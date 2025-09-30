@@ -72,7 +72,7 @@ const profileFormSchema = z.object({
   national_id: z.string().optional(),
   // Emergency contact as separate fields
   emergency_contact_name: z.string().optional(),
-  emergency_contact_relationship: z.string().optional(), 
+  emergency_contact_relationship: z.string().optional(),
   emergency_contact_phone: z.string().optional(),
   emergency_contact_email: z.string().email().optional().or(z.literal("")),
 });
@@ -93,7 +93,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
   const [loading, setLoading] = React.useState(false);
   const [photoUploading, setPhotoUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  
+
   // Auth store and refresh hook
   const { refreshProfile } = useProfileRefresh();
   const { deleteProfilePhoto } = useProfilePhotoDelete();
@@ -135,7 +135,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
   const handleProfileSubmit = async (values: ProfileFormValues) => {
     try {
       setLoading(true);
-      
+
       // Transform emergency contact fields into JSON object
       const emergencyContact: IEmergencyContact = {
         name: values.emergency_contact_name,
@@ -146,14 +146,14 @@ export function AccountForm({ initialData }: AccountFormProps) {
 
       // Remove individual emergency contact fields and add the object
       const { emergency_contact_name, emergency_contact_relationship, emergency_contact_phone, emergency_contact_email, ...otherValues } = values;
-      
+
       const profileData = {
         ...otherValues,
         emergency_contact: emergencyContact,
       };
-      
+
       const result = await updateUserProfile(profileData);
-      
+
       if (result.success) {
         toast.success(result.message);
         // Refresh profile data to sync with navbar
@@ -173,7 +173,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
     try {
       setLoading(true);
       const result = await changePassword(values.newPassword);
-      
+
       if (result.success) {
         toast.success(result.message);
         passwordForm.reset();
@@ -210,7 +210,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
 
     try {
       setPhotoUploading(true);
-      
+
       // Convert file to base64
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -223,14 +223,14 @@ export function AccountForm({ initialData }: AccountFormProps) {
         reader.onerror = () => reject(new Error('Failed to read file'));
         reader.readAsDataURL(file);
       });
-      
+
       console.log('File converted to base64:', {
         name: file.name,
         type: file.type,
         size: file.size,
         base64Length: base64.length
       });
-      
+
       // Upload dengan base64 data
       const result = await uploadProfilePhotoBase64({
         base64Data: base64,
@@ -238,13 +238,13 @@ export function AccountForm({ initialData }: AccountFormProps) {
         fileType: file.type,
         fileSize: file.size
       });
-      
+
       if (result.success) {
-        const successMsg = result.oldPhotoDeleted 
+        const successMsg = result.oldPhotoDeleted
           ? 'Profile photo updated successfully (old photo removed)'
           : 'Profile photo uploaded successfully';
         toast.success(successMsg);
-        
+
         // Update user data in auth store immediately
         if (currentUser && result.url) {
           setUser({
@@ -252,10 +252,10 @@ export function AccountForm({ initialData }: AccountFormProps) {
             profile_photo_url: result.url,
           });
         }
-        
+
         // Also refresh from server to ensure sync
         await refreshProfile();
-        
+
       } else {
         toast.error(result.message);
         console.error('Upload error:', result.message);
@@ -273,14 +273,14 @@ export function AccountForm({ initialData }: AccountFormProps) {
     try {
       setPhotoUploading(true);
       const result = await deleteProfilePhoto();
-      
+
       if (result.success) {
         toast.success(result.message);
-        
+
         // Force component re-render by updating initialData
         // This will hide the delete button and fix the avatar src
         initialData.user.profile_photo_url = null;
-        
+
         // Refresh page setelah delay singkat untuk memastikan state consistency
         setTimeout(() => {
           window.location.reload();
@@ -305,8 +305,8 @@ export function AccountForm({ initialData }: AccountFormProps) {
           <div className="flex flex-col items-center space-y-6">
             <div className="relative group">
               <Avatar className="h-32 w-32 ring-4 ring-white shadow-xl">
-                <AvatarImage 
-                  src={safeAvatarSrc(initialData.user.profile_photo_url)} 
+                <AvatarImage
+                  src={safeAvatarSrc(initialData.user.profile_photo_url)}
                   alt={initialData.user.display_name || "Profile"}
                   className="object-cover"
                 />
@@ -319,7 +319,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                   )}
                 </AvatarFallback>
               </Avatar>
-              
+
               {/* Upload Photo Button */}
               <Button
                 size="sm"
@@ -335,7 +335,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                   <Camera className="h-5 w-5 text-blue-600" />
                 )}
               </Button>
-              
+
               {/* Delete Photo Button - only show if user has photo */}
               {initialData.user.profile_photo_url && (
                 <Button
@@ -349,7 +349,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                   <Trash2 className="h-5 w-5 text-red-600" />
                 </Button>
               )}
-              
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -387,7 +387,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
 
       {/* Account Tabs */}
       <Tabs defaultValue="profile" className="space-y-6">
-        <div className="sticky top-4 z-10 bg-background/80 backdrop-blur-sm border rounded-lg p-1">
+        <div className="top-4 z-10 bg-background/80 backdrop-blur-sm border rounded-lg p-1">
           <TabsList className="grid w-full grid-cols-3 h-12">
             <TabsTrigger value="profile" className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               <User className="h-4 w-4" />
@@ -416,7 +416,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
             <CardContent className="space-y-6">
               <Form {...profileForm}>
                 <form onSubmit={profileForm.handleSubmit(handleProfileSubmit)} className="space-y-6">
-                  
+
                   {/* Basic Information - Hidden on mobile */}
                   <div className="hidden md:block space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -698,7 +698,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              
+
               {/* Organization Details */}
               <div className="space-y-4">
                 <h3 className="text-base font-medium">Organization Details</h3>
@@ -742,12 +742,12 @@ export function AccountForm({ initialData }: AccountFormProps) {
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-muted-foreground">Hire Date</label>
                     <p className="text-sm">
-                      {initialData.organizationMember?.hire_date 
+                      {initialData.organizationMember?.hire_date
                         ? new Date(initialData.organizationMember.hire_date).toLocaleDateString('id-ID', {
-                            year: 'numeric', 
-                            month: 'long',
-                            day: 'numeric'
-                          })
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })
                         : "Not specified"
                       }
                     </p>
@@ -764,9 +764,8 @@ export function AccountForm({ initialData }: AccountFormProps) {
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-muted-foreground">Employment Status</label>
                     <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${
-                        initialData.organizationMember?.employment_status === 'active' ? 'bg-green-500' : 'bg-red-500'
-                      }`} />
+                      <div className={`w-2 h-2 rounded-full ${initialData.organizationMember?.employment_status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                        }`} />
                       <p className="text-sm capitalize">
                         {initialData.organizationMember?.employment_status || "Not specified"}
                       </p>
@@ -799,7 +798,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                   <h3 className="text-base font-medium">Change Password</h3>
                   <p className="text-sm text-muted-foreground">Update your account password for better security</p>
                 </div>
-                
+
                 <Form {...passwordForm}>
                   <form onSubmit={passwordForm.handleSubmit(handlePasswordSubmit)} className="space-y-4">
                     <FormField
@@ -828,7 +827,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                         </FormItem>
                       )}
                     />
-                    
+
                     <div className="text-xs text-muted-foreground space-y-1">
                       <p>Password requirements:</p>
                       <ul className="list-disc list-inside space-y-1">
@@ -836,7 +835,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                         <li>Use a combination of letters and numbers</li>
                       </ul>
                     </div>
-                    
+
                     <div className="flex justify-end pt-4">
                       <Button type="submit" disabled={loading} className="min-w-24">
                         {loading ? "Changing..." : "Change Password"}
