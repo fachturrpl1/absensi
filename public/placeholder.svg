@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="179.43448mm"
+   height="177.15863mm"
+   viewBox="0 0 179.43448 177.15863"
+   version="1.1"
+   id="svg1"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm">
+    <inkscape:page
+       x="-2.2411081e-22"
+       y="0"
+       width="179.43448"
+       height="177.15863"
+       id="page2"
+       margin="0"
+       bleed="0" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-22.179309,-65.799996)">
+    <g
+       id="g3"
+       inkscape:export-filename="g3.png"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96">
+      <ellipse
+         style="fill:#cccccc;stroke:#b3b3b3;stroke-width:0.4"
+         id="path1"
+         cx="111.89655"
+         cy="154.3793"
+         rx="89.517242"
+         ry="88.379311" />
+      <text
+         xml:space="preserve"
+         style="font-weight:bold;font-size:31.7872px;font-family:Arial;-inkscape-font-specification:'Arial Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#f9f9f9;stroke:#f9f9f9;stroke-width:0;stroke-dasharray:none"
+         x="62.533909"
+         y="127.32243"
+         id="text1"><tspan
+           sodipodi:role="line"
+           id="tspan1"
+           style="fill:#f9f9f9;stroke:#f9f9f9;stroke-width:0;stroke-dasharray:none"
+           x="62.533909"
+           y="127.32243">YOUR</tspan><tspan
+           sodipodi:role="line"
+           style="fill:#f9f9f9;stroke:#f9f9f9;stroke-width:0;stroke-dasharray:none"
+           x="62.533909"
+           y="167.05643"
+           id="tspan2">LOGO</tspan><tspan
+           sodipodi:role="line"
+           style="fill:#f9f9f9;stroke:#f9f9f9;stroke-width:0;stroke-dasharray:none"
+           x="62.533909"
+           y="206.79044"
+           id="tspan3">HERE</tspan></text>
+    </g>
+  </g>
+</svg>
