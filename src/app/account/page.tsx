@@ -4,7 +4,6 @@ import { createClient } from "@/utils/supabase/server";
 import { getAccountData } from "@/action/account";
 import { AccountForm } from "@/components/form/account-form";
 import { ContentLayout } from "@/components/admin-panel/content-layout";
-// Unused imports removed
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 

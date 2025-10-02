@@ -73,8 +73,9 @@ export default function WorkSchedulesPage() {
         try {
             setLoading(true)
             const response: unknown = await getAllWorkSchedules()
-            if (!response.success) throw new Error(response.message)
-            setSchedules(response.data)
+            const typedResponse = response as { success: boolean; data: IWorkSchedule[]; message: string }
+            if (!typedResponse.success) throw new Error(typedResponse.message)
+            setSchedules(typedResponse.data)
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'Unknown error')
         } finally {
@@ -84,8 +85,9 @@ export default function WorkSchedulesPage() {
     const fetchOrganizations = async () => {
         try {
             const response: unknown = await getAllOrganization()
-            if (!response.success) throw new Error(response.message)
-            setOrganizations(response.data)
+            const typedResponse = response as { success: boolean; data: { id: string, name: string }[]; message: string }
+            if (!typedResponse.success) throw new Error(typedResponse.message)
+            setOrganizations(typedResponse.data)
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'Unknown error')
         }
@@ -96,7 +98,7 @@ export default function WorkSchedulesPage() {
     }, [scheduleId])
 
     const form = useForm<ScheduleForm>({
-        resolver: zodResolver(scheduleSchema) as unknown,
+        resolver: zodResolver(scheduleSchema),
         defaultValues: {
             organization_id: "",
             code: "",
@@ -111,12 +113,12 @@ export default function WorkSchedulesPage() {
         try {
             let res
             if (editingDetail) {
-                res = await updateWorkSchedule(editingDetail.id, values as unknown)
+                res = await updateWorkSchedule(editingDetail.id, values as Partial<IWorkSchedule>)
             } else {
-                res = await createWorkSchedule(values as unknown)
+                res = await createWorkSchedule(values as Partial<IWorkSchedule>)
             }
             if (!res.success) throw new Error(res.message)
-            toast.success(editingDetail ? "Updated successfully" : "Created successfully")
+            toast.success(editingDetail ? 'Schedule updated successfully' : 'Schedule created successfully')
             setOpen(false)
             setEditingDetail(null)
             fetchSchedules()
@@ -130,7 +132,7 @@ export default function WorkSchedulesPage() {
             setLoading(true)
             const response = await deleteWorkSchedule(scheduleId)
             if (!response.success) throw new Error(response.message)
-            toast.success("Schedule deleted successfully")
+            toast.success('Schedule deleted successfully')
             fetchSchedules()
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'Unknown error')
@@ -186,7 +188,7 @@ export default function WorkSchedulesPage() {
     ]
 
     return (
-        <ContentLayout title="Schedules">
+        <ContentLayout title="Work Schedules">
         
             <div className="w-full max-w-6xl mx-auto">
                 <div className=" items-center my-7">
@@ -199,13 +201,13 @@ export default function WorkSchedulesPage() {
                                     form.reset()
                                 }}
                             >
-                                Add <Plus className="ml-2" />
+                                Add Schedule <Plus className="ml-2" />
                             </Button>
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
                                 <DialogTitle>
-                                    {editingDetail ? "Edit Detail" : "Add Detail"}
+                                    {editingDetail ? 'Edit Schedule' : 'Add Schedule'}
                                 </DialogTitle>
                             </DialogHeader>
                             <Form {...form}>
@@ -225,7 +227,7 @@ export default function WorkSchedulesPage() {
                                                 >
                                                     <FormControl>
                                                         <SelectTrigger>
-                                                            <SelectValue placeholder="Select organization" />
+                                                            <SelectValue placeholder="Select Organization" />
                                                         </SelectTrigger>
                                                     </FormControl>
                                                     <SelectContent>
@@ -306,7 +308,7 @@ export default function WorkSchedulesPage() {
                                         )}
                                     />
                                     <Button type="submit" className="w-full">
-                                        {editingDetail ? "Update" : "Create"}
+                                        {editingDetail ? 'Update' : 'Create'}
                                     </Button>
                                 </form>
                             </Form>

@@ -58,14 +58,14 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  // Get user session with error handling for malformed cookies
-  let session = null
+  // Get user with error handling for malformed cookies
+  let user = null
   try {
-    const result = await supabase.auth.getSession()
-    session = result.data?.session
+    const result = await supabase.auth.getUser()
+    user = result.data?.user
   } catch (error) {
     // If there's an error (likely due to malformed cookies), clear auth cookies
-    console.warn('Error getting session, clearing auth cookies:', error)
+    console.warn('Error getting user, clearing auth cookies:', error)
     const authCookieNames = [
       `sb-${process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]}-auth-token`,
       `sb-${process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]}-auth-token.0`,
@@ -80,13 +80,54 @@ export async function middleware(req: NextRequest) {
 
   const { pathname } = req.nextUrl
 
-  // Redirect logic based on session
-  if (session && (pathname.startsWith("/auth/login") || pathname.startsWith("/auth/signup"))) {
+  // Redirect logic based on user authentication
+  if (user && pathname.startsWith("/auth/login")) {
     return NextResponse.redirect(new URL("/", req.url))
   }
+  
+  // Allow newly signed up users to see signup page briefly before redirect
+  if (user && pathname.startsWith("/auth/signup")) {
+    // Check if user has been recently created (within last minute)
+    const userCreatedAt = new Date(user.created_at)
+    const now = new Date()
+    const timeDifference = now.getTime() - userCreatedAt.getTime()
+    const oneMinuteInMs = 60 * 1000
+    
+    // If user was created more than 1 minute ago, redirect to dashboard
+    if (timeDifference > oneMinuteInMs) {
+      return NextResponse.redirect(new URL("/", req.url))
+    }
+    // Otherwise, let them stay on signup page to see the success message
+  }
 
-  if (!session && !pathname.startsWith("/auth")) {
+  if (!user && !pathname.startsWith("/auth")) {
     return NextResponse.redirect(new URL("/auth/login", req.url))
+  }
+
+  // Check if authenticated user has organization (except for onboarding page)
+  if (user && !pathname.startsWith("/onboarding") && !pathname.startsWith("/auth")) {
+    try {
+      // Check if user has organization membership
+      const { data: member } = await supabase
+        .from("organization_members")
+        .select(`
+          is_active,
+          organization:organizations(
+            id,
+            is_active
+          )
+        `)
+        .eq("user_id", user.id)
+        .maybeSingle()
+
+      // If user has no organization or organization is inactive, redirect to onboarding
+      if (!member || !member.organization || !member.organization.is_active || !member.is_active) {
+        return NextResponse.redirect(new URL("/onboarding", req.url))
+      }
+    } catch (error) {
+      console.warn('Error checking organization membership:', error)
+      // On error, allow access but user will see appropriate message in UI
+    }
   }
 
   return response

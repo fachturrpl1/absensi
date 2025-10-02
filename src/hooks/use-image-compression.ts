@@ -94,6 +94,14 @@ export function useImageCompression({
       setIsCompressing(true);
       updateProgress(0, 100, 'compressing');
 
+      // Debug: Log original file details
+      console.log('🔍 Original file details:', {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        lastModified: file.lastModified
+      });
+
       // Validate file
       const validation = validateFile(file);
       if (!validation.isValid) {
@@ -123,6 +131,14 @@ export function useImageCompression({
       const compressedFile = await imageCompression(file, options);
       const compressedSize = compressedFile.size;
       const compressionRatio = calculateCompressionRatio(originalSize, compressedSize);
+
+      // Debug: Log compressed file details
+      console.log('🔍 Compressed file details:', {
+        name: compressedFile.name,
+        type: compressedFile.type,
+        size: compressedFile.size,
+        lastModified: compressedFile.lastModified
+      });
 
       // Generate data URL for preview
       const dataUrl = await imageCompression.getDataUrlFromFile(compressedFile);

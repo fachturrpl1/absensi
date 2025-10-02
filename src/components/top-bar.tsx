@@ -20,6 +20,27 @@ export default function TopBar() {
     return /^\d+$/.test(segment) || /^[0-9a-fA-F-]{36}$/.test(segment) // angka atau UUID
   }
 
+  // mapping untuk mengubah nama segment
+  const getSegmentLabel = (segment: string) => {
+    const segmentMappings: { [key: string]: string } = {
+      'department': 'Groups',
+      'departments': 'Groups',
+      'members': 'Members',
+      'users': 'Users',
+      'position': 'Positions',
+      'role': 'Roles',
+      'permission': 'Permissions',
+      'schedule': 'Schedules',
+      'attendance': 'Attendance',
+      'organization': 'Organization',
+      'settings': 'Settings',
+      'add': 'Add',
+      'edit': 'Edit'
+    }
+    
+    return segmentMappings[segment] || segment.charAt(0).toUpperCase() + segment.slice(1)
+  }
+
   return (
     <div>
       <Breadcrumb>
@@ -48,12 +69,12 @@ export default function TopBar() {
                     <BreadcrumbItem>
                       {isLast ? (
                         <BreadcrumbPage>
-                          {segment.charAt(0).toUpperCase() + segment.slice(1)}
+                          {getSegmentLabel(segment)}
                         </BreadcrumbPage>
                       ) : (
                         <BreadcrumbLink asChild>
                           <Link href={href}>
-                            {segment.charAt(0).toUpperCase() + segment.slice(1)}
+                            {getSegmentLabel(segment)}
                           </Link>
                         </BreadcrumbLink>
                       )}

@@ -14,7 +14,7 @@ export const getAllRolePermission = async () => {
 
     return { success: true, data: data as IRolePermission[] };
 };
-export async function createRolePermission(data: { role_id: number; permission_id: number }[]) {
+export async function createRolePermission(data: { role_id: number; permission_id: string }[]) {
   try {
     if (!data.length) {
       // kalau tidak ada permission → hapus semua untuk role_id

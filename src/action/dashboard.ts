@@ -198,8 +198,8 @@ export async function getPendingApprovals() {
   return { success: true, data: count || 0 };
 }
 
-// Get total departments
-export async function getTotalDepartments() {
+// Get total groups
+export async function getTotalGroups() {
   const organizationId = await getUserOrganizationId();
   if (!organizationId) {
     return { success: false, data: 0 };
@@ -248,7 +248,7 @@ export async function getMemberStatusDistribution() {
     .select("employment_status")
     .eq("organization_id", organizationId);
 
-  const employmentDistribution = employmentData?.reduce((acc: any, member) => {
+  const employmentDistribution = employmentData?.reduce((acc: Record<string, number>, member) => {
     const status = member.employment_status || 'unknown';
     acc[status] = (acc[status] || 0) + 1;
     return acc;
@@ -324,7 +324,7 @@ export async function getTodayAttendanceDistribution() {
 
 // Get all dashboard stats at once
 export async function getDashboardStats() {
-  const [totalActiveMembers, totalMembers, todayAttendance, todayLate, todayAbsent, todayExcused, pendingApprovals, totalDepartments, memberDistribution] = await Promise.all([
+  const [totalActiveMembers, totalMembers, todayAttendance, todayLate, todayAbsent, todayExcused, pendingApprovals, totalGroups, memberDistribution] = await Promise.all([
     getTotalActiveMembers(),
     getTotalMembers(),
     getTodayAttendance(),
@@ -332,7 +332,7 @@ export async function getDashboardStats() {
     getTodayAbsent(),
     getTodayExcused(),
     getPendingApprovals(),
-    getTotalDepartments(),
+    getTotalGroups(),
     getMemberStatusDistribution()
   ]);
 
@@ -344,7 +344,7 @@ export async function getDashboardStats() {
     todayAbsent: todayAbsent.data,
     todayExcused: todayExcused.data,
     pendingApprovals: pendingApprovals.data,
-    totalDepartments: totalDepartments.data,
+    totalGroups: totalGroups.data,
     memberDistribution: memberDistribution.data
   };
 }

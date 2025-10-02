@@ -77,7 +77,7 @@ export default async function RootLayout({
     : null
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="id" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <UserProvider user={mappedUser} />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>

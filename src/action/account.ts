@@ -369,7 +369,7 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
 
         // Only use compressed if it's actually smaller
         if (compressed.length < originalBuffer.length) {
-          finalBuffer = compressed;
+          finalBuffer = Buffer.from(compressed);
           console.log('Compression applied:', { originalSize: originalBuffer.length, compressedSize: compressed.length });
         } else {
           finalBuffer = originalBuffer;

@@ -25,6 +25,7 @@ import { useAuthStore } from "@/store/user-store"
 import { useProfileRefresh, useProfilePhotoUrl } from "@/hooks/use-profile"
 import { safeAvatarSrc, getUserInitials } from "@/lib/avatar-utils"
 import LogoutButton from "../logout"
+import { LanguageDropdownItem } from "@/components/language-dropdown-item"
 
 export function UserNav() {
   const user = useAuthStore((state) => state.user)
@@ -57,12 +58,12 @@ export function UserNav() {
   // Get full name from user data
   const getFullName = () => {
     if (user.display_name) return user.display_name
-    
+
     const parts = []
     if (user.first_name) parts.push(user.first_name)
     if (user.middle_name) parts.push(user.middle_name)
     if (user.last_name) parts.push(user.last_name)
-    
+
     return parts.length > 0 ? parts.join(' ') : user.email || 'User'
   }
 
@@ -79,7 +80,7 @@ export function UserNav() {
                 className="relative h-8 w-8 rounded-full"
               >
                 <Avatar className="h-8 w-8">
-                  <AvatarImage 
+                  <AvatarImage
                     src={safeAvatarSrc(profilePhotoUrl)}
                     alt={fullName}
                     className="object-cover"
@@ -149,8 +150,8 @@ export function UserNav() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="hover:cursor-pointer" onClick={() => {}}>
-          <LogoutButton/>
+        <DropdownMenuItem className="hover:cursor-pointer" onClick={() => { }}>
+          <LogoutButton />
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

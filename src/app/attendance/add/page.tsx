@@ -1,11 +1,14 @@
+"use client"
+
 import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { AttendanceForm } from "@/components/form/attendance-form"
 import TopBar from "@/components/top-bar"
 
 
 export default function AddAttendancePage() {
+    
     return (
-        <ContentLayout title="Add Attendance">
+        <ContentLayout title="Text">
             <TopBar />
 
 

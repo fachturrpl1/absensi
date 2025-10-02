@@ -28,10 +28,22 @@ export async function signUp(formData: FormData) {
         last_name: lastName,
         display_name: `${firstName} ${lastName}`,
       },
+      // Ensure email confirmation is handled automatically
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/onboarding`,
     },
   })
 
   if (error) return { error: error.message }
+
+  // If user is created and confirmed (auto-confirm is enabled in Supabase)
+  if (data.user && data.session) {
+    return { success: true, user: data.user, session: data.session }
+  }
+
+  // If user is created but not confirmed (email confirmation required)
+  if (data.user && !data.session) {
+    return { success: true, user: data.user, needsConfirmation: true }
+  }
 
   return { success: true, user: data.user }
 }
@@ -154,13 +166,13 @@ export async function getAllUsersNotRegistered() {
 export async function getCurrentUserProfile() {
   const supabase = await getSupabase()
 
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return { error: "Not logged in", profile: null }
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) return { error: "Not logged in", profile: null }
 
   const { data: profile, error } = await supabase
     .from("user_profiles")
     .select("*")
-    .eq("id", session.user.id)
+    .eq("id", user.id)
     .single()
 
   if (error || !profile) return { error: error?.message || "Profile not found", profile: null }

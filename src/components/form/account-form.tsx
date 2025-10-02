@@ -719,7 +719,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">Department</label>
+                    <label className="text-sm font-medium text-muted-foreground">Group</label>
                     <p className="text-sm">
                       {initialData.organizationMember?.departments?.name || "Not assigned"}
                     </p>

@@ -81,7 +81,7 @@ export default function AttendancePage() {
 
         return {
           ...a,
-          memberName: user?.first_name || "Unknown",
+          memberName: user?.first_name || "No User",
           timezone: org?.timezone || "UTC",
           schedules, // sekarang aman
         }
@@ -89,7 +89,7 @@ export default function AttendancePage() {
       console.log("memberScheduleData", memberScheduleData)
       setAttendance(merged)
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error instanceof Error ? error.message : 'Unknown error' : "Something went wrong")
+      toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
@@ -123,7 +123,7 @@ export default function AttendancePage() {
   const columns: ColumnDef<AttendanceWithRelations>[] = [
     {
       accessorKey: "memberName",
-      header: "Member",
+      header: "Members",
       cell: ({ row }) => (
         <div className="flex gap-2 items-center">
           <User className="w-4 h-4" /> {row.getValue("memberName")}
@@ -160,7 +160,7 @@ export default function AttendancePage() {
       },
     },
     {
-      header: "Schedules",
+      header: "Schedule",
       cell: ({ row }) => {
         const schedules = row.original.schedules || []
 
@@ -171,7 +171,7 @@ export default function AttendancePage() {
             ))}
           </div>
         ) : (
-          <span className="text-gray-400">No schedules</span>
+          <span className="text-gray-400">No Schedule</span>
         )
       },
     }
@@ -202,7 +202,7 @@ export default function AttendancePage() {
 },
 {
   accessorKey: "actual_check_out",
-  header: "Go Home",
+      header: "Go Home",
   cell: ({ row }) => {
     const checkOut = row.getValue("actual_check_out") as string | null
     if (!checkOut) {
@@ -234,12 +234,12 @@ export default function AttendancePage() {
       try {
         const res = await updateAttendanceStatus(attendance.id, newStatus)
         if (res.success) {
-          toast.success(`Status updated to ${newStatus}`)
+          toast.success('Status updated successfully')
         } else {
-          toast.error("Failed to update status")
+          toast.error('Failed to update status')
         }
       } catch (error: unknown) {
-        toast.error(error instanceof Error ? error instanceof Error ? error.message : 'Unknown error' : "Error updating status")
+        toast.error(error instanceof Error ? error.message : 'An error occurred')
       }
     }
         return (

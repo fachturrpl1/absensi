@@ -167,7 +167,7 @@ export const SUPPORTED_IMAGE_FORMATS = [
 // Maximum file size limits (in bytes)
 export const MAX_FILE_SIZE = {
   avatar: 5 * 1024 * 1024, // 5MB
-  standard: 10 * 1024 * 1024, // 10MB
-  document: 15 * 1024 * 1024, // 15MB
-  highQuality: 20 * 1024 * 1024 // 20MB
+  standard: 5 * 1024 * 1024, // 5MB
+  document: 5 * 1024 * 1024, // 5MB
+  highQuality: 5 * 1024 * 1024 // 5MB
 };

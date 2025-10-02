@@ -37,12 +37,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
 
 import { IRole } from "@/interface"
-import {
-    createDepartments,
-    deleteDepartments,
-    getAllDepartments,
-    updateDepartments,
-} from "@/action/departement"
 import LoadingSkeleton from "@/components/loading-skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getAllOrganization } from "@/action/organization"
@@ -72,8 +66,9 @@ export default function RolesPage() {
         try {
             setLoading(true)
             const response: unknown = await getAllRole()
-            if (!response.success) throw new Error(response.message)
-            setroles(response.data)
+            const typedResponse = response as { success: boolean; data: IRole[]; message: string }
+            if (!typedResponse.success) throw new Error(typedResponse.message)
+            setroles(typedResponse.data)
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'Unknown error')
         } finally {
@@ -87,7 +82,7 @@ export default function RolesPage() {
     }, [roleId])
 
     const form = useForm<RoleForm>({
-        resolver: zodResolver(roleSchema) as unknown,
+        resolver: zodResolver(roleSchema),
         defaultValues: {
 
             code: "",
@@ -101,12 +96,12 @@ export default function RolesPage() {
         try {
             let res
             if (editingDetail) {
-                res = await updateRole(editingDetail.id, values as unknown)
+                res = await updateRole(editingDetail.id, values as Partial<IRole>)
             } else {
-                res = await createRole(values as unknown)
+                res = await createRole(values as Partial<IRole>)
             }
             if (!res.success) throw new Error(res.message)
-            toast.success(editingDetail ? "Updated successfully" : "Created successfully")
+            toast.success(editingDetail ? 'Role updated successfully' : 'Role created successfully')
             setOpen(false)
             setEditingDetail(null)
             fetchroles()
@@ -120,7 +115,7 @@ export default function RolesPage() {
             setLoading(true)
             const response = await deleteRole(roleId)
             if (!response.success) throw new Error(response.message)
-            toast.success("role deleted successfully")
+            toast.success('Role deleted successfully')
             fetchroles()
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'Unknown error')
@@ -166,7 +161,7 @@ export default function RolesPage() {
                         </Button>
                         <Link href={`/role/role-permission/${ws.id}`}>
                             <Button variant={"outline"} className="border-2 cursor-pointer">
-                                 Permission<ChevronRight/>
+                                 Permissions<ChevronRight/>
                             </Button>
                         </Link>
 
@@ -177,7 +172,7 @@ export default function RolesPage() {
     ]
 
     return (
-        <ContentLayout title="Role">
+        <ContentLayout title="Roles">
             
             <div className="w-full max-w-6xl mx-auto">
                 <div className=" items-center my-7">
@@ -190,13 +185,13 @@ export default function RolesPage() {
                                     form.reset()
                                 }}
                             >
-                                Add <Plus className="ml-2" />
+                                Add Role <Plus className="ml-2" />
                             </Button>
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
                                 <DialogTitle>
-                                    {editingDetail ? "Edit Detail" : "Add Detail"}
+                                    {editingDetail ? 'Edit Role' : 'Add Role'}
                                 </DialogTitle>
                             </DialogHeader>
                             <Form {...form}>
@@ -246,7 +241,7 @@ export default function RolesPage() {
 
 
                                     <Button type="submit" className="w-full">
-                                        {editingDetail ? "Update" : "Create"}
+                                        {editingDetail ? 'Update' : 'Create'}
                                     </Button>
                                 </form>
                             </Form>

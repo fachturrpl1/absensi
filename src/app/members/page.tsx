@@ -43,7 +43,7 @@ export default function MembersPage() {
 
       setMembers(merged)
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error instanceof Error ? error.message : 'Unknown error' : "Something went wrong")
+      toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
@@ -54,11 +54,11 @@ export default function MembersPage() {
   }, [])
 
   async function handleDelete(id: string) {
-    if (!confirm("Are you sure you want to delete this member?")) return
+    if (!confirm('Are you sure you want to delete this member?')) return
 
     const res = await deleteOrganization_member(id)
     if (res.success) {
-      toast.success("Member deleted successfully")
+      toast.success('Member deleted successfully')
       setMembers((prev) => prev.filter((m) => m.id !== id))
     } else {
       toast.error(res.message)
@@ -69,7 +69,7 @@ export default function MembersPage() {
   const columns: ColumnDef<IOrganization_member>[] = [
     {
       accessorKey: "user",
-      header: "Member",
+      header: "Members",
       cell: ({ row }) => {
         const user = row.original.user
         const fullname = user
@@ -83,7 +83,7 @@ export default function MembersPage() {
       },
     },
     {
-      header: "Phone",
+      header: "Phone Number",
       cell: ({ row }) => row.original.user?.phone ?? "No Phone",
     },
     {
@@ -133,7 +133,7 @@ export default function MembersPage() {
   ]
 
   return (
-    <ContentLayout title="Member">
+    <ContentLayout title="Member List">
 
       <div className="w-full max-w-6xl mx-auto">
       
@@ -144,7 +144,7 @@ export default function MembersPage() {
           <div>
             <Link href="/members/add">
               <Button className="flex gap-2 float-end ml-5">
-                <PlusCircleIcon className="w-5 h-5" /> Add
+                <PlusCircleIcon className="w-5 h-5" /> Add Member
               </Button>
             </Link>
             <DataTable columns={columns} data={members} filterColumn="user" />

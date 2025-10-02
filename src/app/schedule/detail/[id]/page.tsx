@@ -66,7 +66,7 @@ import LoadingSkeleton from "@/components/loading-skeleton"
 import { ContentLayout } from "@/components/admin-panel/content-layout"
 
 const detailSchema = z.object({
-  day_of_week: z.coerce.number().min(0).max(6),
+  day_of_week: z.number().min(0).max(6),
   is_working_day: z.boolean(),
   start_time: z.string().optional(),
   end_time: z.string().optional(),
@@ -256,10 +256,11 @@ export default function WorkScheduleDetailsPage() {
   const fetchDetails = async () => {
     setLoading(true)
     const res: unknown = await getWorkScheduleDetails(scheduleId)
-    if (res.success) {
-      setDetails(res.data)
+    const typedRes = res as { success: boolean; data: IWorkScheduleDetail[]; message: string }
+    if (typedRes.success) {
+      setDetails(typedRes.data)
     } else {
-      toast.error(res.message)
+      toast.error(typedRes.message)
     }
     setLoading(false)
   }
@@ -269,7 +270,7 @@ export default function WorkScheduleDetailsPage() {
   }, [scheduleId])
 
   const form = useForm<DetailForm>({
-    resolver: zodResolver(detailSchema)as unknown,
+    resolver: zodResolver(detailSchema),
     defaultValues: {
       day_of_week: 1,
       is_working_day: true,
@@ -307,7 +308,7 @@ export default function WorkScheduleDetailsPage() {
       toast.success("Schedule detail deleted successfully");
       fetchDetails(); // refresh list
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : 'Unknown error' || "Failed to delete schedule detail");
+      toast.error(error instanceof Error ? error.message : "Failed to delete schedule detail");
     } finally {
       setLoading(false);
     }

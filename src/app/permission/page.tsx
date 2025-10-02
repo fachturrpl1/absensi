@@ -82,7 +82,7 @@ export default function RolesPage() {
     }, [roleId])
 
     const form = useForm<PermissionForm>({
-        resolver: zodResolver(permissionSchema) as unknown,
+        resolver: zodResolver(permissionSchema),
         defaultValues: {
         
             code: "",
@@ -97,12 +97,12 @@ export default function RolesPage() {
         try {
             let res
             if (editingDetail) {
-                res = await updatePermission(editingDetail.id, values as unknown)
+                res = await updatePermission(editingDetail.id, values)
             } else {
-                res = await createPermission(values as unknown)
+                res = await createPermission(values)
             }
             if (!res.success) throw new Error(res.message)
-            toast.success(editingDetail ? "Updated successfully" : "Created successfully")
+            toast.success(editingDetail ? 'Permission updated successfully' : 'Permission created successfully')
             setOpen(false)
             setEditingDetail(null)
             fetchpermissions()
@@ -116,7 +116,7 @@ export default function RolesPage() {
             setLoading(true)
             const response = await deletePermission(roleId)
             if (!response.success) throw new Error(response.message)
-            toast.success("role deleted successfully")
+            toast.success('Permission deleted successfully')
             fetchpermissions()
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'Unknown error')
@@ -129,7 +129,7 @@ export default function RolesPage() {
     // --- definisi kolom ---
     const columns: ColumnDef<IPermission>[] = [
         { accessorKey: "code", header: "Code" },
-        {accessorKey:"module",header:"Module"},
+        {accessorKey:"module",header: "Module"},
         { accessorKey: "name", header: "Name" },
         { accessorKey: "description", header: "Description" },
       
@@ -182,13 +182,13 @@ export default function RolesPage() {
                                     form.reset()
                                 }}
                             >
-                                Add <Plus className="ml-2" />
+                                Add Permission <Plus className="ml-2" />
                             </Button>
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
                                 <DialogTitle>
-                                    {editingDetail ? "Edit Detail" : "Add Detail"}
+                                    {editingDetail ? "Edit Permission" : "Add Permission"}
                                 </DialogTitle>
                             </DialogHeader>
                             <Form {...form}>

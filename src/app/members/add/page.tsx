@@ -1,10 +1,13 @@
 
 
+"use client"
+
 import { ContentLayout } from "@/components/admin-panel/content-layout";
 import  MembersForm  from "@/components/form/members-form";
 
 
 export default function AddOrganizationPage() {
+    
     return (
         <ContentLayout title="Add Member">
           

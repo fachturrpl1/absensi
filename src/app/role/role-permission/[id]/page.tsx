@@ -27,9 +27,10 @@ import {
 import { getAllPermission } from "@/action/permission"
 import { getRolePermissions, createRolePermission } from "@/action/role_permission"
 import { ContentLayout } from "@/components/admin-panel/content-layout"
+import { IPermission, IRolePermission } from "@/interface"
 
 const schema = z.object({
-  permission_ids: z.array(z.number()).optional(),
+  permission_ids: z.array(z.string()).optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -39,7 +40,7 @@ export default function RolePermissionPage() {
   const router = useRouter()
   const roleId = Number(params.id)
 
-  const [permissions, setPermissions] = useState<Record<string, unknown>[]>([])
+  const [permissions, setPermissions] = useState<IPermission[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -62,7 +63,7 @@ export default function RolePermissionPage() {
 
         setPermissions(permRes.data)
 
-        const rolePermIds = rolePermRes.data.map((rp: unknown) => rp.permission_id)
+        const rolePermIds = (rolePermRes.data as IRolePermission[]).map((rp: IRolePermission) => rp.permission_id)
         form.reset({ permission_ids: rolePermIds })
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : 'Unknown error')
@@ -100,9 +101,9 @@ export default function RolePermissionPage() {
     router.back();
   };
 
-  const handleSelectAll = (moduleName: string, permissions: unknown[]) => {
+  const handleSelectAll = (moduleName: string, permissions: IPermission[]) => {
     const currentValues = form.getValues("permission_ids") || []
-    const modulePermissionIds = permissions.map((p: unknown) => p.id)
+    const modulePermissionIds = permissions.map((p: IPermission) => p.id)
     const allSelected = modulePermissionIds.every(id => currentValues.includes(id))
 
     if (allSelected) {
@@ -145,7 +146,7 @@ export default function RolePermissionPage() {
   }
 
   // 🔹 group berdasarkan module
-  const groupedPermissions = permissions.reduce((acc: unknown, perm: unknown) => {
+  const groupedPermissions = permissions.reduce((acc: Record<string, IPermission[]>, perm: IPermission) => {
     const moduleName = perm.module || "Other"
     if (!acc[moduleName]) acc[moduleName] = []
     acc[moduleName].push(perm)
@@ -178,7 +179,7 @@ export default function RolePermissionPage() {
                   <div className="space-y-6">
                     {Object.keys(groupedPermissions).map((moduleName) => {
                       const modulePermissions = groupedPermissions[moduleName]
-                      const modulePermissionIds = modulePermissions.map((p: unknown) => p.id)
+                      const modulePermissionIds = modulePermissions.map((p: IPermission) => p.id)
                       const currentValues = field.value || []
                       const selectedCount = modulePermissionIds.filter(id => currentValues.includes(id)).length
                       const totalCount = modulePermissionIds.length
@@ -210,7 +211,7 @@ export default function RolePermissionPage() {
                           </CardHeader>
                           <CardContent>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              {modulePermissions.map((perm: unknown) => (
+                              {modulePermissions.map((perm: IPermission) => (
                                 <FormItem
                                   key={perm.id}
                                   className="flex items-start space-x-3 space-y-0 p-3 border rounded-lg hover:bg-muted/50 transition-colors"

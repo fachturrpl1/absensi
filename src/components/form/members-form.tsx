@@ -50,15 +50,15 @@ interface OrganizationMembersFormProps {
 const OrganizationMembersFormSchema = z.object({
     organization_id: z.string().min(1, "Organization is required"),
     user_id: z.string().min(1, "User is required"),
-    department_id: z.string().min(1, "Department is required"),
+    department_id: z.string().min(1, "Group is required"),
     position_id: z.string().min(1, "Position is required"),
     hire_date: z.string().optional(),
     probation_end_date: z.string().optional(),
     employment_status: z.string().optional(),
     work_location: z.string().optional(),
 
-    // RFID
-    card_number: z.string().min(1, "Card number is required"),
+    // RFID - now optional
+    card_number: z.string().optional(),
     card_type: z.string().optional(),
 })
 
@@ -286,14 +286,14 @@ export default function MembersForm({
                             name="department_id"
                             render={({ field }) => (
                                 <FormItem className="w-full">
-                                    <FormLabel>Department</FormLabel>
+                                    <FormLabel>Group</FormLabel>
                                     <Select
                                         onValueChange={field.onChange}
                                         value={field.value}
                                     >
                                         <FormControl className="w-full">
                                             <SelectTrigger>
-                                                <SelectValue placeholder="Select Department" />
+                                                <SelectValue placeholder="Select Group" />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
@@ -336,7 +336,8 @@ export default function MembersForm({
                             )}
                         />
 
-                        {/* Legal Name */}
+                        {/* Hide hire_date field */}
+                        {/* 
                         <FormField
                             control={form.control}
                             name="hire_date"
@@ -350,8 +351,10 @@ export default function MembersForm({
                                 </FormItem>
                             )}
                         />
+                        */}
 
-                        {/* Tax ID */}
+                        {/* Hide probation_end_date field */}
+                        {/* 
                         <FormField
                             control={form.control}
                             name="probation_end_date"
@@ -365,6 +368,7 @@ export default function MembersForm({
                                 </FormItem>
                             )}
                         />
+                        */}
 
                         {/* Industry */}
                         <FormField
@@ -422,9 +426,9 @@ export default function MembersForm({
                             name="card_number"
                             render={({ field }) => (
                                 <FormItem className="mb-5">
-                                    <FormLabel>Card Number</FormLabel>
+                                    <FormLabel>Card Number (Optional)</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Enter card number" {...field} />
+                                        <Input placeholder="Enter card number (optional)" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -436,9 +440,9 @@ export default function MembersForm({
                             name="card_type"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Card Type</FormLabel>
+                                    <FormLabel>Card Type (Optional)</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Enter card type" {...field} />
+                                        <Input placeholder="Enter card type (optional)" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

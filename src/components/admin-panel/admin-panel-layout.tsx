@@ -13,20 +13,21 @@ export default function AdminPanelLayout({
 }: {
   children: React.ReactNode;
 }) {
-const pathname = usePathname();
+  const pathname = usePathname();
   const sidebar = useStore(useSidebar, (x) => x);
 
-  if (pathname === "/auth/login" || pathname === "/auth/signup") {
+  if (pathname === "/auth/login" || pathname === "/auth/signup" || pathname === "/onboarding") {
     return <>{children}</>;
   }
 
   if (!sidebar) return null;
+  
   const { getOpenState, settings } = sidebar;
+
   return (
     <>
-
       <Sidebar />
-
+      
       <main
         className={cn(
           "min-h-[calc(100vh_-_56px)] bg-zinc-50 dark:bg-zinc-900 transition-[margin-left] ease-in-out duration-300",
@@ -35,7 +36,6 @@ const pathname = usePathname();
       >
         {children}
       </main>
-
     </>
   );
 }

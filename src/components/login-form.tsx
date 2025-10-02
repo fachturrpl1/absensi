@@ -30,7 +30,7 @@ export function LoginForm({
     const result = await login(formData)
 
     if (!result.success) {
-      setError(result.message || "Login gagal")
+      setError(result.message || 'Login failed. Please try again.')
     } else {
       // Simpan user & permissions ke Zustand
       useAuthStore.getState().setUser(result.user)
@@ -51,9 +51,9 @@ export function LoginForm({
           <div className="flex size-8 items-center justify-center rounded-md">
             <GalleryVerticalEnd className="size-6" />
           </div>
-          <h1 className="text-xl font-bold">Welcome back</h1>
+          <h1 className="text-xl font-bold">Welcome Back</h1>
           <p className="text-sm text-muted-foreground">
-            Login to continue
+            Please login to continue
           </p>
         </div>
 
@@ -76,14 +76,14 @@ export function LoginForm({
         </div>
 
         <div className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
+          Don't have an account?{" "}
           <Link href="/auth/signup" className="text-primary underline underline-offset-4 hover:text-primary/80">
             Sign up
           </Link>
         </div>
 
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
+          {loading ? 'Logging in...' : 'Login'}
         </Button>
 
         {error && <p className="text-sm text-red-500">{error}</p>}

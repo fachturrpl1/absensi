@@ -77,10 +77,11 @@ export default function WorkSchedulesPage() {
         try {
             setLoading(true)
             const response: unknown = await getAllPositions()
-            if (!response.success) throw new Error(response.message)
-            setSchedules(response.data)
+            const typedResponse = response as { success: boolean; data: IPositions[]; message: string }
+            if (!typedResponse.success) throw new Error(typedResponse.message)
+            setSchedules(typedResponse.data)
         } catch (error: unknown) {
-            toast.error(error instanceof Error ? error.message : 'Unknown error')
+            toast.error(error instanceof Error ? error.message : 'An error occurred')
         } finally {
             setLoading(false)
         }
@@ -89,8 +90,9 @@ export default function WorkSchedulesPage() {
     const fetchOrganizations = async () => {
         try {
             const response: unknown = await getAllOrganization()
-            if (!response.success) throw new Error(response.message)
-            setOrganizations(response.data)
+            const typedResponse = response as { success: boolean; data: { id: string; name: string }[]; message: string }
+            if (!typedResponse.success) throw new Error(typedResponse.message)
+            setOrganizations(typedResponse.data)
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'Unknown error')
         }
@@ -122,7 +124,7 @@ export default function WorkSchedulesPage() {
     }, [scheduleId])
 
     const form = useForm<PositionsForm>({
-        resolver: zodResolver(positionSchema) as unknown,
+        resolver: zodResolver(positionSchema),
         defaultValues: {
             organization_id: "",
             code: "",
@@ -150,12 +152,12 @@ export default function WorkSchedulesPage() {
         try {
             let res
             if (editingDetail) {
-                res = await updatePositions(editingDetail.id, values as unknown)
+                res = await updatePositions(editingDetail.id, values)
             } else {
-                res = await createPositions(values as unknown)
+                res = await createPositions(values)
             }
             if (!res.success) throw new Error(res.message)
-            toast.success(editingDetail ? "Updated successfully" : "Created successfully")
+            toast.success(editingDetail ? 'Saved successfully' : 'Position created successfully')
             setOpen(false)
             setEditingDetail(null)
             fetchSchedules()
@@ -169,7 +171,7 @@ export default function WorkSchedulesPage() {
             setLoading(true)
             const response = await deletePositions(scheduleId)
             if (!response.success) throw new Error(response.message)
-            toast.success("Schedule deleted successfully")
+            toast.success('Position deleted successfully')
             fetchSchedules()
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'Unknown error')
@@ -181,7 +183,7 @@ export default function WorkSchedulesPage() {
     // --- definisi kolom ---
     const columns: ColumnDef<IPositions>[] = [
         { accessorKey: "code", header: "Code" },
-        { accessorKey: "title", header: "Title" },
+        { accessorKey: "title", header: "Position Name" },
         { accessorKey: "description", header: "Description" },
         { accessorKey: "level", header: "Level" },
         {
@@ -218,7 +220,7 @@ export default function WorkSchedulesPage() {
     ]
 
     return (
-        <ContentLayout title="Position">
+        <ContentLayout title="Positions">
             <div className="w-full max-w-6xl mx-auto">
                 <div className="items-center my-7">
                     <Dialog open={open} onOpenChange={setOpen}>
@@ -235,7 +237,7 @@ export default function WorkSchedulesPage() {
                         <DialogContent aria-describedby={undefined}>
                             <DialogHeader>
                                 <DialogTitle>
-                                    {editingDetail ? "Edit Detail" : "Add Detail"}
+                                    {editingDetail ? 'Edit' : 'Add'} Position
                                 </DialogTitle>
                             </DialogHeader>
                             <Form {...form}>
@@ -270,7 +272,7 @@ export default function WorkSchedulesPage() {
                                                         >
                                                             <FormControl>
                                                                 <SelectTrigger>
-                                                                    <SelectValue placeholder="Select organization" />
+                                                                    <SelectValue placeholder="Select..." />
                                                                 </SelectTrigger>
                                                             </FormControl>
                                                             <SelectContent>
@@ -306,7 +308,7 @@ export default function WorkSchedulesPage() {
                                         name="title"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Title</FormLabel>
+                                                <FormLabel>Position Name</FormLabel>
                                                 <FormControl>
                                                     <Input type="text" {...field} />
                                                 </FormControl>
@@ -354,7 +356,7 @@ export default function WorkSchedulesPage() {
                                         )}
                                     />
                                     <Button type="submit" className="w-full">
-                                        {editingDetail ? "Update" : "Create"}
+                                        {editingDetail ? 'Update' : 'Create'}
                                     </Button>
                                 </form>
                             </Form>

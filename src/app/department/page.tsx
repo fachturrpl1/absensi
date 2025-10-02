@@ -49,7 +49,7 @@ import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { createClient } from "@/utils/supabase/client"
 import { Can } from "@/components/can"
 
-const departmentSchema = z.object({
+const groupSchema = z.object({
     organization_id: z.string().min(1, "Organization is required"),
     code: z.string().min(2, "min 2 characters"),
     name: z.string().min(2, "min 2 characters"),
@@ -57,29 +57,29 @@ const departmentSchema = z.object({
     is_active: z.boolean(),
 })
 
-type DepartmentsForm = z.infer<typeof departmentSchema>
+type GroupForm = z.infer<typeof groupSchema>
 
-export default function DepartmentsPage() {
+export default function GroupsPage() {
     const params = useParams()
     const scheduleId = Number(params.id)
 
     const [open, setOpen] = React.useState(false)
     const [editingDetail, setEditingDetail] = React.useState<IDepartments | null>(null)
-    const [schedules, setSchedules] = React.useState<IDepartments[]>([])
+    const [groups, setGroups] = React.useState<IDepartments[]>([])
     const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
     const [loading, setLoading] = React.useState<boolean>(true)
     const [organizationId, setOrganizationId] = React.useState<string>("")
 
     const supabase = createClient()
 
-    const fetchSchedules = async () => {
+    const fetchGroups = async () => {
         try {
             setLoading(true)
             const response = await getAllDepartments()
             if (!response.success) throw new Error(response.message)
-            setSchedules(response.data)
+            setGroups(response.data)
         } catch (error: unknown) {
-            toast.error(error instanceof Error ? error instanceof Error ? error.message : 'Unknown error' : 'Unknown error')
+            toast.error(error instanceof Error ? error.message : 'An error occurred')
         } finally {
             setLoading(false)
         }
@@ -115,13 +115,13 @@ export default function DepartmentsPage() {
     }
 
     React.useEffect(() => {
-        fetchSchedules()
+        fetchGroups()
         fetchOrganizations()
         fetchOrganizationId()
     }, [scheduleId])
 
-    const form = useForm<DepartmentsForm>({
-        resolver: zodResolver(departmentSchema),
+    const form = useForm<GroupForm>({
+        resolver: zodResolver(groupSchema),
         defaultValues: {
             organization_id: "",
             code: "",
@@ -141,7 +141,7 @@ export default function DepartmentsPage() {
         }
     }, [organizationId])
 
-    const handleSubmit = async (values: DepartmentsForm) => {
+    const handleSubmit = async (values: GroupForm) => {
         console.log("🚀 Submit values:", values)
         try {
             let res
@@ -151,10 +151,10 @@ export default function DepartmentsPage() {
                 res = await createDepartments(values)
             }
             if (!res.success) throw new Error(res.message)
-            toast.success(editingDetail ? "Updated successfully" : "Created successfully")
+            toast.success(editingDetail ? 'Saved successfully' : 'Department created successfully')
             setOpen(false)
             setEditingDetail(null)
-            fetchSchedules()
+            fetchGroups()
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err instanceof Error ? err.message : 'Unknown error' : 'Unknown error')
         }
@@ -165,8 +165,8 @@ export default function DepartmentsPage() {
             setLoading(true)
             const response = await deleteDepartments(scheduleId)
             if (!response.success) throw new Error(response.message)
-            toast.success("Department deleted successfully")
-            fetchSchedules()
+            toast.success('Department deleted successfully')
+            fetchGroups()
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error instanceof Error ? error.message : 'Unknown error' : 'Unknown error')
         } finally {
@@ -177,11 +177,11 @@ export default function DepartmentsPage() {
     // --- definisi kolom ---
     const columns: ColumnDef<IDepartments>[] = [
         { accessorKey: "code", header: "Code" },
-        { accessorKey: "name", header: "Name" },
+        { accessorKey: "name", header: "Department Name" },
         { accessorKey: "description", header: "Description" },
         {
             id: "actions",
-            header: "Actions",
+            header: 'Actions',
             cell: ({ row }) => {
                 const ws = row.original
                 return (
@@ -224,13 +224,13 @@ export default function DepartmentsPage() {
                                     form.reset()
                                 }}
                             >
-                                Add <Plus className="ml-2" />
+                                Add Department <Plus className="ml-2" />
                             </Button>
                         </DialogTrigger>
                         <DialogContent aria-describedby={undefined}>
                             <DialogHeader>
                                 <DialogTitle>
-                                    {editingDetail ? "Edit Department" : "Add Department"}
+                                    {editingDetail ? 'Edit Department' : 'Add Department'}
                                 </DialogTitle>
                             </DialogHeader>
                             <Form {...form}>
@@ -265,7 +265,7 @@ export default function DepartmentsPage() {
                                                         >
                                                             <FormControl>
                                                                 <SelectTrigger>
-                                                                    <SelectValue placeholder="Select organization" />
+                                                                    <SelectValue placeholder="Select Organization" />
                                                                 </SelectTrigger>
                                                             </FormControl>
                                                             <SelectContent>
@@ -301,7 +301,7 @@ export default function DepartmentsPage() {
                                         name="name"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Name</FormLabel>
+                                                <FormLabel>Department Name</FormLabel>
                                                 <FormControl>
                                                     <Input type="text" {...field} />
                                                 </FormControl>
@@ -337,7 +337,7 @@ export default function DepartmentsPage() {
                                         )}
                                     />
                                     <Button type="submit" className="w-full">
-                                        {editingDetail ? "Update" : "Create"}
+                                        {editingDetail ? 'Update' : 'Create'}
                                     </Button>
                                 </form>
                             </Form>
@@ -347,7 +347,7 @@ export default function DepartmentsPage() {
                 {loading ? (
                     <LoadingSkeleton />
                 ) : (
-                    <DataTable columns={columns} data={schedules} filterColumn="name" />
+                    <DataTable columns={columns} data={groups} filterColumn="name" />
                 )}
             </div>
         </ContentLayout>

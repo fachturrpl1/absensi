@@ -1,6 +1,5 @@
 import {
   Tag,
-  Users,
   Settings,
   Bookmark,
   SquarePen,
@@ -12,7 +11,8 @@ import {
   Group,
   Calendar,
   ClipboardCheck,
-  ShieldCheck
+  ShieldCheck,
+  Briefcase
 } from "lucide-react";
 
 type Submenu = {
@@ -52,35 +52,28 @@ export function getMenuList(pathname: string): Group[] {
       groupLabel: "GENERAL",
       menus: [
         {
-          href: "",
-          label: "Organization",
+          href: "/department",
+          label: "Group",
           icon: Building2,
-          submenus: [
-
-            {
-              href: "/organization",
-              label: "All Organization"
-            },
-            {
-              href: "/department",
-              label: "Department"
-            },
-            {
-              href: "/position",
-              label: "Position"
-            },
-          ]
+          active: pathname.includes("/department")
         },
-
+        {
+          href: "/position",
+          label: "Position",
+          icon: Briefcase,
+          active: pathname.includes("/position")
+        },
         {
           href: "/members",
           label: "Member",
-          icon: UserCheck
+          icon: UserCheck,
+          active: pathname.includes("/members")
         },
         {
           href: "/attendance",
           label: "Attendance",
-          icon: ClipboardCheck
+          icon: ClipboardCheck,
+          active: pathname.includes("/attendance")
         },
 
       ]
@@ -89,24 +82,28 @@ export function getMenuList(pathname: string): Group[] {
       groupLabel: "MANAGEMENT",
       menus: [
         {
-          href: "/users",
-          label: "Users",
-          icon: Users
-        },
-        {
           href: "/schedule",
           label: "Schedule",
-          icon: Calendar
+          icon: Calendar,
+          active: pathname.includes("/schedule")
         },
         {
           href: "/role",
           label: "Role",
-          icon: ShieldCheck
+          icon: ShieldCheck,
+          active: pathname.includes("/role")
         },
         {
           href: "/permission",
           label: "Permission",
-          icon: List
+          icon: List,
+          active: pathname.includes("/permission")
+        },
+        {
+          href: "/organization/settings",
+          label: "Organization Settings",
+          icon: Settings,
+          active: pathname.includes("/organization/settings")
         }
       ]
     }

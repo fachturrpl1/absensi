@@ -28,7 +28,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function DepartmentChart({ organizationId }: { organizationId: string }) {
+export function GroupChart({ organizationId }: { organizationId: string }) {
   const [chartData, setChartData] = useState<{ department: string; members: number }[]>([])
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export function DepartmentChart({ organizationId }: { organizationId: string }) 
     <Card>
       <CardHeader>
         <CardTitle>Member Distribution</CardTitle>
-        <CardDescription>Per Department</CardDescription>
+        <CardDescription>Per Group</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
@@ -70,7 +70,7 @@ export function DepartmentChart({ organizationId }: { organizationId: string }) 
         
         </div>
         <div className="text-muted-foreground leading-none">
-          Showing Data Distribution Members Per Departments
+          Showing Data Distribution Members Per Groups
         </div>
       </CardFooter>
     </Card>

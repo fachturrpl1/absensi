@@ -28,7 +28,7 @@ export default function UsersPage() {
             if (!response.success) throw new Error(response.message)
             setUsers(response.data)
         } catch (error: unknown) {
-            toast.error(error instanceof Error ? error.message : 'Unknown error')
+            toast.error(error instanceof Error ? error.message : 'An error occurred')
         } finally {
             setLoading(false)
         }
@@ -39,11 +39,11 @@ export default function UsersPage() {
     }, [])
 
     async function handleDelete(id: string) {
-        if (!confirm("Are you sure you want to delete this User?")) return
+        if (!confirm('Are you sure you want to delete this user?')) return
 
         const res = await deleteUsers(id)
         if (res.success) {
-            toast.success("Users deleted successfully")
+            toast.success('User deleted successfully')
             setUsers((prev) => prev.filter((m) => m.id !== id))
         } else {
             toast.error(res.message)
@@ -65,7 +65,7 @@ export default function UsersPage() {
         },
         {
             accessorKey: "phone",
-            header: "Phone",
+            header: "Phone Number",
 
         },
         {

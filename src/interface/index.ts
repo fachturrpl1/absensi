@@ -54,6 +54,7 @@ export interface IOrganization {
 }
 
 
+// Groups (stored as departments in database)
 export interface IDepartments {
     id: string;
     organization_id: string;
@@ -89,7 +90,7 @@ export interface IOrganization_member {
     organization_id: string;
     user_id: string;
     employee_id?: string;
-    department_id?: string;
+    department_id?: string; // References group (stored as department in DB)
     position_id?: string;
     direct_manager_id?: string;
     hire_date: string;
