@@ -30,6 +30,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
 
 import { IDepartments } from "@/interface"
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
     createDepartments,
     deleteDepartments,
@@ -63,12 +65,13 @@ export default function GroupsPage() {
     const params = useParams()
     const scheduleId = Number(params.id)
 
-    const [open, setOpen] = React.useState(false)
+    const [isModalOpen, setIsModalOpen] = React.useState(false)
     const [editingDetail, setEditingDetail] = React.useState<IDepartments | null>(null)
     const [groups, setGroups] = React.useState<IDepartments[]>([])
     const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
     const [loading, setLoading] = React.useState<boolean>(true)
     const [organizationId, setOrganizationId] = React.useState<string>("")
+    const { open: confirmOpen, setOpen: setConfirmOpen, onConfirm, handleConfirm } = useConfirmDialog()
 
     const supabase = createClient()
 
@@ -152,7 +155,7 @@ export default function GroupsPage() {
             }
             if (!res.success) throw new Error(res.message)
             toast.success(editingDetail ? 'Saved successfully' : 'Department created successfully')
-            setOpen(false)
+            setIsModalOpen(false)
             setEditingDetail(null)
             fetchGroups()
         } catch (err: unknown) {
@@ -161,23 +164,25 @@ export default function GroupsPage() {
     }
 
     const handleDelete = async (scheduleId: string | number) => {
-        try {
-            setLoading(true)
-            const response = await deleteDepartments(scheduleId)
-            if (!response.success) throw new Error(response.message)
-            toast.success('Department deleted successfully')
-            fetchGroups()
-        } catch (error: unknown) {
-            toast.error(error instanceof Error ? error instanceof Error ? error.message : 'Unknown error' : 'Unknown error')
-        } finally {
-            setLoading(false)
-        }
+        onConfirm(async () => {
+            try {
+                setLoading(true)
+                const response = await deleteDepartments(scheduleId)
+                if (!response.success) throw new Error(response.message)
+                toast.success('Department deleted successfully')
+                fetchGroups()
+            } catch (error: unknown) {
+                toast.error(error instanceof Error ? error.message : 'Unknown error')
+            } finally {
+                setLoading(false)
+            }
+        })
     }
 
     // --- definisi kolom ---
     const columns: ColumnDef<IDepartments>[] = [
         { accessorKey: "code", header: "Code" },
-        { accessorKey: "name", header: "Department Name" },
+        { accessorKey: "name", header: "Name" },
         { accessorKey: "description", header: "Description" },
         {
             id: "actions",
@@ -193,7 +198,7 @@ export default function GroupsPage() {
                             onClick={() => {
                                 setEditingDetail(ws)
                                 form.reset(ws)
-                                setOpen(true)
+                                setIsModalOpen(true)
                             }}
                         >
                             <Pencil />
@@ -214,9 +219,17 @@ export default function GroupsPage() {
 
     return (
         <ContentLayout title="Departments">
+            <ConfirmDialog
+                open={confirmOpen}
+                onOpenChange={setConfirmOpen}
+                onConfirm={handleConfirm}
+                title="Delete Department"
+                description="Are you sure you want to delete this department? This action cannot be undone."
+                confirmText="Delete"
+            />
             <div className="w-full max-w-6xl mx-auto">
                 <div className="items-center my-7">
-                    <Dialog open={open} onOpenChange={setOpen}>
+                    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                         <DialogTrigger asChild className="float-end ml-5">
                             <Button
                                 onClick={() => {

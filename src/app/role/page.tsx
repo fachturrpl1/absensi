@@ -18,6 +18,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
     Form,
     FormControl,
@@ -124,6 +125,9 @@ export default function RolesPage() {
         }
     }
 
+    const [confirmOpen, setConfirmOpen] = React.useState(false)
+    const [roleToDelete, setRoleToDelete] = React.useState<number | null>(null)
+
 
     // --- definisi kolom ---
     const columns: ColumnDef<IRole>[] = [
@@ -155,7 +159,10 @@ export default function RolesPage() {
                             variant="outline"
                             size="icon"
                             className="text-red-500 border-0 cursor-pointer"
-                            onClick={() => handleDelete(ws.id)}
+                            onClick={() => {
+                                setRoleToDelete(Number(ws.id))
+                                setConfirmOpen(true)
+                            }}
                         >
                             <Trash />
                         </Button>
@@ -175,6 +182,19 @@ export default function RolesPage() {
         <ContentLayout title="Roles">
             
             <div className="w-full max-w-6xl mx-auto">
+                <ConfirmDialog
+                    open={confirmOpen}
+                    onOpenChange={setConfirmOpen}
+                    title="Delete Role"
+                    description="Are you sure you want to delete this role?"
+                    onConfirm={async () => {
+                        if (roleToDelete) {
+                            await handleDelete(roleToDelete)
+                            setConfirmOpen(false)
+                            setRoleToDelete(null)
+                        }
+                    }}
+                />
                 <div className=" items-center my-7">
                    
                     <Dialog open={open} onOpenChange={setOpen}>

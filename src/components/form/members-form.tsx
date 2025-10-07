@@ -158,14 +158,23 @@ export default function MembersForm({
             setLoading(true);
 
             const { card_number, card_type, ...memberData } = values;
+
+            // 🔑 sanitize date fields
+            const safeMemberData = {
+                ...memberData,
+                hire_date: memberData.hire_date || new Date().toISOString().slice(0, 10), // YYYY-MM-DD
+                probation_end_date: memberData.probation_end_date || null,
+            };
+
+
             let memberId: string | null = null;
 
             if (formType === "edit" && initialValues?.id) {
-                const res = await updateOrganizationMember(initialValues.id, memberData);
+                const res = await updateOrganizationMember(initialValues.id, safeMemberData);
                 if (!res.success) throw new Error(res.message);
                 memberId = initialValues.id;
             } else {
-                const res = await createOrganizationMember(memberData);
+                const res = await createOrganizationMember(safeMemberData);
                 if (!res.success || !res.data) throw new Error(res.message);
                 memberId = res.data.id;
             }

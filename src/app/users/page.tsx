@@ -14,6 +14,8 @@ import LoadingSkeleton from "@/components/loading-skeleton"
 import { deleteUsers, getAllUsers } from "@/action/users"
 import { useRouter } from "next/navigation"
 import { ContentLayout } from "@/components/admin-panel/content-layout"
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 export default function UsersPage() {
     const [Users, setUsers] = React.useState<IUser[]>([])
@@ -25,8 +27,9 @@ export default function UsersPage() {
             setLoading(true)
 
             const response: unknown = await getAllUsers()
-            if (!response.success) throw new Error(response.message)
-            setUsers(response.data)
+            const res = response as { success: boolean; message?: string; data: IUser[] }
+            if (!res.success) throw new Error(res.message)
+            setUsers(res.data)
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'An error occurred')
         } finally {
@@ -38,16 +41,18 @@ export default function UsersPage() {
         fetchData()
     }, [])
 
-    async function handleDelete(id: string) {
-        if (!confirm('Are you sure you want to delete this user?')) return
+    const { open, setOpen, onConfirm, handleConfirm } = useConfirmDialog()
 
-        const res = await deleteUsers(id)
-        if (res.success) {
-            toast.success('User deleted successfully')
-            setUsers((prev) => prev.filter((m) => m.id !== id))
-        } else {
-            toast.error(res.message)
-        }
+    async function handleDelete(id: string) {
+        onConfirm(async () => {
+            const res = await deleteUsers(id)
+            if (res.success) {
+                toast.success('User deleted successfully')
+                setUsers((prev) => prev.filter((m) => m.id !== id))
+            } else {
+                toast.error(res.message)
+            }
+        })
     }
 
     // --- definisi kolom ---
@@ -122,15 +127,20 @@ export default function UsersPage() {
 
     return (
         <ContentLayout title="Users">
+            <ConfirmDialog
+                open={open}
+                onOpenChange={setOpen}
+                onConfirm={handleConfirm}
+                title="Delete User"
+                description="Are you sure you want to delete this user? This action cannot be undone."
+                confirmText="Delete"
+            />
 
             <div className="w-full max-w-6xl mx-auto">
-
-
                 {loading ? (
                     <LoadingSkeleton />
                 ) : (
                     <div>
-                      
                         <DataTable columns={columns} data={Users} filterColumn="first_name" />
                     </div>
                 )}

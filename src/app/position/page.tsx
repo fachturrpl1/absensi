@@ -48,6 +48,8 @@ import { getAllOrganization } from "@/action/organization"
 import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { createClient } from "@/utils/supabase/client"
 import { Can } from "@/components/can"
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 const positionSchema = z.object({
     organization_id: z.string().min(1, "Organization is required"),
@@ -60,26 +62,26 @@ const positionSchema = z.object({
 
 type PositionsForm = z.infer<typeof positionSchema>
 
-export default function WorkSchedulesPage() {
+export default function PositionsPage() {
     const params = useParams()
-    const scheduleId = Number(params.id)
+    const positionId = Number(params.id)
 
     const [open, setOpen] = React.useState(false)
     const [editingDetail, setEditingDetail] = React.useState<IPositions | null>(null)
-    const [schedules, setSchedules] = React.useState<IPositions[]>([])
+    const [positions, setPositions] = React.useState<IPositions[]>([])
     const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
     const [loading, setLoading] = React.useState<boolean>(true)
     const [organizationId, setOrganizationId] = React.useState<string>("")
 
     const supabase = createClient()
 
-    const fetchSchedules = async () => {
+    const fetchPositions = async () => {
         try {
             setLoading(true)
             const response: unknown = await getAllPositions()
             const typedResponse = response as { success: boolean; data: IPositions[]; message: string }
             if (!typedResponse.success) throw new Error(typedResponse.message)
-            setSchedules(typedResponse.data)
+            setPositions(typedResponse.data)
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'An error occurred')
         } finally {
@@ -118,10 +120,10 @@ export default function WorkSchedulesPage() {
     }
 
     React.useEffect(() => {
-        fetchSchedules()
+        fetchPositions()
         fetchOrganizations()
         fetchOrganizationId()
-    }, [scheduleId])
+    }, [positionId])
 
     const form = useForm<PositionsForm>({
         resolver: zodResolver(positionSchema),
@@ -160,19 +162,22 @@ export default function WorkSchedulesPage() {
             toast.success(editingDetail ? 'Saved successfully' : 'Position created successfully')
             setOpen(false)
             setEditingDetail(null)
-            fetchSchedules()
+            fetchPositions()
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : 'Unknown error')
         }
     }
 
-    const handleDelete = async (scheduleId: string | number) => {
+    const [confirmOpen, setConfirmOpen] = React.useState(false)
+    const [positionToDelete, setPositionToDelete] = React.useState<number | null>(null)
+
+    const handleDelete = async (positionId: string | number) => {
         try {
             setLoading(true)
-            const response = await deletePositions(scheduleId)
+            const response = await deletePositions(positionId)
             if (!response.success) throw new Error(response.message)
             toast.success('Position deleted successfully')
-            fetchSchedules()
+            fetchPositions()
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'Unknown error')
         } finally {
@@ -209,7 +214,10 @@ export default function WorkSchedulesPage() {
                             variant="outline"
                             size="icon"
                             className="text-red-500 border-0 cursor-pointer"
-                            onClick={() => handleDelete(ws.id)}
+                            onClick={() => {
+                                setPositionToDelete(Number(ws.id))
+                                setConfirmOpen(true)
+                            }}
                         >
                             <Trash />
                         </Button>
@@ -222,6 +230,19 @@ export default function WorkSchedulesPage() {
     return (
         <ContentLayout title="Positions">
             <div className="w-full max-w-6xl mx-auto">
+                <ConfirmDialog
+                    open={confirmOpen}
+                    onOpenChange={setConfirmOpen}
+                    title="Delete Position"
+                    description="Are you sure you want to delete this position?"
+                    onConfirm={async () => {
+                        if (positionToDelete) {
+                            await handleDelete(positionToDelete)
+                            setConfirmOpen(false)
+                            setPositionToDelete(null)
+                        }
+                    }}
+                />
                 <div className="items-center my-7">
                     <Dialog open={open} onOpenChange={setOpen}>
                         <DialogTrigger asChild className="float-end  ml-5">
@@ -366,7 +387,7 @@ export default function WorkSchedulesPage() {
                 {loading ? (
                     <LoadingSkeleton />
                 ) : (
-                    <DataTable columns={columns} data={schedules} filterColumn="title" />
+                    <DataTable columns={columns} data={positions} filterColumn="title" />
                 )}
             </div>
         </ContentLayout>

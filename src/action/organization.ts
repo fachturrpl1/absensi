@@ -1,6 +1,7 @@
 "use server";
 import { createSupabaseClient } from "@/config/supabase-config";
 import { IOrganization } from "@/interface";
+import { createClient } from "@/utils/supabase/server";
 
 // ➕ Add Organization
 export const addOrganization = async (organization: Partial<IOrganization>) => {
@@ -19,7 +20,7 @@ export const addOrganization = async (organization: Partial<IOrganization>) => {
 
 // ✏️ Update Organization
 export const updateOrganization = async (id: string, organization: Partial<IOrganization>) => {
- 
+
   const supabase = await createSupabaseClient();
   const { data, error } = await supabase
     .from("organizations")
@@ -93,7 +94,7 @@ export const deleteLogo = async (fileUrl: string | null): Promise<boolean> => {
     const supabase = await createSupabaseClient();
     // Ambil hanya path relatif setelah bucket name
     const url = new URL(fileUrl);
-    const path = url.pathname.split("/object/public/logo/")[1]; 
+    const path = url.pathname.split("/object/public/logo/")[1];
 
     if (!path) {
       console.error("Invalid logo URL:", fileUrl);
@@ -196,4 +197,23 @@ export const getUserOrganizationName = async (userId: string) => {
   }
 
   return { success: true, name: org.name }
+}
+
+export async function getOrganizationTimezoneByUserId(userId: string) {
+  if (!userId) return "UTC";
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select("organizations(timezone)") // ✅ relasi benar sesuai FK
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error fetching organization timezone:", error);
+    return "UTC";
+  }
+
+  return data?.organizations?.timezone ?? "UTC";
 }

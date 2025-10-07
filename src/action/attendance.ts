@@ -1,44 +1,60 @@
 "use server";
+
 import { createClient } from "@/utils/supabase/server";
 import { IAttendance } from "@/interface";
 
-// Helper function to get the supabase client
 async function getSupabase() {
   return await createClient();
 }
 
-// // ➕ Add MemIOrganization_member
-// export const addOrganization_member = async (Organization_member: Partial<IOrganization_member>) => {
-//   const { data, error } = await supabase.from("Organization_members").insert([Organization_member]).select().single();
-
-//   if (error) {
-//     return { success: false, message: error instanceof Error ? error.message : 'Unknown error', data: null };
-//   }
-//   return { success: true, message: "Show added successfully", data: data as IOrganization_member };
-// };
-
 export const getAllAttendance = async () => {
   const supabase = await getSupabase();
-  const { data, error } = await supabase.from("attendance_records").select("*").order("created_at",{ascending:true});
+
+  const { data, error } = await supabase
+    .from("attendance_records")
+    .select(`
+      id,
+      organization_member_id,
+      attendance_date,
+      actual_check_in,
+      actual_check_out,
+      status,
+      created_at,
+      organization_members:organization_member_id (
+        id,
+        user_id,
+        organization_id,
+        organizations:organization_id (
+          id,
+          name,
+          timezone
+        )
+      )
+    `);
 
   if (error) {
-    return { success: false, message: error instanceof Error ? error.message : 'Unknown error', data: [] };
+    console.error("❌ Error fetching attendance:", error);
+    return { success: false, data: [] };
   }
 
-  return { success: true, data: data as IAttendance[] };
+  // Ubah format agar timezone muncul langsung
+  const mapped = (data || []).map((item: any) => ({
+    ...item,
+    timezone:
+      item.organization_members?.organizations?.timezone || "Asia/Jakarta",
+  }));
+
+  console.log("✅ Attendance fetched with timezone:", mapped);
+
+  return { success: true, data: mapped as IAttendance[] };
 };
 
 export async function updateAttendanceStatus(id: string, status: string) {
   const supabase = await getSupabase();
-  try {
-    const { error } = await supabase
-      .from("attendance_records")
-      .update({ status })
-      .eq("id", id)
-
-    if (error) throw error
-    return { success: true }
-  } catch (error: unknown) {
-    return { success: false, message: error instanceof Error ? error instanceof Error ? error.message : 'Unknown error' : 'Unknown error' }
-  }
+  const { error } = await supabase
+    .from("attendance_records")
+    .update({ status })
+    .eq("id", id);
+  if (error) return { success: false, message: error.message };
+  return { success: true };
 }

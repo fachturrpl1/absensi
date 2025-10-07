@@ -1,26 +1,37 @@
-import type { Metadata } from "next"
+import type { Metadata } from "next";
+import "./globals.css";
 
-import "./globals.css"
-import { Toaster } from "@/components/ui/sonner"
-import { ThemeProvider } from "@/components/providers/theme-provider"
-import { UserProvider } from "@/components/user-provider"
-import AdminPanelLayout from "@/components/admin-panel/admin-panel-layout"
-import { createClient } from "@/utils/supabase/server"
+import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/providers/theme-provider";
+import { UserProvider } from "@/components/user-provider";
+import { TimezoneProvider } from "@/components/timezone-provider";
+import AdminPanelLayout from "@/components/admin-panel/admin-panel-layout";
+
+import { createClient } from "@/utils/supabase/server";
+import { getOrganizationTimezoneByUserId } from "@/action/organization";
 
 import { Geist, Geist_Mono } from "next/font/google";
 
 const geistSans = Geist({
   subsets: ["latin"],
   variable: "--font-geist-sans",
-  fallback: ['system-ui', 'arial'],
-  display: 'swap',
+  fallback: ["system-ui", "arial"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
-  fallback: ['ui-monospace', 'SFMono-Regular', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
-  display: 'swap',
+  fallback: [
+    "ui-monospace",
+    "SFMono-Regular",
+    "Monaco",
+    "Consolas",
+    "Liberation Mono",
+    "Courier New",
+    "monospace",
+  ],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -34,36 +45,32 @@ export const metadata: Metadata = {
       ? `https://${process.env.VERCEL_URL}`
       : `http://localhost:${process.env.PORT || 3000}`
   ),
-  alternates: {
-    canonical: "/",
-  },
+  alternates: { canonical: "/" },
   openGraph: {
     url: "/",
-    title: "shadcn/ui sidebar",
-    description:
-      "A stunning and functional retractable sidebar for Next.js built on top of shadcn/ui complete with desktop and mobile responsiveness.",
+    title: "Attendance App",
+    description: "A stunning and functional retractable sidebar for Next.js.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "shadcn/ui sidebar",
-    description:
-      "A stunning and functional retractable sidebar for Next.js built on top of shadcn/ui complete with desktop and mobile responsiveness.",
+    title: "Attendance App",
+    description: "A stunning and functional retractable sidebar for Next.js.",
   },
-}
+};
 
 export default async function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  // 🔹 Ambil user dari Supabase (server component)
-  const supabase = await createClient()
+  // Ambil user Supabase (server-side)
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await supabase.auth.getUser();
 
-  const metadata = user?.user_metadata || {}
+  const metadata = user?.user_metadata || {};
 
   const mappedUser = user
     ? {
@@ -74,17 +81,22 @@ export default async function RootLayout({
           user.email!,
         profile_photo_url: metadata.profile_photo_url ?? "",
       }
-    : null
+    : null;
+
+  // 🔹 Ambil timezone dari organisasi user
+  const timezone = user ? await getOrganizationTimezoneByUserId(user.id) : "UTC";
 
   return (
     <html lang="id" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <UserProvider user={mappedUser} />
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AdminPanelLayout>{children}</AdminPanelLayout>
-        </ThemeProvider>
-        <Toaster />
+        <TimezoneProvider timezone={timezone}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <AdminPanelLayout>{children}</AdminPanelLayout>
+          </ThemeProvider>
+          <Toaster />
+        </TimezoneProvider>
       </body>
     </html>
-  )
+  );
 }

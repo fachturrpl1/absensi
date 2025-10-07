@@ -18,6 +18,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
     Form,
     FormControl,
@@ -125,6 +126,9 @@ export default function RolesPage() {
         }
     }
 
+    const [confirmOpen, setConfirmOpen] = React.useState(false)
+    const [permissionToDelete, setPermissionToDelete] = React.useState<number | null>(null)
+
 
     // --- definisi kolom ---
     const columns: ColumnDef<IPermission>[] = [
@@ -157,7 +161,10 @@ export default function RolesPage() {
                             variant="outline"
                             size="icon"
                             className="text-red-500 border-0 cursor-pointer"
-                            onClick={() => handleDelete(ws.id)}
+                            onClick={() => {
+                                setPermissionToDelete(Number(ws.id))
+                                setConfirmOpen(true)
+                            }}
                         >
                             <Trash />
                         </Button>
@@ -172,6 +179,19 @@ export default function RolesPage() {
         <ContentLayout title="Permission">
             
             <div className="w-full max-w-6xl mx-auto">
+                <ConfirmDialog
+                    open={confirmOpen}
+                    onOpenChange={setConfirmOpen}
+                    title="Delete Permission"
+                    description="Are you sure you want to delete this permission?"
+                    onConfirm={async () => {
+                        if (permissionToDelete) {
+                            await handleDelete(permissionToDelete)
+                            setConfirmOpen(false)
+                            setPermissionToDelete(null)
+                        }
+                    }}
+                />
                 <div className=" items-center my-7">
                     
                     <Dialog open={open} onOpenChange={setOpen}>

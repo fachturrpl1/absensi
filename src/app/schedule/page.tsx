@@ -18,6 +18,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
     Form,
     FormControl,
@@ -141,6 +142,9 @@ export default function WorkSchedulesPage() {
         }
     }
 
+    const [confirmOpen, setConfirmOpen] = React.useState(false)
+    const [scheduleToDelete, setScheduleToDelete] = React.useState<number | null>(null)
+
 
     // --- definisi kolom ---
     const columns: ColumnDef<IWorkSchedule>[] = [
@@ -172,7 +176,10 @@ export default function WorkSchedulesPage() {
                             variant="outline"
                             size="icon"
                             className="text-red-500 border-0 cursor-pointer"
-                            onClick={() => handleDelete(ws.id)}
+                            onClick={() => {
+                                setScheduleToDelete(Number(ws.id))
+                                setConfirmOpen(true)
+                            }}
                         >
                             <Trash />
                         </Button>
@@ -191,6 +198,19 @@ export default function WorkSchedulesPage() {
         <ContentLayout title="Work Schedules">
         
             <div className="w-full max-w-6xl mx-auto">
+                <ConfirmDialog
+                    open={confirmOpen}
+                    onOpenChange={setConfirmOpen}
+                    title="Delete Schedule" 
+                    description="Are you sure you want to delete this schedule?"
+                    onConfirm={async () => {
+                        if (scheduleToDelete) {
+                            await handleDelete(scheduleToDelete)
+                            setConfirmOpen(false)
+                            setScheduleToDelete(null)
+                        }
+                    }}
+                />
                 <div className=" items-center my-7">
                  
                     <Dialog open={open} onOpenChange={setOpen}>

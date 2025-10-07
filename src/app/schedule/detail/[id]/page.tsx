@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   Form,
   FormControl,
@@ -252,6 +253,8 @@ export default function WorkScheduleDetailsPage() {
 
   const [open, setOpen] = React.useState(false)
   const [editingDetail, setEditingDetail] = React.useState<IWorkScheduleDetail | null>(null)
+  const [confirmOpen, setConfirmOpen] = React.useState(false)
+  const [scheduleDetailToDelete, setScheduleDetailToDelete] = React.useState<string | null>(null)
 
   const fetchDetails = async () => {
     setLoading(true)
@@ -299,10 +302,10 @@ export default function WorkScheduleDetailsPage() {
     }
   }
 
-  const handleDelete = async (showId: string) => {
+  const handleDelete = async (detailId: string) => {
     try {
       setLoading(true);
-      const response = await deleteWorkScheduleDetail(showId);
+      const response = await deleteWorkScheduleDetail(detailId);
       if (!response.success) throw new Error(response.message);
 
       toast.success("Schedule detail deleted successfully");
@@ -351,7 +354,10 @@ export default function WorkScheduleDetailsPage() {
               variant="outline"
               size="icon"
               className="text-red-500"
-              onClick={() => handleDelete(d.id)}
+              onClick={() => {
+                setScheduleDetailToDelete(d.id)
+                setConfirmOpen(true)
+              }}
             >
               <Trash className="h-4 w-4" />
             </Button>
@@ -364,6 +370,19 @@ export default function WorkScheduleDetailsPage() {
   return (
     <ContentLayout title="Schedule Details">
       <div className="w-full max-w-6xl mx-auto py-8">
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title="Delete Schedule Detail"
+          description="Are you sure you want to delete this schedule detail?"
+          onConfirm={async () => {
+            if (scheduleDetailToDelete) {
+              await handleDelete(scheduleDetailToDelete)
+              setConfirmOpen(false)
+              setScheduleDetailToDelete(null)
+            }
+          }}
+        />
         <div className="">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild className="float-end ml-5">

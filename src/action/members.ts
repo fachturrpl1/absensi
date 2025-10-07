@@ -51,6 +51,7 @@ export const getAllOrganization_member = async () => {
 
   return { success: true, data: data as IOrganization_member[] };
 };
+
 // ✏️ Update Organization
 export const updateOrganizationMember = async (id: string, organization: Partial<IOrganization_member>) => {
   const supabase = await getSupabase();

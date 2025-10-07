@@ -13,6 +13,8 @@ import LoadingSkeleton from "@/components/loading-skeleton"
 import { getAllUsers } from "@/action/users"
 import { useRouter } from "next/navigation"
 import { ContentLayout } from "@/components/admin-panel/content-layout"
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 export default function MembersPage() {
   const [members, setMembers] = React.useState<IOrganization_member[]>([])
@@ -53,16 +55,18 @@ export default function MembersPage() {
     fetchData()
   }, [])
 
-  async function handleDelete(id: string) {
-    if (!confirm('Are you sure you want to delete this member?')) return
+  const { open, setOpen, onConfirm, handleConfirm } = useConfirmDialog()
 
-    const res = await deleteOrganization_member(id)
-    if (res.success) {
-      toast.success('Member deleted successfully')
-      setMembers((prev) => prev.filter((m) => m.id !== id))
-    } else {
-      toast.error(res.message)
-    }
+  async function handleDelete(id: string) {
+    onConfirm(async () => {
+      const res = await deleteOrganization_member(id)
+      if (res.success) {
+        toast.success('Member deleted successfully')
+        setMembers((prev) => prev.filter((m) => m.id !== id))
+      } else {
+        toast.error(res.message)
+      }
+    })
   }
 
   // --- definisi kolom ---
@@ -134,10 +138,16 @@ export default function MembersPage() {
 
   return (
     <ContentLayout title="Member List">
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        onConfirm={handleConfirm}
+        title="Delete Member"
+        description="Are you sure you want to delete this member? This action cannot be undone."
+        confirmText="Delete"
+      />
 
       <div className="w-full max-w-6xl mx-auto">
-      
-
         {loading ? (
           <LoadingSkeleton />
         ) : (
