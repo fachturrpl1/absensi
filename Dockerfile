@@ -26,6 +26,6 @@ WORKDIR /app
 # Copy hasil build dari builder
 COPY --from=builder /app ./
 
-EXPOSE 3000
-ENV PORT=3000
+EXPOSE 4005
+ENV PORT=4005
 CMD ["pnpm", "start"]
