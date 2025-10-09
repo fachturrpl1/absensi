@@ -27,7 +27,8 @@ export const getAllAttendance = async () => {
         organizations:organization_id (
           id,
           name,
-          timezone
+          timezone,
+          time_format
         )
       )
     `);
@@ -37,11 +38,11 @@ export const getAllAttendance = async () => {
     return { success: false, data: [] };
   }
 
-  // Ubah format agar timezone muncul langsung
+  // Ubah format agar timezone dan time_format muncul langsung
   const mapped = (data || []).map((item: any) => ({
     ...item,
-    timezone:
-      item.organization_members?.organizations?.timezone || "Asia/Jakarta",
+    timezone: item.organization_members?.organizations?.timezone || "Asia/Jakarta",
+    time_format: item.organization_members?.organizations?.time_format || "24h",
   }));
 
   console.log("✅ Attendance fetched with timezone:", mapped);

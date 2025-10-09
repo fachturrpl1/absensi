@@ -3,7 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 
-interface OrganizationUpdateData {
+export interface OrganizationUpdateData {
   name: string;
   legal_name?: string | null;
   description?: string | null;
@@ -19,6 +19,7 @@ interface OrganizationUpdateData {
   country_code?: string | null;
   industry?: string | null;
   logo_url?: string | null;
+  time_format?: '12h' | '24h';
 }
 
 // Get current user's organization
@@ -44,6 +45,7 @@ export async function getCurrentUserOrganization(): Promise<{
     currency_code: string | null;
     country_code: string;
     industry: string | null;
+    time_format: '12h' | '24h';
     created_at: string;
     updated_at: string;
   };
@@ -86,6 +88,7 @@ export async function getCurrentUserOrganization(): Promise<{
           industry,
           inv_code,
           is_active,
+          time_format,
           created_at,
           updated_at
         )
@@ -103,30 +106,34 @@ export async function getCurrentUserOrganization(): Promise<{
       return { success: false, message: "No organization found for this user" };
     }
 
+    const org = member.organization as any;
+    const timeFormat = org.time_format === '12h' ? '12h' : '24h';
+    
     return {
       success: true,
-      data: member.organization as unknown as {
-        id: number;
-        code: string;
-        name: string;
-        legal_name: string | null;
-        description: string | null;
-        address: string | null;
-        city: string | null;
-        state_province: string | null;
-        postal_code: string | null;
-        phone: string | null;
-        website: string | null;
-        email: string | null;
-        logo_url: string | null;
-        inv_code: string;
-        is_active: boolean;
-        timezone: string | null;
-        currency_code: string | null;
-        country_code: string;
-        industry: string | null;
-        created_at: string;
-        updated_at: string;
+      data: {
+        id: org.id,
+        code: org.code,
+        name: org.name,
+        legal_name: org.legal_name,
+        description: org.description,
+        address: org.address,
+        city: org.city,
+        state_province: org.state_province,
+        postal_code: org.postal_code,
+        phone: org.phone,
+        website: org.website,
+        email: org.email,
+        logo_url: org.logo_url,
+        inv_code: org.inv_code,
+        is_active: org.is_active,
+        timezone: org.timezone,
+        currency_code: org.currency_code,
+        country_code: org.country_code,
+        industry: org.industry,
+        time_format: timeFormat,
+        created_at: org.created_at,
+        updated_at: org.updated_at
       },
       message: "Organization data fetched successfully"
     };
@@ -186,6 +193,7 @@ export async function updateOrganization(updateData: OrganizationUpdateData): Pr
         country_code: updateData.country_code?.trim() || null,
         industry: updateData.industry?.trim() || null,
         logo_url: updateData.logo_url,
+        time_format: updateData.time_format || '24h',
         updated_at: new Date().toISOString()
       })
       .eq("id", member.organization_id);

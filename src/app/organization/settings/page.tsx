@@ -22,7 +22,7 @@ import {
   RefreshCw,
   Loader2
 } from "lucide-react";
-import { getCurrentUserOrganization, updateOrganization, regenerateInviteCode } from "@/action/organization-settings";
+import { getCurrentUserOrganization, updateOrganization, regenerateInviteCode, OrganizationUpdateData } from "@/action/organization-settings";
 import { ContentLayout } from "@/components/admin-panel/content-layout";
 import { INDUSTRY_OPTIONS, findIndustryValue, getIndustryLabel } from "@/lib/constants/industries";
 import { useImageCompression } from "@/hooks/use-image-compression";
@@ -48,6 +48,7 @@ interface OrganizationData {
   currency_code: string | null;
   country_code: string;
   industry: string | null;
+  time_format: '12h' | '24h';
   created_at: string;
   updated_at: string;
 }
@@ -59,7 +60,23 @@ export default function OrganizationSettingsPage() {
   const [showInviteCode, setShowInviteCode] = useState(false);
   const [inviteCodeCopied, setInviteCodeCopied] = useState(false);
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    legal_name: string;
+    description: string;
+    address: string;
+    city: string;
+    state_province: string;
+    postal_code: string;
+    phone: string;
+    website: string;
+    email: string;
+    timezone: string;
+    currency_code: string;
+    country_code: string;
+    industry: string;
+    time_format: '12h' | '24h';
+  }>({
     name: "",
     legal_name: "",
     description: "",
@@ -73,7 +90,8 @@ export default function OrganizationSettingsPage() {
     timezone: "UTC",
     currency_code: "USD",
     country_code: "ID",
-    industry: ""
+    industry: "",
+    time_format: "24h"
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -95,7 +113,7 @@ export default function OrganizationSettingsPage() {
         
         if (result.success && result.data) {
           const data = result.data;
-          setOrgData(data);
+          setOrgData(data as OrganizationData);
           setFormData({
             name: data.name || "",
             legal_name: data.legal_name || "",
@@ -110,7 +128,8 @@ export default function OrganizationSettingsPage() {
             timezone: data.timezone || "UTC",
             currency_code: data.currency_code || "USD",
             country_code: data.country_code || "ID",
-            industry: findIndustryValue(data.industry) // Normalize industry value
+            industry: findIndustryValue(data.industry), // Normalize industry value
+            time_format: data.time_format || '24h'
           });
           setLogoPreview(data.logo_url);
         } else {
@@ -266,9 +285,23 @@ export default function OrganizationSettingsPage() {
         }
       }
       
-      const updateData = {
-        ...formData,
-        logo_url: logoUrl
+      const updateData: OrganizationUpdateData = {
+        name: formData.name,
+        legal_name: formData.legal_name,
+        description: formData.description,
+        address: formData.address,
+        city: formData.city,
+        state_province: formData.state_province,
+        postal_code: formData.postal_code,
+        phone: formData.phone,
+        website: formData.website,
+        email: formData.email,
+        timezone: formData.timezone,
+        currency_code: formData.currency_code,
+        country_code: formData.country_code,
+        industry: formData.industry,
+        logo_url: logoUrl,
+        time_format: formData.time_format
       };
       
       const result = await updateOrganization(updateData);
@@ -280,7 +313,7 @@ export default function OrganizationSettingsPage() {
         // Refresh organization data
         const refreshResult = await getCurrentUserOrganization();
         if (refreshResult.success && refreshResult.data) {
-          setOrgData(refreshResult.data);
+          setOrgData(refreshResult.data as OrganizationData);
         }
       } else {
         toast.error(result.message || "Failed to update organization settings");
@@ -315,7 +348,10 @@ export default function OrganizationSettingsPage() {
         // Refresh organization data to get the new invite code
         const refreshResult = await getCurrentUserOrganization();
         if (refreshResult.success && refreshResult.data) {
-          setOrgData(refreshResult.data);
+          setOrgData({
+            ...refreshResult.data,
+            time_format: (refreshResult.data as any).time_format || '24h'
+          });
         }
       } else {
         toast.error(result.message || "Failed to regenerate invitation code");
@@ -729,6 +765,19 @@ export default function OrganizationSettingsPage() {
                   {/* UTC */}
                   <SelectItem value="UTC">UTC (Coordinated Universal Time)</SelectItem>
                   <SelectItem value="GMT">GMT (Greenwich Mean Time)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="time_format">Time Format</Label>
+              <Select value={formData.time_format} onValueChange={(value: '12h' | '24h') => setFormData({...formData, time_format: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select time format" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="12h">12-Hour Format (AM/PM)</SelectItem>
+                  <SelectItem value="24h">24-Hour Format</SelectItem>
                 </SelectContent>
               </Select>
             </div>

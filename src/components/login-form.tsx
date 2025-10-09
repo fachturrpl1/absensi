@@ -41,7 +41,11 @@ export function LoginForm({
     }
 
 
-    setLoading(false)
+    // Jika login gagal, kembalikan loading ke false agar pengguna bisa coba lagi.
+    // Jika sukses, biarkan loading tetap true sehingga tombol tetap disabled
+    if (!result.success) {
+      setLoading(false)
+    }
   }
 
   return (
@@ -82,8 +86,12 @@ export function LoginForm({
           </Link>
         </div>
 
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={loading || success}
+        >
+          {loading ? 'Logging in...' : success ? 'Logged in' : 'Login'}
         </Button>
 
         {error && <p className="text-sm text-red-500">{error}</p>}

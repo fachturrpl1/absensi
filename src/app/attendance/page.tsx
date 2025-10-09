@@ -166,7 +166,7 @@ export default function AttendancePage() {
       cell: ({ row }) => {
         const utc = row.getValue("actual_check_in") as string;
         const tz = row.original.timezone || "Asia/Jakarta";
-        return <span>{formatLocalTime(utc, tz, "HH:mm")}</span>;
+        return <span>{formatLocalTime(utc, tz, row.original.time_format || '24h')}</span>;
       },
     },
     {
@@ -175,7 +175,7 @@ export default function AttendancePage() {
       cell: ({ row }) => {
         const utc = row.getValue("actual_check_out") as string;
         const tz = row.original.timezone || "Asia/Jakarta";
-        return <span>{formatLocalTime(utc, tz, "HH:mm")}</span>;
+        return <span>{formatLocalTime(utc, tz, row.original.time_format || '24h')}</span>;
       },
     },
     {

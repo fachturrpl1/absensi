@@ -48,6 +48,7 @@ export interface IOrganization {
     logo_url?: string | null
     is_active: boolean
     subscription_tier?: string // ✅ perbaikan typo
+    time_format?: '12h' | '24h'
     subscription_expires_at?: string | null
     created_at: string
     updated_at?: string
@@ -145,9 +146,8 @@ export interface IAttendance {
 
 
     organization_member?: IOrganization_member;
-
-
-
+    timezone?: string;
+    time_format?: '12h' | '24h';
 }
 
 export interface IWorkSchedule {

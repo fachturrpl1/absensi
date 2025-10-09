@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { UserProvider } from "@/components/user-provider";
 import { TimezoneProvider } from "@/components/timezone-provider";
+import { TimeFormatProvider } from "@/components/time-format-provider";
 import AdminPanelLayout from "@/components/admin-panel/admin-panel-layout";
 
 import { createClient } from "@/utils/supabase/server";
@@ -92,7 +93,9 @@ export default async function RootLayout({
         <UserProvider user={mappedUser} />
         <TimezoneProvider timezone={timezone}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <AdminPanelLayout>{children}</AdminPanelLayout>
+            <TimeFormatProvider>
+              <AdminPanelLayout>{children}</AdminPanelLayout>
+            </TimeFormatProvider>
           </ThemeProvider>
           <Toaster />
         </TimezoneProvider>
