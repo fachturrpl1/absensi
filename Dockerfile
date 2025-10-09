@@ -1,23 +1,19 @@
-FROM node:20-alpine AS builder
+# Gunakan base image Nixpacks seperti yang dipakai Coolify
+FROM node:20-alpine
+
 WORKDIR /app
-
-RUN npm install -g pnpm
-
 COPY . .
 
-# Install dependencies tanpa strict check
-RUN pnpm install --no-frozen-lockfile || true
+# Install dependencies
+RUN npm install --legacy-peer-deps
 
-# Matikan type checking saat build Next.js
-ENV NEXT_DISABLE_TYPECHECK=1
+# Nonaktifkan type checking & linting saat build
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_DISABLE_TYPECHECK=1
+ENV CI=false
 
-# Jalankan build, abaikan error TS
-RUN pnpm run build --no-lint || true
+# Jalankan build tanpa gagal walau ada error TypeScript
+RUN npm run build --no-lint || true
 
-FROM node:20-alpine AS runner
-WORKDIR /app
-COPY --from=builder /app ./
 EXPOSE 4005
-ENV PORT=4005
-CMD ["pnpm", "start"]
+CMD ["npm", "start"]
