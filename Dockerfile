@@ -1,21 +1,8 @@
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-
-# 🚫 Skip lint & typecheck
-ENV NEXT_DISABLE_ESLINT=true
-ENV NEXT_DISABLE_TYPECHECK=true
-ENV CI=false
-ENV NODE_OPTIONS="--no-warnings"
-
-RUN npm run build --if-present || echo "⚠️ Build skipped typecheck"
-
-# ================================
 FROM node:20-alpine AS runner
 WORKDIR /app
+
+# install jq (hanya 300KB)
+RUN apk add --no-cache jq
 
 ENV NODE_ENV=production
 COPY --from=builder /app ./
