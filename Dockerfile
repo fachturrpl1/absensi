@@ -29,16 +29,16 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Salin hasil build
+# Salin hasil build dari stage builder
 COPY --from=builder /app ./
 
-# Tambahkan script “start-only” biar bisa jalan tanpa rebuild
+# Tambahkan script “start-only” agar bisa dijalankan langsung
 RUN node -e "\
-  const fs=require('fs'); \
-  const pkg=JSON.parse(fs.readFileSync('package.json')); \
-  pkg.scripts=pkg.scripts||{}; \
-  pkg.scripts['start-only']='next start'; \
-  fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2)); \
+const fs=require('fs'); \
+const pkg=JSON.parse(fs.readFileSync('package.json')); \
+pkg.scripts=pkg.scripts||{}; \
+pkg.scripts['start-only']='next start'; \
+fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2)); \
 "
 
 # Set port
@@ -46,4 +46,4 @@ ENV PORT=4005
 EXPOSE 4005
 
 # Jalankan aplikasi
-CMD [\"npm\", \"run\", \"start-only\"]
+CMD ["npm", "run", "start-only"]
