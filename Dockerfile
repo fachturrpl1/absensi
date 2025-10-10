@@ -4,13 +4,14 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Salin package files dan install dependencies
+# Salin file dependency & install
 COPY package*.json ./
-RUN npm install
+RUN npm ci --legacy-peer-deps
 
-# Salin semua source code dan build Next.js
+# Salin semua source code
 COPY . .
-# Nonaktifkan lint biar gak error pas build
+
+# Build Next.js (skip lint biar gak gagal)
 RUN npm run build --no-lint
 
 
@@ -19,13 +20,12 @@ RUN npm run build --no-lint
 # =====================
 FROM node:20-alpine AS runner
 WORKDIR /app
-
 ENV NODE_ENV=production
 
-# Salin hasil build dari builder
+# Salin hasil build
 COPY --from=builder /app ./
 
-# Tambahkan script "start-only" supaya bisa jalan tanpa rebuild
+# Tambahkan script “start-only” agar bisa run tanpa rebuild
 RUN node -e "\
   const fs=require('fs'); \
   const pkg=JSON.parse(fs.readFileSync('package.json')); \
@@ -34,9 +34,10 @@ RUN node -e "\
   fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2)); \
 "
 
-# Port Coolify kamu
-EXPOSE 4005
+# Tentukan port default
 ENV PORT=4005
+EXPOSE 4005
 
-# Jalankan Next.js
+# Jalankan app
 CMD ["npm", "run", "start-only"]
+
