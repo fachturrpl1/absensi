@@ -75,14 +75,18 @@ export async function getTodayAttendance() {
   const supabase = await getSupabase();
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
 
+  // Get authorized member IDs first
+  const { data: memberIds } = await supabase
+    .from('organization_members')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .eq('is_active', true);
+
   const { count, error } = await supabase
     .from("attendance_records")
-    .select(`
-      *,
-      organization_member!inner(organization_id)
-    `, { count: "exact", head: true })
+    .select('id', { count: 'exact', head: true })
+    .in('organization_member_id', memberIds?.map(m => m.id) || [])
     .eq("attendance_date", today)
-    .eq("organization_member.organization_id", organizationId)
     .in("status", ["present", "late"]);
 
   if (error) {
@@ -100,16 +104,20 @@ export async function getTodayLateAttendance() {
   }
 
   const supabase = await getSupabase();
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  const today = new Date().toISOString().split('T')[0];
+
+  // Get authorized member IDs first
+  const { data: memberIds } = await supabase
+    .from('organization_members')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .eq('is_active', true);
 
   const { count, error } = await supabase
     .from("attendance_records")
-    .select(`
-      *,
-      organization_member!inner(organization_id)
-    `, { count: "exact", head: true })
+    .select('id', { count: 'exact', head: true })
+    .in('organization_member_id', memberIds?.map(m => m.id) || [])
     .eq("attendance_date", today)
-    .eq("organization_member.organization_id", organizationId)
     .eq("status", "late");
 
   if (error) {
@@ -127,16 +135,20 @@ export async function getTodayAbsent() {
   }
 
   const supabase = await getSupabase();
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  const today = new Date().toISOString().split('T')[0];
+
+  // Get authorized member IDs first
+  const { data: memberIds } = await supabase
+    .from('organization_members')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .eq('is_active', true);
 
   const { count, error } = await supabase
     .from("attendance_records")
-    .select(`
-      *,
-      organization_member!inner(organization_id)
-    `, { count: "exact", head: true })
+    .select('id', { count: 'exact', head: true })
+    .in('organization_member_id', memberIds?.map(m => m.id) || [])
     .eq("attendance_date", today)
-    .eq("organization_member.organization_id", organizationId)
     .eq("status", "absent");
 
   if (error) {
@@ -154,16 +166,20 @@ export async function getTodayExcused() {
   }
 
   const supabase = await getSupabase();
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  const today = new Date().toISOString().split('T')[0];
+
+  // Get authorized member IDs first
+  const { data: memberIds } = await supabase
+    .from('organization_members')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .eq('is_active', true);
 
   const { count, error } = await supabase
     .from("attendance_records")
-    .select(`
-      *,
-      organization_member!inner(organization_id)
-    `, { count: "exact", head: true })
+    .select('id', { count: 'exact', head: true })
+    .in('organization_member_id', memberIds?.map(m => m.id) || [])
     .eq("attendance_date", today)
-    .eq("organization_member.organization_id", organizationId)
     .eq("status", "excused");
 
   if (error) {
@@ -182,14 +198,18 @@ export async function getPendingApprovals() {
 
   const supabase = await getSupabase();
 
+  // Get authorized member IDs first
+  const { data: memberIds } = await supabase
+    .from('organization_members')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .eq('is_active', true);
+
   const { count, error } = await supabase
     .from("attendance_records")
-    .select(`
-      *,
-      organization_member!inner(organization_id)
-    `, { count: "exact", head: true })
-    .eq("organization_member.organization_id", organizationId)
-    .eq("validated_status", "pending");
+    .select('id', { count: 'exact', head: true })
+    .in('organization_member_id', memberIds?.map(m => m.id) || [])
+    .eq("validation_status", "pending");
 
   if (error) {
     return { success: false, data: 0 };
@@ -280,18 +300,22 @@ export async function getTodayAttendanceDistribution() {
   const supabase = await getSupabase();
   const today = new Date().toISOString().split('T')[0];
 
+  // Get authorized member IDs first
+  const { data: memberIds } = await supabase
+    .from('organization_members')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .eq('is_active', true);
+
   // Get all possible attendance statuses for today
   const statuses = ['present', 'late', 'absent', 'excused'];
   const results = await Promise.all(
     statuses.map(async (status) => {
       const { count } = await supabase
         .from("attendance_records")
-        .select(`
-          *,
-          organization_member!inner(organization_id)
-        `, { count: "exact", head: true })
+        .select('id', { count: 'exact', head: true })
+        .in('organization_member_id', memberIds?.map(m => m.id) || [])
         .eq("attendance_date", today)
-        .eq("organization_member.organization_id", organizationId)
         .eq("status", status);
       
       return { status, count: count || 0 };
@@ -347,4 +371,103 @@ export async function getDashboardStats() {
     totalGroups: totalGroups.data,
     memberDistribution: memberDistribution.data
   };
+}
+
+// Get monthly attendance stats
+export async function getMonthlyAttendanceStats() {
+  try {
+    const supabase = await getSupabase();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
+    }
+
+    const organizationId = await getUserOrganizationId();
+    if (!organizationId) {
+      return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
+    }
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-12
+
+    // Get first and last day of month
+    function monthRange(year: number, month: number) {
+      const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
+      const lastDay = new Date(Date.UTC(year, month, 0, 23, 59, 59));
+      
+      const formatDate = (date: Date) => {
+        const y = date.getUTCFullYear();
+        const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const d = String(date.getUTCDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      };
+
+      return { 
+        start: formatDate(start),
+        end: formatDate(lastDay)
+      };
+    }
+
+    const curRange = monthRange(currentYear, currentMonth);
+    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+    const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+    const prevRange = monthRange(prevYear, prevMonth);
+
+    // Get authorized member IDs first
+    const { data: memberIds } = await supabase
+      .from('organization_members')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true);
+
+    const [currentRes, previousRes] = await Promise.all([
+      supabase
+        .from('attendance_records')
+        .select('id', { count: 'exact', head: true })
+        .in('organization_member_id', memberIds?.map(m => m.id) || [])
+        .gte('attendance_date', curRange.start)
+        .lte('attendance_date', curRange.end)
+        .in('status', ['present', 'late']),
+
+      supabase
+        .from('attendance_records')
+        .select('id', { count: 'exact', head: true })
+        .in('organization_member_id', memberIds?.map(m => m.id) || [])
+        .gte('attendance_date', prevRange.start)
+        .lte('attendance_date', prevRange.end)
+        .in('status', ['present', 'late'])
+    ]);
+
+    const currentCount = currentRes.count ?? 0;
+    const previousCount = previousRes.count ?? 0;
+
+    let percentChange = 0;
+    if (previousCount === 0 && currentCount > 0) {
+      percentChange = 100;
+    } else if (previousCount === 0 && currentCount === 0) {
+      percentChange = 0;
+    } else {
+      percentChange = Math.round(((currentCount - previousCount) / previousCount) * 100);
+    }
+
+    return {
+      success: true,
+      data: {
+        currentMonth: currentCount,
+        previousMonth: previousCount,
+        percentChange
+      }
+    };
+  } catch (e) {
+    return {
+      success: false,
+      data: {
+        currentMonth: 0,
+        previousMonth: 0,
+        percentChange: 0
+      }
+    };
+  }
 }

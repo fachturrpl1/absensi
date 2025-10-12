@@ -120,8 +120,11 @@ export async function middleware(req: NextRequest) {
         .eq("user_id", user.id)
         .maybeSingle()
 
+      // Normalize typing from Supabase response for safer runtime checks
+      const memberData: any = member
+
       // If user has no organization or organization is inactive, redirect to onboarding
-      if (!member || !member.organization || !member.organization.is_active || !member.is_active) {
+      if (!memberData || !memberData.organization || !memberData.organization.is_active || !memberData.is_active) {
         return NextResponse.redirect(new URL("/onboarding", req.url))
       }
     } catch (error) {
@@ -134,5 +137,8 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"], // exclude assets
+  // Exclude static assets and debug/api routes used during development from auth middleware
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api/debug|api/dashboard/monthly).*)",
+  ],
 }

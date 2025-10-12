@@ -30,12 +30,14 @@ const chartConfig = {
 
 export function GroupChart({ organizationId }: { organizationId: string }) {
   const [chartData, setChartData] = useState<{ department: string; members: number }[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchData() {
       const res = await getDepartmentMembersByOrganization(organizationId)
       if (res.success) {
         setChartData(res.data)
+        setLoading(false)
       }
     }
     fetchData()
@@ -49,6 +51,11 @@ export function GroupChart({ organizationId }: { organizationId: string }) {
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
+          {loading && chartData.length === 0 ? (
+            <div className="flex gap-2">
+              <div className="w-full h-36 bg-muted animate-pulse rounded" />
+            </div>
+          ) : (
           <BarChart accessibilityLayer data={chartData}>
             <CartesianGrid vertical={false} />
             <XAxis
@@ -63,6 +70,7 @@ export function GroupChart({ organizationId }: { organizationId: string }) {
             />
             <Bar dataKey="members" fill="var(--color-members)" radius={8} />
           </BarChart>
+          )}
         </ChartContainer>
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm">

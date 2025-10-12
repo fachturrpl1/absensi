@@ -39,6 +39,7 @@ export const getAllAttendance = async () => {
   }
 
   // Ubah format agar timezone dan time_format muncul langsung
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapped = (data || []).map((item: any) => ({
     ...item,
     timezone: item.organization_members?.organizations?.timezone || "Asia/Jakarta",

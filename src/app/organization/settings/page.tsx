@@ -15,13 +15,13 @@ import {
   Save,
   Eye,
   EyeOff,
-  Copy,
+  ClipboardCheck,
   Check,
   Upload,
   Image,
   RefreshCw,
-  Loader2
-} from "lucide-react";
+  Loader2,
+} from "@/components/icons/lucide-exports";
 import { getCurrentUserOrganization, updateOrganization, regenerateInviteCode, OrganizationUpdateData } from "@/action/organization-settings";
 import { ContentLayout } from "@/components/admin-panel/content-layout";
 import { INDUSTRY_OPTIONS, findIndustryValue, getIndustryLabel } from "@/lib/constants/industries";
@@ -343,14 +343,15 @@ export default function OrganizationSettingsPage() {
     try {
       const result = await regenerateInviteCode();
       
-      if (result.success) {
+        if (result.success) {
         toast.success(result.message);
         // Refresh organization data to get the new invite code
         const refreshResult = await getCurrentUserOrganization();
         if (refreshResult.success && refreshResult.data) {
+          const refreshed = refreshResult.data as Partial<OrganizationData>;
           setOrgData({
-            ...refreshResult.data,
-            time_format: (refreshResult.data as any).time_format || '24h'
+            ...(refreshResult.data as OrganizationData),
+            time_format: refreshed.time_format || '24h'
           });
         }
       } else {
@@ -422,7 +423,7 @@ export default function OrganizationSettingsPage() {
                   onClick={copyInviteCode}
                   disabled={!showInviteCode}
                 >
-                  {inviteCodeCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {inviteCodeCopied ? <Check className="h-4 w-4" /> : <ClipboardCheck className="h-4 w-4" />}
                 </Button>
                 <Button
                   size="sm"

@@ -4,7 +4,6 @@ import {
   Bookmark,
   SquarePen,
   LayoutGrid,
-  LucideIcon,
   List,
   Building2,
   UserCheck,
@@ -12,8 +11,9 @@ import {
   Calendar,
   ClipboardCheck,
   ShieldCheck,
-  Briefcase
-} from "lucide-react";
+  Briefcase,
+} from "@/components/icons/lucide-exports";
+import type { LucideIcon } from "@/components/icons/lucide-exports";
 
 type Submenu = {
   href: string;
@@ -49,7 +49,7 @@ export function getMenuList(pathname: string): Group[] {
     },
 
     {
-      groupLabel: "GENERAL",
+      groupLabel: "General",
       menus: [
         {
           href: "/department",
@@ -79,7 +79,7 @@ export function getMenuList(pathname: string): Group[] {
       ]
     },
     {
-      groupLabel: "MANAGEMENT",
+      groupLabel: "Managment",
       menus: [
         {
           href: "/schedule",

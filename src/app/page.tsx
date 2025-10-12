@@ -8,7 +8,9 @@ import { ChartLineDots } from "@/components/line-chart";
 import { MemberStatusChart } from "@/components/pie-chart";
 import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
-import { Users, UserCheck, Clock, UserX, FileCheck, Building2 } from "lucide-react";
+// icons moved to centralized exports; removed unused lucide-react imports
+import { CustomerInsights } from "@/components/customer-insights";
+import { SectionCards } from "@/components/section-cards";
 
 
 export default function Home() {
@@ -39,6 +41,7 @@ export default function Home() {
   })
   const [loading, setLoading] = useState(true)
   const [organizationLoading, setOrganizationLoading] = useState(true)
+  const [monthlyAttendance, setMonthlyAttendance] = useState<{ currentMonth: number; previousMonth: number; percentChange: number } | null>(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -54,6 +57,20 @@ export default function Home() {
         if (res.organizationId) {
           const stats = await getDashboardStats()
           setDashboardStats(stats)
+
+          // Fetch monthly attendance from server-side API (server will use service/client with cookies)
+          try {
+            const resp = await fetch('/api/dashboard/monthly', { credentials: 'same-origin' })
+            const json = await resp.json()
+            console.log('[dashboard] /api/dashboard/monthly response', json)
+            if (json && json.success && json.data) {
+              setMonthlyAttendance(json.data)
+            } else {
+              console.error('Monthly attendance API returned no data', json)
+            }
+          } catch (err) {
+            console.error('Failed to fetch monthly attendance from API', err)
+          }
         }
       } else {
         setOrganizationLoading(false)
@@ -93,35 +110,11 @@ export default function Home() {
   return (
     <ContentLayout title="Dashboard">
       <div className="mt-10">
-        <div className="w-full max-w-6xl mx-auto">
+  <div className="w-full max-w-[90rem] px-6 mx-auto">
           <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-            <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-              <DashboardCard
-                title="Total Employees"
-                value={dashboardStats.totalActiveMembers}
-                description="Active employees"
-                icon={Users}
-                iconColor="text-blue-600"
-                loading={loading}
-              />
-              <DashboardCard
-                title="Total Groups"
-                value={dashboardStats.totalGroups}
-                description="Active groups"
-                icon={Building2}
-                iconColor="text-purple-600"
-                loading={loading}
-              />
-              <DashboardCard
-                title="All Employees"
-                value={dashboardStats.totalMembers}
-                description="All employees in organization"
-                icon={UserCheck}
-                iconColor="text-green-600"
-                loading={loading}
-              />
+            <div className="mt-4">
+              <SectionCards monthlyAttendance={monthlyAttendance} />
             </div>
-            <div className="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
             {orgId && <GroupChart organizationId={orgId} />}

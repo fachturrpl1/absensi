@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+// use simple animate-pulse for loading
 import {
   ChartConfig,
   ChartContainer,
@@ -66,37 +67,41 @@ export function CustomPieChart({
           config={chartConfig}
           className="mx-auto aspect-square max-h-[250px]"
         >
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <ChartTooltip
-                cursor={false}
-                content={<ChartTooltipContent hideLabel />}
-              />
-              <Pie
-                data={data}
-                dataKey="value"
-                nameKey="name"
-                innerRadius={innerRadius}
-                outerRadius={outerRadius}
-                strokeWidth={2}
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-                {showLabel && (
-                  <LabelList
-                    dataKey="value"
-                    className="fill-background"
-                    stroke="none"
-                    fontSize={12}
-                    formatter={(value: number) => 
-                      total > 0 ? `${((value / total) * 100).toFixed(0)}%` : '0%'
-                    }
-                  />
-                )}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
+          {data.length === 0 ? (
+            <div className="w-full h-44 bg-muted animate-pulse rounded" />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel />}
+                />
+                <Pie
+                  data={data}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={innerRadius}
+                  outerRadius={outerRadius}
+                  strokeWidth={2}
+                >
+                  {data.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                  {showLabel && (
+                    <LabelList
+                      dataKey="value"
+                      className="fill-background"
+                      stroke="none"
+                      fontSize={12}
+                      formatter={(value: number) => 
+                        total > 0 ? `${((value / total) * 100).toFixed(0)}%` : '0%'
+                      }
+                    />
+                  )}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </ChartContainer>
       </CardContent>
       {footerText && (

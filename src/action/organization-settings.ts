@@ -106,7 +106,9 @@ export async function getCurrentUserOrganization(): Promise<{
       return { success: false, message: "No organization found for this user" };
     }
 
-    const org = member.organization as any;
+  // org comes from supabase select shape; use any here to avoid tight typing in this helper
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const org = member.organization as any;
     const timeFormat = org.time_format === '12h' ? '12h' : '24h';
     
     return {

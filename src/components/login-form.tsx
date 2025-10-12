@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, FormEvent } from "react"
-import { GalleryVerticalEnd } from "lucide-react"
+import { GalleryVerticalEnd } from "@/components/icons/lucide-exports"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -80,7 +80,7 @@ export function LoginForm({
         </div>
 
         <div className="text-center text-sm text-muted-foreground">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="/auth/signup" className="text-primary underline underline-offset-4 hover:text-primary/80">
             Sign up
           </Link>
