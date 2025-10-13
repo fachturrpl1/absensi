@@ -7,8 +7,23 @@ export async function GET() {
     if (result && result.success) {
       return NextResponse.json({ success: true, data: result.data })
     }
+
+    // Log and forward helpful non-sensitive error information to the client
     console.error('getMonthlyAttendanceStats returned no data', result)
-    return NextResponse.json({ success: false, message: 'No data' }, { status: 404 })
+    const safeError: any = {}
+    if (result && typeof result === 'object') {
+      if ((result as any).error) {
+        safeError.message = (result as any).error.message || String((result as any).error)
+        safeError.code = (result as any).error.code || null
+      } else if ((result as any).message) {
+        safeError.message = (result as any).message
+      } else {
+        safeError.message = 'No data available'
+      }
+    } else {
+      safeError.message = 'No data available'
+    }
+    return NextResponse.json({ success: false, error: safeError, data: result?.data || null }, { status: 502 })
   } catch (err) {
     console.error('API /dashboard/monthly error', err)
     return NextResponse.json({ success: false, message: 'Failed to fetch monthly attendance stats' }, { status: 500 })

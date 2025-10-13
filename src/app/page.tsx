@@ -5,6 +5,7 @@ import { ContentLayout } from "@/components/admin-panel/content-layout";
 import { DashboardCard } from "@/components/dashboard-card";
 import { GroupChart } from "@/components/bar-chart";
 import { ChartLineDots } from "@/components/line-chart";
+import { AttendanceByGroupTable } from "@/components/attendance-by-group-table/attendance-by-group-table";
 import { MemberStatusChart } from "@/components/pie-chart";
 import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
@@ -40,6 +41,7 @@ export default function Home() {
     memberDistribution: { status: [], employment: [] }
   })
   const [loading, setLoading] = useState(true)
+  const [attendanceGroups, setAttendanceGroups] = useState<any[] | null>(null)
   const [organizationLoading, setOrganizationLoading] = useState(true)
   const [monthlyAttendance, setMonthlyAttendance] = useState<{ currentMonth: number; previousMonth: number; percentChange: number } | null>(null)
 
@@ -62,11 +64,11 @@ export default function Home() {
           try {
             const resp = await fetch('/api/dashboard/monthly', { credentials: 'same-origin' })
             const json = await resp.json()
-            console.log('[dashboard] /api/dashboard/monthly response', json)
+            console.log('[dashboard] /api/dashboard/monthly response status', resp.status, json)
             if (json && json.success && json.data) {
               setMonthlyAttendance(json.data)
             } else {
-              console.error('Monthly attendance API returned no data', json)
+              console.error('Monthly attendance API returned no data', { status: resp.status, body: json })
             }
           } catch (err) {
             console.error('Failed to fetch monthly attendance from API', err)
@@ -79,6 +81,45 @@ export default function Home() {
     }
     fetchData()
   }, [])
+
+  // fetch attendance groups after orgId is available (avoid showing other orgs)
+  useEffect(() => {
+    if (!orgId) return
+
+    async function fetchGroups() {
+      try {
+        const query = `?organizationId=${orgId}`
+        const resp = await fetch(`/api/attendance/group${query}`)
+        const json = await resp.json()
+        if (json && json.success) {
+          // transform data to table schema
+          const transformed = (json.data || []).map((g: any) => {
+            const present_plus_late = (g.present || 0) + (g.late || 0)
+            const not_in_others = (g.absent || 0) + (g.excused || 0) + (g.others || 0)
+            const total = g.total || present_plus_late + not_in_others
+            const percent_present = total > 0 ? present_plus_late / total : 0
+            const late_count = g.late || 0
+            const overall = present_plus_late + not_in_others
+            return {
+              group: g.group,
+              present_plus_late,
+              not_in_others,
+              percent_present,
+              late_count,
+              overall,
+            }
+          })
+          setAttendanceGroups(transformed)
+        } else {
+          setAttendanceGroups([])
+        }
+      } catch (err) {
+        console.error('Failed to load attendance groups', err)
+        setAttendanceGroups([])
+      }
+    }
+    fetchGroups()
+  }, [orgId])
 
   // Show loading state while checking organization
   if (organizationLoading) {
@@ -127,10 +168,18 @@ export default function Home() {
           </div>
           
           <div className="grid grid-cols-1 gap-5">
-            <ChartLineDots />
+                {/* replaced ChartLineDots with AttendanceByGroupTable */}
+                <div>
+                  <AttendanceByGroupTable 
+                    data={attendanceGroups} 
+                    isLoading={loading || organizationLoading} 
+                  />
+                </div>
           </div>
         </div>
       </div>
     </ContentLayout>
   );
 }
+
+    

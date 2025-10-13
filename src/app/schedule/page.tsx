@@ -47,6 +47,7 @@ import {
 import LoadingSkeleton from "@/components/loading-skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getAllOrganization } from "@/action/organization"
+import { createClient } from "@/utils/supabase/client"
 import { ContentLayout } from "@/components/admin-panel/content-layout"
 
 const scheduleSchema = z.object({
@@ -68,6 +69,7 @@ export default function WorkSchedulesPage() {
     const [editingDetail, setEditingDetail] = React.useState<IWorkSchedule | null>(null)
     const [schedules, setSchedules] = React.useState<IWorkSchedule[]>([])
     const [organizations, setOrganizations] = React.useState<{ id: string, name: string }[]>([])
+    const [organizationId, setOrganizationId] = React.useState<string>("")
     const [loading, setLoading] = React.useState<boolean>(true)
 
     const fetchSchedules = async () => {
@@ -93,9 +95,30 @@ export default function WorkSchedulesPage() {
             toast.error(error instanceof Error ? error.message : 'Unknown error')
         }
     }
+    const supabase = createClient()
+
+    const fetchOrganizationId = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) return
+
+            const { data, error } = await supabase
+                .from("organization_members")
+                .select("organization_id")
+                .eq("user_id", user.id)
+
+            if (error) throw error
+            if (data && data.length > 0) {
+                setOrganizationId(String(data[0].organization_id))
+            }
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'Unknown error')
+        }
+    }
     React.useEffect(() => {
-        fetchSchedules(),
-            fetchOrganizations()
+        fetchSchedules()
+        fetchOrganizations()
+        fetchOrganizationId()
     }, [scheduleId])
 
     const form = useForm<ScheduleForm>({
@@ -109,6 +132,23 @@ export default function WorkSchedulesPage() {
             is_active: true,
         },
     })
+
+    // sync organizationId into the form when available
+    React.useEffect(() => {
+        if (organizationId) {
+            form.reset({
+                ...form.getValues(),
+                organization_id: organizationId,
+            })
+        }
+    }, [organizationId])
+
+    // resolve organization name from loaded organizations when organizationId is present
+    const organizationName = React.useMemo(() => {
+        if (!organizationId) return ""
+        const found = organizations.find((o) => String(o.id) === String(organizationId))
+        return found ? found.name : ""
+    }, [organizationId, organizations])
 
     const handleSubmit = async (values: ScheduleForm) => {
         try {
@@ -145,7 +185,7 @@ export default function WorkSchedulesPage() {
     const [confirmOpen, setConfirmOpen] = React.useState(false)
     const [scheduleToDelete, setScheduleToDelete] = React.useState<number | null>(null)
 
-
+Select
     // --- definisi kolom ---
     const columns: ColumnDef<IWorkSchedule>[] = [
         { accessorKey: "code", header: "Code" },
@@ -235,33 +275,58 @@ export default function WorkSchedulesPage() {
                                     onSubmit={form.handleSubmit(handleSubmit)}
                                     className="space-y-4"
                                 >
-                                    <FormField
-                                        control={form.control}
-                                        name="organization_id"
-                                        render={({ field }) => (
+                                    {/* If we already know user's organization, hide the select and use a hidden input.
+                                        Otherwise fall back to showing the organization selector. */}
+                                    {organizationId ? (
+                                        <>
+                                            <FormField
+                                                control={form.control}
+                                                name="organization_id"
+                                                render={({ field }) => (
+                                                    <input
+                                                        type="hidden"
+                                                        value={organizationId}
+                                                        onChange={field.onChange}
+                                                    />
+                                                )}
+                                            />
+                                            {/* Show organization name as plain text so user knows which org will be used */}
                                             <FormItem>
                                                 <FormLabel>Organization</FormLabel>
-                                                <Select
-                                                    onValueChange={field.onChange}
-                                                    defaultValue={field.value}
-                                                >
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select Organization" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {organizations.map((org) => (
-                                                            <SelectItem key={org.id} value={String(org.id)}>
-                                                                {org.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
+                                                <div className="text-sm text-muted-foreground">
+                                                    {organizationName || "(Organization name not loaded)"}
+                                                </div>
                                             </FormItem>
-                                        )}
-                                    />
+                                        </>
+                                    ) : (
+                                        <FormField
+                                            control={form.control}
+                                            name="organization_id"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Organization</FormLabel>
+                                                    <Select
+                                                        onValueChange={field.onChange}
+                                                        defaultValue={field.value}
+                                                    >
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Select Organization" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {organizations.map((org) => (
+                                                                <SelectItem key={org.id} value={String(org.id)}>
+                                                                    {org.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    )}
                                     <FormField
                                         control={form.control}
                                         name="code"

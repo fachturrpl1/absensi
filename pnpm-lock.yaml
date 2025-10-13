@@ -162,6 +162,9 @@ importers:
       eslint-config-next:
         specifier: 15.5.3
         version: 15.5.3(eslint@9.36.0(jiti@2.6.1))(typescript@5.9.3)
+      eslint-formatter-unix:
+        specifier: ^8.40.0
+        version: 8.40.0
       shadcn:
         specifier: ^3.4.0
         version: 3.4.0(@types/node@20.19.19)(typescript@5.9.3)
@@ -2050,6 +2053,10 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  eslint-formatter-unix@8.40.0:
+    resolution: {integrity: sha512-gfsmFZ/cb1MobrMfYl2IPFLZEz2tWQVO/tnmziNQdhWJMN85GfZD64dcPsEgaEoeVKgAtK6W9LWLlOxhJWZvDw==}
+    engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
   eslint-import-resolver-node@0.3.9:
     resolution: {integrity: sha512-WFj2isz22JahUv+B788TlO3N6zL3nNJGU8CcZbPZvVEkBPaJdCV4vy5wyghty5ROFbCRnm132v8BScu5/1BQ8g==}
@@ -5697,6 +5704,8 @@ snapshots:
       - eslint-import-resolver-webpack
       - eslint-plugin-import-x
       - supports-color
+
+  eslint-formatter-unix@8.40.0: {}
 
   eslint-import-resolver-node@0.3.9:
     dependencies:

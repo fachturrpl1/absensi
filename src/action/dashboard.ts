@@ -416,28 +416,55 @@ export async function getMonthlyAttendanceStats() {
     const prevRange = monthRange(prevYear, prevMonth);
 
     // Get authorized member IDs first
-    const { data: memberIds } = await supabase
+    const { data: memberIds, error: memberIdsError } = await supabase
       .from('organization_members')
       .select('id')
       .eq('organization_id', organizationId)
       .eq('is_active', true);
 
-    const [currentRes, previousRes] = await Promise.all([
-      supabase
-        .from('attendance_records')
-        .select('id', { count: 'exact', head: true })
-        .in('organization_member_id', memberIds?.map(m => m.id) || [])
-        .gte('attendance_date', curRange.start)
-        .lte('attendance_date', curRange.end)
-        .in('status', ['present', 'late']),
+    if (memberIdsError) {
+      console.error('Failed to fetch organization member ids', memberIdsError);
+      return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 }, error: memberIdsError };
+    }
 
-      supabase
-        .from('attendance_records')
-        .select('id', { count: 'exact', head: true })
-        .in('organization_member_id', memberIds?.map(m => m.id) || [])
-        .gte('attendance_date', prevRange.start)
-        .lte('attendance_date', prevRange.end)
-        .in('status', ['present', 'late'])
+    const memberIdList = (memberIds || []).map((m: any) => m.id);
+
+    // small retry wrapper for transient network errors
+    async function queryWithRetry(queryFn: () => Promise<any>, retries = 1) {
+      try {
+        return await queryFn();
+      } catch (err) {
+        if (retries > 0) {
+          console.warn('Query failed, retrying once', err);
+          return await queryWithRetry(queryFn, retries - 1);
+        }
+        throw err;
+      }
+    }
+
+    const [currentRes, previousRes] = await Promise.all([
+      queryWithRetry(() => Promise.resolve(
+        supabase
+          .from('attendance_records')
+          .select('id', { count: 'exact', head: true })
+          .in('organization_member_id', memberIdList || [])
+          .gte('attendance_date', curRange.start)
+          .lte('attendance_date', curRange.end)
+          .in('status', ['present', 'late'])
+          .then(res => res)
+      )),
+
+      queryWithRetry(() => Promise.resolve(
+        supabase
+          .from('attendance_records')
+          .select('id', { count: 'exact', head: true })
+          .in('organization_member_id', memberIdList || [])
+          .gte('attendance_date', prevRange.start)
+          .lte('attendance_date', prevRange.end)
+          .in('status', ['present', 'late'])
+          .then(res => res)
+      )
+      )
     ]);
 
     const currentCount = currentRes.count ?? 0;
