@@ -1,0 +1,216 @@
+import { NextResponse } from 'next/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { AuthError } from '@supabase/supabase-js'
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json()
+    const { email, token, token_hash, password, display_name } = body || {}
+
+    // Enhanced validation with detailed error messages
+    if (!email?.trim()) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Email is required', 
+        code: 'MISSING_EMAIL' 
+      }, { status: 400 })
+    }
+    
+    if (!token?.trim() && !token_hash?.trim()) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Valid invite token is required', 
+        code: 'MISSING_TOKEN' 
+      }, { status: 400 })
+    }
+    
+    if (!password?.trim()) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Password is required', 
+        code: 'MISSING_PASSWORD' 
+      }, { status: 400 })
+    }
+    
+    if (!display_name?.trim()) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Display name is required', 
+        code: 'MISSING_DISPLAY_NAME' 
+      }, { status: 400 })
+    }
+
+    // Password validation
+    if (password.length < 6) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Password must be at least 6 characters', 
+        code: 'INVALID_PASSWORD' 
+      }, { status: 400 })
+    }
+
+    const supabaseAnon = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!, 
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+
+    // Verify the invite token
+    const theToken = token ?? token_hash
+    let verifyData: any = null
+
+    try {
+      const result = await supabaseAnon.auth.verifyOtp({ 
+        email, 
+        token: theToken, 
+        type: 'invite' 
+      })
+
+      if (result.error) {
+        console.error('[accept-invite] verifyOtp failed', { 
+          error: result.error, 
+          email,
+          tokenLength: theToken?.length 
+        })
+
+        let errorMessage = 'Invalid or expired invite token'
+        let errorCode = 'INVITE_INVALID'
+        
+        if (result.error.message?.includes('expired')) {
+          errorMessage = 'This invite link has expired. Please request a new invite from your administrator.'
+          errorCode = 'INVITE_EXPIRED'
+        } else if (result.error.message?.includes('invalid')) {
+          errorMessage = 'This invite link is invalid. Please ensure you\'re using the complete link from your invite email.'
+          errorCode = 'INVITE_INVALID'
+        }
+        
+        return NextResponse.json({
+          success: false,
+          message: errorMessage,
+          code: errorCode
+        }, { status: 400 })
+      }
+
+      verifyData = result.data
+    } catch (error) {
+      console.error('[accept-invite] Unexpected error during verification:', error)
+      return NextResponse.json({
+        success: false,
+        message: 'An unexpected error occurred while verifying your invite. Please try again.',
+        code: 'VERIFICATION_ERROR'
+      }, { status: 500 })
+    }
+
+    const user = verifyData?.user
+    if (!user) {
+      console.error('[accept-invite] No user data after verification')
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Could not resolve user from invite token',
+        code: 'USER_NOT_FOUND'
+      }, { status: 400 })
+    }
+
+    // Use admin client to update user
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('[accept-invite] Missing service role key')
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Server configuration error',
+        code: 'CONFIG_ERROR'
+      }, { status: 500 })
+    }
+
+    const supabaseAdmin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!, 
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+
+    // Update user with new password and metadata
+    const { data: updatedUser, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      user.id,
+      {
+        password,
+        user_metadata: { 
+          display_name: display_name ?? (user.user_metadata?.display_name ?? 
+            `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`).trim()
+        },
+        email_confirm: true,
+      }
+    )
+
+    if (updateError) {
+      console.error('[accept-invite] admin.updateUserById failed', updateError)
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Failed to update user account',
+        code: 'UPDATE_FAILED'
+      }, { status: 500 })
+    }
+
+    // Handle organization membership
+    try {
+      const orgIdFromMeta = (updatedUser as any)?.user?.user_metadata?.organization_id ?? 
+        (updatedUser as any)?.user_metadata?.organization_id ?? 
+        (user.user_metadata?.organization_id)
+
+      if (orgIdFromMeta) {
+        const insertResp = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/organization_members`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
+            Prefer: 'return=representation',
+          },
+          body: JSON.stringify([{ 
+            user_id: user.id, 
+            organization_id: orgIdFromMeta, 
+            is_active: true, 
+            hire_date: new Date().toISOString().split('T')[0],
+            created_at: new Date().toISOString() 
+          }]),
+        })
+
+        if (!insertResp.ok) {
+          console.warn('[accept-invite] organization_members insert failed:', { 
+            status: insertResp.status, 
+            statusText: insertResp.statusText 
+          })
+        }
+      }
+    } catch (error) {
+      console.error('[accept-invite] Failed to insert organization_members:', error)
+    }
+
+    // Sign in the user to obtain a session
+    const { data: signInData, error: signInError } = await supabaseAnon.auth.signInWithPassword({ 
+      email: user.email!, 
+      password 
+    })
+
+    if (signInError) {
+      console.error('[accept-invite] signInWithPassword failed:', signInError)
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Account updated but automatic login failed. Please try logging in manually.',
+        code: 'LOGIN_FAILED',
+        user: updatedUser 
+      })
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Account accepted and logged in successfully', 
+      user: updatedUser,
+      session: signInData.session 
+    })
+
+  } catch (err: unknown) {
+    console.error('[accept-invite] Unexpected error:', err)
+    return NextResponse.json({ 
+      success: false, 
+      message: err instanceof Error ? err.message : 'An unexpected error occurred',
+      code: 'UNKNOWN_ERROR'
+    }, { status: 500 })
+  }
+}

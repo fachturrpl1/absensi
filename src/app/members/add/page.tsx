@@ -1,22 +1,15 @@
-
-
 "use client"
 
-import { ContentLayout } from "@/components/admin-panel/content-layout";
-import  MembersForm  from "@/components/form/members-form";
+import React from "react"
+import { ContentLayout } from "@/components/admin-panel/content-layout"
 
-
-export default function AddOrganizationPage() {
-    
+export default function AddOrganizationPageDisabled() {
     return (
-        <ContentLayout title="Add Member">
-          
-            <div className="w-full max-w-6xl mx-auto p-4">
-         
-                <MembersForm formType="add" />
-              
+        <ContentLayout title="Add Member (Disabled)">
+            <div className="w-full max-w-6xl mx-auto p-8 text-center">
+                <h2 className="text-lg font-semibold mb-2">Add Member feature is temporarily disabled</h2>
+                <p className="text-sm text-muted-foreground">The ability to invite or create members has been turned off while we make changes. Please contact the administrator to add members manually.</p>
             </div>
         </ContentLayout>
-
     )
 }

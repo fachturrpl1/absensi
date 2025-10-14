@@ -100,12 +100,16 @@ export async function middleware(req: NextRequest) {
     // Otherwise, let them stay on signup page to see the success message
   }
 
-  if (!user && !pathname.startsWith("/auth")) {
+  // Don't require auth for accept-invite (part of registration flow) or auth pages
+  const publicPaths = ["/auth", "/accept-invite"]
+  const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
+
+  if (!user && !isPublicPath) {
     return NextResponse.redirect(new URL("/auth/login", req.url))
   }
 
-  // Check if authenticated user has organization (except for onboarding page)
-  if (user && !pathname.startsWith("/onboarding") && !pathname.startsWith("/auth")) {
+  // Check if authenticated user has organization (except for onboarding page and accept-invite flow)
+  if (user && !pathname.startsWith("/onboarding") && !isPublicPath) {
     try {
       // Check if user has organization membership
       const { data: member } = await supabase
@@ -139,6 +143,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   // Exclude static assets and debug/api routes used during development from auth middleware
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/debug|api/dashboard/monthly).*)",
+    // Ensure our client logging endpoint and other debug APIs are excluded from auth middleware
+    "/((?!_next/static|_next/image|favicon.ico|api/debug|api/dashboard/monthly|api/log-client-error).*)",
   ],
 }

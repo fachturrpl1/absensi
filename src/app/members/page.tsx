@@ -72,7 +72,11 @@ export default function MembersPage() {
   // --- definisi kolom ---
   const columns: ColumnDef<IOrganization_member>[] = [
     {
-      accessorKey: "user",
+      id: "userFullName",
+      accessorFn: (row) => {
+        const user = (row as any).user as IUser | undefined
+        return user ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() : ""
+      },
       header: "Members",
       cell: ({ row }) => {
         const user = row.original.user
@@ -152,12 +156,8 @@ export default function MembersPage() {
           <LoadingSkeleton />
         ) : (
           <div>
-            <Link href="/members/add">
-              <Button className="flex gap-2 float-end ml-5">
-                <PlusCircleIcon className="w-5 h-5" /> Add Member
-              </Button>
-            </Link>
-            <DataTable columns={columns} data={members} filterColumn="user" />
+            {/* Add Member feature temporarily disabled */}
+            <DataTable columns={columns} data={members} filterColumn="userFullName" />
           </div>
         )}
       </div>

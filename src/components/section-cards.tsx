@@ -191,18 +191,6 @@ export function SectionCards({ monthlyAttendance }: { monthlyAttendance?: Monthl
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             {rfidStats ? rfidStats.currentMonth : <Skeleton className="w-20 h-8" />}
           </CardTitle>
-          <CardAction>
-            {/* If RFID returns a percentChange, hide tiny or 100% values similarly */}
-            {rfidStats && rfidStats.percentChange !== undefined && rfidStats.percentChange !== null ? (
-              Math.abs(rfidStats.percentChange) >= 1 && rfidStats.percentChange !== 100 ? (
-                <Badge variant="outline">{rfidStats.percentChange > 0 ? '+' : ''}{rfidStats.percentChange}%</Badge>
-              ) : (
-                <Badge variant="outline">—</Badge>
-              )
-            ) : (
-              <Badge variant="outline">—</Badge>
-            )}
-          </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">

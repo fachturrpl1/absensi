@@ -34,7 +34,8 @@ import { Columns3Cog, Loader2 } from "lucide-react" // Loader icon
 type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
-  filterColumn?: keyof TData
+  // allow either a real key of TData or a string id (for accessorFn columns)
+  filterColumn?: keyof TData | string
   isLoading?: boolean // ✅ Tambahkan props loading
 }
 
@@ -68,21 +69,41 @@ export function DataTable<TData, TValue>({
     },
   })
 
+  // Local controlled input to avoid filtering on every keystroke
+  const [inputValue, setInputValue] = React.useState<string>(() => {
+    return (
+      (table.getColumn(String(filterColumn ?? ""))?.getFilterValue() as string) ?? ""
+    )
+  })
+
+  function applyFilter() {
+    if (!filterColumn) return
+    table.getColumn(String(filterColumn))?.setFilterValue(inputValue)
+    // Reset to first page when applying a new filter
+    table.setPageIndex(0)
+  }
+
+
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end items-center gap-4">
         {/* Filter */}
         {filterColumn && (
-          <Input
-            placeholder={`Filter ${String(filterColumn)}...`}
-            value={
-              (table.getColumn(String(filterColumn))?.getFilterValue() as string) ?? ""
-            }
-            onChange={(event) =>
-              table.getColumn(String(filterColumn))?.setFilterValue(event.target.value)
-            }
-            className="max-w-sm"
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder={`Filter ${String(filterColumn)}...`}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") applyFilter()
+              }}
+              className="max-w-sm"
+            />
+            <Button size="sm" onClick={applyFilter} disabled={isLoading}>
+              Search
+            </Button>
+          </div>
         )}
 
         {/* Toggle Columns */}
