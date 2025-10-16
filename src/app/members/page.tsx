@@ -6,6 +6,7 @@ import { Check, X, User, PlusCircleIcon, Edit, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { deleteOrganization_member, getAllOrganization_member } from "@/action/members"
+import { getAllDepartments } from "@/action/departement"
 import React from "react"
 import { IOrganization_member, IUser } from "@/interface"
 import { toast } from "sonner"
@@ -25,27 +26,50 @@ export default function MembersPage() {
     try {
       setLoading(true)
 
-      const [memberRes, userRes] = await Promise.all([
+      const [memberRes, userRes, deptRes] = await Promise.all([
         getAllOrganization_member(),
         getAllUsers(),
+        getAllDepartments(),
       ])
 
-      if (!memberRes.success || !userRes.success) {
-        throw new Error("Failed to fetch data")
+      // Log responses for easier debugging
+      // eslint-disable-next-line no-console
+      console.debug('getAllOrganization_member', memberRes)
+      // eslint-disable-next-line no-console
+      console.debug('getAllUsers', userRes)
+      // eslint-disable-next-line no-console
+      console.debug('getAllDepartments', deptRes)
+
+      if (!memberRes.success) {
+        throw new Error(memberRes.message || 'Failed to fetch members')
+      }
+
+      if (!userRes.success) {
+        throw new Error(userRes.message || 'Failed to fetch users')
       }
 
       const membersData = memberRes.data || []
       const usersData = userRes.data || []
+      const departmentsData = deptRes?.data || []
+
+      const deptMap = new Map<string, string>()
+      departmentsData.forEach((d: any) => {
+        if (d && d.id) deptMap.set(String(d.id), d.name)
+      })
 
       // join manual: tambahkan user ke setiap member
       const merged = membersData.map((m: IOrganization_member) => {
         const u = usersData.find((usr: IUser) => usr.id === m.user_id)
-        return { ...m, user: u }
+        const groupName = deptMap.get(String(m.department_id)) || (m.departments && (m.departments as any).name) || ""
+        return { ...m, user: u, groupName }
       })
 
       setMembers(merged)
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : 'An error occurred')
+      const msg = error instanceof Error ? error.message : 'An error occurred'
+      // eslint-disable-next-line no-console
+      console.error('MembersPage.fetchData error', msg, error)
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
@@ -95,6 +119,11 @@ export default function MembersPage() {
       cell: ({ row }) => row.original.user?.phone ?? "No Phone",
     },
     {
+      header: "Group",
+      accessorFn: (row) => (row as any).groupName || row.departments?.name || "-",
+      cell: ({ row }) => (row.original as any).groupName || row.original.departments?.name || "-",
+    },
+    {
       accessorKey: "is_active",
       header: "Status",
       cell: ({ row }) => {
@@ -129,6 +158,15 @@ export default function MembersPage() {
             <Button
               variant="outline"
               size="icon"
+              onClick={() => router.push(`/members/${member.id}`)}
+              className="cursor-pointer bg-secondary border-0 shadow-0 p-0 m-0"
+              title="View Profile"
+            >
+              <User />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
               className="text-red-500 cursor-pointer bg-secondary border-0  p-0 m-0 "
                  onClick={() => handleDelete(member.id!)}
             >
@@ -157,7 +195,11 @@ export default function MembersPage() {
         ) : (
           <div>
             {/* Add Member feature temporarily disabled */}
-            <DataTable columns={columns} data={members} filterColumn="userFullName" />
+            {members.length === 0 ? (
+              <div className="p-6 text-center text-muted-foreground">No members found for this organization.</div>
+            ) : (
+              <DataTable columns={columns} data={members} />
+            )}
           </div>
         )}
       </div>

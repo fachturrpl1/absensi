@@ -257,7 +257,7 @@ export default function AttendancePage() {
         {loading ? (
           <LoadingSkeleton />
         ) : (
-          <DataTable columns={columns} data={attendance} filterColumn="memberName" />
+          <DataTable columns={columns} data={attendance} />
         )}
       </div>
     </ContentLayout>

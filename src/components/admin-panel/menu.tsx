@@ -146,8 +146,8 @@ export function Menu({ isOpen }: MenuProps) {
             <TooltipProvider disableHoverableContent>
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
-                  <div className="w-full">
-                    <LogoutButton /> {/* langsung dipanggil */}
+                  <div className="w-full flex justify-center items-center">
+                    <LogoutButton compact={isOpen === false} className={cn(isOpen === false ? "" : "w-full justify-start")} />
                   </div>
                 </TooltipTrigger>
                 {isOpen === false && (

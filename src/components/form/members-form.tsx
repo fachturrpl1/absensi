@@ -117,14 +117,18 @@ export default function MembersForm({
 
                 // 3. load dropdown lain
                 await Promise.all([
-                    getAllDepartments().then((res: unknown) => {
-                        if (res.success) setDepartments(res.data);
+                    getAllDepartments().then((res) => {
+                        // actions return { success: boolean, data: any }
+                        const r = res as any
+                        if (r && r.success) setDepartments(r.data || []);
                     }),
-                    getAllPositions().then((res: unknown) => {
-                        if (res.success) setPositions(res.data);
+                    getAllPositions().then((res) => {
+                        const r = res as any
+                        if (r && r.success) setPositions(r.data || []);
                     }),
-                    (formType === "edit" ? getAllUsers() : getAllUsersNotRegistered()).then((res: unknown) => {
-                        if (res.success) setUsers(res.data);
+                    (formType === "edit" ? getAllUsers() : getAllUsersNotRegistered()).then((res) => {
+                        const r = res as any
+                        if (r && r.success) setUsers(r.data || []);
                     }),
                 ]);
 
@@ -139,12 +143,13 @@ export default function MembersForm({
                         probation_end_date: initialValues.probation_end_date ?? "",
                         employment_status: initialValues.employment_status ?? "",
                         work_location: initialValues.work_location ?? "",
-                        card_number: rfidInitial?.card_number || (initialValues as unknown)?.rfid_cards?.card_number || "",
-                        card_type: rfidInitial?.card_type || (initialValues as unknown)?.rfid_cards?.card_type || "",
+                        card_number: rfidInitial?.card_number || ((initialValues as any)?.rfid_cards?.card_number) || "",
+                        card_type: rfidInitial?.card_type || ((initialValues as any)?.rfid_cards?.card_type) || "",
                     });
                 }
             } catch (err: unknown) {
-                toast.error(err instanceof Error ? err.message : 'Unknown error' || "Failed to load form data");
+                const msg = err instanceof Error ? err.message : 'Unknown error';
+                toast.error(msg);
             } finally {
                 setLoadingForm(false);
             }
@@ -160,10 +165,11 @@ export default function MembersForm({
             const { card_number, card_type, ...memberData } = values;
 
             // 🔑 sanitize date fields
-            const safeMemberData = {
+            const safeMemberData: Partial<IOrganization_member> = {
                 ...memberData,
                 hire_date: memberData.hire_date || new Date().toISOString().slice(0, 10), // YYYY-MM-DD
-                probation_end_date: memberData.probation_end_date || null,
+                // keep undefined instead of null to match interface expectations
+                probation_end_date: memberData.probation_end_date || undefined,
             };
 
 
@@ -200,7 +206,8 @@ export default function MembersForm({
             toast.success("Member & RFID card saved successfully");
             router.push("/members");
         } catch (err: unknown) {
-            toast.error(err instanceof Error ? err.message : 'Unknown error' ?? "Something went wrong");
+            const msg = err instanceof Error ? err.message : 'Unknown error';
+            toast.error(msg);
         } finally {
             setLoading(false);
         }

@@ -10,7 +10,16 @@ import {
     Pencil,
     ChevronRight,
     Plus,
+    Calendar,
 } from "lucide-react"
+import {
+    Empty,
+    EmptyHeader,
+    EmptyTitle,
+    EmptyDescription,
+    EmptyContent,
+    EmptyMedia,
+} from "@/components/ui/empty"
 import {
     Dialog,
     DialogContent,
@@ -72,10 +81,10 @@ export default function WorkSchedulesPage() {
     const [organizationId, setOrganizationId] = React.useState<string>("")
     const [loading, setLoading] = React.useState<boolean>(true)
 
-    const fetchSchedules = async () => {
+    const fetchSchedules = async (orgId?: string) => {
         try {
             setLoading(true)
-            const response: unknown = await getAllWorkSchedules()
+            const response: unknown = await getAllWorkSchedules(orgId)
             const typedResponse = response as { success: boolean; data: IWorkSchedule[]; message: string }
             if (!typedResponse.success) throw new Error(typedResponse.message)
             setSchedules(typedResponse.data)
@@ -116,10 +125,15 @@ export default function WorkSchedulesPage() {
         }
     }
     React.useEffect(() => {
-        fetchSchedules()
         fetchOrganizations()
         fetchOrganizationId()
     }, [scheduleId])
+
+    React.useEffect(() => {
+        if (organizationId) {
+            fetchSchedules(organizationId)
+        }
+    }, [organizationId])
 
     const form = useForm<ScheduleForm>({
         resolver: zodResolver(scheduleSchema),
@@ -402,8 +416,25 @@ Select
                 </div>
                 {loading ? (
                     <LoadingSkeleton />
+                ) : schedules.length === 0 ? (
+                    <div className="mt-20">
+                        <Empty>
+                            <EmptyHeader>
+                                <EmptyMedia variant="icon">
+                                    <Calendar className="h-14 w-14 text-muted-foreground mx-auto" />
+                                </EmptyMedia>
+                                <EmptyTitle>No schedules yet</EmptyTitle>
+                                <EmptyDescription>
+                                    There are no schedules for this organization. Use the "Add Schedule" button to create one.
+                                </EmptyDescription>
+                            </EmptyHeader>
+                            <EmptyContent>
+                                <Button onClick={() => setOpen(true)}>Add Schedule</Button>
+                            </EmptyContent>
+                        </Empty>
+                    </div>
                 ) : (
-                    <DataTable columns={columns} data={schedules} filterColumn="name" />
+                    <DataTable columns={columns} data={schedules} />
                 )}
             </div>
         </ContentLayout>

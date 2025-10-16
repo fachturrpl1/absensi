@@ -5,11 +5,14 @@ import { IWorkSchedule, IWorkScheduleDetail } from "@/interface"
 
 
 
-export const getAllWorkSchedules = async () => {
+export const getAllWorkSchedules = async (organizationId?: string) => {
     const supabase = await createSupabaseClient();
-    const { data, error } = await supabase.from("work_schedules")
-        .select("*, work_schedule_details(*)")
-        .order("created_at", { ascending: false })
+    let query = supabase.from("work_schedules").select("*, work_schedule_details(*)").order("created_at", { ascending: false })
+    if (organizationId) {
+        query = query.eq("organization_id", organizationId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
         return { success: false, message: error.message, data: [] };

@@ -16,6 +16,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
+  InputGroup,
+  InputGroupInput,
+  InputGroupButton,
+} from "@/components/ui/input-group"
+import {
   Table,
   TableBody,
   TableCell,
@@ -34,77 +39,93 @@ import { Columns3Cog, Loader2 } from "lucide-react" // Loader icon
 type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
-  // allow either a real key of TData or a string id (for accessorFn columns)
-  filterColumn?: keyof TData | string
   isLoading?: boolean // ✅ Tambahkan props loading
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
-  filterColumn,
-  isLoading = false, // default false
+  isLoading = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+  // Local controlled input (typing) and applied search (applies on Enter or click)
+  const [inputValue, setInputValue] = React.useState("")
+  const [appliedSearch, setAppliedSearch] = React.useState("")
+
+  // Global filter function: checks if any cell value contains the search string
+  const filteredData = React.useMemo(() => {
+    if (!appliedSearch) return data
+    const lower = appliedSearch.toLowerCase()
+    return data.filter((row) => {
+      return columns.some((col) => {
+        let value = ""
+        // tanstack v8: accessorKey is a string, accessorFn is a function
+        if (typeof (col as any).accessorFn === "function") {
+          try {
+            value = String((col as any).accessorFn(row, 0) ?? "")
+          } catch {
+            value = ""
+          }
+        } else if (typeof (col as any).accessorKey === "string") {
+          value = String((row as any)[(col as any).accessorKey] ?? "")
+        }
+        return value.toLowerCase().includes(lower)
+      })
+    })
+  }, [appliedSearch, data, columns])
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     state: {
       sorting,
-      columnFilters,
       columnVisibility,
       rowSelection,
     },
   })
-
-  // Local controlled input to avoid filtering on every keystroke
-  const [inputValue, setInputValue] = React.useState<string>(() => {
-    return (
-      (table.getColumn(String(filterColumn ?? ""))?.getFilterValue() as string) ?? ""
-    )
-  })
-
-  function applyFilter() {
-    if (!filterColumn) return
-    table.getColumn(String(filterColumn))?.setFilterValue(inputValue)
-    // Reset to first page when applying a new filter
-    table.setPageIndex(0)
-  }
 
 
 
   return (
     <div className="space-y-4">
       <div className="flex justify-end items-center gap-4">
-        {/* Filter */}
-        {filterColumn && (
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder={`Filter ${String(filterColumn)}...`}
+        {/* Global Filter */}
+        <div className="flex items-center gap-2">
+          <InputGroup className="max-w-sm">
+            <InputGroupInput
+              placeholder="Search..."
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") applyFilter()
+              onChange={(e) => {
+                const v = e.target.value
+                setInputValue(v)
+                if (v.trim() === "") {
+                  // if input cleared, immediately show all rows
+                  setAppliedSearch("")
+                }
               }}
-              className="max-w-sm"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setAppliedSearch(inputValue)
+                }
+              }}
             />
-            <Button size="sm" onClick={applyFilter} disabled={isLoading}>
+            <InputGroupButton
+              size="sm"
+              onClick={() => setAppliedSearch(inputValue)}
+              disabled={isLoading}
+            >
               Search
-            </Button>
-          </div>
-        )}
+            </InputGroupButton>
+          </InputGroup>
+        </div>
 
         {/* Toggle Columns */}
         <DropdownMenu>

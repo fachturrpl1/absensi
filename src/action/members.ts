@@ -23,6 +23,10 @@ export const getAllOrganization_member = async () => {
   // 1. Ambil user dari cookies
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
+  // Debug logging to help diagnose missing members
+  // eslint-disable-next-line no-console
+  console.debug('getAllOrganization_member - auth.getUser result', { user, userError });
+
   if (userError || !user) {
     return { success: false, message: "User not logged in", data: [] };
   }
@@ -35,6 +39,8 @@ export const getAllOrganization_member = async () => {
     .maybeSingle();
 
   if (!member) {
+    // eslint-disable-next-line no-console
+    console.debug('getAllOrganization_member - user has no organization_members entry for user id', user.id)
     return { success: true, message: "User not registered in any organization", data: [] };
   }
 
@@ -46,9 +52,13 @@ export const getAllOrganization_member = async () => {
     .order("created_at", { ascending: true });
 
   if (error) {
+    // eslint-disable-next-line no-console
+    console.error('getAllOrganization_member - error fetching organization_members for org', error)
     return { success: false, message: error.message, data: [] };
   }
 
+  // eslint-disable-next-line no-console
+  console.debug('getAllOrganization_member - fetched members count', Array.isArray(data) ? data.length : 0)
   return { success: true, data: data as IOrganization_member[] };
 };
 
@@ -98,6 +108,50 @@ export const getOrganizationMembersById = async (id: string) => {
 
   if (error) {
     return { success: false, message: error.message, data: null }
+  }
+
+  // If the member row exists, also fetch related user, department and position records
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const member: any = data
+
+    if (member) {
+      // Fetch user profile
+      if (member.user_id) {
+        const { data: userData, error: userError } = await supabase
+          .from("user_profiles")
+          .select("*")
+          .eq("id", member.user_id)
+          .maybeSingle()
+
+        if (!userError && userData) member.user = userData
+      }
+
+      // Fetch department (group)
+      if (member.department_id) {
+        const { data: deptData, error: deptError } = await supabase
+          .from("departments")
+          .select("*")
+          .eq("id", member.department_id)
+          .maybeSingle()
+
+        if (!deptError && deptData) member.departments = deptData
+      }
+
+      // Fetch position
+      if (member.position_id) {
+        const { data: posData, error: posError } = await supabase
+          .from("positions")
+          .select("*")
+          .eq("id", member.position_id)
+          .maybeSingle()
+
+        if (!posError && posData) member.positions = posData
+      }
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn('getOrganizationMembersById: failed to fetch related records', e)
   }
 
   return { success: true, data }

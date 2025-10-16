@@ -52,10 +52,10 @@ export function getMenuList(pathname: string): Group[] {
       groupLabel: "General",
       menus: [
         {
-          href: "/department",
+          href: "/group",
           label: "Group",
-          icon: Building2,
-          active: pathname.includes("/department")
+          icon: Group,
+          active: pathname.includes("/group")
         },
         {
           href: "/position",
@@ -86,18 +86,6 @@ export function getMenuList(pathname: string): Group[] {
           label: "Schedule",
           icon: Calendar,
           active: pathname.includes("/schedule")
-        },
-        {
-          href: "/role",
-          label: "Role",
-          icon: ShieldCheck,
-          active: pathname.includes("/role")
-        },
-        {
-          href: "/permission",
-          label: "Permission",
-          icon: List,
-          active: pathname.includes("/permission")
         },
         {
           href: "/organization/settings",

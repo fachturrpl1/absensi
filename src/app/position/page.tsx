@@ -4,7 +4,7 @@ import React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
-import { Trash, Pencil, Plus } from "lucide-react"
+import { Trash, Pencil, Plus, Briefcase } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -37,6 +37,14 @@ import {
     updatePositions,
 } from "@/action/position"
 import LoadingSkeleton from "@/components/loading-skeleton"
+import {
+    Empty,
+    EmptyHeader,
+    EmptyTitle,
+    EmptyDescription,
+    EmptyContent,
+    EmptyMedia,
+} from "@/components/ui/empty"
 import {
     Select,
     SelectContent,
@@ -245,14 +253,14 @@ export default function PositionsPage() {
                 />
                 <div className="items-center my-7">
                     <Dialog open={open} onOpenChange={setOpen}>
-                        <DialogTrigger asChild className="float-end  ml-5">
+                            <DialogTrigger asChild className="float-end  ml-5">
                             <Button
                                 onClick={() => {
                                     setEditingDetail(null)
                                     form.reset()
                                 }}
                             >
-                                Add <Plus className="ml-2" />
+                                Add Position <Plus className="ml-2" />
                             </Button>
                         </DialogTrigger>
                         <DialogContent aria-describedby={undefined}>
@@ -386,8 +394,25 @@ export default function PositionsPage() {
                 </div>
                 {loading ? (
                     <LoadingSkeleton />
+                ) : positions.length === 0 ? (
+                    <div className="mt-20">
+                        <Empty>
+                            <EmptyHeader>
+                                <EmptyMedia variant="icon">
+                                    <Briefcase className="h-14 w-14 text-muted-foreground mx-auto" />
+                                </EmptyMedia>
+                                <EmptyTitle>No positions yet</EmptyTitle>
+                                <EmptyDescription>
+                                    There are no positions for this organization. Use the &quot;Add&quot; button to create a new position.
+                                </EmptyDescription>
+                            </EmptyHeader>
+                            <EmptyContent>
+                                <Button onClick={() => setOpen(true)}>Add Position</Button>
+                            </EmptyContent>
+                        </Empty>
+                    </div>
                 ) : (
-                    <DataTable columns={columns} data={positions} filterColumn="title" />
+                    <DataTable columns={columns} data={positions} />
                 )}
             </div>
         </ContentLayout>

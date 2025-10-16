@@ -271,7 +271,7 @@ export default function RolesPage() {
                 {loading ? (
                     <LoadingSkeleton />
                 ) : (
-                    <DataTable columns={columns} data={roles} filterColumn="name" />
+                    <DataTable columns={columns} data={roles} />
                 )}
             </div>
         </ContentLayout>

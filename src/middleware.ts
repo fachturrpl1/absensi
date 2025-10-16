@@ -100,8 +100,8 @@ export async function middleware(req: NextRequest) {
     // Otherwise, let them stay on signup page to see the success message
   }
 
-  // Don't require auth for accept-invite (part of registration flow) or auth pages
-  const publicPaths = ["/auth", "/accept-invite"]
+  // Don't require auth for auth pages
+  const publicPaths = ["/auth"]
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
 
   if (!user && !isPublicPath) {

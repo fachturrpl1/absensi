@@ -141,7 +141,7 @@ export default function UsersPage() {
                     <LoadingSkeleton />
                 ) : (
                     <div>
-                        <DataTable columns={columns} data={Users} filterColumn="first_name" />
+                        <DataTable columns={columns} data={Users} />
                     </div>
                 )}
             </div>
