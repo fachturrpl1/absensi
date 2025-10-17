@@ -104,9 +104,14 @@ export default function AttendancePage() {
           .map((ms) => workScheduleData.find((ws) => ws.id === ms.work_schedule_id))
           .filter((s): s is IWorkSchedule => s !== undefined);
 
+        const fullNameParts = [user?.first_name, user?.middle_name, user?.last_name].filter(
+          (part): part is string => Boolean(part && part.trim())
+        );
+        const fullName = fullNameParts.join(" ");
+
         return {
           ...a,
-          memberName: user?.first_name || "No User",
+          memberName: fullName || user?.display_name || "No User",
           timezone: org?.timezone || "UTC",
           schedules,
         };
@@ -155,6 +160,7 @@ export default function AttendancePage() {
     {
       accessorKey: "attendance_date",
       header: "Date",
+      sortingFn: "datetime",
       cell: ({ row }) => {
         const date = row.getValue("attendance_date") as string;
         return <span>{date || "-"}</span>;
@@ -163,6 +169,7 @@ export default function AttendancePage() {
     {
       accessorKey: "actual_check_in",
       header: "Check In",
+      sortingFn: "datetime",
       cell: ({ row }) => {
         const utc = row.getValue("actual_check_in") as string;
         const tz = row.original.timezone || "Asia/Jakarta";
@@ -257,7 +264,14 @@ export default function AttendancePage() {
         {loading ? (
           <LoadingSkeleton />
         ) : (
-          <DataTable columns={columns} data={attendance} />
+          <DataTable
+            columns={columns}
+            data={attendance}
+            initialSorting={[
+              { id: "attendance_date", desc: true },
+              { id: "actual_check_in", desc: true },
+            ]}
+          />
         )}
       </div>
     </ContentLayout>

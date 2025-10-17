@@ -26,10 +26,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { attendanceByGroupColumns } from "@/components/attendance-by-group-table/attendance-by-group-columns"
+import { attendanceByGroupColumns, AttendanceByGroupRow } from "@/components/attendance-by-group-table/attendance-by-group-columns"
 
 interface AttendanceByGroupTableProps {
-  data: any[] | null
+  data: AttendanceByGroupRow[] | null
   isLoading?: boolean
 }
 
@@ -37,7 +37,7 @@ export function AttendanceByGroupTable({ data, isLoading = false }: AttendanceBy
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = useState({})
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
 
   const table = useReactTable({
     data: data || [],

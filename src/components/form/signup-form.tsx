@@ -68,8 +68,12 @@ export function SignUp({
           <Input id="first_name" name="first_name" type="text" required />
         </div>
         <div className="grid gap-3">
-          <Label htmlFor="last_name">Last Name</Label>
-          <Input id="last_name" name="last_name" type="text" required />
+          <Label htmlFor="middle_name">Middle Name (optional)</Label>
+          <Input id="middle_name" name="middle_name" type="text" />
+        </div>
+        <div className="grid gap-3">
+          <Label htmlFor="last_name">Last Name (optional)</Label>
+          <Input id="last_name" name="last_name" type="text" />
         </div>
 
         {/* Email */}

@@ -62,7 +62,7 @@ const profileFormSchema = z.object({
   employee_code: z.string().optional(),
   first_name: z.string().min(1, "First name is required"),
   middle_name: z.string().optional(),
-  last_name: z.string().min(1, "Last name is required"),
+  last_name: z.string().optional(),
   display_name: z.string().optional(),
   email: z.string().email("Invalid email address"),
   phone: z.string().optional(),
@@ -361,7 +361,11 @@ export function AccountForm({ initialData }: AccountFormProps) {
             </div>
             <div className="text-center space-y-2">
               <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-                {initialData.user.display_name || `${initialData.user.first_name} ${initialData.user.last_name}` || "No Name"}
+                {initialData.user.display_name ||
+                  [initialData.user.first_name, initialData.user.middle_name, initialData.user.last_name]
+                    .filter((part) => part && part.trim() !== "")
+                    .join(" ") ||
+                  "No Name"}
               </CardTitle>
               <CardDescription className="text-lg">
                 <span className="inline-flex items-center gap-2">

@@ -33,11 +33,11 @@ export default function MembersPage() {
       ])
 
       // Log responses for easier debugging
-      // eslint-disable-next-line no-console
+       
       console.debug('getAllOrganization_member', memberRes)
-      // eslint-disable-next-line no-console
+       
       console.debug('getAllUsers', userRes)
-      // eslint-disable-next-line no-console
+       
       console.debug('getAllDepartments', deptRes)
 
       if (!memberRes.success) {
@@ -67,7 +67,7 @@ export default function MembersPage() {
       setMembers(merged)
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'An error occurred'
-      // eslint-disable-next-line no-console
+       
       console.error('MembersPage.fetchData error', msg, error)
       toast.error(msg)
     } finally {
@@ -99,13 +99,18 @@ export default function MembersPage() {
       id: "userFullName",
       accessorFn: (row) => {
         const user = (row as any).user as IUser | undefined
-        return user ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() : ""
+        if (!user) return ""
+        const parts = [user.first_name, user.middle_name, user.last_name]
+          .filter((part): part is string => Boolean(part && part.trim()))
+        return parts.length ? parts.join(" ") : ""
       },
       header: "Members",
       cell: ({ row }) => {
         const user = row.original.user
         const fullname = user
-          ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()
+          ? ([user.first_name, user.middle_name, user.last_name]
+              .filter((part) => part && part.trim() !== "")
+              .join(" ") || user.display_name || user.email || "No User")
           : "No User"
         return (
           <div className="flex gap-2 items-center">

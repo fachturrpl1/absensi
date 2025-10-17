@@ -2,7 +2,16 @@
 
 import type { ColumnDef } from "@tanstack/react-table"
 
-export const attendanceByGroupColumns: ColumnDef<any>[] = [
+export type AttendanceByGroupRow = {
+  group?: string
+  present_plus_late?: number
+  not_in_others?: number
+  percent_present?: number
+  late_count?: number
+  overall?: number
+}
+
+export const attendanceByGroupColumns: ColumnDef<AttendanceByGroupRow>[] = [
   {
     id: "group",
     accessorKey: "group",

@@ -57,14 +57,14 @@ export function UserNav() {
 
   // Get full name from user data
   const getFullName = () => {
-    if (user.display_name) return user.display_name
+    const nameParts = [user.first_name, user.middle_name, user.last_name]
+      .filter((part): part is string => Boolean(part && part.trim()))
 
-    const parts = []
-    if (user.first_name) parts.push(user.first_name)
-    if (user.middle_name) parts.push(user.middle_name)
-    if (user.last_name) parts.push(user.last_name)
+    if (user.display_name && user.display_name.trim() !== '') {
+      return user.display_name
+    }
 
-    return parts.length > 0 ? parts.join(' ') : user.email || 'User'
+    return nameParts.length > 0 ? nameParts.join(' ') : user.email || 'User'
   }
 
   const fullName = getFullName()

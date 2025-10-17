@@ -16,8 +16,12 @@ export async function signUp(formData: FormData) {
 
   const email = formData.get("email") as string
   const password = formData.get("password") as string
-  const firstName = formData.get("first_name") as string
-  const lastName = formData.get("last_name") as string
+  const firstName = (formData.get("first_name") as string) || ""
+  const middleName = (formData.get("middle_name") as string) || ""
+  const lastName = (formData.get("last_name") as string) || ""
+
+  const displayNameParts = [firstName, middleName, lastName].filter((part) => part && part.trim() !== "")
+  const displayName = displayNameParts.join(" ") || firstName || email
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -25,8 +29,9 @@ export async function signUp(formData: FormData) {
     options: {
       data: {
         first_name: firstName,
-        last_name: lastName,
-        display_name: `${firstName} ${lastName}`,
+        middle_name: middleName || null,
+        last_name: lastName || null,
+        display_name: displayName,
       },
       // Ensure email confirmation is handled automatically
       emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/onboarding`,

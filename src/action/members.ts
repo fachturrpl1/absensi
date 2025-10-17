@@ -23,10 +23,6 @@ export const getAllOrganization_member = async () => {
   // 1. Ambil user dari cookies
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-  // Debug logging to help diagnose missing members
-  // eslint-disable-next-line no-console
-  console.debug('getAllOrganization_member - auth.getUser result', { user, userError });
-
   if (userError || !user) {
     return { success: false, message: "User not logged in", data: [] };
   }
@@ -39,8 +35,6 @@ export const getAllOrganization_member = async () => {
     .maybeSingle();
 
   if (!member) {
-    // eslint-disable-next-line no-console
-    console.debug('getAllOrganization_member - user has no organization_members entry for user id', user.id)
     return { success: true, message: "User not registered in any organization", data: [] };
   }
 
@@ -52,13 +46,12 @@ export const getAllOrganization_member = async () => {
     .order("created_at", { ascending: true });
 
   if (error) {
-    // eslint-disable-next-line no-console
+     
     console.error('getAllOrganization_member - error fetching organization_members for org', error)
     return { success: false, message: error.message, data: [] };
   }
 
-  // eslint-disable-next-line no-console
-  console.debug('getAllOrganization_member - fetched members count', Array.isArray(data) ? data.length : 0)
+  
   return { success: true, data: data as IOrganization_member[] };
 };
 
@@ -118,9 +111,10 @@ export const getOrganizationMembersById = async (id: string) => {
     if (member) {
       // Fetch user profile
       if (member.user_id) {
+        // select common profile fields including email explicitly
         const { data: userData, error: userError } = await supabase
           .from("user_profiles")
-          .select("*")
+          .select("id, employee_code, first_name, middle_name, last_name, display_name, phone, mobile, profile_photo_url, email, is_active, created_at, updated_at, deleted_at")
           .eq("id", member.user_id)
           .maybeSingle()
 
@@ -150,7 +144,7 @@ export const getOrganizationMembersById = async (id: string) => {
       }
     }
   } catch (e) {
-    // eslint-disable-next-line no-console
+     
     console.warn('getOrganizationMembersById: failed to fetch related records', e)
   }
 

@@ -111,6 +111,34 @@ export interface IOrganization_member {
     rfid_cards?: IRfidCard;
 }
 
+// Performance data returned for a single member
+export interface IMemberPerformance {
+    counts: {
+        present: number;
+        late: number;
+        absent: number;
+        excused: number;
+    };
+    lastSeen?: string | null;
+    averageWorkDurationMinutes?: number;
+    // new insight fields (formatted time strings, e.g. "08:45")
+    averageCheckInTime?: string | null;
+    averageCheckOutTime?: string | null;
+    recent30?: Array<{
+        id?: string;
+        attendance_date?: string;
+        status?: string;
+        work_duration_minutes?: number | null;
+    }>;
+}
+
+// Point data for trend charts
+export interface IMemberAttendancePoint {
+    date: string; // YYYY-MM-DD
+    count: number; // count of attendance records (present) on that date
+    averageWorkDurationMinutes?: number | null;
+}
+
 export interface IAttendance {
     id: string;
     organization_member_id: string;
