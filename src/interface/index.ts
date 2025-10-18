@@ -9,11 +9,11 @@ export interface IEmergencyContact {
 export interface IUser {
     id: string;
     employee_code?: string;
-    email: string; // Tambahkan field email yang wajib
-    first_name: string;
+    email?: string;
+    first_name?: string;
     middle_name?: string;
-    last_name: string;
-    display_name?: string;
+    last_name?: string;
+    display_name?: string | null;
     phone?: string;
     mobile?: string;
     date_of_birth?: string;
@@ -22,8 +22,8 @@ export interface IUser {
     national_id?: string;
     profile_photo_url?: string | null;
     emergency_contact?: IEmergencyContact | null;
-    is_active: boolean;
-    created_at: string;
+    is_active?: boolean;
+    created_at?: string;
     updated_at?: string;
     deleted_at?: string;
 }

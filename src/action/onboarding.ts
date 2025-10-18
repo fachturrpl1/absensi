@@ -79,7 +79,7 @@ export async function joinOrganization(invitationCode: string): Promise<{
     }
 
     // Get user profile to use as member data
-    const { data: userProfile, error: profileError } = await supabase
+    const { error: profileError } = await supabase
       .from("user_profiles")
       .select("first_name, last_name, phone")
       .eq("id", user.id)

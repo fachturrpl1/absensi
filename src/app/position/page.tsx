@@ -56,8 +56,17 @@ import { getAllOrganization } from "@/action/organization"
 import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { createClient } from "@/utils/supabase/client"
 import { Can } from "@/components/can"
-import { useConfirmDialog } from "@/hooks/use-confirm-dialog"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const positionSchema = z.object({
     organization_id: z.string().min(1, "Organization is required"),
@@ -176,9 +185,6 @@ export default function PositionsPage() {
         }
     }
 
-    const [confirmOpen, setConfirmOpen] = React.useState(false)
-    const [positionToDelete, setPositionToDelete] = React.useState<number | null>(null)
-
     const handleDelete = async (positionId: string | number) => {
         try {
             setLoading(true)
@@ -218,17 +224,37 @@ export default function PositionsPage() {
                         >
                             <Pencil />
                         </Button>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="text-red-500 border-0 cursor-pointer"
-                            onClick={() => {
-                                setPositionToDelete(Number(ws.id))
-                                setConfirmOpen(true)
-                            }}
-                        >
-                            <Trash />
-                        </Button>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="text-red-500 border-0 cursor-pointer"
+                                >
+                                    <Trash />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Position</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Are you sure you want to delete this position?
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={async () => {
+                                            if (ws.id) {
+                                                await handleDelete(ws.id)
+                                            }
+                                        }}
+                                    >
+                                        Delete
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </div>
                 )
             },
@@ -238,19 +264,6 @@ export default function PositionsPage() {
     return (
         <ContentLayout title="Positions">
             <div className="w-full max-w-6xl mx-auto">
-                <ConfirmDialog
-                    open={confirmOpen}
-                    onOpenChange={setConfirmOpen}
-                    title="Delete Position"
-                    description="Are you sure you want to delete this position?"
-                    onConfirm={async () => {
-                        if (positionToDelete) {
-                            await handleDelete(positionToDelete)
-                            setConfirmOpen(false)
-                            setPositionToDelete(null)
-                        }
-                    }}
-                />
                 <div className="items-center my-7">
                     <Dialog open={open} onOpenChange={setOpen}>
                             <DialogTrigger asChild className="float-end  ml-5">

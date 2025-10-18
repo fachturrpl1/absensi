@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
+import { IUser } from '@/interface'
 import { useAuthStore } from '@/store/user-store'
 import { getAccountData } from '@/action/account'
 
@@ -9,18 +10,51 @@ import { getAccountData } from '@/action/account'
  * Automatically refreshes user data when profile photo changes
  */
 export function useProfileRefresh() {
-  const { user, setUser } = useAuthStore()
+  const setUser = useAuthStore((state) => state.setUser)
+  const user = useAuthStore((state) => state.user)
 
-  const refreshProfile = async () => {
-    if (!user) return false
-    
+  const refreshProfile = useCallback(async () => {
+    if (!user?.id) return false
+
     try {
       const result = await getAccountData()
       if (result.success && result.data?.user) {
-        // Update user data in store with fresh data from database
-        setUser({
-          ...user,
-          ...result.data.user,
+        const incoming = result.data.user
+        setUser((current) => {
+          const base: Partial<IUser> = current ?? {}
+
+          const profilePhoto =
+            typeof incoming.profile_photo_url === "undefined"
+              ? base.profile_photo_url ?? null
+              : incoming.profile_photo_url
+
+          const incomingDisplayName =
+            typeof incoming.display_name === "undefined"
+              ? undefined
+              : incoming.display_name
+
+          const normalizedIncomingDisplayName =
+            typeof incomingDisplayName === "string" && incomingDisplayName.trim() === ""
+              ? null
+              : incomingDisplayName ?? null
+
+          const normalizedBaseDisplayName =
+            typeof base.display_name === "string" && base.display_name.trim() === ""
+              ? null
+              : base.display_name ?? null
+
+          const fallbackName =
+            [incoming.first_name || base.first_name || "", incoming.middle_name || base.middle_name || "", incoming.last_name || base.last_name || ""]
+              .filter((part) => part && part.trim() !== "")
+              .join(" ") || null
+
+          return {
+            ...base,
+            ...incoming,
+            profile_photo_url: profilePhoto ?? null,
+            display_name: normalizedIncomingDisplayName ?? normalizedBaseDisplayName ?? fallbackName,
+            email: incoming.email ?? base.email,
+          } as IUser
         })
         return true
       }
@@ -29,18 +63,18 @@ export function useProfileRefresh() {
       console.error('Failed to refresh user profile:', error)
       return false
     }
-  }
+  }, [setUser, user?.id])
 
   // Auto refresh profile data on mount if user exists
   useEffect(() => {
     if (user && user.id) {
       refreshProfile()
     }
-  }, [user?.id]) // Only run when user ID changes
+  }, [refreshProfile, user?.id])
 
   return {
     refreshProfile,
-    user
+    user,
   }
 }
 

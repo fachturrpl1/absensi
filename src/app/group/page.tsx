@@ -38,8 +38,17 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
 
 import { IDepartments } from "@/interface"
-import { useConfirmDialog } from "@/hooks/use-confirm-dialog"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import {
   createDepartments,
   deleteDepartments,
@@ -79,8 +88,6 @@ export default function GroupsPage() {
   const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = React.useState<boolean>(true)
   const [organizationId, setOrganizationId] = React.useState<string>("")
-  const { open: confirmOpen, setOpen: setConfirmOpen, onConfirm, handleConfirm } = useConfirmDialog()
-
   const supabase = createClient()
 
   const fetchGroups = async () => {
@@ -172,19 +179,17 @@ export default function GroupsPage() {
   }
 
   const handleDelete = async (scheduleId: string | number) => {
-    onConfirm(async () => {
-      try {
-        setLoading(true)
-        const response = await deleteDepartments(scheduleId)
-        if (!response.success) throw new Error(response.message)
-        toast.success('Group deleted successfully')
-        fetchGroups()
-      } catch (error: unknown) {
-        toast.error(error instanceof Error ? error.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
-    })
+    try {
+      setLoading(true)
+      const response = await deleteDepartments(scheduleId)
+      if (!response.success) throw new Error(response.message)
+      toast.success('Group deleted successfully')
+      fetchGroups()
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Unknown error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   // --- definisi kolom ---
@@ -211,14 +216,35 @@ export default function GroupsPage() {
             >
               <Pencil />
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="text-red-500 border-0 cursor-pointer"
-              onClick={() => handleDelete(ws.id)}
-            >
-              <Trash />
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="text-red-500 border-0 cursor-pointer"
+                >
+                  <Trash />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Group</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this group? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      await handleDelete(ws.id)
+                    }}
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )
       },
@@ -227,14 +253,6 @@ export default function GroupsPage() {
 
   return (
     <ContentLayout title="Groups">
-      <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        onConfirm={handleConfirm}
-        title="Delete Group"
-        description="Are you sure you want to delete this group? This action cannot be undone."
-        confirmText="Delete"
-      />
       <div className="w-full max-w-6xl mx-auto">
         <div className="items-center my-7">
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

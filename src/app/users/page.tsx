@@ -14,8 +14,17 @@ import LoadingSkeleton from "@/components/loading-skeleton"
 import { deleteUsers, getAllUsers } from "@/action/users"
 import { useRouter } from "next/navigation"
 import { ContentLayout } from "@/components/admin-panel/content-layout"
-import { useConfirmDialog } from "@/hooks/use-confirm-dialog"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 export default function UsersPage() {
     const [Users, setUsers] = React.useState<IUser[]>([])
@@ -41,18 +50,14 @@ export default function UsersPage() {
         fetchData()
     }, [])
 
-    const { open, setOpen, onConfirm, handleConfirm } = useConfirmDialog()
-
     async function handleDelete(id: string) {
-        onConfirm(async () => {
-            const res = await deleteUsers(id)
-            if (res.success) {
-                toast.success('User deleted successfully')
-                setUsers((prev) => prev.filter((m) => m.id !== id))
-            } else {
-                toast.error(res.message)
-            }
-        })
+        const res = await deleteUsers(id)
+        if (res.success) {
+            toast.success('User deleted successfully')
+            setUsers((prev) => prev.filter((m) => m.id !== id))
+        } else {
+            toast.error(res.message)
+        }
     }
 
     // --- definisi kolom ---
@@ -111,14 +116,37 @@ export default function UsersPage() {
                         >
                             <Edit />
                         </Button>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="text-red-500 cursor-pointer bg-secondary border-0  p-0 m-0 "
-                            onClick={() => handleDelete(member.id!)}
-                        >
-                            <Trash />
-                        </Button>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="text-red-500 cursor-pointer bg-secondary border-0  p-0 m-0 "
+                                >
+                                    <Trash />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Are you sure you want to delete this user? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={async () => {
+                                            if (member.id) {
+                                                await handleDelete(member.id)
+                                            }
+                                        }}
+                                    >
+                                        Delete
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </div>
                 )
             },
@@ -127,15 +155,6 @@ export default function UsersPage() {
 
     return (
         <ContentLayout title="Users">
-            <ConfirmDialog
-                open={open}
-                onOpenChange={setOpen}
-                onConfirm={handleConfirm}
-                title="Delete User"
-                description="Are you sure you want to delete this user? This action cannot be undone."
-                confirmText="Delete"
-            />
-
             <div className="w-full max-w-6xl mx-auto">
                 {loading ? (
                     <LoadingSkeleton />

@@ -27,7 +27,17 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import {
     Form,
     FormControl,
@@ -196,9 +206,6 @@ export default function WorkSchedulesPage() {
         }
     }
 
-    const [confirmOpen, setConfirmOpen] = React.useState(false)
-    const [scheduleToDelete, setScheduleToDelete] = React.useState<number | null>(null)
-
 Select
     // --- definisi kolom ---
     const columns: ColumnDef<IWorkSchedule>[] = [
@@ -226,17 +233,37 @@ Select
                         >
                             <Pencil />
                         </Button>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="text-red-500 border-0 cursor-pointer"
-                            onClick={() => {
-                                setScheduleToDelete(Number(ws.id))
-                                setConfirmOpen(true)
-                            }}
-                        >
-                            <Trash />
-                        </Button>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="text-red-500 border-0 cursor-pointer"
+                                >
+                                    <Trash />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Schedule</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Are you sure you want to delete this schedule?
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={async () => {
+                                            if (ws.id) {
+                                                await handleDelete(ws.id)
+                                            }
+                                        }}
+                                    >
+                                        Delete
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                         <Link href={`/schedule/detail/${ws.id}`}>
                             <Button variant="outline" className="border-0 cursor-pointer">
                                 <ChevronRight />
@@ -252,19 +279,6 @@ Select
         <ContentLayout title="Work Schedules">
         
             <div className="w-full max-w-6xl mx-auto">
-                <ConfirmDialog
-                    open={confirmOpen}
-                    onOpenChange={setConfirmOpen}
-                    title="Delete Schedule" 
-                    description="Are you sure you want to delete this schedule?"
-                    onConfirm={async () => {
-                        if (scheduleToDelete) {
-                            await handleDelete(scheduleToDelete)
-                            setConfirmOpen(false)
-                            setScheduleToDelete(null)
-                        }
-                    }}
-                />
                 <div className=" items-center my-7">
                  
                     <Dialog open={open} onOpenChange={setOpen}>

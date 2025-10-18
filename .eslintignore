@@ -1,8 +1,0 @@
-node_modules/
-.next/
-.turbo/
-dist/
-build/
-.pnpm-store/
-.trash/
-coverage/

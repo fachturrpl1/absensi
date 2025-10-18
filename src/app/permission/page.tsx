@@ -18,7 +18,17 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import {
     Form,
     FormControl,
@@ -126,10 +136,6 @@ export default function RolesPage() {
         }
     }
 
-    const [confirmOpen, setConfirmOpen] = React.useState(false)
-    const [permissionToDelete, setPermissionToDelete] = React.useState<number | null>(null)
-
-
     // --- definisi kolom ---
     const columns: ColumnDef<IPermission>[] = [
         { accessorKey: "code", header: "Code" },
@@ -157,17 +163,37 @@ export default function RolesPage() {
                         >
                             <Pencil />
                         </Button>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="text-red-500 border-0 cursor-pointer"
-                            onClick={() => {
-                                setPermissionToDelete(Number(ws.id))
-                                setConfirmOpen(true)
-                            }}
-                        >
-                            <Trash />
-                        </Button>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="text-red-500 border-0 cursor-pointer"
+                                >
+                                    <Trash />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Permission</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Are you sure you want to delete this permission?
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={async () => {
+                                            if (ws.id) {
+                                                await handleDelete(ws.id)
+                                            }
+                                        }}
+                                    >
+                                        Delete
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                        
                     </div>
                 )
@@ -179,19 +205,6 @@ export default function RolesPage() {
         <ContentLayout title="Permission">
             
             <div className="w-full max-w-6xl mx-auto">
-                <ConfirmDialog
-                    open={confirmOpen}
-                    onOpenChange={setConfirmOpen}
-                    title="Delete Permission"
-                    description="Are you sure you want to delete this permission?"
-                    onConfirm={async () => {
-                        if (permissionToDelete) {
-                            await handleDelete(permissionToDelete)
-                            setConfirmOpen(false)
-                            setPermissionToDelete(null)
-                        }
-                    }}
-                />
                 <div className=" items-center my-7">
                     
                     <Dialog open={open} onOpenChange={setOpen}>

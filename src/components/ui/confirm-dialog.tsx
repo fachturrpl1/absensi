@@ -1,5 +1,7 @@
 "use client"
 
+import * as React from "react"
+
 import { cn } from "@/lib/utils"
 import {
   AlertDialog,
@@ -15,12 +17,14 @@ import {
 interface ConfirmDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onConfirm: () => void
+  onConfirm: () => Promise<void> | void
   title?: string
   description?: string
   cancelText?: string
   confirmText?: string
+  destructive?: boolean
   className?: string
+  loadingText?: string
 }
 
 export function ConfirmDialog({
@@ -31,30 +35,39 @@ export function ConfirmDialog({
   description = "This action cannot be undone.",
   cancelText = "Cancel",
   confirmText = "Continue",
-  className
+  destructive = true,
+  className,
+  loadingText,
 }: ConfirmDialogProps) {
+  const [isLoading, setIsLoading] = React.useState(false)
+
+  const handleConfirm = async () => {
+    try {
+      setIsLoading(true)
+      await onConfirm()
+    } finally {
+      setIsLoading(false)
+      onOpenChange(false)
+    }
+  }
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className={cn(
-        "transition-opacity duration-75",
-        className
-      )}>
+    <AlertDialog open={open} onOpenChange={(value) => !isLoading && onOpenChange(value)}>
+      <AlertDialogContent className={cn("transition-opacity duration-75", className)}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {description}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{cancelText}</AlertDialogCancel>
+          <AlertDialogCancel disabled={isLoading}>{cancelText}</AlertDialogCancel>
           <AlertDialogAction
-            onClick={(e: React.MouseEvent) => {
-              e.preventDefault()
-              onConfirm()
-            }}
-            className="bg-destructive hover:bg-destructive/90"
+            onClick={handleConfirm}
+            className={cn(
+              destructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "",
+            )}
+            disabled={isLoading}
           >
-            {confirmText}
+            {isLoading ? loadingText || "Processing..." : confirmText}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

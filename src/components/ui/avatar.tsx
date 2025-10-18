@@ -27,7 +27,7 @@ function AvatarImage({
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Image>) {
   // Don't render if src is empty string, null, or undefined
-  if (!src || src === '') {
+  if (!src || (typeof src === "string" && src.trim() === "")) {
     return null
   }
   

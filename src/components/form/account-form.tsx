@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Camera, User, Briefcase, Lock, Trash2 } from "lucide-react";
+import { Camera, User, Briefcase, Lock, Trash2, AlertCircle } from "lucide-react";
 import {
   updateUserProfile,
   changePassword,
@@ -41,8 +41,9 @@ import {
 } from "@/action/account";
 import { IUser, IOrganization_member, IEmergencyContact } from "@/interface";
 import { useAuthStore } from "@/store/user-store";
-import { useProfileRefresh, useProfilePhotoDelete } from "@/hooks/use-profile";
+import { useProfileRefresh, useProfilePhotoDelete, useProfilePhotoUrl } from "@/hooks/use-profile";
 import { safeAvatarSrc, getUserInitials } from "@/lib/avatar-utils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface UserProfile extends Partial<IUser> {
   email?: string;
@@ -131,9 +132,37 @@ export function AccountForm({ initialData }: AccountFormProps) {
     },
   });
 
+  const requiredFields = [
+    { label: "Email Address", value: profileForm.watch("email") },
+    { label: "First Name", value: profileForm.watch("first_name") },
+    { label: "Gender", value: profileForm.watch("gender") },
+    { label: "Phone Number", value: profileForm.watch("phone") },
+  ];
+
+  const missingRequired = requiredFields
+    .filter((field) => !field.value || String(field.value).trim() === "")
+    .map((field) => field.label);
+  const missingEmail = missingRequired.includes("Email Address");
+  const missingFirstName = missingRequired.includes("First Name");
+  const missingGender = missingRequired.includes("Gender");
+  const missingPhone = missingRequired.includes("Phone Number");
+  const hasMissingRequired = missingRequired.length > 0;
+
+  const watchedDisplayName = profileForm.watch("display_name")?.trim();
+
   // Handle profile update
   const handleProfileSubmit = async (values: ProfileFormValues) => {
     try {
+      const submitMissing: string[] = [];
+      if (!values.email?.trim()) submitMissing.push("Email Address");
+      if (!values.first_name?.trim()) submitMissing.push("First Name");
+      if (!values.gender?.trim()) submitMissing.push("Gender");
+      if (!values.phone?.trim()) submitMissing.push("Phone Number");
+
+      if (submitMissing.length) {
+        toast.error("Harap isi semua field wajib sebelum menyimpan.");
+        return;
+      }
       setLoading(true);
 
       // Transform emergency contact fields into JSON object
@@ -246,15 +275,41 @@ export function AccountForm({ initialData }: AccountFormProps) {
         toast.success(successMsg);
 
         // Update user data in auth store immediately
-        if (currentUser && result.url) {
-          setUser({
-            ...currentUser,
-            profile_photo_url: result.url,
-          });
+        if (result.url) {
+          const formDisplayName = profileForm.getValues("display_name")?.trim()
+          const initialDisplayName = initialData.user.display_name?.trim()
+
+          setUser((prev) => {
+            if (!prev) {
+              return prev
+            }
+
+            const prevDisplayName = prev.display_name?.trim()
+            const preservedDisplayName =
+              (formDisplayName && formDisplayName !== "" ? formDisplayName : undefined) ??
+              (prevDisplayName && prevDisplayName !== "" ? prevDisplayName : undefined) ??
+              (initialDisplayName && initialDisplayName !== "" ? initialDisplayName : undefined) ??
+              prev.display_name ?? null
+
+            return {
+              ...prev,
+              profile_photo_url: result.url!,
+              display_name: preservedDisplayName,
+            }
+          })
+
+          if (typeof initialData.user.display_name === "string") {
+            const trimmed = initialData.user.display_name.trim()
+            initialData.user.display_name = trimmed === "" ? null : trimmed
+          }
+
+          initialData.user.profile_photo_url = result.url
         }
 
-        // Also refresh from server to ensure sync
-        await refreshProfile();
+        // Also refresh from server to ensure sync (ignore result)
+        refreshProfile().catch((error) => {
+          console.error('refreshProfile after upload failed:', error);
+        });
 
       } else {
         toast.error(result.message);
@@ -276,15 +331,38 @@ export function AccountForm({ initialData }: AccountFormProps) {
 
       if (result.success) {
         toast.success(result.message);
+        const formDisplayName = profileForm.getValues("display_name")?.trim()
+        const initialDisplayName = initialData.user.display_name?.trim()
 
-        // Force component re-render by updating initialData
-        // This will hide the delete button and fix the avatar src
-        initialData.user.profile_photo_url = null;
+        setUser((prev) => {
+          if (!prev) {
+            return prev
+          }
 
-        // Refresh page setelah delay singkat untuk memastikan state consistency
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+          const prevDisplayName = prev.display_name?.trim()
+          const preservedDisplayName =
+            (formDisplayName && formDisplayName !== "" ? formDisplayName : undefined) ??
+            (prevDisplayName && prevDisplayName !== "" ? prevDisplayName : undefined) ??
+            (initialDisplayName && initialDisplayName !== "" ? initialDisplayName : undefined) ??
+            prev.display_name ?? null
+
+          return {
+            ...prev,
+            profile_photo_url: null,
+            display_name: preservedDisplayName,
+          }
+        })
+
+        if (typeof initialData.user.display_name === "string") {
+          const trimmed = initialData.user.display_name.trim()
+          initialData.user.display_name = trimmed === "" ? null : trimmed
+        }
+
+        initialData.user.profile_photo_url = null
+
+        refreshProfile().catch((error) => {
+          console.error('refreshProfile after delete failed:', error);
+        });
       } else {
         toast.error(result.message);
       }
@@ -306,16 +384,36 @@ export function AccountForm({ initialData }: AccountFormProps) {
             <div className="relative group">
               <Avatar className="h-32 w-32 ring-4 ring-white shadow-xl">
                 <AvatarImage
-                  src={safeAvatarSrc(initialData.user.profile_photo_url)}
-                  alt={initialData.user.display_name || "Profile"}
+                  src={safeAvatarSrc(useProfilePhotoUrl(currentUser?.profile_photo_url ?? initialData.user.profile_photo_url ?? undefined) ?? undefined)}
+                  alt={(() => {
+                    const displayName = watchedDisplayName && watchedDisplayName !== "" ? watchedDisplayName : currentUser?.display_name ?? initialData.user.display_name
+                    if (displayName && displayName.trim() !== "") {
+                      return displayName
+                    }
+
+                    const parts = [
+                      currentUser?.first_name ?? initialData.user.first_name ?? "",
+                      currentUser?.middle_name ?? initialData.user.middle_name ?? "",
+                      currentUser?.last_name ?? initialData.user.last_name ?? "",
+                    ].filter((part) => part && part.trim() !== "")
+
+                    if (parts.length > 0) {
+                      return parts.join(" ")
+                    }
+
+                    return currentUser?.email ?? initialData.user.email ?? "Profile"
+                  })()}
                   className="object-cover"
+                  onError={(event) => {
+                    event.currentTarget.style.display = "none";
+                  }}
                 />
                 <AvatarFallback className="text-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white">
                   {getUserInitials(
-                    initialData.user.first_name,
-                    initialData.user.last_name,
-                    initialData.user.display_name,
-                    initialData.user.email
+                    currentUser?.first_name ?? initialData.user.first_name,
+                    currentUser?.last_name ?? initialData.user.last_name,
+                    watchedDisplayName && watchedDisplayName !== "" ? watchedDisplayName : currentUser?.display_name ?? initialData.user.display_name,
+                    currentUser?.email ?? initialData.user.email
                   )}
                 </AvatarFallback>
               </Avatar>
@@ -337,12 +435,12 @@ export function AccountForm({ initialData }: AccountFormProps) {
               </Button>
 
               {/* Delete Photo Button - only show if user has photo */}
-              {initialData.user.profile_photo_url && (
+              {(currentUser?.profile_photo_url || initialData.user.profile_photo_url) && (
                 <Button
                   size="sm"
                   variant="secondary"
                   className="absolute -bottom-1 -left-1 h-10 w-10 rounded-full p-0 shadow-lg hover:shadow-xl transition-all duration-200 bg-white hover:bg-red-50 border-2 border-red-100"
-                  onClick={handlePhotoDelete}
+                  onClick={() => handlePhotoDelete()}
                   disabled={photoUploading}
                   title="Delete current photo"
                 >
@@ -361,11 +459,24 @@ export function AccountForm({ initialData }: AccountFormProps) {
             </div>
             <div className="text-center space-y-2">
               <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-                {initialData.user.display_name ||
-                  [initialData.user.first_name, initialData.user.middle_name, initialData.user.last_name]
-                    .filter((part) => part && part.trim() !== "")
-                    .join(" ") ||
-                  "No Name"}
+                {(() => {
+                  const displayName = watchedDisplayName && watchedDisplayName !== "" ? watchedDisplayName : currentUser?.display_name ?? initialData.user.display_name
+                  if (displayName && displayName.trim() !== "") {
+                    return displayName
+                  }
+
+                  const parts = [
+                    currentUser?.first_name ?? initialData.user.first_name ?? "",
+                    currentUser?.middle_name ?? initialData.user.middle_name ?? "",
+                    currentUser?.last_name ?? initialData.user.last_name ?? "",
+                  ].filter((part) => part && part.trim() !== "")
+
+                  if (parts.length > 0) {
+                    return parts.join(" ")
+                  }
+
+                  return currentUser?.email ?? initialData.user.email ?? "No Name"
+                })()}
               </CardTitle>
               <CardDescription className="text-lg">
                 <span className="inline-flex items-center gap-2">
@@ -418,6 +529,15 @@ export function AccountForm({ initialData }: AccountFormProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {missingRequired.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Lengkapi data wajib</AlertTitle>
+                  <AlertDescription>
+                    Silakan isi: {missingRequired.join(", ")} untuk melanjutkan.
+                  </AlertDescription>
+                </Alert>
+              )}
               <Form {...profileForm}>
                 <form onSubmit={profileForm.handleSubmit(handleProfileSubmit)} className="space-y-6">
 
@@ -446,8 +566,12 @@ export function AccountForm({ initialData }: AccountFormProps) {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Email Address</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="email" />
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="email"
+                            className={profileForm.formState.errors.email || missingEmail ? "border-destructive focus-visible:ring-destructive" : undefined}
+                          />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -463,7 +587,10 @@ export function AccountForm({ initialData }: AccountFormProps) {
                           <FormItem>
                             <FormLabel>First Name</FormLabel>
                             <FormControl>
-                              <Input {...field} />
+                              <Input
+                                {...field}
+                                className={profileForm.formState.errors.first_name || missingFirstName ? "border-destructive focus-visible:ring-destructive" : undefined}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -524,8 +651,13 @@ export function AccountForm({ initialData }: AccountFormProps) {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Phone Number</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="tel" placeholder="+62 xxx xxx xxxx" />
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="tel"
+                              placeholder="+62 xxx xxx xxxx"
+                              className={profileForm.formState.errors.phone || missingPhone ? "border-destructive focus-visible:ring-destructive" : undefined}
+                            />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -561,7 +693,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                             <FormLabel>Gender</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger className={profileForm.formState.errors.gender || missingGender ? "border-destructive focus-visible:ring-destructive" : undefined}>
                                   <SelectValue placeholder="Select gender" />
                                 </SelectTrigger>
                               </FormControl>

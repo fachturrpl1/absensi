@@ -49,7 +49,7 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
   }
 
   // Create a map of member IDs to their department names for quick lookup
-  const memberDeptMap = new Map();
+  const memberDeptMap = new Map<string, string>();
   
   if (!members) {
     console.log("No members found!");
@@ -57,21 +57,35 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
   }
   
   // Try to map embedded department first, but only accept departments that belong to this organization
-  members.forEach(m => {
-    const raw = (m as any).departments || (m as any).department || (m as any).departments_organization_members_department_id_fkey;
+  type EmbeddedDepartment = {
+    id: string;
+    name: string;
+    organization_id?: string | null;
+  };
+
+  type MemberRow = {
+    id: string;
+    department_id: string | null;
+    departments?: EmbeddedDepartment[] | EmbeddedDepartment | null;
+    department?: EmbeddedDepartment | null;
+    departments_organization_members_department_id_fkey?: EmbeddedDepartment[] | EmbeddedDepartment | null;
+  };
+
+  members.forEach((member: MemberRow) => {
+    const raw = member.departments || member.department || member.departments_organization_members_department_id_fkey;
     if (!raw) return;
 
-    let candidate: any = null;
+    let candidate: EmbeddedDepartment | null = null;
     if (Array.isArray(raw) && raw.length > 0) candidate = raw[0];
     else if (raw && typeof raw === 'object') candidate = raw;
 
     if (candidate && candidate.name) {
       // Only map if the department belongs to the requested organization
       if (String(candidate.organization_id) === String(organizationId)) {
-        memberDeptMap.set(m.id, candidate.name);
+        memberDeptMap.set(member.id, candidate.name);
       } else {
         // Skip departments that belong to other organizations (data inconsistency)
-        console.warn(`Skipping department mapping for member ${m.id} because department org ${candidate.organization_id} !== ${organizationId}`);
+        console.warn(`Skipping department mapping for member ${member.id} because department org ${candidate.organization_id} !== ${organizationId}`);
       }
     }
   });
@@ -79,7 +93,13 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
   // Fallback: if embedding failed or produced no mappings, fetch department names by department_id
   if (memberDeptMap.size === 0) {
     console.log('Embedded mapping empty, using fallback via department_id');
-    const deptIds = Array.from(new Set(members.map((m: any) => m.department_id).filter(Boolean)));
+    const deptIds = Array.from(
+      new Set(
+        members
+          .map((member: MemberRow) => member.department_id)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
     if (deptIds.length > 0) {
       const { data: depts, error: deptFetchErr } = await supabase
         .from('departments')
@@ -88,12 +108,24 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
         .eq('organization_id', organizationId);
 
       if (!deptFetchErr && depts) {
-        const deptMap = new Map(depts.map((d: any) => [d.id, d.name]));
-        members.forEach((m: any) => {
-          const name = deptMap.get(m.department_id);
-          if (name) memberDeptMap.set(m.id, name);
-          else if (m.department_id) {
-            console.warn(`Member ${m.id} references department_id ${m.department_id} which is not a department in organization ${organizationId}`);
+        type DepartmentRow = { id: string; name: string };
+
+        const deptMap = new Map<string, string>(
+          (depts as DepartmentRow[]).map((dept) => [dept.id, dept.name])
+        );
+
+        members.forEach((member: MemberRow) => {
+          if (!member.department_id) {
+            return;
+          }
+
+          const name = deptMap.get(member.department_id);
+          if (name) {
+            memberDeptMap.set(member.id, name);
+          } else {
+            console.warn(
+              `Member ${member.id} references department_id ${member.department_id} which is not a department in organization ${organizationId}`
+            );
           }
         });
       } else {
@@ -109,7 +141,7 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
   console.log("Department map:", Object.fromEntries(memberDeptMap)); // Debug logging
 
   // Get attendance records only for these members
-  const memberIds = members.map(m => m.id);
+  const memberIds = members.map((member: MemberRow) => member.id);
   
   const { data: records, error: recordsError } = await supabase
     .from('attendance_records')
@@ -143,7 +175,7 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
 
   // Count attendance for each group
   (records || []).forEach((rec) => {
-    const deptName = memberDeptMap.get(rec.organization_member_id) || "Unknown";
+    const deptName = memberDeptMap.get(rec.organization_member_id) ?? "Unknown";
     
     if (!groupsMap[deptName]) {
       groupsMap[deptName] = {

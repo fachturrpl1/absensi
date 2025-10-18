@@ -73,14 +73,46 @@ export default async function RootLayout({
 
   const metadata = user?.user_metadata || {};
 
+  let profile: {
+    first_name?: string | null;
+    middle_name?: string | null;
+    last_name?: string | null;
+    display_name?: string | null;
+    profile_photo_url?: string | null;
+    employee_code?: string | null;
+  } | null = null;
+
+  if (user) {
+    const { data: profileData } = await supabase
+      .from("user_profiles")
+      .select("first_name, middle_name, last_name, display_name, profile_photo_url, employee_code")
+      .eq("id", user.id)
+      .maybeSingle();
+    profile = profileData ?? null;
+  }
+
+  const resolvedFirstName = profile?.first_name ?? metadata.first_name ?? undefined;
+  const resolvedMiddleName = profile?.middle_name ?? metadata.middle_name ?? undefined;
+  const resolvedLastName = profile?.last_name ?? metadata.last_name ?? undefined;
+
+  const displayNameCandidates = [
+    profile?.display_name,
+    metadata.display_name,
+    [resolvedFirstName, resolvedMiddleName, resolvedLastName].filter((part) => part && part.trim() !== "").join(" ") || null,
+  ].filter((value): value is string => Boolean(value && value.trim() !== ""));
+
+  const resolvedDisplayName = displayNameCandidates[0] ?? null;
+
   const mappedUser = user
     ? {
         id: user.id,
-        email: user.email ?? "",
-        name:
-          `${metadata.first_name || ""} ${metadata.last_name || ""}`.trim() ||
-          user.email!,
-        profile_photo_url: metadata.profile_photo_url ?? "",
+        email: user.email ?? undefined,
+        employee_code: profile?.employee_code ?? undefined,
+        first_name: resolvedFirstName ?? undefined,
+        middle_name: resolvedMiddleName ?? undefined,
+        last_name: resolvedLastName ?? undefined,
+        display_name: resolvedDisplayName ?? undefined,
+        profile_photo_url: profile?.profile_photo_url ?? metadata.profile_photo_url ?? undefined,
       }
     : null;
 

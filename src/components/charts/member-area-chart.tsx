@@ -1,12 +1,50 @@
 "use client"
 import React from 'react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import type { TooltipProps } from 'recharts'
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { IMemberAttendancePoint } from '@/interface'
-import { ShadcnChartContainer, ShadcnChartTooltip, ShadcnChartTooltipContent } from '@/components/ui/shadcn-chart'
+import { ShadcnChartTooltipContent } from '@/components/ui/shadcn-chart'
+
+type ChartDatum = {
+  date: IMemberAttendancePoint['date']
+  iso: string
+  short: string | IMemberAttendancePoint['date']
+  present: number
+  absent: number
+  avg: number | null
+}
+
+function MemberTooltipContent({ active, payload }: TooltipProps<number, string>) {
+  if (!active || !payload || payload.length === 0) return null
+  const data = payload[0]?.payload as ChartDatum | undefined
+  if (!data) return null
+
+  const formattedDate = React.useMemo(() => {
+    const dt = new Date(data.iso || data.date)
+    return Number.isNaN(dt.getTime()) ? String(data.date) : dt.toLocaleDateString()
+  }, [data.iso, data.date])
+
+  return (
+    <ShadcnChartTooltipContent>
+      <div className="bg-card border shadow-sm rounded px-3 py-2 text-xs">
+        <div className="font-medium">{formattedDate}</div>
+        <div className="text-muted-foreground">
+          Present: <span className="font-semibold">{data.present}</span>
+        </div>
+        <div className="text-muted-foreground">
+          Absent: <span className="font-semibold">{data.absent}</span>
+        </div>
+        <div className="text-muted-foreground">
+          Avg (min): <span className="font-semibold">{data.avg ?? '-'}</span>
+        </div>
+      </div>
+    </ShadcnChartTooltipContent>
+  )
+}
 
 export default function MemberAreaChart({ data }: { data: IMemberAttendancePoint[] }) {
   // map data to chart-friendly format (date label)
-  const chartData = data.map((d) => {
+  const chartData: ChartDatum[] = data.map((d) => {
     // ensure we parse YYYY-MM-DD safely by appending T00:00:00 to avoid timezone parsing issues
     const iso = typeof d.date === 'string' && d.date.length === 10 ? `${d.date}T00:00:00` : String(d.date)
     const dt = new Date(iso)
@@ -33,24 +71,6 @@ export default function MemberAreaChart({ data }: { data: IMemberAttendancePoint
   const colorPrimary = 'var(--primary, #2563eb)'
   const colorDesktop = 'var(--color-desktop, ' + colorPrimary + ')'
 
-  const TooltipContent = ({ active, payload }: any) => {
-    if (!active || !payload || !payload.length) return null
-    const p = payload[0].payload
-    return (
-      <ShadcnChartTooltipContent>
-        <div className="bg-card border shadow-sm rounded px-3 py-2 text-xs">
-          <div className="font-medium">{(() => {
-            const dt = new Date(p.iso || p.date)
-            return isNaN(dt.getTime()) ? String(p.date) : dt.toLocaleDateString()
-          })()}</div>
-          <div className="text-muted-foreground">Present: <span className="font-semibold">{p.present}</span></div>
-          <div className="text-muted-foreground">Absent: <span className="font-semibold">{p.absent}</span></div>
-          <div className="text-muted-foreground">Avg (min): <span className="font-semibold">{p.avg ?? '-'}</span></div>
-        </div>
-      </ShadcnChartTooltipContent>
-    )
-  }
-
   return (
     <div className="aspect-auto h-[250px] w-full">
       <ResponsiveContainer>
@@ -76,7 +96,7 @@ export default function MemberAreaChart({ data }: { data: IMemberAttendancePoint
               return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
             }}
           />
-          <Tooltip cursor={false} content={<TooltipContent />} />
+          <Tooltip cursor={false} content={<MemberTooltipContent />} />
           <Area
             dataKey="present"
             name="Present"

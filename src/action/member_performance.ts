@@ -73,14 +73,19 @@ export const getMemberPerformance = async (memberId: string): Promise<ApiRespons
     recentPromise,
   ]);
 
+  type StatusCount = { status: string; count: number };
   const countsMap: Record<string, number> = {};
-  (counts || []).forEach((c: any) => (countsMap[c.status] = c.count || 0));
+  (counts || []).forEach((entry) => {
+    const castEntry = entry as StatusCount;
+    countsMap[castEntry.status] = castEntry.count || 0;
+  });
 
   // average over last 90 days
   let avg = 0;
-  if (avg90Res && avg90Res.data && Array.isArray(avg90Res.data)) {
-    const vals = avg90Res.data
-      .map((r: any) => Number(r.work_duration_minutes || 0))
+  if (avg90Res && Array.isArray(avg90Res.data)) {
+    type DurationRow = { work_duration_minutes: number | null };
+    const vals = (avg90Res.data as DurationRow[])
+      .map((row) => Number(row.work_duration_minutes || 0))
       .filter((v) => Number.isFinite(v) && v > 0);
     avg = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
   }
@@ -95,14 +100,20 @@ export const getMemberPerformance = async (memberId: string): Promise<ApiRespons
 
   let avgCheckInStr: string | null = null;
   let avgCheckOutStr: string | null = null;
-  if (avgTimesRes && avgTimesRes.data && Array.isArray(avgTimesRes.data)) {
-    const ins: number[] = []
-    const outs: number[] = []
-    const durations: number[] = []
-    for (const r of avgTimesRes.data) {
-      const ci = r.actual_check_in
-      const co = r.actual_check_out
-      const dur = Number(r.work_duration_minutes || 0)
+  if (avgTimesRes && Array.isArray(avgTimesRes.data)) {
+    type TimeRow = {
+      actual_check_in: string | null;
+      actual_check_out: string | null;
+      work_duration_minutes: number | null;
+    };
+
+    const ins: number[] = [];
+    const outs: number[] = [];
+    const durations: number[] = [];
+    for (const row of avgTimesRes.data as TimeRow[]) {
+      const ci = row.actual_check_in;
+      const co = row.actual_check_out;
+      const dur = Number(row.work_duration_minutes || 0);
       if (ci) {
         const t = Date.parse(ci)
         if (!isNaN(t)) ins.push(new Date(t).getHours() * 60 + new Date(t).getMinutes())
@@ -120,7 +131,7 @@ export const getMemberPerformance = async (memberId: string): Promise<ApiRespons
           if (m2) outs.push(Number(m2[1]) * 60 + Number(m2[2]))
         }
       }
-      if (Number.isFinite(dur) && dur > 0) durations.push(dur)
+      if (Number.isFinite(dur) && dur > 0) durations.push(dur);
     }
 
     const avgMinutes = (arr: number[]) => (arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null)
@@ -131,7 +142,7 @@ export const getMemberPerformance = async (memberId: string): Promise<ApiRespons
 
     // prefer previously computed avg for work duration if present; else compute from durations
     if (!avg && durations.length) {
-      avg = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+      avg = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length);
     }
   }
 

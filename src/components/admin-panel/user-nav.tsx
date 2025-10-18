@@ -31,7 +31,7 @@ export function UserNav() {
   const user = useAuthStore((state) => state.user)
   const { refreshProfile } = useProfileRefresh()
   const [isRefreshing, setIsRefreshing] = React.useState(false)
-  const profilePhotoUrl = useProfilePhotoUrl(user?.profile_photo_url)
+  const profilePhotoUrl = useProfilePhotoUrl(user?.profile_photo_url ?? undefined)
 
   // Auto-refresh profile data on component mount
   React.useEffect(() => {
@@ -64,7 +64,15 @@ export function UserNav() {
       return user.display_name
     }
 
-    return nameParts.length > 0 ? nameParts.join(' ') : user.email || 'User'
+    if (user.display_name && user.display_name.trim() !== '') {
+      return user.display_name
+    }
+
+    if (nameParts.length > 0) {
+      return nameParts.join(' ')
+    }
+
+    return user.email || 'User'
   }
 
   const fullName = getFullName()

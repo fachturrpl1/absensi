@@ -4,15 +4,17 @@ import { useState } from 'react'
 
 export function useConfirmDialog() {
   const [open, setOpen] = useState(false)
-  const [callback, setCallback] = useState<(() => void) | null>(null)
+  const [callback, setCallback] = useState<(() => Promise<void> | void) | null>(null)
 
-  const onConfirm = (callback: () => void) => {
+  const onConfirm = (callback: () => Promise<void> | void) => {
     setCallback(() => callback)
     setOpen(true)
   }
 
-  const handleConfirm = () => {
-    if (callback) callback()
+  const handleConfirm = async () => {
+    if (callback) {
+      await callback()
+    }
     setOpen(false)
     setCallback(null)
   }

@@ -427,10 +427,11 @@ export async function getMonthlyAttendanceStats() {
       return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 }, error: memberIdsError };
     }
 
-    const memberIdList = (memberIds || []).map((m: any) => m.id);
+    type MemberIdRow = { id: string };
+    const memberIdList = (memberIds || []).map((member) => (member as MemberIdRow).id);
 
     // small retry wrapper for transient network errors
-    async function queryWithRetry(queryFn: () => Promise<any>, retries = 1) {
+    async function queryWithRetry<T>(queryFn: () => Promise<T>, retries = 1): Promise<T> {
       try {
         return await queryFn();
       } catch (err) {
@@ -443,27 +444,30 @@ export async function getMonthlyAttendanceStats() {
     }
 
     const [currentRes, previousRes] = await Promise.all([
-      queryWithRetry(() => Promise.resolve(
-        supabase
-          .from('attendance_records')
-          .select('id', { count: 'exact', head: true })
-          .in('organization_member_id', memberIdList || [])
-          .gte('attendance_date', curRange.start)
-          .lte('attendance_date', curRange.end)
-          .in('status', ['present', 'late'])
-          .then(res => res)
-      )),
+      queryWithRetry(() =>
+        Promise.resolve(
+          supabase
+            .from('attendance_records')
+            .select('id', { count: 'exact', head: true })
+            .in('organization_member_id', memberIdList || [])
+            .gte('attendance_date', curRange.start)
+            .lte('attendance_date', curRange.end)
+            .in('status', ['present', 'late'])
+            .then((res) => res)
+        )
+      ),
 
-      queryWithRetry(() => Promise.resolve(
-        supabase
-          .from('attendance_records')
-          .select('id', { count: 'exact', head: true })
-          .in('organization_member_id', memberIdList || [])
-          .gte('attendance_date', prevRange.start)
-          .lte('attendance_date', prevRange.end)
-          .in('status', ['present', 'late'])
-          .then(res => res)
-      )
+      queryWithRetry(() =>
+        Promise.resolve(
+          supabase
+            .from('attendance_records')
+            .select('id', { count: 'exact', head: true })
+            .in('organization_member_id', memberIdList || [])
+            .gte('attendance_date', prevRange.start)
+            .lte('attendance_date', prevRange.end)
+            .in('status', ['present', 'late'])
+            .then((res) => res)
+        )
       )
     ]);
 
@@ -487,14 +491,15 @@ export async function getMonthlyAttendanceStats() {
         percentChange
       }
     };
-  } catch (e) {
+  } catch (error) {
     return {
       success: false,
       data: {
         currentMonth: 0,
         previousMonth: 0,
         percentChange: 0
-      }
+      },
+      error,
     };
   }
 }

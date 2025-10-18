@@ -26,13 +26,14 @@ export const getMemberAttendanceTrend = async (memberId: string): Promise<ApiRes
     return { success: false, message: 'Query error', data: [] } as ApiResponse<IMemberAttendancePoint[]>;
   }
 
+  type AttendanceRow = { attendance_date: string | null; work_duration_minutes: number | null };
   const map: Record<string, { count: number; sumMinutes: number; rows: number }> = {};
-  (rows || []).forEach((r: any) => {
-    const d = (r.attendance_date || '').toString().split('T')[0];
+  (rows || []).forEach((row: AttendanceRow) => {
+    const d = (row.attendance_date || '').toString().split('T')[0];
     if (!d) return;
     if (!map[d]) map[d] = { count: 0, sumMinutes: 0, rows: 0 };
     map[d].count += 1;
-    const m = Number(r.work_duration_minutes || 0);
+    const m = Number(row.work_duration_minutes || 0);
     map[d].sumMinutes += m;
     map[d].rows += (m ? 1 : 0);
   });

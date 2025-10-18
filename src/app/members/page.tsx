@@ -14,8 +14,17 @@ import LoadingSkeleton from "@/components/loading-skeleton"
 import { getAllUsers } from "@/action/users"
 import { useRouter } from "next/navigation"
 import { ContentLayout } from "@/components/admin-panel/content-layout"
-import { useConfirmDialog } from "@/hooks/use-confirm-dialog"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 export default function MembersPage() {
   const [members, setMembers] = React.useState<IOrganization_member[]>([])
@@ -79,18 +88,14 @@ export default function MembersPage() {
     fetchData()
   }, [])
 
-  const { open, setOpen, onConfirm, handleConfirm } = useConfirmDialog()
-
   async function handleDelete(id: string) {
-    onConfirm(async () => {
-      const res = await deleteOrganization_member(id)
-      if (res.success) {
-        toast.success('Member deleted successfully')
-        setMembers((prev) => prev.filter((m) => m.id !== id))
-      } else {
-        toast.error(res.message)
-      }
-    })
+    const res = await deleteOrganization_member(id)
+    if (res.success) {
+      toast.success('Member deleted successfully')
+      setMembers((prev) => prev.filter((m) => m.id !== id))
+    } else {
+      toast.error(res.message)
+    }
   }
 
   // --- definisi kolom ---
@@ -169,14 +174,37 @@ export default function MembersPage() {
             >
               <User />
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="text-red-500 cursor-pointer bg-secondary border-0  p-0 m-0 "
-                 onClick={() => handleDelete(member.id!)}
-            >
-              <Trash />
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="text-red-500 cursor-pointer bg-secondary border-0  p-0 m-0 "
+                >
+                  <Trash />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Member</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this member? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      if (member.id) {
+                        await handleDelete(member.id)
+                      }
+                    }}
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )
       },
@@ -185,15 +213,6 @@ export default function MembersPage() {
 
   return (
     <ContentLayout title="Member List">
-      <ConfirmDialog
-        open={open}
-        onOpenChange={setOpen}
-        onConfirm={handleConfirm}
-        title="Delete Member"
-        description="Are you sure you want to delete this member? This action cannot be undone."
-        confirmText="Delete"
-      />
-
       <div className="w-full max-w-6xl mx-auto">
         {loading ? (
           <LoadingSkeleton />

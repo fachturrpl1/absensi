@@ -14,7 +14,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import {
   Form,
   FormControl,
@@ -253,8 +263,6 @@ export default function WorkScheduleDetailsPage() {
 
   const [open, setOpen] = React.useState(false)
   const [editingDetail, setEditingDetail] = React.useState<IWorkScheduleDetail | null>(null)
-  const [confirmOpen, setConfirmOpen] = React.useState(false)
-  const [scheduleDetailToDelete, setScheduleDetailToDelete] = React.useState<string | null>(null)
 
   const fetchDetails = async () => {
     setLoading(true)
@@ -350,17 +358,35 @@ export default function WorkScheduleDetailsPage() {
             >
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="text-red-500"
-              onClick={() => {
-                setScheduleDetailToDelete(d.id)
-                setConfirmOpen(true)
-              }}
-            >
-              <Trash className="h-4 w-4" />
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="text-red-500"
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Schedule Detail</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this schedule detail?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      await handleDelete(d.id)
+                    }}
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )
       },
@@ -370,19 +396,6 @@ export default function WorkScheduleDetailsPage() {
   return (
     <ContentLayout title="Schedule Details">
       <div className="w-full max-w-6xl mx-auto py-8">
-        <ConfirmDialog
-          open={confirmOpen}
-          onOpenChange={setConfirmOpen}
-          title="Delete Schedule Detail"
-          description="Are you sure you want to delete this schedule detail?"
-          onConfirm={async () => {
-            if (scheduleDetailToDelete) {
-              await handleDelete(scheduleDetailToDelete)
-              setConfirmOpen(false)
-              setScheduleDetailToDelete(null)
-            }
-          }}
-        />
         <div className="">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild className="float-end ml-5">
