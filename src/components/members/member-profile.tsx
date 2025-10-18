@@ -61,7 +61,12 @@ export default function MemberProfile({ member, performance, attendanceTrend }: 
                     .join(" ") || user?.display_name || user?.email || "")}
                 />
                 <AvatarFallback className="text-lg font-semibold">
-                  {getUserInitials(user?.first_name, user?.last_name, user?.display_name, user?.email)}
+                  {getUserInitials(
+                    user?.first_name,
+                    user?.last_name,
+                    user?.display_name ?? undefined,
+                    user?.email ?? undefined
+                  )}
                 </AvatarFallback>
               </Avatar>
             </div>

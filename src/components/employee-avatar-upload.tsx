@@ -3,9 +3,10 @@
 
 'use client';
 
-import { AvatarImageUpload } from '@/components/image-compression-upload';
-import { uploadEmployeePhoto } from '@/action/employees';
-import { toast } from 'sonner';
+import type { CompressionResult } from "@/types/image-compression";
+import { ImageCompressionUpload } from "@/components/image-compression-upload";
+import { toast } from "sonner";
+import { safeAvatarSrc } from "@/lib/avatar-utils";
 
 interface EmployeeAvatarUploadProps {
   employeeId: string;
@@ -20,47 +21,44 @@ export function EmployeeAvatarUpload({
 }: EmployeeAvatarUploadProps) {
   const handlePhotoUpload = async (result: CompressionResult) => {
     try {
-      // File sudah dikompres otomatis!
-      console.log('Original size:', result.originalSize); // Misal: 2.5 MB
-      console.log('Compressed size:', result.compressedSize); // Misal: 250 KB
-      console.log('Saved:', result.compressionRatio + '%'); // Misal: 90% saved
-      
-      // Upload ke storage (Supabase/CloudFlare/dll)
-      const photoUrl = await uploadEmployeePhoto(employeeId, result.file);
-      
-      // Update database dengan URL foto baru
-      await updateEmployeeProfile(employeeId, { avatar_url: photoUrl });
-      
-      toast.success(`Foto profil berhasil diupload! Hemat ${result.compressionRatio}% storage`);
-      onPhotoUpdated?.(photoUrl);
-      
+      console.log("Compressed photo ready", {
+        employeeId,
+        originalSize: result.originalSize,
+        compressedSize: result.compressedSize,
+        compressionRatio: result.compressionRatio,
+      });
+
+      toast.success("Compressed photo ready to upload");
+      onPhotoUpdated?.(URL.createObjectURL(result.file));
     } catch (error) {
-      toast.error('Gagal upload foto profil');
+      console.error("EmployeeAvatarUpload failed", error);
+      toast.error("Failed to process profile photo");
     }
   };
 
   return (
     <div className="space-y-4">
-      <h3 className="font-medium">Foto Profil Karyawan</h3>
+      <h3 className="font-medium">Employee Profile Photo</h3>
       <p className="text-sm text-muted-foreground">
-        Upload foto profil (otomatis dikompres untuk menghemat storage)
+        Compress a profile photo before uploading it to storage.
       </p>
-      
-      <AvatarImageUpload
-        onUpload={handlePhotoUpload}
-        className="max-w-md"
-      />
-      
+
+      <ImageCompressionUpload onUpload={handlePhotoUpload} className="max-w-md" />
+
       {currentPhotoUrl && (
         <div className="flex items-center space-x-4">
-          <img 
-            src={currentPhotoUrl} 
-            alt="Current photo" 
-            className="w-16 h-16 rounded-full object-cover"
-          />
+          {safeAvatarSrc(currentPhotoUrl) ? (
+            <img
+              src={safeAvatarSrc(currentPhotoUrl) as string}
+              alt="Current photo"
+              className="w-16 h-16 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-muted" />
+          )}
           <div className="text-sm">
-            <p className="font-medium">Foto saat ini</p>
-            <p className="text-muted-foreground">Sudah terkompresi</p>
+            <p className="font-medium">Current photo</p>
+            <p className="text-muted-foreground">Displayed for reference</p>
           </div>
         </div>
       )}

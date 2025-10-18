@@ -316,8 +316,9 @@ export function AccountForm({ initialData }: AccountFormProps) {
         console.error('Upload error:', result.message);
       }
     } catch (error: unknown) {
-      console.error('Upload error:', error);
-      toast.error(`Failed to upload photo: ${error instanceof Error ? error.message : 'Unknown error' || 'Unknown error'}`);
+      console.error("Upload error:", error)
+      const message = error instanceof Error ? error.message : "Unknown error"
+      toast.error(`Failed to upload photo: ${message}`)
     } finally {
       setPhotoUploading(false);
     }
@@ -384,7 +385,9 @@ export function AccountForm({ initialData }: AccountFormProps) {
             <div className="relative group">
               <Avatar className="h-32 w-32 ring-4 ring-white shadow-xl">
                 <AvatarImage
-                  src={safeAvatarSrc(useProfilePhotoUrl(currentUser?.profile_photo_url ?? initialData.user.profile_photo_url ?? undefined) ?? undefined)}
+                  src={safeAvatarSrc(
+                    useProfilePhotoUrl(currentUser?.profile_photo_url ?? initialData.user.profile_photo_url ?? undefined) ?? undefined
+                  ) || undefined}
                   alt={(() => {
                     const displayName = watchedDisplayName && watchedDisplayName !== "" ? watchedDisplayName : currentUser?.display_name ?? initialData.user.display_name
                     if (displayName && displayName.trim() !== "") {
@@ -412,7 +415,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                   {getUserInitials(
                     currentUser?.first_name ?? initialData.user.first_name,
                     currentUser?.last_name ?? initialData.user.last_name,
-                    watchedDisplayName && watchedDisplayName !== "" ? watchedDisplayName : currentUser?.display_name ?? initialData.user.display_name,
+                    (watchedDisplayName && watchedDisplayName !== "" ? watchedDisplayName : currentUser?.display_name ?? initialData.user.display_name) ?? undefined,
                     currentUser?.email ?? initialData.user.email
                   )}
                 </AvatarFallback>

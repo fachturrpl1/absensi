@@ -252,8 +252,8 @@ export class ImageCompressor {
       } else {
         targetFormat = 'webp'; // Default to WebP for best compression
       }
-    } else if (format !== 'auto') {
-      targetFormat = format as 'jpeg' | 'webp' | 'avif';
+    } else {
+      targetFormat = format;
     }
 
     return await this.compressBuffer(buffer, {

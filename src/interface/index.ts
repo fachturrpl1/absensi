@@ -23,6 +23,7 @@ export interface IUser {
     profile_photo_url?: string | null;
     emergency_contact?: IEmergencyContact | null;
     is_active?: boolean;
+    role_id?: string | null;
     created_at?: string;
     updated_at?: string;
     deleted_at?: string;

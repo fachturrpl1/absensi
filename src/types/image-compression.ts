@@ -7,6 +7,7 @@ export interface CompressionOptions {
   alwaysKeepResolution?: boolean;
   useWebWorker?: boolean;
   preserveExif?: boolean;
+  onProgress?: (progress: number) => void;
   signal?: AbortSignal;
 }
 

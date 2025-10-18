@@ -2,15 +2,16 @@
 
 import { useState, useCallback, useRef } from 'react';
 import imageCompression from 'browser-image-compression';
-import { 
-  CompressionOptions, 
-  CompressionResult, 
-  UploadProgress, 
+import {
+  CompressionOptions,
+  CompressionResult,
+  UploadProgress,
   COMPRESSION_PRESETS,
   SUPPORTED_IMAGE_FORMATS,
   MAX_FILE_SIZE,
   formatFileSize,
-  calculateCompressionRatio
+  calculateCompressionRatio,
+  CompressionPreset
 } from '../types/image-compression';
 
 export interface UseImageCompressionOptions {

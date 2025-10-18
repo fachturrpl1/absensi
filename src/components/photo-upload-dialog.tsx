@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Camera, Upload, X, Compress } from "lucide-react";
+import { Camera, Upload, X, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { useAvatarCompression } from "@/hooks/use-image-compression";
+import { useImageCompression } from "@/hooks/use-image-compression";
 import { formatFileSize } from "@/types/image-compression";
 
 interface PhotoUploadDialogProps {
@@ -48,7 +48,8 @@ export function PhotoUploadDialog({
     isCompressing,
     progress,
     error: compressionError
-  } = useAvatarCompression({
+  } = useImageCompression({
+    preset: "avatar",
     onSuccess: (result) => {
       setSelectedFile(result.file);
       setPreviewUrl(result.dataUrl || '');
@@ -159,7 +160,7 @@ export function PhotoUploadDialog({
                   <span>{formatFileSize(selectedFile.size)}</span>
                   {compressionStats && compressionStats.compressionRatio > 0 && (
                     <Badge variant="secondary" className="text-xs">
-                      <Compress className="h-3 w-3 mr-1" />
+                      <Archive className="h-3 w-3 mr-1" />
                       {compressionStats.compressionRatio}% saved
                     </Badge>
                   )}

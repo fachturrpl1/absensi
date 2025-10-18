@@ -59,12 +59,9 @@ const OrganizationFormSchema = z.object({
   logo_url: z.string().url("URL tidak valid").nullable().optional(),
 
 
-  is_active: z.boolean().default(true),
+  is_active: z.boolean(),
   subscription_tier: z.string().optional(),
-  subscription_expires_at: z
-    .string()
-    .optional()
-    .transform((val) => (val === "" ? null : val)),
+  subscription_expires_at: z.string().optional(),
 })
 
 export default function OrganizationForm({
@@ -79,7 +76,7 @@ export default function OrganizationForm({
 
   // ✅ Inisialisasi form
   const form = useForm<z.infer<typeof OrganizationFormSchema>>({
-    resolver: zodResolver(OrganizationFormSchema) as unknown,
+    resolver: zodResolver(OrganizationFormSchema),
     defaultValues: {
       code: "",
       name: "",
@@ -153,6 +150,10 @@ export default function OrganizationForm({
       const payload = {
         ...values,
         logo_url: logoUrl,
+        subscription_expires_at:
+          values.subscription_expires_at === ""
+            ? null
+            : values.subscription_expires_at,
       };
 
       let response
@@ -173,7 +174,8 @@ export default function OrganizationForm({
       )
       router.push("/organization")
     } catch (err: unknown) {
-      toast.error(err?.message ?? "Something went wrong")
+      const message = err instanceof Error ? err.message : "Something went wrong"
+      toast.error(message)
     } finally {
       setLoading(false)
     }

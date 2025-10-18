@@ -89,7 +89,7 @@ export function UserNav() {
               >
                 <Avatar className="h-8 w-8">
                   <AvatarImage
-                    src={safeAvatarSrc(profilePhotoUrl)}
+                    src={safeAvatarSrc(profilePhotoUrl) || undefined}
                     alt={fullName}
                     className="object-cover"
                     onError={(e) => {
@@ -104,7 +104,7 @@ export function UserNav() {
                     {getUserInitials(
                       user.first_name,
                       user.last_name,
-                      user.display_name,
+                      user.display_name ?? undefined,
                       user.email
                     )}
                   </AvatarFallback>

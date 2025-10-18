@@ -13,18 +13,28 @@ export function UserProvider({ user }: { user: Partial<IUser> | null | undefined
         return null
       }
 
+      const merged = {
+        ...current,
+        ...user,
+      }
+
+      const nextId = merged.id ?? current?.id
+      if (!nextId) {
+        return current
+      }
+
       const resolvedDisplayName =
-        user.display_name && user.display_name.trim() !== ""
-          ? user.display_name
+        typeof merged.display_name === "string" && merged.display_name.trim() !== ""
+          ? merged.display_name
           : current?.display_name && current.display_name.trim() !== ""
             ? current.display_name
             : user.display_name ?? current?.display_name ?? null
 
       return {
-        ...current,
-        ...user,
+        ...merged,
+        id: nextId,
         display_name: resolvedDisplayName,
-      }
+      } as IUser
     })
   }, [user, setUser])
 

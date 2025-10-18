@@ -215,5 +215,13 @@ export async function getOrganizationTimezoneByUserId(userId: string) {
     return "UTC";
   }
 
-  return data?.organizations?.timezone ?? "UTC";
+  if (!data) return "UTC";
+
+  const organizations = data.organizations as { timezone?: string } | { timezone?: string }[] | null | undefined;
+
+  if (Array.isArray(organizations)) {
+    return organizations[0]?.timezone ?? "UTC";
+  }
+
+  return organizations?.timezone ?? "UTC";
 }

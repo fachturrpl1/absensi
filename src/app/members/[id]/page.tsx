@@ -5,11 +5,7 @@ import { getMemberAttendanceTrend } from "@/action/member_attendance_trend"
 import MemberProfile from "@/components/members/member-profile"
 import { ContentLayout } from "@/components/admin-panel/content-layout"
 
-interface Props {
-  params: { id: string }
-}
-
-export default async function MemberProfilePage({ params }: Props) {
+export default async function MemberProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
   const [memberRes, perfRes, trendRes] = await Promise.all([

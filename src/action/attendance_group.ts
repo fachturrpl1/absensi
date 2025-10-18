@@ -77,7 +77,9 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
 
     let candidate: EmbeddedDepartment | null = null;
     if (Array.isArray(raw) && raw.length > 0) candidate = raw[0];
-    else if (raw && typeof raw === 'object') candidate = raw;
+    else if (raw && !Array.isArray(raw) && typeof raw === "object") {
+      candidate = raw;
+    }
 
     if (candidate && candidate.name) {
       // Only map if the department belongs to the requested organization

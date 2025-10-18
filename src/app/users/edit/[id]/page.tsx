@@ -46,7 +46,7 @@ const formSchema = z.object({
   last_name: z.string().optional(),
   phone: z.string().optional(),
   gender: z.enum(["male", "female"]).optional(),
-  is_active: z.boolean().default(true),
+  is_active: z.boolean(),
   role_id: z.string().min(1, "Role is required"),
 });
 
@@ -59,7 +59,7 @@ export default function EditUserPage() {
   const [roles, setRoles] = useState<IRole[]>([]);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema)as unknown,
+    resolver: zodResolver(formSchema),
     defaultValues: {
       first_name: "",
       last_name: "",
@@ -77,7 +77,7 @@ export default function EditUserPage() {
         setLoading(true);
 
         // get user
-        const resUsers: unknown = await getAllUsers();
+        const resUsers = await getAllUsers();
         if (!resUsers.success) throw new Error(resUsers.message);
         const found = resUsers.data.find((u: IUser) => u.id === id);
         if (!found) {
@@ -87,14 +87,18 @@ export default function EditUserPage() {
         }
 
         // get role
-        const resRoles: unknown = await getAllRole();
+        const resRoles = await getAllRole();
         if (!resRoles.success) throw new Error(resRoles.message);
         setRoles(resRoles.data);
 
         // reset form values
         form.reset({
-          ...found,
-          role_id: found.role_id ?? "", // ambil dari relasi user_roles
+          first_name: found.first_name ?? "",
+          last_name: found.last_name ?? "",
+          phone: found.phone ?? "",
+          gender: found.gender === "male" || found.gender === "female" ? found.gender : "male",
+          is_active: Boolean(found.is_active),
+          role_id: found.role_id ?? "",
         });
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : 'Unknown error');
