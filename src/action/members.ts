@@ -55,6 +55,79 @@ export const getAllOrganization_member = async () => {
   return { success: true, data: data as IOrganization_member[] };
 };
 
+type OrganizationSummary = {
+  organizationId: string | null;
+  stats: {
+    totalMembers: number;
+    activeMembers: number;
+    inactiveMembers: number;
+    pendingInvitations: number;
+  };
+};
+
+export const getMemberSummary = async (): Promise<OrganizationSummary> => {
+  const supabase = await getSupabase();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return {
+      organizationId: null,
+      stats: { totalMembers: 0, activeMembers: 0, inactiveMembers: 0, pendingInvitations: 0 },
+    };
+  }
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (membershipError || !membership?.organization_id) {
+    return {
+      organizationId: null,
+      stats: { totalMembers: 0, activeMembers: 0, inactiveMembers: 0, pendingInvitations: 0 },
+    };
+  }
+
+  const organizationId = membership.organization_id as string;
+
+  const [totalMembersRes, activeMembersRes, pendingInvitesRes] = await Promise.all([
+    supabase
+      .from("organization_members")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId),
+    supabase
+      .from("organization_members")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .eq("is_active", true),
+    supabase
+      .from("member_invitations")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .eq("status", "pending"),
+  ]);
+
+  const totalMembers = totalMembersRes.count ?? 0;
+  const activeMembers = activeMembersRes.count ?? 0;
+  const inactiveMembers = totalMembers - activeMembers;
+  const pendingInvitations = pendingInvitesRes.count ?? 0;
+
+  return {
+    organizationId,
+    stats: {
+      totalMembers,
+      activeMembers,
+      inactiveMembers,
+      pendingInvitations,
+    },
+  };
+};
+
 // ✏️ Update Organization
 export const updateOrganizationMember = async (id: string, organization: Partial<IOrganization_member>) => {
   const supabase = await getSupabase();

@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   ShieldCheck,
   Briefcase,
+  BarChart3,
 } from "@/components/icons/lucide-exports";
 import type { LucideIcon } from "@/components/icons/lucide-exports";
 
@@ -75,7 +76,6 @@ export function getMenuList(pathname: string): Group[] {
           icon: ClipboardCheck,
           active: pathname.includes("/attendance")
         },
-
       ]
     },
     {

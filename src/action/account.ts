@@ -64,12 +64,14 @@ export async function getAccountData(): Promise<{
       console.error('Org member error:', orgMemberError);
     }
 
+    const normalizedUserProfile: UserProfile = userProfile ? { ...userProfile } : {};
+
     const accountData: AccountData = {
       user: {
-        ...userProfile,
+        ...normalizedUserProfile,
         email: user.email,
       },
-      organizationMember: orgMember,
+      organizationMember: orgMember ?? null,
     };
 
     return {
@@ -350,6 +352,10 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
     const baseFileName = `profile_${timestamp}`;
 
     try {
+      if (typeof Buffer === "undefined") {
+        throw new Error("File uploads are not supported in this deployment environment");
+      }
+
       // Convert base64 to buffer
       const originalBuffer = Buffer.from(base64Data, 'base64');
       console.log('Buffer created:', { size: originalBuffer.length });
