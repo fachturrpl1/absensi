@@ -78,7 +78,7 @@ export async function updateWorkSchedule(id: string, payload: Partial<IWorkSched
 
 
 export const deleteWorkSchedule = async ( scheduleId: string | number) => {
-     const id = String(scheduleId) // konversi ke string
+     const id = String(scheduleId) // convert to string
     const supabase = await createSupabaseClient();
     const { data, error } = await supabase
         .from("work_schedules").delete().eq("id", id)

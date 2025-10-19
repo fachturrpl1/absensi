@@ -38,7 +38,7 @@ export const getAllAttendance = async () => {
     return { success: false, data: [] };
   }
 
-  // Ubah format agar timezone dan time_format muncul langsung
+  // Transform format so timezone and time_format are available directly
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapped = (data || []).map((item: any) => ({
     ...item,

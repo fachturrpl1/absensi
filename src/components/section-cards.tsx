@@ -130,10 +130,10 @@ export function SectionCards({ monthlyAttendance }: { monthlyAttendance?: Monthl
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Total kehadiran bulan ini
+            Total attendance this month
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
-            <span>Bulan lalu: {localMonthlyAttendance?.previousMonth ?? '—'}</span>
+            <span>Last month: {localMonthlyAttendance?.previousMonth ?? '—'}</span>
             {percent !== null && (
               <Badge variant={trendPositive ? "secondary" : "destructive"} className="text-xs">
                 {trendPositive ? <TrendingUp className="size-3 mr-1" /> : <TrendingDown className="size-3 mr-1" />}
@@ -145,7 +145,7 @@ export function SectionCards({ monthlyAttendance }: { monthlyAttendance?: Monthl
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Keterlambatan</CardDescription>
+          <CardDescription>Late arrivals</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             {lateValue === null ? <Skeleton className="w-20 h-8" /> : lateValue}
           </CardTitle>
@@ -158,10 +158,10 @@ export function SectionCards({ monthlyAttendance }: { monthlyAttendance?: Monthl
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Total keterlambatan bulan ini
+            Total late arrivals this month
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
-            <span>Bulan lalu: {monthlyLate?.previousMonth ?? '—'}</span>
+            <span>Last month: {monthlyLate?.previousMonth ?? '—'}</span>
             {latePercent !== null && (
               <Badge variant={lateTrendPositive ? "secondary" : "destructive"} className="text-xs">
                 {lateTrendPositive ? <TrendingDown className="size-3 mr-1" /> : <TrendingUp className="size-3 mr-1" />}
@@ -173,28 +173,28 @@ export function SectionCards({ monthlyAttendance }: { monthlyAttendance?: Monthl
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Member Aktif</CardDescription>
+          <CardDescription>Active members</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             {memberValue === null ? <Skeleton className="w-20 h-8" /> : memberValue}
           </CardTitle>          
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Total member aktif bulan ini
+            Total active members this month
           </div>
           {/* footer intentionally left minimal */}
         </CardFooter>
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Kartu RFID Aktif</CardDescription>
+          <CardDescription>Active RFID cards</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             {rfidStats ? rfidStats.currentMonth : <Skeleton className="w-20 h-8" />}
           </CardTitle>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Total kartu RFID aktif
+            Total active RFID cards
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             {/* intentionally hide Bulan lalu for RFID card */}

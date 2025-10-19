@@ -160,7 +160,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
       if (!values.phone?.trim()) submitMissing.push("Phone Number");
 
       if (submitMissing.length) {
-        toast.error("Harap isi semua field wajib sebelum menyimpan.");
+        toast.error("Please fill in all required fields before saving.");
         return;
       }
       setLoading(true);
@@ -216,7 +216,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
     }
   };
 
-  // Handle photo upload dengan base64 approach
+  // Handle photo upload with a base64 approach
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -226,7 +226,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
       event.target.value = '';
     }
 
-    // Validasi file di frontend
+    // Frontend validation
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file');
       return;
@@ -260,7 +260,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
         base64Length: base64.length
       });
 
-      // Upload dengan base64 data
+      // Upload using base64 data
       const result = await uploadProfilePhotoBase64({
         base64Data: base64,
         fileName: file.name,

@@ -50,7 +50,7 @@ export const getMemberPerformance = async (memberId: string): Promise<ApiRespons
 
   const avg90Promise = supabase
     .from("attendance_records")
-    .select("work_duration_minutes")
+    .select("work_duration_minutes,actual_check_in,actual_check_out")
     .eq("organization_member_id", memberId)
     .gte("attendance_date", since90);
 
@@ -61,7 +61,7 @@ export const getMemberPerformance = async (memberId: string): Promise<ApiRespons
 
   const recentPromise = supabase
     .from("attendance_records")
-    .select("id,status,attendance_date,work_duration_minutes")
+    .select("id,status,attendance_date,work_duration_minutes,actual_check_in,actual_check_out")
     .eq("organization_member_id", memberId)
     .gte("attendance_date", since)
     .order("attendance_date", { ascending: true });
@@ -81,13 +81,36 @@ export const getMemberPerformance = async (memberId: string): Promise<ApiRespons
   });
 
   // average over last 90 days
-  let avg = 0;
+  function parseMinutes(value: string | null | undefined) {
+    if (!value) return null
+    const timestamp = Date.parse(value)
+    if (!Number.isNaN(timestamp)) {
+      const dt = new Date(timestamp)
+      return dt.getHours() * 60 + dt.getMinutes()
+    }
+    const match = String(value).match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/)
+    if (!match) return null
+    const hours = Number(match[1])
+    const minutes = Number(match[2])
+    return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : null
+  }
+
+  let avg = 0
   if (avg90Res && Array.isArray(avg90Res.data)) {
-    type DurationRow = { work_duration_minutes: number | null };
-    const vals = (avg90Res.data as DurationRow[])
-      .map((row) => Number(row.work_duration_minutes || 0))
-      .filter((v) => Number.isFinite(v) && v > 0);
-    avg = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+    type DurationRow = { work_duration_minutes: number | null; actual_check_in: string | null; actual_check_out: string | null }
+    const durations = (avg90Res.data as DurationRow[]).flatMap((row) => {
+      const stored = Number(row.work_duration_minutes ?? 0)
+      if (Number.isFinite(stored) && stored > 0) {
+        return [stored]
+      }
+      const start = parseMinutes(row.actual_check_in)
+      const end = parseMinutes(row.actual_check_out)
+      if (start != null && end != null && end > start) {
+        return [end - start]
+      }
+      return []
+    })
+    avg = durations.length ? Math.round(durations.reduce((sum, val) => sum + val, 0) / durations.length) : 0
   }
 
   // compute average check-in and check-out times over the last 90 days
@@ -158,10 +181,10 @@ export const getMemberPerformance = async (memberId: string): Promise<ApiRespons
         excused: countsMap.excused || 0,
       },
       lastSeen: latestRes && latestRes.data ? (latestRes.data as any).attendance_date : null,
-  averageWorkDurationMinutes: avg,
-  averageCheckInTime: avgCheckInStr,
-  averageCheckOutTime: avgCheckOutStr,
+      averageWorkDurationMinutes: avg,
+      averageCheckInTime: avgCheckInStr,
+      averageCheckOutTime: avgCheckOutStr,
       recent30: recent,
     },
-  };
-};
+  }
+}

@@ -46,7 +46,7 @@ interface OrganizationMembersFormProps {
     rfidInitial?: Partial<IRfidCard>
 }
 
-// ✅ Zod schema sinkron dengan IOrganization_member + RFID
+// ✅ Zod schema aligned with IOrganization_member + RFID
 const OrganizationMembersFormSchema = z.object({
     organization_id: z.string().min(1, "Organization is required"),
     user_id: z.string().min(1, "User is required"),
@@ -102,7 +102,7 @@ export default function MembersForm({
                 const { data: { user } } = await supabase.auth.getUser();
 
                 if (user) {
-                    // 🔑 2. ambil organization_id dari organization_members
+                    // 🔑 2. fetch organization_id from organization_members
                     const { data: member } = await supabase
                         .from("organization_members")
                         .select("organization_id")
@@ -110,12 +110,12 @@ export default function MembersForm({
                         .maybeSingle();
 
                     if (member) {
-                        // set langsung ke form
+                        // set directly on the form
                         form.setValue("organization_id", String(member.organization_id));
                     }
                 }
 
-                // 3. load dropdown lain
+                // 3. load additional dropdown data
                 await Promise.all([
                     getAllDepartments().then((res) => {
                         // actions return { success: boolean, data: any }
@@ -132,7 +132,7 @@ export default function MembersForm({
                     }),
                 ]);
 
-                // 4. kalau edit, isi default values
+                // 4. preload default values when editing
                 if (initialValues && Object.keys(initialValues).length > 0) {
                     form.reset({
                         organization_id: String(initialValues.organization_id ?? form.getValues("organization_id")),

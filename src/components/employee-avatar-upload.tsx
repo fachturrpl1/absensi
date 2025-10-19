@@ -1,4 +1,4 @@
-// Contoh implementasi untuk foto profil karyawan
+// Example implementation for employee profile photos
 // File: src/components/employee-avatar-upload.tsx
 
 'use client';
@@ -66,7 +66,7 @@ export function EmployeeAvatarUpload({
   );
 }
 
-// Fungsi helper untuk menghitung penghematan storage
+// Helper function to estimate storage savings
 export function calculateStorageSavings(employees: number, avgCompressionRatio: number = 85) {
   const originalSizePerPhoto = 3; // MB
   const totalOriginalSize = employees * originalSizePerPhoto;
@@ -84,7 +84,7 @@ export function calculateStorageSavings(employees: number, avgCompressionRatio: 
 
 /* 
 Contoh penggunaan:
-const savings = calculateStorageSavings(500); // 500 karyawan
+const savings = calculateStorageSavings(500); // 500 employees
 console.log(savings);
 // {
 //   totalEmployees: 500,

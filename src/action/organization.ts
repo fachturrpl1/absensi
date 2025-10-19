@@ -40,7 +40,7 @@ export const updateOrganization = async (id: string, organization: Partial<IOrga
 export const getAllOrganization = async () => {
   const supabase = await createSupabaseClient();
   const { data, error } = await supabase
-    .from("organizations") // konsisten nama tabel
+    .from("organizations") // table name consistency
     .select("*")
     .order("created_at", { ascending: false });
 
@@ -53,11 +53,11 @@ export const getAllOrganization = async () => {
 
 export const uploadLogo = async (
   file: File,
-  oldFilePath?: string // opsional: kalau update, bisa kirim logo lama
+  oldFilePath?: string // optional: pass old logo when updating
 ): Promise<string | null> => {
   try {
     const supabase = await createSupabaseClient();
-    // 🔥 kalau ada logo lama, hapus dulu
+    // 🔥 remove old logo if present
     if (oldFilePath) {
       await deleteLogo(oldFilePath)
     }
@@ -79,7 +79,7 @@ export const uploadLogo = async (
       throw error
     }
 
-    // Ambil public URL
+    // Retrieve public URL
     const { data } = supabase.storage.from("logo").getPublicUrl(fileName)
 
     return data.publicUrl
@@ -89,10 +89,10 @@ export const uploadLogo = async (
   }
 }
 export const deleteLogo = async (fileUrl: string | null): Promise<boolean> => {
-  if (!fileUrl) return true; // ⬅️ kalau null/empty, anggap berhasil
+  if (!fileUrl) return true; // treat null/empty as success
   try {
     const supabase = await createSupabaseClient();
-    // Ambil hanya path relatif setelah bucket name
+    // Extract path relative to the bucket
     const url = new URL(fileUrl);
     const path = url.pathname.split("/object/public/logo/")[1];
 
@@ -121,7 +121,7 @@ export const deleteLogo = async (fileUrl: string | null): Promise<boolean> => {
 export const deleteOrganization = async (id: string): Promise<{ success: boolean; message: string }> => {
   try {
     const supabase = await createSupabaseClient();
-    // Ambil dulu data org untuk tahu logo path
+    // Fetch organization data first to determine logo path
     const { data: org, error: fetchError } = await supabase
       .from("organizations")
       .select("id, logo_url")
@@ -132,12 +132,12 @@ export const deleteOrganization = async (id: string): Promise<{ success: boolean
       throw new Error(fetchError.message);
     }
 
-    // Hapus logo kalau ada
+    // Delete logo if present
     if (org?.logo_url) {
       await deleteLogo(org.logo_url);
     }
 
-    // Hapus data org
+    // Remove organization record
     const { error } = await supabase
       .from("organizations")
       .delete()

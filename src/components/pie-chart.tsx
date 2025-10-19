@@ -137,10 +137,10 @@ export function CustomPieChart({
 export function MemberStatusChart({ data }: { data: PieChartData[] }) {
   return (
     <CustomPieChart
-      title="Status Karyawan"
-      description="Distribusi status aktif/tidak aktif"
+      title="Employee Status"
+      description="Distribution of active versus inactive employees"
       data={data}
-      footerText="Status karyawan saat ini"
+      footerText="Current employee status"
       innerRadius={60}
       outerRadius={100}
     />
@@ -151,10 +151,10 @@ export function MemberStatusChart({ data }: { data: PieChartData[] }) {
 export function AttendanceDistributionChart({ data }: { data: PieChartData[] }) {
   return (
     <CustomPieChart
-      title="Distribusi Kehadiran Hari Ini"
-      description="Breakdown kehadiran karyawan hari ini"
+      title="Today's Attendance Distribution"
+      description="Breakdown of employee attendance today"
       data={data}
-      footerText="Data kehadiran real-time"
+      footerText="Real-time attendance data"
       innerRadius={50}
       outerRadius={90}
     />
@@ -165,10 +165,10 @@ export function AttendanceDistributionChart({ data }: { data: PieChartData[] }) 
 export function EmploymentStatusChart({ data }: { data: PieChartData[] }) {
   return (
     <CustomPieChart
-      title="Status Kepegawaian"
-      description="Distribusi berdasarkan status kepegawaian"
+      title="Employment Status"
+      description="Distribution by employment classification"
       data={data}
-      footerText="Komposisi karyawan"
+      footerText="Employee composition"
       innerRadius={40}
       outerRadius={80}
     />

@@ -53,7 +53,7 @@ export default function AttendancePage() {
   const [loading, setLoading] = React.useState<boolean>(true);
   const timezone = useTimezone(); // 🕒 timezone global dari layout (mis. Asia/Jakarta)
 
-  // 🔹 Ambil semua data attendance dan relasinya
+  // 🔹 Fetch all attendance data and related entities
   const fetchData = async () => {
     try {
       setLoading(true);

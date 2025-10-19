@@ -17,7 +17,7 @@ export const getAllRolePermission = async () => {
 export async function createRolePermission(data: { role_id: number; permission_id: string }[]) {
   try {
     if (!data.length) {
-      // kalau tidak ada permission → hapus semua untuk role_id
+      // if there are no permissions, remove all entries for the role_id
       const roleId = data[0]?.role_id
       if (roleId) {
         await supabase.from("role_permissions").delete().eq("role_id", roleId)
@@ -27,7 +27,7 @@ export async function createRolePermission(data: { role_id: number; permission_i
 
     const roleId = data[0].role_id
 
-    // 1️⃣ hapus semua lama
+    // 1️⃣ remove existing entries
     const { error: delErr } = await supabase
       .from("role_permissions")
       .delete()
@@ -48,7 +48,7 @@ export async function createRolePermission(data: { role_id: number; permission_i
 
 
 export const deleteRolePermission = async ( RoleId: string | number) => {
-     const id = String(RoleId) // konversi ke string
+     const id = String(RoleId) // convert to string
     const { data, error } = await supabase
         .from("role_permissions").delete().eq("id", id)
         .select()

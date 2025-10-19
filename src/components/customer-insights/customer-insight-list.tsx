@@ -26,7 +26,7 @@ export function CustomerInsightList({ data }: { data: CustomerInsightsType }) {
         color="hsl(var(--chart-3))"
       />
       <CustomerInsightItem
-        title="Total Kehadiran Hari Ini"
+        title="Today's Total Attendance"
         value={data.vipCustomers}
         icon={Crown}
         color="hsl(var(--chart-4))"

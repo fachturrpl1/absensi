@@ -20,14 +20,14 @@ export const createOrganizationMember = async (Organization_member: Partial<IOrg
 export const getAllOrganization_member = async () => {
   const supabase = await getSupabase();
 
-  // 1. Ambil user dari cookies
+  // 1. Retrieve user from cookies
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
   if (userError || !user) {
     return { success: false, message: "User not logged in", data: [] };
   }
 
-  // 2. Cari organization_id user
+  // 2. Find the user's organization_id
   const { data: member } = await supabase
     .from("organization_members")
     .select("organization_id")
@@ -38,7 +38,7 @@ export const getAllOrganization_member = async () => {
     return { success: true, message: "User not registered in any organization", data: [] };
   }
 
-  // 3. Ambil semua member sesuai org
+  // 3. Fetch all members belonging to the organization
   const { data, error } = await supabase
     .from("organization_members")
     .select("*")
@@ -94,6 +94,7 @@ export const getOrganizationMembersById = async (id: string) => {
     .from("organization_members")
     .select(`
     *,
+    organizations:organization_id (*),
     rfid_cards (card_number, card_type)
   `)
     .eq("id", id)
@@ -142,6 +143,16 @@ export const getOrganizationMembersById = async (id: string) => {
 
         if (!posError && posData) member.positions = posData
       }
+
+      if (!member.organization && member.organization_id) {
+        const { data: orgData, error: orgError } = await supabase
+          .from("organizations")
+          .select("*")
+          .eq("id", member.organization_id)
+          .maybeSingle()
+
+        if (!orgError && orgData) member.organization = orgData
+      }
     }
   } catch (e) {
      
@@ -183,14 +194,14 @@ export const getUserOrganizationId = async (userId: string) => {
     .from("organization_members")
     .select("organization_id")
     .eq("user_id", userId)
-    .maybeSingle(); // supaya bisa null kalau tidak ada
+    .maybeSingle(); // allows null when none exists
 
   if (error) {
     return { success: false, message: error.message, organizationId: null };
   }
 
   if (!data) {
-    // user belum terdaftar di organization_members
+    // user is not yet registered in organization_members
     return { success: true, message: "User not in organization", organizationId: null };
   }
 

@@ -69,7 +69,7 @@ export async function login(formData: FormData) {
 
   if (error) return { success: false, message: error.message }
   if (!data.user) {
-    return { success: false, message: "Login gagal. Pastikan email sudah dikonfirmasi." }
+    return { success: false, message: "Login failed. Please ensure your email is confirmed." }
   }
 
   const user = data.user

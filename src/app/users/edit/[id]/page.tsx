@@ -129,7 +129,7 @@ export default function EditUserPage() {
   return (
     <ContentLayout title="Edit User">
       <div className="container mx-auto p-4 md:p-6 lg:p-8 max-w-4xl">
-        {/* Header dengan Go Back Button */}
+        {/* Header with Go Back Button */}
         <div className="flex items-center gap-4 mb-6">
           <Button 
             variant="outline" 

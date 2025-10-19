@@ -66,7 +66,7 @@ export default function MembersPage() {
         if (d && d.id) deptMap.set(String(d.id), d.name)
       })
 
-      // join manual: tambahkan user ke setiap member
+      // manual join: attach user to each member
       const merged = membersData.map((m: IOrganization_member) => {
         const u = usersData.find((usr: IUser) => usr.id === m.user_id)
         const groupName = deptMap.get(String(m.department_id)) || (m.departments && (m.departments as any).name) || ""

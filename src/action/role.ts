@@ -49,7 +49,7 @@ export async function updateRole(id: string, payload: Partial<IRole>) {
 
 
 export const deleteRole = async ( RoleId: string | number) => {
-     const id = String(RoleId) // konversi ke string
+     const id = String(RoleId) // convert to string
     const supabase = await createSupabaseClient();
     const { data, error } = await supabase
         .from("system_roles").delete().eq("id", id)

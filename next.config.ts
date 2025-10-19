@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
   experimental: {
     // Configure Server Actions
     serverActions: {
-      bodySizeLimit: '8mb', // Increased from default 1MB to 8MB for profile photo uploads
+      bodySizeLimit: "20mb",
     },
   },
   

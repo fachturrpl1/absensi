@@ -49,7 +49,7 @@ export async function updatePermission(id: string, payload: Partial<IPermission>
 
 
 export const deletePermission = async ( PermissionId: string | number) => {
-     const id = String(PermissionId) // konversi ke string
+     const id = String(PermissionId) // convert to string
     const supabase = await createSupabaseClient();
     const { data, error } = await supabase
         .from("permissions").delete().eq("id", id)

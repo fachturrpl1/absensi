@@ -39,11 +39,12 @@ import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, Columns3Cog, Loader2 } from "lucid
 type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
-  isLoading?: boolean // ✅ Tambahkan props loading
+  isLoading?: boolean // ✅ Added loading prop
   showGlobalFilter?: boolean
   showPagination?: boolean
   showColumnToggle?: boolean
   initialSorting?: SortingState
+  getRowKey?: (row: TData, index: number) => string
 }
 
 export function DataTable<TData, TValue>({
@@ -54,6 +55,7 @@ export function DataTable<TData, TValue>({
   showPagination = true,
   showColumnToggle = true,
   initialSorting,
+  getRowKey,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting ?? [])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -86,7 +88,7 @@ export function DataTable<TData, TValue>({
   }, [appliedSearch, data, columns])
 
   const table = useReactTable({
-    data: filteredData,
+      data: filteredData,
     columns,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
@@ -168,14 +170,14 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-md border relative">
+      <div className="relative overflow-x-auto rounded-md border">
         {isLoading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70">
-            <Loader2 className="animate-spin h-8 w-8 text-gray-500" />
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         )}
 
-        <Table>
+        <Table className="min-w-[36rem]">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -219,9 +221,9 @@ export function DataTable<TData, TValue>({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
+              table.getRowModel().rows.map((row, index) => (
                 <TableRow
-                  key={row.id}
+                  key={getRowKey ? getRowKey(row.original, index) : row.id}
                   data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (

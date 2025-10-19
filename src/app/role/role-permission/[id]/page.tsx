@@ -156,7 +156,7 @@ export default function RolePermissionPage() {
   return (
     <ContentLayout title="Role Permission">
       <div className="container mx-auto p-4 md:p-6 lg:p-8 max-w-6xl">
-        {/* Header dengan Go Back Button */}
+        {/* Header with Go Back Button */}
         <div className="flex items-center gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">

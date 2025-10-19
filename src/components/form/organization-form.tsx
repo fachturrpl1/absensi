@@ -38,10 +38,10 @@ interface OrganizationFormProps {
   initialValues?: Partial<IOrganization>
 }
 
-// ✅ Zod schema sinkron dengan IOrganization
+// ✅ Zod schema aligned with IOrganization
 const OrganizationFormSchema = z.object({
   code: z.string().optional(),
-  name: z.string().min(2, "Nama organisasi minimal 2 karakter."),
+  name: z.string().min(2, "Organization name must be at least 2 characters."),
   legal_name: z.string().optional(),
   tax_id: z.string().optional(),
   industry: z.string().optional(),
@@ -54,9 +54,9 @@ const OrganizationFormSchema = z.object({
   state_province: z.string().optional(),
   postal_code: z.string().optional(),
   phone: z.string().optional(),
-  website: z.string().url("URL tidak valid").or(z.literal("")).optional(),
-  email: z.string().email("Email tidak valid").or(z.literal("")).optional(),
-  logo_url: z.string().url("URL tidak valid").nullable().optional(),
+  website: z.string().url("Invalid URL").or(z.literal("")).optional(),
+  email: z.string().email("Invalid email").or(z.literal("")).optional(),
+  logo_url: z.string().url("Invalid URL").nullable().optional(),
 
 
   is_active: z.boolean(),
@@ -74,7 +74,7 @@ export default function OrganizationForm({
     null
   )
 
-  // ✅ Inisialisasi form
+  // ✅ Initialize form
   const form = useForm<z.infer<typeof OrganizationFormSchema>>({
     resolver: zodResolver(OrganizationFormSchema),
     defaultValues: {
@@ -132,17 +132,17 @@ export default function OrganizationForm({
     try {
       setLoading(true)
 
-      let logoUrl = values.logo_url; // default pakai yang lama
+      let logoUrl = values.logo_url; // default to existing logo
 
       if (selectedLogoFile) {
-        // 1. Upload dulu logo baru
+        // 1. Upload new logo
         const uploaded = await uploadLogo(selectedLogoFile);
         if (uploaded) {
-          // 2. Kalau ada logo lama, hapus
+          // 2. Delete old logo if any
           if (initialValues?.logo_url) {
             await deleteLogo(initialValues.logo_url);
           }
-          // 3. Update ke logo baru
+          // 3. Update to new logo
           logoUrl = uploaded;
         }
       }
@@ -486,7 +486,7 @@ export default function OrganizationForm({
                     <Input
                       type="date"
                       {...field}
-                      value={field.value ?? ""} // ⬅️ null → ""
+                      value={field.value ?? ""} // convert null to empty string
                     />
                   </FormControl>
                   <FormMessage />

@@ -65,7 +65,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Ambil user Supabase (server-side)
+  // Fetch Supabase user (server-side)
   const supabase = await createClient();
   const {
     data: { user },
@@ -116,7 +116,7 @@ export default async function RootLayout({
       }
     : null;
 
-  // 🔹 Ambil timezone dari organisasi user
+  // 🔹 Fetch timezone from the user's organization
   const timezone = user ? await getOrganizationTimezoneByUserId(user.id) : "UTC";
 
   return (

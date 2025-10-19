@@ -45,7 +45,7 @@ export async function updateRfidCard(id: string, payload: Partial<IRfidCard>) {
 }
 
 export const deleteRfidCard = async (CardId: string | number) => {
-    const id = String(CardId) // konversi ke string
+    const id = String(CardId) // convert to string
     const { data, error } = await supabase
         .from("rfid_cards").delete().eq("id", id)
         .select()

@@ -1,203 +1,255 @@
 "use client"
 
 import React from "react"
-import { IOrganization_member, IMemberPerformance, IMemberAttendancePoint } from "@/interface"
-import MemberAreaInteractive from "@/components/charts/member-area-interactive"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import {
+  Mail,
+  Phone,
+  MapPin,
+  BriefcaseBusiness,
+  Building,
+  UserRound,
+  Calendar,
+  Clock3,
+  Award,
+  CalendarClock,
+  Sparkles,
+  ArrowLeft,
+} from "lucide-react"
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import Recent30DataTable from "@/components/members/recent30-data-table"
+import { Button } from "@/components/ui/button"
 import { useProfilePhotoUrl } from "@/hooks/use-profile"
 import { getUserInitials } from "@/lib/avatar-utils"
-// (no React hooks needed)
+import { MemberAttendanceDonut } from "@/components/charts/member-attendance-donut"
+import type { IOrganization_member, IMemberPerformance } from "@/interface"
 
-type RecentRecord = {
-  attendance_date?: string
-  status?: string
-  work_duration_minutes?: number | null
+const formatDate = (value?: string | null) => {
+  if (!value) return "-"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(date)
 }
+
+const formatDuration = (minutes?: number | null) => {
+  if (minutes == null) return "-"
+  const total = Math.round(minutes)
+  const hours = Math.floor(total / 60)
+  const mins = Math.max(total - hours * 60, 0)
+  const parts: string[] = []
+  if (hours) parts.push(`${hours}h`)
+  parts.push(`${mins}m`)
+  return parts.join(" ")
+}
+
+const formatTime = (value?: string | null) => (value && value.trim() ? value : "-")
 
 type Perf = IMemberPerformance | undefined
 
-export default function MemberProfile({ member, performance, attendanceTrend }: { member: IOrganization_member; performance?: Perf; attendanceTrend?: IMemberAttendancePoint[] }) {
-  const user = member.user
-  // prefer email from associated user object, but fall back to member.email if present
-  const email = user?.email ?? (member as any).email ?? '-'
-  // handle some possible extra fields that may be present at runtime
-  const extendedMember = member as IOrganization_member & { groupName?: string; position_title?: string }
-  const router = useRouter()
-  // no admin fetch — show email from member.user and Last Seen from performance
+type MemberProfileProps = {
+  member: IOrganization_member
+  performance?: Perf
+}
 
-  const formatDate = (dateStr?: string | null) => {
-    if (!dateStr) return '-'
-    try {
-      const dt = new Date(dateStr)
-      return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(dt)
-    } catch {
-      return dateStr
-    }
+export default function MemberProfile({ member, performance }: MemberProfileProps) {
+  const router = useRouter()
+  const user = member.user
+  const email = user?.email ?? (member as { email?: string }).email ?? "-"
+  const phone = user?.mobile || user?.phone || "-"
+  const photoUrl = useProfilePhotoUrl(user?.profile_photo_url ?? undefined) ?? undefined
+  const extendedMember = member as IOrganization_member & {
+    groupName?: string
+    position_title?: string
+    manager_name?: string
   }
 
+  const groupName = extendedMember.groupName || member.departments?.name || ""
+  const positionTitle = member.positions?.title || extendedMember.position_title || ""
+  const groupPosition = [groupName, positionTitle]
+    .filter((part) => part && part.trim().length)
+    .join(" • ")
+
+  const displayName = user
+    ? [user.first_name, user.middle_name, user.last_name]
+        .filter((part) => part && part.trim().length)
+        .join(" ") || user.email || "Name unavailable"
+    : "Name unavailable"
+
+  const canEmail = email && email !== "-"
+  const canCall = phone && phone !== "-"
+
+  const attendancePercentages = React.useMemo(
+    () => ({
+      present: performance?.counts?.present ?? 0,
+      late: performance?.counts?.late ?? 0,
+      absent: performance?.counts?.absent ?? 0,
+      excused: performance?.counts?.excused ?? 0,
+    }),
+    [performance?.counts?.present, performance?.counts?.late, performance?.counts?.absent, performance?.counts?.excused],
+  )
+
   return (
-    <div className="space-y-6">
-
-      {/* Personal Info card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Personal Info</CardTitle>
-          <CardDescription>Identitas & kontak — cepat lihat detail dasar anggota</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-start gap-6">
-            <div className="w-28 h-28 flex-shrink-0">
-              <Avatar className="h-28 w-28">
-                <AvatarImage
-                  src={useProfilePhotoUrl(user?.profile_photo_url ?? undefined) ?? undefined}
-                  alt={([user?.first_name, user?.middle_name, user?.last_name]
-                    .filter((part) => part && part.trim() !== "")
-                    .join(" ") || user?.display_name || user?.email || "")}
-                />
-                <AvatarFallback className="text-lg font-semibold">
-                  {getUserInitials(
-                    user?.first_name,
-                    user?.last_name,
-                    user?.display_name ?? undefined,
-                    user?.email ?? undefined
-                  )}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-            <div className="flex-1">
-              <div className="text-sm text-muted-foreground">Basic member information</div>
-              <div className="text-lg font-semibold mt-1">
-                {user
-                  ? [user.first_name, user.middle_name, user.last_name]
-                      .filter((part) => part && part.trim() !== "")
-                      .join(" ") || user.email || "No User"
-                  : "No User"}
+    <div className="mx-auto w-full max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-10">
+      <Card className="border-muted-foreground/20 bg-gradient-to-br from-primary/10 via-background to-background">
+        <CardContent className="flex flex-col gap-8 p-6 sm:px-8 sm:py-8 lg:flex-row lg:flex-nowrap lg:items-start lg:justify-between lg:gap-12">
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-6 text-center lg:flex-row lg:items-center lg:text-left">
+            <Avatar className="h-24 w-24 border-4 border-background shadow-xl sm:h-28 sm:w-28">
+              <AvatarImage src={photoUrl} alt={displayName} />
+              <AvatarFallback className="text-xl font-semibold">
+                {getUserInitials(
+                  user?.first_name,
+                  user?.last_name,
+                  user?.display_name ?? undefined,
+                  user?.email ?? undefined,
+                )}
+              </AvatarFallback>
+            </Avatar>
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+                <CardTitle className="break-words text-2xl font-semibold sm:text-3xl">{displayName || "Name unavailable"}</CardTitle>
+                {member.employment_status ? (
+                  <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+                    {member.employment_status}
+                  </Badge>
+                ) : null}
               </div>
-              <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-xs text-muted-foreground">Employee ID</div>
-                    <Badge variant="outline">{member.employee_id || '-'}</Badge>
-                  </div>
-                  <div className="mt-2">Email: <span className="font-medium">{email}</span></div>
-                  <div>Phone: <span className="font-medium">{user?.phone || '-'}</span></div>
-                </div>
-                <div>
-                    <div>Group: <span className="font-medium">{extendedMember.groupName || member.departments?.name || '-'}</span></div>
-                    <div className="mt-2">Position: <Badge variant="secondary">{member.positions?.title || extendedMember.position_title || '-'}</Badge></div>
-                  <div className="mt-2">Hire Date: <span className="font-medium">{member.hire_date || '-'}</span></div>
-                </div>
+              <CardDescription className="break-words text-sm text-muted-foreground">
+                {groupPosition || "Role details unavailable"}
+              </CardDescription>
+              <div className="flex flex-wrap justify-center gap-2 text-xs text-muted-foreground lg:justify-start">
+                {member.departments?.name ? <Badge variant="outline">{member.departments.name}</Badge> : null}
+                {member.contract_type ? <Badge variant="outline">{member.contract_type}</Badge> : null}
               </div>
             </div>
           </div>
-        </CardContent>
-        {/* Footer intentionally removed from Personal Info — actions moved to bottom */}
-      </Card>
-
-      {/* Performance card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Performance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {performance ? (
-            <div className="grid grid-cols-2 gap-6">
-              {/* Left summary */}
-              <div className="space-y-4">
-                <div className="text-sm text-muted-foreground">Attendance summary and recent activity</div>
-                <div className="grid grid-cols-1 gap-3">
-                  <div>
-                    <div className="text-xs text-muted-foreground">Total Present</div>
-              <div className="text-2xl font-semibold">{performance?.counts?.present ?? 0}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Total Late</div>
-                    <div className="text-2xl font-semibold text-amber-500">{performance?.counts?.late ?? 0}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Total Absent</div>
-                    <div className="text-2xl font-semibold text-red-500">{performance?.counts?.absent ?? 0}</div>
-                  </div>
-                  {/* Quick insights under counts */}
-                  <div className="mt-2">
-                    <div className="text-xs text-muted-foreground">Average Check-in Time</div>
-                    <div className="font-medium">{performance?.averageCheckInTime ?? '-'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Average Check-out Time</div>
-                    <div className="font-medium">{performance?.averageCheckOutTime ?? '-'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Average Work Duration (mins)</div>
-                    <div className="font-medium">{performance?.averageWorkDurationMinutes ?? '-'}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right details */}
-              <div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    {/* Average Work Duration temporarily hidden */}
-                  </div>
-                  <div>
-                    {/* Last Seen removed per request */}
-                  </div>
-                </div>
-
-                <div className="mt-4 text-sm">
-                  <div className="w-full">
-                    <Recent30DataTable data={(performance.recent30 || []) as any} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-muted-foreground">No performance data available.</div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Performance Analytics card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Performance Analytics</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm text-muted-foreground">High level analytics and trends for this member.</div>
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* 90-day Average card temporarily hidden */}
-            <div className="p-3 bg-muted/5 rounded">
-              <div className="text-xs text-muted-foreground">Trend</div>
-              <div className="text-xl font-semibold">{performance ? (performance.counts?.present ?? 0) : '-'}</div>
-            </div>
-            <div className="p-3 bg-muted/5 rounded">
-              <div className="text-xs text-muted-foreground">Streak</div>
-              <div className="text-xl font-semibold">-</div>
-            </div>
-          </div>
-
-          <div className="mt-4">
-            {attendanceTrend && attendanceTrend.length ? (
-              <MemberAreaInteractive data={attendanceTrend} />
-            ) : (
-              <div className="text-muted-foreground text-sm">No trend data available.</div>
-            )}
+          <div className="grid w/full min-w-0 gap-3 sm:grid-cols-2 sm:gap-4 lg:w-auto lg:min-w-[20rem] lg:max-w-[22rem] lg:grid-cols-1">
+            {canEmail ? (
+              <Button variant="secondary" className="w-full justify-center gap-2 lg:justify-start" asChild>
+                <a href={`mailto:${email}`}>
+                  <Mail className="h-4 w-4" /> Send Email
+                </a>
+              </Button>
+            ) : null}
+            {canCall ? (
+              <Button variant="outline" className="w-full justify-center gap-2 lg:justify-start" asChild>
+                <a href={`tel:${phone}`}>
+                  <Phone className="h-4 w-4" /> Call
+                </a>
+              </Button>
+            ) : null}
+            <Button variant="outline" className="w-full justify-center gap-2 lg:justify-start" onClick={() => router.back()}>
+              <ArrowLeft className="h-4 w-4" />
+              Back to List
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Global actions (Back) placed below analytics for clearer layout */}
-      <div className="flex justify-end mt-4">
-        <Button variant="outline" onClick={() => router.back()}>Back</Button>
+      <div className="mt-6 space-y-6">
+        <Card className="border-muted-foreground/20">
+          <CardHeader className="flex flex-col gap-1 pb-4">
+            <CardTitle className="text-lg font-semibold">Contact & Information</CardTitle>
+            <CardDescription>Concise details for coordination and reporting.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <InfoItem icon={Mail} label="Email" value={email} />
+            <InfoItem icon={Phone} label="Phone" value={phone} />
+            <InfoItem icon={BriefcaseBusiness} label="Group & Position" value={groupPosition || "-"} />
+            <InfoItem icon={Building} label="Organization" value={member.organization?.name || "-"} />
+            <InfoItem icon={MapPin} label="Location" value={member.work_location || "Location unavailable"} />
+            <InfoItem icon={Calendar} label="Hire Date" value={formatDate(member.hire_date)} />
+            <InfoItem icon={Clock3} label="Average Work Duration" value={formatDuration(performance?.averageWorkDurationMinutes)} />
+            <InfoItem icon={UserRound} label="Employee ID" value={member.employee_id || "-"} />
+          </CardContent>
+        </Card>
+
+        {performance ? (
+          <Card className="border-muted-foreground/20">
+            <CardHeader className="flex flex-col gap-1 pb-4">
+              <CardTitle className="text-lg font-semibold">Performance Highlights</CardTitle>
+              <CardDescription>Quick overview of attendance and work activity.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <MemberAttendanceDonut data={attendancePercentages} />
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <StatPill icon={Award} label="Total Present" value={performance.counts?.present ?? 0} />
+                <StatPill icon={CalendarClock} label="Total Late" value={performance.counts?.late ?? 0} />
+                <StatPill icon={Calendar} label="Total Absent" value={performance.counts?.absent ?? 0} />
+                <StatPill icon={Sparkles} label="Total Excused" value={performance.counts?.excused ?? 0} />
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <MiniHighlight label="Average Work Duration" value={formatDuration(performance.averageWorkDurationMinutes)} />
+                <MiniHighlight label="Average Check-in" value={formatTime(performance.averageCheckInTime)} />
+                <MiniHighlight label="Average Check-out" value={formatTime(performance.averageCheckOutTime)} />
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+
       </div>
-
     </div>
   )
 }
+
+type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>
+
+type InfoItemProps = {
+  icon: IconType
+  label: string
+  value?: React.ReactNode
+}
+
+function InfoItem({ icon: Icon, label, value }: InfoItemProps) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-muted-foreground/10 bg-card/60 px-4 py-3">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted/60 text-muted-foreground">
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="text-sm font-medium text-foreground">{value && String(value).trim().length ? value : "-"}</p>
+      </div>
+    </div>
+  )
+}
+
+type StatPillProps = {
+  icon: IconType
+  label: string
+  value: React.ReactNode
+}
+
+function StatPill({ icon: Icon, label, value }: StatPillProps) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-2xl border border-muted-foreground/10 bg-card/70 px-5 py-4">
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="text-2xl font-semibold text-foreground">{value}</p>
+      </div>
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <Icon className="h-5 w-5" />
+      </div>
+    </div>
+  )
+}
+
+type MiniHighlightProps = {
+  label: string
+  value: React.ReactNode
+}
+
+function MiniHighlight({ label, value }: MiniHighlightProps) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-muted-foreground/10 bg-muted/40 px-4 py-3">
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+      <span className="text-sm font-semibold text-foreground">{value}</span>
+    </div>
+  )
+}
+

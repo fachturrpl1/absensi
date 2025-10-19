@@ -11,11 +11,11 @@ export function MembersList() {
     const fetchData = async () => {
       const supabase = createClient();
 
-      // 1. Ambil user login
+      // 1. Retrieve the logged-in user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 2. Cari organization_id user ini
+      // 2. Find the organization_id for this user
       const { data: member } = await supabase
         .from("organization_members")
         .select("organization_id")
@@ -24,7 +24,7 @@ export function MembersList() {
 
       if (!member) return;
 
-      // 3. Ambil semua member sesuai org
+      // 3. Fetch all members in the organization
       const { data } = await supabase
         .from("organization_members")
         .select("*")

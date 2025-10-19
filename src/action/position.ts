@@ -7,14 +7,14 @@ import { createClient } from "@/utils/supabase/server";
 export const getAllPositions = async () => {
   const supabase = await createClient();
 
-  // 1. Ambil user dari cookies
+  // 1. Retrieve user from cookies
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
   if (userError || !user) {
     return { success: false, message: "User not logged in", data: [] };
   }
 
-  // 2. Cari organization_id user
+  // 2. Find user's organization_id
   const { data: member } = await supabase
    .from("organization_members")
     .select("organization_id")
@@ -25,7 +25,7 @@ export const getAllPositions = async () => {
     return { success: true, message: "User not registered in any organization", data: [] };
   }
 
-  // 3. Ambil semua member sesuai org
+  // 3. Fetch all members for the organization
   const { data, error } = await supabase
     .from("positions")
     .select("*")
@@ -70,7 +70,7 @@ export async function updatePositions(id: string, payload: Partial<IPositions>) 
 
 
 export const deletePositions = async ( PositionsId: string | number) => {
-     const id = String(PositionsId) // konversi ke string
+     const id = String(PositionsId) // convert to string
     const { data, error } = await supabase
         .from("positions").delete().eq("id", id)
         .select()

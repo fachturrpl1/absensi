@@ -32,7 +32,7 @@ export function LoginForm({
     if (!result.success) {
       setError(result.message || 'Login failed. Please try again.')
     } else {
-      // Simpan user & permissions ke Zustand
+      // Store user & permissions in Zustand
       useAuthStore.getState().setUser(result.user)
       useAuthStore.getState().setPermissions(result.permissions!.map(p => p.code))
 
@@ -41,8 +41,8 @@ export function LoginForm({
     }
 
 
-    // Jika login gagal, kembalikan loading ke false agar pengguna bisa coba lagi.
-    // Jika sukses, biarkan loading tetap true sehingga tombol tetap disabled
+    // If login fails, restore loading to allow another attempt.
+    // If it succeeds, keep loading true so the button stays disabled.
     if (!result.success) {
       setLoading(false)
     }

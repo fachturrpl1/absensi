@@ -278,8 +278,8 @@ export async function getMemberStatusDistribution() {
     success: true,
     data: {
       status: [
-        { name: "Aktif", value: activeCount || 0, color: "#10b981" },
-        { name: "Tidak Aktif", value: inactiveCount || 0, color: "#ef4444" }
+        { name: "Active", value: activeCount || 0, color: "#10b981" },
+        { name: "Inactive", value: inactiveCount || 0, color: "#ef4444" }
       ],
       employment: Object.entries(employmentDistribution).map(([key, value], index) => ({
         name: key.charAt(0).toUpperCase() + key.slice(1),
@@ -330,10 +330,10 @@ export async function getTodayAttendanceDistribution() {
   };
 
   const labelMap: { [key: string]: string } = {
-    present: "Hadir",
-    late: "Terlambat",
-    absent: "Tidak Hadir",
-    excused: "Izin"
+    present: "Present",
+    late: "Late",
+    absent: "Absent",
+    excused: "Excused"
   };
 
   return {

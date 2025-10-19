@@ -8,14 +8,14 @@ import { createClient } from "@/utils/supabase/server";
 export const getAllDepartments = async () => {
   const supabase = await createClient();
 
-  // 1. Ambil user dari cookies
+  // 1. Retrieve user from cookies
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
   if (userError || !user) {
     return { success: false, message: "User not logged in", data: [] };
   }
 
-  // 2. Cari organization_id user
+  // 2. Find user's organization_id
   const { data: member } = await supabase
     .from("organization_members")
     .select("organization_id")
@@ -26,7 +26,7 @@ export const getAllDepartments = async () => {
     return { success: true, message: "User not registered in any organization", data: [] };
   }
 
-  // 3. Ambil semua member sesuai org
+  // 3. Fetch all members for the organization
   const { data, error } = await supabase
     .from("departments")
     .select("*")
@@ -43,13 +43,13 @@ export const getAllDepartments = async () => {
 export async function createDepartments(payload: Partial<IDepartments>) {
   const supabaseServer = await createClient();
 
-  // 1. Ambil user login
+  // 1. Retrieve logged-in user
   const { data: { user }, error: userError } = await supabaseServer.auth.getUser();
   if (userError || !user) {
     return { success: false, message: "User not logged in", data: [] };
   }
 
-  // 2. Cari organization_id dari organization_members
+  // 2. Find organization_id from organization_members
   const { data: member, error: memberError } = await supabaseServer
     .from("organization_members")
     .select("organization_id")
@@ -64,7 +64,7 @@ export async function createDepartments(payload: Partial<IDepartments>) {
     return { success: false, message: "User not registered in any organization", data: [] };
   }
 
-  // 3. Insert department dengan organization_id yang sesuai
+  // 3. Insert department with matching organization_id
   const { data, error } = await supabase
     .from("departments")
     .insert({
@@ -99,7 +99,7 @@ export async function updateDepartments(id: string, payload: Partial<IDepartment
 
 
 export const deleteDepartments = async ( departmentsId: string | number) => {
-     const id = String(departmentsId) // konversi ke string
+     const id = String(departmentsId) // convert to string
     const { data, error } = await supabase
         .from("departments").delete().eq("id", id)
         .select()
