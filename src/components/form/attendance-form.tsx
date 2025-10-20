@@ -5,7 +5,7 @@ import { CalendarIcon, ChevronDown, Loader2, Plus, Trash2, X } from "lucide-reac
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
-import { useForm, useFieldArray } from "react-hook-form"
+import { useForm, useFieldArray, useWatch } from "react-hook-form"
 import type { Control } from "react-hook-form"
 import { z } from "zod"
 
@@ -323,6 +323,8 @@ function SingleEntryForm({
   loadingMembers,
   isSubmitting,
 }: SingleEntryFormProps) {
+  const checkInTime = useWatch({ control, name: "entries.0.checkInTime" })
+
   return (
     <div className="space-y-6">
       {/* Member Selection with Filters */}
@@ -433,7 +435,7 @@ function SingleEntryForm({
           name="entries.0.checkOutTime"
           label="Check-out (opsional)"
           description="Isi jika sudah ada jam pulang."
-          getReferenceDate={() => form.getValues("entries.0.checkInTime")}
+          getReferenceDate={() => checkInTime}
         />
       </div>
 
@@ -619,7 +621,8 @@ function BatchEntryItem({
   isSubmitting,
   onRemove,
 }: BatchEntryItemProps) {
-  const selectedMemberId = control._formValues.entries?.[index]?.memberId
+  const selectedMemberId = useWatch({ control, name: `entries.${index}.memberId` })
+  const checkInTime = useWatch({ control, name: `entries.${index}.checkInTime` })
   const selectedMember = members.find((m) => m.id === selectedMemberId)
 
   return (
@@ -716,7 +719,7 @@ function BatchEntryItem({
             control={control}
             name={`entries.${index}.checkOutTime` as any}
             label="Check-out (opsional)"
-            getReferenceDate={() => control._formValues.entries?.[index]?.checkInTime}
+            getReferenceDate={() => checkInTime}
           />
         </div>
 
