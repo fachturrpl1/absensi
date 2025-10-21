@@ -2,8 +2,9 @@
 
 import React from "react";
 import { ColumnDef } from "@tanstack/react-table";
+import Link from "next/link";
 import { DataTable } from "@/components/data-table";
-import { Check, X, Clock, Info, User, MoreHorizontal } from "lucide-react";
+import { Check, X, Clock, Info, User, MoreHorizontal, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -125,7 +126,7 @@ export default function AttendancePage() {
     }
   };
 
-  // 🔁 Realtime listener Supabase
+  // Real-time listener
   React.useEffect(() => {
     fetchData();
 
@@ -134,19 +135,18 @@ export default function AttendancePage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "attendance_records" },
-        (payload) => {
-          console.log("Realtime event:", payload);
+        () => {
           fetchData();
         }
       )
-      .subscribe((status) => console.log("Realtime status:", status));
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
 
-  // 📊 Kolom tabel attendance
+  // Attendance table columns
   const columns: ColumnDef<AttendanceWithRelations>[] = [
     {
       accessorKey: "memberName",
@@ -261,6 +261,15 @@ export default function AttendancePage() {
   return (
     <ContentLayout title="Attendance">
       <div className="w-full max-w-6xl mx-auto">
+        <div className="items-center my-7">
+          <div className="float-end ml-5">
+            <Button asChild>
+              <Link href="/attendance/add">
+                Add Attendance <Plus className="ml-2" />
+              </Link>
+            </Button>
+          </div>
+        </div>
         {loading ? (
           <LoadingSkeleton />
         ) : (

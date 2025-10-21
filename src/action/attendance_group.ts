@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 
-// Returns aggregated attendance counts grouped by department (group)
+// Returns aggregated attendance counts grouped by group
 export const getAttendanceByGroup = async (organizationId?: string) => {
   const supabase = await createClient();
 
@@ -10,23 +10,21 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
     return { success: true, data: [] };
   }
 
-  // First, get all members of the organization with their departments
-  // First fetch valid departments for this organization to ensure we only get departments that belong to this org
-  // Let's first check what departments exist for this organization
-  const { data: validDepartments, error: deptError } = await supabase
+  // First, get all members of the organization with their groups
+  // First fetch valid groups for this organization to ensure we only get groups that belong to this org
+  // Let's first check what groups exist for this organization
+  const { data: validGroups, error: groupError } = await supabase
     .from('departments')
     .select('*')
     .eq('organization_id', organizationId)
     .eq('is_active', true);
 
-  if (deptError) {
-    console.error("Error fetching valid departments:", deptError);
+  if (groupError) {
+    console.error("Error fetching valid groups:", groupError);
     return { success: false, data: [] };
   }
 
-  console.log("Valid departments:", validDepartments); // Debug logging
-
-  // Get members with their departments - explicitly use the correct relationship
+  // Get members with their groups - explicitly use the correct relationship
   const { data: members, error: membersError } = await supabase
     .from('organization_members')
     .select(`
@@ -41,23 +39,20 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
     .eq('organization_id', organizationId)
     .eq('is_active', true);
 
-  console.log("Members data:", members); // Debug logging
-
   if (membersError) {
     console.error("Error fetching organization members:", membersError);
     return { success: false, data: [] };
   }
 
-  // Create a map of member IDs to their department names for quick lookup
-  const memberDeptMap = new Map<string, string>();
+  // Create a map of member IDs to their group names for quick lookup
+  const memberGroupMap = new Map<string, string>();
   
   if (!members) {
-    console.log("No members found!");
     return { success: false, data: [] };
   }
   
-  // Try to map embedded department first, but only accept departments that belong to this organization
-  type EmbeddedDepartment = {
+  // Try to map embedded group first, but only accept groups that belong to this organization
+  type EmbeddedGroup = {
     id: string;
     name: string;
     organization_id?: string | null;
@@ -66,54 +61,54 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
   type MemberRow = {
     id: string;
     department_id: string | null;
-    departments?: EmbeddedDepartment[] | EmbeddedDepartment | null;
-    department?: EmbeddedDepartment | null;
-    departments_organization_members_department_id_fkey?: EmbeddedDepartment[] | EmbeddedDepartment | null;
+    departments?: EmbeddedGroup[] | EmbeddedGroup | null;
+    department?: EmbeddedGroup | null;
+    departments_organization_members_department_id_fkey?: EmbeddedGroup[] | EmbeddedGroup | null;
   };
 
   members.forEach((member: MemberRow) => {
     const raw = member.departments || member.department || member.departments_organization_members_department_id_fkey;
     if (!raw) return;
 
-    let candidate: EmbeddedDepartment | null = null;
+    let candidate: EmbeddedGroup | null = null;
     if (Array.isArray(raw) && raw.length > 0) candidate = raw[0];
     else if (raw && !Array.isArray(raw) && typeof raw === "object") {
       candidate = raw;
     }
 
     if (candidate && candidate.name) {
-      // Only map if the department belongs to the requested organization
+      // Only map if the group belongs to the requested organization
       if (String(candidate.organization_id) === String(organizationId)) {
-        memberDeptMap.set(member.id, candidate.name);
+        memberGroupMap.set(member.id, candidate.name);
       } else {
-        // Skip departments that belong to other organizations (data inconsistency)
-        console.warn(`Skipping department mapping for member ${member.id} because department org ${candidate.organization_id} !== ${organizationId}`);
+        // Skip groups that belong to other organizations (data inconsistency)
+        console.warn(`Skipping group mapping for member ${member.id} because group org ${candidate.organization_id} !== ${organizationId}`);
       }
     }
   });
 
-  // Fallback: if embedding failed or produced no mappings, fetch department names by department_id
-  if (memberDeptMap.size === 0) {
-    console.log('Embedded mapping empty, using fallback via department_id');
-    const deptIds = Array.from(
+  // Fallback: if embedding failed or produced no mappings, fetch group names by department_id
+  if (memberGroupMap.size === 0) {
+
+    const groupIds = Array.from(
       new Set(
         members
           .map((member: MemberRow) => member.department_id)
           .filter((id): id is string => Boolean(id))
       )
     );
-    if (deptIds.length > 0) {
-      const { data: depts, error: deptFetchErr } = await supabase
+    if (groupIds.length > 0) {
+      const { data: groups, error: groupFetchErr } = await supabase
         .from('departments')
         .select('id, name, organization_id')
-        .in('id', deptIds)
+        .in('id', groupIds)
         .eq('organization_id', organizationId);
 
-      if (!deptFetchErr && depts) {
-        type DepartmentRow = { id: string; name: string };
+      if (!groupFetchErr && groups) {
+        type GroupRow = { id: string; name: string };
 
-        const deptMap = new Map<string, string>(
-          (depts as DepartmentRow[]).map((dept) => [dept.id, dept.name])
+        const groupMap = new Map<string, string>(
+          (groups as GroupRow[]).map((group) => [group.id, group.name])
         );
 
         members.forEach((member: MemberRow) => {
@@ -121,26 +116,26 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
             return;
           }
 
-          const name = deptMap.get(member.department_id);
+          const name = groupMap.get(member.department_id);
           if (name) {
-            memberDeptMap.set(member.id, name);
+            memberGroupMap.set(member.id, name);
           } else {
             console.warn(
-              `Member ${member.id} references department_id ${member.department_id} which is not a department in organization ${organizationId}`
+              `Member ${member.id} references department_id ${member.department_id} which is not a group in organization ${organizationId}`
             );
           }
         });
       } else {
-        console.warn('Failed to fetch department names for fallback', deptFetchErr);
+        console.warn('Failed to fetch group names for fallback', groupFetchErr);
       }
     }
   }
   
-  if (memberDeptMap.size === 0) {
-    console.log("No department mappings created! Members:", members);
+  if (memberGroupMap.size === 0) {
+
   }
   
-  console.log("Department map:", Object.fromEntries(memberDeptMap)); // Debug logging
+
 
   // Get attendance records only for these members
   const memberIds = members.map((member: MemberRow) => member.id);
@@ -155,17 +150,17 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
     return { success: false, data: [] };
   }
 
-  // Aggregate attendance by department
+  // Aggregate attendance by group
   const groupsMap: Record<
     string,
     { group: string; present: number; late: number; absent: number; excused: number; others: number }
   > = {};
 
   // Initialize groups with 0 counts
-  for (const [_, deptName] of memberDeptMap) {
-    if (!groupsMap[deptName]) {
-      groupsMap[deptName] = {
-        group: deptName,
+  for (const [_, groupName] of memberGroupMap) {
+    if (!groupsMap[groupName]) {
+      groupsMap[groupName] = {
+        group: groupName,
         present: 0,
         late: 0,
         absent: 0,
@@ -177,11 +172,11 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
 
   // Count attendance for each group
   (records || []).forEach((rec) => {
-    const deptName = memberDeptMap.get(rec.organization_member_id) ?? "Unknown";
+    const groupName = memberGroupMap.get(rec.organization_member_id) ?? "Unknown";
     
-    if (!groupsMap[deptName]) {
-      groupsMap[deptName] = {
-        group: deptName,
+    if (!groupsMap[groupName]) {
+      groupsMap[groupName] = {
+        group: groupName,
         present: 0,
         late: 0,
         absent: 0,
@@ -191,16 +186,16 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
     }
 
     const status = rec.status;
-    if (status === "present") groupsMap[deptName].present += 1;
-    else if (status === "late") groupsMap[deptName].late += 1;
-    else if (status === "absent") groupsMap[deptName].absent += 1;
-    else if (status === "excused") groupsMap[deptName].excused += 1;
+    if (status === "present") groupsMap[groupName].present += 1;
+    else if (status === "late") groupsMap[groupName].late += 1;
+    else if (status === "absent") groupsMap[groupName].absent += 1;
+    else if (status === "excused") groupsMap[groupName].excused += 1;
     else {
       // exclude explicit 'go_home' status from Others aggregation if present
       if (status === "go_home" || status === "go-home" || status === "gone_home") {
         // do not count into others
       } else {
-        groupsMap[deptName].others += 1;
+        groupsMap[groupName].others += 1;
       }
     }
   });

@@ -6,7 +6,7 @@ import { Check, X, User, PlusCircleIcon, Edit, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { deleteOrganization_member, getAllOrganization_member } from "@/action/members"
-import { getAllDepartments } from "@/action/departement"
+import { getAllGroups } from "@/action/group"
 import React from "react"
 import { IOrganization_member, IUser } from "@/interface"
 import { toast } from "sonner"
@@ -38,16 +38,10 @@ export default function MembersPage() {
       const [memberRes, userRes, deptRes] = await Promise.all([
         getAllOrganization_member(),
         getAllUsers(),
-        getAllDepartments(),
+        getAllGroups(),
       ])
 
-      // Log responses for easier debugging
-       
-      console.debug('getAllOrganization_member', memberRes)
-       
-      console.debug('getAllUsers', userRes)
-       
-      console.debug('getAllDepartments', deptRes)
+
 
       if (!memberRes.success) {
         throw new Error(memberRes.message || 'Failed to fetch members')
@@ -59,25 +53,23 @@ export default function MembersPage() {
 
       const membersData = memberRes.data || []
       const usersData = userRes.data || []
-      const departmentsData = deptRes?.data || []
+      const groupsData = deptRes?.data || []
 
-      const deptMap = new Map<string, string>()
-      departmentsData.forEach((d: any) => {
-        if (d && d.id) deptMap.set(String(d.id), d.name)
+      const groupMap = new Map<string, string>()
+      groupsData.forEach((g: any) => {
+        if (g && g.id) groupMap.set(String(g.id), g.name)
       })
 
       // manual join: attach user to each member
       const merged = membersData.map((m: IOrganization_member) => {
         const u = usersData.find((usr: IUser) => usr.id === m.user_id)
-        const groupName = deptMap.get(String(m.department_id)) || (m.departments && (m.departments as any).name) || ""
+        const groupName = groupMap.get(String(m.department_id)) || (m.groups && (m.groups as any).name) || (m.departments && (m.departments as any).name) || ""
         return { ...m, user: u, groupName }
       })
 
       setMembers(merged)
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'An error occurred'
-       
-      console.error('MembersPage.fetchData error', msg, error)
       toast.error(msg)
     } finally {
       setLoading(false)

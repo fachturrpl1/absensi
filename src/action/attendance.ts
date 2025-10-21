@@ -1,5 +1,7 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import { createClient } from "@/utils/supabase/server";
 import { IAttendance } from "@/interface";
 
@@ -46,8 +48,6 @@ export const getAllAttendance = async () => {
     time_format: item.organization_members?.organizations?.time_format || "24h",
   }));
 
-  console.log("✅ Attendance fetched with timezone:", mapped);
-
   return { success: true, data: mapped as IAttendance[] };
 };
 
@@ -58,5 +58,28 @@ export async function updateAttendanceStatus(id: string, status: string) {
     .update({ status })
     .eq("id", id);
   if (error) return { success: false, message: error.message };
+  return { success: true };
+}
+
+type ManualAttendancePayload = {
+  organization_member_id: string;
+  attendance_date: string;
+  actual_check_in: string;
+  actual_check_out: string | null;
+  status: string;
+  remarks?: string;
+};
+
+export async function createManualAttendance(payload: ManualAttendancePayload) {
+  const supabase = await getSupabase();
+  const { error } = await supabase.from("attendance_records").insert([payload]);
+
+  if (error) {
+    console.error("❌ Error creating attendance:", error);
+    return { success: false, message: error.message };
+  }
+
+  revalidatePath("/attendance");
+
   return { success: true };
 }

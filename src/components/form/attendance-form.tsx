@@ -6,7 +6,7 @@ import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { useForm, useFieldArray, useWatch } from "react-hook-form"
-import type { Control } from "react-hook-form"
+import type { Control, FieldArrayMethodProps } from "react-hook-form"
 import { z } from "zod"
 
 import { createManualAttendance } from "@/action/attendance"
@@ -57,31 +57,31 @@ type MemberOption = {
   id: string
   label: string
   organizationId: string
-  departmentName?: string
-  departmentId?: string
+  groupName?: string
+  groupId?: string
 }
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour)
 const MINUTES = Array.from({ length: 12 }, (_, idx) => idx * 5)
 
 const QUICK_STATUSES = [
-  { value: "present", label: "Hadir", color: "bg-green-100 text-green-800" },
-  { value: "absent", label: "Alpa", color: "bg-red-100 text-red-800" },
-  { value: "late", label: "Terlambat", color: "bg-yellow-100 text-yellow-800" },
-  { value: "excused", label: "Izin", color: "bg-blue-100 text-blue-800" },
-  { value: "go home", label: "Pulang Cepat", color: "bg-purple-100 text-purple-800" },
+  { value: "present", label: "Present", color: "bg-green-100 text-green-800" },
+  { value: "absent", label: "Absent", color: "bg-red-100 text-red-800" },
+  { value: "late", label: "Late", color: "bg-yellow-100 text-yellow-800" },
+  { value: "excused", label: "Excused", color: "bg-blue-100 text-blue-800" },
+  { value: "go home", label: "Early Leave", color: "bg-purple-100 text-purple-800" },
 ]
 
 const entrySchema = z.object({
-  memberId: z.string().min(1, "Member wajib dipilih."),
-  checkInTime: z.date({ required_error: "Check-in wajib diisi." }),
+  memberId: z.string().min(1, "Member is required."),
+  checkInTime: z.date().refine(() => true, { message: "Check-in is required." }),
   checkOutTime: z.date().optional(),
   status: z.enum(["present", "absent", "late", "excused", "go home"]),
-  remarks: z.string().max(500, "Catatan maksimal 500 karakter.").optional(),
+  remarks: z.string().max(500, "Notes max 500 characters.").optional(),
 })
 
 const formSchema = z.object({
-  entries: z.array(entrySchema).min(1, "Minimal 1 presensi harus ditambahkan."),
+  entries: z.array(entrySchema).min(1, "At least 1 attendance entry is required."),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -89,9 +89,9 @@ type FormValues = z.infer<typeof formSchema>
 export function AttendanceForm() {
   const router = useRouter()
   const [members, setMembers] = useState<MemberOption[]>([])
-  const [departments, setDepartments] = useState<string[]>([])
+  const [groups, setGroups] = useState<string[]>([])
   const [loadingMembers, setLoadingMembers] = useState(true)
-  const [selectedDept, setSelectedDept] = useState<string>("")
+  const [selectedGroup, setSelectedGroup] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState<"single" | "batch">("single")
 
@@ -122,38 +122,39 @@ export function AttendanceForm() {
         const membersRes = await getAllOrganization_member()
 
         if (!membersRes.success) {
-          throw new Error(membersRes.message || "Gagal memuat data members")
+          throw new Error(membersRes.message || "Failed to load members data")
         }
 
         const membersData = (membersRes.data || []) as IOrganization_member[]
 
-        const options: MemberOption[] = membersData.map((member) => {
-          const displayName = member.user?.display_name?.trim()
-          const concatenated = [member.user?.first_name, member.user?.middle_name, member.user?.last_name]
-            .filter(Boolean)
-            .join(" ")
+        const options: MemberOption[] = membersData
+          .map((member) => {
+            const displayName = member.user?.display_name?.trim()
+            const concatenated = [member.user?.first_name, member.user?.middle_name, member.user?.last_name]
+              .filter(Boolean)
+              .join(" ")
 
-          const fullName = concatenated.trim()
-          const resolvedLabel = displayName || fullName || member.user?.email || "Tanpa Nama"
+            const fullName = concatenated.trim()
+            const resolvedLabel = displayName || fullName || member.user?.email || "No Name"
 
-          return {
-            id: String(member.id),
-            label: resolvedLabel,
-            organizationId: String(member.organization_id),
-            departmentId: member.department_id,
-            departmentName: member.departments?.name || "Tanpa Department",
-          }
-        })
+            return {
+              id: String(member.id),
+              label: resolvedLabel,
+              organizationId: String(member.organization_id),
+              groupId: member.department_id,
+              groupName: member.departments?.name || "",
+            }
+          })
 
         setMembers(options)
 
-        // Extract unique departments
+        // Extract unique groups
         const depts = Array.from(
-          new Set(options.map((m) => m.departmentName).filter(Boolean))
+          new Set(options.map((m) => m.groupName).filter(Boolean))
         ).sort() as string[]
-        setDepartments(depts)
+        setGroups(depts)
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Terjadi kesalahan"
+        const message = err instanceof Error ? err.message : "An error occurred"
         toast.error(message)
       } finally {
         setLoadingMembers(false)
@@ -166,14 +167,14 @@ export function AttendanceForm() {
   const filteredMembers = useMemo(
     () =>
       members
-        .filter((m) => !selectedDept || m.departmentName === selectedDept)
+        .filter((m) => !selectedGroup || m.groupName === selectedGroup)
         .filter((m) =>
           searchQuery
             ? m.label.toLowerCase().includes(searchQuery.toLowerCase())
             : true
         )
         .sort((a, b) => a.label.localeCompare(b.label)),
-    [members, selectedDept, searchQuery],
+    [members, selectedGroup, searchQuery],
   )
 
   const onSubmit = async (values: FormValues) => {
@@ -194,18 +195,18 @@ export function AttendanceForm() {
         if (res.success) {
           successCount++
         } else {
-          toast.error(`Gagal: ${res.message}`)
+          toast.error(`Error: ${res.message}`)
         }
       }
 
       if (successCount === payloads.length) {
-        toast.success(`${successCount} presensi berhasil dibuat`)
+        toast.success(`${successCount} attendance records created successfully`)
         router.push("/attendance")
       } else {
-        toast.warning(`${successCount} dari ${payloads.length} presensi berhasil dibuat`)
+        toast.warning(`${successCount} of ${payloads.length} attendance records created successfully`)
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Terjadi kesalahan"
+      const message = err instanceof Error ? err.message : "An error occurred"
       toast.error(message)
     }
   }
@@ -224,18 +225,18 @@ export function AttendanceForm() {
           <TabsContent value="single" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Tambah Presensi (Single)</CardTitle>
+                <CardTitle>Add Attendance (Single)</CardTitle>
                 <CardDescription>
-                  Tambahkan presensi satu per satu untuk anggota tim Anda.
+                  Add attendance records one by one for your team members.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <SingleEntryForm
                   control={form.control}
                   members={filteredMembers}
-                  departments={departments}
-                  selectedDept={selectedDept}
-                  setSelectedDept={setSelectedDept}
+                  groups={groups}
+                  selectedGroup={selectedGroup}
+                  setSelectedGroup={setSelectedGroup}
                   searchQuery={searchQuery}
                   setSearchQuery={setSearchQuery}
                   loadingMembers={loadingMembers}
@@ -249,9 +250,9 @@ export function AttendanceForm() {
           <TabsContent value="batch" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Tambah Presensi (Batch)</CardTitle>
+                <CardTitle>Add Attendance (Batch)</CardTitle>
                 <CardDescription>
-                  Tambahkan multiple presensi sekaligus untuk departemen atau grup tertentu.
+                  Add multiple attendance records at once for a specific department or group.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -259,9 +260,9 @@ export function AttendanceForm() {
                   control={form.control}
                   fields={fields}
                   members={filteredMembers}
-                  departments={departments}
-                  selectedDept={selectedDept}
-                  setSelectedDept={setSelectedDept}
+                  groups={groups}
+                  selectedGroup={selectedGroup}
+                  setSelectedGroup={setSelectedGroup}
                   searchQuery={searchQuery}
                   setSearchQuery={setSearchQuery}
                   loadingMembers={loadingMembers}
@@ -282,15 +283,15 @@ export function AttendanceForm() {
             onClick={() => router.back()}
             disabled={isSubmitting}
           >
-            <X className="mr-2 h-4 w-4" /> Batalkan
+            <X className="mr-2 h-4 w-4" /> Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
               </>
             ) : (
-              `Simpan ${activeTab === "batch" ? fields.length : "1"} Presensi`
+              `Save ${activeTab === "batch" ? fields.length : "1"} Attendance Records`
             )}
           </Button>
         </div>
@@ -302,9 +303,9 @@ export function AttendanceForm() {
 type SingleEntryFormProps = {
   control: Control<FormValues>
   members: MemberOption[]
-  departments: string[]
-  selectedDept: string
-  setSelectedDept: (dept: string) => void
+  groups: string[]
+  selectedGroup: string
+  setSelectedGroup: (group: string) => void
   searchQuery: string
   setSearchQuery: (query: string) => void
   loadingMembers: boolean
@@ -315,9 +316,9 @@ type SingleEntryFormProps = {
 function SingleEntryForm({
   control,
   members,
-  departments,
-  selectedDept,
-  setSelectedDept,
+  groups,
+  selectedGroup,
+  setSelectedGroup,
   searchQuery,
   setSearchQuery,
   loadingMembers,
@@ -329,23 +330,23 @@ function SingleEntryForm({
     <div className="space-y-6">
       {/* Member Selection with Filters */}
       <div className="space-y-3">
-        <FormLabel>Filter & Cari Member</FormLabel>
+        <FormLabel>Filter & Search Members</FormLabel>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <Select value={selectedDept} onValueChange={setSelectedDept}>
+          <Select value={selectedGroup} onValueChange={setSelectedGroup}>
             <SelectTrigger>
-              <SelectValue placeholder="Semua Department" />
+              <SelectValue placeholder="All Groups" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Semua Department</SelectItem>
-              {departments.map((dept) => (
-                <SelectItem key={dept} value={dept}>
-                  {dept}
+              <SelectItem value="">All Groups</SelectItem>
+              {groups.map((group) => (
+                <SelectItem key={group} value={group}>
+                  {group}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Input
-            placeholder="Cari nama member..."
+            placeholder="Search member name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             disabled={loadingMembers}
@@ -368,24 +369,21 @@ function SingleEntryForm({
               <FormControl>
                 <SelectTrigger className="w-full">
                   <SelectValue
-                    placeholder={loadingMembers ? "Memuat data..." : "Pilih member"}
+                    placeholder={loadingMembers ? "Loading..." : "Select member"}
                   />
                 </SelectTrigger>
               </FormControl>
               <SelectContent className="max-h-64">
                 {members.length ? (
-                  members.map((member) => (
+                  members.filter((m) => m.id).map((member) => (
                     <SelectItem key={member.id} value={member.id}>
-                      <div className="flex flex-col">
-                        <span>{member.label}</span>
-                        <span className="text-xs text-muted-foreground">{member.departmentName}</span>
-                      </div>
+                      <span>{member.label}</span>
                     </SelectItem>
                   ))
                 ) : (
-                  <SelectItem value="__empty" disabled>
-                    {loadingMembers ? "Memuat data..." : "Belum ada member."}
-                  </SelectItem>
+                  <div className="p-2 text-sm text-muted-foreground text-center py-6">
+                    {loadingMembers ? "Loading data..." : "No members available."}
+                  </div>
                 )}
               </SelectContent>
             </Select>
@@ -445,10 +443,10 @@ function SingleEntryForm({
         name="entries.0.remarks"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Catatan (Opsional)</FormLabel>
+            <FormLabel>Notes (Optional)</FormLabel>
             <FormControl>
               <Textarea
-                placeholder="Tambahkan catatan atau alasan khusus..."
+                placeholder="Add notes or special reason..."
                 rows={3}
                 {...field}
                 value={field.value ?? ""}
@@ -456,7 +454,7 @@ function SingleEntryForm({
               />
             </FormControl>
             <FormDescription>
-              Gunakan untuk menjelaskan konteks atau alasan perubahan status.
+              Use to explain the context or reason for status change.
             </FormDescription>
             <FormMessage />
           </FormItem>
@@ -468,11 +466,11 @@ function SingleEntryForm({
 
 type BatchEntryFormProps = {
   control: Control<FormValues>
-  fields: typeof FormValues.prototype.entries
+  fields: ReturnType<typeof useFieldArray<FormValues>>['fields']
   members: MemberOption[]
-  departments: string[]
-  selectedDept: string
-  setSelectedDept: (dept: string) => void
+  groups: string[]
+  selectedGroup: string
+  setSelectedGroup: (group: string) => void
   searchQuery: string
   setSearchQuery: (query: string) => void
   loadingMembers: boolean
@@ -486,9 +484,9 @@ function BatchEntryForm({
   control,
   fields,
   members,
-  departments,
-  selectedDept,
-  setSelectedDept,
+  groups,
+  selectedGroup,
+  setSelectedGroup,
   searchQuery,
   setSearchQuery,
   loadingMembers,
@@ -500,23 +498,23 @@ function BatchEntryForm({
     <div className="space-y-6">
       {/* Filter Section */}
       <div className="space-y-3">
-        <FormLabel>Filter Department & Member</FormLabel>
+        <FormLabel>Filter Group & Members</FormLabel>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <Select value={selectedDept} onValueChange={setSelectedDept}>
+          <Select value={selectedGroup} onValueChange={setSelectedGroup}>
             <SelectTrigger>
-              <SelectValue placeholder="Semua Department" />
+              <SelectValue placeholder="All Groups" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Semua Department</SelectItem>
-              {departments.map((dept) => (
-                <SelectItem key={dept} value={dept}>
-                  {dept}
+              <SelectItem value="">All Groups</SelectItem>
+              {groups.map((group) => (
+                <SelectItem key={group} value={group}>
+                  {group}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Input
-            placeholder="Cari nama member..."
+            placeholder="Search member name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             disabled={loadingMembers}
@@ -531,7 +529,7 @@ function BatchEntryForm({
           Quick Add ({members.length} member{members.length !== 1 ? "s" : ""})
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-3 mt-3 pt-3 border-t">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {members.map((member) => (
               <Button
                 key={member.id}
@@ -554,8 +552,15 @@ function BatchEntryForm({
                   }
                 }}
                 disabled={isSubmitting}
+                className="flex flex-col items-start gap-1 h-auto py-2"
               >
-                <Plus className="mr-1 h-3 w-3" /> {member.label}
+                <div className="flex items-center gap-1">
+                  <Plus className="h-3 w-3" /> 
+                  <span className="text-xs font-medium">{member.label}</span>
+                </div>
+                {member.groupName && (
+                  <span className="text-xs text-muted-foreground">{member.groupName}</span>
+                )}
               </Button>
             ))}
           </div>
@@ -565,7 +570,7 @@ function BatchEntryForm({
       {/* Entry List */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <FormLabel>Daftar Presensi ({fields.length})</FormLabel>
+          <FormLabel>Attendance Records ({fields.length})</FormLabel>
           <Button
             type="button"
             variant="outline"
@@ -581,13 +586,13 @@ function BatchEntryForm({
             }
             disabled={isSubmitting}
           >
-            <Plus className="mr-1 h-4 w-4" /> Tambah Entry
+            <Plus className="mr-1 h-4 w-4" /> Add Entry
           </Button>
         </div>
 
         {fields.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
-            Belum ada entry. Gunakan tombol "Quick Add" atau "Tambah Entry" untuk memulai.
+            No entries yet. Use the "Quick Add" or "Add Entry" button to start.
           </div>
         )}
 
@@ -633,9 +638,11 @@ function BatchEntryItem({
             {selectedMember && (
               <div className="text-sm">
                 <div className="font-semibold">{selectedMember.label}</div>
-                <div className="text-xs text-muted-foreground">
-                  {selectedMember.departmentName}
-                </div>
+                {selectedMember.groupName && (
+                  <div className="text-xs text-muted-foreground">
+                    {selectedMember.groupName}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -668,9 +675,16 @@ function BatchEntryItem({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent className="max-h-64">
-                  {members.map((member) => (
+                  {members.filter((m) => m.id).map((member) => (
                     <SelectItem key={member.id} value={member.id}>
-                      {member.label}
+                      <div className="flex items-center gap-2">
+                        <span>{member.label}</span>
+                        {member.groupName && (
+                          <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded">
+                            {member.groupName}
+                          </span>
+                        )}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -729,10 +743,10 @@ function BatchEntryItem({
           name={`entries.${index}.remarks`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Catatan (Opsional)</FormLabel>
+              <FormLabel>Notes (Optional)</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Catatan untuk entry ini..."
+                  placeholder="Notes for this entry..."
                   rows={2}
                   {...field}
                   value={field.value ?? ""}

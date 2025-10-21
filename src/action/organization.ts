@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/server";
 export const addOrganization = async (organization: Partial<IOrganization>) => {
   const supabase = await createSupabaseClient();
   const { data, error } = await supabase
-    .from("organizations") // pastikan nama tabel benar di Supabase
+    .from("organizations")
     .insert([organization])
     .select()
     .single();

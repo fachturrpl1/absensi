@@ -37,7 +37,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
 
-import { IDepartments } from "@/interface"
+import { IGroup } from "@/interface"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,11 +50,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import {
-  createDepartments,
-  deleteDepartments,
-  getAllDepartments,
-  updateDepartments,
-} from "@/action/departement"
+  createGroup,
+  deleteGroup,
+  getAllGroups,
+  updateGroup,
+} from "@/action/group"
 import LoadingSkeleton from "@/components/loading-skeleton"
 import {
   Select,
@@ -83,8 +83,8 @@ export default function GroupsPage() {
   const scheduleId = Number(params.id)
 
   const [isModalOpen, setIsModalOpen] = React.useState(false)
-  const [editingDetail, setEditingDetail] = React.useState<IDepartments | null>(null)
-  const [groups, setGroups] = React.useState<IDepartments[]>([])
+  const [editingDetail, setEditingDetail] = React.useState<IGroup | null>(null)
+  const [groups, setGroups] = React.useState<IGroup[]>([])
   const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = React.useState<boolean>(true)
   const [organizationId, setOrganizationId] = React.useState<string>("")
@@ -93,7 +93,7 @@ export default function GroupsPage() {
   const fetchGroups = async () => {
     try {
       setLoading(true)
-      const response = await getAllDepartments()
+      const response = await getAllGroups()
       if (!response.success) throw new Error(response.message)
       setGroups(response.data)
     } catch (error: unknown) {
@@ -160,13 +160,12 @@ export default function GroupsPage() {
   }, [organizationId])
 
   const handleSubmit = async (values: GroupForm) => {
-    console.log("🚀 Submit values:", values)
     try {
       let res
       if (editingDetail) {
-        res = await updateDepartments(editingDetail.id, values)
+        res = await updateGroup(editingDetail.id, values)
       } else {
-        res = await createDepartments(values)
+        res = await createGroup(values)
       }
       if (!res.success) throw new Error(res.message)
       toast.success(editingDetail ? 'Saved successfully' : 'Group created successfully')
@@ -181,7 +180,7 @@ export default function GroupsPage() {
   const handleDelete = async (scheduleId: string | number) => {
     try {
       setLoading(true)
-      const response = await deleteDepartments(scheduleId)
+      const response = await deleteGroup(scheduleId)
       if (!response.success) throw new Error(response.message)
       toast.success('Group deleted successfully')
       fetchGroups()
@@ -193,7 +192,7 @@ export default function GroupsPage() {
   }
 
   // --- definisi kolom ---
-  const columns: ColumnDef<IDepartments>[] = [
+  const columns: ColumnDef<IGroup>[] = [
     { accessorKey: "code", header: "Code" },
     { accessorKey: "name", header: "Name" },
     { accessorKey: "description", header: "Description" },

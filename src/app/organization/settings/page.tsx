@@ -9,6 +9,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
   Building2,
@@ -335,10 +346,6 @@ export default function OrganizationSettingsPage() {
   };
 
   const handleRegenerateInviteCode = async () => {
-    if (!confirm("Are you sure you want to regenerate the invitation code? The old code will no longer work.")) {
-      return;
-    }
-
     setRegenerating(true);
     try {
       const result = await regenerateInviteCode();
@@ -425,19 +432,44 @@ export default function OrganizationSettingsPage() {
                 >
                   {inviteCodeCopied ? <Check className="h-4 w-4" /> : <ClipboardCheck className="h-4 w-4" />}
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleRegenerateInviteCode}
-                  disabled={regenerating}
-                  title="Generate new invitation code"
-                >
-                  {regenerating ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={regenerating}
+                      title="Generate new invitation code"
+                    >
+                      {regenerating ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Regenerate invite code?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action will deactivate the current invitation code immediately. New members must use the new
+                        code.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={regenerating}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleRegenerateInviteCode} disabled={regenerating}>
+                        {regenerating ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Regenerating...
+                          </>
+                        ) : (
+                          "Yes, regenerate"
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
 

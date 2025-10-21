@@ -242,8 +242,16 @@ export async function getTotalGroups() {
 // Get member status distribution
 export async function getMemberStatusDistribution() {
   const organizationId = await getUserOrganizationId();
+  const defaultData = {
+    status: [
+      { name: "Active", value: 0, color: "#10b981" },
+      { name: "Inactive", value: 0, color: "#ef4444" }
+    ],
+    employment: []
+  };
+  
   if (!organizationId) {
-    return { success: false, data: [] };
+    return { success: false, data: defaultData };
   }
 
   const supabase = await getSupabase();
@@ -347,7 +355,17 @@ export async function getTodayAttendanceDistribution() {
 }
 
 // Get all dashboard stats at once
-export async function getDashboardStats() {
+export async function getDashboardStats(): Promise<{
+  totalActiveMembers: number
+  totalMembers: number
+  todayAttendance: number
+  todayLate: number
+  todayAbsent: number
+  todayExcused: number
+  pendingApprovals: number
+  totalGroups: number
+  memberDistribution: { status: Array<{ name: string; value: number; color: string }>; employment: Array<{ name: string; value: number; color: string }> } | null
+}> {
   const [totalActiveMembers, totalMembers, todayAttendance, todayLate, todayAbsent, todayExcused, pendingApprovals, totalGroups, memberDistribution] = await Promise.all([
     getTotalActiveMembers(),
     getTotalMembers(),
@@ -369,7 +387,7 @@ export async function getDashboardStats() {
     todayExcused: todayExcused.data,
     pendingApprovals: pendingApprovals.data,
     totalGroups: totalGroups.data,
-    memberDistribution: memberDistribution.data
+    memberDistribution: memberDistribution.success ? memberDistribution.data : null
   };
 }
 

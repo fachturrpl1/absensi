@@ -31,7 +31,7 @@ import {
     updateOrganizationMember,
 } from "@/action/members"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
-import { getAllDepartments } from "@/action/departement"
+import { getAllGroups } from "@/action/group"
 import { getAllPositions } from "@/action/position"
 import { getAllUsers, getAllUsersNotRegistered } from "@/action/users"
 import FormSkeleton from "../form-skeleton"
@@ -72,7 +72,7 @@ export default function MembersForm({
     const router = useRouter()
     const [loading, setLoading] = React.useState(false)
     const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
-    const [departments, setDepartments] = React.useState<{ id: string; name: string }[]>([])
+    const [groups, setGroups] = React.useState<{ id: string; name: string }[]>([])
     const [positions, setPositions] = React.useState<{ id: string; title: string }[]>([])
     const [users, setUsers] = React.useState<IUser[]>([])
     const [loadingForm, setLoadingForm] = React.useState(true)
@@ -117,10 +117,10 @@ export default function MembersForm({
 
                 // 3. load additional dropdown data
                 await Promise.all([
-                    getAllDepartments().then((res) => {
+                    getAllGroups().then((res) => {
                         // actions return { success: boolean, data: any }
                         const r = res as any
-                        if (r && r.success) setDepartments(r.data || []);
+                        if (r && r.success) setGroups(r.data || []);
                     }),
                     getAllPositions().then((res) => {
                         const r = res as any
@@ -313,7 +313,7 @@ export default function MembersForm({
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {departments.map((org) => (
+                                            {groups.map((org) => (
                                                 <SelectItem key={org.id} value={String(org.id)}>
                                                     {org.name}
                                                 </SelectItem>

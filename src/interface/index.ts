@@ -57,7 +57,7 @@ export interface IOrganization {
 
 
 // Groups (stored as departments in database)
-export interface IDepartments {
+export interface IGroup {
     id: string;
     organization_id: string;
     parent_department_id?: string;
@@ -72,6 +72,9 @@ export interface IDepartments {
     organization?: IOrganization;
 
 }
+
+// Backward compatibility alias
+export type IDepartments = IGroup;
 export interface IPositions {
     id: string;
     organization_id: string;
@@ -106,7 +109,8 @@ export interface IOrganization_member {
     updated_at?: string;
 
     user?: IUser;
-    departments?: IDepartments;
+    groups?: IGroup;
+    departments?: IGroup;
     positions?: IPositions;
     organization?: IOrganization;
     rfid_cards?: IRfidCard;
@@ -172,6 +176,7 @@ export interface IAttendance {
     is_active: boolean;
     created_at: string;
     updated_at?: string;
+    notes?: string;
 
 
     organization_member?: IOrganization_member;

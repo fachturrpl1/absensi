@@ -28,7 +28,7 @@ export default function Home() {
     memberDistribution: {
       status: { name: string; value: number; color: string; }[];
       employment: { name: string; value: number; color: string; }[];
-    } | never[];
+    } | null;
   }>({
     totalActiveMembers: 0,
     totalMembers: 0,
@@ -38,7 +38,7 @@ export default function Home() {
     todayExcused: 0,
     pendingApprovals: 0,
     totalGroups: 0,
-    memberDistribution: { status: [], employment: [] }
+    memberDistribution: null
   })
   const [loading, setLoading] = useState(true)
   const [attendanceGroups, setAttendanceGroups] = useState<any[] | null>(null)

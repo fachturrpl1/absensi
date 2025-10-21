@@ -88,7 +88,7 @@ export function DataTable<TData, TValue>({
   }, [appliedSearch, data, columns])
 
   const table = useReactTable({
-      data: filteredData,
+    data: filteredData,
     columns,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),

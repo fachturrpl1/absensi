@@ -41,7 +41,23 @@ export const getAllOrganization_member = async () => {
   // 3. Fetch all members belonging to the organization
   const { data, error } = await supabase
     .from("organization_members")
-    .select("*")
+    .select(`
+      *,
+      user:user_id (
+        id,
+        email,
+        first_name,
+        middle_name,
+        last_name,
+        display_name
+      ),
+      departments:department_id (
+        id,
+        name,
+        code,
+        organization_id
+      )
+    `)
     .eq("organization_id", member.organization_id)
     .order("created_at", { ascending: true });
 
