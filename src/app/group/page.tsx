@@ -151,13 +151,16 @@ export default function GroupsPage() {
 
   // sinkronkan orgId ke form setelah didapat dari supabase
   React.useEffect(() => {
-    if (organizationId) {
+    if (organizationId && !isModalOpen) {
       form.reset({
-        ...form.getValues(),
         organization_id: organizationId,
+        code: "",
+        name: "",
+        description: "",
+        is_active: true,
       })
     }
-  }, [organizationId])
+  }, [organizationId, form, isModalOpen])
 
   const handleSubmit = async (values: GroupForm) => {
     try {
@@ -188,6 +191,20 @@ export default function GroupsPage() {
       toast.error(error instanceof Error ? error.message : 'Unknown error')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDialogOpenChange = (open: boolean) => {
+    setIsModalOpen(open)
+    if (!open) {
+      setEditingDetail(null)
+      form.reset({
+        organization_id: organizationId || "",
+        code: "",
+        name: "",
+        description: "",
+        is_active: true,
+      })
     }
   }
 
@@ -254,12 +271,19 @@ export default function GroupsPage() {
     <ContentLayout title="Groups">
       <div className="w-full max-w-6xl mx-auto">
         <div className="items-center my-7">
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <Dialog open={isModalOpen} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild className="float-end ml-5">
               <Button
                 onClick={() => {
                   setEditingDetail(null)
-                  form.reset()
+                  form.reset({
+                    organization_id: organizationId || "",
+                    code: "",
+                    name: "",
+                    description: "",
+                    is_active: true,
+                  })
+                  setIsModalOpen(true)
                 }}
               >
                 Add Group <Plus className="ml-2" />
