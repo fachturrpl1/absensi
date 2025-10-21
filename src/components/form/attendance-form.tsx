@@ -97,10 +97,10 @@ export function AttendanceForm() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: "onChange",
     defaultValues: {
       entries: [
         {
-          memberId: "",
           checkInTime: undefined,
           checkOutTime: undefined,
           status: "present",
