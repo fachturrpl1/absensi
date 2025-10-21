@@ -70,6 +70,26 @@ type ManualAttendancePayload = {
   remarks?: string;
 };
 
+export async function checkExistingAttendance(
+  organization_member_id: string,
+  attendance_date: string
+) {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("attendance_records")
+    .select("id")
+    .eq("organization_member_id", organization_member_id)
+    .eq("attendance_date", attendance_date)
+    .single();
+
+  if (error && error.code !== "PGRST116") {
+    console.error("❌ Error checking attendance:", error);
+    return { success: false, exists: false };
+  }
+
+  return { success: true, exists: !!data };
+}
+
 export async function createManualAttendance(payload: ManualAttendancePayload) {
   const supabase = await getSupabase();
   const { error } = await supabase.from("attendance_records").insert([payload]);

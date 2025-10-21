@@ -210,6 +210,7 @@ export default function AttendancePage() {
           absent: { color: "bg-gray-300 text-black", icon: <X className="w-3 h-3 mr-1" /> },
           late: { color: "bg-red-500 text-white", icon: <Clock className="w-3 h-3 mr-1" /> },
           excused: { color: "bg-blue-500 text-white", icon: <Info className="w-3 h-3 mr-1" /> },
+          "go home": { color: "bg-purple-500 text-white", icon: <Check className="w-3 h-3 mr-1" /> },
         };
         const { color, icon } = statusMap[status] || { color: "bg-gray-200", icon: null };
         return (

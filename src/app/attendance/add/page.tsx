@@ -1,7 +1,7 @@
 "use client"
 
 import { ContentLayout } from "@/components/admin-panel/content-layout"
-import { AttendanceFormClean } from "@/components/form/attendance-form-clean"
+import { AttendanceFormBatch } from "@/components/form/attendance-form-batch"
 import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
@@ -19,7 +19,7 @@ export default function AddAttendancePage() {
                 </Alert>
 
                 {/* Form */}
-                <AttendanceFormClean />
+                <AttendanceFormBatch />
             </div>
         </ContentLayout>
     )
