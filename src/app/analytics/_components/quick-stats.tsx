@@ -44,14 +44,14 @@ export function QuickStats({ stats = DEFAULT_STATS }: QuickStatsProps) {
       {stats.map((stat, index) => (
         <Card
           key={index}
-          className="border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30"
+          className="border-gray-200 bg-gray-50"
         >
           <CardContent className="pt-4 pb-4">
-            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium truncate">
+            <p className="text-xs text-gray-600 font-medium truncate">
               {stat.label}
             </p>
             <div className="flex items-baseline justify-between mt-2">
-              <p className="text-lg font-bold text-slate-900 dark:text-slate-50">
+              <p className="text-lg font-bold text-gray-900">
                 {stat.value}
               </p>
               {stat.change && (
@@ -59,8 +59,8 @@ export function QuickStats({ stats = DEFAULT_STATS }: QuickStatsProps) {
                   className={cn(
                     "flex items-center gap-0.5 text-xs font-medium",
                     stat.change.isPositive
-                      ? "text-slate-700 dark:text-slate-300"
-                      : "text-slate-600 dark:text-slate-400"
+                      ? "text-gray-700"
+                      : "text-gray-600"
                   )}
                 >
                   {stat.change.isPositive ? (

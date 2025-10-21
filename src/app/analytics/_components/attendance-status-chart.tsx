@@ -23,10 +23,10 @@ export function AttendanceStatusChart({ data }: AttendanceStatusChartProps) {
   const total = data.reduce((acc, item) => acc + item.value, 0)
 
   return (
-    <Card className="border-slate-200 dark:border-slate-800">
+    <Card className="border-gray-200">
       <CardHeader>
         <CardTitle className="text-base">Attendance Status Distribution</CardTitle>
-        <CardDescription>Today&apos;s attendance breakdown</CardDescription>
+        <CardDescription className="text-gray-600">Today&apos;s attendance breakdown</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -59,22 +59,22 @@ export function AttendanceStatusChart({ data }: AttendanceStatusChartProps) {
             {data.map((item) => (
               <div
                 key={item.name}
-                className="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                className="rounded-lg border border-gray-200 p-3"
               >
                 <div className="flex items-center gap-2">
                   <div
                     className="h-3 w-3 rounded-full"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  <span className="text-sm font-medium text-gray-600">
                     {item.name}
                   </span>
                 </div>
                 <div className="mt-1 flex items-baseline gap-2">
-                  <span className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+                  <span className="text-lg font-semibold text-gray-900">
                     {item.value}
                   </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                  <span className="text-xs text-gray-500">
                     {total > 0 ? Math.round((item.value / total) * 100) : 0}%
                   </span>
                 </div>

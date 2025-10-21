@@ -31,10 +31,10 @@ export function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
   } satisfies ChartConfig
 
   return (
-    <Card className="border-slate-200 dark:border-slate-800">
+    <Card className="border-gray-200">
       <CardHeader>
         <CardTitle className="text-base">Attendance Trends</CardTitle>
-        <CardDescription>Last 30 days attendance pattern</CardDescription>
+        <CardDescription className="text-gray-600">Last 30 days attendance pattern</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-64 w-full">

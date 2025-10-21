@@ -156,13 +156,17 @@ export default function PositionsPage() {
 
     // sinkronkan orgId ke form setelah didapat dari supabase
     React.useEffect(() => {
-        if (organizationId) {
+        if (organizationId && !open) {
             form.reset({
-                ...form.getValues(),
                 organization_id: organizationId,
+                code: "",
+                title: "",
+                description: "",
+                level: "",
+                is_active: true,
             })
         }
-    }, [organizationId]) // <--- HANYA organizationId
+    }, [organizationId, form, open])
 
 
 
@@ -196,6 +200,21 @@ export default function PositionsPage() {
             toast.error(error instanceof Error ? error.message : 'Unknown error')
         } finally {
             setLoading(false)
+        }
+    }
+
+    const handleDialogOpenChange = (isOpen: boolean) => {
+        setOpen(isOpen)
+        if (!isOpen) {
+            setEditingDetail(null)
+            form.reset({
+                organization_id: organizationId || "",
+                code: "",
+                title: "",
+                description: "",
+                level: "",
+                is_active: true,
+            })
         }
     }
 
@@ -265,12 +284,20 @@ export default function PositionsPage() {
         <ContentLayout title="Positions">
             <div className="w-full max-w-6xl mx-auto">
                 <div className="items-center my-7">
-                    <Dialog open={open} onOpenChange={setOpen}>
+                    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
                             <DialogTrigger asChild className="float-end  ml-5">
                             <Button
                                 onClick={() => {
                                     setEditingDetail(null)
-                                    form.reset()
+                                    form.reset({
+                                        organization_id: organizationId || "",
+                                        code: "",
+                                        title: "",
+                                        description: "",
+                                        level: "",
+                                        is_active: true,
+                                    })
+                                    setOpen(true)
                                 }}
                             >
                                 Add Position <Plus className="ml-2" />

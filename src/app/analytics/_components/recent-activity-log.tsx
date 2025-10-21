@@ -62,19 +62,19 @@ const DEFAULT_ACTIVITIES: ActivityItem[] = [
 const statusConfig = {
   present: {
     label: "Present",
-    badgeClass: "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900",
+    badgeClass: "bg-gray-900 text-white",
   },
   late: {
     label: "Late",
-    badgeClass: "bg-slate-600 text-white dark:bg-slate-400 dark:text-slate-900",
+    badgeClass: "bg-gray-600 text-white",
   },
   absent: {
     label: "Absent",
-    badgeClass: "bg-slate-400 text-white dark:bg-slate-500 dark:text-white",
+    badgeClass: "bg-gray-400 text-white",
   },
   excused: {
     label: "Excused",
-    badgeClass: "bg-slate-700 text-white dark:bg-slate-300 dark:text-slate-900",
+    badgeClass: "bg-gray-700 text-white",
   },
 }
 
@@ -82,15 +82,15 @@ export function RecentActivityLog({
   activities = DEFAULT_ACTIVITIES,
 }: RecentActivityLogProps) {
   return (
-    <Card className="border-slate-200 dark:border-slate-800">
+    <Card className="border-gray-200">
       <CardHeader>
         <CardTitle className="text-base">Recent Activity</CardTitle>
-        <CardDescription>Latest attendance check-ins today</CardDescription>
+        <CardDescription className="text-gray-600">Latest attendance check-ins today</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {activities.length === 0 ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-8">
+            <p className="text-sm text-gray-500 text-center py-8">
               No activity yet
             </p>
           ) : (
@@ -99,17 +99,17 @@ export function RecentActivityLog({
               return (
                 <div
                   key={activity.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors"
+                  className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="flex-shrink-0 h-9 w-9 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-                      <User className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+                    <div className="flex-shrink-0 h-9 w-9 rounded-full bg-gray-200 flex items-center justify-center">
+                      <User className="h-5 w-5 text-gray-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 dark:text-slate-50 truncate">
+                      <p className="text-sm font-medium text-gray-900 truncate">
                         {activity.name}
                       </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      <p className="text-xs text-gray-500 truncate">
                         {activity.department}
                       </p>
                     </div>
@@ -118,12 +118,12 @@ export function RecentActivityLog({
                   <div className="flex items-center gap-3 flex-shrink-0 ml-3">
                     <div className="text-right">
                       {activity.checkInTime && (
-                        <p className="text-xs font-medium text-slate-600 dark:text-slate-400 flex items-center justify-end gap-1">
+                        <p className="text-xs font-medium text-gray-600 flex items-center justify-end gap-1">
                           <Clock className="h-3 w-3" />
                           {activity.checkInTime}
                         </p>
                       )}
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <p className="text-xs text-gray-500">
                         {activity.timestamp}
                       </p>
                     </div>

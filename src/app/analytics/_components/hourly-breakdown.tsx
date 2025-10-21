@@ -32,10 +32,10 @@ export function HourlyBreakdown({ data = DEFAULT_HOURLY_DATA }: HourlyBreakdownP
   } satisfies ChartConfig
 
   return (
-    <Card className="border-slate-200 dark:border-slate-800">
+    <Card className="border-gray-200">
       <CardHeader>
         <CardTitle className="text-base">Hourly Check-in Distribution</CardTitle>
-        <CardDescription>Members checked in by time slot</CardDescription>
+        <CardDescription className="text-gray-600">Members checked in by time slot</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-64 w-full">

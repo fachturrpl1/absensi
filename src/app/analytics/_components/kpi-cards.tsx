@@ -25,8 +25,8 @@ export function KPICards({
       icon: Users,
       description: "Active organization members",
       trend: "+5.2%",
-      color: "text-slate-700 dark:text-slate-300",
-      bgColor: "bg-slate-50 dark:bg-slate-900/50",
+      color: "text-gray-700",
+      bgColor: "bg-gray-50",
     },
     {
       title: "Present Today",
@@ -34,8 +34,8 @@ export function KPICards({
       icon: CheckCircle2,
       description: "Members checked in",
       trend: "+12.5%",
-      color: "text-slate-700 dark:text-slate-300",
-      bgColor: "bg-slate-50 dark:bg-slate-900/50",
+      color: "text-gray-700",
+      bgColor: "bg-gray-50",
     },
     {
       title: "Late Arrivals",
@@ -43,8 +43,8 @@ export function KPICards({
       icon: Clock,
       description: "Late check-ins today",
       trend: "-2.5%",
-      color: "text-slate-700 dark:text-slate-300",
-      bgColor: "bg-slate-50 dark:bg-slate-900/50",
+      color: "text-gray-700",
+      bgColor: "bg-gray-50",
     },
     {
       title: "Absent",
@@ -52,8 +52,8 @@ export function KPICards({
       icon: AlertCircle,
       description: "Members not present",
       trend: "-1.2%",
-      color: "text-slate-700 dark:text-slate-300",
-      bgColor: "bg-slate-50 dark:bg-slate-900/50",
+      color: "text-gray-700",
+      bgColor: "bg-gray-50",
     },
     {
       title: "Attendance Rate",
@@ -61,8 +61,8 @@ export function KPICards({
       icon: TrendingUp,
       description: "Overall attendance percentage",
       trend: "+3.8%",
-      color: "text-slate-700 dark:text-slate-300",
-      bgColor: "bg-slate-50 dark:bg-slate-900/50",
+      color: "text-gray-700",
+      bgColor: "bg-gray-50",
     },
   ]
 
@@ -71,26 +71,26 @@ export function KPICards({
       {cards.map((card) => {
         const Icon = card.icon
         return (
-          <Card key={card.title} className="border-slate-200 dark:border-slate-800">
+          <Card key={card.title} className="border-gray-200">
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between">
-                <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                <CardTitle className="text-sm font-medium text-gray-600">
                   {card.title}
                 </CardTitle>
                 <div className={`p-2 rounded-lg ${card.bgColor}`}>
-                  <Icon className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                  <Icon className="h-4 w-4 text-gray-600" />
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="text-2xl font-bold text-slate-900 dark:text-slate-50">
+                <div className="text-2xl font-bold text-gray-900">
                   {card.value}
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-gray-500">
                   {card.description}
                 </p>
-                <div className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                <div className="text-xs font-medium text-gray-600">
                   {card.trend}
                 </div>
               </div>

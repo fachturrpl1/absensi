@@ -39,19 +39,19 @@ export function StatsSummary({
       {stats.map((stat) => (
         <Card
           key={stat.label}
-          className="border-slate-200 dark:border-slate-800"
+          className="border-gray-200"
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
+            <CardTitle className="text-sm font-medium text-gray-600">
               {stat.label}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <div className="text-3xl font-bold text-slate-900 dark:text-slate-50">
+              <div className="text-3xl font-bold text-gray-900">
                 {stat.value}
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-gray-500">
                 {stat.subtext}
               </p>
             </div>
