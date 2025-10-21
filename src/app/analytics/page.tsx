@@ -143,10 +143,7 @@ export default function AnalyticsPage() {
     <ContentLayout title="Analytics">
       <div className="space-y-6">
         {/* Header Section */}
-        <AnalyticsHeader
-          onRefresh={() => window.location.reload()}
-          onExport={() => console.log("Export clicked")}
-        />
+        <AnalyticsHeader />
 
         {/* KPI Cards */}
         <KPICards
