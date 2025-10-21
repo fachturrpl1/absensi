@@ -226,6 +226,26 @@ export function AttendanceFormBatch() {
       }
     }
 
+    // Check for duplicates within batch itself
+    const duplicateCheck = new Map<string, string[]>()
+    for (const entry of batchEntries) {
+      const key = `${entry.memberId}-${entry.checkInDate}`
+      if (!duplicateCheck.has(key)) {
+        duplicateCheck.set(key, [])
+      }
+      duplicateCheck.get(key)!.push(entry.memberId)
+    }
+
+    for (const [key, memberIds] of duplicateCheck.entries()) {
+      if (memberIds.length > 1) {
+        const [memberId, date] = key.split("-")
+        const selectedMember = members.find((m) => m.id === memberId)
+        const memberName = selectedMember?.label || `Member ${memberId}`
+        toast.error(`${memberName} has duplicate entries for ${date}`)
+        return
+      }
+    }
+
     try {
       setIsSubmitting(true)
       let successCount = 0
@@ -237,7 +257,8 @@ export function AttendanceFormBatch() {
         const memberName = selectedMember?.label || `Member ${entry.memberId}`
 
         // Check if attendance already exists for this member and date
-        const checkRes = await checkExistingAttendance(entry.memberId, entry.checkInDate)
+        // Convert memberId to ensure it's a proper number
+        const checkRes = await checkExistingAttendance(String(Number(entry.memberId)), entry.checkInDate)
         if (checkRes.success && checkRes.exists) {
           skipCount++
           errors.push(`${memberName} already has attendance recorded for ${entry.checkInDate}`)

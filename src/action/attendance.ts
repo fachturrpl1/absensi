@@ -74,32 +74,76 @@ export async function checkExistingAttendance(
   organization_member_id: string,
   attendance_date: string
 ) {
-  const supabase = await getSupabase();
-  const { data, error } = await supabase
-    .from("attendance_records")
-    .select("id")
-    .eq("organization_member_id", organization_member_id)
-    .eq("attendance_date", attendance_date)
-    .single();
+  try {
+    const supabase = await getSupabase();
+    
+    // Ensure organization_member_id is a number
+    const memberId = Number(organization_member_id);
+    if (isNaN(memberId)) {
+      console.error("❌ Invalid organization_member_id:", organization_member_id);
+      return { success: false, exists: false };
+    }
 
-  if (error && error.code !== "PGRST116") {
-    console.error("❌ Error checking attendance:", error);
+    // Log for debugging
+    console.log(`🔍 Checking attendance for member ${memberId} on ${attendance_date}`);
+
+    const { data, error } = await supabase
+      .from("attendance_records")
+      .select("id")
+      .eq("organization_member_id", memberId)
+      .eq("attendance_date", attendance_date)
+      .maybeSingle();
+
+    if (error) {
+      console.error("❌ Error checking attendance:", error);
+      return { success: false, exists: false };
+    }
+
+    const exists = !!data;
+    console.log(`✓ Attendance check result: exists=${exists}`);
+    return { success: true, exists };
+  } catch (err) {
+    console.error("❌ Exception checking attendance:", err);
     return { success: false, exists: false };
   }
-
-  return { success: true, exists: !!data };
 }
 
 export async function createManualAttendance(payload: ManualAttendancePayload) {
-  const supabase = await getSupabase();
-  const { error } = await supabase.from("attendance_records").insert([payload]);
+  try {
+    const supabase = await getSupabase();
+    
+    // Log for debugging
+    console.log("📝 Creating attendance for:", {
+      member_id: payload.organization_member_id,
+      date: payload.attendance_date,
+      check_in: payload.actual_check_in,
+    });
 
-  if (error) {
-    console.error("❌ Error creating attendance:", error);
-    return { success: false, message: error.message };
+    const { error } = await supabase.from("attendance_records").insert([payload]);
+
+    if (error) {
+      console.error("❌ Error creating attendance:", error);
+      
+      // Check if duplicate key error
+      if (error.code === "23505") {
+        return { 
+          success: false, 
+          message: `Attendance already exists for this date. Please check existing records.` 
+        };
+      }
+      
+      return { success: false, message: error.message };
+    }
+
+    console.log("✓ Attendance created successfully");
+    revalidatePath("/attendance");
+
+    return { success: true };
+  } catch (err) {
+    console.error("❌ Exception creating attendance:", err);
+    return { 
+      success: false, 
+      message: err instanceof Error ? err.message : "An error occurred" 
+    };
   }
-
-  revalidatePath("/attendance");
-
-  return { success: true };
 }
