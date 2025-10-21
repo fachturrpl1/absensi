@@ -583,15 +583,15 @@ function BatchEntryForm({
             type="button"
             variant="outline"
             size="sm"
-            onClick={() =>
-              append({
-                memberId: "",
+            onClick={() => {
+              const newEntry: any = {
                 checkInTime: undefined,
                 checkOutTime: undefined,
                 status: "present",
                 remarks: "",
-              })
-            }
+              }
+              append(newEntry)
+            }}
             disabled={isSubmitting}
           >
             <Plus className="mr-1 h-4 w-4" /> Add Entry
