@@ -128,6 +128,7 @@ export function AttendanceForm() {
         const membersData = (membersRes.data || []) as IOrganization_member[]
 
         const options: MemberOption[] = membersData
+          .filter((member) => member.id && member.user)
           .map((member) => {
             const displayName = member.user?.display_name?.trim()
             const concatenated = [member.user?.first_name, member.user?.middle_name, member.user?.last_name]
@@ -375,7 +376,7 @@ function SingleEntryForm({
               </FormControl>
               <SelectContent className="max-h-64">
                 {members.length ? (
-                  members.filter((m) => m.id).map((member) => (
+                  members.filter((m) => m.id && m.id.trim()).map((member) => (
                     <SelectItem key={member.id} value={member.id}>
                       <span>{member.label}</span>
                     </SelectItem>
@@ -526,11 +527,11 @@ function BatchEntryForm({
       <Collapsible defaultOpen>
         <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:underline">
           <ChevronDown className="h-4 w-4" />
-          Quick Add ({members.length} member{members.length !== 1 ? "s" : ""})
+          Quick Add ({members.filter((m) => m.id && m.id.trim()).length} member{members.filter((m) => m.id && m.id.trim()).length !== 1 ? "s" : ""})
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-3 mt-3 pt-3 border-t">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {members.map((member) => (
+            {members.filter((m) => m.id && m.id.trim()).map((member) => (
               <Button
                 key={member.id}
                 type="button"
@@ -675,16 +676,9 @@ function BatchEntryItem({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent className="max-h-64">
-                  {members.filter((m) => m.id).map((member) => (
+                  {members.filter((m) => m.id && m.id.trim()).map((member) => (
                     <SelectItem key={member.id} value={member.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{member.label}</span>
-                        {member.groupName && (
-                          <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded">
-                            {member.groupName}
-                          </span>
-                        )}
-                      </div>
+                      <span>{member.label}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
