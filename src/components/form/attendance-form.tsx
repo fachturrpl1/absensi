@@ -128,7 +128,10 @@ export function AttendanceForm() {
         const membersData = (membersRes.data || []) as IOrganization_member[]
 
         const options: MemberOption[] = membersData
-          .filter((member) => member.id && member.user && String(member.id).trim())
+          .filter((member) => {
+            const memberId = Number(member.id)
+            return !isNaN(memberId) && memberId > 0 && member.user?.id
+          })
           .map((member) => {
             const displayName = member.user?.display_name?.trim()
             const concatenated = [member.user?.first_name, member.user?.middle_name, member.user?.last_name]
@@ -138,7 +141,7 @@ export function AttendanceForm() {
             const fullName = concatenated.trim()
             const resolvedLabel = displayName || fullName || member.user?.email || "No Name"
 
-            const memberId = String(member.id).trim()
+            const memberId = String(Number(member.id))
             return {
               id: memberId,
               label: resolvedLabel,
@@ -169,7 +172,7 @@ export function AttendanceForm() {
   const filteredMembers = useMemo(
     () =>
       members
-        .filter((m) => m.id && m.id.trim())
+        .filter((m) => !isNaN(Number(m.id)) && Number(m.id) > 0)
         .filter((m) => !selectedGroup || m.groupName === selectedGroup)
         .filter((m) =>
           searchQuery
@@ -377,9 +380,9 @@ function SingleEntryForm({
                 </SelectTrigger>
               </FormControl>
               <SelectContent className="max-h-64">
-                {members.length ? (
+                {members.length > 0 && members.some((m) => Number(m.id) > 0) ? (
                   members
-                    .filter((m) => Boolean(m.id) && String(m.id).trim().length > 0)
+                    .filter((m) => !isNaN(Number(m.id)) && Number(m.id) > 0)
                     .map((member) => (
                       <SelectItem key={member.id} value={member.id}>
                         <span>{member.label}</span>
@@ -531,11 +534,11 @@ function BatchEntryForm({
       <Collapsible defaultOpen>
         <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:underline">
           <ChevronDown className="h-4 w-4" />
-          Quick Add ({members.filter((m) => Boolean(m.id) && String(m.id).trim().length > 0).length} member{members.filter((m) => Boolean(m.id) && String(m.id).trim().length > 0).length !== 1 ? "s" : ""})
+          Quick Add ({members.filter((m) => !isNaN(Number(m.id)) && Number(m.id) > 0).length} member{members.filter((m) => !isNaN(Number(m.id)) && Number(m.id) > 0).length !== 1 ? "s" : ""})
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-3 mt-3 pt-3 border-t">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {members.filter((m) => Boolean(m.id) && String(m.id).trim().length > 0).map((member) => (
+            {members.filter((m) => !isNaN(Number(m.id)) && Number(m.id) > 0).map((member) => (
               <Button
                 key={member.id}
                 type="button"
@@ -681,7 +684,7 @@ function BatchEntryItem({
                 </FormControl>
                 <SelectContent className="max-h-64">
                   {members
-                    .filter((m) => Boolean(m.id) && String(m.id).trim().length > 0)
+                    .filter((m) => !isNaN(Number(m.id)) && Number(m.id) > 0)
                     .map((member) => (
                       <SelectItem key={member.id} value={member.id}>
                         <span>{member.label}</span>
