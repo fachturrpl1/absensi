@@ -13,6 +13,10 @@ import { AttendanceStatusChart } from "./_components/attendance-status-chart"
 import { MonthlyTrendChart } from "./_components/monthly-trend-chart"
 import { DepartmentPerformanceChart } from "./_components/department-performance-chart"
 import { StatsSummary } from "./_components/stats-summary"
+import { AnalyticsHeader } from "./_components/analytics-header"
+import { QuickStats } from "./_components/quick-stats"
+import { HourlyBreakdown } from "./_components/hourly-breakdown"
+import { RecentActivityLog } from "./_components/recent-activity-log"
 
 type DashboardData = {
   totalMembers: number
@@ -138,6 +142,12 @@ export default function AnalyticsPage() {
   return (
     <ContentLayout title="Analytics">
       <div className="space-y-6">
+        {/* Header Section */}
+        <AnalyticsHeader
+          onRefresh={() => window.location.reload()}
+          onExport={() => console.log("Export clicked")}
+        />
+
         {/* KPI Cards */}
         <KPICards
           totalMembers={dashboardData?.totalMembers ?? 0}
@@ -147,21 +157,34 @@ export default function AnalyticsPage() {
           attendanceRate={attendanceRate}
         />
 
+        {/* Quick Stats */}
+        <QuickStats />
+
+        {/* Main Charts Row 1 */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <AttendanceStatusChart data={attendanceDistribution} />
+          <HourlyBreakdown />
+        </div>
+
+        {/* Main Charts Row 2 */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <MonthlyTrendChart data={SAMPLE_MONTHLY_DATA} />
+          </div>
+          <div>
+            <RecentActivityLog />
+          </div>
+        </div>
+
+        {/* Department Performance */}
+        <DepartmentPerformanceChart data={SAMPLE_DEPARTMENT_DATA} />
+
         {/* Stats Summary */}
         <StatsSummary
           pendingApprovals={dashboardData?.pendingApprovals ?? 0}
           totalGroups={dashboardData?.totalGroups ?? 0}
           onTimeRate={92}
         />
-
-        {/* Charts Row 1 */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <AttendanceStatusChart data={attendanceDistribution} />
-          <MonthlyTrendChart data={SAMPLE_MONTHLY_DATA} />
-        </div>
-
-        {/* Charts Row 2 */}
-        <DepartmentPerformanceChart data={SAMPLE_DEPARTMENT_DATA} />
       </div>
     </ContentLayout>
   )

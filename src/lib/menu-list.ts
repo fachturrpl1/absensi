@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Briefcase,
   BarChart3,
+  TrendingUp,
 } from "@/components/icons/lucide-exports";
 import type { LucideIcon } from "@/components/icons/lucide-exports";
 
@@ -75,6 +76,12 @@ export function getMenuList(pathname: string): Group[] {
           label: "Attendance",
           icon: ClipboardCheck,
           active: pathname.includes("/attendance")
+        },
+        {
+          href: "/analytics",
+          label: "Analytics",
+          icon: TrendingUp,
+          active: pathname.includes("/analytics")
         },
       ]
     },
