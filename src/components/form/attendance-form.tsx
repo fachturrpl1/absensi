@@ -61,6 +61,18 @@ type MemberOption = {
   groupId?: string
 }
 
+// Strict validation function untuk member ID
+const isValidMemberId = (id: string | undefined | null): id is string => {
+  if (!id) return false
+  const numId = Number(id)
+  return !isNaN(numId) && numId > 0 && String(numId) === id
+}
+
+// Filter dan ensure members adalah valid
+const getValidMembers = (members: MemberOption[]): MemberOption[] => {
+  return members.filter((m) => isValidMemberId(m.id))
+}
+
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour)
 const MINUTES = Array.from({ length: 12 }, (_, idx) => idx * 5)
 
@@ -129,8 +141,9 @@ export function AttendanceForm() {
 
         const options: MemberOption[] = membersData
           .filter((member) => {
+            if (!member.id || !member.user?.id) return false
             const memberId = Number(member.id)
-            return !isNaN(memberId) && memberId > 0 && member.user?.id
+            return !isNaN(memberId) && memberId > 0
           })
           .map((member) => {
             const displayName = member.user?.display_name?.trim()
@@ -150,6 +163,7 @@ export function AttendanceForm() {
               groupName: member.departments?.name || "",
             }
           })
+          .filter((opt) => isValidMemberId(opt.id))
 
         setMembers(options)
 
@@ -172,7 +186,6 @@ export function AttendanceForm() {
   const filteredMembers = useMemo(
     () =>
       members
-        .filter((m) => !isNaN(Number(m.id)) && Number(m.id) > 0)
         .filter((m) => !selectedGroup || m.groupName === selectedGroup)
         .filter((m) =>
           searchQuery
@@ -380,14 +393,12 @@ function SingleEntryForm({
                 </SelectTrigger>
               </FormControl>
               <SelectContent className="max-h-64">
-                {members.length > 0 && members.some((m) => Number(m.id) > 0) ? (
-                  members
-                    .filter((m) => !isNaN(Number(m.id)) && Number(m.id) > 0)
-                    .map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        <span>{member.label}</span>
-                      </SelectItem>
-                    ))
+                {members.length > 0 ? (
+                  members.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      <span>{member.label}</span>
+                    </SelectItem>
+                  ))
                 ) : (
                   <div className="p-2 text-sm text-muted-foreground text-center py-6">
                     {loadingMembers ? "Loading data..." : "No members available."}
@@ -534,11 +545,11 @@ function BatchEntryForm({
       <Collapsible defaultOpen>
         <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:underline">
           <ChevronDown className="h-4 w-4" />
-          Quick Add ({members.filter((m) => !isNaN(Number(m.id)) && Number(m.id) > 0).length} member{members.filter((m) => !isNaN(Number(m.id)) && Number(m.id) > 0).length !== 1 ? "s" : ""})
+          Quick Add ({members.length} member{members.length !== 1 ? "s" : ""})
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-3 mt-3 pt-3 border-t">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {members.filter((m) => !isNaN(Number(m.id)) && Number(m.id) > 0).map((member) => (
+            {members.map((member) => (
               <Button
                 key={member.id}
                 type="button"
@@ -683,13 +694,11 @@ function BatchEntryItem({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent className="max-h-64">
-                  {members
-                    .filter((m) => !isNaN(Number(m.id)) && Number(m.id) > 0)
-                    .map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        <span>{member.label}</span>
-                      </SelectItem>
-                    ))}
+                  {members.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      <span>{member.label}</span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />
