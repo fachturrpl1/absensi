@@ -23,10 +23,10 @@ export function AttendanceStatusChart({ data }: AttendanceStatusChartProps) {
   const total = data.reduce((acc, item) => acc + item.value, 0)
 
   return (
-    <Card className="border-gray-200">
+    <Card className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
       <CardHeader>
-        <CardTitle className="text-base">Attendance Status Distribution</CardTitle>
-        <CardDescription className="text-gray-600">Today&apos;s attendance breakdown</CardDescription>
+        <CardTitle className="text-base text-gray-900 dark:text-gray-100">Attendance Status Distribution</CardTitle>
+        <CardDescription className="text-gray-600 dark:text-gray-400">Today&apos;s attendance breakdown</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -59,22 +59,22 @@ export function AttendanceStatusChart({ data }: AttendanceStatusChartProps) {
             {data.map((item) => (
               <div
                 key={item.name}
-                className="rounded-lg border border-gray-200 p-3"
+                className="rounded-lg border border-gray-800 bg-gray-100 dark:bg-gray-800 p-3"
               >
                 <div className="flex items-center gap-2">
                   <div
                     className="h-3 w-3 rounded-full"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-sm font-medium text-gray-600">
+                  <span className="text-sm font-medium text-gray-300">
                     {item.name}
                   </span>
                 </div>
                 <div className="mt-1 flex items-baseline gap-2">
-                  <span className="text-lg font-semibold text-gray-900">
+                  <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                     {item.value}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-600 dark:text-gray-500">
                     {total > 0 ? Math.round((item.value / total) * 100) : 0}%
                   </span>
                 </div>

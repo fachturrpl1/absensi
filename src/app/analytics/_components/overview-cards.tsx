@@ -32,31 +32,31 @@ export function OverviewCards({
   return (
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       {/* Total Members Card */}
-      <Card>
+      <Card className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
         <CardHeader>
-          <CardTitle>Total Members</CardTitle>
-          <CardDescription>Organization</CardDescription>
+          <CardTitle className="text-gray-900 dark:text-gray-100">Total Members</CardTitle>
+          <CardDescription className="text-gray-600 dark:text-gray-400">Organization</CardDescription>
         </CardHeader>
         <CardContent className="size-full">
           <div className="flex items-end justify-between">
             <div>
-              <span className="text-3xl font-semibold tabular-nums">{totalMembers}</span>
+              <span className="text-3xl font-semibold tabular-nums text-gray-900 dark:text-gray-100">{totalMembers}</span>
             </div>
-            <div className="rounded-lg bg-emerald-500/10 p-2">
-              <Users className="h-5 w-5 text-emerald-600" />
+            <div className="rounded-lg bg-gray-100 dark:bg-gray-800 p-2">
+              <Users className="h-5 w-5 text-gray-600 dark:text-gray-400" />
             </div>
           </div>
         </CardContent>
         <CardFooter>
-          <span className="text-sm font-medium text-green-500">+5.2%</span>
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">+5.2%</span>
         </CardFooter>
       </Card>
 
       {/* Present Today Card with Chart */}
-      <Card>
+      <Card className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
         <CardHeader>
-          <CardTitle>Present Today</CardTitle>
-          <CardDescription>Last Month</CardDescription>
+          <CardTitle className="text-gray-900 dark:text-gray-100">Present Today</CardTitle>
+          <CardDescription className="text-gray-600 dark:text-gray-400">Last Month</CardDescription>
         </CardHeader>
         <CardContent className="size-full">
           <ChartContainer className="size-full min-h-24" config={attendanceDistributionConfig}>
@@ -68,16 +68,16 @@ export function OverviewCards({
           </ChartContainer>
         </CardContent>
         <CardFooter className="flex items-center justify-between">
-          <span className="text-xl font-semibold tabular-nums">{todayAttendance}</span>
-          <span className="text-sm font-medium text-green-500">+12.5%</span>
+          <span className="text-xl font-semibold tabular-nums text-gray-900 dark:text-gray-100">{todayAttendance}</span>
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">+12.5%</span>
         </CardFooter>
       </Card>
 
       {/* Late Arrivals Card with Chart */}
-      <Card>
+      <Card className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
         <CardHeader>
-          <CardTitle>Late Arrivals</CardTitle>
-          <CardDescription>Last Month</CardDescription>
+          <CardTitle className="text-gray-900 dark:text-gray-100">Late Arrivals</CardTitle>
+          <CardDescription className="text-gray-600 dark:text-gray-400">Last Month</CardDescription>
         </CardHeader>
         <CardContent className="size-full">
           <ChartContainer className="size-full min-h-24" config={attendanceDistributionConfig}>
@@ -89,50 +89,50 @@ export function OverviewCards({
           </ChartContainer>
         </CardContent>
         <CardFooter className="flex items-center justify-between">
-          <span className="text-xl font-semibold tabular-nums">{todayLate}</span>
-          <span className="text-sm font-medium text-red-500">-2.5%</span>
+          <span className="text-xl font-semibold tabular-nums text-gray-900 dark:text-gray-100">{todayLate}</span>
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">-2.5%</span>
         </CardFooter>
       </Card>
 
       {/* Attendance Rate Card */}
-      <Card>
+      <Card className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
         <CardHeader>
-          <div className="w-fit rounded-lg bg-blue-500/10 p-2">
-            <TrendingUp className="h-5 w-5 text-blue-600" />
+          <div className="w-fit rounded-lg bg-gray-100 dark:bg-gray-800 p-2">
+            <TrendingUp className="h-5 w-5 text-gray-600 dark:text-gray-400" />
           </div>
         </CardHeader>
         <CardContent className="flex size-full flex-col justify-between">
           <div className="space-y-1.5">
-            <CardTitle>Attendance Rate</CardTitle>
-            <CardDescription>This Month</CardDescription>
+            <CardTitle className="text-gray-900 dark:text-gray-100">Attendance Rate</CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-400">This Month</CardDescription>
           </div>
-          <p className="text-2xl font-semibold tabular-nums">{attendanceRate}%</p>
-          <div className="w-fit rounded-md bg-green-500/10 px-2 py-1 text-xs font-medium text-green-500">+3.8%</div>
+          <p className="text-2xl font-semibold tabular-nums text-gray-900 dark:text-gray-100">{attendanceRate}%</p>
+          <div className="w-fit rounded-md bg-gray-100 dark:bg-gray-800 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400">+3.8%</div>
         </CardContent>
       </Card>
 
       {/* On-Time Rate Card */}
-      <Card>
+      <Card className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
         <CardHeader>
-          <div className="w-fit rounded-lg bg-emerald-500/10 p-2">
-            <Clock className="h-5 w-5 text-emerald-600" />
+          <div className="w-fit rounded-lg bg-gray-100 dark:bg-gray-800 p-2">
+            <Clock className="h-5 w-5 text-gray-600 dark:text-gray-400" />
           </div>
         </CardHeader>
         <CardContent className="flex size-full flex-col justify-between">
           <div className="space-y-1.5">
-            <CardTitle>On-Time Rate</CardTitle>
-            <CardDescription>This Month</CardDescription>
+            <CardTitle className="text-gray-900 dark:text-gray-100">On-Time Rate</CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-400">This Month</CardDescription>
           </div>
-          <p className="text-2xl font-semibold tabular-nums">92%</p>
-          <div className="w-fit rounded-md bg-green-500/10 px-2 py-1 text-xs font-medium text-green-500">+5.2%</div>
+          <p className="text-2xl font-semibold tabular-nums text-gray-900 dark:text-gray-100">92%</p>
+          <div className="w-fit rounded-md bg-gray-100 dark:bg-gray-800 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400">+5.2%</div>
         </CardContent>
       </Card>
 
       {/* Attendance Trend Card */}
-      <Card className="col-span-1 xl:col-span-2">
+      <Card className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950 col-span-1 xl:col-span-2">
         <CardHeader>
-          <CardTitle>Attendance Trend</CardTitle>
-          <CardDescription>Year to Date (YTD)</CardDescription>
+          <CardTitle className="text-gray-900 dark:text-gray-100">Attendance Trend</CardTitle>
+          <CardDescription className="text-gray-600 dark:text-gray-400">Year to Date (YTD)</CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={attendanceTrendConfig} className="h-24 w-full">
@@ -159,7 +159,7 @@ export function OverviewCards({
           </ChartContainer>
         </CardContent>
         <CardFooter>
-          <p className="text-muted-foreground text-sm">+14% growth since January</p>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">+14% growth since January</p>
         </CardFooter>
       </Card>
     </div>

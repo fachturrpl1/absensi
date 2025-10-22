@@ -19,41 +19,41 @@ export function DepartmentPerformanceChart({
   const chartConfig = {
     attendance: {
       label: "Attendance Rate",
-      color: "hsl(0, 0%, 25%)",
+      color: "hsl(186, 100%, 50%)",
     },
     target: {
       label: "Target Rate",
-      color: "hsl(0, 0%, 80%)",
+      color: "hsl(0, 0%, 70%)",
     },
   } satisfies ChartConfig
 
   return (
-    <Card className="border-gray-200">
+    <Card className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
       <CardHeader>
-        <CardTitle className="text-base">Department Performance</CardTitle>
-        <CardDescription className="text-gray-600">Attendance vs Target by department</CardDescription>
+        <CardTitle className="text-base text-gray-900 dark:text-gray-100">Department Performance</CardTitle>
+        <CardDescription className="text-gray-600 dark:text-gray-400">Attendance vs Target by department</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0, 0%, 90%)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0, 0%, 25%)" />
               <XAxis
                 dataKey="name"
-                stroke="hsl(0, 0%, 50%)"
+                stroke="hsl(0, 0%, 40%)"
                 style={{ fontSize: "12px" }}
               />
-              <YAxis stroke="hsl(0, 0%, 50%)" style={{ fontSize: "12px" }} />
+              <YAxis stroke="hsl(0, 0%, 40%)" style={{ fontSize: "12px" }} />
               <ChartTooltip content={<ChartTooltipContent />} />
               <Legend />
               <Bar
                 dataKey="attendance"
-                fill="hsl(0, 0%, 25%)"
+                fill="hsl(186, 100%, 50%)"
                 radius={[6, 6, 0, 0]}
               />
               <Bar
                 dataKey="target"
-                fill="hsl(0, 0%, 80%)"
+                fill="hsl(0, 0%, 70%)"
                 radius={[6, 6, 0, 0]}
               />
             </BarChart>

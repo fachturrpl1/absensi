@@ -71,26 +71,26 @@ export function KPICards({
       {cards.map((card) => {
         const Icon = card.icon
         return (
-          <Card key={card.title} className="border-gray-200">
+          <Card key={card.title} className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between">
-                <CardTitle className="text-sm font-medium text-gray-600">
+                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
                   {card.title}
                 </CardTitle>
-                <div className={`p-2 rounded-lg ${card.bgColor}`}>
-                  <Icon className="h-4 w-4 text-gray-600" />
+                <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800">
+                  <Icon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {card.value}
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-600 dark:text-gray-500">
                   {card.description}
                 </p>
-                <div className="text-xs font-medium text-gray-600">
+                <div className="text-xs font-medium text-gray-600 dark:text-gray-400">
                   {card.trend}
                 </div>
               </div>

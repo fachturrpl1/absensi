@@ -27,38 +27,38 @@ export function HourlyBreakdown({ data = DEFAULT_HOURLY_DATA }: HourlyBreakdownP
   const chartConfig = {
     count: {
       label: "Check-ins",
-      color: "hsl(0, 0%, 25%)",
+      color: "hsl(186, 100%, 50%)",
     },
   } satisfies ChartConfig
 
   return (
-    <Card className="border-gray-200">
+    <Card className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
       <CardHeader>
-        <CardTitle className="text-base">Hourly Check-in Distribution</CardTitle>
-        <CardDescription className="text-gray-600">Members checked in by time slot</CardDescription>
+        <CardTitle className="text-base text-gray-900 dark:text-gray-100">Hourly Check-in Distribution</CardTitle>
+        <CardDescription className="text-gray-600 dark:text-gray-400">Members checked in by time slot</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0, 0%, 90%)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0, 0%, 25%)" />
               <XAxis
                 dataKey="hour"
-                stroke="hsl(0, 0%, 50%)"
+                stroke="hsl(0, 0%, 40%)"
                 style={{ fontSize: "12px" }}
               />
-              <YAxis stroke="hsl(0, 0%, 50%)" style={{ fontSize: "12px" }} />
+              <YAxis stroke="hsl(0, 0%, 40%)" style={{ fontSize: "12px" }} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(0, 0%, 100%)",
-                  border: "1px solid hsl(0, 0%, 85%)",
+                  backgroundColor: "hsl(0, 0%, 95%)",
+                  border: "1px solid hsl(0, 0%, 80%)",
                   borderRadius: "6px",
                 }}
-                cursor={{ fill: "hsl(0, 0%, 95%)" }}
+                cursor={{ fill: "hsl(0, 0%, 90%)" }}
               />
               <Bar
                 dataKey="count"
-                fill="hsl(0, 0%, 25%)"
+                fill="hsl(186, 100%, 50%)"
                 radius={[6, 6, 0, 0]}
               />
             </BarChart>

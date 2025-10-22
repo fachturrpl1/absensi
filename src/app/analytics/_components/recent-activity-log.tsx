@@ -62,19 +62,19 @@ const DEFAULT_ACTIVITIES: ActivityItem[] = [
 const statusConfig = {
   present: {
     label: "Present",
-    badgeClass: "bg-gray-900 text-white",
+    badgeClass: "bg-cyan-600 text-white",
   },
   late: {
     label: "Late",
-    badgeClass: "bg-gray-600 text-white",
+    badgeClass: "bg-amber-600 text-white",
   },
   absent: {
     label: "Absent",
-    badgeClass: "bg-gray-400 text-white",
+    badgeClass: "bg-red-600 text-white",
   },
   excused: {
     label: "Excused",
-    badgeClass: "bg-gray-700 text-white",
+    badgeClass: "bg-indigo-600 text-white",
   },
 }
 
@@ -82,15 +82,15 @@ export function RecentActivityLog({
   activities = DEFAULT_ACTIVITIES,
 }: RecentActivityLogProps) {
   return (
-    <Card className="border-gray-200">
+    <Card className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
       <CardHeader>
-        <CardTitle className="text-base">Recent Activity</CardTitle>
-        <CardDescription className="text-gray-600">Latest attendance check-ins today</CardDescription>
+        <CardTitle className="text-base text-gray-900 dark:text-gray-100">Recent Activity</CardTitle>
+        <CardDescription className="text-gray-600 dark:text-gray-400">Latest attendance check-ins today</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {activities.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-8">
+            <p className="text-sm text-gray-600 dark:text-gray-500 text-center py-8">
               No activity yet
             </p>
           ) : (
@@ -99,17 +99,17 @@ export function RecentActivityLog({
               return (
                 <div
                   key={activity.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                  className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="flex-shrink-0 h-9 w-9 rounded-full bg-gray-200 flex items-center justify-center">
-                      <User className="h-5 w-5 text-gray-600" />
+                    <div className="flex-shrink-0 h-9 w-9 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                      <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-200 truncate">
                         {activity.name}
                       </p>
-                      <p className="text-xs text-gray-500 truncate">
+                      <p className="text-xs text-gray-600 dark:text-gray-500 truncate">
                         {activity.department}
                       </p>
                     </div>
@@ -118,12 +118,12 @@ export function RecentActivityLog({
                   <div className="flex items-center gap-3 flex-shrink-0 ml-3">
                     <div className="text-right">
                       {activity.checkInTime && (
-                        <p className="text-xs font-medium text-gray-600 flex items-center justify-end gap-1">
+                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center justify-end gap-1">
                           <Clock className="h-3 w-3" />
                           {activity.checkInTime}
                         </p>
                       )}
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-600 dark:text-gray-500">
                         {activity.timestamp}
                       </p>
                     </div>

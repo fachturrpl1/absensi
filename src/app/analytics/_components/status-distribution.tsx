@@ -4,14 +4,14 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recha
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { statusDistributionData } from "./analytics-config"
 
-const COLORS = ["hsl(0, 0%, 25%)", "hsl(0, 0%, 65%)", "hsl(0, 0%, 45%)", "hsl(0, 0%, 55%)"]
+const COLORS = ["hsl(186, 100%, 50%)", "hsl(0, 100%, 50%)", "hsl(38, 100%, 50%)", "hsl(220, 90%, 56%)"]
 
 export function StatusDistribution() {
   return (
-    <Card className="border-slate-200 dark:border-slate-800">
+    <Card className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Status Distribution</CardTitle>
-        <CardDescription>Today's attendance status breakdown</CardDescription>
+        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">Status Distribution</CardTitle>
+        <CardDescription className="text-gray-600 dark:text-gray-400">Today's attendance status breakdown</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="h-80 w-full">

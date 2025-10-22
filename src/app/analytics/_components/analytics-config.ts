@@ -17,15 +17,15 @@ export const attendanceTrendsData = [
 export const attendanceTrendsConfig = {
   present: {
     label: "Present",
-    color: "hsl(0, 0%, 20%)",
+    color: "hsl(186, 100%, 50%)",
   },
   absent: {
     label: "Absent",
-    color: "hsl(0, 0%, 70%)",
+    color: "hsl(0, 100%, 50%)",
   },
   late: {
     label: "Late",
-    color: "hsl(0, 0%, 45%)",
+    color: "hsl(38, 100%, 50%)",
   },
 } as ChartConfig
 
@@ -41,11 +41,11 @@ export const departmentPerformanceData = [
 export const departmentConfig = {
   attendance: {
     label: "Attendance %",
-    color: "hsl(0, 0%, 25%)",
+    color: "hsl(186, 100%, 50%)",
   },
   target: {
     label: "Target %",
-    color: "hsl(0, 0%, 85%)",
+    color: "hsl(0, 0%, 70%)",
   },
 } as ChartConfig
 
@@ -63,19 +63,19 @@ export const statusConfig = {
   },
   present: {
     label: "Present",
-    color: "hsl(0, 0%, 15%)",
+    color: "hsl(186, 100%, 50%)",
   },
   absent: {
     label: "Absent",
-    color: "hsl(0, 0%, 75%)",
+    color: "hsl(0, 100%, 50%)",
   },
   late: {
     label: "Late",
-    color: "hsl(0, 0%, 50%)",
+    color: "hsl(38, 100%, 50%)",
   },
   excused: {
     label: "Excused",
-    color: "hsl(0, 0%, 60%)",
+    color: "hsl(220, 90%, 56%)",
   },
 } as ChartConfig
 
@@ -93,7 +93,7 @@ export const hourlyCheckInData = [
 export const hourlyConfig = {
   count: {
     label: "Members",
-    color: "hsl(0, 0%, 30%)",
+    color: "hsl(186, 100%, 50%)",
   },
 } as ChartConfig
 
@@ -109,7 +109,7 @@ export const weeklyStatsData = [
 export const weeklyStatsConfig = {
   rate: {
     label: "Attendance %",
-    color: "hsl(0, 0%, 25%)",
+    color: "hsl(186, 100%, 50%)",
   },
 } as ChartConfig
 

@@ -26,15 +26,15 @@ export function DistributionCards({ distribution = [], statusData = [] }: Distri
   return (
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs lg:grid-cols-3">
       {/* Bar Chart */}
-      <Card className="lg:col-span-2">
+      <Card className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950 lg:col-span-2">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-blue-600" />
+              <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                <BarChart3 className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                 Attendance Overview
               </CardTitle>
-              <CardDescription>Today's attendance distribution</CardDescription>
+              <CardDescription className="text-gray-600 dark:text-gray-400">Today's attendance distribution</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -62,19 +62,19 @@ export function DistributionCards({ distribution = [], statusData = [] }: Distri
           )}
         </CardContent>
         <CardFooter>
-          <p className="text-xs text-muted-foreground">Updated just now</p>
+          <p className="text-xs text-gray-600 dark:text-gray-500">Updated just now</p>
         </CardFooter>
       </Card>
 
       {/* Pie Chart */}
-      <Card>
+      <Card className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
         <CardHeader>
           <div className="space-y-1">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-purple-600" />
+            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+              <Users className="h-5 w-5 text-gray-600 dark:text-gray-400" />
               Status Breakdown
             </CardTitle>
-            <CardDescription>Member distribution</CardDescription>
+            <CardDescription className="text-gray-600 dark:text-gray-400">Member distribution</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex items-center justify-center">
@@ -103,10 +103,10 @@ export function DistributionCards({ distribution = [], statusData = [] }: Distri
           )}
         </CardContent>
         <CardFooter className="gap-2">
-          <Button size="sm" variant="outline" className="basis-1/2">
+          <Button size="sm" variant="outline" className="basis-1/2 border-gray-600 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
             Export
           </Button>
-          <Button size="sm" variant="outline" className="basis-1/2">
+          <Button size="sm" variant="outline" className="basis-1/2 border-gray-600 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
             Details
           </Button>
         </CardFooter>
