@@ -9,6 +9,7 @@ const statusColors = {
   Late: "bg-slate-100 text-slate-700 border-slate-300",
   Absent: "bg-slate-200 text-slate-700 border-slate-400",
   Excused: "bg-slate-100 text-slate-700 border-slate-300",
+  "Early Leave": "bg-slate-100 text-slate-700 border-slate-300",
 }
 
 export function RecentActivity() {

@@ -82,14 +82,14 @@ const QUICK_STATUSES = [
   { value: "absent", label: "Absent", color: "bg-red-100 text-red-800" },
   { value: "late", label: "Late", color: "bg-yellow-100 text-yellow-800" },
   { value: "excused", label: "Excused", color: "bg-blue-100 text-blue-800" },
-  { value: "go home", label: "Early Leave", color: "bg-purple-100 text-purple-800" },
+  { value: "early_leave", label: "Early Leave", color: "bg-purple-100 text-purple-800" },
 ]
 
 const entrySchema = z.object({
   memberId: z.string().min(1, "Member is required."),
   checkInTime: z.date().refine(() => true, { message: "Check-in is required." }),
   checkOutTime: z.date().optional(),
-  status: z.enum(["present", "absent", "late", "excused", "go home"]),
+  status: z.enum(["present", "absent", "late", "excused", "early_leave"]),
   remarks: z.string().max(500, "Notes max 500 characters.").optional(),
 })
 

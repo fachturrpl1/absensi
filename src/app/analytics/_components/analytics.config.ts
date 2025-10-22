@@ -2,12 +2,12 @@ import { ChartConfig } from "@/components/ui/chart"
 
 // Attendance Distribution Chart Data
 export const attendanceDistributionChartData = [
-  { date: "1-5", present: 120, absent: 15, late: 20, excused: 10 },
-  { date: "6-10", present: 135, absent: 12, late: 18, excused: 8 },
-  { date: "11-15", present: 128, absent: 18, late: 22, excused: 12 },
-  { date: "16-20", present: 140, absent: 10, late: 15, excused: 5 },
-  { date: "21-25", present: 145, absent: 8, late: 12, excused: 8 },
-  { date: "26-30", present: 138, absent: 14, late: 18, excused: 10 },
+  { date: "1-5", present: 120, late: 20, absent: 15, excused: 10, earlyLeave: 5 },
+  { date: "6-10", present: 135, late: 18, absent: 12, excused: 8, earlyLeave: 4 },
+  { date: "11-15", present: 128, late: 22, absent: 18, excused: 12, earlyLeave: 6 },
+  { date: "16-20", present: 140, late: 15, absent: 10, excused: 5, earlyLeave: 3 },
+  { date: "21-25", present: 145, late: 12, absent: 8, excused: 8, earlyLeave: 4 },
+  { date: "26-30", present: 138, late: 18, absent: 14, excused: 10, earlyLeave: 5 },
 ]
 
 export const attendanceDistributionConfig = {
@@ -15,17 +15,21 @@ export const attendanceDistributionConfig = {
     label: "Present",
     color: "var(--chart-1)",
   },
-  absent: {
-    label: "Absent",
-    color: "var(--chart-2)",
-  },
   late: {
     label: "Late",
     color: "var(--chart-3)",
   },
+  absent: {
+    label: "Absent",
+    color: "var(--chart-2)",
+  },
   excused: {
     label: "Excused",
     color: "var(--chart-4)",
+  },
+  earlyLeave: {
+    label: "Early Leave",
+    color: "var(--chart-5)",
   },
 } as ChartConfig
 
@@ -79,9 +83,10 @@ export const departmentPerformanceConfig = {
 // Attendance by Status (Pie Chart)
 export const attendanceByStatusData = [
   { status: "Present", members: 145, fill: "var(--color-present)" },
-  { status: "Absent", members: 12, fill: "var(--color-absent)" },
   { status: "Late", members: 18, fill: "var(--color-late)" },
+  { status: "Absent", members: 12, fill: "var(--color-absent)" },
   { status: "Excused", members: 8, fill: "var(--color-excused)" },
+  { status: "Early Leave", members: 14, fill: "var(--color-earlyLeave)" },
 ]
 
 export const attendanceByStatusConfig = {
@@ -92,17 +97,21 @@ export const attendanceByStatusConfig = {
     label: "Present",
     color: "var(--chart-1)",
   },
-  absent: {
-    label: "Absent",
-    color: "var(--chart-2)",
-  },
   late: {
     label: "Late",
     color: "var(--chart-3)",
   },
+  absent: {
+    label: "Absent",
+    color: "var(--chart-2)",
+  },
   excused: {
     label: "Excused",
     color: "var(--chart-4)",
+  },
+  earlyLeave: {
+    label: "Early Leave",
+    color: "var(--chart-5)",
   },
 } as ChartConfig
 

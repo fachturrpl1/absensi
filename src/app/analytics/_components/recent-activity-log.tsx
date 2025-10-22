@@ -9,7 +9,7 @@ interface ActivityItem {
   id: string
   name: string
   department: string
-  status: "present" | "late" | "absent" | "excused"
+  status: "present" | "late" | "absent" | "excused" | "early_leave"
   checkInTime?: string
   timestamp: string
 }
@@ -75,6 +75,10 @@ const statusConfig = {
   excused: {
     label: "Excused",
     badgeClass: "bg-indigo-600 text-white",
+  },
+  early_leave: {
+    label: "Early Leave",
+    badgeClass: "bg-purple-600 text-white",
   },
 }
 

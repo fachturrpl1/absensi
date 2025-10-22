@@ -75,10 +75,22 @@ import {
 import TopBar from "@/components/top-bar"
 import LoadingSkeleton from "@/components/loading-skeleton"
 import { ContentLayout } from "@/components/admin-panel/content-layout"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Clock, CalendarDays, TrendingUp } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { formatTime } from "@/utils/format-time"
+import { useTimeFormat } from "@/store/time-format-store"
 
 const detailSchema = z.object({
   day_of_week: z.number().min(0).max(6),
   is_working_day: z.boolean(),
+  flexible_hours: z.boolean(),
   start_time: z.string().optional(),
   end_time: z.string().optional(),
   break_start: z.string().optional(),
@@ -90,6 +102,26 @@ type DetailForm = z.infer<typeof detailSchema>
 const dayNames = [
   "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 ]
+
+const calculateWorkingHours = (start?: string, end?: string, breakStart?: string, breakEnd?: string) => {
+  if (!start || !end) return "-"
+  
+  const startTime = new Date(`2000-01-01T${start}`)
+  const endTime = new Date(`2000-01-01T${end}`)
+  let totalMinutes = (endTime.getTime() - startTime.getTime()) / 1000 / 60
+  
+  if (breakStart && breakEnd) {
+    const breakStartTime = new Date(`2000-01-01T${breakStart}`)
+    const breakEndTime = new Date(`2000-01-01T${breakEnd}`)
+    const breakMinutes = (breakEndTime.getTime() - breakStartTime.getTime()) / 1000 / 60
+    totalMinutes -= breakMinutes
+  }
+  
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = Math.round(totalMinutes % 60)
+  
+  return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
+}
 
 // Custom DataTable with Back button in pagination
 function DataTableWithBack<TData, TValue>({
@@ -257,12 +289,19 @@ export default function WorkScheduleDetailsPage() {
   const params = useParams()
   const router = useRouter()
   const scheduleId = Number(params.id)
+  const { format: timeFormat } = useTimeFormat()
 
   const [details, setDetails] = React.useState<IWorkScheduleDetail[]>([])
   const [loading, setLoading] = React.useState(true)
 
   const [open, setOpen] = React.useState(false)
   const [editingDetail, setEditingDetail] = React.useState<IWorkScheduleDetail | null>(null)
+
+  // Format time range with organization's time format
+  const formatTimeRange = (start?: string, end?: string) => {
+    if (!start || !end) return "-"
+    return `${formatTime(start, timeFormat)} - ${formatTime(end, timeFormat)}`
+  }
 
   const fetchDetails = async () => {
     setLoading(true)
@@ -285,6 +324,7 @@ export default function WorkScheduleDetailsPage() {
     defaultValues: {
       day_of_week: 1,
       is_working_day: true,
+      flexible_hours: false,
       start_time: "",
       end_time: "",
       break_start: "",
@@ -329,16 +369,140 @@ export default function WorkScheduleDetailsPage() {
     router.back()
   }
 
+  // Calculate summary statistics
+  const calculateSummary = () => {
+    const workingDays = details.filter(d => d.is_working_day)
+    const totalWorkingDays = workingDays.length
+    
+    let totalMinutes = 0
+    workingDays.forEach(day => {
+      if (day.start_time && day.end_time) {
+        const start = new Date(`2000-01-01T${day.start_time}`)
+        const end = new Date(`2000-01-01T${day.end_time}`)
+        let minutes = (end.getTime() - start.getTime()) / 1000 / 60
+        
+        if (day.break_start && day.break_end) {
+          const breakStart = new Date(`2000-01-01T${day.break_start}`)
+          const breakEnd = new Date(`2000-01-01T${day.break_end}`)
+          minutes -= (breakEnd.getTime() - breakStart.getTime()) / 1000 / 60
+        }
+        totalMinutes += minutes
+      }
+    })
+    
+    const totalHours = Math.floor(totalMinutes / 60)
+    const avgHoursPerDay = totalWorkingDays > 0 ? (totalMinutes / 60 / totalWorkingDays).toFixed(1) : "0"
+    
+    return {
+      totalWorkingDays,
+      totalHours,
+      avgHoursPerDay
+    }
+  }
+
+  const summary = calculateSummary()
+
   const columns: ColumnDef<IWorkScheduleDetail>[] = [
-    { accessorKey: "day_of_week", header: "Day" },
-    { accessorKey: "start_time", header: "Start" },
-    { accessorKey: "end_time", header: "End" },
-    { accessorKey: "break_start", header: "Break Start", cell: (info) => info.getValue() ?? "-" },
-    { accessorKey: "break_end", header: "Break End", cell: (info) => info.getValue() ?? "-" },
+    { 
+      accessorKey: "day_of_week", 
+      header: "Day",
+      cell: ({ row }) => {
+        const dayNum = row.getValue("day_of_week") as number
+        const isWorking = row.original.is_working_day
+        const isFlexible = row.original.flexible_hours
+        return (
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{dayNames[dayNum]}</span>
+            {isWorking ? (
+              <span className="px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs rounded-full">
+                Working
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 text-xs rounded-full">
+                Off
+              </span>
+            )}
+            {isFlexible && isWorking && (
+              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs rounded-full">
+                Flexible
+              </span>
+            )}
+          </div>
+        )
+      }
+    },
+    { 
+      id: "work_hours",
+      header: "Work Hours",
+      cell: ({ row }) => {
+        const start = row.original.start_time
+        const end = row.original.end_time
+        const isWorking = row.original.is_working_day
+        const isFlexible = row.original.flexible_hours
+        
+        if (!isWorking) {
+          return (
+            <span className="text-sm text-muted-foreground italic">
+              Off Day
+            </span>
+          )
+        }
+        
+        return (
+          <div className="flex flex-col">
+            <span className="font-mono text-sm font-medium">
+              {formatTimeRange(start, end)}
+            </span>
+            {isFlexible && (
+              <span className="text-xs text-muted-foreground italic">
+                Adjustable hours
+              </span>
+            )}
+          </div>
+        )
+      }
+    },
+    { 
+      id: "break_time",
+      header: "Break Time",
+      cell: ({ row }) => {
+        const breakStart = row.original.break_start
+        const breakEnd = row.original.break_end
+        const isWorking = row.original.is_working_day
+        
+        if (!isWorking) {
+          return <span className="text-xs text-muted-foreground">-</span>
+        }
+        
+        const range = formatTimeRange(breakStart, breakEnd)
+        return (
+          <span className="font-mono text-xs text-muted-foreground">
+            {range}
+          </span>
+        )
+      }
+    },
     {
-      accessorKey: "is_working_day",
-      header: "Working Day",
-      cell: ({ row }) => (row.getValue("is_working_day") ? <Check /> : "-"),
+      id: "total_hours",
+      header: "Total Hours",
+      cell: ({ row }) => {
+        const isWorking = row.original.is_working_day
+        
+        if (!isWorking) {
+          return <span className="text-sm text-muted-foreground">-</span>
+        }
+        
+        const hours = calculateWorkingHours(
+          row.original.start_time,
+          row.original.end_time,
+          row.original.break_start,
+          row.original.break_end
+        )
+        
+        return (
+          <span className="font-bold text-sm">{hours}</span>
+        )
+      }
     },
     {
       id: "actions",
@@ -395,7 +559,57 @@ export default function WorkScheduleDetailsPage() {
 
   return (
     <ContentLayout title="Schedule Details">
-      <div className="w-full max-w-6xl mx-auto py-8">
+      <div className="w-full max-w-6xl mx-auto py-8 space-y-6">
+        {/* Summary Cards */}
+        {!loading && details.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Working Days
+                </CardTitle>
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summary.totalWorkingDays}</div>
+                <p className="text-xs text-muted-foreground">
+                  per week
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Hours
+                </CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summary.totalHours}h</div>
+                <p className="text-xs text-muted-foreground">
+                  per week
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Average Hours
+                </CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summary.avgHoursPerDay}h</div>
+                <p className="text-xs text-muted-foreground">
+                  per working day
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         <div className="">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild className="float-end ml-5">
@@ -424,10 +638,24 @@ export default function WorkScheduleDetailsPage() {
                     name="day_of_week"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Day of Week (0-6)</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} />
-                        </FormControl>
+                        <FormLabel>Day of Week</FormLabel>
+                        <Select
+                          onValueChange={(value) => field.onChange(parseInt(value))}
+                          value={field.value?.toString()}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select day" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {dayNames.map((day, index) => (
+                              <SelectItem key={index} value={index.toString()}>
+                                {day}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -436,15 +664,36 @@ export default function WorkScheduleDetailsPage() {
                     control={form.control}
                     name="is_working_day"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Working Day</FormLabel>
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                         <FormControl>
                           <Checkbox
                             checked={field.value}
                             onCheckedChange={field.onChange}
                           />
                         </FormControl>
-                        <FormMessage />
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Working Day</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="flexible_hours"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Flexible Hours</FormLabel>
+                          <p className="text-xs text-muted-foreground">
+                            Allow adjustable work hours for this day
+                          </p>
+                        </div>
                       </FormItem>
                     )}
                   />

@@ -103,13 +103,6 @@ export function HourlyHeatmap({ data, loading }: HourlyHeatmapProps) {
               radius={[4, 4, 0, 0]}
               opacity={0.8}
             />
-            <Line
-              type="monotone"
-              dataKey="checkIn"
-              stroke="hsl(142, 76%, 36%)"
-              strokeWidth={2}
-              dot={false}
-            />
           </ComposedChart>
         </ResponsiveContainer>
       </CardContent>

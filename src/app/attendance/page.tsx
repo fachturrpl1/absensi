@@ -210,7 +210,7 @@ export default function AttendancePage() {
           absent: { color: "bg-gray-300 text-black", icon: <X className="w-3 h-3 mr-1" /> },
           late: { color: "bg-red-500 text-white", icon: <Clock className="w-3 h-3 mr-1" /> },
           excused: { color: "bg-blue-500 text-white", icon: <Info className="w-3 h-3 mr-1" /> },
-          "go home": { color: "bg-purple-500 text-white", icon: <Check className="w-3 h-3 mr-1" /> },
+          early_leave: { color: "bg-purple-500 text-white", icon: <Check className="w-3 h-3 mr-1" /> },
         };
         const { color, icon } = statusMap[status] || { color: "bg-gray-200", icon: null };
         return (
@@ -247,9 +247,9 @@ export default function AttendancePage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Update Status</DropdownMenuLabel>
-              {["present", "absent", "late", "excused", "go home"].map((s) => (
+              {["present", "absent", "late", "excused", "early_leave"].map((s) => (
                 <DropdownMenuItem key={s} onClick={() => handleUpdateStatus(s)}>
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                  {s === "early_leave" ? "Early Leave" : s.charAt(0).toUpperCase() + s.slice(1)}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>

@@ -2,16 +2,16 @@ import { ChartConfig } from "@/components/ui/chart"
 
 // Attendance Trends - 30 days
 export const attendanceTrendsData = [
-  { date: "Oct 1", present: 142, absent: 8, late: 15 },
-  { date: "Oct 2", present: 148, absent: 5, late: 12 },
-  { date: "Oct 3", present: 145, absent: 10, late: 10 },
-  { date: "Oct 4", present: 151, absent: 4, late: 10 },
-  { date: "Oct 5", present: 155, absent: 3, late: 7 },
-  { date: "Oct 6", present: 138, absent: 12, late: 15 },
-  { date: "Oct 7", present: 140, absent: 10, late: 15 },
-  { date: "Oct 8", present: 152, absent: 4, late: 9 },
-  { date: "Oct 9", present: 149, absent: 8, late: 8 },
-  { date: "Oct 10", present: 156, absent: 2, late: 7 },
+  { date: "Oct 1", present: 142, absent: 8, late: 15, excused: 3, earlyLeave: 2 },
+  { date: "Oct 2", present: 148, absent: 5, late: 12, excused: 2, earlyLeave: 1 },
+  { date: "Oct 3", present: 145, absent: 10, late: 10, excused: 4, earlyLeave: 3 },
+  { date: "Oct 4", present: 151, absent: 4, late: 10, excused: 2, earlyLeave: 1 },
+  { date: "Oct 5", present: 155, absent: 3, late: 7, excused: 1, earlyLeave: 2 },
+  { date: "Oct 6", present: 138, absent: 12, late: 15, excused: 5, earlyLeave: 3 },
+  { date: "Oct 7", present: 140, absent: 10, late: 15, excused: 4, earlyLeave: 2 },
+  { date: "Oct 8", present: 152, absent: 4, late: 9, excused: 2, earlyLeave: 1 },
+  { date: "Oct 9", present: 149, absent: 8, late: 8, excused: 3, earlyLeave: 2 },
+  { date: "Oct 10", present: 156, absent: 2, late: 7, excused: 1, earlyLeave: 1 },
 ]
 
 export const attendanceTrendsConfig = {
@@ -19,13 +19,21 @@ export const attendanceTrendsConfig = {
     label: "Present",
     color: "hsl(186, 100%, 50%)",
   },
+  late: {
+    label: "Late",
+    color: "hsl(38, 100%, 50%)",
+  },
   absent: {
     label: "Absent",
     color: "hsl(0, 100%, 50%)",
   },
-  late: {
-    label: "Late",
-    color: "hsl(38, 100%, 50%)",
+  excused: {
+    label: "Excused",
+    color: "hsl(220, 90%, 56%)",
+  },
+  earlyLeave: {
+    label: "Early Leave",
+    color: "hsl(270, 70%, 60%)",
   },
 } as ChartConfig
 
@@ -51,10 +59,11 @@ export const departmentConfig = {
 
 // Status Distribution
 export const statusDistributionData = [
-  { status: "Present", value: 145, percentage: 79 },
-  { status: "Absent", value: 18, percentage: 10 },
+  { status: "Present", value: 145, percentage: 73 },
   { status: "Late", value: 15, percentage: 8 },
+  { status: "Absent", value: 18, percentage: 9 },
   { status: "Excused", value: 5, percentage: 3 },
+  { status: "Early Leave", value: 14, percentage: 7 },
 ]
 
 export const statusConfig = {
@@ -65,17 +74,21 @@ export const statusConfig = {
     label: "Present",
     color: "hsl(186, 100%, 50%)",
   },
-  absent: {
-    label: "Absent",
-    color: "hsl(0, 100%, 50%)",
-  },
   late: {
     label: "Late",
     color: "hsl(38, 100%, 50%)",
   },
+  absent: {
+    label: "Absent",
+    color: "hsl(0, 100%, 50%)",
+  },
   excused: {
     label: "Excused",
     color: "hsl(220, 90%, 56%)",
+  },
+  earlyLeave: {
+    label: "Early Leave",
+    color: "hsl(270, 70%, 60%)",
   },
 } as ChartConfig
 

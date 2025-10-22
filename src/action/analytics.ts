@@ -230,12 +230,14 @@ export async function getAttendanceTrends30Days() {
       { count: present },
       { count: late },
       { count: absent },
-      { count: leave },
+      { count: excused },
+      { count: earlyLeave },
     ] = await Promise.all([
       supabase.from("attendance_records").select("id", { count: "exact", head: true }).in("organization_member_id", memberIdList).eq("attendance_date", dateStr).eq("status", "present"),
       supabase.from("attendance_records").select("id", { count: "exact", head: true }).in("organization_member_id", memberIdList).eq("attendance_date", dateStr).eq("status", "late"),
       supabase.from("attendance_records").select("id", { count: "exact", head: true }).in("organization_member_id", memberIdList).eq("attendance_date", dateStr).eq("status", "absent"),
-      supabase.from("attendance_records").select("id", { count: "exact", head: true }).in("organization_member_id", memberIdList).eq("attendance_date", dateStr).in("status", ["leave", "excused"]),
+      supabase.from("attendance_records").select("id", { count: "exact", head: true }).in("organization_member_id", memberIdList).eq("attendance_date", dateStr).eq("status", "excused"),
+      supabase.from("attendance_records").select("id", { count: "exact", head: true }).in("organization_member_id", memberIdList).eq("attendance_date", dateStr).eq("status", "early_leave"),
     ])
 
     trends.push({
@@ -243,7 +245,8 @@ export async function getAttendanceTrends30Days() {
       present: present || 0,
       late: late || 0,
       absent: absent || 0,
-      leave: leave || 0,
+      excused: excused || 0,
+      earlyLeave: earlyLeave || 0,
     })
   }
 
@@ -277,13 +280,20 @@ export async function getStatusDistribution() {
 
   const memberIdList = memberIds?.map((m) => m.id) || []
 
-  const statuses = ["present", "late", "absent", "leave", "excused"]
+  const statuses = ["present", "late", "absent", "excused", "early_leave"]
+  const statusLabels = {
+    present: "Present",
+    late: "Late",
+    absent: "Absent",
+    excused: "Excused",
+    early_leave: "Early Leave",
+  }
   const colors = {
     present: "#10b981",
     late: "#f59e0b",
     absent: "#ef4444",
-    leave: "#6366f1",
-    excused: "#8b5cf6",
+    excused: "#6366f1",
+    early_leave: "#8b5cf6",
   }
 
   const [todayData, monthData] = await Promise.all([

@@ -191,9 +191,9 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
     else if (status === "absent") groupsMap[groupName].absent += 1;
     else if (status === "excused") groupsMap[groupName].excused += 1;
     else {
-      // exclude explicit 'go_home' status from Others aggregation if present
-      if (status === "go_home" || status === "go-home" || status === "gone_home") {
-        // do not count into others
+      // exclude explicit 'early_leave' status from Others aggregation if present
+      if (status === "early_leave" || status === "go_home" || status === "go-home" || status === "gone_home") {
+        // do not count into others (these are valid statuses but not tracked in this view)
       } else {
         groupsMap[groupName].others += 1;
       }

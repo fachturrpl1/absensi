@@ -17,7 +17,8 @@ interface TrendData {
   present: number
   late: number
   absent: number
-  leave: number
+  excused: number
+  earlyLeave: number
 }
 
 interface TrendsAreaChartProps {
@@ -94,9 +95,13 @@ export function TrendsAreaChart({ data, loading }: TrendsAreaChartProps) {
                 <stop offset="5%" stopColor="hsl(0, 72%, 51%)" stopOpacity={0.8} />
                 <stop offset="95%" stopColor="hsl(0, 72%, 51%)" stopOpacity={0.1} />
               </linearGradient>
-              <linearGradient id="colorLeave" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(262, 83%, 58%)" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="hsl(262, 83%, 58%)" stopOpacity={0.1} />
+              <linearGradient id="colorExcused" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(220, 90%, 56%)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="hsl(220, 90%, 56%)" stopOpacity={0.1} />
+              </linearGradient>
+              <linearGradient id="colorEarlyLeave" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(270, 70%, 60%)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="hsl(270, 70%, 60%)" stopOpacity={0.1} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -126,19 +131,27 @@ export function TrendsAreaChart({ data, loading }: TrendsAreaChartProps) {
             />
             <Area
               type="monotone"
-              dataKey="leave"
-              stackId="1"
-              stroke="hsl(262, 83%, 58%)"
-              fill="url(#colorLeave)"
-              name="Leave"
-            />
-            <Area
-              type="monotone"
               dataKey="absent"
               stackId="1"
               stroke="hsl(0, 72%, 51%)"
               fill="url(#colorAbsent)"
               name="Absent"
+            />
+            <Area
+              type="monotone"
+              dataKey="excused"
+              stackId="1"
+              stroke="hsl(220, 90%, 56%)"
+              fill="url(#colorExcused)"
+              name="Excused"
+            />
+            <Area
+              type="monotone"
+              dataKey="earlyLeave"
+              stackId="1"
+              stroke="hsl(270, 70%, 60%)"
+              fill="url(#colorEarlyLeave)"
+              name="Early Leave"
             />
           </AreaChart>
         </ResponsiveContainer>

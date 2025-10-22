@@ -65,7 +65,7 @@ const STATUSES = [
   { value: "absent", label: "Absent" },
   { value: "late", label: "Late" },
   { value: "excused", label: "Excused" },
-  { value: "go home", label: "Early Leave" },
+  { value: "early_leave", label: "Early Leave" },
 ]
 
 const singleFormSchema = z.object({
