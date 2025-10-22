@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Clock } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { useProfilePhotoUrl } from "@/hooks/use-profile"
+import { parseTimestamp } from "@/lib/timezone"
 
 interface Activity {
   id: number
@@ -37,11 +38,10 @@ function ActivityItem({ activity }: { activity: Activity }) {
       .join(" ")
   }
 
-  // Parse time - database returns timestamp with timezone already handled by Supabase
-  // If time is in ISO format, new Date() will handle it correctly
-  const activityTime = new Date(activity.time)
+  // Parse time from database and adjust for timezone offset if needed (handles old data)
+  const activityTime = parseTimestamp(activity.time)
   
-  // Calculate time string - if invalid or future time, there might be data issue
+  // Calculate time string
   const timeStr = formatDistanceToNow(activityTime, { addSuffix: true })
 
   return (

@@ -11,6 +11,7 @@ import { z } from "zod"
 
 import { createManualAttendance } from "@/action/attendance"
 import { getAllOrganization_member } from "@/action/members"
+import { toTimestampWithTimezone } from "@/lib/timezone"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -201,8 +202,8 @@ export function AttendanceForm() {
       const payloads: ManualAttendancePayload[] = values.entries.map((entry) => ({
         organization_member_id: entry.memberId,
         attendance_date: entry.checkInTime.toISOString().slice(0, 10),
-        actual_check_in: entry.checkInTime.toISOString(),
-        actual_check_out: entry.checkOutTime ? entry.checkOutTime.toISOString() : null,
+        actual_check_in: toTimestampWithTimezone(entry.checkInTime),
+        actual_check_out: entry.checkOutTime ? toTimestampWithTimezone(entry.checkOutTime) : null,
         status: entry.status,
         remarks: entry.remarks?.trim() ? entry.remarks.trim() : undefined,
       }))

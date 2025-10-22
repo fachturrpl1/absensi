@@ -36,6 +36,7 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [data, setData] = useState<AnalyticsData | null>(null)
+  const [initializing, setInitializing] = useState(true)
 
   useEffect(() => {
     async function initializeOrg() {
@@ -46,14 +47,17 @@ export default function AnalyticsPage() {
         if (!userData.user) {
           setOrganizationId(null)
           setLoading(false)
+          setInitializing(false)
           return
         }
 
         const summary = await getMemberSummary()
         setOrganizationId(summary.organizationId)
+        setInitializing(false)
       } catch (error) {
         console.error("Failed to initialize organization:", error)
         setLoading(false)
+        setInitializing(false)
       }
     }
 
@@ -182,6 +186,34 @@ export default function AnalyticsPage() {
     return insights.slice(0, 4)
   }
 
+  // Show loading skeleton while initializing
+  if (initializing) {
+    return (
+      <ContentLayout title="Analytics">
+        <div className="space-y-8">
+          <Card className="p-8">
+            <div className="flex flex-col gap-2 items-center text-center">
+              <div className="h-10 w-48 bg-muted rounded animate-pulse" />
+              <div className="h-4 w-64 bg-muted rounded animate-pulse mt-2" />
+            </div>
+          </Card>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i} className="p-6">
+                <div className="animate-pulse space-y-3">
+                  <div className="h-4 w-24 bg-muted rounded" />
+                  <div className="h-8 w-16 bg-muted rounded" />
+                  <div className="h-3 w-32 bg-muted rounded" />
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </ContentLayout>
+    )
+  }
+
+  // Show empty state only after initialization complete
   if (organizationId === null) {
     return (
       <ContentLayout title="Analytics">

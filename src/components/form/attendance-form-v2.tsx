@@ -9,6 +9,7 @@ import { z } from "zod"
 
 import { createManualAttendance } from "@/action/attendance"
 import { getAllOrganization_member } from "@/action/members"
+import { toTimestampWithTimezone } from "@/lib/timezone"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -159,8 +160,8 @@ export function AttendanceFormV2() {
       const payload: AttendanceEntry = {
         organization_member_id: values.memberId,
         attendance_date: values.checkInDate,
-        actual_check_in: checkInDateTime.toISOString(),
-        actual_check_out: checkOutDateTime?.toISOString() || null,
+        actual_check_in: toTimestampWithTimezone(checkInDateTime),
+        actual_check_out: checkOutDateTime ? toTimestampWithTimezone(checkOutDateTime) : null,
         status: values.status,
         remarks: values.remarks?.trim() || undefined,
       }
