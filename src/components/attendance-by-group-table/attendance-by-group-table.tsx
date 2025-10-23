@@ -59,9 +59,16 @@ export function AttendanceByGroupTable({ data, isLoading = false }: AttendanceBy
   })
 
   return (
-    <Card>
+    <Card className="border-0 shadow-lg overflow-hidden">
       <CardHeader className="flex-row justify-between items-center gap-x-1.5 space-y-0">
-        <CardTitle>Attendance by Group</CardTitle>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 dark:bg-indigo-500/20">
+            <svg className="h-5 w-5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+          </div>
+          <CardTitle>Attendance by Department</CardTitle>
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         {isLoading ? (

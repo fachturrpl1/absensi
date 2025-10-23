@@ -11,6 +11,8 @@ import { useEffect, useState, useMemo } from "react";
 import { CustomerInsights } from "@/components/customer-insights";
 import { SectionCards } from "@/components/section-cards";
 import { useDashboardStats } from "@/hooks/use-dashboard-stats";
+import { MonthlyTrendChart } from "@/components/charts/monthly-trend-chart";
+import { useMonthlyTrend } from "@/hooks/use-monthly-trend";
 
 
 export default function Home() {
@@ -19,6 +21,7 @@ export default function Home() {
 
   // Single consolidated hook call - React Query deduplicates automatically
   const { data: dashboardData, isLoading: statsLoading } = useDashboardStats()
+  const { data: monthlyTrendData, isLoading: trendLoading } = useMonthlyTrend()
   
   // Extract data from consolidated response
   const attendanceGroups = useMemo(() => {
@@ -96,14 +99,20 @@ export default function Home() {
   }
   return (
     <ContentLayout title="Dashboard">
-      <div className="mt-10">
-  <div className="w-full max-w-[90rem] px-6 mx-auto">
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-            <div className="mt-4">
-              <SectionCards dashboardData={dashboardData} />
-            </div>
+      <div className="mt-6">
+        <div className="w-full max-w-[90rem] px-6 mx-auto space-y-6">
+          {/* Stats Cards */}
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <SectionCards dashboardData={dashboardData} />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+          
+          {/* Monthly Trend Chart */}
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <MonthlyTrendChart data={monthlyTrendData} isLoading={trendLoading} />
+          </div>
+          
+          {/* Charts Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             {orgId && <GroupChart organizationId={orgId} />}
             
             {memberDistribution && memberDistribution.status && (
@@ -111,13 +120,12 @@ export default function Home() {
             )}
           </div>
           
-          <div className="grid grid-cols-1 gap-5">
-                <div>
-                  <AttendanceByGroupTable 
-                    data={attendanceGroups} 
-                    isLoading={organizationLoading || statsLoading} 
-                  />
-                </div>
+          {/* Attendance Table */}
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            <AttendanceByGroupTable 
+              data={attendanceGroups} 
+              isLoading={organizationLoading || statsLoading} 
+            />
           </div>
         </div>
       </div>

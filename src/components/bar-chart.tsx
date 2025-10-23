@@ -33,10 +33,17 @@ export const GroupChart = memo(function GroupChart({ organizationId }: { organiz
   const { data: chartData = [], isLoading: loading } = useDepartmentMembers(organizationId)
 
   return (
-    <Card>
+    <Card className="border-0 shadow-lg overflow-hidden">
       <CardHeader>
-        <CardTitle>Member Distribution</CardTitle>
-        <CardDescription>Per Group</CardDescription>
+        <CardTitle className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 dark:bg-blue-500/20">
+            <svg className="h-4 w-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </span>
+          Member Distribution
+        </CardTitle>
+        <CardDescription>Distribution across departments</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
