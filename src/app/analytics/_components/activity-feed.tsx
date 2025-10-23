@@ -38,6 +38,39 @@ function ActivityItem({ activity }: { activity: Activity }) {
       .join(" ")
   }
 
+  // Get badge style based on activity type
+  const getBadgeStyle = (type: string) => {
+    const typeUpper = type.toUpperCase()
+    
+    if (typeUpper.includes("CHECK_IN") || typeUpper.includes("CHECKIN")) {
+      return "bg-green-500/10 text-green-700 dark:bg-green-500/20 dark:text-green-400 border border-green-500/20"
+    }
+    if (typeUpper.includes("CHECK_OUT") || typeUpper.includes("CHECKOUT")) {
+      return "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border border-blue-500/20"
+    }
+    if (typeUpper.includes("BREAK_IN") || typeUpper.includes("BREAKIN")) {
+      return "bg-orange-500/10 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400 border border-orange-500/20"
+    }
+    if (typeUpper.includes("BREAK_OUT") || typeUpper.includes("BREAKOUT")) {
+      return "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border border-amber-500/20"
+    }
+    if (typeUpper.includes("LATE") || typeUpper.includes("TERLAMBAT")) {
+      return "bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-400 border border-red-500/20"
+    }
+    if (typeUpper.includes("EARLY")) {
+      return "bg-purple-500/10 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400 border border-purple-500/20"
+    }
+    if (typeUpper.includes("ABSENT") || typeUpper.includes("TIDAK_HADIR")) {
+      return "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400 border border-gray-500/20"
+    }
+    if (typeUpper.includes("OVERTIME") || typeUpper.includes("LEMBUR")) {
+      return "bg-indigo-500/10 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 border border-indigo-500/20"
+    }
+    
+    // Default
+    return "bg-secondary text-secondary-foreground border border-border"
+  }
+
   // Parse time from database and adjust for timezone offset if needed (handles old data)
   const activityTime = parseTimestamp(activity.time)
   
@@ -61,7 +94,7 @@ function ActivityItem({ activity }: { activity: Activity }) {
               <span>{timeStr}</span>
             </div>
           </div>
-          <span className="text-xs flex-shrink-0 px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground font-medium">
+          <span className={`text-xs flex-shrink-0 px-2.5 py-1 rounded-md font-medium transition-colors ${getBadgeStyle(activity.type)}`}>
             {formatEventType(activity.type)}
           </span>
         </div>

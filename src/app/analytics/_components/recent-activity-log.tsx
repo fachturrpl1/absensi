@@ -62,23 +62,23 @@ const DEFAULT_ACTIVITIES: ActivityItem[] = [
 const statusConfig = {
   present: {
     label: "Present",
-    badgeClass: "bg-cyan-600 text-white",
+    badgeClass: "bg-green-500/10 text-green-700 dark:bg-green-500/20 dark:text-green-400 border border-green-500/20",
   },
   late: {
     label: "Late",
-    badgeClass: "bg-amber-600 text-white",
+    badgeClass: "bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-400 border border-red-500/20",
   },
   absent: {
     label: "Absent",
-    badgeClass: "bg-red-600 text-white",
+    badgeClass: "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400 border border-gray-500/20",
   },
   excused: {
     label: "Excused",
-    badgeClass: "bg-indigo-600 text-white",
+    badgeClass: "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border border-blue-500/20",
   },
   early_leave: {
     label: "Early Leave",
-    badgeClass: "bg-purple-600 text-white",
+    badgeClass: "bg-purple-500/10 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400 border border-purple-500/20",
   },
 }
 

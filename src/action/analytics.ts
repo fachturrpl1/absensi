@@ -158,45 +158,72 @@ export async function getDepartmentPerformance() {
   const supabase = await createClient()
   const startDate = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0]
 
-  const { data: departments } = await supabase
-    .from("departments")
-    .select("id, name, code")
-    .eq("organization_id", organizationId)
-    .eq("is_active", true)
+  // Fetch all data in parallel - optimized
+  const [
+    { data: departments },
+    { data: members },
+    { data: records }
+  ] = await Promise.all([
+    supabase
+      .from("departments")
+      .select("id, name, code")
+      .eq("organization_id", organizationId)
+      .eq("is_active", true),
+    supabase
+      .from("organization_members")
+      .select("id, department_id")
+      .eq("organization_id", organizationId)
+      .eq("is_active", true),
+    supabase
+      .from("attendance_records")
+      .select("organization_member_id, status")
+      .gte("attendance_date", startDate)
+  ])
 
-  const departmentStats = await Promise.all(
-    (departments || []).map(async (dept) => {
-      const { data: members } = await supabase
-        .from("organization_members")
-        .select("id")
-        .eq("department_id", dept.id)
-        .eq("is_active", true)
+  // Group members by department
+  const deptMembersMap = new Map<string, string[]>()
+  members?.forEach((member) => {
+    if (member.department_id) {
+      const memberIds = deptMembersMap.get(member.department_id) || []
+      memberIds.push(member.id)
+      deptMembersMap.set(member.department_id, memberIds)
+    }
+  })
 
-      const memberIds = members?.map((m) => m.id) || []
+  // Group records by member
+  const memberRecordsMap = new Map<string, { total: number, present: number }>()
+  records?.forEach((record) => {
+    const stats = memberRecordsMap.get(record.organization_member_id) || { total: 0, present: 0 }
+    stats.total++
+    if (record.status === "present" || record.status === "late") {
+      stats.present++
+    }
+    memberRecordsMap.set(record.organization_member_id, stats)
+  })
 
-      const [{ count: totalRecords }, { count: presentRecords }] = await Promise.all([
-        supabase
-          .from("attendance_records")
-          .select("id", { count: "exact", head: true })
-          .in("organization_member_id", memberIds)
-          .gte("attendance_date", startDate),
-        supabase
-          .from("attendance_records")
-          .select("id", { count: "exact", head: true })
-          .in("organization_member_id", memberIds)
-          .gte("attendance_date", startDate)
-          .in("status", ["present", "late"]),
-      ])
-
-      const rate = totalRecords ? Math.round(((presentRecords || 0) / (totalRecords || 1)) * 100) : 0
-
-      return {
-        name: dept.name,
-        rate,
-        memberCount: memberIds.length,
+  // Calculate department stats
+  const departmentStats = (departments || []).map((dept) => {
+    const memberIds = deptMembersMap.get(dept.id) || []
+    
+    let totalRecords = 0
+    let presentRecords = 0
+    
+    memberIds.forEach((memberId) => {
+      const stats = memberRecordsMap.get(memberId)
+      if (stats) {
+        totalRecords += stats.total
+        presentRecords += stats.present
       }
     })
-  )
+
+    const rate = totalRecords > 0 ? Math.round((presentRecords / totalRecords) * 100) : 0
+
+    return {
+      name: dept.name,
+      rate,
+      memberCount: memberIds.length,
+    }
+  })
 
   return {
     success: true,
@@ -211,6 +238,7 @@ export async function getAttendanceTrends30Days() {
   }
 
   const supabase = await createClient()
+  const startDate = new Date(Date.now() - 29 * 86400000).toISOString().split("T")[0]
 
   const { data: memberIds } = await supabase
     .from("organization_members")
@@ -219,36 +247,58 @@ export async function getAttendanceTrends30Days() {
     .eq("is_active", true)
 
   const memberIdList = memberIds?.map((m) => m.id) || []
-
-  const trends = []
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(Date.now() - i * 86400000)
-    const dateStr = date.toISOString().split("T")[0]
-    const dayName = date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-
-    const [
-      { count: present },
-      { count: late },
-      { count: absent },
-      { count: excused },
-      { count: earlyLeave },
-    ] = await Promise.all([
-      supabase.from("attendance_records").select("id", { count: "exact", head: true }).in("organization_member_id", memberIdList).eq("attendance_date", dateStr).eq("status", "present"),
-      supabase.from("attendance_records").select("id", { count: "exact", head: true }).in("organization_member_id", memberIdList).eq("attendance_date", dateStr).eq("status", "late"),
-      supabase.from("attendance_records").select("id", { count: "exact", head: true }).in("organization_member_id", memberIdList).eq("attendance_date", dateStr).eq("status", "absent"),
-      supabase.from("attendance_records").select("id", { count: "exact", head: true }).in("organization_member_id", memberIdList).eq("attendance_date", dateStr).eq("status", "excused"),
-      supabase.from("attendance_records").select("id", { count: "exact", head: true }).in("organization_member_id", memberIdList).eq("attendance_date", dateStr).eq("status", "early_leave"),
-    ])
-
-    trends.push({
-      date: dayName,
-      present: present || 0,
-      late: late || 0,
-      absent: absent || 0,
-      excused: excused || 0,
-      earlyLeave: earlyLeave || 0,
-    })
+  if (memberIdList.length === 0) {
+    return { success: true, data: [] }
   }
+
+  // Optimized: Single query to get all attendance records for 30 days
+  const { data: records } = await supabase
+    .from("attendance_records")
+    .select("attendance_date, status")
+    .in("organization_member_id", memberIdList)
+    .gte("attendance_date", startDate)
+
+  // Group by date and status
+  const dateMap = new Map<string, {
+    present: number,
+    late: number,
+    absent: number,
+    excused: number,
+    earlyLeave: number
+  }>()
+
+  // Initialize all 30 days
+  for (let i = 29; i >= 0; i--) {
+    const dateStr = new Date(Date.now() - i * 86400000).toISOString().split("T")[0]
+    dateMap.set(dateStr, { present: 0, late: 0, absent: 0, excused: 0, earlyLeave: 0 })
+  }
+
+  // Count statuses
+  records?.forEach((record) => {
+    const dateData = dateMap.get(record.attendance_date)
+    if (dateData) {
+      if (record.status === "present") dateData.present++
+      else if (record.status === "late") dateData.late++
+      else if (record.status === "absent") dateData.absent++
+      else if (record.status === "excused") dateData.excused++
+      else if (record.status === "early_leave") dateData.earlyLeave++
+    }
+  })
+
+  // Convert to array format
+  const trends = Array.from(dateMap.entries()).map(([dateStr, data]) => {
+    const date = new Date(dateStr + "T00:00:00")
+    const dayName = date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    
+    return {
+      date: dayName,
+      present: data.present,
+      late: data.late,
+      absent: data.absent,
+      excused: data.excused,
+      earlyLeave: data.earlyLeave,
+    }
+  })
 
   return {
     success: true,

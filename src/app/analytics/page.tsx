@@ -5,14 +5,7 @@ import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { createClient } from "@/utils/supabase/client"
 import { getMemberSummary } from "@/action/members"
-import {
-  getAnalyticsKPIs,
-  getHourlyAttendanceHeatmap,
-  getDepartmentPerformance,
-  getAttendanceTrends30Days,
-  getStatusDistribution,
-  getRecentActivities,
-} from "@/action/analytics"
+import { useAnalytics } from "@/hooks/use-analytics"
 
 import { Card } from "@/components/ui/card"
 import { ModernKPICards } from "./_components/modern-kpi-cards"
@@ -23,20 +16,11 @@ import { StatusPieChart } from "./_components/status-pie-chart"
 import { ActivityFeed } from "./_components/activity-feed"
 import { InsightsCards } from "./_components/insights-cards"
 
-interface AnalyticsData {
-  kpis: any
-  hourlyData: any[]
-  departmentData: any[]
-  trendsData: any[]
-  statusData: { today: any[]; month: any[] }
-  activities: any[]
-}
-
 export default function AnalyticsPage() {
-  const [loading, setLoading] = useState(true)
   const [organizationId, setOrganizationId] = useState<string | null>(null)
-  const [data, setData] = useState<AnalyticsData | null>(null)
   const [initializing, setInitializing] = useState(true)
+  
+  const { data, isLoading, error } = useAnalytics()
 
   useEffect(() => {
     async function initializeOrg() {
@@ -46,7 +30,6 @@ export default function AnalyticsPage() {
 
         if (!userData.user) {
           setOrganizationId(null)
-          setLoading(false)
           setInitializing(false)
           return
         }
@@ -56,49 +39,12 @@ export default function AnalyticsPage() {
         setInitializing(false)
       } catch (error) {
         console.error("Failed to initialize organization:", error)
-        setLoading(false)
         setInitializing(false)
       }
     }
 
     initializeOrg()
   }, [])
-
-  useEffect(() => {
-    if (!organizationId) {
-      setLoading(false)
-      return
-    }
-
-    async function fetchAnalytics() {
-      try {
-        setLoading(true)
-        const [kpis, hourly, dept, trends, status, activities] = await Promise.all([
-          getAnalyticsKPIs(),
-          getHourlyAttendanceHeatmap(),
-          getDepartmentPerformance(),
-          getAttendanceTrends30Days(),
-          getStatusDistribution(),
-          getRecentActivities(10),
-        ])
-
-        setData({
-          kpis: kpis.data,
-          hourlyData: hourly.data || [],
-          departmentData: dept.data || [],
-          trendsData: trends.data || [],
-          statusData: status.data || { today: [], month: [] },
-          activities: activities.data || [],
-        })
-      } catch (error) {
-        console.error("Failed to fetch analytics:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchAnalytics()
-  }, [organizationId])
 
   const generateInsights = () => {
     if (!data?.kpis) return []
@@ -186,8 +132,8 @@ export default function AnalyticsPage() {
     return insights.slice(0, 4)
   }
 
-  // Show loading skeleton while initializing
-  if (initializing) {
+  // Show loading skeleton while initializing or loading data
+  if (initializing || isLoading) {
     return (
       <ContentLayout title="Analytics">
         <div className="space-y-8">
@@ -231,6 +177,24 @@ export default function AnalyticsPage() {
     )
   }
 
+  // Show error state
+  if (error) {
+    return (
+      <ContentLayout title="Analytics">
+        <div className="mt-24 flex justify-center">
+          <Empty>
+            <EmptyHeader>
+              <EmptyTitle>Failed to load analytics</EmptyTitle>
+              <EmptyDescription>
+                {error instanceof Error ? error.message : 'An error occurred'}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </div>
+      </ContentLayout>
+    )
+  }
+
   return (
     <ContentLayout title="Analytics">
       <div className="space-y-8">
@@ -246,31 +210,31 @@ export default function AnalyticsPage() {
           </div>
         </Card>
 
-        <ModernKPICards data={data?.kpis || null} loading={loading} />
+        <ModernKPICards data={data?.kpis || null} loading={false} />
 
-        <InsightsCards data={generateInsights()} loading={loading} />
+        <InsightsCards data={generateInsights()} loading={false} />
 
         {/* Charts Grid with better spacing */}
         <div className="grid gap-6 xl:grid-cols-2">
-          <HourlyHeatmap data={data?.hourlyData || []} loading={loading} />
-          <DepartmentPerformanceGrid data={data?.departmentData || []} loading={loading} />
+          <HourlyHeatmap data={data?.hourlyData || []} loading={false} />
+          <DepartmentPerformanceGrid data={data?.departmentData || []} loading={false} />
         </div>
 
         {/* Trends and Status Section */}
         <div className="grid gap-6 xl:grid-cols-3">
           <div className="xl:col-span-2">
-            <TrendsAreaChart data={data?.trendsData || []} loading={loading} />
+            <TrendsAreaChart data={data?.trendsData || []} loading={false} />
           </div>
           <StatusPieChart
             todayData={data?.statusData.today || []}
             monthData={data?.statusData.month || []}
-            loading={loading}
+            loading={false}
           />
         </div>
 
         {/* Activity Feed */}
         <div className="pb-8">
-          <ActivityFeed data={data?.activities || []} loading={loading} />
+          <ActivityFeed data={data?.activities || []} loading={false} />
         </div>
       </div>
     </ContentLayout>

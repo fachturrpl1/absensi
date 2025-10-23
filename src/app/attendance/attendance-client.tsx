@@ -155,8 +155,8 @@ export default function AttendanceClient({
         const schedules = row.original.schedules || []
         return schedules.length > 0 ? (
           <div className="flex flex-col">
-            {schedules.map((s: IWorkSchedule) => (
-              <span key={s.id}>{s.name}</span>
+            {schedules.map((s: IWorkSchedule, index) => (
+              <span key={`${row.original.id}-schedule-${s.id}-${index}`}>{s.name}</span>
             ))}
           </div>
         ) : (

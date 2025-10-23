@@ -4,7 +4,14 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recha
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { statusDistributionData } from "./analytics-config"
 
-const COLORS = ["hsl(186, 100%, 50%)", "hsl(0, 100%, 50%)", "hsl(38, 100%, 50%)", "hsl(220, 90%, 56%)"]
+// Modern color palette for status distribution
+// Green for Present, Red for Late, Gray for Absent, Blue for Excused
+const COLORS = [
+  "hsl(142, 71%, 45%)", // Green for Present
+  "hsl(0, 84%, 60%)",   // Red for Late
+  "hsl(215, 14%, 34%)", // Gray for Absent
+  "hsl(221, 83%, 53%)", // Blue for Excused
+]
 
 export function StatusDistribution() {
   return (

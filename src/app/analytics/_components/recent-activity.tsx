@@ -5,11 +5,11 @@ import { Badge } from "@/components/ui/badge"
 import { recentActivityData } from "./analytics-config"
 
 const statusColors = {
-  Present: "bg-slate-100 text-slate-800 border-slate-300",
-  Late: "bg-slate-100 text-slate-700 border-slate-300",
-  Absent: "bg-slate-200 text-slate-700 border-slate-400",
-  Excused: "bg-slate-100 text-slate-700 border-slate-300",
-  "Early Leave": "bg-slate-100 text-slate-700 border-slate-300",
+  Present: "bg-green-500/10 text-green-700 dark:bg-green-500/20 dark:text-green-400 border-green-500/20",
+  Late: "bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-400 border-red-500/20",
+  Absent: "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400 border-gray-500/20",
+  Excused: "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/20",
+  "Early Leave": "bg-purple-500/10 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400 border-purple-500/20",
 }
 
 export function RecentActivity() {
