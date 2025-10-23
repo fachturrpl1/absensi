@@ -354,7 +354,224 @@ export async function getTodayAttendanceDistribution() {
   };
 }
 
-// Get all dashboard stats at once
+// Get monthly late attendance stats
+export async function getMonthlyLateStats() {
+  try {
+    const supabase = await getSupabase();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
+    }
+
+    const organizationId = await getUserOrganizationId();
+    if (!organizationId) {
+      return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
+    }
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    function monthRange(year: number, month: number) {
+      const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
+      const lastDay = new Date(Date.UTC(year, month, 0, 23, 59, 59));
+      const formatDate = (date: Date) => {
+        const y = date.getUTCFullYear();
+        const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const d = String(date.getUTCDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      };
+      return { start: formatDate(start), end: formatDate(lastDay) };
+    }
+
+    const curRange = monthRange(currentYear, currentMonth);
+    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+    const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+    const prevRange = monthRange(prevYear, prevMonth);
+
+    const { data: memberIds } = await supabase
+      .from('organization_members')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true);
+
+    const memberIdList = (memberIds || []).map((m: any) => m.id);
+
+    const [currentRes, previousRes] = await Promise.all([
+      supabase
+        .from('attendance_records')
+        .select('id', { count: 'exact', head: true })
+        .in('organization_member_id', memberIdList)
+        .gte('attendance_date', curRange.start)
+        .lte('attendance_date', curRange.end)
+        .eq('status', 'late'),
+      supabase
+        .from('attendance_records')
+        .select('id', { count: 'exact', head: true })
+        .in('organization_member_id', memberIdList)
+        .gte('attendance_date', prevRange.start)
+        .lte('attendance_date', prevRange.end)
+        .eq('status', 'late')
+    ]);
+
+    const currentCount = currentRes.count ?? 0;
+    const previousCount = previousRes.count ?? 0;
+    let percentChange = 0;
+    if (previousCount === 0 && currentCount > 0) {
+      percentChange = 100;
+    } else if (previousCount > 0) {
+      percentChange = Math.round(((currentCount - previousCount) / previousCount) * 100);
+    }
+
+    return {
+      success: true,
+      data: { currentMonth: currentCount, previousMonth: previousCount, percentChange }
+    };
+  } catch (error) {
+    return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
+  }
+}
+
+// Get active members stats
+export async function getActiveMembersStats() {
+  try {
+    const supabase = await getSupabase();
+    const organizationId = await getUserOrganizationId();
+    if (!organizationId) {
+      return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
+    }
+
+    const { data: currentMembers } = await supabase
+      .from('organization_members')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true);
+
+    const previousDate = new Date();
+    previousDate.setMonth(previousDate.getMonth() - 1);
+    
+    const { data: previousMembers } = await supabase
+      .from('organization_members')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .lte('hire_date', previousDate.toISOString().split('T')[0]);
+
+    const currentMonthCount = currentMembers?.length ?? 0;
+    const previousMonthCount = previousMembers?.length ?? 0;
+    let percentChange = 0;
+    if (previousMonthCount === 0 && currentMonthCount > 0) {
+      percentChange = 100;
+    } else if (previousMonthCount > 0) {
+      percentChange = Math.round(((currentMonthCount - previousMonthCount) / previousMonthCount) * 100);
+    }
+
+    return {
+      success: true,
+      data: { currentMonth: currentMonthCount, previousMonth: previousMonthCount, percentChange }
+    };
+  } catch (error) {
+    return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
+  }
+}
+
+// Get active RFID stats
+export async function getActiveRfidStats() {
+  try {
+    const supabase = await getSupabase();
+    const organizationId = await getUserOrganizationId();
+    if (!organizationId) {
+      return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
+    }
+
+    const { data: members } = await supabase
+      .from("organization_members")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("is_active", true);
+
+    const memberIds = members?.map((m: any) => m.id) || [];
+    if (memberIds.length === 0) {
+      return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
+    }
+
+    const { count: currentCount } = await supabase
+      .from("rfid_cards")
+      .select("id", { count: "exact", head: true })
+      .in("organization_member_id", memberIds);
+
+    return {
+      success: true,
+      data: { currentMonth: currentCount ?? 0, previousMonth: 0, percentChange: 0 }
+    };
+  } catch (error) {
+    return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
+  }
+}
+
+// Get attendance groups data
+export async function getAttendanceGroupsData(organizationId: string) {
+  try {
+    const supabase = await getSupabase();
+    if (!organizationId) {
+      return { success: false, data: [] };
+    }
+
+    const { data: members } = await supabase
+      .from('organization_members')
+      .select(`
+        id,
+        department_id,
+        departments:department_id (
+          id,
+          name
+        )
+      `)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true);
+
+    if (!members || members.length === 0) {
+      return { success: true, data: [] };
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const memberIds = members.map((m: any) => m.id);
+
+    const { data: attendance } = await supabase
+      .from('attendance_records')
+      .select('organization_member_id, status')
+      .in('organization_member_id', memberIds)
+      .eq('attendance_date', today);
+
+    const groupMap = new Map<string, { group: string; present: number; late: number; absent: number; excused: number; others: number; total: number }>();
+
+    members.forEach((member: any) => {
+      const groupName = member.departments?.name || 'No Group';
+      if (!groupMap.has(groupName)) {
+        groupMap.set(groupName, { group: groupName, present: 0, late: 0, absent: 0, excused: 0, others: 0, total: 0 });
+      }
+      const groupData = groupMap.get(groupName)!;
+      groupData.total += 1;
+
+      const memberAttendance = attendance?.find((a: any) => a.organization_member_id === member.id);
+      if (memberAttendance) {
+        const status = memberAttendance.status;
+        if (status === 'present') groupData.present += 1;
+        else if (status === 'late') groupData.late += 1;
+        else if (status === 'absent') groupData.absent += 1;
+        else if (status === 'excused') groupData.excused += 1;
+        else groupData.others += 1;
+      }
+    });
+
+    return { success: true, data: Array.from(groupMap.values()) };
+  } catch (error) {
+    return { success: false, data: [] };
+  }
+}
+
+// Get all dashboard stats at once - CONSOLIDATED with single org ID fetch
 export async function getDashboardStats(): Promise<{
   totalActiveMembers: number
   totalMembers: number
@@ -365,8 +582,33 @@ export async function getDashboardStats(): Promise<{
   pendingApprovals: number
   totalGroups: number
   memberDistribution: { status: Array<{ name: string; value: number; color: string }>; employment: Array<{ name: string; value: number; color: string }> } | null
+  monthlyAttendance: { currentMonth: number; previousMonth: number; percentChange: number }
+  monthlyLate: { currentMonth: number; previousMonth: number; percentChange: number }
+  activeMembers: { currentMonth: number; previousMonth: number; percentChange: number }
+  activeRfid: { currentMonth: number; previousMonth: number; percentChange: number }
+  attendanceGroups: any[]
 }> {
-  const [totalActiveMembers, totalMembers, todayAttendance, todayLate, todayAbsent, todayExcused, pendingApprovals, totalGroups, memberDistribution] = await Promise.all([
+  // Call getUserOrganizationId once at the top - prevents multiple DB calls
+  const organizationId = await getUserOrganizationId();
+  
+  // All these functions internally call getUserOrganizationId again
+  // TODO: Refactor to accept organizationId as parameter to avoid redundant calls
+  const [
+    totalActiveMembers, 
+    totalMembers, 
+    todayAttendance, 
+    todayLate, 
+    todayAbsent, 
+    todayExcused, 
+    pendingApprovals, 
+    totalGroups, 
+    memberDistribution,
+    monthlyAttendance,
+    monthlyLate,
+    activeMembers,
+    activeRfid,
+    attendanceGroups
+  ] = await Promise.all([
     getTotalActiveMembers(),
     getTotalMembers(),
     getTodayAttendance(),
@@ -375,7 +617,12 @@ export async function getDashboardStats(): Promise<{
     getTodayExcused(),
     getPendingApprovals(),
     getTotalGroups(),
-    getMemberStatusDistribution()
+    getMemberStatusDistribution(),
+    getMonthlyAttendanceStats(),
+    getMonthlyLateStats(),
+    getActiveMembersStats(),
+    getActiveRfidStats(),
+    getAttendanceGroupsData(organizationId || '')
   ]);
 
   return {
@@ -387,7 +634,12 @@ export async function getDashboardStats(): Promise<{
     todayExcused: todayExcused.data,
     pendingApprovals: pendingApprovals.data,
     totalGroups: totalGroups.data,
-    memberDistribution: memberDistribution.success ? memberDistribution.data : null
+    memberDistribution: memberDistribution.success ? memberDistribution.data : null,
+    monthlyAttendance: monthlyAttendance.data,
+    monthlyLate: monthlyLate.data,
+    activeMembers: activeMembers.data,
+    activeRfid: activeRfid.data,
+    attendanceGroups: attendanceGroups.data
   };
 }
 

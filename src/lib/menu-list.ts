@@ -14,6 +14,7 @@ import {
   Briefcase,
   BarChart3,
   TrendingUp,
+  CalendarCheck2,
 } from "@/components/icons/lucide-exports";
 import type { LucideIcon } from "@/components/icons/lucide-exports";
 
@@ -93,6 +94,12 @@ export function getMenuList(pathname: string): Group[] {
           label: "Schedule",
           icon: Calendar,
           active: pathname.includes("/schedule")
+        },
+        {
+          href: "/member-schedules",
+          label: "Member Schedules",
+          icon: CalendarCheck2,
+          active: pathname.includes("/member-schedules")
         },
         {
           href: "/organization/settings",

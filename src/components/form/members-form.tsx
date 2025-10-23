@@ -31,14 +31,14 @@ import {
     updateOrganizationMember,
 } from "@/action/members"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
-import { getAllGroups } from "@/action/group"
-import { getAllPositions } from "@/action/position"
 import { getAllUsers, getAllUsersNotRegistered } from "@/action/users"
 import FormSkeleton from "../form-skeleton"
 import { createRfidCard, updateRfidCard } from "@/action/rfid_card"
-import { getAllOrganization } from "@/action/organization"
 import { createClient } from "@/utils/supabase/client"
 import { Can } from "../can"
+import { useGroups } from "@/hooks/use-groups"
+import { usePositions } from "@/hooks/use-positions"
+import { EMPLOYMENT_STATUS_OPTIONS, CARD_TYPE_OPTIONS } from "@/constants"
 
 interface OrganizationMembersFormProps {
     formType: "add" | "edit"
@@ -71,12 +71,13 @@ export default function MembersForm({
 }: OrganizationMembersFormProps) {
     const router = useRouter()
     const [loading, setLoading] = React.useState(false)
-    const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
-    const [groups, setGroups] = React.useState<{ id: string; name: string }[]>([])
-    const [positions, setPositions] = React.useState<{ id: string; title: string }[]>([])
     const [users, setUsers] = React.useState<IUser[]>([])
     const [loadingForm, setLoadingForm] = React.useState(true)
     const [organizationId, setOrganizationId] = React.useState<string>("")
+    
+    // Use React Query hooks instead of manual state management
+    const { data: groups = [], isLoading: groupsLoading } = useGroups()
+    const { data: positions = [], isLoading: positionsLoading } = usePositions()
     const form = useForm<FormValues>({
         resolver: zodResolver(OrganizationMembersFormSchema),
         defaultValues: {
@@ -115,22 +116,10 @@ export default function MembersForm({
                     }
                 }
 
-                // 3. load additional dropdown data
-                await Promise.all([
-                    getAllGroups().then((res) => {
-                        // actions return { success: boolean, data: any }
-                        const r = res as any
-                        if (r && r.success) setGroups(r.data || []);
-                    }),
-                    getAllPositions().then((res) => {
-                        const r = res as any
-                        if (r && r.success) setPositions(r.data || []);
-                    }),
-                    (formType === "edit" ? getAllUsers() : getAllUsersNotRegistered()).then((res) => {
-                        const r = res as any
-                        if (r && r.success) setUsers(r.data || []);
-                    }),
-                ]);
+                // 3. load users data (groups and positions are loaded via React Query hooks)
+                const usersRes = await (formType === "edit" ? getAllUsers() : getAllUsersNotRegistered());
+                const r = usersRes as any;
+                if (r && r.success) setUsers(r.data || []);
 
                 // 4. preload default values when editing
                 if (initialValues && Object.keys(initialValues).length > 0) {
@@ -213,7 +202,7 @@ export default function MembersForm({
         }
     };
 
-    if (loadingForm) return <FormSkeleton />;
+    if (loadingForm || groupsLoading || positionsLoading) return <FormSkeleton />;
 
 
     return (
@@ -386,25 +375,24 @@ export default function MembersForm({
                         />
                         */}
 
-                        {/* Industry */}
                         <FormField
                             control={form.control}
                             name="employment_status"
                             render={({ field }) => (
                                 <FormItem className="w-full">
-                                    <FormLabel>Status</FormLabel>
-
-                                    <Select onValueChange={field.onChange}
-                                        value={field.value}>
+                                    <FormLabel>Employment Status</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl className="w-full">
-                                            <SelectTrigger >
-                                                <SelectValue placeholder="Choose Status" />
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Choose Employment Status" />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            <SelectItem value="Active">Active</SelectItem>
-                                            <SelectItem value="Non Active">Non Active</SelectItem>
-
+                                            {EMPLOYMENT_STATUS_OPTIONS.map((option) => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </FormItem>
@@ -457,9 +445,20 @@ export default function MembersForm({
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Card Type (Optional)</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Enter card type (optional)" {...field} />
-                                    </FormControl>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select card type" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {CARD_TYPE_OPTIONS.map((option) => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}

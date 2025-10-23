@@ -1,119 +1,42 @@
-import { useState, useEffect } from "react";
 import { TrendingUp, TrendingDown } from "@/components/icons/lucide-exports";
-
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { memo } from "react";
 
 // Small inline Skeleton component
 function Skeleton({ className = "", style = {} }: { className?: string; style?: any }) {
   return <div className={`skeleton rounded-md ${className}`} style={style} />;
 }
 
-type MonthlyStats = {
-  currentMonth: number;
-  previousMonth: number;
-  percentChange: number;
-} | null;
+type DashboardData = {
+  monthlyAttendance?: { currentMonth: number; previousMonth: number; percentChange: number }
+  monthlyLate?: { currentMonth: number; previousMonth: number; percentChange: number }
+  activeMembers?: { currentMonth: number; previousMonth: number; percentChange: number }
+  activeRfid?: { currentMonth: number; previousMonth: number; percentChange: number }
+} | undefined
 
-export function SectionCards({ monthlyAttendance }: { monthlyAttendance?: MonthlyStats }) {
-  // local state so the component can fetch its own data if the parent didn't pass monthlyAttendance
-  const [localMonthlyAttendance, setLocalMonthlyAttendance] = useState<MonthlyStats>(monthlyAttendance ?? null);
-  const [monthlyLate, setMonthlyLate] = useState<MonthlyStats>(null);
-  const [monthlyMembers, setMonthlyMembers] = useState<MonthlyStats>(null);
-  
-  useEffect(() => {
-    // keep localMonthlyAttendance in sync with prop if parent provides it later
-    if (monthlyAttendance) setLocalMonthlyAttendance(monthlyAttendance);
+interface SectionCardsProps {
+  dashboardData: DashboardData
+}
 
-    async function fetchLateStats() {
-      try {
-        const res = await fetch('/api/dashboard/monthly-late', { credentials: 'same-origin' });
-        const json = await res.json();
-        console.debug('[SectionCards] /api/dashboard/monthly-late response', json);
-        if (json && json.success && json.data) {
-          setMonthlyLate(json.data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch monthly late stats:', err);
-      }
-    }
-    
-    async function fetchMemberStats() {
-      try {
-        const res = await fetch('/api/dashboard/active-members', { credentials: 'same-origin' });
-        const json = await res.json();
-        console.debug('[SectionCards] /api/dashboard/active-members response', json);
-        if (json && json.success && json.data) {
-          setMonthlyMembers(json.data);
-        } else {
-          // single retry in case of transient auth/cookie race
-          console.debug('[SectionCards] retrying /api/dashboard/active-members');
-          const res2 = await fetch('/api/dashboard/active-members', { credentials: 'same-origin' });
-          const json2 = await res2.json();
-          console.debug('[SectionCards] /api/dashboard/active-members retry response', json2);
-          if (json2 && json2.success && json2.data) setMonthlyMembers(json2.data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch active members stats:', err);
-      }
-    }
-    fetchLateStats();
-    fetchMemberStats();
+export const SectionCards = memo(function SectionCards({ dashboardData }: SectionCardsProps) {
+  // Extract data from props instead of calling hooks
+  const monthlyAttendance = dashboardData?.monthlyAttendance;
+  const monthlyLate = dashboardData?.monthlyLate;
+  const monthlyMembers = dashboardData?.activeMembers;
+  const rfidStats = dashboardData?.activeRfid;
 
-    // If parent did not provide monthlyAttendance prop, fetch it here
-    async function fetchMonthlyAttendance() {
-      if (monthlyAttendance) return; // parent provided it
-      try {
-        const res = await fetch('/api/dashboard/monthly', { credentials: 'same-origin' });
-        const json = await res.json();
-        console.debug('[SectionCards] /api/dashboard/monthly response', json);
-        if (json && json.success && json.data) {
-          setLocalMonthlyAttendance(json.data);
-        } else {
-          console.error('SectionCards: /api/dashboard/monthly returned no data', json);
-          // retry once
-          console.debug('[SectionCards] retrying /api/dashboard/monthly');
-          const res2 = await fetch('/api/dashboard/monthly', { credentials: 'same-origin' });
-          const json2 = await res2.json();
-          console.debug('[SectionCards] /api/dashboard/monthly retry response', json2);
-          if (json2 && json2.success && json2.data) setLocalMonthlyAttendance(json2.data);
-        }
-      } catch (err) {
-        console.error('SectionCards: failed to fetch monthly attendance', err);
-      }
-    }
-
-    fetchMonthlyAttendance();
-
-    // fetch active RFID stats
-    async function fetchRfidStats() {
-      try {
-        const res = await fetch('/api/dashboard/active-rfid', { credentials: 'same-origin' });
-        const json = await res.json();
-        console.debug('[SectionCards] /api/dashboard/active-rfid response', json);
-        if (json && json.success && json.data) {
-          setRfidStats(json.data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch RFID stats:', err);
-      }
-    }
-
-    fetchRfidStats();
-  }, []);
-
-  const attendanceValue = localMonthlyAttendance ? localMonthlyAttendance.currentMonth : null;
-  const percent = localMonthlyAttendance ? localMonthlyAttendance.percentChange : null;
+  const attendanceValue = monthlyAttendance?.currentMonth ?? null;
+  const percent = monthlyAttendance?.percentChange ?? null;
   const trendPositive = percent !== null && percent > 0;
 
-  const lateValue = monthlyLate ? monthlyLate.currentMonth : null;
-  const latePercent = monthlyLate ? monthlyLate.percentChange : null;
-  const lateTrendPositive = latePercent !== null && latePercent < 0; // Note: For lates, negative trend is positive
+  const lateValue = monthlyLate?.currentMonth ?? null;
+  const latePercent = monthlyLate?.percentChange ?? null;
+  const lateTrendPositive = latePercent !== null && latePercent < 0;
 
-  const memberValue = monthlyMembers ? monthlyMembers.currentMonth : null;
-  const memberPercent = monthlyMembers ? monthlyMembers.percentChange : null;
+  const memberValue = monthlyMembers?.currentMonth ?? null;
+  const memberPercent = monthlyMembers?.percentChange ?? null;
   const memberTrendPositive = memberPercent !== null && memberPercent > 0;
-  const [rfidStats, setRfidStats] = useState<MonthlyStats | null>(null);
 
   return (
     <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs sm:grid-cols-2 lg:grid-cols-4">
@@ -133,7 +56,7 @@ export function SectionCards({ monthlyAttendance }: { monthlyAttendance?: Monthl
             Total attendance this month
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
-            <span>Last month: {localMonthlyAttendance?.previousMonth ?? '—'}</span>
+            <span>Last month: {monthlyAttendance?.previousMonth ?? '—'}</span>
             {percent !== null && (
               <Badge variant={trendPositive ? "secondary" : "destructive"} className="text-xs">
                 {trendPositive ? <TrendingUp className="size-3 mr-1" /> : <TrendingDown className="size-3 mr-1" />}
@@ -189,7 +112,7 @@ export function SectionCards({ monthlyAttendance }: { monthlyAttendance?: Monthl
         <CardHeader>
           <CardDescription>Active RFID cards</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {rfidStats ? rfidStats.currentMonth : <Skeleton className="w-20 h-8" />}
+            {rfidStats?.currentMonth ?? <Skeleton className="w-20 h-8" />}
           </CardTitle>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
@@ -203,4 +126,4 @@ export function SectionCards({ monthlyAttendance }: { monthlyAttendance?: Monthl
       </Card>
     </div>
   );
-}
+})

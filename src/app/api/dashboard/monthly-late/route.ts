@@ -4,8 +4,6 @@ import { NextResponse } from "next/server";
 import { getUserOrganization } from "@/utils/get-user-org";
 import { getMonthRange, getPreviousMonthRange } from "@/utils/date-range";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -101,6 +99,10 @@ export async function GET() {
         previousMonth: previous,
         percentChange
       }
+    }, {
+      headers: {
+        'Cache-Control': 'public, max-age=300, stale-while-revalidate=60'
+      }
     });
   } catch (e) {
     console.error('Error fetching monthly late stats:', e);
@@ -110,6 +112,10 @@ export async function GET() {
         currentMonth: 0,
         previousMonth: 0,
         percentChange: 0
+      }
+    }, {
+      headers: {
+        'Cache-Control': 'public, max-age=60, stale-while-revalidate=30'
       }
     });
   }

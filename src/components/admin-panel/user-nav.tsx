@@ -22,38 +22,16 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 import { useAuthStore } from "@/store/user-store"
-import { useProfileRefresh, useProfilePhotoUrl } from "@/hooks/use-profile"
+import { useProfilePhotoUrl } from "@/hooks/use-profile"
 import { safeAvatarSrc, getUserInitials } from "@/lib/avatar-utils"
 import LogoutButton from "../logout"
 import { LanguageDropdownItem } from "@/components/language-dropdown-item"
 
 export function UserNav() {
   const user = useAuthStore((state) => state.user)
-  const { refreshProfile } = useProfileRefresh()
-  const [isRefreshing, setIsRefreshing] = React.useState(false)
   const profilePhotoUrl = useProfilePhotoUrl(user?.profile_photo_url ?? undefined)
 
-  // Auto-refresh profile data on component mount
-  React.useEffect(() => {
-    if (user?.id && process.env.NODE_ENV === 'development') {
-      console.log('UserNav - Profile photo URL:', {
-        original: user.profile_photo_url,
-        processed: profilePhotoUrl
-      })
-    }
-  }, [user, profilePhotoUrl])
-
   if (!user) return null
-
-  // Function to manually refresh user data
-  const handleRefresh = async () => {
-    setIsRefreshing(true)
-    try {
-      await refreshProfile()
-    } finally {
-      setIsRefreshing(false)
-    }
-  }
 
   // Get full name from user data
   const getFullName = () => {
@@ -119,19 +97,7 @@ export function UserNav() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium leading-none">{fullName}</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                title="Refresh profile data"
-              >
-                <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
+            <p className="text-sm font-medium leading-none">{fullName}</p>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>

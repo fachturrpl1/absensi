@@ -6,9 +6,18 @@ export async function GET(req: Request) {
     const url = new URL(req.url)
     const org = url.searchParams.get('organizationId') || undefined
     const res = await getAttendanceByGroup(org)
-    return NextResponse.json({ success: true, data: res.data })
+    return NextResponse.json({ success: true, data: res.data }, {
+      headers: {
+        'Cache-Control': 'public, max-age=300, stale-while-revalidate=60'
+      }
+    })
   } catch (err) {
     console.error('API /attendance/group error', err)
-    return NextResponse.json({ success: false, data: [] }, { status: 500 })
+    return NextResponse.json({ success: false, data: [] }, { 
+      status: 500,
+      headers: {
+        'Cache-Control': 'public, max-age=60, stale-while-revalidate=30'
+      }
+    })
   }
 }

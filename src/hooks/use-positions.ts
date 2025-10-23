@@ -1,0 +1,20 @@
+import { useQuery } from "@tanstack/react-query"
+import { IPosition } from "@/interface"
+
+// Custom hook untuk fetch positions dengan caching via API route (GET)
+export function usePositions() {
+  return useQuery({
+    queryKey: ["positions"],
+    queryFn: async () => {
+      console.log('[React Query] Fetching positions via API')
+      const response = await fetch('/api/positions', { credentials: 'same-origin' })
+      const json = await response.json()
+      if (!json.success) {
+        throw new Error(json.message || 'Failed to fetch positions')
+      }
+      return json.data as IPosition[]
+    },
+    staleTime: 5 * 60 * 1000, // 5 menit - positions jarang berubah
+    gcTime: 15 * 60 * 1000, // Cache 15 menit
+  })
+}

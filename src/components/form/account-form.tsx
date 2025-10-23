@@ -44,6 +44,7 @@ import { useAuthStore } from "@/store/user-store";
 import { useProfileRefresh, useProfilePhotoDelete, useProfilePhotoUrl } from "@/hooks/use-profile";
 import { safeAvatarSrc, getUserInitials } from "@/lib/avatar-utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { GENDER_OPTIONS, RELATIONSHIP_OPTIONS } from "@/constants";
 
 interface UserProfile extends Partial<IUser> {
   email?: string;

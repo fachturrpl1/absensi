@@ -5,7 +5,11 @@ export async function GET() {
   try {
     const result = await getMonthlyAttendanceStats()
     if (result && result.success) {
-      return NextResponse.json({ success: true, data: result.data })
+      return NextResponse.json({ success: true, data: result.data }, {
+        headers: {
+          'Cache-Control': 'public, max-age=300, stale-while-revalidate=60'
+        }
+      })
     }
 
     // Log and forward helpful non-sensitive error information to the client

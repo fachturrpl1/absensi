@@ -3,8 +3,6 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getUserOrganization } from "@/utils/get-user-org";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -46,7 +44,11 @@ export async function GET() {
     const memberIds = members?.map((m: any) => m.id) || [];
 
     if (memberIds.length === 0) {
-      return NextResponse.json({ success: true, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } });
+      return NextResponse.json({ success: true, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } }, {
+      headers: {
+        'Cache-Control': 'public, max-age=60, stale-while-revalidate=30'
+      }
+    });
     }
 
     // Count RFID cards linked to active members
@@ -60,9 +62,17 @@ export async function GET() {
     const current = currentCount ?? 0;
 
     // For now, we don't compute previous month for RFID as UI hides it; return zero
-    return NextResponse.json({ success: true, data: { currentMonth: current, previousMonth: 0, percentChange: 0 } });
+    return NextResponse.json({ success: true, data: { currentMonth: current, previousMonth: 0, percentChange: 0 } }, {
+      headers: {
+        'Cache-Control': 'public, max-age=300, stale-while-revalidate=60'
+      }
+    });
   } catch (e) {
     console.error("Error fetching active RFID stats:", e);
-    return NextResponse.json({ success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } });
+    return NextResponse.json({ success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } }, {
+      headers: {
+        'Cache-Control': 'public, max-age=60, stale-while-revalidate=30'
+      }
+    });
   }
 }

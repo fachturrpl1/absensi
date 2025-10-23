@@ -342,12 +342,44 @@ export default function WorkScheduleDetailsPage() {
       }
       if (!res.success) throw new Error(res.message)
       toast.success(editingDetail ? "Updated successfully" : "Created successfully")
-      setOpen(false)
-      setEditingDetail(null)
+      handleCloseDialog()
       fetchDetails()
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Unknown error')
     }
+  }
+
+  const handleCloseDialog = () => {
+    setOpen(false)
+    setEditingDetail(null)
+    form.reset({
+      day_of_week: 1,
+      is_working_day: true,
+      flexible_hours: false,
+      start_time: "",
+      end_time: "",
+      break_start: "",
+      break_end: "",
+    })
+  }
+
+  const handleOpenDialog = (detail?: IWorkScheduleDetail) => {
+    if (detail) {
+      setEditingDetail(detail)
+      form.reset(detail)
+    } else {
+      setEditingDetail(null)
+      form.reset({
+        day_of_week: 1,
+        is_working_day: true,
+        flexible_hours: false,
+        start_time: "",
+        end_time: "",
+        break_start: "",
+        break_end: "",
+      })
+    }
+    setOpen(true)
   }
 
   const handleDelete = async (detailId: string) => {
@@ -514,11 +546,7 @@ export default function WorkScheduleDetailsPage() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => {
-                setEditingDetail(d)
-                form.reset(d)
-                setOpen(true)
-              }}
+              onClick={() => handleOpenDialog(d)}
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -611,14 +639,13 @@ export default function WorkScheduleDetailsPage() {
         )}
 
         <div className="">
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(isOpen) => {
+            if (!isOpen) {
+              handleCloseDialog()
+            }
+          }}>
             <DialogTrigger asChild className="float-end ml-5">
-              <Button
-                onClick={() => {
-                  setEditingDetail(null)
-                  form.reset()
-                }}
-              >
+              <Button onClick={() => handleOpenDialog()}>
                 Add <Plus className="ml-2" />
               </Button>
             </DialogTrigger>

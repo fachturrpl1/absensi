@@ -6,10 +6,14 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import { UserProvider } from "@/components/user-provider";
 import { TimezoneProvider } from "@/components/timezone-provider";
 import { TimeFormatProvider } from "@/components/time-format-provider";
+import { QueryProvider } from "@/providers/query-provider";
 import AdminPanelLayout from "@/components/admin-panel/admin-panel-layout";
 
 import { createClient } from "@/utils/supabase/server";
-import { getOrganizationTimezoneByUserId } from "@/action/organization";
+import { 
+  getCachedUserProfile, 
+  getCachedOrganizationTimezone 
+} from "@/lib/data-cache";
 
 import { Geist, Geist_Mono } from "next/font/google";
 
@@ -73,23 +77,8 @@ export default async function RootLayout({
 
   const metadata = user?.user_metadata || {};
 
-  let profile: {
-    first_name?: string | null;
-    middle_name?: string | null;
-    last_name?: string | null;
-    display_name?: string | null;
-    profile_photo_url?: string | null;
-    employee_code?: string | null;
-  } | null = null;
-
-  if (user) {
-    const { data: profileData } = await supabase
-      .from("user_profiles")
-      .select("first_name, middle_name, last_name, display_name, profile_photo_url, employee_code")
-      .eq("id", user.id)
-      .maybeSingle();
-    profile = profileData ?? null;
-  }
+  // Use cached profile fetch to avoid duplicates
+  const profile = user ? await getCachedUserProfile(user.id) : null
 
   const resolvedFirstName = profile?.first_name ?? metadata.first_name ?? undefined;
   const resolvedMiddleName = profile?.middle_name ?? metadata.middle_name ?? undefined;
@@ -116,19 +105,21 @@ export default async function RootLayout({
       }
     : null;
 
-  // 🔹 Fetch timezone from the user's organization
-  const timezone = user ? await getOrganizationTimezoneByUserId(user.id) : "UTC";
+  // 🔹 Fetch timezone from the user's organization (cached)
+  const timezone = user ? await getCachedOrganizationTimezone(user.id) : "UTC"
 
   return (
     <html lang="id" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <UserProvider user={mappedUser} />
         <TimezoneProvider timezone={timezone}>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <TimeFormatProvider>
-              <AdminPanelLayout>{children}</AdminPanelLayout>
-            </TimeFormatProvider>
-          </ThemeProvider>
+          <QueryProvider>
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+              <TimeFormatProvider>
+                <AdminPanelLayout>{children}</AdminPanelLayout>
+              </TimeFormatProvider>
+            </ThemeProvider>
+          </QueryProvider>
           <Toaster />
         </TimezoneProvider>
       </body>

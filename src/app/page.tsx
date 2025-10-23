@@ -1,6 +1,5 @@
 "use client"
 import { getUserOrganizationId } from "@/action/members";
-import { getDashboardStats } from "@/action/dashboard";
 import { ContentLayout } from "@/components/admin-panel/content-layout";
 import { DashboardCard } from "@/components/dashboard-card";
 import { GroupChart } from "@/components/bar-chart";
@@ -8,118 +7,65 @@ import { ChartLineDots } from "@/components/line-chart";
 import { AttendanceByGroupTable } from "@/components/attendance-by-group-table/attendance-by-group-table";
 import { MemberStatusChart } from "@/components/pie-chart";
 import { createClient } from "@/utils/supabase/client";
-import { useEffect, useState } from "react";
-// icons moved to centralized exports; removed unused lucide-react imports
+import { useEffect, useState, useMemo } from "react";
 import { CustomerInsights } from "@/components/customer-insights";
 import { SectionCards } from "@/components/section-cards";
+import { useDashboardStats } from "@/hooks/use-dashboard-stats";
 
 
 export default function Home() {
   const [orgId, setOrgId] = useState<string | null>(null)
-  const [dashboardStats, setDashboardStats] = useState<{
-    totalActiveMembers: number;
-    totalMembers: number;
-    todayAttendance: number;
-    todayLate: number;
-    todayAbsent: number;
-    todayExcused: number;
-    pendingApprovals: number;
-    totalGroups: number;
-    memberDistribution: {
-      status: { name: string; value: number; color: string; }[];
-      employment: { name: string; value: number; color: string; }[];
-    } | null;
-  }>({
-    totalActiveMembers: 0,
-    totalMembers: 0,
-    todayAttendance: 0,
-    todayLate: 0,
-    todayAbsent: 0,
-    todayExcused: 0,
-    pendingApprovals: 0,
-    totalGroups: 0,
-    memberDistribution: null
-  })
-  const [loading, setLoading] = useState(true)
-  const [attendanceGroups, setAttendanceGroups] = useState<any[] | null>(null)
   const [organizationLoading, setOrganizationLoading] = useState(true)
-  const [monthlyAttendance, setMonthlyAttendance] = useState<{ currentMonth: number; previousMonth: number; percentChange: number } | null>(null)
+
+  // Single consolidated hook call - React Query deduplicates automatically
+  const { data: dashboardData, isLoading: statsLoading } = useDashboardStats()
+  
+  // Extract data from consolidated response
+  const attendanceGroups = useMemo(() => {
+    if (!dashboardData?.attendanceGroups) return []
+    return dashboardData.attendanceGroups.map((g: any) => {
+      const present_plus_late = (g.present || 0) + (g.late || 0)
+      const not_in_others = (g.absent || 0) + (g.excused || 0) + (g.others || 0)
+      const total = g.total || present_plus_late + not_in_others
+      const percent_present = total > 0 ? present_plus_late / total : 0
+      const late_count = g.late || 0
+      const overall = present_plus_late + not_in_others
+      return {
+        group: g.group,
+        present_plus_late,
+        not_in_others,
+        percent_present,
+        late_count,
+        overall,
+      }
+    })
+  }, [dashboardData?.attendanceGroups])
+  
+  const memberDistribution = dashboardData?.memberDistribution
 
   useEffect(() => {
+    let isMounted = true // Prevent state updates if unmounted
+    
     async function fetchData() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
 
-      if (user) {
+      if (user && isMounted) {
         const res = await getUserOrganizationId(user.id)
-        setOrgId(res.organizationId)
-        setOrganizationLoading(false)
-        
-        // Fetch dashboard stats
-        if (res.organizationId) {
-          const stats = await getDashboardStats()
-          setDashboardStats(stats)
-
-          // Fetch monthly attendance from server-side API (server will use service/client with cookies)
-          try {
-            const resp = await fetch('/api/dashboard/monthly', { credentials: 'same-origin' })
-            const json = await resp.json()
-            console.log('[dashboard] /api/dashboard/monthly response status', resp.status, json)
-            if (json && json.success && json.data) {
-              setMonthlyAttendance(json.data)
-            } else {
-              console.error('Monthly attendance API returned no data', { status: resp.status, body: json })
-            }
-          } catch (err) {
-            console.error('Failed to fetch monthly attendance from API', err)
-          }
+        if (isMounted) {
+          setOrgId(res.organizationId)
         }
-      } else {
+      }
+      if (isMounted) {
         setOrganizationLoading(false)
       }
-      setLoading(false)
     }
     fetchData()
-  }, [])
-
-  // fetch attendance groups after orgId is available (avoid showing other orgs)
-  useEffect(() => {
-    if (!orgId) return
-
-    async function fetchGroups() {
-      try {
-        const query = `?organizationId=${orgId}`
-        const resp = await fetch(`/api/attendance/group${query}`)
-        const json = await resp.json()
-        if (json && json.success) {
-          // transform data to table schema
-          const transformed = (json.data || []).map((g: any) => {
-            const present_plus_late = (g.present || 0) + (g.late || 0)
-            const not_in_others = (g.absent || 0) + (g.excused || 0) + (g.others || 0)
-            const total = g.total || present_plus_late + not_in_others
-            const percent_present = total > 0 ? present_plus_late / total : 0
-            const late_count = g.late || 0
-            const overall = present_plus_late + not_in_others
-            return {
-              group: g.group,
-              present_plus_late,
-              not_in_others,
-              percent_present,
-              late_count,
-              overall,
-            }
-          })
-          setAttendanceGroups(transformed)
-        } else {
-          setAttendanceGroups([])
-        }
-      } catch (err) {
-        console.error('Failed to load attendance groups', err)
-        setAttendanceGroups([])
-      }
+    
+    return () => {
+      isMounted = false // Cleanup
     }
-    fetchGroups()
-  }, [orgId])
+  }, [])
 
   // Show loading state while checking organization
   if (organizationLoading) {
@@ -154,25 +100,22 @@ export default function Home() {
   <div className="w-full max-w-[90rem] px-6 mx-auto">
           <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
             <div className="mt-4">
-              <SectionCards monthlyAttendance={monthlyAttendance} />
+              <SectionCards dashboardData={dashboardData} />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
             {orgId && <GroupChart organizationId={orgId} />}
             
-            {dashboardStats.memberDistribution && 
-             !Array.isArray(dashboardStats.memberDistribution) && 
-             dashboardStats.memberDistribution.status && (
-              <MemberStatusChart data={dashboardStats.memberDistribution.status} />
+            {memberDistribution && memberDistribution.status && (
+              <MemberStatusChart data={memberDistribution.status} />
             )}
           </div>
           
           <div className="grid grid-cols-1 gap-5">
-                {/* replaced ChartLineDots with AttendanceByGroupTable */}
                 <div>
                   <AttendanceByGroupTable 
                     data={attendanceGroups} 
-                    isLoading={loading || organizationLoading} 
+                    isLoading={organizationLoading || statsLoading} 
                   />
                 </div>
           </div>

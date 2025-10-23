@@ -141,9 +141,9 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Exclude static assets and debug/api routes used during development from auth middleware
+  // Exclude static assets and ALL api routes from auth middleware
+  // API routes will handle their own authentication
   matcher: [
-    // Ensure our client logging endpoint and other debug APIs are excluded from auth middleware
-    "/((?!_next/static|_next/image|favicon.ico|api/debug|api/dashboard/monthly|api/log-client-error).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/).*)",
   ],
 }

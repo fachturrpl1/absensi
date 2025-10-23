@@ -3,8 +3,6 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getUserOrganization } from "@/utils/get-user-org";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   try {
     // Await cookie store (avoid sync dynamic API usage)
@@ -82,6 +80,10 @@ export async function GET() {
         previousMonth: previousMonthCount,
         percentChange
       }
+    }, {
+      headers: {
+        'Cache-Control': 'public, max-age=300, stale-while-revalidate=60'
+      }
     });
 
   } catch (error) {
@@ -92,6 +94,10 @@ export async function GET() {
         currentMonth: 0,
         previousMonth: 0,
         percentChange: 0
+      }
+    }, {
+      headers: {
+        'Cache-Control': 'public, max-age=60, stale-while-revalidate=30'
       }
     });
   }

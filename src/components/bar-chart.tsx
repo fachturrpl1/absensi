@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { memo } from "react"
 import { TrendingUp } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
 
@@ -19,7 +19,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 
-import { getDepartmentMembersByOrganization } from "@/action/members"
+import { useDepartmentMembers } from "@/hooks/use-department-members"
 
 const chartConfig = {
   members: {
@@ -28,20 +28,9 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function GroupChart({ organizationId }: { organizationId: string }) {
-  const [chartData, setChartData] = useState<{ department: string; members: number }[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    async function fetchData() {
-      const res = await getDepartmentMembersByOrganization(organizationId)
-      if (res.success) {
-        setChartData(res.data)
-        setLoading(false)
-      }
-    }
-    fetchData()
-  }, [organizationId])
+export const GroupChart = memo(function GroupChart({ organizationId }: { organizationId: string }) {
+  // Use React Query instead of useEffect + useState
+  const { data: chartData = [], isLoading: loading } = useDepartmentMembers(organizationId)
 
   return (
     <Card>
@@ -83,4 +72,4 @@ export function GroupChart({ organizationId }: { organizationId: string }) {
       </CardFooter>
     </Card>
   )
-}
+})
