@@ -1,390 +1,283 @@
-# 📱 Presensi - Smart Attendance Management System
+# Presensi - Smart Attendance Management
 
-> Modern web-based attendance management application built with Next.js, React, and Supabase
+Aplikasi manajemen kehadiran berbasis web untuk organisasi/perusahaan dengan fitur lengkap dan modern.
 
 [![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-blue)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-Latest-green)](https://supabase.com/)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4-06B6D4)](https://tailwindcss.com/)
 
 ---
 
-## 🚀 Overview
+## Fitur Utama
 
-**Presensi** adalah aplikasi manajemen kehadiran (attendance) berbasis web yang dirancang untuk membantu organisasi/perusahaan mengelola kehadiran karyawan dengan mudah dan efisien. Aplikasi ini mendukung multi-organization, role-based access control, real-time updates, dan analisis attendance.
-
-### ✨ Key Features
-
-- 🏢 **Multi-Organization Support** - Satu instance untuk banyak organisasi
-- 👥 **Member Management** - Kelola data karyawan dengan lengkap
-- 📅 **Flexible Scheduling** - Jadwal kerja fleksibel (fixed, rotating, flexible)
-- ⏰ **Attendance Tracking** - Catat kehadiran via web, mobile, atau RFID
-- 📊 **Analytics & Reports** - Dashboard dan laporan lengkap
-- 🔐 **Role-Based Access Control** - Granular permissions per role
-- 🌍 **Multi-timezone Support** - Mendukung berbagai timezone
-- ⚡ **Real-time Updates** - Live attendance updates via Supabase Realtime
-- 🎨 **Modern UI** - Beautiful interface dengan shadcn/ui
-- 📱 **Responsive Design** - Works di desktop, tablet, dan mobile
+- 🏢 **Multi-Organization** - Satu instance untuk banyak organisasi
+- 👥 **Manajemen Karyawan** - Data lengkap dengan departemen & jabatan
+- 📅 **Jadwal Fleksibel** - Fixed, rotating, dan flexible schedule
+- ⏰ **Tracking Kehadiran** - Web, mobile, RFID (planned)
+- 📊 **Analytics** - Dashboard dan laporan lengkap
+- 🔐 **RBAC** - Role-based access control
+- 🌍 **Multi-timezone** - Support berbagai zona waktu
+- ⚡ **Real-time** - Live updates via Supabase
+- 🎨 **Modern UI** - shadcn/ui components
+- 📱 **Responsive** - Desktop, tablet, mobile
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-### Frontend
-- **Framework:** Next.js 15 (App Router)
-- **Language:** TypeScript 5
-- **UI Library:** React 19
-- **Styling:** TailwindCSS 4
-- **Components:** shadcn/ui (Radix UI)
-- **State Management:** React Query v5 + Zustand
-- **Form Handling:** React Hook Form + Zod
-- **Charts:** Recharts
+**Frontend:** Next.js 15, React 19, TypeScript 5, TailwindCSS 4, shadcn/ui
 
-### Backend
-- **BaaS:** Supabase
-  - PostgreSQL Database
-  - Authentication (JWT)
-  - Storage (file uploads)
-  - Realtime (WebSocket)
-- **API:** Next.js Route Handlers
+**Backend:** Supabase (PostgreSQL, Auth, Storage, Realtime)
 
-### DevOps
-- **Package Manager:** pnpm
-- **Linting:** ESLint 9
-- **Testing:** Vitest
-- **Deployment:** Vercel (recommended)
+**State:** React Query v5, Zustand
+
+**Form:** React Hook Form + Zod
 
 ---
 
-## 📚 Documentation
-
-Dokumentasi lengkap tersedia di folder `/docs`:
-
-- **[📖 Database Schema](./docs/DATABASE.md)** - Struktur database lengkap dengan ERD, tables, relationships, dan query patterns
-- **[🌐 API Documentation](./docs/API.md)** - Semua API endpoints dengan request/response examples
-- **[🏗️ Architecture](./docs/ARCHITECTURE.md)** - System architecture, design patterns, dan data flow
-- **[💻 Development Guide](./docs/DEVELOPMENT.md)** - Setup local development, coding standards, dan best practices
-- **[🚀 Deployment Guide](./docs/DEPLOYMENT.md)** - Cara deploy ke Vercel, Docker, atau cloud providers
-
----
-
-## 🚦 Quick Start
-
-### Prerequisites
-
-- Node.js >= 18.x
-- pnpm >= 8.x
-- Supabase account & project
-
-### Installation
+## Quick Start
 
 ```bash
-# 1. Clone repository
+# Clone repo
 git clone https://github.com/your-org/presensi.git
 cd presensi
 
-# 2. Install dependencies
+# Install dependencies
 pnpm install
 
-# 3. Setup environment variables
+# Setup environment
 cp .env.example .env.local
 # Edit .env.local dengan Supabase credentials
 
-# 4. Run development server
+# Run development
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open http://localhost:3000
 
-### Environment Variables
+---
 
-Create `.env.local` file:
+## Environment Variables
 
+`.env.local`:
 ```env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# App Configuration (optional)
-NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-**Get Supabase credentials:**
-1. Go to [Supabase Dashboard](https://app.supabase.com)
-2. Select your project
-3. Settings → API
-4. Copy `Project URL` and `anon public` key
+Dapatkan credentials di [Supabase Dashboard](https://app.supabase.com) → Settings → API
 
 ---
 
-## 📁 Project Structure
+## Struktur Project
 
 ```
-presensi/
-├── src/
-│   ├── app/                   # Next.js pages & API routes
-│   │   ├── api/               # API endpoints
-│   │   ├── attendance/        # Attendance pages
-│   │   ├── members/           # Members management
-│   │   └── ...
-│   ├── components/            # React components
-│   │   ├── ui/                # shadcn/ui components
-│   │   └── ...
-│   ├── hooks/                 # Custom React hooks
-│   ├── action/                # Server actions
-│   ├── lib/                   # Utilities
-│   ├── interface/             # TypeScript interfaces
-│   └── middleware.ts          # Auth middleware
-├── docs/                      # Documentation
-├── public/                    # Static assets
-└── ...
+src/
+├── app/              # Pages & API routes
+│   ├── api/         # API endpoints
+│   ├── attendance/  # Attendance pages
+│   ├── members/     # Members pages
+│   └── ...
+├── components/      # React components
+├── hooks/           # Custom hooks
+├── action/          # Server actions (DB ops)
+├── lib/             # Utilities
+└── interface/       # TypeScript types
 ```
-
-See [Architecture Documentation](./docs/ARCHITECTURE.md) for detailed structure.
 
 ---
 
-## 🎯 Key Features Detail
+## Dokumentasi
 
-### 1. Organization Management
-- Multi-tenant architecture
-- Organization settings (timezone, currency, time format)
-- Logo upload
-- Subscription tiers
+📚 **Dokumentasi lengkap tersedia di `/docs`:**
 
-### 2. Member Management
-- Complete employee profiles
-- Department & position assignment
-- Employment status tracking
-- RFID card integration
-- Invitation system
-
-### 3. Attendance Tracking
-- Manual check-in/out via web
-- Mobile app support (planned)
-- RFID reader integration (planned)
-- Geolocation tracking
-- Photo capture for verification
-- Status calculation (present, late, absent, excused)
-
-### 4. Schedule Management
-- Flexible work schedules
-- Fixed, rotating, and flexible shifts
-- Per-member schedule assignment
-- Effective date management
-
-### 5. Analytics & Reports
-- Dashboard with key metrics
-- Attendance trends
-- Department-wise statistics
-- Late analysis
-- Exportable reports (planned)
-
-### 6. Role-Based Access Control
-- Granular permissions
-- Multiple roles per user
-- Module-level access control
-- Organization-scoped data
+- **[Database Schema](./docs/DATABASE.md)** - Struktur database, ERD, query patterns
+- **[API Reference](./docs/API.md)** - Semua endpoints dengan examples
+- **[Architecture](./docs/ARCHITECTURE.md)** - System design & patterns
+- **[Development Guide](./docs/DEVELOPMENT.md)** - Setup & workflow development
+- **[Deployment Guide](./docs/DEPLOYMENT.md)** - Deploy ke Vercel, Docker, cloud
 
 ---
 
-## 🧑‍💻 Development
-
-### Available Scripts
+## Scripts
 
 ```bash
-pnpm dev              # Start development server
-pnpm dev:network      # Start with network access (0.0.0.0)
-pnpm build            # Build for production
-pnpm start            # Start production server
+pnpm dev              # Development server
+pnpm dev:network      # Dev dengan network access
+pnpm build            # Build production
+pnpm start            # Start production
 pnpm lint             # Run ESLint
 pnpm test             # Run tests
-pnpm test:watch       # Run tests in watch mode
 ```
 
-### Development Workflow
+---
+
+## Development Workflow
 
 1. **Create feature branch**
    ```bash
-   git checkout -b feature/your-feature
+   git checkout -b feature/nama-feature
    ```
 
-2. **Make changes**
-   - Follow [Development Guide](./docs/DEVELOPMENT.md)
-   - Follow coding standards
-   - Write tests
+2. **Develop & test**
+   - Ikuti [Development Guide](./docs/DEVELOPMENT.md)
+   - Test lokal
 
-3. **Commit changes**
+3. **Commit & push**
    ```bash
-   git commit -m "feat: add your feature"
+   git commit -m "feat: add feature"
+   git push origin feature/nama-feature
    ```
 
-4. **Push & create PR**
-   ```bash
-   git push origin feature/your-feature
-   ```
-
-### Coding Standards
-
-- Use TypeScript for type safety
-- Follow ESLint rules
-- Use conventional commits
-- Write meaningful comments
-- Test your changes
-
-See [Development Guide](./docs/DEVELOPMENT.md) for detailed guidelines.
+4. **Create Pull Request**
 
 ---
 
-## 🚀 Deployment
+## Deployment
 
-### Deploy to Vercel (Recommended)
+### Vercel (Recommended)
 
-1. **Push to GitHub**
-   ```bash
-   git push origin main
-   ```
+1. Push ke GitHub
+2. Import di [vercel.com](https://vercel.com)
+3. Set environment variables
+4. Deploy
 
-2. **Import to Vercel**
-   - Go to [vercel.com](https://vercel.com)
-   - Import repository
-   - Add environment variables
-   - Deploy
+Auto-deploy:
+- `main` → Production
+- `develop` → Preview
+- PR → Preview URL
 
-3. **Configure custom domain** (optional)
-   - Add domain in Vercel dashboard
-   - Update DNS records
-
-### Deploy with Docker
+### Docker
 
 ```bash
-# Build image
-docker build -t presensi:latest .
-
-# Run container
+docker build -t presensi .
 docker run -p 3000:3000 \
-  -e NEXT_PUBLIC_SUPABASE_URL=your-url \
-  -e NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key \
-  presensi:latest
+  -e NEXT_PUBLIC_SUPABASE_URL=xxx \
+  -e NEXT_PUBLIC_SUPABASE_ANON_KEY=xxx \
+  presensi
 ```
 
-See [Deployment Guide](./docs/DEPLOYMENT.md) for all deployment options.
+Lihat [Deployment Guide](./docs/DEPLOYMENT.md) untuk detail.
 
 ---
 
-## 📊 Performance
+## Contributing
 
-- **60-74% reduction** in API requests through React Query caching
-- Server-side rendering for better SEO
-- Code splitting for faster page loads
-- Image optimization with Next.js Image
-- CDN-ready (Vercel Edge)
+Contributions welcome! Ikuti guidelines:
 
----
-
-## 🔐 Security
-
-- JWT-based authentication via Supabase
-- Row Level Security (RLS) policies
-- Environment variables for secrets
-- HTTPS-only in production
-- Input validation with Zod
-- SQL injection prevention (parameterized queries)
+1. Fork repository
+2. Create feature branch
+3. Commit dengan format: `feat:`, `fix:`, `docs:`
+4. Push & create PR
+5. Review & merge
 
 ---
 
-## 🧪 Testing
+## Database Schema
 
-```bash
-# Run all tests
-pnpm test
+15 tabel utama:
+- organizations
+- user_profiles
+- organization_members
+- departments
+- positions
+- work_schedules
+- work_schedule_details
+- member_schedules
+- attendance_records
+- rfid_cards
+- system_roles
+- permissions
+- role_permissions
+- user_roles
 
-# Run tests in watch mode
-pnpm test:watch
-
-# Run tests with coverage
-pnpm test:coverage
-```
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
-
-See [Development Guide](./docs/DEVELOPMENT.md) for coding standards.
+Lihat [Database Documentation](./docs/DATABASE.md) untuk detail lengkap.
 
 ---
 
-## 📝 License
+## API Endpoints
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+31+ endpoints tersedia:
+- `/api/members` - Members CRUD
+- `/api/attendance` - Attendance tracking
+- `/api/dashboard` - Dashboard stats
+- `/api/groups` - Departments
+- `/api/positions` - Positions
+- `/api/work-schedules` - Schedules
 
----
-
-## 🙏 Acknowledgments
-
-- [Next.js](https://nextjs.org/) - React framework
-- [Supabase](https://supabase.com/) - Backend-as-a-Service
-- [shadcn/ui](https://ui.shadcn.com/) - UI components
-- [TanStack Query](https://tanstack.com/query) - Data fetching & caching
-- [Radix UI](https://www.radix-ui.com/) - UI primitives
-- [TailwindCSS](https://tailwindcss.com/) - Utility-first CSS
+Lihat [API Documentation](./docs/API.md) untuk detail.
 
 ---
 
-## 📧 Contact & Support
+## Performance
 
-- **Documentation:** [/docs](./docs)
-- **Issues:** [GitHub Issues](https://github.com/your-org/presensi/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/your-org/presensi/discussions)
+- **60-74% pengurangan API calls** melalui React Query caching
+- Server-side rendering untuk SEO
+- Code splitting otomatis
+- Image optimization
+- CDN-ready
 
 ---
 
-## 🗺️ Roadmap
+## Security
+
+- JWT authentication via Supabase
+- Row Level Security (RLS)
+- Environment variables untuk secrets
+- HTTPS only
+- Input validation (Zod)
+- Parameterized queries
+
+---
+
+## Roadmap
 
 ### v1.1 (Q1 2025)
 - [ ] Mobile app (React Native)
 - [ ] RFID reader integration
 - [ ] Advanced reporting
-- [ ] Export to PDF/Excel
-- [ ] Email notifications
+- [ ] Export PDF/Excel
 
 ### v1.2 (Q2 2025)
 - [ ] Leave management
 - [ ] Overtime calculation
-- [ ] Payroll integration
-- [ ] Multi-language support
-- [ ] Dark mode improvements
+- [ ] Multi-language
+- [ ] Email notifications
 
 ### v2.0 (Q3 2025)
 - [ ] Face recognition
 - [ ] Biometric integration
-- [ ] Advanced analytics with AI
-- [ ] Mobile SDK for third-party apps
-- [ ] API webhooks
+- [ ] AI analytics
+- [ ] Webhooks
 
 ---
 
-## 📈 Statistics
+## Support
 
-- **Lines of Code:** ~15,000
-- **Components:** 50+
-- **API Endpoints:** 25+
-- **Database Tables:** 15+
-- **Test Coverage:** TBD
+- **Dokumentasi:** [/docs](./docs)
+- **Issues:** [GitHub Issues](https://github.com/your-org/presensi/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/your-org/presensi/discussions)
 
 ---
 
-**Made with ❤️ by Your Team**
+## License
 
-**Last Updated:** 2025-10-23  
-**Version:** 1.0.0
+MIT License - lihat [LICENSE](LICENSE) file.
+
+---
+
+## Acknowledgments
+
+Built with:
+- [Next.js](https://nextjs.org/)
+- [Supabase](https://supabase.com/)
+- [shadcn/ui](https://ui.shadcn.com/)
+- [TanStack Query](https://tanstack.com/query)
+- [Radix UI](https://www.radix-ui.com/)
+- [TailwindCSS](https://tailwindcss.com/)
+
+---
+
+**Last Updated:** 2025-10-23 | **Version:** 1.0.0

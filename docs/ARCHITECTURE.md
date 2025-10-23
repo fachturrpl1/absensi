@@ -1,210 +1,72 @@
-# 🏗️ Architecture Documentation
+# Architecture
 
-## Overview
+## Tech Stack
 
-Presensi adalah aplikasi **full-stack** berbasis **Next.js 15** dengan **App Router**, menggunakan **Supabase** sebagai Backend-as-a-Service (BaaS), **TypeScript** untuk type safety, dan **React Query** untuk state management & caching.
+**Frontend:**
+- Next.js 15 (App Router)
+- React 19
+- TypeScript 5
+- TailwindCSS 4
+- shadcn/ui (Radix UI)
+- React Query v5 (server state)
+- Zustand (client state)
+- React Hook Form + Zod
 
----
-
-## 🎯 Tech Stack
-
-### Frontend
-- **Framework:** Next.js 15 (App Router)
-- **Language:** TypeScript 5
-- **UI Library:** React 19
-- **Styling:** TailwindCSS 4
-- **Component Library:** shadcn/ui (Radix UI primitives)
-- **State Management:** 
-  - React Query v5 (server state)
-  - Zustand (client state)
-- **Form Handling:** React Hook Form + Zod validation
-- **Charts:** Recharts
-- **Icons:** Lucide React
-- **Date Handling:** date-fns, Luxon, moment-timezone
-
-### Backend
-- **BaaS:** Supabase
-  - Auth (authentication)
-  - PostgreSQL database
-  - Storage (file uploads)
-  - Realtime (live updates)
-- **API:** Next.js Route Handlers (App Router)
-- **ORM:** Supabase Client (direct SQL queries)
-
-### DevOps & Tooling
-- **Package Manager:** pnpm
-- **Linting:** ESLint 9
-- **Testing:** Vitest
-- **Version Control:** Git
-- **CI/CD:** (TBD - Vercel, GitHub Actions)
+**Backend:**
+- Supabase (Auth, PostgreSQL, Storage, Realtime)
+- Next.js Route Handlers
 
 ---
 
-## 📁 Project Structure
+## Struktur Project
 
 ```
-presensi/
-├── public/                    # Static assets
-│   ├── favicon.ico
-│   └── images/
-├── src/
-│   ├── app/                   # Next.js App Router pages & layouts
-│   │   ├── layout.tsx         # Root layout (QueryProvider, theme)
-│   │   ├── page.tsx           # Dashboard homepage
-│   │   ├── api/               # API route handlers
-│   │   │   ├── members/
-│   │   │   ├── attendance/
-│   │   │   ├── dashboard/
-│   │   │   └── ...
-│   │   ├── auth/              # Authentication pages
-│   │   │   ├── login/
-│   │   │   └── signup/
-│   │   ├── attendance/        # Attendance management
-│   │   ├── members/           # Members management
-│   │   ├── schedule/          # Schedule management
-│   │   ├── analytics/         # Analytics & reports
-│   │   ├── organization/      # Organization settings
-│   │   └── onboarding/        # Onboarding flow
-│   ├── components/            # Reusable React components
-│   │   ├── ui/                # shadcn/ui components
-│   │   ├── admin-panel/       # Admin layout components
-│   │   ├── form/              # Form components
-│   │   ├── charts/            # Chart components
-│   │   └── ...
-│   ├── hooks/                 # Custom React hooks
-│   │   ├── use-members.ts
-│   │   ├── use-attendance.ts
-│   │   ├── use-groups.ts
-│   │   └── ...
-│   ├── action/                # Server actions (server-side functions)
-│   │   ├── members.ts
-│   │   ├── attendance.ts
-│   │   ├── organization.ts
-│   │   └── ...
-│   ├── lib/                   # Utility libraries
-│   │   ├── utils.ts           # General utilities
-│   │   ├── menu-list.ts       # Navigation menu config
-│   │   ├── timezone.ts        # Timezone utilities
-│   │   └── data-cache.ts      # Caching utilities
-│   ├── utils/                 # Utility functions
-│   │   ├── supabase/
-│   │   │   ├── client.ts      # Client-side Supabase client
-│   │   │   ├── server.ts      # Server-side Supabase client
-│   │   │   └── admin.ts       # Admin Supabase client
-│   │   └── debounce.ts
-│   ├── interface/             # TypeScript interfaces
-│   │   └── index.ts           # All data interfaces/types
-│   ├── types/                 # TypeScript types
-│   │   └── image-compression.ts
-│   ├── config/                # Configuration files
-│   │   └── supabase-config.ts
-│   ├── providers/             # React context providers
-│   │   └── query-provider.tsx
-│   ├── constants/             # App constants
-│   └── middleware.ts          # Next.js middleware (auth check)
-├── docs/                      # Documentation
-│   ├── README.md
-│   ├── DATABASE.md
-│   ├── API.md
-│   ├── ARCHITECTURE.md
-│   ├── DEVELOPMENT.md
-│   └── DEPLOYMENT.md
-├── .env.local                 # Environment variables (local)
-├── .env.example               # Environment variables example
-├── next.config.ts             # Next.js configuration
-├── tsconfig.json              # TypeScript configuration
-├── tailwind.config.ts         # TailwindCSS configuration
-├── components.json            # shadcn/ui configuration
-├── vitest.config.ts           # Vitest configuration
-├── package.json               # Dependencies & scripts
-└── README.md                  # Project overview
+src/
+├── app/                    # Pages & API routes
+│   ├── layout.tsx         # Root layout (providers)
+│   ├── page.tsx           # Dashboard
+│   ├── api/               # API endpoints
+│   ├── auth/              # Login, signup
+│   ├── attendance/        # Attendance pages
+│   ├── members/           # Members pages
+│   └── ...
+├── components/            # React components
+│   ├── ui/               # shadcn/ui primitives
+│   └── ...
+├── hooks/                # Custom React hooks
+├── action/               # Server actions (DB operations)
+├── lib/                  # Utilities
+├── interface/            # TypeScript interfaces
+├── utils/
+│   └── supabase/        # Supabase clients
+└── middleware.ts         # Auth middleware
 ```
 
 ---
 
-## 🔄 Data Flow Architecture
-
-### 1. **Client → Server → Database**
+## Data Flow
 
 ```
-┌──────────────┐
-│   Browser    │
-│  (React UI)  │
-└──────┬───────┘
-       │
-       │ 1. User action (button click, form submit)
-       ▼
-┌──────────────────────────┐
-│   React Component        │
-│   - members-client.tsx   │
-└──────┬───────────────────┘
-       │
-       │ 2. Call custom hook
-       ▼
-┌──────────────────────────┐
-│   Custom Hook            │
-│   - use-members.ts       │
-│   (React Query)          │
-└──────┬───────────────────┘
-       │
-       │ 3. Fetch API endpoint
-       ▼
-┌──────────────────────────┐
-│   API Route Handler      │
-│   - /api/members/route.ts│
-└──────┬───────────────────┘
-       │
-       │ 4. Call server action
-       ▼
-┌──────────────────────────┐
-│   Server Action          │
-│   - action/members.ts    │
-└──────┬───────────────────┘
-       │
-       │ 5. Query database
-       ▼
-┌──────────────────────────┐
-│   Supabase Client        │
-│   - utils/supabase/      │
-└──────┬───────────────────┘
-       │
-       │ 6. SQL Query
-       ▼
-┌──────────────────────────┐
-│   PostgreSQL Database    │
-│   (Supabase)             │
-└──────────────────────────┘
-```
-
-### 2. **Server-Side Rendering (SSR) Flow**
-
-```
-Request → Middleware → Page Component → Server Actions → Database
-                ↓
-          Auth Check
-          Org Check
-```
-
-### 3. **Realtime Updates Flow**
-
-```
-Database Change → Supabase Realtime → WebSocket → Client → React Query Invalidation
+Browser (React UI)
+  ↓
+Custom Hook (React Query)
+  ↓
+API Route Handler (/api/*)
+  ↓
+Server Action (action/*.ts)
+  ↓
+Supabase Client
+  ↓
+PostgreSQL Database
 ```
 
 ---
 
-## 🧩 Key Architecture Patterns
+## Pattern: Server vs Client Components
 
-### 1. **Server Components vs Client Components**
-
-#### Server Components (Default)
-- Fetch data directly (no API calls needed)
-- Access database via Supabase server client
-- Better SEO, smaller bundle size
-- Used for: Pages, layouts, static content
-
+### Server Component (Default)
 ```typescript
-// app/members/page.tsx (Server Component)
+// app/members/page.tsx
 import { getAllOrganization_member } from '@/action/members'
 
 export default async function MembersPage() {
@@ -213,12 +75,14 @@ export default async function MembersPage() {
 }
 ```
 
-#### Client Components
-- Interactive UI (useState, useEffect, event handlers)
-- Call API routes for data fetching
-- Use React Query for caching
-- Used for: Forms, tables, modals, interactive widgets
+**Keuntungan:**
+- Fetch data langsung di server
+- Better SEO
+- Smaller bundle size
 
+---
+
+### Client Component
 ```typescript
 // components/members-client.tsx
 'use client'
@@ -227,89 +91,93 @@ import { useMembers } from '@/hooks/use-members'
 
 export function MembersClient() {
   const { data, isLoading } = useMembers()
-  // ...
+  
+  if (isLoading) return <div>Loading...</div>
+  return <DataTable data={data} />
 }
 ```
 
+**Kapan pakai:**
+- Butuh interactivity (useState, onClick)
+- Butuh browser APIs
+- Butuh React hooks
+
 ---
 
-### 2. **API Layer Pattern**
+## Pattern: API Layer
 
-**3-Layer Architecture:**
-
-```
-Page Component → Custom Hook (React Query) → API Route → Server Action → Database
-```
-
-**Why this pattern?**
-- **Separation of concerns**: UI logic, API logic, business logic separated
-- **Caching**: React Query caches API responses
-- **Type safety**: Full TypeScript typing end-to-end
-- **Reusability**: Hooks can be used in multiple components
-
-**Example:**
-
+### 1. Custom Hook (React Query)
 ```typescript
-// 1. Custom Hook (hooks/use-members.ts)
+// hooks/use-members.ts
+import { useQuery } from '@tanstack/react-query'
+
 export function useMembers() {
   return useQuery({
     queryKey: ['members'],
     queryFn: async () => {
       const res = await fetch('/api/members')
-      const data = await res.json()
-      return data
+      return res.json()
     },
-    staleTime: 3 * 60 * 1000,
+    staleTime: 3 * 60 * 1000, // 3 menit
   })
 }
+```
 
-// 2. API Route (app/api/members/route.ts)
+### 2. API Route
+```typescript
+// app/api/members/route.ts
+import { NextResponse } from 'next/server'
+import { getAllOrganization_member } from '@/action/members'
+
 export async function GET() {
   const result = await getAllOrganization_member()
   return NextResponse.json(result)
 }
+```
 
-// 3. Server Action (action/members.ts)
+### 3. Server Action
+```typescript
+// action/members.ts
+"use server"
+import { createClient } from '@/utils/supabase/server'
+
 export async function getAllOrganization_member() {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('organization_members')
     .select('*')
+  
   return { success: !error, data }
 }
 ```
 
 ---
 
-### 3. **State Management Pattern**
+## State Management
 
-#### Server State (React Query)
-- API data caching
-- Automatic refetching
-- Optimistic updates
-- Background synchronization
-
+### Server State (React Query)
+Untuk data dari API:
 ```typescript
-const { data, isLoading, error, refetch } = useQuery({
+const { data, isLoading, refetch } = useQuery({
   queryKey: ['members'],
   queryFn: fetchMembers,
   staleTime: 3 * 60 * 1000,
 })
 ```
 
-#### Client State (Zustand)
-- UI state (sidebar open/close, theme)
-- User preferences
-- Temporary form state
+**Invalidate setelah mutasi:**
+```typescript
+const queryClient = useQueryClient()
+queryClient.invalidateQueries(['members'])
+```
 
+---
+
+### Client State (Zustand)
+Untuk UI state:
 ```typescript
 // hooks/use-sidebar.ts
 import { create } from 'zustand'
-
-interface SidebarStore {
-  isOpen: boolean
-  toggle: () => void
-}
 
 export const useSidebar = create<SidebarStore>((set) => ({
   isOpen: true,
@@ -319,147 +187,84 @@ export const useSidebar = create<SidebarStore>((set) => ({
 
 ---
 
-### 4. **Authentication & Authorization Pattern**
+## Authentication Flow
 
-#### Middleware Layer (middleware.ts)
-- Checks Supabase session cookie
-- Redirects to login if unauthenticated
-- Checks organization membership
-- Redirects to onboarding if no organization
-
+### Middleware (middleware.ts)
 ```typescript
-export async function middleware(req: NextRequest) {
-  const user = await supabase.auth.getUser()
-  
-  if (!user && !isPublicPath) {
-    return NextResponse.redirect('/auth/login')
-  }
-  
-  // Check organization membership
-  const member = await checkOrganizationMembership(user.id)
-  if (!member) {
-    return NextResponse.redirect('/onboarding')
-  }
-  
-  return NextResponse.next()
-}
-```
+// Check session
+const { data: { user } } = await supabase.auth.getUser()
 
-#### Route-level Authorization
-- API routes check user authentication
-- Server actions scope data by organization_id
-- RLS policies enforce database-level security
-
-```typescript
-// API route
-const user = await supabase.auth.getUser()
-if (!user) {
-  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+// Redirect jika belum login
+if (!user && !isPublicPath) {
+  return NextResponse.redirect('/auth/login')
 }
 
-// Scope to user's organization
+// Check organization membership
 const { data: member } = await supabase
   .from('organization_members')
   .select('organization_id')
   .eq('user_id', user.id)
   .single()
+
+// Redirect ke onboarding jika belum join org
+if (!member) {
+  return NextResponse.redirect('/onboarding')
+}
 ```
 
 ---
 
-### 5. **Form Handling Pattern**
+### API Route Auth
+```typescript
+const { data: { user } } = await supabase.auth.getUser()
 
-**React Hook Form + Zod + shadcn/ui:**
+if (!user) {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+}
+```
 
+---
+
+## Form Handling
+
+### React Hook Form + Zod
 ```typescript
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
 const schema = z.object({
-  name: z.string().min(2, 'Name too short'),
-  email: z.string().email('Invalid email'),
+  name: z.string().min(2),
+  email: z.string().email(),
 })
 
 type FormData = z.infer<typeof schema>
 
-function MemberForm() {
+function Form() {
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', email: '' },
   })
   
   async function onSubmit(data: FormData) {
-    const result = await createMember(data)
-    if (result.success) {
-      toast.success('Member created!')
-      queryClient.invalidateQueries(['members'])
-    }
+    await createMember(data)
+    queryClient.invalidateQueries(['members'])
   }
   
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        <FormField name="name" control={form.control} />
-        <Button type="submit">Submit</Button>
-      </form>
-    </Form>
+    <form onSubmit={form.handleSubmit(onSubmit)}>
+      {/* fields */}
+    </form>
   )
 }
 ```
 
 ---
 
-### 6. **Error Handling Pattern**
+## Supabase Clients
 
-#### API Level
+### Client-side
 ```typescript
-try {
-  const data = await fetchData()
-  return NextResponse.json({ success: true, data })
-} catch (error) {
-  console.error('API Error:', error)
-  return NextResponse.json(
-    { success: false, message: 'Failed to fetch' },
-    { status: 500 }
-  )
-}
-```
-
-#### Component Level
-```typescript
-const { data, error, isLoading } = useMembers()
-
-if (isLoading) return <LoadingSpinner />
-if (error) return <ErrorMessage error={error} />
-
-return <DataTable data={data} />
-```
-
-#### Form Level
-```typescript
-async function onSubmit(data: FormData) {
-  try {
-    await createMember(data)
-    toast.success('Success!')
-  } catch (err) {
-    toast.error(err instanceof Error ? err.message : 'Failed')
-  }
-}
-```
-
----
-
-## 🗄️ Database Access Patterns
-
-### 1. **Supabase Client Variants**
-
-#### Client-side (`utils/supabase/client.ts`)
-- Browser context
-- Uses cookies for auth
-- Public API key
-
-```typescript
+// utils/supabase/client.ts
 import { createBrowserClient } from '@supabase/ssr'
 
 export function createClient() {
@@ -470,12 +275,9 @@ export function createClient() {
 }
 ```
 
-#### Server-side (`utils/supabase/server.ts`)
-- Server components & API routes
-- Reads cookies from request
-- Public API key
-
+### Server-side
 ```typescript
+// utils/supabase/server.ts
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
@@ -488,285 +290,84 @@ export async function createClient() {
       cookies: {
         get: (name) => cookieStore.get(name)?.value,
         set: (name, value, options) => cookieStore.set(name, value, options),
-        remove: (name, options) => cookieStore.delete(name),
-      },
+        remove: (name) => cookieStore.delete(name),
+      }
     }
   )
 }
 ```
 
-#### Admin (`utils/supabase/admin.ts`)
-- Service role key (bypass RLS)
-- Server-side only
-- For admin operations
-
-```typescript
-import { createClient } from '@supabase/supabase-js'
-
-export const adminClient = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-```
-
-### 2. **Query Patterns**
-
-#### Simple Select
-```typescript
-const { data, error } = await supabase
-  .from('organizations')
-  .select('*')
-  .eq('id', orgId)
-  .single()
-```
-
-#### Join Queries
-```typescript
-const { data } = await supabase
-  .from('organization_members')
-  .select(`
-    *,
-    user:user_id (*),
-    departments:department_id (*),
-    positions:position_id (*)
-  `)
-  .eq('organization_id', orgId)
-```
-
-#### Filtering & Ordering
-```typescript
-const { data } = await supabase
-  .from('attendance_records')
-  .select('*')
-  .gte('attendance_date', startDate)
-  .lte('attendance_date', endDate)
-  .eq('status', 'present')
-  .order('attendance_date', { ascending: false })
-```
-
-#### Aggregation
-```typescript
-const { count } = await supabase
-  .from('organization_members')
-  .select('*', { count: 'exact', head: true })
-  .eq('organization_id', orgId)
-  .eq('is_active', true)
-```
+**Kapan pakai apa:**
+- Client-side: Component client, browser actions
+- Server-side: Server components, API routes, server actions
 
 ---
 
-## 🎨 UI/UX Architecture
+## Error Handling
 
-### Component Structure
-
-```
-Page
-├── Layout (admin-panel)
-│   ├── Sidebar
-│   ├── Header
-│   │   └── UserNav
-│   └── Content Area
-│       └── Page Content
-│           ├── Page Header
-│           ├── Filters/Search
-│           ├── Data Table
-│           │   ├── Columns
-│           │   ├── Row Actions
-│           │   └── Pagination
-│           └── Modals/Dialogs
-```
-
-### Design System (shadcn/ui)
-
-**Primitive Components:**
-- Button, Input, Select, Checkbox, Switch
-- Dialog, Sheet, Popover, Tooltip
-- Table, Card, Separator
-- Form, Label, Error Message
-
-**Composed Components:**
-- DataTable (TanStack Table)
-- FormField (React Hook Form)
-- DatePicker (React Day Picker)
-- Charts (Recharts)
-
-**Theme System:**
-- Light/Dark mode (next-themes)
-- CSS variables for colors
-- Responsive breakpoints
-
----
-
-## 🔌 Integration Points
-
-### Supabase Services
-
-#### Auth
+### API Level
 ```typescript
-// Sign up
-await supabase.auth.signUp({ email, password })
-
-// Sign in
-await supabase.auth.signInWithPassword({ email, password })
-
-// Sign out
-await supabase.auth.signOut()
-
-// Get session
-const { data: { session } } = await supabase.auth.getSession()
-```
-
-#### Storage
-```typescript
-// Upload file
-await supabase.storage
-  .from('logo')
-  .upload(`organization/${filename}`, file)
-
-// Get public URL
-const { data } = supabase.storage
-  .from('logo')
-  .getPublicUrl(filepath)
-```
-
-#### Realtime
-```typescript
-const channel = supabase
-  .channel('attendance-changes')
-  .on('postgres_changes', 
-    { event: '*', schema: 'public', table: 'attendance_records' },
-    (payload) => {
-      queryClient.invalidateQueries(['attendance'])
-    }
+try {
+  const data = await fetchData()
+  return NextResponse.json({ success: true, data })
+} catch (error) {
+  console.error('Error:', error)
+  return NextResponse.json(
+    { success: false, message: 'Failed' },
+    { status: 500 }
   )
-  .subscribe()
+}
+```
+
+### Component Level
+```typescript
+const { data, error, isLoading } = useMembers()
+
+if (isLoading) return <LoadingSpinner />
+if (error) return <ErrorMessage error={error} />
+return <DataTable data={data} />
 ```
 
 ---
 
-## 🚀 Performance Optimization
+## Performance Optimization
 
-### 1. **React Query Caching**
+### React Query Caching
 - Reduces API calls by 60-74%
-- Configurable staleTime & gcTime
+- `staleTime`: Data dianggap fresh (3-5 menit)
+- `gcTime`: Cache bertahan (5-10 menit)
 - Background refetching
-- Optimistic updates
 
-### 2. **Next.js Optimizations**
-- App Router (faster navigation)
+### Next.js Optimizations
 - Server Components (smaller bundles)
 - Image optimization (`next/image`)
-- Font optimization (`next/font`)
+- Code splitting (automatic)
 
-### 3. **Database Optimizations**
-- Proper indexes on frequently queried columns
-- RLS policies for security
-- Prepared statements (via Supabase client)
-- Connection pooling (Supabase handles this)
-
-### 4. **Code Splitting**
-- Dynamic imports for heavy components
-- Route-based code splitting (automatic)
-- Lazy loading for non-critical UI
+### Database
+- Proper indexes
+- RLS policies
+- Prepared statements via Supabase
 
 ---
 
-## 🔐 Security Architecture
+## Security
 
-### 1. **Authentication**
-- Supabase Auth (JWT tokens)
-- HTTP-only cookies for session
-- Automatic token refresh
+### Authentication
+- Supabase Auth (JWT)
+- HTTP-only cookies
+- Auto token refresh
 
-### 2. **Authorization**
-- Row Level Security (RLS) policies
+### Authorization
+- Row Level Security (RLS)
 - Organization-scoped queries
 - Role-based permissions
 
-### 3. **Data Protection**
-- Environment variables for secrets
-- HTTPS only (enforced by Supabase)
-- Input validation (Zod schemas)
-- SQL injection protection (parameterized queries)
-
-### 4. **CSRF Protection**
-- SameSite cookies
-- Middleware validation
-- Next.js built-in protections
+### Data Protection
+- Environment variables untuk secrets
+- HTTPS only
+- Input validation (Zod)
+- Parameterized queries
 
 ---
 
-## 📊 Monitoring & Logging
-
-### Client-Side
-- Error boundaries
-- Client error logging API
-- Console warnings in dev
-
-### Server-Side
-- API route error logging
-- Supabase dashboard logs
-- Performance monitoring (planned)
-
----
-
-## 🧪 Testing Strategy
-
-### Unit Tests (Vitest)
-- Utility functions
-- React hooks
-- Form validation schemas
-
-### Integration Tests
-- API routes
-- Server actions
-- Database queries
-
-### E2E Tests (Planned)
-- Playwright for critical user flows
-- Authentication flow
-- CRUD operations
-
----
-
-## 🔄 Deployment Architecture
-
-```
-┌──────────────────┐
-│   GitHub Repo    │
-└────────┬─────────┘
-         │
-         │ git push
-         ▼
-┌──────────────────┐
-│  Vercel CI/CD    │
-│  (Build & Deploy)│
-└────────┬─────────┘
-         │
-         ├──────────────┬──────────────┐
-         ▼              ▼              ▼
-┌──────────────┐  ┌──────────┐  ┌──────────────┐
-│  Vercel Edge │  │ Supabase │  │Supabase      │
-│  (Next.js)   │  │ Database │  │Storage       │
-└──────────────┘  └──────────┘  └──────────────┘
-```
-
-**Environments:**
-- Production: `main` branch → Vercel production
-- Staging: `develop` branch → Vercel preview
-- Local: `localhost:3000`
-
----
-
-## 📚 Further Reading
-
-- [Next.js App Router Docs](https://nextjs.org/docs/app)
-- [Supabase Documentation](https://supabase.com/docs)
-- [React Query Docs](https://tanstack.com/query/latest)
-- [shadcn/ui Documentation](https://ui.shadcn.com)
-- [TailwindCSS Docs](https://tailwindcss.com/docs)
-
----
-
-**Last Updated:** 2025-10-23  
-**Version:** 1.0
+**Last Updated:** 2025-10-23
