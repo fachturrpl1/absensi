@@ -103,7 +103,7 @@ export default function ScheduleClient({
 
   const handleSubmit = async (values: ScheduleForm) => {
     try {
-      let res: { success: boolean; message?: string }
+      let res: { success: boolean; message?: string; data?: any }
       if (editingDetail) {
         res = await updateWorkSchedule(editingDetail.id, values as Partial<IWorkSchedule>)
         if (res.success) {

@@ -110,11 +110,6 @@ export default function Home() {
     <ContentLayout title="Dashboard">
       <div className="mt-6">
         <div className="w-full max-w-[90rem] px-6 mx-auto space-y-6">
-          {/* Hero Section - Today's Summary */}
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <TodaySummaryHero data={todaySummary} isLoading={summaryLoading} />
-          </div>
-
           {/* Stats Cards */}
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <SectionCards dashboardData={dashboardData} />
