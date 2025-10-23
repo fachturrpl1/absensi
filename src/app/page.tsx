@@ -13,6 +13,12 @@ import { SectionCards } from "@/components/section-cards";
 import { useDashboardStats } from "@/hooks/use-dashboard-stats";
 import { MonthlyTrendChart } from "@/components/charts/monthly-trend-chart";
 import { useMonthlyTrend } from "@/hooks/use-monthly-trend";
+import { TodaySummaryHero } from "@/components/dashboard/today-summary-hero";
+import { useTodaySummary } from "@/hooks/use-today-summary";
+import { RecentActivityFeed } from "@/components/dashboard/recent-activity-feed";
+import { useRecentActivity } from "@/hooks/use-recent-activity";
+import { DepartmentComparison } from "@/components/dashboard/department-comparison";
+import { useDepartmentComparison } from "@/hooks/use-department-comparison";
 
 
 export default function Home() {
@@ -22,6 +28,9 @@ export default function Home() {
   // Single consolidated hook call - React Query deduplicates automatically
   const { data: dashboardData, isLoading: statsLoading } = useDashboardStats()
   const { data: monthlyTrendData, isLoading: trendLoading } = useMonthlyTrend()
+  const { data: todaySummary, isLoading: summaryLoading } = useTodaySummary()
+  const { data: recentActivity, isLoading: activityLoading } = useRecentActivity(15)
+  const { data: departmentComparison, isLoading: comparisonLoading } = useDepartmentComparison()
   
   // Extract data from consolidated response
   const attendanceGroups = useMemo(() => {
@@ -101,13 +110,32 @@ export default function Home() {
     <ContentLayout title="Dashboard">
       <div className="mt-6">
         <div className="w-full max-w-[90rem] px-6 mx-auto space-y-6">
+          {/* Hero Section - Today's Summary */}
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <TodaySummaryHero data={todaySummary} isLoading={summaryLoading} />
+          </div>
+
           {/* Stats Cards */}
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <SectionCards dashboardData={dashboardData} />
           </div>
+
+          {/* Recent Activity & Department Comparison */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <RecentActivityFeed 
+              activities={recentActivity} 
+              isLoading={activityLoading}
+              limit={10}
+            />
+            <DepartmentComparison 
+              departments={departmentComparison}
+              isLoading={comparisonLoading}
+              topN={5}
+            />
+          </div>
           
           {/* Monthly Trend Chart */}
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-900">
             <MonthlyTrendChart data={monthlyTrendData} isLoading={trendLoading} />
           </div>
           

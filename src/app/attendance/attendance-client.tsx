@@ -101,7 +101,7 @@ export default function AttendanceClient({
         toast.success("Status updated successfully")
         // Optimistic update
         setAttendance((prev) =>
-          prev.map((a) => (a.id === attendanceId ? { ...a, status: newStatus } : a))
+          prev.map((a) => (a.id === attendanceId ? { ...a, status: newStatus as "present" | "late" | "absent" | "excused" } : a))
         )
       } else {
         toast.error("Failed to update status")
