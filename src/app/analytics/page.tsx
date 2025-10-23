@@ -47,10 +47,33 @@ export default function AnalyticsPage() {
   }, [])
 
   const generateInsights = () => {
-    if (!data?.kpis) return []
+    if (!data?.kpis) {
+      // Return default insights when no data
+      return [
+        {
+          type: "info" as const,
+          title: "No Data Available",
+          description: "Waiting for attendance data to generate insights",
+          value: "0%",
+        },
+        {
+          type: "info" as const,
+          title: "No Late Arrivals",
+          description: "No late arrival data recorded today",
+          value: "0min",
+        },
+        {
+          type: "info" as const,
+          title: "No Trend Data",
+          description: "Not enough data to calculate attendance trends",
+          value: "0%",
+        },
+      ]
+    }
 
     const insights = []
 
+    // Always show attendance rate card
     if (data.kpis.todayAttendanceRate >= 90) {
       insights.push({
         type: "success" as const,
@@ -58,15 +81,30 @@ export default function AnalyticsPage() {
         description: "Today's attendance rate exceeds 90%. Keep up the great work!",
         value: `${data.kpis.todayAttendanceRate}%`,
       })
-    } else if (data.kpis.todayAttendanceRate < 75) {
+    } else if (data.kpis.todayAttendanceRate >= 75) {
+      insights.push({
+        type: "positive" as const,
+        title: "Good Attendance",
+        description: "Today's attendance is within acceptable range",
+        value: `${data.kpis.todayAttendanceRate}%`,
+      })
+    } else if (data.kpis.todayAttendanceRate > 0) {
       insights.push({
         type: "warning" as const,
         title: "Low Attendance",
         description: "Today's attendance is below target. Consider follow-up actions.",
         value: `${data.kpis.todayAttendanceRate}%`,
       })
+    } else {
+      insights.push({
+        type: "info" as const,
+        title: "No Attendance Data",
+        description: "No attendance records found for today",
+        value: "0%",
+      })
     }
 
+    // Always show late arrivals card
     if (data.kpis.avgLateMinutes > 0) {
       insights.push({
         type: "info" as const,
@@ -74,37 +112,16 @@ export default function AnalyticsPage() {
         description: `Average late time is ${data.kpis.avgLateMinutes} minutes today`,
         value: `${data.kpis.avgLateMinutes}min`,
       })
-    }
-
-    if (data.kpis.totalOvertimeHours > 0) {
+    } else {
       insights.push({
-        type: "info" as const,
-        title: "Overtime Activity",
-        description: "Significant overtime hours recorded today",
-        value: `${data.kpis.totalOvertimeHours}h`,
+        type: "success" as const,
+        title: "Excellent Punctuality",
+        description: "No late arrivals recorded today",
+        value: "0min",
       })
     }
 
-    if (data.kpis.onTimeRate >= 95) {
-      insights.push({
-        type: "positive" as const,
-        title: "High Punctuality",
-        description: "Over 95% of attendees arrived on time",
-        value: `${data.kpis.onTimeRate}%`,
-      })
-    }
-
-    if (data.departmentData.length > 0) {
-      const topDept = data.departmentData[0]
-      if (topDept.rate >= 90) {
-        insights.push({
-          type: "success" as const,
-          title: "Top Department",
-          description: `${topDept.name} leads with ${topDept.rate}% attendance`,
-        })
-      }
-    }
-
+    // Always show trend card
     if (data.kpis.trends.attendance > 5) {
       insights.push({
         type: "positive" as const,
@@ -119,17 +136,54 @@ export default function AnalyticsPage() {
         description: "Attendance dropped compared to yesterday",
         value: `${data.kpis.trends.attendance}%`,
       })
-    }
-
-    if (insights.length === 0) {
+    } else {
       insights.push({
         type: "info" as const,
-        title: "Steady Performance",
-        description: "Attendance metrics are stable and within normal range",
+        title: "Stable Attendance",
+        description: "Attendance trend is steady compared to yesterday",
+        value: `${data.kpis.trends.attendance >= 0 ? '+' : ''}${data.kpis.trends.attendance}%`,
       })
     }
 
-    return insights.slice(0, 4)
+    // Overtime card (only if > 0)
+    if (data.kpis.totalOvertimeHours > 0) {
+      insights.push({
+        type: "info" as const,
+        title: "Overtime Activity",
+        description: "Significant overtime hours recorded today",
+        value: `${data.kpis.totalOvertimeHours}h`,
+      })
+    }
+
+    // Punctuality card (only if very high)
+    if (data.kpis.onTimeRate >= 95) {
+      insights.push({
+        type: "positive" as const,
+        title: "High Punctuality",
+        description: "Over 95% of attendees arrived on time",
+        value: `${data.kpis.onTimeRate}%`,
+      })
+    }
+
+    // Top department card
+    if (data.departmentData && data.departmentData.length > 0) {
+      const topDept = data.departmentData[0]
+      if (topDept.rate >= 90) {
+        insights.push({
+          type: "success" as const,
+          title: "Top Department",
+          description: `${topDept.name} leads with ${topDept.rate}% attendance`,
+        })
+      } else if (topDept.rate > 0) {
+        insights.push({
+          type: "info" as const,
+          title: "Top Department",
+          description: `${topDept.name} leads with ${topDept.rate}% attendance`,
+        })
+      }
+    }
+
+    return insights.slice(0, 6)
   }
 
   // Show loading skeleton while initializing or loading data

@@ -50,7 +50,7 @@ export async function GET(request: Request) {
             first_name,
             last_name
           ),
-          departments (
+          departments!organization_members_department_id_fkey (
             name
           )
         )
