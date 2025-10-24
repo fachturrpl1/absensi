@@ -545,8 +545,8 @@ export function AccountForm({ initialData }: AccountFormProps) {
               <Form {...profileForm}>
                 <form onSubmit={profileForm.handleSubmit(handleProfileSubmit)} className="space-y-6">
 
-                  {/* Basic Information - Hidden on mobile */}
-                  <div className="hidden md:block space-y-4">
+                  {/* Basic Information */}
+                  <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={profileForm.control}
@@ -643,10 +643,10 @@ export function AccountForm({ initialData }: AccountFormProps) {
                     />
                   </div>
 
-                  <div className="hidden md:block border-t" />
+                  <div className="border-t" />
 
-                  {/* Contact Information - Hidden on mobile */}
-                  <div className="hidden md:block space-y-4">
+                  {/* Contact Information */}
+                  <div className="space-y-4">
                     <h3 className="text-base font-medium">Contact Information</h3>
                     <div className="grid grid-cols-1 gap-4">
                       <FormField
@@ -670,10 +670,10 @@ export function AccountForm({ initialData }: AccountFormProps) {
                     </div>
                   </div>
 
-                  <div className="hidden md:block border-t" />
+                  <div className="border-t" />
 
-                  {/* Personal Details - Hidden on mobile */}
-                  <div className="hidden md:block space-y-4">
+                  {/* Personal Details */}
+                  <div className="space-y-4">
                     <h3 className="text-base font-medium">Personal Details</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
@@ -744,10 +744,10 @@ export function AccountForm({ initialData }: AccountFormProps) {
                     </div>
                   </div>
 
-                  <div className="hidden md:block border-t" />
+                  <div className="border-t" />
 
-                  {/* Emergency Contact - Hidden on mobile */}
-                  <div className="hidden md:block space-y-4">
+                  {/* Emergency Contact */}
+                  <div className="space-y-4">
                     <h3 className="text-base font-medium">Emergency Contact</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
@@ -807,17 +807,10 @@ export function AccountForm({ initialData }: AccountFormProps) {
                     </div>
                   </div>
 
-                  {/* Mobile message */}
-                  <div className="block md:hidden text-center py-8">
-                    <div className="text-muted-foreground">
-                      <h3 className="text-lg font-medium mb-2">Edit Profile</h3>
-                      <p className="text-sm">Profile editing is available on desktop devices for the best experience.</p>
-                      <p className="text-xs mt-2">Please use a larger screen to update your profile information.</p>
-                    </div>
-                  </div>
 
-                  {/* Submit Button - Hidden on mobile */}
-                  <div className="hidden md:flex justify-end pt-4">
+
+                  {/* Submit Button */}
+                  <div className="flex justify-end pt-4">
                     <Button type="submit" disabled={loading} className="min-w-24">
                       {loading ? "Saving..." : "Save Changes"}
                     </Button>

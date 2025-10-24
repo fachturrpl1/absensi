@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import { useQueryClient } from "@tanstack/react-query"
 
 import { createManualAttendance, checkExistingAttendance } from "@/action/attendance"
 import { getAllOrganization_member } from "@/action/members"
@@ -82,6 +83,7 @@ type SingleFormValues = z.infer<typeof singleFormSchema>
 
 export function AttendanceFormBatch() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [members, setMembers] = useState<MemberOption[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("single")
@@ -173,6 +175,8 @@ export function AttendanceFormBatch() {
       const res = await createManualAttendance(payload)
 
       if (res.success) {
+        // Invalidate all dashboard-related queries to refresh data
+        await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
         toast.success("Attendance recorded successfully")
         router.push("/attendance")
       } else {
@@ -290,9 +294,13 @@ export function AttendanceFormBatch() {
       }
 
       if (successCount === batchEntries.length) {
+        // Invalidate dashboard cache to refresh data
+        await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
         toast.success(`${successCount} attendance records saved successfully`)
         router.push("/attendance")
       } else if (successCount > 0) {
+        // Invalidate dashboard cache even for partial success
+        await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
         toast.success(`${successCount} records saved`)
         if (skipCount > 0) {
           toast.error(`${skipCount} records skipped (duplicates or errors)`)

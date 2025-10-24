@@ -23,9 +23,9 @@ export function useRecentActivity(limit: number = 15) {
       }
       return json.data as ActivityItem[]
     },
-    staleTime: 1000 * 30, // 30 seconds - very fresh for live feed
-    gcTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: true,
-    refetchInterval: 1000 * 60, // Auto-refetch every 1 minute for live updates
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false
   })
 }

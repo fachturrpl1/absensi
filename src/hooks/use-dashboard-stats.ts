@@ -35,6 +35,7 @@ type DashboardStats = {
   activeMembers: MonthlyStats
   activeRfid: MonthlyStats
   attendanceGroups: any[]
+  groupComparison: any[]
 }
 
 // CONSOLIDATED HOOK - Fetches all dashboard stats in one request

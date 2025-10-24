@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
-interface DepartmentStat {
+interface GroupStat {
   id: string
   name: string
   attendanceRate: number
@@ -17,7 +17,7 @@ interface DepartmentStat {
 }
 
 interface DepartmentComparisonProps {
-  departments?: DepartmentStat[]
+  departments?: GroupStat[]
   isLoading?: boolean
   topN?: number
 }
@@ -55,7 +55,7 @@ export const DepartmentComparison = memo(function DepartmentComparison({
   isLoading = false,
   topN = 5
 }: DepartmentComparisonProps) {
-  const topDepartments = departments
+  const topGroups = departments
     .sort((a, b) => b.attendanceRate - a.attendanceRate)
     .slice(0, topN)
 
@@ -67,8 +67,8 @@ export const DepartmentComparison = memo(function DepartmentComparison({
             <Trophy className="h-5 w-5 text-amber-600 dark:text-amber-400" />
           </div>
           <div>
-            <CardTitle>Department Leaderboard</CardTitle>
-            <CardDescription>Top performing departments this month</CardDescription>
+            <CardTitle>Group Leaderboard</CardTitle>
+            <CardDescription>Top performing groups this month</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -85,15 +85,15 @@ export const DepartmentComparison = memo(function DepartmentComparison({
               </div>
             ))}
           </div>
-        ) : topDepartments.length === 0 ? (
+        ) : topGroups.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Trophy className="h-12 w-12 text-muted-foreground/50 mb-3" />
-            <p className="text-sm text-muted-foreground">No department data</p>
+            <p className="text-sm text-muted-foreground">No group data</p>
             <p className="text-xs text-muted-foreground mt-1">Data will appear here</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {topDepartments.map((dept, index) => {
+            {topGroups.map((group, index) => {
               const rank = index + 1
               const config = rankConfig[rank as keyof typeof rankConfig]
               const RankIcon = config?.icon || TrendingUp
@@ -101,7 +101,7 @@ export const DepartmentComparison = memo(function DepartmentComparison({
 
               return (
                 <div
-                  key={dept.id}
+                  key={group.id}
                   className={cn(
                     "space-y-2 p-4 rounded-xl transition-all",
                     isTopThree && "border-2",
@@ -122,7 +122,7 @@ export const DepartmentComparison = memo(function DepartmentComparison({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h4 className="font-semibold text-sm truncate">{dept.name}</h4>
+                          <h4 className="font-semibold text-sm truncate">{group.name}</h4>
                           {isTopThree && (
                             <Badge variant="outline" className={cn("text-xs shrink-0 border-0", config.bgColor, config.color)}>
                               {config.label}
@@ -130,20 +130,20 @@ export const DepartmentComparison = memo(function DepartmentComparison({
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {dept.presentToday} / {dept.totalMembers} present today
+                          {group.presentToday} / {group.totalMembers} present today
                         </p>
                       </div>
                     </div>
                     <div className="text-right shrink-0">
                       <div className={cn(
                         "text-2xl font-bold tabular-nums",
-                        dept.attendanceRate >= 90 
+                        group.attendanceRate >= 90 
                           ? "text-green-600 dark:text-green-400"
-                          : dept.attendanceRate >= 75 
+                          : group.attendanceRate >= 75 
                           ? "text-blue-600 dark:text-blue-400"
                           : "text-amber-600 dark:text-amber-400"
                       )}>
-                        {dept.attendanceRate}%
+                        {group.attendanceRate}%
                       </div>
                       <p className="text-xs text-muted-foreground">attendance</p>
                     </div>
@@ -151,7 +151,7 @@ export const DepartmentComparison = memo(function DepartmentComparison({
 
                   {/* Progress Bar */}
                   <Progress 
-                    value={dept.attendanceRate} 
+                    value={group.attendanceRate} 
                     className={cn(
                       "h-2",
                       isTopThree && "bg-background/50"
@@ -164,16 +164,16 @@ export const DepartmentComparison = memo(function DepartmentComparison({
         )}
 
         {/* Summary Footer */}
-        {!isLoading && topDepartments.length > 0 && (
+        {!isLoading && topGroups.length > 0 && (
           <div className="mt-6 pt-4 border-t">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                Showing top {topDepartments.length} departments
+                Showing top {topGroups.length} groups
               </span>
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
                 <span className="font-medium text-green-600 dark:text-green-400">
-                  {topDepartments[0]?.name || 'N/A'} leads!
+                  {topGroups[0]?.name || 'N/A'} leads!
                 </span>
               </div>
             </div>

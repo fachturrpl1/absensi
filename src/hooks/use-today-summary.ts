@@ -23,9 +23,9 @@ export function useTodaySummary() {
       }
       return json.data as TodaySummaryData
     },
-    staleTime: 1000 * 60, // 1 minute - more frequent updates for live data
-    gcTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: true, // Refetch when user comes back
-    refetchInterval: 1000 * 60 * 2, // Auto-refetch every 2 minutes
+    staleTime: 1000 * 60 * 3, // 3 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false
   })
 }

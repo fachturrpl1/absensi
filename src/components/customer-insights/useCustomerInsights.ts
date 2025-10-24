@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
-import { createClient } from "@/utils/supabase/client"
+import { useQuery } from '@tanstack/react-query'
 
 export type InsightStats = {
   period: string
@@ -11,53 +10,40 @@ export type InsightStats = {
   vipCustomers: number
 }
 
+// Use React Query instead of custom hook with realtime subscription
+// This prevents duplicate API calls and leverages React Query's caching
 export function useCustomerInsights() {
-  const supabase = useRef(createClient())
-  const [stats, setStats] = useState<InsightStats>({
-    period: "Last 24 hours",
+  const { data } = useQuery({
+    queryKey: ['dashboard', 'stats'],
+    queryFn: async () => {
+      const res = await fetch('/api/dashboard/stats', {
+        credentials: 'same-origin',
+        cache: 'default'
+      })
+      const json = await res.json()
+      if (!json?.success || !json.data) {
+        throw new Error('Failed to fetch dashboard stats')
+      }
+      return json.data
+    },
+    staleTime: 1000 * 60 * 3, // 3 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    select: (data) => ({
+      period: 'Today',
+      totalCustomers: data.totalMembers || 0,
+      newCustomers: data.totalActiveMembers || 0,
+      returningCustomers: data.totalGroups || 0,
+      vipCustomers: data.todayAttendance || 0,
+    })
+  })
+
+  return data || {
+    period: "Today",
     totalCustomers: 0,
     newCustomers: 0,
     returningCustomers: 0,
     vipCustomers: 0,
-  })
-
-  useEffect(() => {
-    let mounted = true
-
-    async function fetchFromApi() {
-      try {
-        const res = await fetch('/api/dashboard/stats')
-        const json = await res.json()
-        if (!mounted) return
-        if (json?.success && json.data) {
-          // Map server fields to UI fields
-          setStats({
-            period: 'Today',
-            totalCustomers: json.data.totalMembers || 0,
-            newCustomers: json.data.totalActiveMembers || 0, // will remap in UI later
-            returningCustomers: json.data.totalGroups || 0,
-            vipCustomers: json.data.todayAttendance || 0,
-          })
-        }
-      } catch (err) {
-        console.error('Failed to fetch dashboard stats from API', err)
-      }
-    }
-
-    fetchFromApi()
-
-    // Subscribe to changes on attendance_records, organization_members, departments
-    const channel = supabase.current.channel('public:dashboard-stats')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records' }, () => fetchFromApi())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'organization_members' }, () => fetchFromApi())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'departments' }, () => fetchFromApi())
-      .subscribe()
-
-    return () => {
-      mounted = false
-      try { supabase.current.removeChannel(channel) } catch (e) { }
-    }
-  }, [])
-
-  return stats
+  }
 }

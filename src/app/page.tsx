@@ -8,7 +8,6 @@ import { AttendanceByGroupTable } from "@/components/attendance-by-group-table/a
 import { MemberStatusChart } from "@/components/pie-chart";
 import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState, useMemo } from "react";
-import { CustomerInsights } from "@/components/customer-insights";
 import { SectionCards } from "@/components/section-cards";
 import { useDashboardStats } from "@/hooks/use-dashboard-stats";
 import { MonthlyTrendChart } from "@/components/charts/monthly-trend-chart";
@@ -18,7 +17,7 @@ import { useTodaySummary } from "@/hooks/use-today-summary";
 import { RecentActivityFeed } from "@/components/dashboard/recent-activity-feed";
 import { useRecentActivity } from "@/hooks/use-recent-activity";
 import { DepartmentComparison } from "@/components/dashboard/department-comparison";
-import { useDepartmentComparison } from "@/hooks/use-department-comparison";
+import { useGroupComparison } from "@/hooks/use-department-comparison";
 
 
 export default function Home() {
@@ -30,7 +29,8 @@ export default function Home() {
   const { data: monthlyTrendData, isLoading: trendLoading } = useMonthlyTrend()
   const { data: todaySummary, isLoading: summaryLoading } = useTodaySummary()
   const { data: recentActivity, isLoading: activityLoading } = useRecentActivity(15)
-  const { data: departmentComparison, isLoading: comparisonLoading } = useDepartmentComparison()
+  // Use groupComparison from consolidated stats - no separate API call
+  const { data: groupComparison, isLoading: comparisonLoading } = useGroupComparison()
   
   // Extract data from consolidated response
   const attendanceGroups = useMemo(() => {
@@ -123,7 +123,7 @@ export default function Home() {
               limit={10}
             />
             <DepartmentComparison 
-              departments={departmentComparison}
+              departments={groupComparison}
               isLoading={comparisonLoading}
               topN={5}
             />

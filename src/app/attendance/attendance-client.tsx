@@ -13,6 +13,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useQueryClient } from "@tanstack/react-query"
 
 import {
   IAttendance,
@@ -53,6 +54,7 @@ export default function AttendanceClient({
   initialMemberSchedules,
   defaultTimezone,
 }: AttendanceClientProps) {
+  const queryClient = useQueryClient()
   const [attendance, setAttendance] = React.useState<AttendanceWithRelations[]>([])
 
   // Merge data - memoized
@@ -98,6 +100,8 @@ export default function AttendanceClient({
     try {
       const res = await updateAttendanceStatus(attendanceId, newStatus)
       if (res.success) {
+        // Invalidate dashboard cache to refresh stats
+        await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
         toast.success("Status updated successfully")
         // Optimistic update
         setAttendance((prev) =>

@@ -587,9 +587,13 @@ export async function getDashboardStats(): Promise<{
   activeMembers: { currentMonth: number; previousMonth: number; percentChange: number }
   activeRfid: { currentMonth: number; previousMonth: number; percentChange: number }
   attendanceGroups: any[]
+  groupComparison: any[]
 }> {
   // Call getUserOrganizationId once at the top - prevents multiple DB calls
   const organizationId = await getUserOrganizationId();
+  
+  // Import group comparison function
+  const { getGroupComparisonStats } = await import('./group-comparison')
   
   // All these functions internally call getUserOrganizationId again
   // TODO: Refactor to accept organizationId as parameter to avoid redundant calls
@@ -607,7 +611,8 @@ export async function getDashboardStats(): Promise<{
     monthlyLate,
     activeMembers,
     activeRfid,
-    attendanceGroups
+    attendanceGroups,
+    groupComparison
   ] = await Promise.all([
     getTotalActiveMembers(),
     getTotalMembers(),
@@ -622,7 +627,8 @@ export async function getDashboardStats(): Promise<{
     getMonthlyLateStats(),
     getActiveMembersStats(),
     getActiveRfidStats(),
-    getAttendanceGroupsData(organizationId || '')
+    getAttendanceGroupsData(organizationId || ''),
+    getGroupComparisonStats(organizationId || '')
   ]);
 
   return {
@@ -639,7 +645,8 @@ export async function getDashboardStats(): Promise<{
     monthlyLate: monthlyLate.data,
     activeMembers: activeMembers.data,
     activeRfid: activeRfid.data,
-    attendanceGroups: attendanceGroups.data
+    attendanceGroups: attendanceGroups.data,
+    groupComparison: groupComparison
   };
 }
 

@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
+import { useDashboardStats } from './use-dashboard-stats'
 
-type DepartmentStat = {
+export type GroupStat = {
   id: string
   name: string
   attendanceRate: number
@@ -9,23 +9,18 @@ type DepartmentStat = {
   rank: number
 }
 
-export function useDepartmentComparison() {
-  return useQuery({
-    queryKey: ['dashboard', 'department-comparison'],
-    queryFn: async () => {
-      const res = await fetch('/api/dashboard/department-comparison', {
-        credentials: 'same-origin',
-        cache: 'default'
-      })
-      const json = await res.json()
-      if (!json.success || !json.data) {
-        throw new Error('Failed to fetch department comparison')
-      }
-      return json.data as DepartmentStat[]
-    },
-    staleTime: 1000 * 60 * 3, // 3 minutes
-    gcTime: 1000 * 60 * 10, // 10 minutes
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-  })
+/**
+ * Get group comparison data from consolidated dashboard stats
+ * This eliminates a separate API call and uses cached data
+ */
+export function useGroupComparison() {
+  const { data, ...rest } = useDashboardStats()
+  
+  return {
+    data: (data?.groupComparison || []) as GroupStat[],
+    ...rest
+  }
 }
+
+// Alias for backward compatibility - now returns group data
+export const useDepartmentComparison = useGroupComparison
