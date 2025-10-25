@@ -47,33 +47,39 @@ export default function AnalyticsPage() {
   }, [])
 
   const generateInsights = () => {
+    const insights = []
+
+    // Default when no data
     if (!data?.kpis) {
-      // Return default insights when no data
       return [
         {
           type: "info" as const,
-          title: "No Data Available",
+          title: "Attendance Overview",
           description: "Waiting for attendance data to generate insights",
           value: "0%",
         },
         {
           type: "info" as const,
-          title: "No Late Arrivals",
+          title: "Punctuality Status",
           description: "No late arrival data recorded today",
-          value: "0min",
+          value: "0 min",
         },
         {
           type: "info" as const,
-          title: "No Trend Data",
+          title: "Trend Analysis",
           description: "Not enough data to calculate attendance trends",
           value: "0%",
+        },
+        {
+          type: "info" as const,
+          title: "Department Status",
+          description: "No department data available yet",
+          value: "-",
         },
       ]
     }
 
-    const insights = []
-
-    // Always show attendance rate card
+    // Card 1: Attendance Rate (always show)
     if (data.kpis.todayAttendanceRate >= 90) {
       insights.push({
         type: "success" as const,
@@ -104,17 +110,31 @@ export default function AnalyticsPage() {
       })
     }
 
-    // Show late arrivals card only if there are late arrivals
-    if (data.kpis.avgLateMinutes > 0) {
+    // Card 2: Punctuality (always show)
+    if (data.kpis.onTimeRate >= 95) {
       insights.push({
-        type: "info" as const,
-        title: "Late Arrivals",
+        type: "success" as const,
+        title: "Excellent Punctuality",
+        description: `${data.kpis.onTimeRate}% of attendees arrived on time today`,
+        value: `${data.kpis.onTimeRate}%`,
+      })
+    } else if (data.kpis.avgLateMinutes > 0) {
+      insights.push({
+        type: "warning" as const,
+        title: "Late Arrivals Detected",
         description: `Average late time is ${data.kpis.avgLateMinutes} minutes today`,
-        value: `${data.kpis.avgLateMinutes}min`,
+        value: `${data.kpis.avgLateMinutes} min`,
+      })
+    } else {
+      insights.push({
+        type: "positive" as const,
+        title: "Good Punctuality",
+        description: "Most employees are arriving on time today",
+        value: `${data.kpis.onTimeRate || 0}%`,
       })
     }
 
-    // Always show trend card
+    // Card 3: Trend Analysis (always show)
     if (data.kpis.trends.attendance > 5) {
       insights.push({
         type: "positive" as const,
@@ -138,57 +158,49 @@ export default function AnalyticsPage() {
       })
     }
 
-    // Overtime card (only if > 0)
-    if (data.kpis.totalOvertimeHours > 0) {
+    // Card 4: Top Department / Overtime (always show)
+    if (data.kpis.totalOvertimeHours >= 5) {
       insights.push({
-        type: "info" as const,
-        title: "Overtime Activity",
+        type: "warning" as const,
+        title: "High Overtime",
         description: "Significant overtime hours recorded today",
         value: `${data.kpis.totalOvertimeHours}h`,
       })
-    }
-
-    // Punctuality card (only if very high)
-    if (data.kpis.onTimeRate >= 95) {
-      insights.push({
-        type: "positive" as const,
-        title: "High Punctuality",
-        description: "Over 95% of attendees arrived on time",
-        value: `${data.kpis.onTimeRate}%`,
-      })
-    }
-
-    // Top department card - always show
-    if (data.departmentData && data.departmentData.length > 0) {
+    } else if (data.departmentData && data.departmentData.length > 0) {
       const topDept = data.departmentData[0]
       if (topDept.rate >= 90) {
         insights.push({
           type: "success" as const,
           title: "Top Department",
           description: `${topDept.name} leads with ${topDept.rate}% attendance`,
+          value: `${topDept.rate}%`,
         })
       } else if (topDept.rate > 0) {
         insights.push({
           type: "info" as const,
           title: "Top Department",
           description: `${topDept.name} leads with ${topDept.rate}% attendance`,
+          value: `${topDept.rate}%`,
         })
       } else {
         insights.push({
           type: "info" as const,
-          title: "Top Department",
-          description: `${topDept.name} - No attendance data yet`,
+          title: "Department Status",
+          description: "No department attendance data available yet",
+          value: "-",
         })
       }
     } else {
       insights.push({
         type: "info" as const,
-        title: "Top Department",
-        description: "No department data available",
+        title: "Department Status",
+        description: "No department data available yet",
+        value: "-",
       })
     }
 
-    return insights.slice(0, 6)
+    // Always return exactly 4 insights
+    return insights.slice(0, 4)
   }
 
   // Show loading skeleton while initializing or loading data
@@ -202,8 +214,8 @@ export default function AnalyticsPage() {
               <div className="h-4 w-64 bg-muted rounded animate-pulse mt-2" />
             </div>
           </Card>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[...Array(3)].map((_, i) => (
               <Card key={i} className="p-6">
                 <div className="animate-pulse space-y-3">
                   <div className="h-4 w-24 bg-muted rounded" />

@@ -85,10 +85,13 @@ export function AttendanceFormBatch() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [members, setMembers] = useState<MemberOption[]>([])
+  const [originalMembersData, setOriginalMembersData] = useState<IOrganization_member[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("single")
   const [batchEntries, setBatchEntries] = useState<BatchEntry[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedGroup, setSelectedGroup] = useState<string>("all")
+  const [availableGroups, setAvailableGroups] = useState<Array<{id: string, name: string}>>([])
 
   const form = useForm<SingleFormValues>({
     resolver: zodResolver(singleFormSchema),
@@ -112,18 +115,37 @@ export function AttendanceFormBatch() {
         }
 
         const membersData = (res.data || []) as IOrganization_member[]
+        
+        // Store original data for filtering
+        setOriginalMembersData(membersData)
+        
+        // Extract unique groups/departments
+        const groupsMap = new Map<string, string>()
+        membersData.forEach((member) => {
+          if (member.department_id && member.departments?.name) {
+            groupsMap.set(String(member.department_id), member.departments.name)
+          }
+        })
+        const groups = Array.from(groupsMap.entries()).map(([id, name]) => ({ id, name }))
+        setAvailableGroups(groups)
+
         const options: MemberOption[] = membersData
           .filter((member) => member.id && member.user?.id)
           .map((member) => {
-            const displayName = member.user?.display_name?.trim()
-            const fullName = [member.user?.first_name, member.user?.last_name]
-              .filter(Boolean)
-              .join(" ")
-            const label = displayName || fullName || member.user?.email || "Unknown"
+            // Build full name from first, middle, last name
+            const nameParts = [
+              member.user?.first_name?.trim(),
+              member.user?.middle_name?.trim(),
+              member.user?.last_name?.trim()
+            ].filter(Boolean)
+            
+            const fullName = nameParts.length > 0 
+              ? nameParts.join(" ") 
+              : member.user?.email || "Unknown"
 
             return {
               id: String(member.id),
-              label,
+              label: fullName,
               department: member.departments?.name || "No Department",
             }
           })
@@ -337,43 +359,70 @@ export function AttendanceFormBatch() {
                   <CardDescription>Record attendance for one team member</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* Group Filter */}
+                  <div className="space-y-2">
+                    <FormLabel>Filter by Group</FormLabel>
+                    <Select value={selectedGroup} onValueChange={setSelectedGroup} disabled={loading}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="All Groups" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Groups</SelectItem>
+                        {availableGroups.map((group) => (
+                          <SelectItem key={group.id} value={group.id}>
+                            {group.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {/* Member Selection */}
                   <FormField
                     control={form.control}
                     name="memberId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Select Member *</FormLabel>
-                        <Select disabled={loading} value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue
-                                placeholder={loading ? "Loading members..." : "Choose a member"}
-                              />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="max-h-72">
-                            {members.length > 0 ? (
-                              members.map((member) => (
-                                <SelectItem key={member.id} value={member.id}>
-                                  <div className="flex items-center gap-3">
-                                    <span>{member.label}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                      ({member.department})
-                                    </span>
-                                  </div>
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <div className="px-2 py-3 text-sm text-muted-foreground text-center">
-                                {loading ? "Loading..." : "No members found"}
-                              </div>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const filteredMembers = selectedGroup === "all"
+                        ? members
+                        : members.filter((m) => {
+                            const member = originalMembersData.find((om) => String(om.id) === m.id)
+                            return member && String(member.department_id) === selectedGroup
+                          })
+
+                      return (
+                        <FormItem>
+                          <FormLabel>Select Member *</FormLabel>
+                          <Select disabled={loading} value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue
+                                  placeholder={loading ? "Loading members..." : "Choose a member"}
+                                />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="max-h-72">
+                              {filteredMembers.length > 0 ? (
+                                filteredMembers.map((member) => (
+                                  <SelectItem key={member.id} value={member.id}>
+                                    <div className="flex items-center gap-3">
+                                      <span>{member.label}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        ({member.department})
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+                                  {loading ? "Loading..." : selectedGroup === "all" ? "No members found" : "No members in this group"}
+                                </div>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )
+                    }}
                   />
 
                   {/* Status */}
@@ -511,6 +560,24 @@ export function AttendanceFormBatch() {
               <CardDescription>Record attendance for multiple team members at once</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Group Filter for Batch Mode */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Filter by Group</label>
+                <Select value={selectedGroup} onValueChange={setSelectedGroup} disabled={loading}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All Groups" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Groups</SelectItem>
+                    {availableGroups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Quick Add Buttons */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -526,7 +593,13 @@ export function AttendanceFormBatch() {
                   </Button>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-48 overflow-y-auto">
-                  {members.map((member) => (
+                  {(selectedGroup === "all"
+                    ? members
+                    : members.filter((m) => {
+                        const member = originalMembersData.find((om) => String(om.id) === m.id)
+                        return member && String(member.department_id) === selectedGroup
+                      })
+                  ).map((member) => (
                     <Button
                       key={member.id}
                       type="button"
@@ -604,9 +677,20 @@ export function AttendanceFormBatch() {
                                 <SelectValue placeholder="Select member" />
                               </SelectTrigger>
                               <SelectContent className="max-h-48">
-                                {members.map((member) => (
+                                {(selectedGroup === "all"
+                                  ? members
+                                  : members.filter((m) => {
+                                      const member = originalMembersData.find((om) => String(om.id) === m.id)
+                                      return member && String(member.department_id) === selectedGroup
+                                    })
+                                ).map((member) => (
                                   <SelectItem key={member.id} value={member.id}>
-                                    <span>{member.label}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span>{member.label}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        ({member.department})
+                                      </span>
+                                    </div>
                                   </SelectItem>
                                 ))}
                               </SelectContent>

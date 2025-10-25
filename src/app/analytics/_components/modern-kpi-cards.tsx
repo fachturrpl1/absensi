@@ -54,22 +54,12 @@ export function ModernKPICards({ data, loading }: ModernKPICardsProps) {
       bgColor: "bg-orange-50 dark:bg-orange-950/30",
       inverse: true,
     },
-    {
-      title: "Overtime Hours",
-      value: data?.totalOvertimeHours || 0,
-      unit: " hrs",
-      icon: Briefcase,
-      description: "Today's total",
-      trend: data?.trends.overtime || 0,
-      color: "text-purple-600 dark:text-purple-400",
-      bgColor: "bg-purple-50 dark:bg-purple-950/30",
-    },
   ]
 
   if (loading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {[...Array(3)].map((_, i) => (
           <Card key={i} className="overflow-hidden">
             <CardContent className="p-6">
               <div className="animate-pulse space-y-3">
@@ -85,7 +75,7 @@ export function ModernKPICards({ data, loading }: ModernKPICardsProps) {
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {kpis.map((kpi, index) => {
         const Icon = kpi.icon
         const trendValue = kpi.trend
