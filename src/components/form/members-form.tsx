@@ -226,9 +226,7 @@ export default function MembersForm({
                                     render={({ field }) => {
                                         console.log(
                                             "Form value (organization_id):",
-                                            field.value,
-                                            "Options:",
-                                            organizations.map((o) => String(o.id))
+                                            field.value
                                         )
 
                                         return (
@@ -244,11 +242,9 @@ export default function MembersForm({
                                                         </SelectTrigger>
                                                     </FormControl>
                                                     <SelectContent>
-                                                        {organizations.map((org) => (
-                                                            <SelectItem key={String(org.id)} value={String(org.id)}>
-                                                                {org.name}
-                                                            </SelectItem>
-                                                        ))}
+                                                        <SelectItem value={organizationId}>
+                                                            Current Organization
+                                                        </SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                                 <FormMessage />

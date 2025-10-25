@@ -104,6 +104,12 @@ function ActivityItem({ activity }: { activity: Activity }) {
 }
 
 export function ActivityFeed({ data, loading }: ActivityFeedProps) {
+  // Debug: log data to console
+  console.log('[ActivityFeed] Received data:', data?.length, 'activities')
+  if (data?.length > 0) {
+    console.log('[ActivityFeed] First activity:', data[0])
+  }
+
   if (loading) {
     return (
       <Card className="h-full">
@@ -142,8 +148,11 @@ export function ActivityFeed({ data, loading }: ActivityFeedProps) {
       <CardContent>
         <div className="space-y-3 max-h-[450px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
           {data.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              No recent activities
+            <div className="text-center py-12">
+              <div className="text-muted-foreground text-sm mb-2">No recent activities</div>
+              <div className="text-xs text-muted-foreground">
+                Activities from attendance logs will appear here
+              </div>
             </div>
           ) : (
             data.map((activity) => (

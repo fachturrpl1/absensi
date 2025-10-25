@@ -393,8 +393,11 @@ export async function getStatusDistribution() {
 export async function getRecentActivities(limit = 10) {
   const organizationId = await getUserOrganizationId()
   if (!organizationId) {
+    console.log('[getRecentActivities] No organization ID found')
     return { success: false, data: [] }
   }
+
+  console.log('[getRecentActivities] Organization ID:', organizationId)
 
   const supabase = await createClient()
 
@@ -405,19 +408,69 @@ export async function getRecentActivities(limit = 10) {
     .eq("is_active", true)
 
   const memberIdList = memberIds?.map((m) => m.id) || []
+  console.log('[getRecentActivities] Found', memberIdList.length, 'active members')
 
-  // Fetch logs with simple query
-  // Note: Supabase returns timestamptz in ISO 8601 format which includes timezone info
-  const { data: logs } = await supabase
-    .from("attendance_logs")
-    .select("id, event_time, event_type, organization_member_id")
-    .in("organization_member_id", memberIdList)
-    .order("event_time", { ascending: false })
-    .limit(limit)
-
-  if (!logs || logs.length === 0) {
+  if (memberIdList.length === 0) {
+    console.log('[getRecentActivities] No active members found')
     return { success: true, data: [] }
   }
+
+  // Fetch both attendance_logs and attendance_records in parallel
+  const [logsResult, recordsResult] = await Promise.all([
+    // Fetch attendance logs (real-time events)
+    supabase
+      .from("attendance_logs")
+      .select("id, event_time, event_type, organization_member_id")
+      .in("organization_member_id", memberIdList)
+      .order("event_time", { ascending: false })
+      .limit(limit),
+    
+    // Fetch attendance records (daily summaries) - last 7 days
+    supabase
+      .from("attendance_records")
+      .select("id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at")
+      .in("organization_member_id", memberIdList)
+      .gte("attendance_date", new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0])
+      .order("created_at", { ascending: false })
+      .limit(limit)
+  ])
+
+  const logs = logsResult.data || []
+  const records = recordsResult.data || []
+
+  if (logsResult.error) {
+    console.error('[getRecentActivities] Error fetching logs:', logsResult.error)
+  }
+  if (recordsResult.error) {
+    console.error('[getRecentActivities] Error fetching records:', recordsResult.error)
+  }
+
+  console.log('[getRecentActivities] Found', logs.length, 'attendance logs and', records.length, 'attendance records')
+
+  // Convert attendance_records to activity format
+  const recordActivities = records.map((record) => ({
+    id: `record-${record.id}`,
+    event_time: record.actual_check_in || record.created_at,
+    event_type: record.status === 'present' ? 'check_in' : 
+                 record.status === 'late' ? 'check_in_late' :
+                 record.status === 'absent' ? 'absent' : 'check_in',
+    organization_member_id: record.organization_member_id,
+    source: 'record' as const
+  }))
+
+  // Combine and sort by time
+  const allActivities = [
+    ...logs.map(log => ({ ...log, source: 'log' as const })),
+    ...recordActivities
+  ].sort((a, b) => new Date(b.event_time).getTime() - new Date(a.event_time).getTime())
+    .slice(0, limit)
+
+  if (allActivities.length === 0) {
+    console.log('[getRecentActivities] No activities found from both sources')
+    return { success: true, data: [] }
+  }
+
+  console.log('[getRecentActivities] Combined', allActivities.length, 'total activities')
 
   // Fetch member details separately
   const { data: members } = await supabase
@@ -428,7 +481,7 @@ export async function getRecentActivities(limit = 10) {
       department_id,
       user_id
     `)
-    .in("id", logs.map((log) => log.organization_member_id))
+    .in("id", allActivities.map((activity) => activity.organization_member_id))
 
   // Fetch user profiles
   const userIds = members?.map((m) => m.user_id).filter(Boolean) || []
@@ -451,15 +504,15 @@ export async function getRecentActivities(limit = 10) {
 
   return {
     success: true,
-    data: logs.map((log) => {
-      const member = memberMap.get(log.organization_member_id)
+    data: allActivities.map((activity) => {
+      const member = memberMap.get(activity.organization_member_id)
       const profile = member?.user_id ? profileMap.get(member.user_id) : null
       const dept = member?.department_id ? deptMap.get(member.department_id) : null
 
       return {
-        id: log.id,
-        time: log.event_time,
-        type: log.event_type,
+        id: typeof activity.id === 'string' ? parseInt(activity.id.replace('record-', '')) : activity.id,
+        time: activity.event_time,
+        type: activity.event_type,
         employeeName: profile
           ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim()
           : "Unknown User",

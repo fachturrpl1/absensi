@@ -20,6 +20,21 @@ type AttendanceGroup = {
   overall: number
 }
 
+type MonthlyTrendData = {
+  month: string
+  attendance: number
+  late: number
+}
+
+type TodaySummaryData = {
+  totalMembers: number
+  checkedIn: number
+  onTime: number
+  late: number
+  absent: number
+  attendanceRate: number
+}
+
 type DashboardStats = {
   totalActiveMembers: number
   totalMembers: number
@@ -36,6 +51,8 @@ type DashboardStats = {
   activeRfid: MonthlyStats
   attendanceGroups: any[]
   groupComparison: any[]
+  monthlyTrend: MonthlyTrendData[]
+  todaySummary: TodaySummaryData
 }
 
 // CONSOLIDATED HOOK - Fetches all dashboard stats in one request

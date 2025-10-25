@@ -510,6 +510,155 @@ export async function getActiveRfidStats() {
   }
 }
 
+// Get monthly trend data (last 6 months)
+async function getMonthlyTrendData(organizationId: string) {
+  try {
+    if (!organizationId) {
+      return []
+    }
+
+    const supabase = await getSupabase()
+    
+    // Get member IDs for the organization
+    const { data: memberIds } = await supabase
+      .from('organization_members')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+
+    const memberIdList = (memberIds || []).map((m: any) => m.id)
+    if (memberIdList.length === 0) {
+      return []
+    }
+
+    // Get last 6 months data
+    const monthsData = []
+    const now = new Date()
+    
+    for (let i = 5; i >= 0; i--) {
+      const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const year = targetDate.getFullYear()
+      const month = targetDate.getMonth() + 1
+      
+      // Get first and last day of month
+      const startDate = new Date(year, month - 1, 1)
+      const endDate = new Date(year, month, 0)
+      
+      const formatDate = (date: Date) => {
+        const y = date.getFullYear()
+        const m = String(date.getMonth() + 1).padStart(2, '0')
+        const d = String(date.getDate()).padStart(2, '0')
+        return `${y}-${m}-${d}`
+      }
+
+      // Get attendance count for this month
+      const { count: attendanceCount } = await supabase
+        .from('attendance_records')
+        .select('id', { count: 'exact', head: true })
+        .in('organization_member_id', memberIdList)
+        .gte('attendance_date', formatDate(startDate))
+        .lte('attendance_date', formatDate(endDate))
+        .in('status', ['present', 'late'])
+
+      // Get late count for this month
+      const { count: lateCount } = await supabase
+        .from('attendance_records')
+        .select('id', { count: 'exact', head: true })
+        .in('organization_member_id', memberIdList)
+        .gte('attendance_date', formatDate(startDate))
+        .lte('attendance_date', formatDate(endDate))
+        .eq('status', 'late')
+
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      
+      monthsData.push({
+        month: monthNames[month - 1],
+        attendance: attendanceCount || 0,
+        late: lateCount || 0
+      })
+    }
+
+    return monthsData
+  } catch (error) {
+    console.error('Error fetching monthly trend data', error)
+    return []
+  }
+}
+
+// Get today's summary data
+async function getTodaySummaryData(organizationId: string) {
+  try {
+    if (!organizationId) {
+      return {
+        totalMembers: 0,
+        checkedIn: 0,
+        onTime: 0,
+        late: 0,
+        absent: 0,
+        attendanceRate: 0
+      }
+    }
+
+    const supabase = await getSupabase()
+    const today = new Date().toISOString().split('T')[0]
+
+    // Get all active members
+    const { data: memberIds } = await supabase
+      .from('organization_members')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+
+    const memberIdList = (memberIds || []).map((m: any) => m.id)
+    const totalMembers = memberIdList.length
+
+    // Get today's attendance records
+    const { data: attendanceRecords } = await supabase
+      .from('attendance_records')
+      .select('status, late_minutes')
+      .in('organization_member_id', memberIdList)
+      .eq('attendance_date', today)
+
+    // Calculate stats
+    const checkedIn = attendanceRecords?.filter(r => 
+      r.status === 'present' || r.status === 'late'
+    ).length || 0
+
+    const onTime = attendanceRecords?.filter(r => 
+      r.status === 'present' || (r.status === 'late' && (r.late_minutes || 0) <= 5)
+    ).length || 0
+
+    const late = attendanceRecords?.filter(r => 
+      r.status === 'late' && (r.late_minutes || 0) > 5
+    ).length || 0
+
+    const absent = totalMembers - checkedIn
+
+    const attendanceRate = totalMembers > 0 
+      ? Math.round((checkedIn / totalMembers) * 100)
+      : 0
+
+    return {
+      totalMembers,
+      checkedIn,
+      onTime,
+      late,
+      absent,
+      attendanceRate
+    }
+  } catch (error) {
+    console.error('Error fetching today summary data', error)
+    return {
+      totalMembers: 0,
+      checkedIn: 0,
+      onTime: 0,
+      late: 0,
+      absent: 0,
+      attendanceRate: 0
+    }
+  }
+}
+
 // Get attendance groups data
 export async function getAttendanceGroupsData(organizationId: string) {
   try {
@@ -588,6 +737,8 @@ export async function getDashboardStats(): Promise<{
   activeRfid: { currentMonth: number; previousMonth: number; percentChange: number }
   attendanceGroups: any[]
   groupComparison: any[]
+  monthlyTrend: Array<{ month: string; attendance: number; late: number }>
+  todaySummary: { totalMembers: number; checkedIn: number; onTime: number; late: number; absent: number; attendanceRate: number }
 }> {
   // Call getUserOrganizationId once at the top - prevents multiple DB calls
   const organizationId = await getUserOrganizationId();
@@ -612,7 +763,9 @@ export async function getDashboardStats(): Promise<{
     activeMembers,
     activeRfid,
     attendanceGroups,
-    groupComparison
+    groupComparison,
+    monthlyTrend,
+    todaySummary
   ] = await Promise.all([
     getTotalActiveMembers(),
     getTotalMembers(),
@@ -628,7 +781,9 @@ export async function getDashboardStats(): Promise<{
     getActiveMembersStats(),
     getActiveRfidStats(),
     getAttendanceGroupsData(organizationId || ''),
-    getGroupComparisonStats(organizationId || '')
+    getGroupComparisonStats(organizationId || ''),
+    getMonthlyTrendData(organizationId || ''),
+    getTodaySummaryData(organizationId || '')
   ]);
 
   return {
@@ -646,7 +801,9 @@ export async function getDashboardStats(): Promise<{
     activeMembers: activeMembers.data,
     activeRfid: activeRfid.data,
     attendanceGroups: attendanceGroups.data,
-    groupComparison: groupComparison
+    groupComparison: groupComparison,
+    monthlyTrend: monthlyTrend,
+    todaySummary: todaySummary
   };
 }
 

@@ -104,20 +104,13 @@ export default function AnalyticsPage() {
       })
     }
 
-    // Always show late arrivals card
+    // Show late arrivals card only if there are late arrivals
     if (data.kpis.avgLateMinutes > 0) {
       insights.push({
         type: "info" as const,
         title: "Late Arrivals",
         description: `Average late time is ${data.kpis.avgLateMinutes} minutes today`,
         value: `${data.kpis.avgLateMinutes}min`,
-      })
-    } else {
-      insights.push({
-        type: "success" as const,
-        title: "Excellent Punctuality",
-        description: "No late arrivals recorded today",
-        value: "0min",
       })
     }
 
@@ -165,7 +158,7 @@ export default function AnalyticsPage() {
       })
     }
 
-    // Top department card
+    // Top department card - always show
     if (data.departmentData && data.departmentData.length > 0) {
       const topDept = data.departmentData[0]
       if (topDept.rate >= 90) {
@@ -180,7 +173,19 @@ export default function AnalyticsPage() {
           title: "Top Department",
           description: `${topDept.name} leads with ${topDept.rate}% attendance`,
         })
+      } else {
+        insights.push({
+          type: "info" as const,
+          title: "Top Department",
+          description: `${topDept.name} - No attendance data yet`,
+        })
       }
+    } else {
+      insights.push({
+        type: "info" as const,
+        title: "Top Department",
+        description: "No department data available",
+      })
     }
 
     return insights.slice(0, 6)

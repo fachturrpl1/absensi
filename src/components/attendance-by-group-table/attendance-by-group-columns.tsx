@@ -27,7 +27,7 @@ export const attendanceByGroupColumns: ColumnDef<AttendanceByGroupRow>[] = [
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           className="font-medium"
         >
-          Department
+          Group
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       )

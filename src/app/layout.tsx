@@ -114,7 +114,7 @@ export default async function RootLayout({
         <UserProvider user={mappedUser} />
         <TimezoneProvider timezone={timezone}>
           <QueryProvider>
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
               <TimeFormatProvider>
                 <AdminPanelLayout>{children}</AdminPanelLayout>
               </TimeFormatProvider>

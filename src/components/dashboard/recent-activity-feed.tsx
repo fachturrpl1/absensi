@@ -67,19 +67,6 @@ export const RecentActivityFeed = memo(function RecentActivityFeed({
       .substring(0, 2)
   }
 
-  const formatTime = (timeString: string) => {
-    try {
-      const date = new Date(timeString)
-      return date.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true 
-      })
-    } catch {
-      return timeString
-    }
-  }
-
   const getRelativeTime = (timeString: string) => {
     try {
       const date = new Date(timeString)
@@ -91,101 +78,151 @@ export const RecentActivityFeed = memo(function RecentActivityFeed({
       if (diffMins < 60) return `${diffMins}m ago`
       const diffHours = Math.floor(diffMins / 60)
       if (diffHours < 24) return `${diffHours}h ago`
-      return formatTime(timeString)
+      const diffDays = Math.floor(diffHours / 24)
+      return `${diffDays}d ago`
     } catch {
-      return formatTime(timeString)
+      return timeString
     }
   }
 
+  if (isLoading) {
+    return (
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500/10">
+              <Activity className="h-4 w-4 text-indigo-600" />
+            </div>
+            <div>
+              <CardTitle className="text-sm font-semibold">Recent Check-ins</CardTitle>
+              <CardDescription className="text-xs">Live attendance activity</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2 pb-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-2.5">
+              <Skeleton className="h-8 w-8 rounded-full flex-shrink-0" />
+              <div className="flex-1 space-y-1">
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-2.5 w-20" />
+              </div>
+              <Skeleton className="h-5 w-12" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (displayActivities.length === 0) {
+    return (
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500/10">
+              <Activity className="h-4 w-4 text-indigo-600" />
+            </div>
+            <div>
+              <CardTitle className="text-sm font-semibold">Recent Check-ins</CardTitle>
+              <CardDescription className="text-xs">Live attendance activity</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pb-3">
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <User className="h-8 w-8 text-muted-foreground/40 mb-1.5" />
+            <p className="text-xs text-muted-foreground font-medium">No recent activity</p>
+            <p className="text-xs text-muted-foreground/60 mt-0.5">Check-ins will appear here</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
-    <Card className="border-0 shadow-lg overflow-hidden">
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 dark:bg-indigo-500/20">
-            <Activity className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+    <Card className="shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500/10">
+            <Activity className="h-4 w-4 text-indigo-600" />
           </div>
           <div>
-            <CardTitle>Recent Check-ins</CardTitle>
-            <CardDescription>Live attendance activity</CardDescription>
+            <CardTitle className="text-sm font-semibold">Recent Check-ins</CardTitle>
+            <CardDescription className="text-xs">Live attendance activity</CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-0">
-        {isLoading ? (
-          <div className="space-y-3 p-6">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
-                <Skeleton className="h-6 w-16" />
-              </div>
-            ))}
-          </div>
-        ) : displayActivities.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <User className="h-12 w-12 text-muted-foreground/50 mb-3" />
-            <p className="text-sm text-muted-foreground">No recent activity</p>
-            <p className="text-xs text-muted-foreground mt-1">Check-ins will appear here</p>
-          </div>
-        ) : (
-          <ScrollArea className="h-[400px]">
-            <div className="space-y-1 p-4">
-              {displayActivities.map((activity, index) => {
-                const config = statusConfig[activity.status]
-                const StatusIcon = config.icon
-                
-                return (
-                  <div
-                    key={activity.id}
-                    className={cn(
-                      "flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-muted/50",
-                      "animate-in fade-in slide-in-from-bottom-2",
-                    )}
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
+      <CardContent className="pb-3">
+        <div className="relative">
+          {/* Timeline vertical line */}
+          <div className="absolute left-4 top-2 bottom-2 w-px bg-gradient-to-b from-indigo-200 via-indigo-300 to-transparent dark:from-indigo-900 dark:via-indigo-800" />
+          
+          <div className="space-y-0.5">
+            {displayActivities.map((activity, index) => {
+              const config = statusConfig[activity.status]
+              const StatusIcon = config.icon
+              const isLast = index === displayActivities.length - 1
+              
+              return (
+                <div
+                  key={activity.id}
+                  className="relative pl-10 pr-2 py-2.5 rounded-lg hover:bg-accent/30 transition-colors group"
+                >
+                  {/* Timeline dot */}
+                  <div className={cn(
+                    "absolute left-[13px] top-1/2 -translate-y-1/2 h-2.5 w-2.5 rounded-full border-2 border-background transition-all",
+                    config.bgColor,
+                    "group-hover:scale-125"
+                  )}>
+                    <div className={cn(
+                      "absolute inset-0 rounded-full animate-ping opacity-75",
+                      config.bgColor,
+                      isLast && index < 3 ? "block" : "hidden"
+                    )} />
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
                     {/* Avatar */}
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className={config.bgColor}>
+                    <Avatar className="h-8 w-8 flex-shrink-0 border-2 border-background shadow-sm">
+                      <AvatarFallback className={cn(config.bgColor, "text-xs font-medium")}>
                         {getInitials(activity.memberName)}
                       </AvatarFallback>
                     </Avatar>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {activity.memberName}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-semibold truncate">
+                          {activity.memberName}
+                        </p>
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            "text-[9px] px-1.5 py-0 h-4 border-0 font-medium flex-shrink-0",
+                            config.bgColor, 
+                            config.color
+                          )}
+                        >
+                          <StatusIcon className="h-2 w-2 mr-0.5" />
+                          {config.label}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5">
                         <span className="truncate">{activity.department || 'No Department'}</span>
-                        <span>•</span>
-                        <span>{getRelativeTime(activity.checkInTime)}</span>
+                        <span className="text-muted-foreground/50">•</span>
+                        <span className="flex items-center gap-0.5">
+                          <Clock className="h-2.5 w-2.5" />
+                          {getRelativeTime(activity.checkInTime)}
+                        </span>
                       </div>
                     </div>
-
-                    {/* Status Badge */}
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge 
-                        variant="outline" 
-                        className={cn("text-xs border-0", config.bgColor, config.color)}
-                      >
-                        <StatusIcon className="h-3 w-3 mr-1" />
-                        {config.label}
-                      </Badge>
-                      {activity.status === 'late' && activity.lateMinutes && (
-                        <span className="text-xs text-muted-foreground">
-                          +{activity.lateMinutes}min
-                        </span>
-                      )}
-                    </div>
                   </div>
-                )
-              })}
-            </div>
-          </ScrollArea>
-        )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
       </CardContent>
     </Card>
   )

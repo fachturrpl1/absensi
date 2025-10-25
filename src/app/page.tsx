@@ -11,13 +11,10 @@ import { useEffect, useState, useMemo } from "react";
 import { SectionCards } from "@/components/section-cards";
 import { useDashboardStats } from "@/hooks/use-dashboard-stats";
 import { MonthlyTrendChart } from "@/components/charts/monthly-trend-chart";
-import { useMonthlyTrend } from "@/hooks/use-monthly-trend";
 import { TodaySummaryHero } from "@/components/dashboard/today-summary-hero";
-import { useTodaySummary } from "@/hooks/use-today-summary";
 import { RecentActivityFeed } from "@/components/dashboard/recent-activity-feed";
 import { useRecentActivity } from "@/hooks/use-recent-activity";
 import { DepartmentComparison } from "@/components/dashboard/department-comparison";
-import { useGroupComparison } from "@/hooks/use-department-comparison";
 
 
 export default function Home() {
@@ -26,11 +23,17 @@ export default function Home() {
 
   // Single consolidated hook call - React Query deduplicates automatically
   const { data: dashboardData, isLoading: statsLoading } = useDashboardStats()
-  const { data: monthlyTrendData, isLoading: trendLoading } = useMonthlyTrend()
-  const { data: todaySummary, isLoading: summaryLoading } = useTodaySummary()
   const { data: recentActivity, isLoading: activityLoading } = useRecentActivity(15)
-  // Use groupComparison from consolidated stats - no separate API call
-  const { data: groupComparison, isLoading: comparisonLoading } = useGroupComparison()
+  
+  // Extract consolidated data - no separate API calls needed
+  const monthlyTrendData = dashboardData?.monthlyTrend
+  const todaySummary = dashboardData?.todaySummary
+  const groupComparison = dashboardData?.groupComparison
+  
+  // All loading states based on single hook
+  const trendLoading = statsLoading
+  const summaryLoading = statsLoading
+  const comparisonLoading = statsLoading
   
   // Extract data from consolidated response
   const attendanceGroups = useMemo(() => {
