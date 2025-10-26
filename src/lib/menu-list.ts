@@ -1,20 +1,14 @@
 import {
-  Tag,
   Settings,
-  Bookmark,
-  SquarePen,
   LayoutGrid,
-  List,
-  Building2,
   UserCheck,
   Group,
   Calendar,
   ClipboardCheck,
-  ShieldCheck,
   Briefcase,
-  BarChart3,
   TrendingUp,
   CalendarCheck2,
+  MapPin,
 } from "@/components/icons/lucide-exports";
 import type { LucideIcon } from "@/components/icons/lucide-exports";
 
@@ -39,59 +33,84 @@ type Group = {
 
 export function getMenuList(pathname: string): Group[] {
   return [
+    // ========================================
+    // OVERVIEW
+    // ========================================
     {
-      groupLabel: "",
+      groupLabel: "Overview",
       menus: [
         {
           href: "/",
           label: "Dashboard",
           icon: LayoutGrid,
           active: pathname === "/"
-        }
-      ]
-    },
-
-    {
-      groupLabel: "General",
-      menus: [
-        {
-          href: "/group",
-          label: "Group",
-          icon: Group,
-          active: pathname.includes("/group")
-        },
-        {
-          href: "/position",
-          label: "Position",
-          icon: Briefcase,
-          active: pathname.includes("/position")
-        },
-        {
-          href: "/members",
-          label: "Member",
-          icon: UserCheck,
-          active: pathname.includes("/members")
-        },
-        {
-          href: "/attendance",
-          label: "Attendance",
-          icon: ClipboardCheck,
-          active: pathname.includes("/attendance")
         },
         {
           href: "/analytics",
           label: "Analytics",
           icon: TrendingUp,
           active: pathname.includes("/analytics")
-        },
+        }
       ]
     },
+
+    // ========================================
+    // PEOPLE
+    // ========================================
     {
-      groupLabel: "Managment",
+      groupLabel: "People",
+      menus: [
+        {
+          href: "/members",
+          label: "Members",
+          icon: UserCheck,
+          active: pathname.includes("/members")
+        },
+        {
+          href: "/group",
+          label: "Groups",
+          icon: Group,
+          active: pathname.includes("/group")
+        },
+        {
+          href: "/position",
+          label: "Positions",
+          icon: Briefcase,
+          active: pathname.includes("/position")
+        }
+      ]
+    },
+
+    // ========================================
+    // ATTENDANCE
+    // ========================================
+    {
+      groupLabel: "Attendance",
+      menus: [
+        {
+          href: "/attendance",
+          label: "Records",
+          icon: ClipboardCheck,
+          active: pathname === "/attendance"
+        },
+        {
+          href: "/attendance/locations",
+          label: "Locations",
+          icon: MapPin,
+          active: pathname.includes("/attendance/locations")
+        }
+      ]
+    },
+
+    // ========================================
+    // SCHEDULING
+    // ========================================
+    {
+      groupLabel: "Scheduling",
       menus: [
         {
           href: "/schedule",
-          label: "Schedule",
+          label: "Work Schedules",
           icon: Calendar,
           active: pathname.includes("/schedule")
         },
@@ -100,10 +119,19 @@ export function getMenuList(pathname: string): Group[] {
           label: "Member Schedules",
           icon: CalendarCheck2,
           active: pathname.includes("/member-schedules")
-        },
+        }
+      ]
+    },
+
+    // ========================================
+    // SETTINGS
+    // ========================================
+    {
+      groupLabel: "Settings",
+      menus: [
         {
           href: "/organization/settings",
-          label: "Organization Settings",
+          label: "Organization",
           icon: Settings,
           active: pathname.includes("/organization/settings")
         }

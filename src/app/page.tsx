@@ -12,7 +12,7 @@ import { SectionCards } from "@/components/section-cards";
 import { useDashboardStats } from "@/hooks/use-dashboard-stats";
 import { MonthlyTrendChart } from "@/components/charts/monthly-trend-chart";
 import { TodaySummaryHero } from "@/components/dashboard/today-summary-hero";
-import { RecentActivityFeed } from "@/components/dashboard/recent-activity-feed";
+// import { RecentActivityFeed } from "@/components/dashboard/recent-activity-feed"; // Component not found
 import { useRecentActivity } from "@/hooks/use-recent-activity";
 import { DepartmentComparison } from "@/components/dashboard/department-comparison";
 
@@ -120,11 +120,11 @@ export default function Home() {
 
           {/* Recent Activity & Department Comparison */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <RecentActivityFeed 
+            {/* <RecentActivityFeed 
               activities={recentActivity} 
               isLoading={activityLoading}
               limit={10}
-            />
+            /> */}
             <DepartmentComparison 
               departments={groupComparison}
               isLoading={comparisonLoading}

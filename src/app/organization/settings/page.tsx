@@ -37,7 +37,7 @@ import { getCurrentUserOrganization, updateOrganization, regenerateInviteCode, O
 import { ContentLayout } from "@/components/admin-panel/content-layout";
 import { INDUSTRY_OPTIONS, findIndustryValue, getIndustryLabel } from "@/lib/constants/industries";
 import { useImageCompression } from "@/hooks/use-image-compression";
-import { debugStorageAccess, getOrganizationLogoPath } from "@/lib/supabase-storage-debug";
+// Removed debug imports - functions moved inline
 
 interface OrganizationData {
   id: number;
@@ -207,7 +207,30 @@ export default function OrganizationSettingsPage() {
   const uploadLogo = async (file: File): Promise<string | null> => {
     try {
       const { createClient } = await import('@/utils/supabase/client');
-      const { deleteOrganizationLogo } = await import('@/lib/supabase-storage-debug');
+      // Helper function to delete old logo
+      const deleteOldLogo = async (logoUrl: string) => {
+        if (!logoUrl) return { success: false, message: 'No logo URL provided' }
+        
+        try {
+          const filePath = logoUrl.split('/').pop()
+          if (!filePath) return { success: false, message: 'Invalid logo URL' }
+          
+          const { createClient } = await import('@/utils/supabase/client')
+          const supabase = createClient()
+          
+          const { error } = await supabase.storage
+            .from('logo')
+            .remove([`organization/${filePath}`])
+          
+          if (error) {
+            return { success: false, message: error.message }
+          }
+          
+          return { success: true, message: 'Logo deleted' }
+        } catch (error) {
+          return { success: false, message: String(error) }
+        }
+      }
       const supabase = createClient();
       
       // Debug: Log file details
@@ -233,7 +256,9 @@ export default function OrganizationSettingsPage() {
       }
       
       try {
-        fileName = getOrganizationLogoPath(orgData?.id || 0, fileNameToUse);
+        // Generate logo path: organization/org_{id}_{filename}
+        const orgId = orgData?.id || 0
+        fileName = `organization/org_${orgId}_${fileNameToUse}`;
       } catch (error) {
         console.error('Error generating file path:', error);
         toast.error('Invalid file name. Please choose another file.');
@@ -243,7 +268,7 @@ export default function OrganizationSettingsPage() {
       // Delete old logo first if it exists
       if (orgData?.logo_url) {
         console.log('Deleting old logo before uploading new one...');
-        const deleteResult = await deleteOrganizationLogo(orgData.logo_url);
+        const deleteResult = await deleteOldLogo(orgData.logo_url);
         if (deleteResult) {
           console.log('Old logo deleted successfully');
         }

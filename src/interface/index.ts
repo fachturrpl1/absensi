@@ -277,6 +277,43 @@ export interface IRfidCard{
     card_type:string;
     issue_date:string;
     organization_member:IOrganization_member;
+}
 
+export interface IDeviceType {
+    id: string;
+    code?: string;
+    name: string;
+    category: string;
+    manufacturer?: string;
+    model?: string;
+    specifications?: Record<string, unknown>;
+    created_at: string;
+}
 
+export interface IAttendanceDevice {
+    id: string;
+    organization_id: string;
+    device_type_id: string;
+    device_code: string;
+    device_name: string;
+    serial_number?: string;
+    ip_address?: string;
+    mac_address?: string;
+    location?: string;
+    latitude?: string;
+    longitude?: string;
+    radius_meters?: number;
+    firmware_version?: string;
+    last_sync_at?: string;
+    is_active: boolean;
+    configuration?: {
+        allow_selfie?: boolean;
+        require_location?: boolean;
+        max_distance?: number;
+        [key: string]: unknown;
+    };
+    created_at: string;
+    updated_at?: string;
+    device_types?: IDeviceType;
+    organization?: IOrganization;
 }
