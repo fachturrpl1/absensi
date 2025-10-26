@@ -6,13 +6,14 @@ import { Area, AreaChart } from "recharts"
 import { IMemberAttendancePoint } from "@/interface"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 
+// eslint-disable-next-line
 type SparklineDatum = {
-  date: string
-  label: string
-  present: number
+  date: string;
+  label: string;
+  present: number;
 }
 
-function formatLabel(date: string) {
+function formatLabel(date: string): string {
   const iso = date && date.length === 10 ? `${date}T00:00:00` : date
   const parsed = new Date(iso)
   if (Number.isNaN(parsed.getTime())) return date

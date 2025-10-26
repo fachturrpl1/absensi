@@ -46,28 +46,40 @@ export const GroupChart = memo(function GroupChart({ organizationId }: { organiz
         <CardDescription>Distribution across departments</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig}>
-          {loading && chartData.length === 0 ? (
-            <div className="flex gap-2">
-              <div className="w-full h-36 bg-muted animate-pulse rounded" />
+        {loading ? (
+          <div className="flex gap-2">
+            <div className="w-full h-36 bg-muted animate-pulse rounded" />
+          </div>
+        ) : chartData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="rounded-full bg-muted p-4 mb-4">
+              <svg className="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
             </div>
-          ) : (
-          <BarChart accessibilityLayer data={chartData}>
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="department"
-              tickLine={false}
-              tickMargin={10}
-              axisLine={false}
-            />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent hideLabel />}
-            />
-            <Bar dataKey="members" fill="var(--color-members)" radius={8} />
-          </BarChart>
-          )}
-        </ChartContainer>
+            <h3 className="font-semibold text-lg mb-1">No Groups Found</h3>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              Create departments or groups to see member distribution across your organization.
+            </p>
+          </div>
+        ) : (
+          <ChartContainer config={chartConfig}>
+            <BarChart accessibilityLayer data={chartData}>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="department"
+                tickLine={false}
+                tickMargin={10}
+                axisLine={false}
+              />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent hideLabel />}
+              />
+              <Bar dataKey="members" fill="var(--color-members)" radius={8} />
+            </BarChart>
+          </ChartContainer>
+        )}
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm">
         <div className="flex gap-2 leading-none font-medium">

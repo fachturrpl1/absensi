@@ -9,38 +9,40 @@ import dynamic from 'next/dynamic'
 import { ComponentType } from 'react'
 
 // Loading fallback component
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center p-8">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
-  </div>
-)
+const LoadingFallback = () => {
+  return (
+    <div className="flex items-center justify-center p-8">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+    </div>
+  )
+}
 
 // ============================================================================
 // FORMS - Large form components (lazy loaded to reduce initial bundle)
 // ============================================================================
 
 export const LazyAccountForm = dynamic(
-  () => import('@/components/form/account-form'),
+  () => import('@/components/form/account-form').then(m => ({ default: m.AccountForm })),
   { loading: LoadingFallback, ssr: false }
 )
 
 export const LazyAttendanceForm = dynamic(
-  () => import('@/components/form/attendance-form'),
+  () => import('@/components/form/attendance-form').then(m => ({ default: m.AttendanceForm })),
   { loading: LoadingFallback, ssr: false }
 )
 
 export const LazyAttendanceFormBatch = dynamic(
-  () => import('@/components/form/attendance-form-batch'),
+  () => import('@/components/form/attendance-form-batch').then(m => ({ default: m.AttendanceFormBatch })),
   { loading: LoadingFallback, ssr: false }
 )
 
 export const LazyAttendanceFormClean = dynamic(
-  () => import('@/components/form/attendance-form-clean'),
+  () => import('@/components/form/attendance-form-clean').then(m => ({ default: m.AttendanceFormClean })),
   { loading: LoadingFallback, ssr: false }
 )
 
 export const LazyAttendanceFormV2 = dynamic(
-  () => import('@/components/form/attendance-form-v2'),
+  () => import('@/components/form/attendance-form-v2').then(m => ({ default: m.AttendanceFormV2 })),
   { loading: LoadingFallback, ssr: false }
 )
 
@@ -93,12 +95,12 @@ export const LazyAttendanceByGroupTable = dynamic(
 )
 
 export const LazyDataTable = dynamic(
-  () => import('@/components/data-table'),
+  () => import('@/components/data-table').then(m => ({ default: m.DataTable })),
   { loading: LoadingFallback }
 )
 
 export const LazyMemberList = dynamic(
-  () => import('@/components/member-list'),
+  () => import('@/components/member-list').then(m => ({ default: m.MembersList })),
   { loading: LoadingFallback }
 )
 
@@ -107,7 +109,7 @@ export const LazyMemberList = dynamic(
 // ============================================================================
 
 export const LazyImageCompressionUpload = dynamic(
-  () => import('@/components/image-compression-upload'),
+  () => import('@/components/image-compression-upload').then(m => ({ default: m.ImageCompressionUpload })),
   { loading: LoadingFallback, ssr: false }
 )
 
@@ -117,7 +119,7 @@ export const LazyChangeFoto = dynamic(
 )
 
 export const LazyPhotoUploadDialog = dynamic(
-  () => import('@/components/photo-upload-dialog'),
+  () => import('@/components/photo-upload-dialog').then(m => ({ default: m.PhotoUploadDialog })),
   { loading: LoadingFallback, ssr: false }
 )
 

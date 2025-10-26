@@ -68,13 +68,23 @@ export function CustomPieChart({
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
-        <ChartContainer
-          config={chartConfig}
-          className="mx-auto aspect-square max-h-[250px]"
-        >
-          {data.length === 0 ? (
-            <div className="w-full h-44 bg-muted animate-pulse rounded" />
-          ) : (
+        {data.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="rounded-full bg-muted p-4 mb-4">
+              <svg className="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <h3 className="font-semibold text-lg mb-1">No Data Available</h3>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              Employee status distribution will appear here once members are added to your organization.
+            </p>
+          </div>
+        ) : (
+          <ChartContainer
+            config={chartConfig}
+            className="mx-auto aspect-square max-h-[250px]"
+          >
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <ChartTooltip
@@ -106,8 +116,8 @@ export function CustomPieChart({
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
-          )}
-        </ChartContainer>
+          </ChartContainer>
+        )}
       </CardContent>
       {footerText && (
         <CardFooter className="flex-col gap-2 text-sm">
