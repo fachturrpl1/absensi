@@ -1,127 +1,160 @@
-"use client"
+"use client";
 
-import { useState, FormEvent } from "react"
-import { GalleryVerticalEnd } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { signUp } from "@/action/users"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import styles from "./signup-form.module.css"
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-export function SignUp({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const [fadeOut, setFadeOut] = useState(false)
-  const router = useRouter()
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { signUp } from "@/action/users";
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+const FormSchema = z
+  .object({
+    first_name: z.string().min(1, { message: "First name is required." }),
+    middle_name: z.string().optional(),
+    last_name: z.string().optional(),
+    email: z.string().email({ message: "Please enter a valid email address." }),
+    password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+    confirmPassword: z.string().min(6, { message: "Confirm Password must be at least 6 characters." }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
 
-    const formData = new FormData(e.currentTarget)
-    const result = await signUp(formData)
+export function SignUp() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const form = useForm<z.infer<typeof FormSchema>>({
+    resolver: zodResolver(FormSchema),
+    defaultValues: {
+      first_name: "",
+      middle_name: "",
+      last_name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
+  const onSubmit = async (data: z.infer<typeof FormSchema>) => {
+    setLoading(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append("first_name", data.first_name);
+    formData.append("middle_name", data.middle_name || "");
+    formData.append("last_name", data.last_name || "");
+    formData.append("email", data.email);
+    formData.append("password", data.password);
+
+    const result = await signUp(formData);
 
     if (result?.error) {
-      setError(result.error)
-      setLoading(false)
+      setError(result.error);
+      setLoading(false);
     } else {
-      setSuccess(true)
-      // Start fade out transition after showing success message
-      setTimeout(() => {
-        setFadeOut(true)
-        // Navigate to onboarding after fade out completes
-        setTimeout(() => {
-          router.push('/onboarding')
-        }, 500) // 500ms fade out duration
-      }, 1000) // Show success message for 1 second
+      router.push("/onboarding");
     }
-  }
+  };
 
   return (
-    <div 
-      className={cn(
-        "flex flex-col gap-6 transition-all duration-500 ease-in-out",
-        fadeOut ? "opacity-0 transform scale-95" : "opacity-100 transform scale-100",
-        className
-      )} 
-      {...props}
-    >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-md">
-            <GalleryVerticalEnd className="size-6" />
-          </div>
-          <h1 className="text-xl font-bold">Welcome to the App</h1>
-        </div>
-
-        {/* Full Name */}
-        <div className="grid gap-3">
-          <Label htmlFor="first_name">First Name</Label>
-          <Input id="first_name" name="first_name" type="text" required />
-        </div>
-        <div className="grid gap-3">
-          <Label htmlFor="middle_name">Middle Name (optional)</Label>
-          <Input id="middle_name" name="middle_name" type="text" />
-        </div>
-        <div className="grid gap-3">
-          <Label htmlFor="last_name">Last Name (optional)</Label>
-          <Input id="last_name" name="last_name" type="text" />
-        </div>
-
-        {/* Email */}
-        <div className="grid gap-3">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="m@example.com"
-            required
-          />
-        </div>
-
-        {/* Password */}
-        <div className="grid gap-3">
-          <Label htmlFor="password">Password</Label>
-          <Input id="password" name="password" type="password" required />
-        </div>
-
-        <div className="text-center text-sm">
-          Already have an account?{" "}
-          <Link href="/auth/login" className="underline underline-offset-4">
-            Login
-          </Link>
-        </div>
-
-        <Button type="submit" className="w-full" disabled={loading || success}>
-          {loading ? 'Signing up...' : success ? 'Redirecting...' : 'Sign Up'}
-        </Button>
-
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="first_name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>First Name</FormLabel>
+              <FormControl>
+                <Input id="first_name" type="text" placeholder="John" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="middle_name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Middle Name (optional)</FormLabel>
+              <FormControl>
+                <Input id="middle_name" type="text" placeholder="Michael" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="last_name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Last Name (optional)</FormLabel>
+              <FormControl>
+                <Input id="last_name" type="text" placeholder="Doe" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email Address</FormLabel>
+              <FormControl>
+                <Input id="email" type="email" placeholder="you@example.com" autoComplete="email" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input id="password" type="password" placeholder="••••••••" autoComplete="new-password" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Confirm Password</FormLabel>
+              <FormControl>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         {error && <p className="text-sm text-red-500">{error}</p>}
-        {success && (
-          <div className={`text-center space-y-2 ${styles['success-container']}`}>
-            <div className="flex items-center justify-center">
-              <div className={`h-6 w-6 text-green-500 mr-2 ${styles['checkmark-animation']}`}>
-                ✓
-              </div>
-              <p className="text-sm text-green-600 font-medium">
-                Account created successfully!
-              </p>
-            </div>
-            <p className="text-xs text-gray-500">
-              Redirecting to onboarding...
-            </p>
-          </div>
-        )}
+        <Button className="w-full" type="submit" disabled={loading}>
+          {loading ? "Signing up..." : "Register"}
+        </Button>
       </form>
-    </div>
-  )
+    </Form>
+  );
 }

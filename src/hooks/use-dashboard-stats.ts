@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useOrganizationId } from './use-organization-id'
 
 type MonthlyStats = {
   currentMonth: number
@@ -57,10 +58,12 @@ type DashboardStats = {
 
 // CONSOLIDATED HOOK - Fetches all dashboard stats in one request
 export function useDashboardStats() {
+  const { data: organizationId } = useOrganizationId()
+
   return useQuery({
-    queryKey: ['dashboard', 'stats'],
+    queryKey: ['dashboard', 'stats', organizationId],
     queryFn: async () => {
-      console.log('[React Query] Fetching consolidated dashboard stats')
+      console.log('[React Query] Fetching consolidated dashboard stats for org:', organizationId)
       const res = await fetch('/api/dashboard/stats', { 
         credentials: 'same-origin',
         // Leverage HTTP caching
@@ -72,6 +75,7 @@ export function useDashboardStats() {
       }
       return json.data as DashboardStats
     },
+    enabled: !!organizationId, // Only fetch when organizationId is available
     staleTime: 1000 * 60 * 3, // 3 minutes - matches server cache
     gcTime: 1000 * 60 * 10, // 10 minutes in cache
     refetchOnWindowFocus: false, // Don't refetch on window focus

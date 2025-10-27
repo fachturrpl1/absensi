@@ -54,6 +54,32 @@ export async function signUp(formData: FormData) {
 }
 
 // ======================
+// SIGN IN WITH GOOGLE
+// ======================
+export async function signInWithGoogle() {
+  const supabase = await getSupabase()
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
+      scopes: 'https://www.googleapis.com/auth/userinfo.email',
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+    },
+  })
+
+  if (error) {
+    console.error('Google OAuth error:', error)
+    return { error: error.message, url: null }
+  }
+
+  return { url: data.url, error: null }
+}
+
+// ======================
 // LOGIN
 // ======================
 export async function login(formData: FormData) {

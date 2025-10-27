@@ -114,12 +114,10 @@ export default function Home() {
       <div className="mt-6">
         <div className="w-full max-w-[90rem] px-6 mx-auto space-y-6">
           {/* Stats Cards */}
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <SectionCards dashboardData={dashboardData} />
-          </div>
+          <SectionCards dashboardData={dashboardData} />
 
           {/* Recent Activity & Department Comparison */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <RecentActivityFeed 
               activities={recentActivity} 
               isLoading={activityLoading}
@@ -133,12 +131,10 @@ export default function Home() {
           </div>
           
           {/* Monthly Trend Chart */}
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-900">
-            <MonthlyTrendChart data={monthlyTrendData} isLoading={trendLoading} />
-          </div>
+          <MonthlyTrendChart data={monthlyTrendData} isLoading={trendLoading} />
           
           {/* Charts Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {orgId && <GroupChart organizationId={orgId} />}
             
             {memberDistribution && memberDistribution.status && (
@@ -147,12 +143,10 @@ export default function Home() {
           </div>
           
           {/* Attendance Table */}
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <AttendanceByGroupTable 
-              data={attendanceGroups} 
-              isLoading={organizationLoading || statsLoading} 
-            />
-          </div>
+          <AttendanceByGroupTable 
+            data={attendanceGroups} 
+            isLoading={organizationLoading || statsLoading} 
+          />
         </div>
       </div>
     </ContentLayout>

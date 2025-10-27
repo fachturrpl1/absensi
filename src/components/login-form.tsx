@@ -1,106 +1,117 @@
-"use client"
+"use client";
 
-import { useState, FormEvent } from "react"
-import { GalleryVerticalEnd } from "@/components/icons/lucide-exports"
-import Link from "next/link"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { login } from "@/action/users"
-import { useRouter } from "next/navigation"
-import { useAuthStore } from "@/store/user-store"
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-export function LoginForm({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const router = useRouter()
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { login } from "@/action/users";
+import { useAuthStore } from "@/store/user-store";
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    setSuccess(false)
+const FormSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address." }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  remember: z.boolean().optional(),
+});
 
-    const formData = new FormData(e.currentTarget)
-    const result = await login(formData)
+export function LoginForm() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const form = useForm<z.infer<typeof FormSchema>>({
+    resolver: zodResolver(FormSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      remember: false,
+    },
+  });
+
+  const onSubmit = async (data: z.infer<typeof FormSchema>) => {
+    setLoading(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append("email", data.email);
+    formData.append("password", data.password);
+
+    const result = await login(formData);
 
     if (!result.success) {
-      setError(result.message || 'Login failed. Please try again.')
+      setError(result.message || "Login failed. Please try again.");
+      setLoading(false);
     } else {
-      // Store user & permissions in Zustand
-      useAuthStore.getState().setUser(result.user)
-      useAuthStore.getState().setPermissions(result.permissions!.map(p => p.code))
-
-      setSuccess(true)
-      setTimeout(() => router.push("/"), 1000)
+      useAuthStore.getState().setUser(result.user);
+      useAuthStore.getState().setPermissions(result.permissions!.map((p) => p.code));
+      router.push("/");
     }
-
-
-    // If login fails, restore loading to allow another attempt.
-    // If it succeeds, keep loading true so the button stays disabled.
-    if (!result.success) {
-      setLoading(false)
-    }
-  }
+  };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-md">
-            <GalleryVerticalEnd className="size-6" />
-          </div>
-          <h1 className="text-xl font-bold">Welcome Back</h1>
-          <p className="text-sm text-muted-foreground">
-            Please login to continue
-          </p>
-        </div>
-
-        {/* Email */}
-        <div className="grid gap-3">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="m@example.com"
-            required
-          />
-        </div>
-
-        {/* Password */}
-        <div className="grid gap-3">
-          <Label htmlFor="password">Password</Label>
-          <Input id="password" name="password" type="password" required />
-        </div>
-
-        <div className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link href="/auth/signup" className="text-primary underline underline-offset-4 hover:text-primary/80">
-            Sign up
-          </Link>
-        </div>
-
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={loading || success}
-        >
-          {loading ? 'Logging in...' : success ? 'Logged in' : 'Login'}
-        </Button>
-
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email Address</FormLabel>
+              <FormControl>
+                <Input id="email" type="email" placeholder="you@example.com" autoComplete="email" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="remember"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center">
+              <FormControl>
+                <Checkbox
+                  id="login-remember"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  className="size-4"
+                />
+              </FormControl>
+              <FormLabel htmlFor="login-remember" className="text-muted-foreground ml-1 text-sm font-medium">
+                Remember me for 30 days
+              </FormLabel>
+            </FormItem>
+          )}
+        />
         {error && <p className="text-sm text-red-500">{error}</p>}
-        {success && (
-          <p className="text-sm text-green-600">
-            Login successful! Redirecting...
-          </p>
-        )}
+        <Button className="w-full" type="submit" disabled={loading}>
+          {loading ? "Logging in..." : "Login"}
+        </Button>
       </form>
-    </div>
-  )
+    </Form>
+  );
 }

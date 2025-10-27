@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useOrganizationId } from './use-organization-id'
 
 type ActivityItem = {
   id: string
@@ -10,8 +11,10 @@ type ActivityItem = {
 }
 
 export function useRecentActivity(limit: number = 15) {
+  const { data: organizationId } = useOrganizationId()
+
   return useQuery({
-    queryKey: ['dashboard', 'recent-activity', limit],
+    queryKey: ['dashboard', 'recent-activity', organizationId, limit],
     queryFn: async () => {
       const res = await fetch(`/api/dashboard/recent-activity?limit=${limit}`, {
         credentials: 'same-origin',
@@ -23,6 +26,7 @@ export function useRecentActivity(limit: number = 15) {
       }
       return json.data as ActivityItem[]
     },
+    enabled: !!organizationId,
     staleTime: 1000 * 60 * 2, // 2 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes
     refetchOnWindowFocus: false,
