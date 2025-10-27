@@ -76,8 +76,8 @@ export function AttendanceByGroupTable({ data, isLoading = false }: AttendanceBy
             Loading attendance data...
           </div>
         ) : (
-          <ScrollArea className="w-[calc(100vw-2rem)] md:w-auto">
-            <Table className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
@@ -107,7 +107,7 @@ export function AttendanceByGroupTable({ data, isLoading = false }: AttendanceBy
                 )}
               </TableBody>
             </Table>
-          </ScrollArea>
+          </div>
         )}
       </CardContent>
     </Card>

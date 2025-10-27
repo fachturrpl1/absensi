@@ -45,7 +45,7 @@ export const SectionCards = memo(function SectionCards({ dashboardData }: Sectio
     : 50;
 
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
       <Card className="@container/card overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 via-white to-blue-50/30 dark:from-blue-950/20 dark:via-background dark:to-blue-950/10">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">

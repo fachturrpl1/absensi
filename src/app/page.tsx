@@ -115,43 +115,41 @@ export default function Home() {
   }
   return (
     <ContentLayout title="Dashboard">
-      <div className="mt-6">
-        <div className="w-full max-w-[90rem] px-6 mx-auto space-y-6">
-          {/* Stats Cards */}
-          <SectionCards dashboardData={dashboardData} />
+      <div className="space-y-4 sm:space-y-6">
+        {/* Stats Cards */}
+        <SectionCards dashboardData={dashboardData} />
 
-          {/* Recent Activity & Department Comparison */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <RecentActivityFeed 
-              activities={recentActivity} 
-              isLoading={activityLoading}
-              limit={10}
-            />
-            <DepartmentComparison 
-              departments={groupComparison}
-              isLoading={comparisonLoading}
-              topN={5}
-            />
-          </div>
-          
-          {/* Monthly Trend Chart */}
-          <MonthlyTrendChart data={monthlyTrendData} isLoading={trendLoading} />
-          
-          {/* Charts Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {orgId && <GroupChart organizationId={orgId} />}
-            
-            {memberDistribution && memberDistribution.status && (
-              <MemberStatusChart data={memberDistribution.status} />
-            )}
-          </div>
-          
-          {/* Attendance Table */}
-          <AttendanceByGroupTable 
-            data={attendanceGroups} 
-            isLoading={organizationLoading || statsLoading} 
+        {/* Recent Activity & Department Comparison */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <RecentActivityFeed 
+            activities={recentActivity} 
+            isLoading={activityLoading}
+            limit={10}
+          />
+          <DepartmentComparison 
+            departments={groupComparison}
+            isLoading={comparisonLoading}
+            topN={5}
           />
         </div>
+        
+        {/* Monthly Trend Chart */}
+        <MonthlyTrendChart data={monthlyTrendData} isLoading={trendLoading} />
+        
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          {orgId && <GroupChart organizationId={orgId} />}
+          
+          {memberDistribution && memberDistribution.status && (
+            <MemberStatusChart data={memberDistribution.status} />
+          )}
+        </div>
+        
+        {/* Attendance Table */}
+        <AttendanceByGroupTable 
+          data={attendanceGroups} 
+          isLoading={organizationLoading || statsLoading} 
+        />
       </div>
     </ContentLayout>
   );
