@@ -18,7 +18,7 @@ export function useRecentActivity(limit: number = 15) {
     queryFn: async () => {
       const res = await fetch(`/api/dashboard/recent-activity?limit=${limit}`, {
         credentials: 'same-origin',
-        cache: 'default'
+        cache: 'no-store'
       })
       const json = await res.json()
       if (!json.success || !json.data) {
@@ -27,9 +27,10 @@ export function useRecentActivity(limit: number = 15) {
       return json.data as ActivityItem[]
     },
     enabled: !!organizationId,
-    staleTime: 1000 * 60 * 2, // 2 minutes
-    gcTime: 1000 * 60 * 10, // 10 minutes
-    refetchOnWindowFocus: false,
-    refetchOnMount: false
+    staleTime: 1000 * 30, // 30 seconds
+    gcTime: 1000 * 60 * 5, // 5 minutes
+    refetchInterval: 1000 * 60, // Auto-refresh every 60 seconds
+    refetchOnWindowFocus: true,
+    refetchOnMount: true
   })
 }

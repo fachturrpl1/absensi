@@ -45,31 +45,31 @@ export const SectionCards = memo(function SectionCards({ dashboardData }: Sectio
     : 50;
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
       <Card className="@container/card overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 via-white to-blue-50/30 dark:from-blue-950/20 dark:via-background dark:to-blue-950/10">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 dark:bg-blue-500/20">
+        <CardHeader className="pb-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 dark:bg-blue-500/20">
               <UserCheck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
             <CardAction>
-              <Badge variant="outline" className="border-blue-200 dark:border-blue-800">
+              <Badge variant="outline" className="border-blue-200 dark:border-blue-800 shrink-0">
                 {percent === null ? null : trendPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                 {percent === null ? '—' : `${percent > 0 ? '+' : ''}${percent}%`}
               </Badge>
             </CardAction>
           </div>
-          <CardDescription className="text-xs font-medium">Total Attendance</CardDescription>
-          <CardTitle className="text-3xl font-bold tabular-nums @[250px]/card:text-4xl">
+          <CardDescription className="text-xs font-medium leading-tight line-clamp-1">Total Attendance</CardDescription>
+          <CardTitle className="text-2xl sm:text-3xl xl:text-4xl font-bold tabular-nums">
             {attendanceValue === null ? <Skeleton className="w-20 h-10" /> : attendanceValue.toLocaleString()}
           </CardTitle>
         </CardHeader>
-        <CardFooter className="flex-col items-start gap-3 pt-0">
+        <CardFooter className="flex-col items-start gap-2 pt-0">
           <Progress value={attendanceProgress} className="h-2" />
-          <div className="flex w-full items-center justify-between text-xs">
-            <span className="text-muted-foreground">Last month: {monthlyAttendance?.previousMonth ?? '—'}</span>
+          <div className="flex w-full items-center justify-between gap-2 text-xs">
+            <span className="text-muted-foreground truncate">Last month: {monthlyAttendance?.previousMonth ?? '—'}</span>
             {percent !== null && (
-              <span className={`font-medium ${trendPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              <span className={`font-medium shrink-0 ${trendPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {trendPositive ? '↑' : '↓'} {Math.abs(percent)}%
               </span>
             )}
@@ -78,29 +78,29 @@ export const SectionCards = memo(function SectionCards({ dashboardData }: Sectio
       </Card>
 
       <Card className="@container/card overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-amber-50 via-white to-amber-50/30 dark:from-amber-950/20 dark:via-background dark:to-amber-950/10">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 dark:bg-amber-500/20">
+        <CardHeader className="pb-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 dark:bg-amber-500/20">
               <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
             <CardAction>
-              <Badge variant="outline" className="border-amber-200 dark:border-amber-800">
+              <Badge variant="outline" className="border-amber-200 dark:border-amber-800 shrink-0">
                 {latePercent === null ? null : lateTrendPositive ? <TrendingDown className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
                 {latePercent === null ? '—' : `${latePercent > 0 ? '+' : ''}${latePercent}%`}
               </Badge>
             </CardAction>
           </div>
-          <CardDescription className="text-xs font-medium">Late Arrivals</CardDescription>
-          <CardTitle className="text-3xl font-bold tabular-nums @[250px]/card:text-4xl">
+          <CardDescription className="text-xs font-medium leading-tight line-clamp-1">Late Arrivals</CardDescription>
+          <CardTitle className="text-2xl sm:text-3xl xl:text-4xl font-bold tabular-nums">
             {lateValue === null ? <Skeleton className="w-20 h-10" /> : lateValue.toLocaleString()}
           </CardTitle>
         </CardHeader>
-        <CardFooter className="flex-col items-start gap-3 pt-0">
+        <CardFooter className="flex-col items-start gap-2 pt-0">
           <Progress value={lateValue && monthlyLate?.previousMonth ? Math.min(100, (lateValue / monthlyLate.previousMonth) * 100) : 0} className="h-2" />
-          <div className="flex w-full items-center justify-between text-xs">
-            <span className="text-muted-foreground">Last month: {monthlyLate?.previousMonth ?? '—'}</span>
+          <div className="flex w-full items-center justify-between gap-2 text-xs">
+            <span className="text-muted-foreground truncate">Last month: {monthlyLate?.previousMonth ?? '—'}</span>
             {latePercent !== null && (
-              <span className={`font-medium ${lateTrendPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              <span className={`font-medium shrink-0 ${lateTrendPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {lateTrendPositive ? '↓' : '↑'} {Math.abs(latePercent)}%
               </span>
             )}
@@ -109,28 +109,28 @@ export const SectionCards = memo(function SectionCards({ dashboardData }: Sectio
       </Card>
 
       <Card className="@container/card overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 via-white to-green-50/30 dark:from-green-950/20 dark:via-background dark:to-green-950/10">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/10 dark:bg-green-500/20">
+        <CardHeader className="pb-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500/10 dark:bg-green-500/20">
               <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
             </div>
             {memberPercent !== null && memberPercent !== 0 && (
-              <Badge variant="outline" className="border-green-200 dark:border-green-800">
+              <Badge variant="outline" className="border-green-200 dark:border-green-800 shrink-0">
                 {memberTrendPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                 {memberPercent > 0 ? '+' : ''}{memberPercent}%
               </Badge>
             )}
           </div>
-          <CardDescription className="text-xs font-medium">Active Members</CardDescription>
-          <CardTitle className="text-3xl font-bold tabular-nums @[250px]/card:text-4xl">
+          <CardDescription className="text-xs font-medium leading-tight line-clamp-1">Active Members</CardDescription>
+          <CardTitle className="text-2xl sm:text-3xl xl:text-4xl font-bold tabular-nums">
             {memberValue === null ? <Skeleton className="w-20 h-10" /> : memberValue.toLocaleString()}
           </CardTitle>
         </CardHeader>
-        <CardFooter className="flex-col items-start gap-3 pt-0">
-          <div className="flex w-full items-center justify-between text-xs">
-            <span className="text-muted-foreground">Active employees</span>
+        <CardFooter className="flex-col items-start gap-2 pt-0">
+          <div className="flex w-full items-center justify-between gap-2 text-xs">
+            <span className="text-muted-foreground truncate">Active employees</span>
             {memberPercent !== null && memberPercent !== 0 && (
-              <span className={`font-medium ${memberTrendPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              <span className={`font-medium shrink-0 ${memberTrendPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {memberTrendPositive ? '↑' : '↓'} {Math.abs(memberPercent)}%
               </span>
             )}
@@ -139,21 +139,21 @@ export const SectionCards = memo(function SectionCards({ dashboardData }: Sectio
       </Card>
 
       <Card className="@container/card overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-50 via-white to-purple-50/30 dark:from-purple-950/20 dark:via-background dark:to-purple-950/10">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 dark:bg-purple-500/20">
+        <CardHeader className="pb-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 dark:bg-purple-500/20">
               <CreditCard className="h-5 w-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
-          <CardDescription className="text-xs font-medium">Active RFID Cards</CardDescription>
-          <CardTitle className="text-3xl font-bold tabular-nums @[250px]/card:text-4xl">
+          <CardDescription className="text-xs font-medium leading-tight line-clamp-1">Active RFID Cards</CardDescription>
+          <CardTitle className="text-2xl sm:text-3xl xl:text-4xl font-bold tabular-nums">
             {rfidStats?.currentMonth === undefined ? <Skeleton className="w-20 h-10" /> : (rfidStats.currentMonth).toLocaleString()}
           </CardTitle>
         </CardHeader>
-        <CardFooter className="flex-col items-start gap-3 pt-0">
-          <div className="flex w-full items-center justify-between text-xs">
-            <span className="text-muted-foreground">Registered cards</span>
-            <span className="font-medium text-purple-600 dark:text-purple-400">Active</span>
+        <CardFooter className="flex-col items-start gap-2 pt-0">
+          <div className="flex w-full items-center justify-between gap-2 text-xs">
+            <span className="text-muted-foreground truncate">Registered cards</span>
+            <span className="font-medium text-purple-600 dark:text-purple-400 shrink-0">Active</span>
           </div>
         </CardFooter>
       </Card>

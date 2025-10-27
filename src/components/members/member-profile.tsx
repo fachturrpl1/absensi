@@ -313,25 +313,20 @@ export default function MemberProfileEnhanced({
                 <CardTitle className="break-words text-2xl font-semibold sm:text-3xl">
                   {displayName || "Name unavailable"}
                 </CardTitle>
-                {member.employment_status ? (
-                  <Badge
-                    variant="secondary"
-                    className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide"
-                  >
-                    {member.employment_status}
-                  </Badge>
-                ) : null}
-                {!member.is_active && (
-                  <Badge variant="destructive" className="rounded-full">
-                    Inactive
-                  </Badge>
-                )}
+                {/* Show Active/Inactive status with priority over employment_status */}
+                <Badge
+                  variant={member.is_active ? "default" : "destructive"}
+                  className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide"
+                >
+                  {member.is_active ? "Active" : "Inactive"}
+                </Badge>
               </div>
               <CardDescription className="break-words text-sm text-muted-foreground">
                 {groupPosition || "Role details unavailable"}
               </CardDescription>
               <div className="flex flex-wrap justify-center gap-2 text-xs text-muted-foreground lg:justify-start">
                 {member.departments?.name ? <Badge variant="outline">{member.departments.name}</Badge> : null}
+                {member.employment_status ? <Badge variant="outline">{member.employment_status}</Badge> : null}
                 {member.contract_type ? <Badge variant="outline">{member.contract_type}</Badge> : null}
                 {member.probation_end_date && new Date(member.probation_end_date) > new Date() ? (
                   <Badge variant="outline" className="border-yellow-500 text-yellow-700">
@@ -551,24 +546,24 @@ export default function MemberProfileEnhanced({
         {/* Performance Highlights - Enhanced */}
         {performance ? (
           <Card className="border-muted-foreground/20">
-            <CardHeader className="flex flex-col gap-1 pb-4">
-              <div className="flex items-center justify-between">
-                <div>
+            <CardHeader className="pb-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex-1">
                   <CardTitle className="text-lg font-semibold">Performance Highlights</CardTitle>
                   <CardDescription>Attendance metrics and work activity.</CardDescription>
                 </div>
-                {/* Attendance Rate with Trend */}
-                <div className="flex items-center gap-2 rounded-lg border bg-card/60 px-4 py-2">
+                {/* Attendance Rate with Trend - Positioned at top right */}
+                <div className="flex items-center gap-3 rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 px-6 py-4 shadow-sm">
                   <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Attendance Rate</p>
-                    <p className="text-2xl font-bold text-primary">{attendanceRate}%</p>
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Attendance Rate</p>
+                    <p className="text-3xl font-bold text-primary">{attendanceRate}%</p>
                   </div>
                   {trend === "up" ? (
-                    <TrendingUp className="h-5 w-5 text-green-500" />
+                    <TrendingUp className="h-6 w-6 text-green-500" />
                   ) : trend === "down" ? (
-                    <TrendingDown className="h-5 w-5 text-red-500" />
+                    <TrendingDown className="h-6 w-6 text-red-500" />
                   ) : (
-                    <Minus className="h-5 w-5 text-gray-500" />
+                    <Minus className="h-6 w-6 text-gray-500" />
                   )}
                 </div>
               </div>

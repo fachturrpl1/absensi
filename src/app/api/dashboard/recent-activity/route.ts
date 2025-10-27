@@ -89,7 +89,7 @@ export async function GET(request: Request) {
       { success: true, data: activities },
       {
         headers: {
-          'Cache-Control': 'private, max-age=30, must-revalidate',
+          'Cache-Control': 'private, no-cache, must-revalidate',
           'Vary': 'Cookie'
         }
       }

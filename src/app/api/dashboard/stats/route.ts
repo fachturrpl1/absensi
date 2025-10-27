@@ -8,8 +8,8 @@ export async function GET() {
       { success: true, data },
       {
         headers: {
-          // Private cache - unique per user/organization
-          'Cache-Control': 'private, max-age=180, must-revalidate',
+          // No HTTP caching - let React Query handle caching
+          'Cache-Control': 'private, no-cache, must-revalidate',
           'Vary': 'Cookie'
         }
       }

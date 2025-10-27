@@ -8,6 +8,7 @@ import { TimezoneProvider } from "@/components/timezone-provider";
 import { TimeFormatProvider } from "@/components/time-format-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import AdminPanelLayout from "@/components/admin-panel/admin-panel-layout";
+import OrganizationStatusChecker from "@/components/organization-status-checker";
 
 import { createClient } from "@/utils/supabase/server";
 import { 
@@ -116,7 +117,9 @@ export default async function RootLayout({
           <QueryProvider>
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
               <TimeFormatProvider>
-                <AdminPanelLayout>{children}</AdminPanelLayout>
+                <OrganizationStatusChecker>
+                  <AdminPanelLayout>{children}</AdminPanelLayout>
+                </OrganizationStatusChecker>
               </TimeFormatProvider>
             </ThemeProvider>
           </QueryProvider>

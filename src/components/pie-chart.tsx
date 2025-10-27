@@ -83,7 +83,7 @@ export function CustomPieChart({
         ) : (
           <ChartContainer
             config={chartConfig}
-            className="mx-auto aspect-square max-h-[250px]"
+            className="mx-auto aspect-square max-h-[200px] sm:max-h-[250px]"
           >
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>

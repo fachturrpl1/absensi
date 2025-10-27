@@ -14,160 +14,136 @@ async function getSupabase() {
 export const getMemberPerformance = async (memberId: string): Promise<ApiResponse<IMemberPerformance>> => {
   const supabase = await getSupabase();
 
-  // basic aggregated counts
-  const statuses = ["present", "late", "absent", "excused"];
-
-  const countsPromise = Promise.all(
-    statuses.map(async (status) => {
-      const { count, error } = await supabase
-        .from("attendance_records")
-        .select("id", { count: "exact", head: true })
-        .eq("organization_member_id", memberId)
-        .eq("status", status);
-
-      if (error) {
-        console.error("getMemberPerformance count error", error);
-        return { status, count: 0 };
-      }
-      return { status, count: count || 0 };
-    })
-  );
-
-  // latest attendance row
-  const latestPromise = supabase
-    .from("attendance_records")
-    .select("*, organization_members(*)")
-    .eq("organization_member_id", memberId)
-    .order("attendance_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  // avg work duration
-  // compute average over the last 90 days as primary metric
+  // Calculate date ranges once
   const since90Date = new Date();
-  since90Date.setDate(since90Date.getDate() - 89); // include today => 90 days
+  since90Date.setDate(since90Date.getDate() - 89);
   const since90 = since90Date.toISOString().split("T")[0];
 
-  const avg90Promise = supabase
-    .from("attendance_records")
-    .select("work_duration_minutes,actual_check_in,actual_check_out")
-    .eq("organization_member_id", memberId)
-    .gte("attendance_date", since90);
-
-  // recent 30 days count
   const sinceDate = new Date();
   sinceDate.setDate(sinceDate.getDate() - 30);
   const since = sinceDate.toISOString().split("T")[0];
 
-  const recentPromise = supabase
-    .from("attendance_records")
-    .select("id,status,attendance_date,work_duration_minutes,actual_check_in,actual_check_out")
-    .eq("organization_member_id", memberId)
-    .gte("attendance_date", since)
-    .order("attendance_date", { ascending: true });
-
-  const [counts, latestRes, avg90Res, recentRes] = await Promise.all([
-    countsPromise,
-    latestPromise,
-    avg90Promise,
-    recentPromise,
+  // Single optimized query to get all data at once
+  const [allRecordsRes, latestRes, recentRes] = await Promise.all([
+    // Get all attendance records for statistics (no limit for accurate counts)
+    supabase
+      .from("attendance_records")
+      .select("status,work_duration_minutes,actual_check_in,actual_check_out,attendance_date")
+      .eq("organization_member_id", memberId),
+    
+    // Latest attendance
+    supabase
+      .from("attendance_records")
+      .select("attendance_date")
+      .eq("organization_member_id", memberId)
+      .order("attendance_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    
+    // Recent 30 days
+    supabase
+      .from("attendance_records")
+      .select("id,status,attendance_date,work_duration_minutes,actual_check_in,actual_check_out")
+      .eq("organization_member_id", memberId)
+      .gte("attendance_date", since)
+      .order("attendance_date", { ascending: true }),
   ]);
 
-  type StatusCount = { status: string; count: number };
-  const countsMap: Record<string, number> = {};
-  (counts || []).forEach((entry) => {
-    const castEntry = entry as StatusCount;
-    countsMap[castEntry.status] = castEntry.count || 0;
-  });
+  // Process counts from single query result
+  const countsMap: Record<string, number> = {
+    present: 0,
+    late: 0,
+    absent: 0,
+    excused: 0,
+  };
 
-  // average over last 90 days
+  if (allRecordsRes.data) {
+    for (const record of allRecordsRes.data) {
+      const status = record.status?.toLowerCase();
+      if (status && status in countsMap) {
+        countsMap[status]++;
+      }
+    }
+  }
+
+  // Calculate averages from the same dataset (last 90 days)
   function parseMinutes(value: string | null | undefined) {
-    if (!value) return null
-    const timestamp = Date.parse(value)
+    if (!value) return null;
+    const timestamp = Date.parse(value);
     if (!Number.isNaN(timestamp)) {
-      const dt = new Date(timestamp)
-      return dt.getHours() * 60 + dt.getMinutes()
+      const dt = new Date(timestamp);
+      return dt.getHours() * 60 + dt.getMinutes();
     }
-    const match = String(value).match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/)
-    if (!match) return null
-    const hours = Number(match[1])
-    const minutes = Number(match[2])
-    return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : null
+    const match = String(value).match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : null;
   }
 
-  let avg = 0
-  if (avg90Res && Array.isArray(avg90Res.data)) {
-    type DurationRow = { work_duration_minutes: number | null; actual_check_in: string | null; actual_check_out: string | null }
-    const durations = (avg90Res.data as DurationRow[]).flatMap((row) => {
-      const stored = Number(row.work_duration_minutes ?? 0)
-      if (Number.isFinite(stored) && stored > 0) {
-        return [stored]
-      }
-      const start = parseMinutes(row.actual_check_in)
-      const end = parseMinutes(row.actual_check_out)
-      if (start != null && end != null && end > start) {
-        return [end - start]
-      }
-      return []
-    })
-    avg = durations.length ? Math.round(durations.reduce((sum, val) => sum + val, 0) / durations.length) : 0
-  }
+  const ins: number[] = [];
+  const outs: number[] = [];
+  const durations: number[] = [];
 
-  // compute average check-in and check-out times over the last 90 days
-  // avg90Res currently only selected work_duration_minutes; fetch check-in/out instead
-  const avgTimesRes = await supabase
-    .from("attendance_records")
-    .select("actual_check_in,actual_check_out,work_duration_minutes")
-    .eq("organization_member_id", memberId)
-    .gte("attendance_date", since90);
+  // Process all records for last 90 days
+  if (allRecordsRes.data) {
+    const since90DateObj = new Date(since90);
+    for (const row of allRecordsRes.data) {
+      // Only process records from last 90 days for averages
+      const recordDate = new Date(row.attendance_date);
+      if (recordDate >= since90DateObj) {
+        const ci = row.actual_check_in;
+        const co = row.actual_check_out;
+        const dur = Number(row.work_duration_minutes || 0);
 
-  let avgCheckInStr: string | null = null;
-  let avgCheckOutStr: string | null = null;
-  if (avgTimesRes && Array.isArray(avgTimesRes.data)) {
-    type TimeRow = {
-      actual_check_in: string | null;
-      actual_check_out: string | null;
-      work_duration_minutes: number | null;
-    };
+        if (ci) {
+          const t = Date.parse(ci);
+          if (!isNaN(t)) {
+            ins.push(new Date(t).getHours() * 60 + new Date(t).getMinutes());
+          } else {
+            const m = String(ci).match(/(\d{1,2}):(\d{2})/);
+            if (m) ins.push(Number(m[1]) * 60 + Number(m[2]));
+          }
+        }
 
-    const ins: number[] = [];
-    const outs: number[] = [];
-    const durations: number[] = [];
-    for (const row of avgTimesRes.data as TimeRow[]) {
-      const ci = row.actual_check_in;
-      const co = row.actual_check_out;
-      const dur = Number(row.work_duration_minutes || 0);
-      if (ci) {
-        const t = Date.parse(ci)
-        if (!isNaN(t)) ins.push(new Date(t).getHours() * 60 + new Date(t).getMinutes())
-        else {
-          // try parse time-only 'HH:MM:SS' or 'HH:MM'
-          const m = String(ci).match(/(\d{1,2}):(\d{2})/)
-          if (m) ins.push(Number(m[1]) * 60 + Number(m[2]))
+        if (co) {
+          const t2 = Date.parse(co);
+          if (!isNaN(t2)) {
+            outs.push(new Date(t2).getHours() * 60 + new Date(t2).getMinutes());
+          } else {
+            const m2 = String(co).match(/(\d{1,2}):(\d{2})/);
+            if (m2) outs.push(Number(m2[1]) * 60 + Number(m2[2]));
+          }
+        }
+
+        if (Number.isFinite(dur) && dur > 0) {
+          durations.push(dur);
+        } else {
+          const start = parseMinutes(ci);
+          const end = parseMinutes(co);
+          if (start != null && end != null && end > start) {
+            durations.push(end - start);
+          }
         }
       }
-      if (co) {
-        const t2 = Date.parse(co)
-        if (!isNaN(t2)) outs.push(new Date(t2).getHours() * 60 + new Date(t2).getMinutes())
-        else {
-          const m2 = String(co).match(/(\d{1,2}):(\d{2})/)
-          if (m2) outs.push(Number(m2[1]) * 60 + Number(m2[2]))
-        }
-      }
-      if (Number.isFinite(dur) && dur > 0) durations.push(dur);
-    }
-
-    const avgMinutes = (arr: number[]) => (arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null)
-    const avgIn = avgMinutes(ins)
-    const avgOut = avgMinutes(outs)
-    avgCheckInStr = avgIn != null ? `${String(Math.floor(avgIn / 60)).padStart(2, "0")}:${String(avgIn % 60).padStart(2, "0")}` : null
-    avgCheckOutStr = avgOut != null ? `${String(Math.floor(avgOut / 60)).padStart(2, "0")}:${String(avgOut % 60).padStart(2, "0")}` : null
-
-    // prefer previously computed avg for work duration if present; else compute from durations
-    if (!avg && durations.length) {
-      avg = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length);
     }
   }
+
+  const avgMinutes = (arr: number[]) => 
+    arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+
+  const avgIn = avgMinutes(ins);
+  const avgOut = avgMinutes(outs);
+  const avg = durations.length 
+    ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) 
+    : 0;
+
+  const avgCheckInStr = avgIn != null 
+    ? `${String(Math.floor(avgIn / 60)).padStart(2, "0")}:${String(avgIn % 60).padStart(2, "0")}` 
+    : null;
+  const avgCheckOutStr = avgOut != null 
+    ? `${String(Math.floor(avgOut / 60)).padStart(2, "0")}:${String(avgOut % 60).padStart(2, "0")}` 
+    : null;
 
   const recent = recentRes && recentRes.data ? recentRes.data : [];
 

@@ -95,9 +95,9 @@ export const MonthlyTrendChart = memo(function MonthlyTrendChart({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-[250px] w-full bg-muted animate-pulse rounded-lg" />
+          <div className="h-[200px] sm:h-[250px] lg:h-[300px] w-full bg-muted animate-pulse rounded-lg" />
         ) : (
-          <ChartContainer config={chartConfig} className="h-[250px] w-full">
+          <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] lg:h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
                 data={trendData}

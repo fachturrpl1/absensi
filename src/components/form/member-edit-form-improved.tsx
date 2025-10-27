@@ -166,21 +166,22 @@ export default function MemberEditFormImproved({
     const isLoading = departmentsLoading || positionsLoading
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
             {/* Header Section */}
             <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => router.push("/members")}
+                            className="shrink-0"
                         >
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
                         <div>
-                            <h2 className="text-2xl font-bold tracking-tight">Edit Member</h2>
-                            <p className="text-muted-foreground">
+                            <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Edit Member</h2>
+                            <p className="text-sm text-muted-foreground">
                                 Update employment and access information
                             </p>
                         </div>
@@ -190,14 +191,14 @@ export default function MemberEditFormImproved({
 
             {/* Member Info Card */}
             <Card className="border-2">
-                <CardContent className="pt-6">
-                    <div className="flex flex-col items-center text-center gap-4">
-                        <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
-                            <User className="h-10 w-10 text-primary" />
+                <CardContent className="pt-4 sm:pt-6">
+                    <div className="flex flex-col items-center text-center gap-3 sm:gap-4">
+                        <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
                         </div>
-                        <div className="space-y-2">
-                            <h3 className="text-xl font-semibold">{fullName || "N/A"}</h3>
-                            <p className="text-sm text-muted-foreground">{userProfile?.email}</p>
+                        <div className="space-y-1 sm:space-y-2">
+                            <h3 className="text-lg sm:text-xl font-semibold">{fullName || "N/A"}</h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground">{userProfile?.email}</p>
                             <div className="flex gap-2 justify-center mt-3">
                                 {initialValues.employee_id && (
                                     <Badge variant="secondary">
@@ -215,16 +216,18 @@ export default function MemberEditFormImproved({
 
             {/* Form Tabs */}
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="employment" className="gap-2">
-                                <Briefcase className="h-4 w-4" />
-                                Employment Info
+                            <TabsTrigger value="employment" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                                <Briefcase className="h-3 w-3 sm:h-4 sm:w-4" />
+                                <span className="hidden xs:inline sm:inline">Employment Info</span>
+                                <span className="xs:hidden sm:hidden">Info</span>
                             </TabsTrigger>
-                            <TabsTrigger value="access" className="gap-2">
-                                <CreditCard className="h-4 w-4" />
-                                Access Control
+                            <TabsTrigger value="access" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                                <CreditCard className="h-3 w-3 sm:h-4 sm:w-4" />
+                                <span className="hidden xs:inline sm:inline">Access Control</span>
+                                <span className="xs:hidden sm:hidden">Access</span>
                             </TabsTrigger>
                         </TabsList>
 

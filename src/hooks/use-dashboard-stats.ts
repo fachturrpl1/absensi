@@ -66,8 +66,7 @@ export function useDashboardStats() {
       console.log('[React Query] Fetching consolidated dashboard stats for org:', organizationId)
       const res = await fetch('/api/dashboard/stats', { 
         credentials: 'same-origin',
-        // Leverage HTTP caching
-        cache: 'default'
+        cache: 'no-store' // Disable cache for fresh data
       })
       const json = await res.json()
       if (!json.success || !json.data) {
@@ -75,11 +74,12 @@ export function useDashboardStats() {
       }
       return json.data as DashboardStats
     },
-    enabled: !!organizationId, // Only fetch when organizationId is available
-    staleTime: 1000 * 60 * 3, // 3 minutes - matches server cache
-    gcTime: 1000 * 60 * 10, // 10 minutes in cache
-    refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: false, // Don't refetch on mount if data exists
+    enabled: !!organizationId,
+    staleTime: 1000 * 30, // 30 seconds - fresh data quickly
+    gcTime: 1000 * 60 * 5, // 5 minutes in cache
+    refetchInterval: 1000 * 60, // Auto-refresh every 60 seconds
+    refetchOnWindowFocus: true, // Refresh when user returns to tab
+    refetchOnMount: true, // Always fetch fresh data on mount
   })
 }
 
