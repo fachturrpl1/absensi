@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactNode } from 'react'
+import { useAuthCacheClear } from '@/hooks/use-auth-cache-clear'
 
 // Create a singleton QueryClient instance outside of component
 // This ensures the same instance is used across all renders and hot reloads
@@ -35,9 +36,19 @@ function getQueryClient() {
   return browserQueryClient
 }
 
+function AuthCacheClearWrapper({ children }: { children: ReactNode }) {
+  // Clear cache when user changes (login/logout/switch)
+  useAuthCacheClear()
+  return <>{children}</>
+}
+
 export function QueryProvider({ children }: { children: ReactNode }) {
   // Get the singleton QueryClient instance
   const queryClient = getQueryClient()
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthCacheClearWrapper>{children}</AuthCacheClearWrapper>
+    </QueryClientProvider>
+  )
 }

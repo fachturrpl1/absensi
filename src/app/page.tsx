@@ -70,7 +70,11 @@ export default function Home() {
         if (isMounted) {
           setOrgId(res.organizationId)
         }
+      } else if (isMounted) {
+        // Clear orgId if no user
+        setOrgId(null)
       }
+      
       if (isMounted) {
         setOrganizationLoading(false)
       }

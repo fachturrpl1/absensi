@@ -6,16 +6,24 @@ import { useRouter } from "next/navigation"
 import { LogOut } from "lucide-react"
 import { useAuthStore } from "@/store/user-store"
 import { cn } from "@/lib/utils"
+import { useQueryClient } from "@tanstack/react-query"
 
 export default function LogoutButton({ className, compact }: { className?: string; compact?: boolean }) {
   const router = useRouter()
   const setUser = useAuthStore((state) => state.setUser)
+  const queryClient = useQueryClient()
 
 const handleLogout = async () => {
   const result = await logout()
   if (result.success) {
+    // Clear all React Query cache to prevent data leakage
+    queryClient.clear()
+    
+    // Clear user state
     setUser(null)
-    router.refresh()  // ⬅️ penting untuk sync server + client
+    
+    // Refresh server state and navigate
+    router.refresh()
     router.replace("/auth/login")
   } else {
     alert(result.error)

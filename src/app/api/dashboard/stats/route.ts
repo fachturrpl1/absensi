@@ -8,9 +8,8 @@ export async function GET() {
       { success: true, data },
       {
         headers: {
-          // Aggressive caching - 3 minutes fresh, 1 minute stale-while-revalidate
-          'Cache-Control': 'public, max-age=180, stale-while-revalidate=60, must-revalidate',
-          // Optional: Add ETag for better caching
+          // Private cache - unique per user/organization
+          'Cache-Control': 'private, max-age=180, must-revalidate',
           'Vary': 'Cookie'
         }
       }
@@ -22,7 +21,7 @@ export async function GET() {
       { 
         status: 500,
         headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate'
+          'Cache-Control': 'private, no-cache, no-store, must-revalidate'
         }
       }
     )

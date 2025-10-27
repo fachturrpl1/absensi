@@ -89,6 +89,11 @@ export default function ScheduleClient({
   const [open, setOpen] = React.useState(false)
   const [editingDetail, setEditingDetail] = React.useState<IWorkSchedule | null>(null)
 
+  // Sync state when initialSchedules changes
+  React.useEffect(() => {
+    setSchedules(initialSchedules)
+  }, [initialSchedules, organizationId])
+
   const form = useForm<ScheduleForm>({
     resolver: zodResolver(scheduleSchema),
     defaultValues: {

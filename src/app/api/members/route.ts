@@ -11,7 +11,8 @@ export async function GET() {
         { 
           status: 400,
           headers: {
-            'Cache-Control': 'public, max-age=60, stale-while-revalidate=30'
+            'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+            'Vary': 'Cookie'
           }
         }
       )
@@ -21,7 +22,8 @@ export async function GET() {
       { success: true, data: response.data },
       {
         headers: {
-          'Cache-Control': 'public, max-age=180, stale-while-revalidate=60'
+          'Cache-Control': 'private, max-age=60, must-revalidate',
+          'Vary': 'Cookie'
         }
       }
     )
@@ -32,7 +34,8 @@ export async function GET() {
       { 
         status: 500,
         headers: {
-          'Cache-Control': 'public, max-age=30, stale-while-revalidate=15'
+          'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+          'Vary': 'Cookie'
         }
       }
     )

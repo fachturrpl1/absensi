@@ -1,15 +1,24 @@
 "use server";
-import { createSupabaseClient } from "@/config/supabase-config";
+import { createClient } from "@/utils/supabase/server";
 
 import { IWorkSchedule, IWorkScheduleDetail } from "@/interface"
 
 
 
 export const getAllWorkSchedules = async (organizationId?: string) => {
-    const supabase = await createSupabaseClient();
+    const supabase = await createClient();
+    
     let query = supabase.from("work_schedules").select("*, work_schedule_details(*)").order("created_at", { ascending: false })
-    if (organizationId) {
-        query = query.eq("organization_id", organizationId)
+    
+    // Only filter if organizationId is provided and not empty
+    if (organizationId && organizationId !== '') {
+        // Convert to integer for proper comparison with database
+        const orgIdInt = parseInt(organizationId, 10)
+        if (!isNaN(orgIdInt)) {
+            query = query.eq("organization_id", orgIdInt)
+        } else {
+        }
+    } else {
     }
 
     const { data, error } = await query
@@ -21,7 +30,7 @@ export const getAllWorkSchedules = async (organizationId?: string) => {
     return { success: true, data: data as IWorkSchedule[] };
 };
 export async function getWorkScheduleById(id: string) {
-    const supabase = await createSupabaseClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from("work_schedules")
         .select("*, work_schedule_details(*)")
@@ -35,7 +44,7 @@ export async function getWorkScheduleById(id: string) {
     return { success: true, data: data as IWorkSchedule[] };
 }
 export async function getWorkScheduleDetails(workScheduleId: number) {
-    const supabase = await createSupabaseClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from("work_schedule_details")
         .select("*")
@@ -46,7 +55,7 @@ export async function getWorkScheduleDetails(workScheduleId: number) {
 }
 
 export async function createWorkSchedule(payload: Partial<IWorkSchedule>) {
-    const supabase = await createSupabaseClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from("work_schedules")
         .insert(payload)
@@ -61,7 +70,7 @@ export async function createWorkSchedule(payload: Partial<IWorkSchedule>) {
 }
 
 export async function updateWorkSchedule(id: string, payload: Partial<IWorkSchedule>) {
-    const supabase = await createSupabaseClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from("work_schedules")
         .update({ ...payload, updated_at: new Date().toISOString() })
@@ -79,7 +88,7 @@ export async function updateWorkSchedule(id: string, payload: Partial<IWorkSched
 
 export const deleteWorkSchedule = async ( scheduleId: string | number) => {
      const id = String(scheduleId) // convert to string
-    const supabase = await createSupabaseClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from("work_schedules").delete().eq("id", id)
         .select()
@@ -93,7 +102,7 @@ export const deleteWorkSchedule = async ( scheduleId: string | number) => {
 
 // ---------------- WorkScheduleDetail ----------------
 export async function createWorkScheduleDetail(payload: Partial<IWorkScheduleDetail>) {
-    const supabase = await createSupabaseClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from("work_schedule_details")
         .insert(payload)
@@ -107,7 +116,7 @@ export async function createWorkScheduleDetail(payload: Partial<IWorkScheduleDet
 };
 
 export async function updateWorkScheduleDetail(id: string, payload: Partial<IWorkScheduleDetail>) {
-    const supabase = await createSupabaseClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from("work_schedule_details")
         .update({ ...payload, updated_at: new Date().toISOString() })
@@ -122,7 +131,7 @@ export async function updateWorkScheduleDetail(id: string, payload: Partial<IWor
 }
 
 export const deleteWorkScheduleDetail = async (id: string) => {
-    const supabase = await createSupabaseClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from("work_schedule_details").delete().eq("id", id)
         .select()

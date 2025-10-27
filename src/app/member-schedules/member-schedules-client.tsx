@@ -87,6 +87,11 @@ export default function MemberSchedulesClient({
   const [open, setOpen] = React.useState(false)
   const [editingSchedule, setEditingSchedule] = React.useState<IMemberSchedule | null>(null)
 
+  // Sync state when props change (user login/logout/switch org)
+  React.useEffect(() => {
+    setSchedules(initialSchedules)
+  }, [initialSchedules])
+
   // Memoized - prevent unnecessary recalculations
   const membersWithActiveSchedule = React.useMemo(() => {
     const activeIds = new Set<string>()

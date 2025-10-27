@@ -1,9 +1,9 @@
 "use server";
-import { createSupabaseClient } from "@/config/supabase-config";
+import { createClient } from "@/utils/supabase/server";
 import { IMemberSchedule } from "@/interface";
 
 export const getAllMemberSchedule = async (organizationId?: string) => {
-  const supabase = await createSupabaseClient();
+  const supabase = await createClient();
   
   let query = supabase
     .from("member_schedules")
@@ -29,16 +29,24 @@ export const getAllMemberSchedule = async (organizationId?: string) => {
     `)
     .order("created_at", { ascending: false });
 
-  if (organizationId) {
-    const { data: members } = await supabase
-      .from("organization_members")
-      .select("id")
-      .eq("organization_id", organizationId);
+  if (organizationId && organizationId !== '') {
+    // Convert to integer for proper comparison
+    const orgIdInt = parseInt(organizationId, 10)
     
-    if (members) {
-      const memberIds = members.map(m => m.id);
-      query = query.in("organization_member_id", memberIds);
+    if (!isNaN(orgIdInt)) {
+      const { data: members } = await supabase
+        .from("organization_members")
+        .select("id")
+        .eq("organization_id", orgIdInt);
+      
+      if (members && members.length > 0) {
+        const memberIds = members.map(m => m.id);
+        query = query.in("organization_member_id", memberIds);
+      } else {
+      }
+    } else {
     }
+  } else {
   }
 
   const { data, error } = await query;
@@ -51,7 +59,7 @@ export const getAllMemberSchedule = async (organizationId?: string) => {
 };
 
 export const getMemberScheduleById = async (id: string) => {
-  const supabase = await createSupabaseClient();
+  const supabase = await createClient();
   
   const { data, error } = await supabase
     .from("member_schedules")
@@ -86,7 +94,7 @@ export const getMemberScheduleById = async (id: string) => {
 };
 
 export const createMemberSchedule = async (payload: Partial<IMemberSchedule>) => {
-  const supabase = await createSupabaseClient();
+  const supabase = await createClient();
   
   // Check if member already has an active schedule
   if (payload.organization_member_id) {
@@ -119,7 +127,7 @@ export const createMemberSchedule = async (payload: Partial<IMemberSchedule>) =>
 };
 
 export const updateMemberSchedule = async (id: string, payload: Partial<IMemberSchedule>) => {
-  const supabase = await createSupabaseClient();
+  const supabase = await createClient();
   
   const { data, error } = await supabase
     .from("member_schedules")
@@ -136,7 +144,7 @@ export const updateMemberSchedule = async (id: string, payload: Partial<IMemberS
 };
 
 export const deleteMemberSchedule = async (id: string) => {
-  const supabase = await createSupabaseClient();
+  const supabase = await createClient();
   
   const { data, error } = await supabase
     .from("member_schedules")

@@ -2,13 +2,13 @@ import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { getAllMemberSchedule } from "@/action/members_schedule"
 import { getAllOrganization_member } from "@/action/members"
 import { getAllWorkSchedules } from "@/action/schedule"
-import { createSupabaseClient } from "@/config/supabase-config"
+import { createClient } from "@/utils/supabase/server"
 import MemberSchedulesClient from "./member-schedules-client"
 import { IMemberSchedule, IOrganization_member, IWorkSchedule } from "@/interface"
 
 // Server Component - fetch data di server (SSR)
 export default async function MemberSchedulesPage() {
-  const supabase = await createSupabaseClient()
+  const supabase = await createClient()
   
   // Get organization ID
   const { data: { user } } = await supabase.auth.getUser()
@@ -21,7 +21,7 @@ export default async function MemberSchedulesPage() {
       .eq("user_id", user.id)
       .maybeSingle()
     
-    if (data) {
+    if (data && data.organization_id) {
       organizationId = String(data.organization_id)
     }
   }
@@ -41,6 +41,24 @@ export default async function MemberSchedulesPage() {
   const filteredMembers = organizationId
     ? members.filter((m) => String(m.organization_id) === organizationId)
     : members
+
+  // Show message if user has no organization
+  if (!organizationId || organizationId === '') {
+    return (
+      <ContentLayout title="Member Schedules">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <div className="text-6xl">🏢</div>
+            <h2 className="text-2xl font-semibold">No Organization Assigned</h2>
+            <p className="text-muted-foreground max-w-md">
+              You are not currently assigned to any organization. 
+              Please contact your administrator to get access to member schedules.
+            </p>
+          </div>
+        </div>
+      </ContentLayout>
+    )
+  }
 
   return (
     <ContentLayout title="Member Schedules">
