@@ -52,6 +52,8 @@ import { createClient } from "@/utils/supabase/client"
 import { useGroups } from "@/hooks/use-groups"
 import { usePositions } from "@/hooks/use-positions"
 import { EMPLOYMENT_STATUS_OPTIONS, CARD_TYPE_OPTIONS } from "@/constants"
+import { useQuery } from "@tanstack/react-query"
+import { getOrgRoles } from "@/lib/rbac"
 
 interface MemberEditFormProps {
     initialValues: Partial<IOrganization_member>
@@ -62,6 +64,7 @@ const MemberFormSchema = z.object({
     // Employment Info
     department_id: z.string().min(1, "Department is required"),
     position_id: z.string().min(1, "Position is required"),
+    role_id: z.string().min(1, "Role is required"),
     is_active: z.boolean(),
     contract_type: z.string().optional(),
     hire_date: z.string().optional(),
@@ -87,6 +90,12 @@ export default function MemberEditFormImproved({
     const { data: departments = [], isLoading: departmentsLoading } = useGroups()
     const { data: positions = [], isLoading: positionsLoading } = usePositions()
     
+    // Fetch organization roles
+    const { data: roles = [], isLoading: rolesLoading } = useQuery({
+        queryKey: ['org-roles'],
+        queryFn: getOrgRoles,
+    })
+    
     // Get user profile info
     const userProfile = initialValues.user as any
     const fullName = [
@@ -100,6 +109,7 @@ export default function MemberEditFormImproved({
         defaultValues: {
             department_id: String(initialValues.department_id ?? ""),
             position_id: String(initialValues.position_id ?? ""),
+            role_id: String(initialValues.role_id ?? ""),
             is_active: initialValues.is_active ?? true,
             contract_type: initialValues.contract_type ?? "",
             hire_date: initialValues.hire_date ?? "",
@@ -123,6 +133,7 @@ export default function MemberEditFormImproved({
             const memberData: Partial<IOrganization_member> = {
                 department_id: values.department_id,
                 position_id: values.position_id,
+                role_id: values.role_id,
                 is_active: values.is_active,
                 contract_type: values.contract_type || undefined,
                 hire_date: values.hire_date || initialValues.hire_date || new Date().toISOString().split('T')[0],
@@ -163,7 +174,7 @@ export default function MemberEditFormImproved({
         }
     }
 
-    const isLoading = departmentsLoading || positionsLoading
+    const isLoading = departmentsLoading || positionsLoading || rolesLoading
 
     return (
         <div className="space-y-4 sm:space-y-6">
@@ -237,14 +248,14 @@ export default function MemberEditFormImproved({
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <Building className="h-5 w-5" />
-                                        Department & Position
+                                        Department, Position & Role
                                     </CardTitle>
                                     <CardDescription>
-                                        Assign department and position for this member
+                                        Assign department, position, and role for this member
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <FormField
                                             control={form.control}
                                             name="department_id"
@@ -259,7 +270,7 @@ export default function MemberEditFormImproved({
                                                         <FormControl>
                                                             <SelectTrigger>
                                                                 <SelectValue placeholder="Select department" />
-                                                            </SelectTrigger>
+                                                            </SelectTrigger>roi
                                                         </FormControl>
                                                         <SelectContent>
                                                             {departments.map((dept: any) => (
@@ -298,6 +309,48 @@ export default function MemberEditFormImproved({
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={form.control}
+                                            name="role_id"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Role *</FormLabel>
+                                                    <Select
+                                                        onValueChange={field.onChange}
+                                                        value={field.value}
+                                                        disabled={isLoading}
+                                                    >
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Select role" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {roles.map((role: any) => {
+                                                                const isAdmin = role.code === "A001"
+                                                                return (
+                                                                    <SelectItem key={role.id} value={String(role.id)}>
+                                                                        <div className="flex items-center gap-2">
+                                                                            {isAdmin ? (
+                                                                                <Shield className="h-3 w-3" />
+                                                                            ) : (
+                                                                                <User className="h-3 w-3" />
+                                                                            )}
+                                                                            {role.name}
+                                                                        </div>
+                                                                    </SelectItem>
+                                                                )
+                                                            })}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormDescription className="text-xs">
+                                                        Admin Organisasi: full access, User: limited
+                                                    </FormDescription>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}

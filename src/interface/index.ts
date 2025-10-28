@@ -98,6 +98,7 @@ export interface IOrganization_member {
     department_id?: string; // References group (stored as department in DB)
     position_id?: string;
     direct_manager_id?: string;
+    role_id?: string; // Role within the organization (Admin Org or User)
     hire_date: string;
     probation_end_date?: string;
     contract_type?: string;
@@ -114,6 +115,7 @@ export interface IOrganization_member {
     positions?: IPositions;
     organization?: IOrganization;
     rfid_cards?: IRfidCard;
+    role?: IRole; // Organization role details
 }
 
 // Performance data returned for a single member
@@ -316,4 +318,28 @@ export interface IAttendanceDevice {
     updated_at?: string;
     device_types?: IDeviceType;
     organization?: IOrganization;
+}
+
+export interface IMemberInvitation {
+    id: string;
+    organization_id: string;
+    email: string;
+    invited_by: string;
+    role_id?: string;
+    department_id?: string;
+    position_id?: string;
+    invitation_token: string;
+    status: 'pending' | 'accepted' | 'expired' | 'cancelled';
+    message?: string;
+    expires_at: string;
+    accepted_at?: string;
+    created_at: string;
+    updated_at?: string;
+    
+    // Relations (populated via Supabase select)
+    organization?: IOrganization;
+    inviter?: IUser;
+    role?: IRole;
+    department?: IDepartment;
+    position?: IPosition;
 }

@@ -56,6 +56,12 @@ export const getAllOrganization_member = async () => {
         name,
         code,
         organization_id
+      ),
+      role:role_id (
+        id,
+        code,
+        name,
+        description
       )
     `)
     .eq("organization_id", member.organization_id)
@@ -184,7 +190,13 @@ export const getOrganizationMembersById = async (id: string) => {
     .select(`
     *,
     organizations:organization_id (*),
-    rfid_cards (card_number, card_type)
+    rfid_cards (card_number, card_type),
+    role:role_id (
+      id,
+      code,
+      name,
+      description
+    )
   `)
     .eq("id", id)
     .single()

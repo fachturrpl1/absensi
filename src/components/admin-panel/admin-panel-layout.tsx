@@ -16,7 +16,11 @@ export default function AdminPanelLayout({
   const pathname = usePathname();
   const sidebar = useStore(useSidebar, (x) => x);
 
-  if (pathname === "/auth/login" || pathname === "/auth/signup" || pathname === "/onboarding") {
+  // Public pages: no sidebar/navbar
+  const publicPages = ["/auth/login", "/auth/signup", "/onboarding"];
+  const isPublicPage = publicPages.some(page => pathname === page) || pathname?.startsWith("/invite");
+  
+  if (isPublicPage) {
     return <>{children}</>;
   }
 

@@ -292,6 +292,8 @@ export async function createOrganization(organizationData: OrganizationData): Pr
 }
 
 // Auto-activate member when organization is approved
+// NOTE: This only activates if member was previously inactive DUE TO organization being inactive
+// It will NOT activate members who were manually deactivated by admin
 export async function autoActivateMemberIfOrgActive(): Promise<{
   success: boolean;
   message: string;
@@ -313,6 +315,8 @@ export async function autoActivateMemberIfOrgActive(): Promise<{
         id,
         is_active,
         employment_status,
+        created_at,
+        updated_at,
         organization:organizations(
           id,
           name,
@@ -326,9 +330,20 @@ export async function autoActivateMemberIfOrgActive(): Promise<{
       return { success: false, message: "No organization membership found" };
     }
 
-    // If organization is active but member is not, activate the member
     const organization = member.organization as unknown as { id: string; name: string; is_active: boolean };
-    if (organization.is_active && !member.is_active) {
+    
+    // IMPORTANT: Only auto-activate if:
+    // 1. Organization is active
+    // 2. Member is inactive
+    // 3. Member's created_at and updated_at are very close (meaning never manually updated)
+    //    This prevents reactivating members who were intentionally deactivated by admin
+    const createdAt = new Date(member.created_at).getTime();
+    const updatedAt = new Date(member.updated_at).getTime();
+    const timeDiff = Math.abs(updatedAt - createdAt);
+    const wasNeverManuallyUpdated = timeDiff < 5000; // Less than 5 seconds difference
+    
+    if (organization.is_active && !member.is_active && wasNeverManuallyUpdated) {
+      // Only activate if member was created inactive due to org being inactive (onboarding case)
       const { error: updateError } = await supabase
         .from("organization_members")
         .update({
@@ -345,6 +360,8 @@ export async function autoActivateMemberIfOrgActive(): Promise<{
       return { success: true, message: "Member activated successfully" };
     }
 
+    // If member was manually deactivated (updated_at differs from created_at significantly),
+    // do NOT auto-activate
     return { success: true, message: "No activation needed" };
 
   } catch (error: unknown) {

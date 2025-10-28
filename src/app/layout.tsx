@@ -9,6 +9,8 @@ import { TimeFormatProvider } from "@/components/time-format-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import AdminPanelLayout from "@/components/admin-panel/admin-panel-layout";
 import OrganizationStatusChecker from "@/components/organization-status-checker";
+import AccountStatusChecker from "@/components/account-status-checker";
+import { PermissionInitializer } from "@/components/permission-initializer";
 
 import { createClient } from "@/utils/supabase/server";
 import { 
@@ -113,12 +115,15 @@ export default async function RootLayout({
     <html lang="id" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <UserProvider user={mappedUser} />
+        {user && <PermissionInitializer userId={user.id} />}
         <TimezoneProvider timezone={timezone}>
           <QueryProvider>
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
               <TimeFormatProvider>
                 <OrganizationStatusChecker>
-                  <AdminPanelLayout>{children}</AdminPanelLayout>
+                  <AccountStatusChecker>
+                    <AdminPanelLayout>{children}</AdminPanelLayout>
+                  </AccountStatusChecker>
                 </OrganizationStatusChecker>
               </TimeFormatProvider>
             </ThemeProvider>

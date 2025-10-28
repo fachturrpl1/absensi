@@ -63,10 +63,10 @@ export async function signInWithGoogle() {
     provider: 'google',
     options: {
       redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
-      scopes: 'https://www.googleapis.com/auth/userinfo.email',
+      skipBrowserRedirect: false,
       queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
+        access_type: 'online',
+        prompt: 'select_account',
       },
     },
   })

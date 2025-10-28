@@ -100,16 +100,24 @@ export async function middleware(req: NextRequest) {
     // Otherwise, let them stay on signup page to see the success message
   }
 
-  // Don't require auth for auth pages
-  const publicPaths = ["/auth"]
+  // Don't require auth for public pages
+  const publicPaths = ["/auth", "/invite"]
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
 
   if (!user && !isPublicPath) {
     return NextResponse.redirect(new URL("/auth/login", req.url))
   }
 
-  // Check if authenticated user has organization (except for onboarding page and accept-invite flow)
-  if (user && !pathname.startsWith("/onboarding") && !isPublicPath) {
+  // Check if authenticated user has organization (except for special pages)
+  const excludedPaths = [
+    "/onboarding",
+    "/account-inactive",
+    "/organization-inactive",
+    "/subscription-expired",
+  ];
+  const isExcludedPath = excludedPaths.some(path => pathname.startsWith(path));
+
+  if (user && !isExcludedPath && !isPublicPath) {
     try {
       // Check if user has organization membership
       const { data: member } = await supabase
@@ -127,9 +135,24 @@ export async function middleware(req: NextRequest) {
       // Normalize typing from Supabase response for safer runtime checks
       const memberData: any = member
 
-      // If user has no organization or organization is inactive, redirect to onboarding
-      if (!memberData || !memberData.organization || !memberData.organization.is_active || !memberData.is_active) {
+      // Priority order:
+      // 1. No organization → onboarding
+      // 2. Has organization but organization inactive → organization-inactive
+      // 3. Has active organization but member inactive → account-inactive
+      
+      if (!memberData || !memberData.organization) {
+        // User has no organization membership → onboarding
         return NextResponse.redirect(new URL("/onboarding", req.url))
+      }
+      
+      if (!memberData.organization.is_active) {
+        // Organization exists but is inactive → organization-inactive
+        return NextResponse.redirect(new URL("/organization-inactive", req.url))
+      }
+      
+      if (!memberData.is_active) {
+        // Organization is active but member is inactive → account-inactive
+        return NextResponse.redirect(new URL("/account-inactive", req.url))
       }
     } catch (error) {
       console.warn('Error checking organization membership:', error)

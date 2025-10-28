@@ -5,6 +5,20 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/";
+  
+  // Check for errors from OAuth provider
+  const errorParam = searchParams.get("error");
+  const errorDescription = searchParams.get("error_description");
+  
+  if (errorParam) {
+    console.error('OAuth error:', errorParam, errorDescription);
+    const errorMessage = errorDescription 
+      ? decodeURIComponent(errorDescription) 
+      : 'Authentication failed';
+    return NextResponse.redirect(
+      `${origin}/auth/login?error=${encodeURIComponent(errorMessage)}`
+    );
+  }
 
   if (code) {
     const supabase = await createClient();
@@ -21,8 +35,23 @@ export async function GET(request: Request) {
       } else {
         return NextResponse.redirect(`${origin}${next}`);
       }
+    } else {
+      // Log the detailed error for debugging
+      console.error('Exchange code error:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Could not authenticate user';
+      if (error.message.includes('invalid_client')) {
+        errorMessage = 'OAuth configuration error. Please contact administrator.';
+      } else if (error.message.includes('code')) {
+        errorMessage = 'Invalid authorization code. Please try again.';
+      }
+      
+      return NextResponse.redirect(
+        `${origin}/auth/login?error=${encodeURIComponent(errorMessage)}`
+      );
     }
   }
 
-  return NextResponse.redirect(`${origin}/auth/login?error=Could not authenticate user`);
+  return NextResponse.redirect(`${origin}/auth/login?error=Missing authorization code`);
 }
