@@ -107,28 +107,45 @@ export default function ScheduleClient({
   })
 
   const handleSubmit = async (values: ScheduleForm) => {
+    console.log('🚀 handleSubmit called with:', values);
+    console.log('📝 editingDetail:', editingDetail);
+    
     try {
       let res: { success: boolean; message?: string; data?: any }
+      
       if (editingDetail) {
+        console.log('🔄 Updating schedule:', { id: editingDetail.id, values });
         res = await updateWorkSchedule(editingDetail.id, values as Partial<IWorkSchedule>)
-        if (res.success) {
-          toast.success("Schedule updated successfully")
-          // Optimistic update
+        console.log('📥 Update response:', res);
+        
+        if (res.success && res.data) {
+          toast.success(res.message || "Schedule updated successfully")
+          // Optimistic update with correct data
           setSchedules((prev) =>
-            prev.map((s) => (s.id === editingDetail.id ? { ...s, ...values } : s))
+            prev.map((s) => (s.id === editingDetail.id ? { ...s, ...res.data } : s))
           )
+        } else {
+          throw new Error(res.message || "Failed to update schedule")
         }
       } else {
+        console.log('➕ Creating schedule:', values);
         res = await createWorkSchedule(values as Partial<IWorkSchedule>)
+        console.log('📥 Create response:', res);
+        
         if (res.success && res.data) {
           toast.success("Schedule created successfully")
           // Optimistic update
           setSchedules((prev) => [res.data as IWorkSchedule, ...prev])
+        } else {
+          throw new Error(res.message || "Failed to create schedule")
         }
       }
-      if (!res.success) throw new Error(res.message)
+      
+      console.log('✅ Operation completed successfully');
       handleCloseDialog()
+      
     } catch (err: unknown) {
+      console.error('❌ Schedule operation error:', err);
       toast.error(err instanceof Error ? err.message : "Unknown error")
     }
   }
@@ -147,19 +164,32 @@ export default function ScheduleClient({
   }
 
   const handleOpenDialog = (schedule?: IWorkSchedule) => {
+    console.log('🔓 Opening dialog:', { schedule, organizationId });
+    
     if (schedule) {
       setEditingDetail(schedule)
-      form.reset(schedule)
+      const formValues = {
+        organization_id: String(schedule.organization_id || organizationId),
+        code: schedule.code || "",
+        name: schedule.name || "",
+        description: schedule.description || "",
+        schedule_type: schedule.schedule_type || "",
+        is_active: schedule.is_active ?? true,
+      }
+      console.log('📝 Form reset with edit values:', formValues);
+      form.reset(formValues)
     } else {
       setEditingDetail(null)
-      form.reset({
+      const formValues = {
         organization_id: organizationId,
         code: "",
         name: "",
         description: "",
         schedule_type: "",
         is_active: true,
-      })
+      }
+      console.log('📝 Form reset with new values:', formValues);
+      form.reset(formValues)
     }
     setOpen(true)
   }
@@ -256,7 +286,19 @@ export default function ScheduleClient({
               <DialogTitle>{editingDetail ? "Edit Schedule" : "Add Schedule"}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              <form 
+                onSubmit={(e) => {
+                  console.log('📤 Form submit event triggered');
+                  e.preventDefault();
+                  form.handleSubmit((values) => {
+                    console.log('✅ Form validation passed');
+                    handleSubmit(values);
+                  }, (errors) => {
+                    console.error('❌ Form validation errors:', errors);
+                  })(e);
+                }} 
+                className="space-y-4"
+              >
                 <FormField
                   control={form.control}
                   name="organization_id"
@@ -342,7 +384,15 @@ export default function ScheduleClient({
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full">
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  onClick={() => {
+                    console.log('🖱️ Button clicked');
+                    console.log('📋 Current form values:', form.getValues());
+                    console.log('⚠️ Form errors:', form.formState.errors);
+                  }}
+                >
                   {editingDetail ? "Update" : "Create"}
                 </Button>
               </form>

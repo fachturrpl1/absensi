@@ -73,7 +73,7 @@ import {
   deleteWorkScheduleDetail,
 } from "@/action/schedule"
 import TopBar from "@/components/top-bar"
-import { FormSkeleton } from "@/components/ui/loading-skeleton"
+import { FormSkeleton, TableSkeleton } from "@/components/ui/loading-skeleton"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Clock, CalendarDays, TrendingUp } from "lucide-react"
 import {

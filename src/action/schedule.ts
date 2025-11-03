@@ -69,20 +69,21 @@ export async function createWorkSchedule(payload: Partial<IWorkSchedule>) {
     return { success: true, data: data as IWorkSchedule[] };
 }
 
-export async function updateWorkSchedule(id: string, payload: Partial<IWorkSchedule>) {
+export async function updateWorkSchedule(id: string | number, payload: Partial<IWorkSchedule>) {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from("work_schedules")
         .update({ ...payload, updated_at: new Date().toISOString() })
-        .eq("id", id)
+        .eq("id", String(id))
         .select()
         .single()
 
     if (error) {
-        return { success: false, message: error.message, data: [] };
+        console.error('❌ Update Work Schedule Error:', error);
+        return { success: false, message: error.message, data: null };
     }
 
-    return { success: true, data: data as IWorkSchedule[] };
+    return { success: true, data: data as IWorkSchedule, message: "Schedule updated successfully" };
 }
 
 
@@ -115,19 +116,20 @@ export async function createWorkScheduleDetail(payload: Partial<IWorkScheduleDet
     return { success: true, message: "Schedule added successfully", data: data as IWorkScheduleDetail };
 };
 
-export async function updateWorkScheduleDetail(id: string, payload: Partial<IWorkScheduleDetail>) {
+export async function updateWorkScheduleDetail(id: string | number, payload: Partial<IWorkScheduleDetail>) {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from("work_schedule_details")
         .update({ ...payload, updated_at: new Date().toISOString() })
-        .eq("id", id)
+        .eq("id", String(id))
         .select()
         .single()
 
-  if (error) {
+    if (error) {
+        console.error('❌ Update Work Schedule Detail Error:', error);
         return { success: false, message: error.message, data: null };
     }
-    return { success: true, message: "Schedule Updated successfully", data: data as IWorkScheduleDetail };
+    return { success: true, message: "Schedule detail updated successfully", data: data as IWorkScheduleDetail };
 }
 
 export const deleteWorkScheduleDetail = async (id: string) => {
