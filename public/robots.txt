@@ -1,0 +1,39 @@
+# Robots.txt for Attendance Management System
+# https://www.robotstxt.org/robotstxt.html
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /auth/
+Disallow: /account/
+Disallow: /organization/settings/
+Disallow: /members/*/edit
+Disallow: /users/*/edit
+Disallow: /_next/
+Disallow: /static/
+
+# Sitemap
+Sitemap: https://yourdomain.com/sitemap.xml
+
+# Crawl-delay (in seconds)
+Crawl-delay: 1
+
+# Popular search engine bots
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# Block bad bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /

@@ -3,9 +3,6 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="light" data-theme="light">
-      {children}
-    </div>
-  );
+  // Auth pages should NOT have sidebar/navbar, just clean layout
+  return <>{children}</>;
 }

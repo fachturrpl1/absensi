@@ -1,10 +1,9 @@
-import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card } from "@/components/ui/card"
 
 export default function MemberSchedulesLoading() {
   return (
-    <ContentLayout title="Member Schedules">
+    <div className="flex flex-1 flex-col gap-4">
       <div className="w-full max-w-6xl mx-auto space-y-4">
         {/* Search and Add Button Skeleton */}
         <div className="flex items-center justify-between gap-4 py-4">
@@ -49,6 +48,6 @@ export default function MemberSchedulesLoading() {
           </div>
         </div>
       </div>
-    </ContentLayout>
+    </div>
   )
 }

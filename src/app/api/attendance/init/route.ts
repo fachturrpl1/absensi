@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createSupabaseClient } from "@/config/supabase-config"
 
+import { attendanceLogger } from '@/lib/logger';
 // Batch API untuk attendance page - 6 queries jadi 1 request
 export async function GET(request: Request) {
   try {
@@ -82,7 +83,7 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.error("Error in attendance init:", error)
+    attendanceLogger.error("Error in attendance init:", error)
     return NextResponse.json(
       {
         success: false,

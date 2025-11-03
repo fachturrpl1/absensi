@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 
+import { authLogger } from '@/lib/logger';
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
   const errorDescription = searchParams.get("error_description");
   
   if (errorParam) {
-    console.error('OAuth error:', errorParam, errorDescription);
+    authLogger.error('OAuth error:', errorParam, errorDescription);
     const errorMessage = errorDescription 
       ? decodeURIComponent(errorDescription) 
       : 'Authentication failed';
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
       }
     } else {
       // Log the detailed error for debugging
-      console.error('Exchange code error:', error);
+      authLogger.error('Exchange code error:', error);
       
       // Provide more specific error messages
       let errorMessage = 'Could not authenticate user';

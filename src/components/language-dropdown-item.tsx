@@ -3,11 +3,12 @@
 import { Languages } from "lucide-react"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 
+import { logger } from '@/lib/logger';
 export function LanguageDropdownItem() {
   const handleLanguageClick = () => {
     // Language switching logic can be implemented here
     // For now, this is a placeholder
-    console.log("Language selection clicked")
+    logger.debug("Language selection clicked")
   }
 
   return (

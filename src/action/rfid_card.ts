@@ -3,6 +3,7 @@
 import { supabase } from "@/config/supabase-config";
 import { IRfidCard } from "@/interface";
 
+import { logger } from '@/lib/logger';
 export const getAllRfidCard = async () => {
     const { data, error } = await supabase.from("rfid_cards")
         .select("*")
@@ -23,7 +24,7 @@ export async function createRfidCard(payload: Partial<IRfidCard>) {
         .single()
 
     if (error) {
-         console.error("Insert RFID error:", error)
+         logger.error("Insert RFID error:", error)
         return { success: false, message: error.message, data: [] };
     }
 

@@ -1,4 +1,3 @@
-import { ContentLayout } from "@/components/admin-panel/content-layout";
 import {
   getAttendanceDeviceById,
   getDeviceTypes,
@@ -50,12 +49,12 @@ export default async function EditLocationPage({
   }
 
   return (
-    <ContentLayout title="Edit Location">
+    <div className="flex flex-1 flex-col gap-4">
       <LocationForm
         device={device}
         deviceTypes={deviceTypes}
         organizationId={organizationId}
       />
-    </ContentLayout>
+    </div>
   );
 }

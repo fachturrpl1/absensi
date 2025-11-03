@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/user-store'
 
+import { authLogger } from '@/lib/logger';
 /**
  * Hook to clear React Query cache when user changes
  * This prevents data leakage between different users/organizations
@@ -16,7 +17,7 @@ export function useAuthCacheClear() {
 
     // If user changed (login/logout/switch), clear all caches
     if (previousUserId.current !== null && previousUserId.current !== currentUserId) {
-      console.log('[Auth Cache Clear] User changed, clearing React Query cache')
+      authLogger.debug('[Auth Cache Clear] User changed, clearing React Query cache')
       queryClient.clear()
     }
 

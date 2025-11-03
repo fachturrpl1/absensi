@@ -23,8 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { IUser, IRole } from "@/interface";
 import { getAllUsers, updateUsers } from "@/action/users";
 import { getAllRole } from "@/action/role";
-import LoadingSkeleton from "@/components/loading-skeleton";
-import { ContentLayout } from "@/components/admin-panel/content-layout";
+import { FormSkeleton } from "@/components/ui/loading-skeleton";
 import {
   Card,
   CardContent,
@@ -124,10 +123,24 @@ export default function EditUserPage() {
     router.back();
   };
 
-  if (loading) return <LoadingSkeleton />;
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Edit User</CardTitle>
+            <CardDescription>Loading user data...</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FormSkeleton />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <ContentLayout title="Edit User">
+    <div className="flex flex-1 flex-col gap-4">
       <div className="container mx-auto p-4 md:p-6 lg:p-8 max-w-4xl">
         {/* Header with Go Back Button */}
         <div className="flex items-center gap-4 mb-6">
@@ -335,6 +348,6 @@ export default function EditUserPage() {
           </CardContent>
         </Card>
       </div>
-    </ContentLayout>
+    </div>
   );
 }

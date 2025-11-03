@@ -1,4 +1,3 @@
-import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { getAllUsers } from "@/action/users"
 import UsersClient from "./users-client"
 import { IUser } from "@/interface"
@@ -10,8 +9,8 @@ export default async function UsersPage() {
   const users = (response.success ? response.data : []) as IUser[]
 
   return (
-    <ContentLayout title="Users">
+    <div className="flex flex-1 flex-col gap-4">
       <UsersClient initialUsers={users} />
-    </ContentLayout>
+    </div>
   )
 }

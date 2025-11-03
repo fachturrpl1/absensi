@@ -5,6 +5,7 @@ import { IUser } from '@/interface'
 import { useAuthStore } from '@/store/user-store'
 import { getAccountData } from '@/action/account'
 
+import { logger } from '@/lib/logger';
 /**
  * Hook for refreshing user profile data
  * Automatically refreshes user data when profile photo changes
@@ -60,7 +61,7 @@ export function useProfileRefresh() {
       }
       return false
     } catch (error) {
-      console.error('Failed to refresh user profile:', error)
+      logger.error('Failed to refresh user profile:', error)
       return false
     }
   }, [setUser, user?.id])
@@ -156,7 +157,7 @@ export function useProfilePhotoDelete() {
       
       return result
     } catch (error) {
-      console.error('Delete profile photo error:', error)
+      logger.error('Delete profile photo error:', error)
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Unknown error'

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAllGroups } from '@/action/group'
 
+import { logger } from '@/lib/logger';
 export async function GET() {
   try {
     const response = await getAllGroups()
@@ -26,7 +27,7 @@ export async function GET() {
       }
     )
   } catch (error) {
-    console.error('API /groups error:', error)
+    logger.error('API /groups error:', error)
     return NextResponse.json(
       { success: false, message: 'Failed to fetch groups' },
       { 

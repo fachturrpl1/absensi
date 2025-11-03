@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useOrganizationId } from './use-organization-id'
 
+import { dashboardLogger } from '@/lib/logger';
 type MonthlyStats = {
   currentMonth: number
   previousMonth: number
@@ -63,7 +64,7 @@ export function useDashboardStats() {
   return useQuery({
     queryKey: ['dashboard', 'stats', organizationId],
     queryFn: async () => {
-      console.log('[React Query] Fetching consolidated dashboard stats for org:', organizationId)
+      dashboardLogger.debug('[React Query] Fetching consolidated dashboard stats for org:', organizationId)
       const res = await fetch('/api/dashboard/stats', { 
         credentials: 'same-origin',
         cache: 'no-store' // Disable cache for fresh data

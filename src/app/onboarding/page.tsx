@@ -28,6 +28,7 @@ import { PendingApproval } from "@/components/pending-approval";
 import { INDUSTRY_OPTIONS } from "@/lib/constants/industries";
 import styles from "./onboarding.module.css";
 
+import { logger } from '@/lib/logger';
 export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -70,7 +71,7 @@ export default function OnboardingPage() {
       const status = await checkUserOrganizationStatus();
       setUserStatus(status);
     } catch (error) {
-      console.error('Error checking user status:', error);
+      logger.error('Error checking user status:', error);
     }
   };
 
@@ -89,7 +90,7 @@ export default function OnboardingPage() {
         router.push('/');
       }
     } catch (error) {
-      console.error('Error refreshing status:', error);
+      logger.error('Error refreshing status:', error);
     } finally {
       setRefreshing(false);
     }

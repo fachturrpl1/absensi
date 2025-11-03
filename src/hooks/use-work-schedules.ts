@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query"
 import { IWorkSchedule } from "@/interface"
 
+import { scheduleLogger } from '@/lib/logger';
 // Custom hook untuk fetch work schedules dengan caching via API route (GET)
 export function useWorkSchedules(organizationId?: string) {
   return useQuery({
     queryKey: ["workSchedules", organizationId],
     queryFn: async () => {
-      console.log('[React Query] Fetching work schedules via API')
+      scheduleLogger.debug('[React Query] Fetching work schedules via API')
       const url = organizationId ? `/api/work-schedules?organizationId=${organizationId}` : '/api/work-schedules'
       const response = await fetch(url, { credentials: 'same-origin' })
       const json = await response.json()

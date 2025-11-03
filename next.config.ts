@@ -1,7 +1,65 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV === 'development';
+
+// Content Security Policy yang ketat untuk production
+const cspHeader = `
+  default-src 'self';
+  script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.supabase.co https://cdn.jsdelivr.net;
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' blob: data: https://*.supabase.co https://*.supabase.in;
+  font-src 'self' data:;
+  object-src 'none';
+  base-uri 'self';
+  form-action 'self';
+  frame-ancestors 'none';
+  connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in;
+  media-src 'self';
+  worker-src 'self' blob:;
+  ${!isDev ? 'upgrade-insecure-requests;' : ''}
+`;
+
+const securityHeaders = [
+  {
+    key: 'X-DNS-Prefetch-Control',
+    value: 'on',
+  },
+  {
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains; preload',
+  },
+  {
+    key: 'X-Frame-Options',
+    value: 'SAMEORIGIN',
+  },
+  {
+    key: 'X-Content-Type-Options',
+    value: 'nosniff',
+  },
+  {
+    key: 'X-XSS-Protection',
+    value: '1; mode=block',
+  },
+  {
+    key: 'Referrer-Policy',
+    value: 'strict-origin-when-cross-origin',
+  },
+  {
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=(self), interest-cohort=()',
+  },
+  {
+    key: 'Content-Security-Policy',
+    value: cspHeader.replace(/\s{2,}/g, ' ').trim(),
+  },
+];
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Security: Disable x-powered-by header
+  poweredByHeader: false,
+  
+  // Enable strict mode for better error handling
+  reactStrictMode: true,
   
   // Allow access from other devices in the same network (moved from experimental)
   allowedDevOrigins: [
@@ -20,10 +78,70 @@ const nextConfig: NextConfig = {
     },
   },
   
+  // Configure headers untuk security
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: securityHeaders,
+      },
+      // Special headers for API routes
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, max-age=0',
+          },
+        ],
+      },
+      // Headers for static assets
+      {
+        source: '/assets/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ];
+  },
+  
+  // Configure redirects for old pages
+  async redirects() {
+    return [
+      {
+        source: '/auth',
+        destination: '/auth/login',
+        permanent: true,
+      },
+    ];
+  },
+  
+  // Image optimization configuration
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.supabase.in',
+      },
+    ],
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60,
+  },
+  
+  // Output configuration for production
+  output: 'standalone',
+  
   // Configure dev indicators for development
-  ...(process.env.NODE_ENV === 'development' && {
+  ...(isDev && {
     devIndicators: {
-      position: 'bottom-right', // renamed from buildActivityPosition
+      position: 'bottom-right',
     },
   }),
 };

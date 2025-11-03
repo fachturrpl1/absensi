@@ -9,6 +9,7 @@ import {
   TrendingUp,
   CalendarCheck2,
   MapPin,
+  CalendarDays,
 } from "@/components/icons/lucide-exports";
 import type { LucideIcon } from "@/components/icons/lucide-exports";
 
@@ -119,6 +120,21 @@ export function getMenuList(pathname: string): Group[] {
           label: "Member Schedules",
           icon: CalendarCheck2,
           active: pathname.includes("/member-schedules")
+        }
+      ]
+    },
+
+    // ========================================
+    // LEAVE MANAGEMENT
+    // ========================================
+    {
+      groupLabel: "Leave Management",
+      menus: [
+        {
+          href: "/leaves",
+          label: "My Leaves",
+          icon: CalendarDays,
+          active: pathname.includes("/leaves")
         }
       ]
     },

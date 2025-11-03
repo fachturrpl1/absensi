@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 
+import { logger } from '@/lib/logger';
 interface OrganizationData {
   name: string;
   description: string;
@@ -60,7 +61,7 @@ export async function joinOrganization(invitationCode: string): Promise<{
       .maybeSingle();
 
     if (orgError) {
-      console.error("Database error:", orgError);
+      logger.error("Database error:", orgError);
       return { success: false, message: "Failed to verify invitation code" };
     }
 
@@ -86,7 +87,7 @@ export async function joinOrganization(invitationCode: string): Promise<{
       .maybeSingle();
 
     if (profileError) {
-      console.error("Profile error:", profileError);
+      logger.error("Profile error:", profileError);
       return { success: false, message: "Failed to get user profile" };
     }
 
@@ -106,7 +107,7 @@ export async function joinOrganization(invitationCode: string): Promise<{
       });
 
     if (memberError) {
-      console.error("Member creation error:", memberError);
+      logger.error("Member creation error:", memberError);
       return { success: false, message: "Failed to join organization. Please try again." };
     }
 
@@ -117,7 +118,7 @@ export async function joinOrganization(invitationCode: string): Promise<{
     };
 
   } catch (error: unknown) {
-    console.error("Join organization error:", error);
+    logger.error("Join organization error:", error);
     return { 
       success: false, 
       message: "An unexpected error occurred. Please try again." 
@@ -245,7 +246,7 @@ export async function createOrganization(organizationData: OrganizationData): Pr
       .single();
 
     if (orgError) {
-      console.error("Organization creation error:", orgError);
+      logger.error("Organization creation error:", orgError);
       return { success: false, message: "Failed to create organization. Please try again." };
     }
 
@@ -266,7 +267,7 @@ export async function createOrganization(organizationData: OrganizationData): Pr
       });
 
     if (memberError) {
-      console.error("Member creation error:", memberError);
+      logger.error("Member creation error:", memberError);
       
       // Cleanup: delete the organization if member creation fails
       await supabase
@@ -283,7 +284,7 @@ export async function createOrganization(organizationData: OrganizationData): Pr
     };
 
   } catch (error: unknown) {
-    console.error("Create organization error:", error);
+    logger.error("Create organization error:", error);
     return { 
       success: false, 
       message: "An unexpected error occurred while creating the organization. Please try again." 
@@ -353,7 +354,7 @@ export async function autoActivateMemberIfOrgActive(): Promise<{
         .eq("id", member.id);
 
       if (updateError) {
-        console.error("Member activation error:", updateError);
+        logger.error("Member activation error:", updateError);
         return { success: false, message: "Failed to activate member" };
       }
 
@@ -365,7 +366,7 @@ export async function autoActivateMemberIfOrgActive(): Promise<{
     return { success: true, message: "No activation needed" };
 
   } catch (error: unknown) {
-    console.error("Auto activate member error:", error);
+    logger.error("Auto activate member error:", error);
     return { success: false, message: "An unexpected error occurred" };
   }
 }
@@ -423,7 +424,7 @@ export async function checkUserOrganizationStatus(): Promise<{
     };
 
   } catch (error: unknown) {
-    console.error("Check organization status error:", error);
+    logger.error("Check organization status error:", error);
     return { hasOrganization: false };
   }
 }

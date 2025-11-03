@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 
+import { logger } from '@/lib/logger';
 type LogPayload = {
   level?: 'error' | 'warn' | 'info' | 'debug'
   message?: string
@@ -30,9 +31,9 @@ export async function POST(request: Request) {
     }
 
     // Log to server console
-    if (entry.level === 'error') console.error('[client-log]', entry)
-    else if (entry.level === 'warn') console.warn('[client-log]', entry)
-    else console.log('[client-log]', entry)
+    if (entry.level === 'error') logger.error('[client-log]', entry)
+    else if (entry.level === 'warn') logger.warn('[client-log]', entry)
+    else logger.debug('[client-log]', entry)
 
     // Append to file
     ensureLogDir()
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true })
   } catch (err) {
-    console.error('Failed to write client log', err)
+    logger.error('Failed to write client log', err)
     return NextResponse.json({ ok: false }, { status: 500 })
   }
 }

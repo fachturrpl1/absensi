@@ -7,10 +7,11 @@ import { UserProvider } from "@/components/user-provider";
 import { TimezoneProvider } from "@/components/timezone-provider";
 import { TimeFormatProvider } from "@/components/time-format-provider";
 import { QueryProvider } from "@/providers/query-provider";
-import AdminPanelLayout from "@/components/admin-panel/admin-panel-layout";
 import OrganizationStatusChecker from "@/components/organization-status-checker";
 import AccountStatusChecker from "@/components/account-status-checker";
 import { PermissionInitializer } from "@/components/permission-initializer";
+import { ToastProvider } from "@/components/notifications/toast-system";
+import { DashboardLayoutWrapper } from "@/components/layout/dashboard-layout-wrapper";
 
 import { createClient } from "@/utils/supabase/server";
 import { 
@@ -19,6 +20,7 @@ import {
 } from "@/lib/data-cache";
 
 import { Geist, Geist_Mono } from "next/font/google";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -81,7 +83,7 @@ export default async function RootLayout({
   const metadata = user?.user_metadata || {};
 
   // Use cached profile fetch to avoid duplicates
-  const profile = user ? await getCachedUserProfile(user.id) : null
+  const profile = user ? await getCachedUserProfile(user.id) : null;
 
   const resolvedFirstName = profile?.first_name ?? metadata.first_name ?? undefined;
   const resolvedMiddleName = profile?.middle_name ?? metadata.middle_name ?? undefined;
@@ -118,13 +120,17 @@ export default async function RootLayout({
         {user && <PermissionInitializer userId={user.id} />}
         <TimezoneProvider timezone={timezone}>
           <QueryProvider>
-            <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+            <ThemeProvider attribute="class" defaultTheme="light" enableSystem={true}>
               <TimeFormatProvider>
-                <OrganizationStatusChecker>
-                  <AccountStatusChecker>
-                    <AdminPanelLayout>{children}</AdminPanelLayout>
-                  </AccountStatusChecker>
-                </OrganizationStatusChecker>
+                <ToastProvider>
+                  <OrganizationStatusChecker>
+                    <AccountStatusChecker>
+                      <DashboardLayoutWrapper>
+                        {children}
+                      </DashboardLayoutWrapper>
+                    </AccountStatusChecker>
+                  </OrganizationStatusChecker>
+                </ToastProvider>
               </TimeFormatProvider>
             </ThemeProvider>
           </QueryProvider>

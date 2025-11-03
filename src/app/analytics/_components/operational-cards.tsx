@@ -1,6 +1,6 @@
 "use client"
 
-import { Clock, CheckCircle2 } from "lucide-react"
+import { Clock } from "lucide-react"
 import { Funnel, FunnelChart, LabelList } from "recharts"
 import { cn } from "@/lib/utils"
 

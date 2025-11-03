@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { getAccountData } from "@/action/account";
 import { AccountForm } from "@/components/form/account-form";
-import { ContentLayout } from "@/components/admin-panel/content-layout";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
@@ -21,7 +20,7 @@ export default async function AccountPage() {
   
   if (!accountResult.success || !accountResult.data) {
     return (
-      <ContentLayout title="Account Settings">
+      <div className="flex flex-1 flex-col gap-4">
         <div className="flex items-center justify-center min-h-[400px]">
           <Alert className="max-w-md">
             <AlertCircle className="h-4 w-4" />
@@ -30,12 +29,12 @@ export default async function AccountPage() {
             </AlertDescription>
           </Alert>
         </div>
-      </ContentLayout>
+      </div>
     );
   }
 
   return (
-    <ContentLayout title="Account Settings">
+    <div className="flex flex-1 flex-col gap-4">
       <div className="container mx-auto py-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold tracking-tight">Account Settings</h1>
@@ -46,6 +45,6 @@ export default async function AccountPage() {
         
         <AccountForm initialData={accountResult.data} />
       </div>
-    </ContentLayout>
+    </div>
   );
 }

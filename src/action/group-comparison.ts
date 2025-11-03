@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server"
 
+import { logger } from '@/lib/logger';
 interface GroupStat {
   id: string
   name: string
@@ -49,7 +50,7 @@ export async function getGroupComparisonStats(organizationId: string): Promise<G
       .eq('organization_members.is_active', true)
 
     if (deptError || !departments || departments.length === 0) {
-      console.error('Failed to fetch departments:', deptError)
+      logger.error('Failed to fetch departments:', deptError)
       return []
     }
 
@@ -94,7 +95,7 @@ export async function getGroupComparisonStats(organizationId: string): Promise<G
       .in('status', ['present', 'late'])
 
     if (attError) {
-      console.error('Failed to fetch attendance records:', attError)
+      logger.error('Failed to fetch attendance records:', attError)
       return []
     }
 
@@ -146,7 +147,7 @@ export async function getGroupComparisonStats(organizationId: string): Promise<G
 
     return result
   } catch (err) {
-    console.error('getGroupComparisonStats error:', err)
+    logger.error('getGroupComparisonStats error:', err)
     return []
   }
 }

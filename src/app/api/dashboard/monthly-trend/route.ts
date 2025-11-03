@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 
+import { dashboardLogger } from '@/lib/logger';
 async function getUserOrganizationId() {
   const supabase = await createClient()
   const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -96,7 +97,7 @@ export async function GET() {
       }
     )
   } catch (err) {
-    console.error('API /dashboard/monthly-trend error', err)
+    dashboardLogger.error('API /dashboard/monthly-trend error', err)
     return NextResponse.json(
       { success: false, message: 'Failed to fetch monthly trend data' },
       { status: 500 }

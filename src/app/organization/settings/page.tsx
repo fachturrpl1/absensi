@@ -34,9 +34,9 @@ import {
   Loader2,
 } from "@/components/icons/lucide-exports";
 import { getCurrentUserOrganization, updateOrganization, regenerateInviteCode, OrganizationUpdateData } from "@/action/organization-settings";
-import { ContentLayout } from "@/components/admin-panel/content-layout";
 import { INDUSTRY_OPTIONS, findIndustryValue, getIndustryLabel } from "@/lib/constants/industries";
 import { useImageCompression } from "@/hooks/use-image-compression";
+import { organizationLogger } from '@/lib/logger';
 // Removed debug imports - functions moved inline
 
 interface OrganizationData {
@@ -195,10 +195,10 @@ export default function OrganizationSettingsPage() {
       // Optional: Log compression info to console for debugging
       const originalSizeMB = (file.size / (1024 * 1024)).toFixed(2);
       const compressedSizeMB = (compressionResult.compressedSize / (1024 * 1024)).toFixed(2);
-      console.log(`Image compressed: ${originalSizeMB}MB → ${compressedSizeMB}MB (${compressionResult.compressionRatio}% reduction)`);
-      console.log('Original filename preserved:', compressedFile.name);
+      organizationLogger.debug(`Image compressed: ${originalSizeMB}MB → ${compressedSizeMB}MB (${compressionResult.compressionRatio}% reduction)`);
+      organizationLogger.debug('Original filename preserved:', compressedFile.name);
     } catch (error) {
-      console.error('Compression error:', error);
+      organizationLogger.error('Compression error:', error);
       toast.error('Failed to process image. Please try again.');
     }
   };
@@ -234,7 +234,7 @@ export default function OrganizationSettingsPage() {
       const supabase = createClient();
       
       // Debug: Log file details
-      console.log('Uploading file:', {
+      organizationLogger.debug('Uploading file:', {
         name: file.name,
         type: file.type,
         size: file.size,
@@ -247,12 +247,12 @@ export default function OrganizationSettingsPage() {
       
       // Fallback if filename is missing or invalid
       if (!fileNameToUse || typeof fileNameToUse !== 'string' || fileNameToUse.trim() === '') {
-        console.warn('Invalid or missing filename, creating random fallback');
+        organizationLogger.warn('Invalid or missing filename, creating random fallback');
         const extension = file.type.split('/')[1] || 'jpg';
         const timestamp = Date.now();
         const randomId = Math.random().toString(36).substring(2, 15);
         fileNameToUse = `logo-${timestamp}-${randomId}.${extension}`;
-        console.log('Generated fallback filename:', fileNameToUse);
+        organizationLogger.debug('Generated fallback filename:', fileNameToUse);
       }
       
       try {
@@ -260,17 +260,17 @@ export default function OrganizationSettingsPage() {
         const orgId = orgData?.id || 0
         fileName = `organization/org_${orgId}_${fileNameToUse}`;
       } catch (error) {
-        console.error('Error generating file path:', error);
+        organizationLogger.error('Error generating file path:', error);
         toast.error('Invalid file name. Please choose another file.');
         return null;
       }
       
       // Delete old logo first if it exists
       if (orgData?.logo_url) {
-        console.log('Deleting old logo before uploading new one...');
+        organizationLogger.debug('Deleting old logo before uploading new one...');
         const deleteResult = await deleteOldLogo(orgData.logo_url);
         if (deleteResult) {
-          console.log('Old logo deleted successfully');
+          organizationLogger.debug('Old logo deleted successfully');
         }
         // Continue with upload even if deletion fails
       }
@@ -281,7 +281,7 @@ export default function OrganizationSettingsPage() {
         .upload(fileName, file, { upsert: true });
       
       if (error) {
-        console.error('Upload error:', error);
+        organizationLogger.error('Upload error:', error);
         toast.error(`Upload failed: ${error.message}`);
         return null;
       }
@@ -293,7 +293,7 @@ export default function OrganizationSettingsPage() {
       
       return publicUrlData.publicUrl;
     } catch (error) {
-      console.error('Upload logo error:', error);
+      organizationLogger.error('Upload logo error:', error);
       toast.error('Failed to upload logo. Please try again.');
       return null;
     }
@@ -408,7 +408,7 @@ export default function OrganizationSettingsPage() {
   }
 
   return (
-    <ContentLayout title="Organization Settings">
+    <div className="flex flex-1 flex-col gap-4">
       <div className="space-y-6">
 
       {/* Organization Status */}
@@ -878,6 +878,6 @@ export default function OrganizationSettingsPage() {
         </Button>
       </div>
       </div>
-    </ContentLayout>
+    </div>
   );
 }

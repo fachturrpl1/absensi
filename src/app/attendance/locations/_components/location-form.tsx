@@ -8,13 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { createAttendanceDevice, updateAttendanceDevice } from "@/action/attendance_device";
 import { toast } from "sonner";
 import { Save, ArrowLeft, Smartphone } from "lucide-react";

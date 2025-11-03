@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { checkOrganizationStatus } from "@/action/organization";
 import { toast } from "sonner";
 
+import { logger } from '@/lib/logger';
 export default function SubscriptionExpiredPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -40,7 +41,7 @@ export default function SubscriptionExpiredPage() {
         router.refresh();
       }
     } catch (error) {
-      console.error("Error checking status:", error);
+      logger.error("Error checking status:", error);
     }
   };
 

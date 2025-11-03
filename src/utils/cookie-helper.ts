@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 "use client"
 
 /**
@@ -31,7 +33,7 @@ export function clearSupabaseCookies() {
     document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
   })
   
-  console.log('Cleared Supabase auth cookies')
+  logger.debug('Cleared Supabase auth cookies')
   
   // Reload the page to ensure clean state
   window.location.reload()
@@ -65,14 +67,14 @@ export function checkAndClearMalformedCookies() {
           const decoded = atob(value.replace('base64-', ''))
           JSON.parse(decoded)
         } catch (error) {
-          console.warn('Found malformed cookie, clearing all auth cookies:', error)
+          logger.warn('Found malformed cookie, clearing all auth cookies:', error)
           clearSupabaseCookies()
           return
         }
       }
     }
   } catch (error) {
-    console.warn('Error checking cookies, clearing all auth cookies:', error)
+    logger.warn('Error checking cookies, clearing all auth cookies:', error)
     clearSupabaseCookies()
   }
 }

@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createSupabaseClient } from "@/config/supabase-config";
 import { IOrganization } from "@/interface";
 
+import { organizationLogger } from '@/lib/logger';
 export interface OrganizationStatus {
   isValid: boolean;
   reason?: "inactive" | "expired" | "not_found";
@@ -95,7 +96,7 @@ export async function checkOrganizationStatus(): Promise<OrganizationStatus> {
     };
 
   } catch (error) {
-    console.error("Error checking organization status:", error);
+    organizationLogger.error("Error checking organization status:", error);
     return { 
       isValid: false, 
       reason: "not_found" 
@@ -122,7 +123,7 @@ export async function getUserOrganizationId(userId: string) {
 
     return { organizationId: String(member.organization_id) };
   } catch (error) {
-    console.error("Error getting organization ID:", error);
+    organizationLogger.error("Error getting organization ID:", error);
     return { organizationId: null };
   }
 }
@@ -194,14 +195,14 @@ export const uploadLogo = async (
       });
 
     if (error) {
-      console.error("Supabase upload error:", error.message);
+      organizationLogger.error("Supabase upload error:", error.message);
       throw error;
     }
 
     const { data } = supabase.storage.from("logo").getPublicUrl(fileName);
     return data.publicUrl;
   } catch (err: unknown) {
-    console.error("Upload logo error:", err);
+    organizationLogger.error("Upload logo error:", err);
     return null;
   }
 };
@@ -214,20 +215,20 @@ export const deleteLogo = async (fileUrl: string | null): Promise<boolean> => {
     const path = url.pathname.split("/object/public/logo/")[1];
 
     if (!path) {
-      console.error("Invalid logo URL:", fileUrl);
+      organizationLogger.error("Invalid logo URL:", fileUrl);
       return false;
     }
 
     const { error } = await supabase.storage.from("logo").remove([path]);
 
     if (error) {
-      console.error("Delete logo error:", error.message);
+      organizationLogger.error("Delete logo error:", error.message);
       return false;
     }
 
     return true;
   } catch (err) {
-    console.error("Delete logo exception:", err);
+    organizationLogger.error("Delete logo exception:", err);
     return false;
   }
 };
@@ -316,7 +317,7 @@ export async function getOrganizationTimezoneByUserId(userId: string) {
     .maybeSingle();
 
   if (error) {
-    console.error("Error fetching organization timezone:", error);
+    organizationLogger.error("Error fetching organization timezone:", error);
     return "UTC";
   }
 

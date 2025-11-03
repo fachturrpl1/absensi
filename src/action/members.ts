@@ -2,6 +2,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { IOrganization_member } from "@/interface";
 
+import { memberLogger } from '@/lib/logger';
 // Helper function to get the supabase client
 async function getSupabase() {
   return await createClient();
@@ -69,7 +70,7 @@ export const getAllOrganization_member = async () => {
 
   if (error) {
      
-    console.error('getAllOrganization_member - error fetching organization_members for org', error)
+    memberLogger.error('getAllOrganization_member - error fetching organization_members for org', error)
     return { success: false, message: error.message, data: [] };
   }
 
@@ -257,7 +258,7 @@ export const getOrganizationMembersById = async (id: string) => {
     }
   } catch (e) {
      
-    console.warn('getOrganizationMembersById: failed to fetch related records', e)
+    memberLogger.warn('getOrganizationMembersById: failed to fetch related records', e)
   }
 
   return { success: true, data }

@@ -1,10 +1,9 @@
-import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 
 export default function AccountLoading() {
   return (
-    <ContentLayout title="Account Settings">
+    <div className="flex flex-1 flex-col gap-4">
       <div className="container mx-auto py-6 space-y-6">
         {/* Header Skeleton */}
         <div className="mb-6 space-y-2">
@@ -78,6 +77,6 @@ export default function AccountLoading() {
           <Skeleton className="h-10 w-[150px]" />
         </div>
       </div>
-    </ContentLayout>
+    </div>
   )
 }

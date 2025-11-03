@@ -2,6 +2,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { ApiResponse, IMemberAttendancePoint } from "@/interface";
 
+import { attendanceLogger } from '@/lib/logger';
 async function getSupabase() {
   return await createClient();
 }
@@ -22,7 +23,7 @@ export const getMemberAttendanceTrend = async (memberId: string): Promise<ApiRes
     .order('attendance_date', { ascending: true });
 
   if (qerr) {
-    console.error('getMemberAttendanceTrend query error', qerr);
+    attendanceLogger.error('getMemberAttendanceTrend query error', qerr);
     return { success: false, message: 'Query error', data: [] } as ApiResponse<IMemberAttendancePoint[]>;
   }
 
@@ -44,7 +45,7 @@ export const getMemberAttendanceTrend = async (memberId: string): Promise<ApiRes
   for (let i = 29; i >= 0; i--) {
     const dt = new Date();
     dt.setDate(today.getDate() - i);
-    const key = dt.toISOString().split('T')[0];
+    const key = dt.toISOString().split('T')[0] as string;
     const entry = map[key];
     result.push({
       date: key,

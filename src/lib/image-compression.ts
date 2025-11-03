@@ -5,6 +5,7 @@ import {
   COMPRESSION_PRESETS 
 } from '../types/image-compression';
 
+import { logger } from '@/lib/logger';
 /**
  * Server-side image compression utility using Sharp
  */
@@ -161,7 +162,7 @@ export class ImageCompressor {
       try {
         results[variant] = await this.compressWithPreset(buffer, variant);
       } catch (error) {
-        console.error(`Failed to create variant '${variant}':`, error);
+        logger.error(`Failed to create variant '${variant}':`, error);
         throw error;
       }
     }

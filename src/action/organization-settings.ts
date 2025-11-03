@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 
+import { organizationLogger } from '@/lib/logger';
 export interface OrganizationUpdateData {
   name: string;
   legal_name?: string | null;
@@ -98,7 +99,7 @@ export async function getCurrentUserOrganization(): Promise<{
       .maybeSingle();
 
     if (memberError) {
-      console.error("Member query error:", memberError);
+      organizationLogger.error("Member query error:", memberError);
       return { success: false, message: "Failed to fetch organization data" };
     }
 
@@ -141,7 +142,7 @@ export async function getCurrentUserOrganization(): Promise<{
     };
 
   } catch (error: unknown) {
-    console.error("Get organization error:", error);
+    organizationLogger.error("Get organization error:", error);
     return {
       success: false,
       message: "An unexpected error occurred while fetching organization data"
@@ -201,7 +202,7 @@ export async function updateOrganization(updateData: OrganizationUpdateData): Pr
       .eq("id", member.organization_id);
 
     if (updateError) {
-      console.error("Organization update error:", updateError);
+      organizationLogger.error("Organization update error:", updateError);
       return { success: false, message: "Failed to update organization data" };
     }
 
@@ -214,7 +215,7 @@ export async function updateOrganization(updateData: OrganizationUpdateData): Pr
     };
 
   } catch (error: unknown) {
-    console.error("Update organization error:", error);
+    organizationLogger.error("Update organization error:", error);
     return {
       success: false,
       message: "An unexpected error occurred while updating organization data"
@@ -294,7 +295,7 @@ export async function regenerateInviteCode(): Promise<{
       .eq("id", member.organization_id);
 
     if (updateError) {
-      console.error("Invite code update error:", updateError);
+      organizationLogger.error("Invite code update error:", updateError);
       return { success: false, message: "Failed to regenerate invitation code" };
     }
 
@@ -308,7 +309,7 @@ export async function regenerateInviteCode(): Promise<{
     };
 
   } catch (error: unknown) {
-    console.error("Regenerate invite code error:", error);
+    organizationLogger.error("Regenerate invite code error:", error);
     return {
       success: false,
       message: "An unexpected error occurred while regenerating invitation code"

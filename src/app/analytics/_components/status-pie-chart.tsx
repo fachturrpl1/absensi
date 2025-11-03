@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from "recharts"
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface StatusData {

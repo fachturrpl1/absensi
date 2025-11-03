@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/utils/supabase/client";
 
+import { attendanceLogger } from '@/lib/logger';
 type AttendanceRecord = {
   id: string;
   date: string;
@@ -33,7 +34,7 @@ export function useMemberRecentAttendance(memberId: string, limit: number = 14) 
         .limit(limit);
 
       if (error) {
-        console.error("Error fetching recent attendance:", error);
+        attendanceLogger.error("Error fetching recent attendance:", error);
         return [];
       }
 

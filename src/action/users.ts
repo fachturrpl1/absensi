@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { IUser } from "@/interface"
 
+import { logger } from '@/lib/logger';
 // Helper buat bikin client
 async function getSupabase() {
   return await createClient()
@@ -72,7 +73,7 @@ export async function signInWithGoogle() {
   })
 
   if (error) {
-    console.error('Google OAuth error:', error)
+    logger.error('Google OAuth error:', error)
     return { error: error.message, url: null }
   }
 

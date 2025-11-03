@@ -7,6 +7,7 @@
 
 import imageCompression from 'browser-image-compression'
 
+import { logger } from '@/lib/logger';
 /**
  * Image compression options
  */
@@ -65,7 +66,7 @@ export async function compressImage(
     })
     return compressed
   } catch (error) {
-    console.error('Image compression failed:', error)
+    logger.error('Image compression failed:', error)
     throw new Error('Failed to compress image')
   }
 }

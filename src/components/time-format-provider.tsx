@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { useTimeFormat } from "@/store/time-format-store"
 
+import { logger } from '@/lib/logger';
 export function TimeFormatProvider({
   children,
 }: {
@@ -39,7 +40,7 @@ export function TimeFormatProvider({
           setFormat(org.time_format)
         }
       } catch (error) {
-        console.error("Error fetching time format:", error)
+        logger.error("Error fetching time format:", error)
       }
     }
 

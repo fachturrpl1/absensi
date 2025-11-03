@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query"
 import { IOrganization_member } from "@/interface"
 
+import { memberLogger } from '@/lib/logger';
 // Custom hook untuk fetch members dengan caching via API route (GET)
 export function useMembers() {
   return useQuery({
     queryKey: ["members"], // Key untuk caching
     queryFn: async () => {
-      console.log('[React Query] Fetching members via API')
+      memberLogger.debug('[React Query] Fetching members via API')
       const response = await fetch('/api/members', { credentials: 'same-origin' })
       const json = await response.json()
       if (!json.success) {
@@ -24,7 +25,7 @@ export function useMembersByOrganization(organizationId?: string) {
   return useQuery({
     queryKey: ["members", "organization", organizationId],
     queryFn: async () => {
-      console.log('[React Query] Fetching members by org via API')
+      memberLogger.debug('[React Query] Fetching members by org via API')
       const response = await fetch('/api/members', { credentials: 'same-origin' })
       const json = await response.json()
       if (!json.success) {

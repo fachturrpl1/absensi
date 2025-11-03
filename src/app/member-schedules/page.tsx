@@ -1,4 +1,3 @@
-import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { getAllMemberSchedule } from "@/action/members_schedule"
 import { getAllOrganization_member } from "@/action/members"
 import { getAllWorkSchedules } from "@/action/schedule"
@@ -45,7 +44,7 @@ export default async function MemberSchedulesPage() {
   // Show message if user has no organization
   if (!organizationId || organizationId === '') {
     return (
-      <ContentLayout title="Member Schedules">
+      <div className="flex flex-1 flex-col gap-4">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center space-y-4">
             <div className="text-6xl">🏢</div>
@@ -56,17 +55,17 @@ export default async function MemberSchedulesPage() {
             </p>
           </div>
         </div>
-      </ContentLayout>
+      </div>
     )
   }
 
   return (
-    <ContentLayout title="Member Schedules">
+    <div className="flex flex-1 flex-col gap-4">
       <MemberSchedulesClient
         initialSchedules={schedules}
         initialMembers={filteredMembers}
         initialWorkSchedules={workSchedules}
       />
-    </ContentLayout>
+    </div>
   )
 }

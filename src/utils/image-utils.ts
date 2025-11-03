@@ -4,6 +4,7 @@
 
 import { CompressionResult, formatFileSize } from '@/types/image-compression';
 
+import { logger } from '@/lib/logger';
 /**
  * Convert a File to base64 string
  */
@@ -234,7 +235,7 @@ export const batchCompressImages = async (
         results.push(result);
       }
     } catch (error) {
-      console.error(`Failed to compress ${file.name}:`, error);
+      logger.error(`Failed to compress ${file.name}:`, error);
     }
   }
   

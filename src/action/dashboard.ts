@@ -1,6 +1,7 @@
 "use server";
 import { createClient } from "@/utils/supabase/server";
 
+import { dashboardLogger } from '@/lib/logger';
 // Helper function to get the supabase client
 async function getSupabase() {
   return await createClient();
@@ -292,7 +293,7 @@ export async function getMemberStatusDistribution() {
       employment: Object.entries(employmentDistribution).map(([key, value], index) => ({
         name: key.charAt(0).toUpperCase() + key.slice(1),
         value: value as number,
-        color: ["#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#10b981"][index % 5]
+        color: ["#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#10b981"][index % 5] || "#6b7280"
       }))
     }
   };
@@ -572,7 +573,7 @@ async function getMonthlyTrendData(organizationId: string) {
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
       
       monthsData.push({
-        month: monthNames[month - 1],
+        month: monthNames[month - 1] || 'Unknown',
         attendance: attendanceCount || 0,
         late: lateCount || 0
       })
@@ -580,7 +581,7 @@ async function getMonthlyTrendData(organizationId: string) {
 
     return monthsData
   } catch (error) {
-    console.error('Error fetching monthly trend data', error)
+    dashboardLogger.error('Error fetching monthly trend data', error)
     return []
   }
 }
@@ -647,7 +648,7 @@ async function getTodaySummaryData(organizationId: string) {
       attendanceRate
     }
   } catch (error) {
-    console.error('Error fetching today summary data', error)
+    dashboardLogger.error('Error fetching today summary data', error)
     return {
       totalMembers: 0,
       checkedIn: 0,
@@ -857,7 +858,7 @@ export async function getMonthlyAttendanceStats() {
       .eq('is_active', true);
 
     if (memberIdsError) {
-      console.error('Failed to fetch organization member ids', memberIdsError);
+      dashboardLogger.error('Failed to fetch organization member ids', memberIdsError);
       return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 }, error: memberIdsError };
     }
 
@@ -870,7 +871,7 @@ export async function getMonthlyAttendanceStats() {
         return await queryFn();
       } catch (err) {
         if (retries > 0) {
-          console.warn('Query failed, retrying once', err);
+          dashboardLogger.warn('Query failed, retrying once', err);
           return await queryWithRetry(queryFn, retries - 1);
         }
         throw err;

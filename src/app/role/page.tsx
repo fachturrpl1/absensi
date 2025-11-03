@@ -48,11 +48,10 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
 
 import { IRole } from "@/interface"
-import LoadingSkeleton from "@/components/loading-skeleton"
+import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getAllOrganization } from "@/action/organization"
 import { createRole, deleteRole, getAllRole, updateRole } from "@/action/role"
-import { ContentLayout } from "@/components/admin-panel/content-layout"
 
 const roleSchema = z.object({
     code: z.string().min(2, "min 2 characters"),
@@ -205,7 +204,7 @@ export default function RolesPage() {
     ]
 
     return (
-        <ContentLayout title="Roles">
+        <div className="flex flex-1 flex-col gap-4">
             
             <div className="w-full max-w-6xl mx-auto">
                 <div className=" items-center my-7">
@@ -282,11 +281,11 @@ export default function RolesPage() {
                     </Dialog>
                 </div>
                 {loading ? (
-                    <LoadingSkeleton />
+                    <TableSkeleton rows={5} columns={4} />
                 ) : (
                     <DataTable columns={columns} data={roles} />
                 )}
             </div>
-        </ContentLayout>
+        </div>
     )
 }

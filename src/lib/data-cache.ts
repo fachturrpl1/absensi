@@ -1,6 +1,7 @@
 import { cache } from "react"
 import { createSupabaseClient } from "@/config/supabase-config"
 
+import { logger } from '@/lib/logger';
 /**
  * Cached data fetching utilities using React cache()
  * Prevents duplicate requests within a single server render
@@ -78,7 +79,7 @@ export const getCachedPositions = cache(async (organizationId: string) => {
     .order("title", { ascending: true })
   
   if (error) {
-    console.error("Error fetching cached positions:", error)
+    logger.error("Error fetching cached positions:", error)
     return []
   }
   
@@ -97,7 +98,7 @@ export const getCachedGroups = cache(async (organizationId: string) => {
     .order("name", { ascending: true })
   
   if (error) {
-    console.error("Error fetching cached groups:", error)
+    logger.error("Error fetching cached groups:", error)
     return []
   }
   
@@ -119,7 +120,7 @@ export const getCachedWorkSchedules = cache(async (organizationId: string) => {
     .order("name", { ascending: true })
   
   if (error) {
-    console.error("Error fetching cached work schedules:", error)
+    logger.error("Error fetching cached work schedules:", error)
     return []
   }
   
@@ -143,7 +144,7 @@ export const getCachedMembers = cache(async (organizationId: string) => {
     .order("created_at", { ascending: false })
   
   if (error) {
-    console.error("Error fetching cached members:", error)
+    logger.error("Error fetching cached members:", error)
     return []
   }
   

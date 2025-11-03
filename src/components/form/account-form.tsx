@@ -46,6 +46,7 @@ import { safeAvatarSrc, getUserInitials } from "@/lib/avatar-utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { GENDER_OPTIONS, RELATIONSHIP_OPTIONS } from "@/constants";
 
+import { accountLogger } from '@/lib/logger';
 interface UserProfile extends Partial<IUser> {
   email?: string;
 }
@@ -254,7 +255,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
         reader.readAsDataURL(file);
       });
 
-      console.log('File converted to base64:', {
+      accountLogger.debug('File converted to base64:', {
         name: file.name,
         type: file.type,
         size: file.size,
@@ -309,15 +310,15 @@ export function AccountForm({ initialData }: AccountFormProps) {
 
         // Also refresh from server to ensure sync (ignore result)
         refreshProfile().catch((error) => {
-          console.error('refreshProfile after upload failed:', error);
+          accountLogger.error('refreshProfile after upload failed:', error);
         });
 
       } else {
         toast.error(result.message);
-        console.error('Upload error:', result.message);
+        accountLogger.error('Upload error:', result.message);
       }
     } catch (error: unknown) {
-      console.error("Upload error:", error)
+      accountLogger.error("Upload error:", error)
       const message = error instanceof Error ? error.message : "Unknown error"
       toast.error(`Failed to upload photo: ${message}`)
     } finally {
@@ -363,7 +364,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
         initialData.user.profile_photo_url = null
 
         refreshProfile().catch((error) => {
-          console.error('refreshProfile after delete failed:', error);
+          accountLogger.error('refreshProfile after delete failed:', error);
         });
       } else {
         toast.error(result.message);
@@ -455,7 +456,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,image/jpg,image/jpeg,image/png,image/webp"
+                accept="image/*,image/jpg,image/jpeg,image/png,image/webp,image/gif"
                 className="hidden"
                 onChange={handlePhotoUpload}
                 key={Date.now()} // Force re-render untuk clear previous state

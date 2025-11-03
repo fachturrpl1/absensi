@@ -17,11 +17,11 @@ export const getMemberPerformance = async (memberId: string): Promise<ApiRespons
   // Calculate date ranges once
   const since90Date = new Date();
   since90Date.setDate(since90Date.getDate() - 89);
-  const since90 = since90Date.toISOString().split("T")[0];
+  const since90 = since90Date.toISOString().split("T")[0] as string;
 
   const sinceDate = new Date();
   sinceDate.setDate(sinceDate.getDate() - 30);
-  const since = sinceDate.toISOString().split("T")[0];
+  const since = sinceDate.toISOString().split("T")[0] as string;
 
   // Single optimized query to get all data at once
   const [allRecordsRes, latestRes, recentRes] = await Promise.all([
@@ -59,8 +59,8 @@ export const getMemberPerformance = async (memberId: string): Promise<ApiRespons
 
   if (allRecordsRes.data) {
     for (const record of allRecordsRes.data) {
-      const status = record.status?.toLowerCase();
-      if (status && status in countsMap) {
+      const status = record.status?.toLowerCase() as keyof typeof countsMap | undefined;
+      if (status && countsMap[status] !== undefined) {
         countsMap[status]++;
       }
     }

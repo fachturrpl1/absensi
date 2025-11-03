@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Users, CheckCircle, XCircle } from "lucide-react";
+import { MapPin, Users, CheckCircle } from "lucide-react";
 
 interface LocationStatsProps {
   totalLocations: number;

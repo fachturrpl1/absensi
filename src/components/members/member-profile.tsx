@@ -63,6 +63,7 @@ import { MemberAttendanceDonut } from "@/components/charts/member-attendance-don
 import type { IOrganization_member, IMemberPerformance } from "@/interface"
 import { cn } from "@/lib/utils"
 
+import { memberLogger } from '@/lib/logger';
 // ============================================================================
 // Types & Interfaces
 // ============================================================================
@@ -269,7 +270,7 @@ export default function MemberProfileEnhanced({
     // TODO: Implement PDF export
     setTimeout(() => {
       setIsExporting(false)
-      console.log("Exporting profile to PDF...")
+      memberLogger.debug("Exporting profile to PDF...")
     }, 1000)
   }
 

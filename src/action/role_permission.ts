@@ -25,7 +25,11 @@ export async function createRolePermission(data: { role_id: number; permission_i
       return { success: true, message: "All permissions removed" }
     }
 
-    const roleId = data[0].role_id
+    const roleId = data[0]?.role_id;
+    
+    if (!roleId) {
+      throw new Error("Role ID is required");
+    }
 
     // 1️⃣ remove existing entries
     const { error: delErr } = await supabase

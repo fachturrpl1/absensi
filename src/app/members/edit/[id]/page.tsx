@@ -5,7 +5,6 @@ import { useParams } from "next/navigation"
 import { getOrganizationMembersById } from "@/action/members"
 import MemberEditFormImproved from "@/components/form/member-edit-form-improved"
 import { IOrganization_member } from "@/interface"
-import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent } from "@/components/ui/card"
 import { AlertCircle } from "lucide-react"
@@ -31,7 +30,7 @@ export default function EditOrganizationMembersPage() {
 
     if (loading) {
         return (
-            <ContentLayout title="Edit Member">
+            <div className="flex flex-1 flex-col gap-4">
                 <div className="w-full max-w-4xl mx-auto p-6 space-y-6">
                     {/* Header Skeleton */}
                     <div className="space-y-3">
@@ -68,13 +67,13 @@ export default function EditOrganizationMembersPage() {
                         </CardContent>
                     </Card>
                 </div>
-            </ContentLayout>
+            </div>
         )
     }
 
     if (!member) {
         return (
-            <ContentLayout title="Edit Member">
+            <div className="flex flex-1 flex-col gap-4">
                 <div className="w-full max-w-4xl mx-auto p-6">
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
@@ -84,19 +83,19 @@ export default function EditOrganizationMembersPage() {
                         </AlertDescription>
                     </Alert>
                 </div>
-            </ContentLayout>
+            </div>
         )
     }
 
     return (
-        <ContentLayout title="Edit Member">
+        <div className="flex flex-1 flex-col gap-4">
             <div className="w-full max-w-4xl mx-auto p-6">
                 <MemberEditFormImproved 
                     initialValues={member}
                     rfidInitial={member.rfid_cards || undefined}
                 />
             </div>
-        </ContentLayout>
+        </div>
     )
 }
 

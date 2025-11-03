@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query"
 import { getDepartmentMembersByOrganization } from "@/action/members"
 
+import { memberLogger } from '@/lib/logger';
 // Hook for fetching department members with React Query caching
 export function useDepartmentMembers(organizationId?: string) {
   return useQuery({
     queryKey: ["departmentMembers", organizationId],
     queryFn: async () => {
       if (!organizationId) return []
-      console.log('[React Query] Fetching department members')
+      memberLogger.debug('[React Query] Fetching department members')
       const res = await getDepartmentMembersByOrganization(organizationId)
       if (!res.success) {
         throw new Error(res.message || 'Failed to fetch department members')

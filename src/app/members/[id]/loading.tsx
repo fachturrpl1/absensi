@@ -1,10 +1,9 @@
-import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 
 export default function MemberProfileLoading() {
   return (
-    <ContentLayout title="Member Profile">
+    <div className="flex flex-1 flex-col gap-4">
       <div className="max-w-4xl mx-auto py-4 space-y-6">
         {/* Profile Header Card */}
         <Card>
@@ -69,6 +68,6 @@ export default function MemberProfileLoading() {
           </CardContent>
         </Card>
       </div>
-    </ContentLayout>
+    </div>
   )
 }

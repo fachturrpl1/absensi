@@ -1,4 +1,3 @@
-import { ContentLayout } from "@/components/admin-panel/content-layout";
 import { getDeviceTypes } from "@/action/attendance_device";
 import { IDeviceType } from "@/interface";
 import LocationForm from "../_components/location-form";
@@ -26,8 +25,8 @@ export default async function NewLocationPage() {
   const deviceTypes = (deviceTypesRes.success ? deviceTypesRes.data : []) as IDeviceType[];
 
   return (
-    <ContentLayout title="Add New Location">
+    <div className="flex flex-1 flex-col gap-4">
       <LocationForm deviceTypes={deviceTypes} organizationId={organizationId} />
-    </ContentLayout>
+    </div>
   );
 }

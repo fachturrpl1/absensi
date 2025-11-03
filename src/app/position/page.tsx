@@ -36,7 +36,7 @@ import {
     getAllPositions,
     updatePositions,
 } from "@/action/position"
-import LoadingSkeleton from "@/components/loading-skeleton"
+import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import {
     Empty,
     EmptyHeader,
@@ -53,7 +53,6 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { getAllOrganization } from "@/action/organization"
-import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { createClient } from "@/utils/supabase/client"
 import { Can } from "@/components/can"
 import {
@@ -68,6 +67,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
+import { logger } from '@/lib/logger';
 const positionSchema = z.object({
     organization_id: z.string().min(1, "Organization is required"),
     code: z.string().min(2, "min 2 characters"),
@@ -98,7 +98,13 @@ export default function PositionsPage() {
             const response: unknown = await getAllPositions()
             const typedResponse = response as { success: boolean; data: IPositions[]; message: string }
             if (!typedResponse.success) throw new Error(typedResponse.message)
-            setPositions(typedResponse.data)
+            
+            // Filter by organization if user has one
+            const filteredPositions = organizationId 
+                ? typedResponse.data.filter((p: IPositions) => String(p.organization_id) === organizationId)
+                : typedResponse.data
+            
+            setPositions(filteredPositions)
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'An error occurred')
         } finally {
@@ -137,10 +143,15 @@ export default function PositionsPage() {
     }
 
     React.useEffect(() => {
-        fetchPositions()
-        fetchOrganizations()
         fetchOrganizationId()
-    }, [positionId])
+        fetchOrganizations()
+    }, [])
+
+    React.useEffect(() => {
+        if (organizationId) {
+            fetchPositions()
+        }
+    }, [organizationId])
 
     const form = useForm<PositionsForm>({
         resolver: zodResolver(positionSchema),
@@ -171,7 +182,7 @@ export default function PositionsPage() {
 
 
     const handleSubmit = async (values: PositionsForm) => {
-        console.log("🚀 Submit values:", values)
+        logger.debug("🚀 Submit values:", values)
         try {
             let res
             if (editingDetail) {
@@ -281,7 +292,7 @@ export default function PositionsPage() {
     ]
 
     return (
-        <ContentLayout title="Positions">
+        <div className="flex flex-1 flex-col gap-4">
             <div className="w-full max-w-6xl mx-auto">
                 <div className="items-center my-7">
                     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
@@ -433,7 +444,7 @@ export default function PositionsPage() {
                     </Dialog>
                 </div>
                 {loading ? (
-                    <LoadingSkeleton />
+                    <TableSkeleton rows={6} columns={5} />
                 ) : positions.length === 0 ? (
                     <div className="mt-20">
                         <Empty>
@@ -455,6 +466,6 @@ export default function PositionsPage() {
                     <DataTable columns={columns} data={positions} />
                 )}
             </div>
-        </ContentLayout>
+        </div>
     )
 }

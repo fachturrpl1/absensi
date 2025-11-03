@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+import { attendanceLogger } from '@/lib/logger';
 // Fix untuk icon marker leaflet
 const icon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -135,7 +136,7 @@ export default function MapComponent({
         });
       }
     } catch (error) {
-      console.error("Search error:", error);
+      attendanceLogger.error("Search error:", error);
       setAlertDialog({
         open: true,
         title: "Search Failed",
@@ -157,7 +158,7 @@ export default function MapComponent({
           }
         },
         (error) => {
-          console.error("Geolocation error:", error);
+          attendanceLogger.error("Geolocation error:", error);
           setAlertDialog({
             open: true,
             title: "Location Access Denied",

@@ -91,7 +91,7 @@ export function DistributionCards({ distribution = [], statusData = [] }: Distri
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {statusData.map((entry: any, index: number) => (
+                  {statusData.map((_entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>

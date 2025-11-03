@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server"
 
+import { analyticsLogger } from '@/lib/logger';
 async function getUserOrganizationId() {
   const supabase = await createClient()
   const {
@@ -269,7 +270,7 @@ export async function getAttendanceTrends30Days() {
 
   // Initialize all 30 days
   for (let i = 29; i >= 0; i--) {
-    const dateStr = new Date(Date.now() - i * 86400000).toISOString().split("T")[0]
+    const dateStr = new Date(Date.now() - i * 86400000).toISOString().split("T")[0]!
     dateMap.set(dateStr, { present: 0, late: 0, absent: 0, excused: 0, earlyLeave: 0 })
   }
 
@@ -331,13 +332,6 @@ export async function getStatusDistribution() {
   const memberIdList = memberIds?.map((m) => m.id) || []
 
   const statuses = ["present", "late", "absent", "excused", "early_leave"]
-  const statusLabels = {
-    present: "Present",
-    late: "Late",
-    absent: "Absent",
-    excused: "Excused",
-    early_leave: "Early Leave",
-  }
   const colors = {
     present: "#10b981",
     late: "#f59e0b",
@@ -393,11 +387,11 @@ export async function getStatusDistribution() {
 export async function getRecentActivities(limit = 10) {
   const organizationId = await getUserOrganizationId()
   if (!organizationId) {
-    console.log('[getRecentActivities] No organization ID found')
+    analyticsLogger.debug('[getRecentActivities] No organization ID found')
     return { success: false, data: [] }
   }
 
-  console.log('[getRecentActivities] Organization ID:', organizationId)
+  analyticsLogger.debug('[getRecentActivities] Organization ID:', organizationId)
 
   const supabase = await createClient()
 
@@ -408,10 +402,10 @@ export async function getRecentActivities(limit = 10) {
     .eq("is_active", true)
 
   const memberIdList = memberIds?.map((m) => m.id) || []
-  console.log('[getRecentActivities] Found', memberIdList.length, 'active members')
+  analyticsLogger.debug('[getRecentActivities] Found', memberIdList.length, 'active members')
 
   if (memberIdList.length === 0) {
-    console.log('[getRecentActivities] No active members found')
+    analyticsLogger.debug('[getRecentActivities] No active members found')
     return { success: true, data: [] }
   }
 
@@ -439,13 +433,13 @@ export async function getRecentActivities(limit = 10) {
   const records = recordsResult.data || []
 
   if (logsResult.error) {
-    console.error('[getRecentActivities] Error fetching logs:', logsResult.error)
+    analyticsLogger.error('[getRecentActivities] Error fetching logs:', logsResult.error)
   }
   if (recordsResult.error) {
-    console.error('[getRecentActivities] Error fetching records:', recordsResult.error)
+    analyticsLogger.error('[getRecentActivities] Error fetching records:', recordsResult.error)
   }
 
-  console.log('[getRecentActivities] Found', logs.length, 'attendance logs and', records.length, 'attendance records')
+  analyticsLogger.debug('[getRecentActivities] Found', logs.length, 'attendance logs and', records.length, 'attendance records')
 
   // Convert attendance_records to activity format
   const recordActivities = records.map((record) => ({
@@ -466,11 +460,11 @@ export async function getRecentActivities(limit = 10) {
     .slice(0, limit)
 
   if (allActivities.length === 0) {
-    console.log('[getRecentActivities] No activities found from both sources')
+    analyticsLogger.debug('[getRecentActivities] No activities found from both sources')
     return { success: true, data: [] }
   }
 
-  console.log('[getRecentActivities] Combined', allActivities.length, 'total activities')
+  analyticsLogger.debug('[getRecentActivities] Combined', allActivities.length, 'total activities')
 
   // Fetch member details separately
   const { data: members } = await supabase

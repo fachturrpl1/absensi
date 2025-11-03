@@ -27,6 +27,7 @@ import { safeAvatarSrc, getUserInitials } from "@/lib/avatar-utils"
 import LogoutButton from "../logout"
 import { LanguageDropdownItem } from "@/components/language-dropdown-item"
 
+import { logger } from '@/lib/logger';
 export function UserNav() {
   const user = useAuthStore((state) => state.user)
   const profilePhotoUrl = useProfilePhotoUrl(user?.profile_photo_url ?? undefined)
@@ -72,7 +73,7 @@ export function UserNav() {
                     className="object-cover"
                     onError={(e) => {
                       if (process.env.NODE_ENV === 'development') {
-                        console.log('Avatar image load failed:', profilePhotoUrl)
+                        logger.debug('Avatar image load failed:', profilePhotoUrl)
                       }
                       // Hide image if it fails to load
                       e.currentTarget.style.display = 'none'

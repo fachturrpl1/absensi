@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getMonthlyAttendanceStats } from '@/action/dashboard'
 
+import { dashboardLogger } from '@/lib/logger';
 export async function GET() {
   try {
     const result = await getMonthlyAttendanceStats()
@@ -13,7 +14,7 @@ export async function GET() {
     }
 
     // Log and forward helpful non-sensitive error information to the client
-    console.error('getMonthlyAttendanceStats returned no data', result)
+    dashboardLogger.error('getMonthlyAttendanceStats returned no data', result)
     const safeError: any = {}
     if (result && typeof result === 'object') {
       if ((result as any).error) {
@@ -29,7 +30,7 @@ export async function GET() {
     }
     return NextResponse.json({ success: false, error: safeError, data: result?.data || null }, { status: 502 })
   } catch (err) {
-    console.error('API /dashboard/monthly error', err)
+    dashboardLogger.error('API /dashboard/monthly error', err)
     return NextResponse.json({ success: false, message: 'Failed to fetch monthly attendance stats' }, { status: 500 })
   }
 }

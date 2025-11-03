@@ -1,5 +1,6 @@
 import { formatInTimeZone } from "date-fns-tz";
 
+import { logger } from '@/lib/logger';
 export function formatLocalTime(
   utcString: string | null | undefined,
   timezone: string,
@@ -13,7 +14,7 @@ export function formatLocalTime(
     const formatted = formatInTimeZone(date, timezone, formatStr);
     return formatted;
   } catch (err) {
-    console.error("Error formatting time:", err);
+    logger.error("Error formatting time:", err);
     return "-";
   }
 }

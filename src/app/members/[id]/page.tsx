@@ -2,7 +2,6 @@ import React from "react"
 import { getOrganizationMembersById } from "@/action/members"
 import { getMemberPerformance } from "@/action/member_performance"
 import MemberProfileClient from "@/components/members/member-profile-client"
-import { ContentLayout } from "@/components/admin-panel/content-layout"
 
 const getMockSchedule = () => ({
   name: "Standard Office Hours",
@@ -24,7 +23,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   const schedule = getMockSchedule()
 
   return (
-    <ContentLayout title="Member Profile">
+    <div className="flex flex-1 flex-col gap-4">
       <div className="max-w-4xl mx-auto py-4">
         {member ? (
           <MemberProfileClient 
@@ -36,6 +35,6 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
           <div className="text-muted-foreground">Member not found.</div>
         )}
       </div>
-    </ContentLayout>
+    </div>
   )
 }

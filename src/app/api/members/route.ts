@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAllOrganization_member } from '@/action/members'
 
+import { memberLogger } from '@/lib/logger';
 export async function GET() {
   try {
     const response = await getAllOrganization_member()
@@ -28,7 +29,7 @@ export async function GET() {
       }
     )
   } catch (error) {
-    console.error('API /members error:', error)
+    memberLogger.error('API /members error:', error)
     return NextResponse.json(
       { success: false, message: 'Failed to fetch members' },
       { 

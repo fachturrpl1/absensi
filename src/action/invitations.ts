@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { IMemberInvitation } from "@/interface";
 import { sendInvitationEmailViaSupabase, sendInvitationEmail } from "@/lib/email";
 
+import { logger } from '@/lib/logger';
 // Toggle email service:
 // true = Supabase built-in email (only works for NEW emails)
 // false = Resend (works for all emails, but requires third-party)
@@ -162,7 +163,7 @@ export async function createInvitation(data: CreateInvitationData) {
         // If email was skipped (user already registered), that's OK
         // Invitation is still created, just no email sent
         if (emailResult.skipEmail) {
-          console.log("Email skipped for registered user. Invitation created without email.");
+          logger.debug("Email skipped for registered user. Invitation created without email.");
         }
       } else {
         // Option 2: Use Resend (requires API key)
@@ -185,7 +186,7 @@ export async function createInvitation(data: CreateInvitationData) {
         });
       }
     } catch (emailError) {
-      console.error("Failed to send invitation email:", emailError);
+      logger.error("Failed to send invitation email:", emailError);
       // Don't fail the invitation creation if email fails
     }
 
@@ -195,7 +196,7 @@ export async function createInvitation(data: CreateInvitationData) {
       data: invitation as IMemberInvitation,
     };
   } catch (error) {
-    console.error("Error creating invitation:", error);
+    logger.error("Error creating invitation:", error);
     return {
       success: false,
       message: error instanceof Error ? error.message : "Unknown error",
@@ -269,7 +270,7 @@ export async function getInvitationByToken(token: string) {
       data: invitation as IMemberInvitation,
     };
   } catch (error) {
-    console.error("Error getting invitation:", error);
+    logger.error("Error getting invitation:", error);
     return {
       success: false,
       message: error instanceof Error ? error.message : "Unknown error",
@@ -337,7 +338,7 @@ export async function acceptInvitation(data: AcceptInvitationData) {
       });
 
     if (profileError) {
-      console.error("Error creating user profile:", profileError);
+      logger.error("Error creating user profile:", profileError);
       // Continue anyway, profile might already exist
     }
 
@@ -375,7 +376,7 @@ export async function acceptInvitation(data: AcceptInvitationData) {
       data: orgMember,
     };
   } catch (error) {
-    console.error("Error accepting invitation:", error);
+    logger.error("Error accepting invitation:", error);
     return {
       success: false,
       message: error instanceof Error ? error.message : "Unknown error",
@@ -448,7 +449,7 @@ export async function getAllInvitations(status?: string) {
       data: invitations as IMemberInvitation[],
     };
   } catch (error) {
-    console.error("Error getting invitations:", error);
+    logger.error("Error getting invitations:", error);
     return {
       success: false,
       message: error instanceof Error ? error.message : "Unknown error",
@@ -556,7 +557,7 @@ export async function resendInvitation(invitationId: string) {
         }
       }
     } catch (emailError) {
-      console.error("Failed to resend invitation email:", emailError);
+      logger.error("Failed to resend invitation email:", emailError);
     }
 
     return {
@@ -565,7 +566,7 @@ export async function resendInvitation(invitationId: string) {
       data: updated as IMemberInvitation,
     };
   } catch (error) {
-    console.error("Error resending invitation:", error);
+    logger.error("Error resending invitation:", error);
     return {
       success: false,
       message: error instanceof Error ? error.message : "Unknown error",
@@ -599,7 +600,7 @@ export async function cancelInvitation(invitationId: string) {
       data: updated as IMemberInvitation,
     };
   } catch (error) {
-    console.error("Error cancelling invitation:", error);
+    logger.error("Error cancelling invitation:", error);
     return {
       success: false,
       message: error instanceof Error ? error.message : "Unknown error",
@@ -630,7 +631,7 @@ export async function deleteInvitation(invitationId: string) {
       message: "Invitation deleted successfully",
     };
   } catch (error) {
-    console.error("Error deleting invitation:", error);
+    logger.error("Error deleting invitation:", error);
     return {
       success: false,
       message: error instanceof Error ? error.message : "Unknown error",

@@ -49,10 +49,9 @@ import z from "zod"
 
 import {IPermission, ApiResponse} from "@/interface"
 
-import LoadingSkeleton from "@/components/loading-skeleton"
+import { TableSkeleton } from "@/components/ui/loading-skeleton"
 
 import { createPermission, deletePermission, getAllPermission, updatePermission } from "@/action/permission"
-import { ContentLayout } from "@/components/admin-panel/content-layout"
 
 const permissionSchema = z.object({
     code: z.string().min(2, "min 2 characters"),
@@ -202,7 +201,7 @@ export default function RolesPage() {
     ]
 
     return (
-        <ContentLayout title="Permission">
+        <div className="flex flex-1 flex-col gap-4">
             
             <div className="w-full max-w-6xl mx-auto">
                 <div className=" items-center my-7">
@@ -292,11 +291,11 @@ export default function RolesPage() {
                     </Dialog>
                 </div>
                 {loading ? (
-                    <LoadingSkeleton />
+                    <TableSkeleton rows={6} columns={5} />
                 ) : (
                     <DataTable columns={columns} data={permissions} />
                 )}
             </div>
-        </ContentLayout>
+        </div>
     )
 }

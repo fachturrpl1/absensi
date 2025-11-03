@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { IUser, IOrganization_member, IEmergencyContact } from "@/interface";
 import { revalidatePath } from "next/cache";
 
+import { accountLogger } from '@/lib/logger';
 interface UserProfile extends Partial<IUser> {
   email?: string;
 }
@@ -44,7 +45,7 @@ export async function getAccountData(): Promise<{
       .maybeSingle();
 
     if (profileError) {
-      console.error('Profile error:', profileError);
+      accountLogger.error('Profile error:', profileError);
     }
 
     // Get organization member data with relations
@@ -61,7 +62,7 @@ export async function getAccountData(): Promise<{
       .maybeSingle();
 
     if (orgMemberError) {
-      console.error('Org member error:', orgMemberError);
+      accountLogger.error('Org member error:', orgMemberError);
     }
 
     const normalizedUserProfile: UserProfile = userProfile ? { ...userProfile } : {};
@@ -79,7 +80,7 @@ export async function getAccountData(): Promise<{
       data: accountData,
     };
   } catch (error: unknown) {
-    console.error('Get account data error:', error);
+    accountLogger.error('Get account data error:', error);
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Failed to fetch account data',
@@ -150,7 +151,7 @@ export async function updateUserProfile(profileData: Partial<UserProfile>): Prom
       message: 'Profile updated successfully',
     };
   } catch (error: unknown) {
-    console.error('Update profile error:', error);
+    accountLogger.error('Update profile error:', error);
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Failed to update profile',
@@ -195,7 +196,7 @@ export async function updateProfilePhoto(photoUrl: string): Promise<{
       message: 'Profile photo updated successfully',
     };
   } catch (error: unknown) {
-    console.error('Update profile photo error:', error);
+    accountLogger.error('Update profile photo error:', error);
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Failed to update profile photo',
@@ -235,7 +236,7 @@ export async function changePassword(newPassword: string): Promise<{
       message: 'Password changed successfully',
     };
   } catch (error: unknown) {
-    console.error('Change password error:', error);
+    accountLogger.error('Change password error:', error);
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Failed to change password',
@@ -260,7 +261,11 @@ export async function deleteOldProfilePhoto(oldPhotoUrl: string): Promise<{
     
     const filePath = urlParts[1]; // users/user-id/filename
     
-    console.log('Deleting old photo:', filePath);
+    if (!filePath) {
+      return { success: false, message: 'Invalid file path' };
+    }
+    
+    accountLogger.debug('Deleting old photo:', filePath);
     
     // Delete file from Supabase Storage
     const { error } = await supabase.storage
@@ -268,20 +273,20 @@ export async function deleteOldProfilePhoto(oldPhotoUrl: string): Promise<{
       .remove([filePath]);
     
     if (error) {
-      console.error('Delete error:', error);
+      accountLogger.error('Delete error:', error);
       return {
         success: false,
         message: `Failed to delete old photo: ${error.message}`,
       };
     }
     
-    console.log('Old photo deleted successfully:', filePath);
+    accountLogger.debug('Old photo deleted successfully:', filePath);
     return {
       success: true,
       message: 'Old photo deleted successfully',
     };
   } catch (error: unknown) {
-    console.error('Delete old photo error:', error);
+    accountLogger.error('Delete old photo error:', error);
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -303,7 +308,7 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
-      console.error('User authentication error:', userError);
+      accountLogger.error('User authentication error:', userError);
       return { success: false, message: "User not authenticated" };
     }
 
@@ -314,7 +319,7 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
       return { success: false, message: "Invalid upload data" };
     }
 
-    console.log('Processing base64 upload:', {
+    accountLogger.debug('Processing base64 upload:', {
       fileName,
       fileType,
       fileSize,
@@ -340,7 +345,7 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
       .maybeSingle();
 
     if (profileError) {
-      console.error('Profile fetch error:', profileError);
+      accountLogger.error('Profile fetch error:', profileError);
     }
 
     // Create user-specific folder structure: users/{user-id}/
@@ -358,45 +363,53 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
 
       // Convert base64 to buffer
       const originalBuffer = Buffer.from(base64Data, 'base64');
-      console.log('Buffer created:', { size: originalBuffer.length });
+      accountLogger.debug('Buffer created:', { size: originalBuffer.length });
 
       // Try server-side compression using sharp
       let finalBuffer = originalBuffer;
       let finalContentType = 'image/webp';
       let finalExt = 'webp';
 
-      try {
-        const sharp = (await import('sharp')).default;
-        const compressed = await sharp(originalBuffer)
-          .rotate()
-          .resize(400, 400, { fit: 'cover', withoutEnlargement: true })
-          .webp({ quality: 85 })
-          .toBuffer();
-
-        // Only use compressed if it's actually smaller
-        if (compressed.length < originalBuffer.length) {
-          finalBuffer = Buffer.from(compressed);
-          console.log('Compression applied:', { originalSize: originalBuffer.length, compressedSize: compressed.length });
-        } else {
-          finalBuffer = originalBuffer;
-          // If not smaller, use original type/ext
-          finalContentType = fileType;
-          finalExt = origExt;
-          console.log('Compression skipped (no size benefit).');
-        }
-      } catch (e) {
-        // If sharp fails (e.g., not installed), fall back to original
+      // Skip compression for GIF to preserve animation
+      if (fileType === 'image/gif') {
         finalBuffer = originalBuffer;
         finalContentType = fileType;
-        finalExt = origExt;
-        console.warn('Image compression unavailable, uploading original buffer:', e instanceof Error ? e.message : e);
+        finalExt = 'gif';
+        accountLogger.debug('GIF detected, skipping compression to preserve animation');
+      } else {
+        try {
+          const sharp = (await import('sharp')).default;
+          const compressed = await sharp(originalBuffer)
+            .rotate()
+            .resize(400, 400, { fit: 'cover', withoutEnlargement: true })
+            .webp({ quality: 85 })
+            .toBuffer();
+
+          // Only use compressed if it's actually smaller
+          if (compressed.length < originalBuffer.length) {
+            finalBuffer = Buffer.from(compressed);
+            accountLogger.debug('Compression applied:', { originalSize: originalBuffer.length, compressedSize: compressed.length });
+          } else {
+            finalBuffer = originalBuffer;
+            // If not smaller, use original type/ext
+            finalContentType = fileType;
+            finalExt = origExt;
+            accountLogger.debug('Compression skipped (no size benefit).');
+          }
+        } catch (e) {
+          // If sharp fails (e.g., not installed), fall back to original
+          finalBuffer = originalBuffer;
+          finalContentType = fileType;
+          finalExt = origExt;
+          accountLogger.warn('Image compression unavailable, uploading original buffer:', e instanceof Error ? e.message : e);
+        }
       }
 
       const newFileName = `${baseFileName}.${finalExt}`;
       const filePath = `${userFolder}/${newFileName}`;
 
-      console.log('Upload path:', filePath);
-      console.log('User folder:', userFolder);
+      accountLogger.debug('Upload path:', filePath);
+      accountLogger.debug('User folder:', userFolder);
 
       // Upload buffer to Supabase Storage
       const { error: uploadError, data: uploadResult } = await supabase.storage
@@ -408,21 +421,21 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
         });
 
       if (uploadError) {
-        console.error('Supabase upload error:', uploadError);
+        accountLogger.error('Supabase upload error:', uploadError);
         return {
           success: false,
           message: `Upload failed: ${uploadError.message}`,
         };
       }
 
-      console.log('Upload successful:', uploadResult);
+      accountLogger.debug('Upload successful:', uploadResult);
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('profile-photos')
         .getPublicUrl(filePath);
 
-      console.log('Public URL:', publicUrl);
+      accountLogger.debug('Public URL:', publicUrl);
 
       // Delete old photo if exists
       let oldPhotoDeleted = false;
@@ -431,7 +444,7 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
         oldPhotoDeleted = deleteResult.success;
         
         if (!deleteResult.success) {
-          console.warn('Failed to delete old photo, but continuing with upload:', deleteResult.message);
+          accountLogger.warn('Failed to delete old photo, but continuing with upload:', deleteResult.message);
         }
       }
 
@@ -439,13 +452,13 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
       const updateResult = await updateProfilePhoto(publicUrl);
       
       if (!updateResult.success) {
-        console.error('Profile update error:', updateResult.message);
+        accountLogger.error('Profile update error:', updateResult.message);
         
         // If profile update fails, delete the uploaded file to maintain consistency
         try {
           await supabase.storage.from('profile-photos').remove([filePath]);
         } catch (cleanupError) {
-          console.error('Cleanup error:', cleanupError);
+          accountLogger.error('Cleanup error:', cleanupError);
         }
         
         return updateResult;
@@ -458,14 +471,14 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
         oldPhotoDeleted,
       };
     } catch (bufferError: unknown) {
-      console.error('Buffer processing error:', bufferError);
+      accountLogger.error('Buffer processing error:', bufferError);
       return {
         success: false,
         message: `Failed to process image data: ${bufferError instanceof Error ? bufferError.message : 'Unknown error'}`,
       };
     }
   } catch (error: unknown) {
-    console.error('Upload profile photo base64 error:', error);
+    accountLogger.error('Upload profile photo base64 error:', error);
     return {
       success: false,
       message: `Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -538,7 +551,7 @@ export async function deleteUserProfilePhoto(): Promise<{
       message: 'Profile photo deleted successfully',
     };
   } catch (error: unknown) {
-    console.error('Delete profile photo error:', error);
+    accountLogger.error('Delete profile photo error:', error);
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Failed to delete profile photo',

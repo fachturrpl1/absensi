@@ -6,7 +6,7 @@
  */
 
 import dynamic from 'next/dynamic'
-import { ComponentType } from 'react'
+import { ComponentType, ReactElement } from 'react'
 
 // Loading fallback component
 const LoadingFallback = () => {
@@ -146,10 +146,7 @@ export const LazyTodaySummaryHero = dynamic(
 // CLIENT COMPONENTS - Heavy client-side components
 // ============================================================================
 
-export const LazyMembersClient = dynamic(
-  () => import('@/app/members/members-client'),
-  { loading: LoadingFallback, ssr: false }
-)
+// LazyMembersClient removed - members-client.tsx has been merged into page.tsx
 
 export const LazyAttendanceClient = dynamic(
   () => import('@/app/attendance/attendance-client'),
@@ -172,7 +169,7 @@ export const LazyMemberProfile = dynamic(
 export function createLazyComponent<T extends ComponentType<any>>(
   importFunc: () => Promise<{ default: T } | T>,
   options?: {
-    loading?: ComponentType
+    loading?: () => ReactElement
     ssr?: boolean
   }
 ) {
@@ -182,7 +179,7 @@ export function createLazyComponent<T extends ComponentType<any>>(
       return 'default' in mod ? mod : { default: mod as T }
     },
     {
-      loading: options?.loading || LoadingFallback,
+      loading: options?.loading,
       ssr: options?.ssr ?? true,
     }
   )

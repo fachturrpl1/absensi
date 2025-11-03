@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createSupabaseClient } from "@/config/supabase-config"
 
+import { memberLogger } from '@/lib/logger';
 // Batch API untuk members page - 3 queries jadi 1 request
 export async function GET(request: Request) {
   try {
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.error("Error in members init:", error)
+    memberLogger.error("Error in members init:", error)
     return NextResponse.json(
       {
         success: false,

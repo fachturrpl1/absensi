@@ -26,7 +26,6 @@ import {
 
 import { getAllPermission } from "@/action/permission"
 import { getRolePermissions, createRolePermission } from "@/action/role_permission"
-import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { IPermission, IRolePermission } from "@/interface"
 
 const schema = z.object({
@@ -119,7 +118,7 @@ export default function RolePermissionPage() {
 
   if (loading) {
     return (
-      <ContentLayout title="Role Permission">
+      <div className="flex flex-1 flex-col gap-4">
         <div className="container mx-auto p-4 md:p-6 lg:p-8 max-w-6xl">
           <div className="space-y-6">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -141,7 +140,7 @@ export default function RolePermissionPage() {
             ))}
           </div>
         </div>
-      </ContentLayout>
+      </div>
     )
   }
 
@@ -154,7 +153,7 @@ export default function RolePermissionPage() {
   }, {})
 
   return (
-    <ContentLayout title="Role Permission">
+    <div className="flex flex-1 flex-col gap-4">
       <div className="container mx-auto p-4 md:p-6 lg:p-8 max-w-6xl">
         {/* Header with Go Back Button */}
         <div className="flex items-center gap-4 mb-6">
@@ -292,6 +291,6 @@ export default function RolePermissionPage() {
           </form>
         </Form>
       </div>
-    </ContentLayout>
+    </div>
   )
 }

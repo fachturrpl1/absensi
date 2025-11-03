@@ -1,12 +1,7 @@
 "use client";
 
-import { Footer } from "@/components/admin-panel/footer";
-import { Sidebar } from "@/components/admin-panel/sidebar";
-import { useSidebar } from "@/hooks/use-sidebar";
-import { useStore } from "@/hooks/use-store";
-import { cn } from "@/lib/utils";
-import { SidebarProvider } from "../ui/sidebar";
 import { usePathname } from "next/navigation";
+import { AppShell } from "@/components/layout/app-shell";
 
 export default function AdminPanelLayout({
   children
@@ -14,9 +9,8 @@ export default function AdminPanelLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const sidebar = useStore(useSidebar, (x) => x);
 
-  // Public pages: no sidebar/navbar
+  // Public pages: no layout
   const publicPages = ["/auth/login", "/auth/signup", "/onboarding"];
   const isPublicPage = publicPages.some(page => pathname === page) || pathname?.startsWith("/invite");
   
@@ -24,22 +18,5 @@ export default function AdminPanelLayout({
     return <>{children}</>;
   }
 
-  if (!sidebar) return null;
-  
-  const { getOpenState, settings } = sidebar;
-
-  return (
-    <>
-      <Sidebar />
-      
-      <main
-        className={cn(
-          "min-h-[calc(100vh_-_56px)] bg-zinc-50 dark:bg-zinc-900 transition-[padding-left] ease-in-out duration-300",
-          !settings.disabled && (!getOpenState() ? "lg:pl-[90px]" : "lg:pl-72")
-        )}
-      >
-        {children}
-      </main>
-    </>
-  );
+  return <AppShell>{children}</AppShell>;
 }

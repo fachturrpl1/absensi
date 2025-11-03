@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
-import { Check, Pencil, Plus, Trash, ArrowLeft } from "lucide-react"
+import { Pencil, Plus, Trash, ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
 import {
   Dialog,
@@ -73,8 +73,7 @@ import {
   deleteWorkScheduleDetail,
 } from "@/action/schedule"
 import TopBar from "@/components/top-bar"
-import LoadingSkeleton from "@/components/loading-skeleton"
-import { ContentLayout } from "@/components/admin-panel/content-layout"
+import { FormSkeleton } from "@/components/ui/loading-skeleton"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Clock, CalendarDays, TrendingUp } from "lucide-react"
 import {
@@ -586,7 +585,7 @@ export default function WorkScheduleDetailsPage() {
   ]
 
   return (
-    <ContentLayout title="Schedule Details">
+    <div className="flex flex-1 flex-col gap-4">
       <div className="w-full max-w-6xl mx-auto py-8 space-y-6">
         {/* Summary Cards */}
         {!loading && details.length > 0 && (
@@ -782,7 +781,7 @@ export default function WorkScheduleDetailsPage() {
         </div>
 
         {loading ? (
-          <LoadingSkeleton />
+          <TableSkeleton rows={10} columns={7} />
         ) : (
           <DataTableWithBack 
             columns={columns} 
@@ -792,6 +791,6 @@ export default function WorkScheduleDetailsPage() {
           />
         )}
       </div>
-    </ContentLayout>
+    </div>
   )
 }

@@ -32,7 +32,6 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 
 import { toast } from "sonner"
-import { useParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
@@ -55,7 +54,7 @@ import {
   getAllGroups,
   updateGroup,
 } from "@/action/group"
-import LoadingSkeleton from "@/components/loading-skeleton"
+import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import {
   Select,
   SelectContent,
@@ -64,7 +63,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { getAllOrganization } from "@/action/organization"
-import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { createClient } from "@/utils/supabase/client"
 import { Can } from "@/components/can"
 
@@ -79,9 +77,6 @@ const groupSchema = z.object({
 type GroupForm = z.infer<typeof groupSchema>
 
 export default function GroupsPage() {
-  const params = useParams()
-  const scheduleId = Number(params.id)
-
   const [isModalOpen, setIsModalOpen] = React.useState(false)
   const [editingDetail, setEditingDetail] = React.useState<IGroup | null>(null)
   const [groups, setGroups] = React.useState<IGroup[]>([])
@@ -95,7 +90,13 @@ export default function GroupsPage() {
       setLoading(true)
       const response = await getAllGroups()
       if (!response.success) throw new Error(response.message)
-      setGroups(response.data)
+      
+      // Filter by organization if user has one
+      const filteredGroups = organizationId 
+        ? response.data.filter((g: IGroup) => String(g.organization_id) === organizationId)
+        : response.data
+      
+      setGroups(filteredGroups)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
@@ -133,10 +134,15 @@ export default function GroupsPage() {
   }
 
   React.useEffect(() => {
-    fetchGroups()
-    fetchOrganizations()
     fetchOrganizationId()
-  }, [scheduleId])
+    fetchOrganizations()
+  }, [])
+
+  React.useEffect(() => {
+    if (organizationId) {
+      fetchGroups()
+    }
+  }, [organizationId])
 
   const form = useForm<GroupForm>({
     resolver: zodResolver(groupSchema),
@@ -268,7 +274,7 @@ export default function GroupsPage() {
   ]
 
   return (
-    <ContentLayout title="Groups">
+    <div className="flex flex-1 flex-col gap-4">
       <div className="w-full max-w-6xl mx-auto">
         <div className="items-center my-7">
           <Dialog open={isModalOpen} onOpenChange={handleDialogOpenChange}>
@@ -407,7 +413,7 @@ export default function GroupsPage() {
           </Dialog>
         </div>
         {loading ? (
-          <LoadingSkeleton />
+          <TableSkeleton rows={6} columns={4} />
         ) : groups.length === 0 ? (
           <div className="mt-20">
             <Empty>
@@ -429,6 +435,6 @@ export default function GroupsPage() {
           <DataTable columns={columns} data={groups} />
         )}
       </div>
-    </ContentLayout>
+    </div>
   )
 }

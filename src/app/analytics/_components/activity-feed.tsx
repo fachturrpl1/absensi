@@ -7,6 +7,7 @@ import { formatDistanceToNow } from "date-fns"
 import { useProfilePhotoUrl } from "@/hooks/use-profile"
 import { parseTimestamp } from "@/lib/timezone"
 
+import { analyticsLogger } from '@/lib/logger';
 interface Activity {
   id: number
   time: string
@@ -105,9 +106,9 @@ function ActivityItem({ activity }: { activity: Activity }) {
 
 export function ActivityFeed({ data, loading }: ActivityFeedProps) {
   // Debug: log data to console
-  console.log('[ActivityFeed] Received data:', data?.length, 'activities')
+  analyticsLogger.debug('[ActivityFeed] Received data:', data?.length, 'activities')
   if (data?.length > 0) {
-    console.log('[ActivityFeed] First activity:', data[0])
+    analyticsLogger.debug('[ActivityFeed] First activity:', data[0])
   }
 
   if (loading) {

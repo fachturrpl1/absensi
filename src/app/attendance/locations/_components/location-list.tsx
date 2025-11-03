@@ -32,6 +32,7 @@ export default function LocationList({
 }: LocationListProps) {
   const router = useRouter();
   const [devices, setDevices] = useState(initialDevices);
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
 
   const filteredDevices = devices.filter((device) =>
@@ -79,10 +80,23 @@ export default function LocationList({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by name, location, or code..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                value={searchInput}
+                onChange={(e) => {
+                  setSearchInput(e.target.value);
+                  if (e.target.value === '') setSearch('');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') setSearch(searchInput);
+                }}
+                className="pl-10 pr-24"
               />
+              <Button
+                size="sm"
+                className="absolute right-1 top-1/2 h-8 -translate-y-1/2"
+                onClick={() => setSearch(searchInput)}
+              >
+                Search
+              </Button>
             </div>
           </div>
 

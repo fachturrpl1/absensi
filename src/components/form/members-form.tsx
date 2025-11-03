@@ -40,6 +40,7 @@ import { useGroups } from "@/hooks/use-groups"
 import { usePositions } from "@/hooks/use-positions"
 import { EMPLOYMENT_STATUS_OPTIONS, CARD_TYPE_OPTIONS } from "@/constants"
 
+import { memberLogger } from '@/lib/logger';
 interface OrganizationMembersFormProps {
     formType: "add" | "edit"
     initialValues?: Partial<IOrganization_member>
@@ -224,7 +225,7 @@ export default function MembersForm({
                                     control={form.control}
                                     name="organization_id"
                                     render={({ field }) => {
-                                        console.log(
+                                        memberLogger.debug(
                                             "Form value (organization_id):",
                                             field.value
                                         )

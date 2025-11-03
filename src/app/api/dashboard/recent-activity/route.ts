@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 
+import { dashboardLogger } from '@/lib/logger';
 async function getUserOrganizationId() {
   const supabase = await createClient()
   const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -62,7 +63,7 @@ export async function GET(request: Request) {
       .limit(limit)
 
     if (error) {
-      console.error('Error fetching recent activity:', error)
+      dashboardLogger.error('Error fetching recent activity:', error)
       return NextResponse.json(
         { success: false, message: 'Failed to fetch recent activity' },
         { status: 500 }
@@ -95,7 +96,7 @@ export async function GET(request: Request) {
       }
     )
   } catch (err) {
-    console.error('API /dashboard/recent-activity error', err)
+    dashboardLogger.error('API /dashboard/recent-activity error', err)
     return NextResponse.json(
       { success: false, message: 'Failed to fetch recent activity' },
       { status: 500 }

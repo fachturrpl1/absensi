@@ -8,6 +8,7 @@ import { ImageCompressionUpload } from "@/components/image-compression-upload";
 import { toast } from "sonner";
 import { safeAvatarSrc } from "@/lib/avatar-utils";
 
+import { logger } from '@/lib/logger';
 interface EmployeeAvatarUploadProps {
   employeeId: string;
   currentPhotoUrl?: string;
@@ -21,7 +22,7 @@ export function EmployeeAvatarUpload({
 }: EmployeeAvatarUploadProps) {
   const handlePhotoUpload = async (result: CompressionResult) => {
     try {
-      console.log("Compressed photo ready", {
+      logger.debug("Compressed photo ready", {
         employeeId,
         originalSize: result.originalSize,
         compressedSize: result.compressedSize,
@@ -31,7 +32,7 @@ export function EmployeeAvatarUpload({
       toast.success("Compressed photo ready to upload");
       onPhotoUpdated?.(URL.createObjectURL(result.file));
     } catch (error) {
-      console.error("EmployeeAvatarUpload failed", error);
+      logger.error("EmployeeAvatarUpload failed", error);
       toast.error("Failed to process profile photo");
     }
   };
@@ -85,7 +86,7 @@ export function calculateStorageSavings(employees: number, avgCompressionRatio: 
 /* 
 Contoh penggunaan:
 const savings = calculateStorageSavings(500); // 500 employees
-console.log(savings);
+logger.debug(savings);
 // {
 //   totalEmployees: 500,
 //   originalStorageGB: 1.46 GB,

@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useAuthStore } from "@/store/user-store"
 import { getUserPermissions } from "@/lib/rbac"
 
+import { logger } from '@/lib/logger';
 /**
  * Permission Initializer Component
  * Loads user permissions on mount and stores them in Zustand
@@ -17,9 +18,9 @@ export function PermissionInitializer({ userId }: { userId: string }) {
       try {
         const permissions = await getUserPermissions(userId)
         setPermissions(permissions)
-        console.log("✅ Permissions loaded:", permissions)
+        logger.debug("✅ Permissions loaded:", permissions)
       } catch (error) {
-        console.error("❌ Failed to load permissions:", error)
+        logger.error("❌ Failed to load permissions:", error)
         setPermissions([])
       }
     }

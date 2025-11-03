@@ -8,6 +8,7 @@ import {
   getRecentActivities,
 } from '@/action/analytics'
 
+import { analyticsLogger } from '@/lib/logger';
 // Cache duration: 2 minutes for analytics data
 const CACHE_DURATION = 120
 
@@ -41,7 +42,7 @@ export async function GET() {
       }
     )
   } catch (error) {
-    console.error('Analytics API Error:', error)
+    analyticsLogger.error('Analytics API Error:', error)
     return NextResponse.json(
       { success: false, message: 'Failed to fetch analytics' },
       { 

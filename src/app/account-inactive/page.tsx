@@ -3,9 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mail, UserX, RefreshCw, Phone, Building, AlertCircle } from "lucide-react";
+import { Mail, UserX, RefreshCw, Phone } from "lucide-react";
 import { logout } from "@/action/users";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,6 +13,7 @@ import { toast } from "sonner";
 import { getUserInitials } from "@/lib/avatar-utils";
 import { useProfilePhotoUrl } from "@/hooks/use-profile";
 
+import { accountLogger } from '@/lib/logger';
 type UserProfile = {
   first_name: string;
   middle_name?: string;
@@ -82,7 +82,7 @@ export default function AccountInactivePage() {
           });
         }
       } catch (error) {
-        console.error("Error fetching profile:", error);
+        accountLogger.error("Error fetching profile:", error);
       } finally {
         setLoading(false);
       }
@@ -121,7 +121,7 @@ export default function AccountInactivePage() {
         router.refresh();
       }
     } catch (error) {
-      console.error("Error checking status:", error);
+      accountLogger.error("Error checking status:", error);
     }
   };
 

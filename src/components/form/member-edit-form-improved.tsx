@@ -270,7 +270,7 @@ export default function MemberEditFormImproved({
                                                         <FormControl>
                                                             <SelectTrigger>
                                                                 <SelectValue placeholder="Select department" />
-                                                            </SelectTrigger>roi
+                                                            </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent>
                                                             {departments.map((dept: any) => (

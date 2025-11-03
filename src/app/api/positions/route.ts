@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAllPositions } from '@/action/position'
 
+import { logger } from '@/lib/logger';
 export async function GET() {
   try {
     const response = await getAllPositions()
@@ -26,7 +27,7 @@ export async function GET() {
       }
     )
   } catch (error) {
-    console.error('API /positions error:', error)
+    logger.error('API /positions error:', error)
     return NextResponse.json(
       { success: false, message: 'Failed to fetch positions' },
       { 

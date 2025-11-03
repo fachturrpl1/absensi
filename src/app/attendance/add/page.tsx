@@ -1,13 +1,12 @@
 "use client"
 
-import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { AttendanceFormBatch } from "@/components/form/attendance-form-batch"
 import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function AddAttendancePage() {
     return (
-        <ContentLayout title="Add Manual Attendance">
+        <div className="flex flex-1 flex-col gap-4">
             <div className="w-full max-w-5xl mx-auto space-y-6">
                 {/* Info Card */}
                 <Alert>
@@ -21,6 +20,6 @@ export default function AddAttendancePage() {
                 {/* Form */}
                 <AttendanceFormBatch />
             </div>
-        </ContentLayout>
+        </div>
     )
 }

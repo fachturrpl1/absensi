@@ -1,7 +1,7 @@
 "use client"
 
 import { format, subMonths } from "date-fns"
-import { Users, TrendingUp, TrendingDown, Clock } from "lucide-react"
+import { Users, TrendingUp, Clock } from "lucide-react"
 import { Area, AreaChart, Bar, BarChart, XAxis } from "recharts"
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"

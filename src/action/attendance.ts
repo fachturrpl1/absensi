@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { IAttendance } from "@/interface";
 
+import { attendanceLogger } from '@/lib/logger';
 async function getSupabase() {
   return await createClient();
 }
@@ -36,7 +37,7 @@ export const getAllAttendance = async () => {
     `);
 
   if (error) {
-    console.error("❌ Error fetching attendance:", error);
+    attendanceLogger.error("❌ Error fetching attendance:", error);
     return { success: false, data: [] };
   }
 
@@ -80,12 +81,12 @@ export async function checkExistingAttendance(
     // Ensure organization_member_id is a number
     const memberId = Number(organization_member_id);
     if (isNaN(memberId)) {
-      console.error("❌ Invalid organization_member_id:", organization_member_id);
+      attendanceLogger.error("❌ Invalid organization_member_id:", organization_member_id);
       return { success: false, exists: false };
     }
 
     // Log for debugging
-    console.log(`🔍 Checking attendance for member ${memberId} on ${attendance_date}`);
+    attendanceLogger.debug(`🔍 Checking attendance for member ${memberId} on ${attendance_date}`);
 
     const { data, error } = await supabase
       .from("attendance_records")
@@ -95,15 +96,15 @@ export async function checkExistingAttendance(
       .maybeSingle();
 
     if (error) {
-      console.error("❌ Error checking attendance:", error);
+      attendanceLogger.error("❌ Error checking attendance:", error);
       return { success: false, exists: false };
     }
 
     const exists = !!data;
-    console.log(`✓ Attendance check result: exists=${exists}`);
+    attendanceLogger.debug(`✓ Attendance check result: exists=${exists}`);
     return { success: true, exists };
   } catch (err) {
-    console.error("❌ Exception checking attendance:", err);
+    attendanceLogger.error("❌ Exception checking attendance:", err);
     return { success: false, exists: false };
   }
 }
@@ -113,7 +114,7 @@ export async function createManualAttendance(payload: ManualAttendancePayload) {
     const supabase = await getSupabase();
     
     // Log for debugging
-    console.log("📝 Creating attendance for:", {
+    attendanceLogger.debug("📝 Creating attendance for:", {
       member_id: payload.organization_member_id,
       date: payload.attendance_date,
       check_in: payload.actual_check_in,
@@ -122,7 +123,7 @@ export async function createManualAttendance(payload: ManualAttendancePayload) {
     const { error } = await supabase.from("attendance_records").insert([payload]);
 
     if (error) {
-      console.error("❌ Error creating attendance:", error);
+      attendanceLogger.error("❌ Error creating attendance:", error);
       
       // Check if duplicate key error
       if (error.code === "23505") {
@@ -135,12 +136,12 @@ export async function createManualAttendance(payload: ManualAttendancePayload) {
       return { success: false, message: error.message };
     }
 
-    console.log("✓ Attendance created successfully");
+    attendanceLogger.debug("✓ Attendance created successfully");
     revalidatePath("/attendance");
 
     return { success: true };
   } catch (err) {
-    console.error("❌ Exception creating attendance:", err);
+    attendanceLogger.error("❌ Exception creating attendance:", err);
     return { 
       success: false, 
       message: err instanceof Error ? err.message : "An error occurred" 

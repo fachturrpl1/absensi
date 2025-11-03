@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAttendanceByGroup } from '@/action/attendance_group'
 
+import { attendanceLogger } from '@/lib/logger';
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url)
@@ -12,7 +13,7 @@ export async function GET(req: Request) {
       }
     })
   } catch (err) {
-    console.error('API /attendance/group error', err)
+    attendanceLogger.error('API /attendance/group error', err)
     return NextResponse.json({ success: false, data: [] }, { 
       status: 500,
       headers: {

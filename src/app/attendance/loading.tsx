@@ -1,10 +1,9 @@
-import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card } from "@/components/ui/card"
 
 export default function AttendanceLoading() {
   return (
-    <ContentLayout title="Attendance">
+    <div className="flex flex-1 flex-col gap-4">
       <div className="w-full max-w-7xl mx-auto space-y-4">
         {/* Filters and Actions Skeleton */}
         <div className="flex flex-wrap items-center justify-between gap-4 py-4">
@@ -62,6 +61,6 @@ export default function AttendanceLoading() {
           </div>
         </div>
       </div>
-    </ContentLayout>
+    </div>
   )
 }

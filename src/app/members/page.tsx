@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { useSearchParams } from "next/navigation"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
@@ -62,8 +63,8 @@ import {
 import { deleteOrganization_member, getAllOrganization_member } from "@/action/members"
 import { getAllUsers } from "@/action/users"
 import { getAllGroups } from "@/action/group"
-import LoadingSkeleton from "@/components/loading-skeleton"
-import { ContentLayout } from "@/components/admin-panel/content-layout"
+import { TableSkeleton } from "@/components/ui/loading-skeleton"
+// ContentLayout removed - using new layout system
 import { createClient } from "@/utils/supabase/client"
 import { createInvitation } from "@/action/invitations"
 import { getOrgRoles } from "@/lib/rbac"
@@ -82,6 +83,7 @@ type InviteFormValues = z.infer<typeof inviteSchema>
 
 export default function MembersPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
   const [members, setMembers] = React.useState<IOrganization_member[]>([])
@@ -89,6 +91,13 @@ export default function MembersPage() {
   const [inviteDialogOpen, setInviteDialogOpen] = React.useState(false)
   const [submittingInvite, setSubmittingInvite] = React.useState(false)
   const [organizationId, setOrganizationId] = React.useState<string>("")
+
+  // Auto-open invite dialog if action=invite in URL
+  React.useEffect(() => {
+    if (searchParams.get('action') === 'invite') {
+      setInviteDialogOpen(true)
+    }
+  }, [searchParams])
 
   // Fetch data for invite form
   const { data: roles = [], isLoading: rolesLoading } = useQuery({
@@ -121,7 +130,7 @@ export default function MembersPage() {
       let orgId = ""
 
       if (user) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("organization_members")
           .select("organization_id")
           .eq("user_id", user.id)
@@ -167,7 +176,7 @@ export default function MembersPage() {
       const filteredMembers = orgId
         ? mergedMembers.filter((m: any) => String(m.organization_id) === orgId)
         : mergedMembers
-
+      
       setMembers(filteredMembers)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'An error occurred')
@@ -231,6 +240,18 @@ export default function MembersPage() {
   const columns: ColumnDef<IOrganization_member>[] = [
     {
       id: "userFullName",
+      accessorFn: (row: any) => {
+        const user = row.user
+        const fullname = user
+          ? [user.first_name, user.middle_name, user.last_name]
+              .filter((part: any) => part && part.trim() !== "")
+              .join(" ") ||
+            user.display_name ||
+            user.email ||
+            "No User"
+          : "No User"
+        return fullname
+      },
       header: "Members",
       cell: ({ row }) => {
         const user = (row.original as any).user
@@ -250,10 +271,12 @@ export default function MembersPage() {
       },
     },
     {
+      accessorFn: (row: any) => row.user?.phone || "",
       header: "Phone Number",
       cell: ({ row }) => (row.original as any).user?.phone ?? "No Phone",
     },
     {
+      accessorFn: (row: any) => row.groupName || "",
       header: "Group",
       cell: ({ row }) => (row.original as any).groupName || "-",
     },
@@ -346,7 +369,7 @@ export default function MembersPage() {
   ]
 
   return (
-    <ContentLayout title="Members">
+    <div className="flex flex-1 flex-col gap-4">
       <div className="w-full max-w-6xl mx-auto">
         <div className="items-center my-7">
           <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
@@ -511,7 +534,7 @@ export default function MembersPage() {
         </div>
 
         {loading ? (
-          <LoadingSkeleton />
+          <TableSkeleton rows={8} columns={6} />
         ) : members.length === 0 ? (
           <div className="mt-20">
             <Empty>
@@ -530,9 +553,13 @@ export default function MembersPage() {
             </Empty>
           </div>
         ) : (
-          <DataTable columns={columns} data={members} />
+          <DataTable 
+            columns={columns} 
+            data={members}
+            isLoading={loading}
+          />
         )}
       </div>
-    </ContentLayout>
+    </div>
   )
 }

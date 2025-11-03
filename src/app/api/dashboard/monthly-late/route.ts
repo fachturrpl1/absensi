@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getUserOrganization } from "@/utils/get-user-org";
 import { getMonthRange, getPreviousMonthRange } from "@/utils/date-range";
 
+import { dashboardLogger } from '@/lib/logger';
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -105,7 +106,7 @@ export async function GET() {
       }
     });
   } catch (e) {
-    console.error('Error fetching monthly late stats:', e);
+    dashboardLogger.error('Error fetching monthly late stats:', e);
     return NextResponse.json({
       success: false,
       data: {

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 
+import { accountLogger } from '@/lib/logger';
 /**
  * AccountStatusChecker Component
  * 
@@ -54,17 +55,17 @@ export default function AccountStatusChecker({ children }: { children: React.Rea
           .maybeSingle();
 
         if (memberError) {
-          console.error("Error checking account status:", memberError);
+          accountLogger.error("Error checking account status:", memberError);
           return;
         }
 
         // If member exists but is inactive, redirect
         if (member && member.is_active === false) {
-          console.log("Account is inactive, redirecting to /account-inactive");
+          accountLogger.debug("Account is inactive, redirecting to /account-inactive");
           router.replace("/account-inactive");
         }
       } catch (error) {
-        console.error("Error in account status check:", error);
+        accountLogger.error("Error in account status check:", error);
       }
     }
 

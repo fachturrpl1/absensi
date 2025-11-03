@@ -1,6 +1,6 @@
 "use client"
 
-import { Users, TrendingUp, Clock, Briefcase } from "lucide-react"
+import { Users, TrendingUp, Clock } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 

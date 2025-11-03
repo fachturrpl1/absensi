@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getUserOrganization } from "@/utils/get-user-org";
 import { getMonthRange, getPreviousMonthRange } from "@/utils/date-range";
 
+import { attendanceLogger } from '@/lib/logger';
 export const dynamic = "force-dynamic";
 
 export async function GET() {
@@ -101,7 +102,7 @@ export async function GET() {
       }
     });
   } catch (e) {
-    console.error('Error fetching total attendance stats:', e);
+    attendanceLogger.error('Error fetching total attendance stats:', e);
     return NextResponse.json({
       success: false,
       data: {

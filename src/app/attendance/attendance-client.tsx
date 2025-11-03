@@ -4,7 +4,7 @@ import React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import Link from "next/link"
 import { DataTable } from "@/components/data-table"
-import { Check, X, Clock, Info, User, MoreHorizontal, Plus } from "lucide-react"
+import { User, MoreHorizontal, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,

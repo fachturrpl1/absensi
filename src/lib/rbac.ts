@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { IRole, IPermission } from "@/interface";
 
+import { logger } from '@/lib/logger';
 /**
  * RBAC Helper Functions for Role-Based Access Control
  * Supports both Platform-level roles (user_roles) and Organization-level roles (organization_members.role_id)
@@ -44,7 +45,7 @@ export async function getUserPlatformRole(userId: string): Promise<IRole | null>
     
     return roleData;
   } catch (error) {
-    console.error("Error getting platform role:", error);
+    logger.error("Error getting platform role:", error);
     return null;
   }
 }
@@ -97,7 +98,7 @@ export async function getUserOrgRole(userId: string): Promise<{
       memberId: String(data.id),
     };
   } catch (error) {
-    console.error("Error getting org role:", error);
+    logger.error("Error getting org role:", error);
     return { role: null, organizationId: null, memberId: null };
   }
 }
@@ -144,7 +145,7 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
 
     return Array.from(permissions);
   } catch (error) {
-    console.error("Error getting user permissions:", error);
+    logger.error("Error getting user permissions:", error);
     return [];
   }
 }
@@ -164,7 +165,7 @@ export async function hasPermission(
     const permissions = await getUserPermissions(userId);
     return permissions.includes(permissionCode);
   } catch (error) {
-    console.error("Error checking permission:", error);
+    logger.error("Error checking permission:", error);
     return false;
   }
 }
@@ -180,7 +181,7 @@ export async function hasAnyPermission(
     const permissions = await getUserPermissions(userId);
     return permissionCodes.some((code) => permissions.includes(code));
   } catch (error) {
-    console.error("Error checking any permission:", error);
+    logger.error("Error checking any permission:", error);
     return false;
   }
 }
@@ -196,7 +197,7 @@ export async function hasAllPermissions(
     const permissions = await getUserPermissions(userId);
     return permissionCodes.every((code) => permissions.includes(code));
   } catch (error) {
-    console.error("Error checking all permissions:", error);
+    logger.error("Error checking all permissions:", error);
     return false;
   }
 }
@@ -216,7 +217,7 @@ export async function hasPlatformRole(
     const role = await getUserPlatformRole(userId);
     return role?.code === roleCode;
   } catch (error) {
-    console.error("Error checking platform role:", error);
+    logger.error("Error checking platform role:", error);
     return false;
   }
 }
@@ -250,7 +251,7 @@ export async function isOrgAdmin(userId: string): Promise<boolean> {
     const { role } = await getUserOrgRole(userId);
     return role?.code === "A001";
   } catch (error) {
-    console.error("Error checking org admin:", error);
+    logger.error("Error checking org admin:", error);
     return false;
   }
 }
@@ -263,7 +264,7 @@ export async function isOrgUser(userId: string): Promise<boolean> {
     const { role } = await getUserOrgRole(userId);
     return role?.code === "S001";
   } catch (error) {
-    console.error("Error checking org user:", error);
+    logger.error("Error checking org user:", error);
     return false;
   }
 }
@@ -309,7 +310,7 @@ export async function assignRoleToMember(
 
     return { success: true, message: "Role assigned successfully" };
   } catch (error) {
-    console.error("Error assigning role:", error);
+    logger.error("Error assigning role:", error);
     return {
       success: false,
       message: error instanceof Error ? error.message : "Unknown error",
@@ -334,7 +335,7 @@ export async function getOrgRoles(): Promise<IRole[]> {
 
     return data as IRole[];
   } catch (error) {
-    console.error("Error getting org roles:", error);
+    logger.error("Error getting org roles:", error);
     return [];
   }
 }
@@ -355,7 +356,7 @@ export async function getAllPermissions(): Promise<IPermission[]> {
 
     return data as IPermission[];
   } catch (error) {
-    console.error("Error getting permissions:", error);
+    logger.error("Error getting permissions:", error);
     return [];
   }
 }
@@ -378,7 +379,7 @@ export async function getRolePermissions(roleId: string): Promise<string[]> {
       .map((item: any) => item.permissions?.code)
       .filter((code: string | undefined) => code) as string[];
   } catch (error) {
-    console.error("Error getting role permissions:", error);
+    logger.error("Error getting role permissions:", error);
     return [];
   }
 }

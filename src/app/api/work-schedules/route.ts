@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAllWorkSchedules } from '@/action/schedule'
 
+import { scheduleLogger } from '@/lib/logger';
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url)
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
       }
     )
   } catch (error) {
-    console.error('API /work-schedules error:', error)
+    scheduleLogger.error('API /work-schedules error:', error)
     return NextResponse.json(
       { success: false, message: 'Failed to fetch work schedules' },
       { 

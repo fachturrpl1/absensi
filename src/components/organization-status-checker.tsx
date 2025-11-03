@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { checkOrganizationStatus, OrganizationStatus } from "@/action/organization";
 
+import { organizationLogger } from '@/lib/logger';
 interface OrganizationStatusCheckerProps {
   children: React.ReactNode;
 }
@@ -47,7 +48,11 @@ export default function OrganizationStatusChecker({ children }: OrganizationStat
           }
         }
       } catch (error) {
-        console.error("Failed to check organization status:", error);
+        // Silently fail open - don't log network errors to console
+        // Only log if it's not a network error
+        if (error && !(error instanceof TypeError && error.message.includes('fetch'))) {
+          organizationLogger.error("Failed to check organization status:", error);
+        }
         setStatus({ isValid: true }); // Fail open untuk menghindari lock-out
       } finally {
         setLoading(false);

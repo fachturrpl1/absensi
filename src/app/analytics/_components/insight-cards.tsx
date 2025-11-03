@@ -14,7 +14,7 @@ import {
 } from "./analytics.config"
 
 export function InsightCards() {
-  const totalMembers = attendanceByStatusData.reduce((acc, curr) => acc + curr.members, 0)
+  // const totalMembers = attendanceByStatusData.reduce((acc, curr) => acc + curr.members, 0)
 
   return (
     <div className="grid grid-cols-1 gap-4 *:data-[slot=card]:shadow-xs sm:grid-cols-2 xl:grid-cols-5">

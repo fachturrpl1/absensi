@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 
+import { attendanceLogger } from '@/lib/logger';
 // Returns aggregated attendance counts grouped by group
 export const getAttendanceByGroup = async (organizationId?: string) => {
   const supabase = await createClient();
@@ -13,14 +14,14 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
   // First, get all members of the organization with their groups
   // First fetch valid groups for this organization to ensure we only get groups that belong to this org
   // Let's first check what groups exist for this organization
-  const { data: validGroups, error: groupError } = await supabase
+  const { error: groupError } = await supabase
     .from('departments')
     .select('*')
     .eq('organization_id', organizationId)
     .eq('is_active', true);
 
   if (groupError) {
-    console.error("Error fetching valid groups:", groupError);
+    attendanceLogger.error("Error fetching valid groups:", groupError);
     return { success: false, data: [] };
   }
 
@@ -40,7 +41,7 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
     .eq('is_active', true);
 
   if (membersError) {
-    console.error("Error fetching organization members:", membersError);
+    attendanceLogger.error("Error fetching organization members:", membersError);
     return { success: false, data: [] };
   }
 
@@ -71,7 +72,7 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
     if (!raw) return;
 
     let candidate: EmbeddedGroup | null = null;
-    if (Array.isArray(raw) && raw.length > 0) candidate = raw[0];
+    if (Array.isArray(raw) && raw.length > 0) candidate = raw[0] ?? null;
     else if (raw && !Array.isArray(raw) && typeof raw === "object") {
       candidate = raw;
     }
@@ -82,7 +83,7 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
         memberGroupMap.set(member.id, candidate.name);
       } else {
         // Skip groups that belong to other organizations (data inconsistency)
-        console.warn(`Skipping group mapping for member ${member.id} because group org ${candidate.organization_id} !== ${organizationId}`);
+        attendanceLogger.warn(`Skipping group mapping for member ${member.id} because group org ${candidate.organization_id} !== ${organizationId}`);
       }
     }
   });
@@ -120,13 +121,13 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
           if (name) {
             memberGroupMap.set(member.id, name);
           } else {
-            console.warn(
+            attendanceLogger.warn(
               `Member ${member.id} references department_id ${member.department_id} which is not a group in organization ${organizationId}`
             );
           }
         });
       } else {
-        console.warn('Failed to fetch group names for fallback', groupFetchErr);
+        attendanceLogger.warn('Failed to fetch group names for fallback', groupFetchErr);
       }
     }
   }
@@ -146,7 +147,7 @@ export const getAttendanceByGroup = async (organizationId?: string) => {
     .in('organization_member_id', memberIds);
 
   if (recordsError) {
-    console.error("Error fetching attendance records:", recordsError);
+    attendanceLogger.error("Error fetching attendance records:", recordsError);
     return { success: false, data: [] };
   }
 

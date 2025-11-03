@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { IAttendanceDevice, IDeviceType } from "@/interface";
 
+import { attendanceLogger } from '@/lib/logger';
 async function getSupabase() {
   return await createClient();
 }
@@ -21,7 +22,7 @@ export const getAllAttendanceDevices = async () => {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("❌ Error fetching attendance devices:", error);
+    attendanceLogger.error("❌ Error fetching attendance devices:", error);
     return { success: false, data: [] };
   }
 
@@ -42,7 +43,7 @@ export const getAttendanceDeviceById = async (id: string) => {
     .single();
 
   if (error) {
-    console.error("❌ Error fetching attendance device:", error);
+    attendanceLogger.error("❌ Error fetching attendance device:", error);
     return { success: false, data: null };
   }
 
@@ -58,7 +59,7 @@ export const getDeviceTypes = async () => {
     .order("name");
 
   if (error) {
-    console.error("❌ Error fetching device types:", error);
+    attendanceLogger.error("❌ Error fetching device types:", error);
     return { success: false, data: [] };
   }
 
@@ -93,14 +94,14 @@ export const createAttendanceDevice = async (payload: CreateDevicePayload) => {
       .single();
 
     if (error) {
-      console.error("❌ Error creating attendance device:", error);
+      attendanceLogger.error("❌ Error creating attendance device:", error);
       return { success: false, message: error.message };
     }
 
     revalidatePath("/attendance/locations");
     return { success: true, data };
   } catch (err) {
-    console.error("❌ Exception creating attendance device:", err);
+    attendanceLogger.error("❌ Exception creating attendance device:", err);
     return {
       success: false,
       message: err instanceof Error ? err.message : "An error occurred",
@@ -125,14 +126,14 @@ export const updateAttendanceDevice = async (
       .single();
 
     if (error) {
-      console.error("❌ Error updating attendance device:", error);
+      attendanceLogger.error("❌ Error updating attendance device:", error);
       return { success: false, message: error.message };
     }
 
     revalidatePath("/attendance/locations");
     return { success: true, data };
   } catch (err) {
-    console.error("❌ Exception updating attendance device:", err);
+    attendanceLogger.error("❌ Exception updating attendance device:", err);
     return {
       success: false,
       message: err instanceof Error ? err.message : "An error occurred",
@@ -150,14 +151,14 @@ export const deleteAttendanceDevice = async (id: string) => {
       .eq("id", id);
 
     if (error) {
-      console.error("❌ Error deleting attendance device:", error);
+      attendanceLogger.error("❌ Error deleting attendance device:", error);
       return { success: false, message: error.message };
     }
 
     revalidatePath("/attendance/locations");
     return { success: true };
   } catch (err) {
-    console.error("❌ Exception deleting attendance device:", err);
+    attendanceLogger.error("❌ Exception deleting attendance device:", err);
     return {
       success: false,
       message: err instanceof Error ? err.message : "An error occurred",
@@ -175,14 +176,14 @@ export const toggleDeviceStatus = async (id: string, is_active: boolean) => {
       .eq("id", id);
 
     if (error) {
-      console.error("❌ Error toggling device status:", error);
+      attendanceLogger.error("❌ Error toggling device status:", error);
       return { success: false, message: error.message };
     }
 
     revalidatePath("/attendance/locations");
     return { success: true };
   } catch (err) {
-    console.error("❌ Exception toggling device status:", err);
+    attendanceLogger.error("❌ Exception toggling device status:", err);
     return {
       success: false,
       message: err instanceof Error ? err.message : "An error occurred",

@@ -1,4 +1,3 @@
-import { ContentLayout } from "@/components/admin-panel/content-layout"
 import { getAllWorkSchedules } from "@/action/schedule"
 import { getAllOrganization } from "@/action/organization"
 import { createClient } from "@/utils/supabase/server"
@@ -45,7 +44,7 @@ export default async function WorkSchedulesPage() {
   // Show message if user has no organization
   if (!organizationId || organizationId === '') {
     return (
-      <ContentLayout title="Work Schedules">
+      <div className="flex flex-1 flex-col gap-4">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center space-y-4">
             <div className="text-6xl">🏢</div>
@@ -56,17 +55,17 @@ export default async function WorkSchedulesPage() {
             </p>
           </div>
         </div>
-      </ContentLayout>
+      </div>
     )
   }
 
   return (
-    <ContentLayout title="Work Schedules">
+    <div className="flex flex-1 flex-col gap-4">
       <ScheduleClient
         initialSchedules={schedules}
         organizationId={organizationId}
         organizationName={organizationName}
       />
-    </ContentLayout>
+    </div>
   )
 }

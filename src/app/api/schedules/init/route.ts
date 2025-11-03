@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createSupabaseClient } from "@/config/supabase-config"
 
+import { scheduleLogger } from '@/lib/logger';
 // Batch API untuk schedules page
 export async function GET(request: Request) {
   try {
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.error("Error in schedules init:", error)
+    scheduleLogger.error("Error in schedules init:", error)
     return NextResponse.json(
       {
         success: false,

@@ -14,6 +14,7 @@ import {
   CompressionPreset
 } from '../types/image-compression';
 
+import { logger } from '@/lib/logger';
 export interface UseImageCompressionOptions {
   preset?: string;
   customOptions?: CompressionOptions;
@@ -96,7 +97,7 @@ export function useImageCompression({
       updateProgress(0, 100, 'compressing');
 
       // Debug: Log original file details
-      console.log('🔍 Original file details:', {
+      logger.debug('🔍 Original file details:', {
         name: file.name,
         type: file.type,
         size: file.size,
@@ -134,7 +135,7 @@ export function useImageCompression({
       const compressionRatio = calculateCompressionRatio(originalSize, compressedSize);
 
       // Debug: Log compressed file details
-      console.log('🔍 Compressed file details:', {
+      logger.debug('🔍 Compressed file details:', {
         name: compressedFile.name,
         type: compressedFile.type,
         size: compressedFile.size,
@@ -187,7 +188,7 @@ export function useImageCompression({
         const result = await compressImage(file);
         results.push(result);
       } catch (error) {
-        console.error(`Failed to compress file ${file.name}:`, error);
+        logger.error(`Failed to compress file ${file.name}:`, error);
         results.push(null);
       }
     }

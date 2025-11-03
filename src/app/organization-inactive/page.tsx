@@ -9,6 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { checkOrganizationStatus } from "@/action/organization";
 import { toast } from "sonner";
 
+import { organizationLogger } from '@/lib/logger';
 export default function OrganizationInactivePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -33,7 +34,7 @@ export default function OrganizationInactivePage() {
         router.refresh();
       }
     } catch (error) {
-      console.error("Error checking status:", error);
+      organizationLogger.error("Error checking status:", error);
     }
   };
 

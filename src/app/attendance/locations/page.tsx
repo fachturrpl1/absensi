@@ -1,4 +1,3 @@
-import { ContentLayout } from "@/components/admin-panel/content-layout";
 import { getAllAttendanceDevices, getDeviceTypes } from "@/action/attendance_device";
 import { IAttendanceDevice, IDeviceType } from "@/interface";
 import LocationList from "./_components/location-list";
@@ -35,12 +34,12 @@ export default async function LocationsPage() {
   );
 
   return (
-    <ContentLayout title="Attendance Locations">
+    <div className="flex flex-1 flex-col gap-4">
       <LocationList
         initialDevices={filteredDevices}
         deviceTypes={deviceTypes}
         organizationId={organizationId}
       />
-    </ContentLayout>
+    </div>
   );
 }

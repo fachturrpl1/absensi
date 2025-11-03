@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query"
 import { IDepartments } from "@/interface"
 
+import { logger } from '@/lib/logger';
 // Custom hook untuk fetch groups/departments dengan caching via API route (GET)
 export function useGroups() {
   return useQuery({
     queryKey: ["groups"],
     queryFn: async () => {
-      console.log('[React Query] Fetching groups via API')
+      logger.debug('[React Query] Fetching groups via API')
       const response = await fetch('/api/groups', { credentials: 'same-origin' })
       const json = await response.json()
       if (!json.success) {

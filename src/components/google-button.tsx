@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { signInWithGoogle } from "@/action/users";
 
+import { logger } from '@/lib/logger';
 export function GoogleButton({ className, ...props }: React.ComponentProps<typeof Button>) {
   const [loading, setLoading] = useState(false);
 
@@ -14,22 +15,22 @@ export function GoogleButton({ className, ...props }: React.ComponentProps<typeo
       const result = await signInWithGoogle();
       
       if (result.error) {
-        console.error("Google OAuth error:", result.error);
+        logger.error("Google OAuth error:", result.error);
         alert(`Error: ${result.error}`);
         setLoading(false);
         return;
       }
       
       if (result.url) {
-        console.log("Redirecting to:", result.url);
+        logger.debug("Redirecting to:", result.url);
         window.location.href = result.url;
       } else {
-        console.error("No OAuth URL returned");
+        logger.error("No OAuth URL returned");
         alert("Failed to initialize Google login. Please try again.");
         setLoading(false);
       }
     } catch (error) {
-      console.error("Google sign in error:", error);
+      logger.error("Google sign in error:", error);
       alert("An unexpected error occurred. Check console for details.");
       setLoading(false);
     }

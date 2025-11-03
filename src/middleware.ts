@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 
+import { logger } from '@/lib/logger';
 export async function middleware(req: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -65,7 +66,7 @@ export async function middleware(req: NextRequest) {
     user = result.data?.user
   } catch (error) {
     // If there's an error (likely due to malformed cookies), clear auth cookies
-    console.warn('Error getting user, clearing auth cookies:', error)
+    logger.warn('Error getting user, clearing auth cookies:', error)
     const authCookieNames = [
       `sb-${process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]}-auth-token`,
       `sb-${process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]}-auth-token.0`,
@@ -155,7 +156,7 @@ export async function middleware(req: NextRequest) {
         return NextResponse.redirect(new URL("/account-inactive", req.url))
       }
     } catch (error) {
-      console.warn('Error checking organization membership:', error)
+      logger.warn('Error checking organization membership:', error)
       // On error, allow access but user will see appropriate message in UI
     }
   }

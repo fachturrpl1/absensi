@@ -7,6 +7,7 @@ import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { useQueryClient } from "@tanstack/react-query"
+import { format } from "date-fns"
 
 import { createManualAttendance, checkExistingAttendance } from "@/action/attendance"
 import { getAllOrganization_member } from "@/action/members"
@@ -93,11 +94,18 @@ export function AttendanceFormBatch() {
   const [selectedGroup, setSelectedGroup] = useState<string>("all")
   const [availableGroups, setAvailableGroups] = useState<Array<{id: string, name: string}>>([])
 
+  // Auto-fill dengan waktu sekarang
+  const now = new Date();
+  const currentDate = format(now, 'yyyy-MM-dd');
+  const currentTime = format(now, 'HH:mm');
+
   const form = useForm<SingleFormValues>({
     resolver: zodResolver(singleFormSchema),
     defaultValues: {
-      checkInTime: "08:00",
-      checkOutTime: "17:00",
+      checkInDate: currentDate,
+      checkInTime: currentTime,
+      checkOutDate: currentDate,
+      checkOutTime: currentTime,
       status: "present",
       remarks: "",
     },
@@ -545,7 +553,7 @@ export function AttendanceFormBatch() {
                 </Button>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
                   {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Attendance
+                  Save
                 </Button>
               </div>
             </form>

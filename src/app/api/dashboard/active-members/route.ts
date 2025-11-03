@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getUserOrganization } from "@/utils/get-user-org";
 
+import { dashboardLogger } from '@/lib/logger';
 export async function GET() {
   try {
     // Await cookie store (avoid sync dynamic API usage)
@@ -87,7 +88,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('Error fetching active members stats:', error);
+    dashboardLogger.error('Error fetching active members stats:', error);
     return NextResponse.json({
       success: false,
       data: {

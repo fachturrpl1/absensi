@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getUserOrganization } from "@/utils/get-user-org";
 
+import { dashboardLogger } from '@/lib/logger';
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -68,7 +69,7 @@ export async function GET() {
       }
     });
   } catch (e) {
-    console.error("Error fetching active RFID stats:", e);
+    dashboardLogger.error("Error fetching active RFID stats:", e);
     return NextResponse.json({ success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } }, {
       headers: {
         'Cache-Control': 'public, max-age=60, stale-while-revalidate=30'

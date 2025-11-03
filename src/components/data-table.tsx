@@ -68,20 +68,46 @@ export function DataTable<TData, TValue>({
   const filteredData = React.useMemo(() => {
     if (!appliedSearch) return data
     const lower = appliedSearch.toLowerCase()
+    
     return data.filter((row) => {
       return columns.some((col) => {
         let value = ""
-        // tanstack v8: accessorFn is a function, accessorKey is string
+        
+        // Try accessorFn first
         if ("accessorFn" in col && typeof (col as any).accessorFn === "function") {
           try {
             value = String((col as any).accessorFn(row as TData, 0) ?? "")
           } catch {
             value = ""
           }
-        } else if ("accessorKey" in col && typeof (col as any).accessorKey === "string") {
-          const key = (col as any).accessorKey as keyof TData
-          value = String((row as any)[key] ?? "")
+        } 
+        // Try accessorKey
+        else if ("accessorKey" in col && typeof (col as any).accessorKey === "string") {
+          const key = (col as any).accessorKey as string
+          
+          // Handle nested keys like "user.phone"
+          if (key.includes('.')) {
+            const keys = key.split('.')
+            let nestedValue: any = row
+            for (const k of keys) {
+              nestedValue = nestedValue?.[k]
+            }
+            value = String(nestedValue ?? "")
+          } else {
+            value = String((row as any)[key] ?? "")
+          }
         }
+        // Fallback: try to get value from cell render
+        else if ("cell" in col) {
+          try {
+            // Get all values from row object
+            const rowValues = Object.values(row as any).join(' ')
+            value = rowValues
+          } catch {
+            value = ""
+          }
+        }
+        
         return value.toLowerCase().includes(lower)
       })
     })

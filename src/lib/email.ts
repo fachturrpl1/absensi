@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 /**
  * Email Service
  * 
@@ -56,7 +58,7 @@ export async function sendInvitationEmailViaSupabase({
 
     if (userExists) {
       // User already registered - Supabase inviteUserByEmail won't work
-      console.warn(`Email ${to} already registered. Skipping Supabase invite email.`);
+      logger.warn(`Email ${to} already registered. Skipping Supabase invite email.`);
       return {
         success: false,
         message: "Email already registered. User must be added manually to organization.",
@@ -77,13 +79,13 @@ export async function sendInvitationEmailViaSupabase({
     });
 
     if (error) {
-      console.error("Supabase invitation email error:", error);
+      logger.error("Supabase invitation email error:", error);
       return { success: false, message: error.message };
     }
 
     return { success: true, data };
   } catch (error) {
-    console.error("Error sending Supabase invitation:", error);
+    logger.error("Error sending Supabase invitation:", error);
     return {
       success: false,
       message: error instanceof Error ? error.message : "Unknown error",
@@ -105,7 +107,7 @@ export async function sendInvitationEmail({
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
   
   if (!RESEND_API_KEY) {
-    console.warn("RESEND_API_KEY not found, skipping email");
+    logger.warn("RESEND_API_KEY not found, skipping email");
     return { success: false, message: "Email service not configured" };
   }
 
@@ -134,13 +136,13 @@ export async function sendInvitationEmail({
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("Resend API error:", data);
+      logger.error("Resend API error:", data);
       return { success: false, message: data.message || "Failed to send email" };
     }
 
     return { success: true, data };
   } catch (error) {
-    console.error("Error sending email:", error);
+    logger.error("Error sending email:", error);
     return {
       success: false,
       message: error instanceof Error ? error.message : "Unknown error",
@@ -271,7 +273,7 @@ export async function sendInvitationReminderEmail({
     const data = await response.json();
     return response.ok ? { success: true, data } : { success: false, message: data.message };
   } catch (error) {
-    console.error("Error sending reminder:", error);
+    logger.error("Error sending reminder:", error);
     return { success: false, message: "Failed to send reminder" };
   }
 }
