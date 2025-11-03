@@ -229,29 +229,6 @@ Lihat [API Documentation](./docs/API.md) untuk detail.
 - HTTPS only
 - Input validation (Zod)
 - Parameterized queries
-
----
-
-## Roadmap
-
-### v1.1 (Q1 2025)
-- [ ] Mobile app (React Native)
-- [ ] RFID reader integration
-- [ ] Advanced reporting
-- [ ] Export PDF/Excel
-
-### v1.2 (Q2 2025)
-- [ ] Leave management
-- [ ] Overtime calculation
-- [ ] Multi-language
-- [ ] Email notifications
-
-### v2.0 (Q3 2025)
-- [ ] Face recognition
-- [ ] Biometric integration
-- [ ] AI analytics
-- [ ] Webhooks
-
 ---
 
 ## Support
