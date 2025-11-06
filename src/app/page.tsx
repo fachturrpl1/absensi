@@ -102,21 +102,20 @@ export default function ModernDashboard() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   
-  // Date filter state - default to LAST 7 DAYS for better data visibility
+  // Date filter state - default to TODAY
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
     const today = new Date();
-    today.setHours(23, 59, 59, 999);
-    const sevenDaysAgo = new Date(today);
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
     
-    console.log('🎯 Initial Date Range (LAST 7 DAYS):', {
-      from: sevenDaysAgo.toISOString(),
-      to: today.toISOString(),
-      preset: 'last7'
+    console.log('🎯 Initial Date Range (TODAY):', {
+      from: today.toISOString(),
+      to: endOfToday.toISOString(),
+      preset: 'today'
     });
     
-    return { from: sevenDaysAgo, to: today, preset: 'last7' };
+    return { from: today, to: endOfToday, preset: 'today' };
   });
 
   const [stats, setStats] = useState<DashboardStats>({
@@ -301,6 +300,50 @@ export default function ModernDashboard() {
 
     return filtered;
   }, [allRecords, fromDateStr, toDateStr, dateRange.preset]);
+
+  // Get chart title based on date filter preset
+  const getChartTitle = () => {
+    switch (dateRange.preset) {
+      case 'today':
+        return 'Today Data';
+      case 'yesterday':
+        return 'Yesterday Data';
+      case 'last7':
+        return 'Last 7 Days';
+      case 'last30':
+        return 'Last 30 Days';
+      case 'thisMonth':
+        return 'This Month';
+      case 'lastMonth':
+        return 'Last Month';
+      case 'custom':
+        return 'Custom Range';
+      default:
+        return 'Attendance Data';
+    }
+  };
+
+  // Get chart subtitle based on date filter
+  const getChartSubtitle = () => {
+    switch (dateRange.preset) {
+      case 'today':
+        return 'Real-time attendance for today';
+      case 'yesterday':
+        return 'Attendance data from yesterday';
+      case 'last7':
+        return 'Weekly attendance trend';
+      case 'last30':
+        return 'Monthly attendance trend';
+      case 'thisMonth':
+        return 'Current month overview';
+      case 'lastMonth':
+        return 'Previous month overview';
+      case 'custom':
+        return 'Custom date range analysis';
+      default:
+        return 'Attendance statistics';
+    }
+  };
 
   // Recalculate stats from filtered data
   useEffect(() => {
@@ -583,12 +626,18 @@ export default function ModernDashboard() {
                   <div>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <BarChart3 className="w-5 h-5 text-blue-600" />
-                      Weekly Attendance Trend
+                      {getChartTitle()}
                     </CardTitle>
-                    <CardDescription>Daily breakdown of attendance status</CardDescription>
+                    <CardDescription>{getChartSubtitle()}</CardDescription>
                   </div>
                   <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
-                    Last 7 Days
+                    {dateRange.preset === 'today' ? 'Today' 
+                      : dateRange.preset === 'yesterday' ? 'Yesterday'
+                      : dateRange.preset === 'last7' ? 'Last 7 Days'
+                      : dateRange.preset === 'last30' ? 'Last 30 Days'
+                      : dateRange.preset === 'thisMonth' ? 'This Month'
+                      : dateRange.preset === 'lastMonth' ? 'Last Month'
+                      : 'Custom'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -631,7 +680,15 @@ export default function ModernDashboard() {
                   <Activity className="w-5 h-5 text-purple-600" />
                   Status Distribution
                 </CardTitle>
-                <CardDescription>Breakdown by status</CardDescription>
+                <CardDescription>
+                  {dateRange.preset === 'today' 
+                    ? 'Today\'s breakdown' 
+                    : dateRange.preset === 'last7'
+                    ? 'Weekly breakdown'
+                    : dateRange.preset === 'last30'
+                    ? 'Monthly breakdown'
+                    : 'Breakdown by status'}
+                </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
                 {statusData.length > 0 ? (
@@ -704,7 +761,15 @@ export default function ModernDashboard() {
                       <UserCheck className="w-5 h-5 text-amber-600" />
                       Top Performers
                     </CardTitle>
-                    <CardDescription>Members with highest work hours</CardDescription>
+                    <CardDescription>
+                      {dateRange.preset === 'today' 
+                        ? 'Highest hours today' 
+                        : dateRange.preset === 'last7'
+                        ? 'Top contributors this week'
+                        : dateRange.preset === 'last30'
+                        ? 'Top contributors this month'
+                        : 'Members with highest work hours'}
+                    </CardDescription>
                   </div>
                   <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
                     Top 5
