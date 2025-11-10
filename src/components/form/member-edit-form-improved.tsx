@@ -48,10 +48,9 @@ import {
     updateOrganizationMember,
 } from "@/action/members"
 import { createRfidCard, updateRfidCard } from "@/action/rfid_card"
-import { createClient } from "@/utils/supabase/client"
 import { useGroups } from "@/hooks/use-groups"
 import { usePositions } from "@/hooks/use-positions"
-import { EMPLOYMENT_STATUS_OPTIONS, CARD_TYPE_OPTIONS } from "@/constants"
+import { CARD_TYPE_OPTIONS } from "@/constants"
 import { useQuery } from "@tanstack/react-query"
 import { getOrgRoles } from "@/lib/rbac"
 

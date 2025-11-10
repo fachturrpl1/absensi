@@ -1,7 +1,7 @@
 "use client"
 
 import { memo } from "react"
-import { Calendar, Sun, Cloud, CloudRain, Users, UserCheck, Clock, AlertTriangle } from "lucide-react"
+import { Calendar, Sun, Cloud, Users, UserCheck, Clock, AlertTriangle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"

@@ -1,7 +1,6 @@
 "use client"
 
 import { memo } from "react"
-import { TrendingUp } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
 
 import {

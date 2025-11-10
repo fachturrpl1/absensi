@@ -125,7 +125,7 @@ export default function GroupsPage() {
         .eq("user_id", user.id)
 
       if (error) throw error
-      if (data && data.length > 0) {
+      if (data && data.length > 0 && data[0]?.organization_id) {
         setOrganizationId(String(data[0].organization_id))
       }
     } catch (error: unknown) {

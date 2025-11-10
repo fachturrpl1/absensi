@@ -6,7 +6,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Trash, Pencil, Eye, User, Shield, Check, X, UserPlus, Mail, Plus } from "lucide-react"
+import { Trash, Pencil, Eye, User, Shield, Check, X, Mail, Plus } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -26,7 +26,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -90,7 +89,6 @@ export default function MembersPage() {
   const [loading, setLoading] = React.useState<boolean>(true)
   const [inviteDialogOpen, setInviteDialogOpen] = React.useState(false)
   const [submittingInvite, setSubmittingInvite] = React.useState(false)
-  const [organizationId, setOrganizationId] = React.useState<string>("")
 
   // Auto-open invite dialog if action=invite in URL
   React.useEffect(() => {
@@ -130,7 +128,7 @@ export default function MembersPage() {
       let orgId = ""
 
       if (user) {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from("organization_members")
           .select("organization_id")
           .eq("user_id", user.id)
@@ -138,7 +136,6 @@ export default function MembersPage() {
 
         if (data) {
           orgId = String(data.organization_id)
-          setOrganizationId(orgId)
         }
       }
 

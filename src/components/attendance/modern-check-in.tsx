@@ -5,14 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin,
   Clock,
-  Camera,
   Wifi,
   CheckCircle2,
   XCircle,
   AlertCircle,
   Fingerprint,
-  Smartphone,
-  Calendar,
   Timer,
   LogIn,
   LogOut,
@@ -24,7 +21,6 @@ import {
   User,
   Building,
   TrendingUp,
-  Briefcase,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,18 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface AttendanceStats {
   onTime: number;
@@ -71,8 +56,8 @@ export default function ModernCheckIn() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [locationEnabled, setLocationEnabled] = useState(true);
-  const [wifiConnected, setWifiConnected] = useState(true);
+  const [locationEnabled, _setLocationEnabled] = useState(true);
+  const [wifiConnected, _setWifiConnected] = useState(true);
   const [checkInData, setCheckInData] = useState<CheckInData | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<'location' | 'manual' | 'biometric'>('location');
 
@@ -139,19 +124,6 @@ export default function ModernCheckIn() {
         return <User className="h-5 w-5" />;
       default:
         return <Shield className="h-5 w-5" />;
-    }
-  };
-
-  const getMethodColor = (method: string) => {
-    switch (method) {
-      case 'location':
-        return 'text-blue-600 dark:text-blue-400';
-      case 'biometric':
-        return 'text-green-600 dark:text-green-400';
-      case 'manual':
-        return 'text-amber-600 dark:text-amber-400';
-      default:
-        return 'text-muted-foreground';
     }
   };
 

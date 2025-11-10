@@ -6,7 +6,7 @@ import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { useForm, useFieldArray, useWatch } from "react-hook-form"
-import type { Control, FieldArrayMethodProps } from "react-hook-form"
+import type { Control } from "react-hook-form"
 import { z } from "zod"
 
 import { createManualAttendance } from "@/action/attendance"
@@ -67,11 +67,6 @@ const isValidMemberId = (id: string | undefined | null): id is string => {
   if (!id) return false
   const numId = Number(id)
   return !isNaN(numId) && numId > 0 && String(numId) === id
-}
-
-// Filter dan ensure members adalah valid
-const getValidMembers = (members: MemberOption[]): MemberOption[] => {
-  return members.filter((m) => isValidMemberId(m.id))
 }
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour)

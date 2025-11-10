@@ -20,7 +20,8 @@ import {
 } from "@/lib/data-cache";
 
 import { Geist, Geist_Mono } from "next/font/google";
-import { ErrorBoundary } from "@/components/error-boundary";
+import { PWARegister } from "@/components/pwa-register";
+import { InstallPrompt } from "@/components/install-prompt";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -56,6 +57,15 @@ export const metadata: Metadata = {
       : `http://localhost:${process.env.PORT || 3000}`
   ),
   alternates: { canonical: "/" },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Presensi",
+  },
+  formatDetection: {
+    telephone: false,
+  },
   openGraph: {
     url: "/",
     title: "Attendance App",
@@ -67,6 +77,17 @@ export const metadata: Metadata = {
     title: "Attendance App",
     description: "A stunning and functional retractable sidebar for Next.js.",
   },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" }
+  ],
 };
 
 export default async function RootLayout({
@@ -115,7 +136,18 @@ export default async function RootLayout({
 
   return (
     <html lang="id" suppressHydrationWarning>
+      <head>
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Presensi" />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <PWARegister />
+        <InstallPrompt />
         <UserProvider user={mappedUser} />
         {user && <PermissionInitializer userId={user.id} />}
         <TimezoneProvider timezone={timezone}>

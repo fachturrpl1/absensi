@@ -223,7 +223,7 @@ export function AttendanceFormBatch() {
     const newEntry: BatchEntry = {
       id: Date.now().toString(),
       memberId: memberId || "",
-      checkInDate: new Date().toISOString().split("T")[0],
+      checkInDate: new Date().toISOString().split("T")[0] || "",
       checkInTime: "08:00",
       checkOutTime: "17:00",
       status: "present",
@@ -644,7 +644,7 @@ export function AttendanceFormBatch() {
                   </div>
                 ) : (
                   <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {batchEntries.map((entry, idx) => {
+                    {batchEntries.map((entry) => {
                       const selectedMember = members.find((m) => m.id === entry.memberId)
                       return (
                         <Card key={entry.id} className="bg-muted/50">

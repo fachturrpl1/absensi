@@ -12,8 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, User, TrendingUp } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns';
+import { ChevronLeft, ChevronRight, Clock, MapPin, User, TrendingUp } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IAttendance } from '@/interface';
@@ -353,23 +353,25 @@ export function AttendanceCalendarView({
                     </div>
 
                     {/* Work period bar */}
-                    {selectedAttendance.actual_check_in && (
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: 'auto' }}
-                        className="absolute top-2 bottom-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded flex items-center justify-center text-white text-xs font-semibold shadow-lg"
-                        style={{
-                          left: `${(parseInt(selectedAttendance.actual_check_in.split(':')[0]) / 24) * 100}%`,
-                          right: selectedAttendance.actual_check_out 
-                            ? `${100 - (parseInt(selectedAttendance.actual_check_out.split(':')[0]) / 24) * 100}%`
-                            : '10%'
-                        }}
-                      >
-                        {selectedAttendance.work_duration_minutes && 
-                          `${Math.floor(selectedAttendance.work_duration_minutes / 60)}h ${selectedAttendance.work_duration_minutes % 60}m`
-                        }
-                      </motion.div>
-                    )}
+                    {selectedAttendance.actual_check_in && selectedAttendance.actual_check_out && (() => {
+                      const checkInHour = parseInt(selectedAttendance.actual_check_in.split(':')[0] || '0');
+                      const checkOutHour = parseInt(selectedAttendance.actual_check_out.split(':')[0] || '0');
+                      return (
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: 'auto' }}
+                          className="absolute top-2 bottom-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded flex items-center justify-center text-white text-xs font-semibold shadow-lg"
+                          style={{
+                            left: `${(checkInHour / 24) * 100}%`,
+                            right: `${100 - (checkOutHour / 24) * 100}%`
+                          }}
+                        >
+                          {selectedAttendance.work_duration_minutes && 
+                            `${Math.floor(selectedAttendance.work_duration_minutes / 60)}h ${selectedAttendance.work_duration_minutes % 60}m`
+                          }
+                        </motion.div>
+                      );
+                    })()}
                   </div>
 
                   {/* Time labels */}

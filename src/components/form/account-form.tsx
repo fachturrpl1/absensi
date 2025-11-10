@@ -32,7 +32,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { Camera, User, Briefcase, Lock, Trash2, AlertCircle } from "lucide-react";
 import {
   updateUserProfile,
@@ -44,7 +43,6 @@ import { useAuthStore } from "@/store/user-store";
 import { useProfileRefresh, useProfilePhotoDelete, useProfilePhotoUrl } from "@/hooks/use-profile";
 import { safeAvatarSrc, getUserInitials } from "@/lib/avatar-utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { GENDER_OPTIONS, RELATIONSHIP_OPTIONS } from "@/constants";
 
 import { accountLogger } from '@/lib/logger';
 interface UserProfile extends Partial<IUser> {
@@ -148,7 +146,6 @@ export function AccountForm({ initialData }: AccountFormProps) {
   const missingFirstName = missingRequired.includes("First Name");
   const missingGender = missingRequired.includes("Gender");
   const missingPhone = missingRequired.includes("Phone Number");
-  const hasMissingRequired = missingRequired.length > 0;
 
   const watchedDisplayName = profileForm.watch("display_name")?.trim();
 
@@ -249,6 +246,10 @@ export function AccountForm({ initialData }: AccountFormProps) {
           const result = reader.result as string;
           // Remove data:image/...;base64, prefix
           const base64Data = result.split(',')[1];
+          if (!base64Data) {
+            reject(new Error('Invalid base64 data'));
+            return;
+          }
           resolve(base64Data);
         };
         reader.onerror = () => reject(new Error('Failed to read file'));

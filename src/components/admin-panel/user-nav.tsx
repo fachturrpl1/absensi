@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { LayoutGrid, LogOut, User, RefreshCw } from "lucide-react"
+import { LayoutGrid, User } from "lucide-react"
 import React from "react"
 
 import { Button } from "@/components/ui/button"
@@ -25,7 +25,6 @@ import { useAuthStore } from "@/store/user-store"
 import { useProfilePhotoUrl } from "@/hooks/use-profile"
 import { safeAvatarSrc, getUserInitials } from "@/lib/avatar-utils"
 import LogoutButton from "../logout"
-import { LanguageDropdownItem } from "@/components/language-dropdown-item"
 
 import { logger } from '@/lib/logger';
 export function UserNav() {

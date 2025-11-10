@@ -74,7 +74,7 @@ export default function MembersForm({
     const [loading, setLoading] = React.useState(false)
     const [users, setUsers] = React.useState<IUser[]>([])
     const [loadingForm, setLoadingForm] = React.useState(true)
-    const [organizationId, setOrganizationId] = React.useState<string>("")
+    const [organizationId, _setOrganizationId] = React.useState<string>("")
     
     // Use React Query hooks instead of manual state management
     const { data: groups = [], isLoading: groupsLoading } = useGroups()

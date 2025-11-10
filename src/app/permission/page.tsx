@@ -3,12 +3,10 @@
 import React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
-import TopBar from "@/components/top-bar"
 import { Button } from "@/components/ui/button"
 import {
     Trash,
     Pencil,
-    ChevronRight,
     Plus,
 } from "lucide-react"
 import {
@@ -38,10 +36,8 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
 
 import { toast } from "sonner"
-import Link from "next/link"
 import { useParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"

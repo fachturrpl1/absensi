@@ -21,7 +21,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -34,10 +33,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { DataTable } from "@/components/data-table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Empty,
   EmptyHeader,
@@ -60,8 +58,6 @@ export default function InvitationsClient() {
   const [invitations, setInvitations] = useState<IMemberInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedInvitation, setSelectedInvitation] = useState<string | null>(null);
 
   useEffect(() => {
     loadInvitations();

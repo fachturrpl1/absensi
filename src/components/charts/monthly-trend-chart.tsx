@@ -60,8 +60,8 @@ export const MonthlyTrendChart = memo(function MonthlyTrendChart({
 
   const trend = useMemo(() => {
     if (trendData.length < 2) return { direction: 'stable', percentage: 0 }
-    const lastMonth = trendData[trendData.length - 1].attendance
-    const previousMonth = trendData[trendData.length - 2].attendance
+    const lastMonth = trendData[trendData.length - 1]?.attendance || 0
+    const previousMonth = trendData[trendData.length - 2]?.attendance || 0
     
     if (previousMonth === 0) return { direction: 'up', percentage: 0 }
     

@@ -3,7 +3,6 @@
 import React from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ColumnDef } from "@tanstack/react-table"
-import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
 import { Pencil, Plus, Trash, ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
@@ -72,9 +71,8 @@ import {
   updateWorkScheduleDetail,
   deleteWorkScheduleDetail,
 } from "@/action/schedule"
-import TopBar from "@/components/top-bar"
-import { FormSkeleton, TableSkeleton } from "@/components/ui/loading-skeleton"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { TableSkeleton } from "@/components/ui/loading-skeleton"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Clock, CalendarDays, TrendingUp } from "lucide-react"
 import {
   Select,

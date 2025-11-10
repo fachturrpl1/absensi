@@ -3,7 +3,6 @@
 import React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
-import TopBar from "@/components/top-bar"
 import { Button } from "@/components/ui/button"
 import {
     Trash,
@@ -38,7 +37,6 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
 
 import { toast } from "sonner"
 import Link from "next/link"
@@ -49,8 +47,6 @@ import z from "zod"
 
 import { IRole } from "@/interface"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getAllOrganization } from "@/action/organization"
 import { createRole, deleteRole, getAllRole, updateRole } from "@/action/role"
 
 const roleSchema = z.object({

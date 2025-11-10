@@ -9,7 +9,7 @@ import { PanelsTopLeft } from "lucide-react";
 import Link from "next/link";
 import { BrandName } from "../organization-name";
 
-export function Sidebar({ organizationId }: { organizationId?: string | null }) {
+export function Sidebar({ organizationId: _organizationId }: { organizationId?: string | null }) {
   const sidebar = useStore(useSidebar, (x) => x);
   if (!sidebar) return null;
   const { isOpen, toggleOpen, getOpenState, setIsHover, settings } = sidebar;

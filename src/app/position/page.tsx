@@ -24,7 +24,6 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 
 import { toast } from "sonner"
-import { useParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
@@ -80,9 +79,6 @@ const positionSchema = z.object({
 type PositionsForm = z.infer<typeof positionSchema>
 
 export default function PositionsPage() {
-    const params = useParams()
-    const positionId = Number(params.id)
-
     const [open, setOpen] = React.useState(false)
     const [editingDetail, setEditingDetail] = React.useState<IPositions | null>(null)
     const [positions, setPositions] = React.useState<IPositions[]>([])
@@ -134,7 +130,7 @@ export default function PositionsPage() {
                 .eq("user_id", user.id)
 
             if (error) throw error
-            if (data && data.length > 0) {
+            if (data && data.length > 0 && data[0]?.organization_id) {
                 setOrganizationId(String(data[0].organization_id))
             }
         } catch (error: unknown) {

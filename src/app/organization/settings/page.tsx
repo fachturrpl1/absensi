@@ -528,7 +528,7 @@ export default function OrganizationSettingsPage() {
                 <div className="w-16 h-16 rounded-lg border overflow-hidden bg-gray-50">
                   <img 
                     src={logoPreview} 
-                    alt="Organization logo" 
+                    alt={`${orgData?.name || 'Organization'} logo preview`}
                     className="w-full h-full object-cover"
                   />
                 </div>

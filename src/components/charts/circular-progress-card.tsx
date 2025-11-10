@@ -3,7 +3,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveContainer, RadialBarChart, RadialBar, PolarAngleAxis } from 'recharts';
 import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
 
 interface CircularProgressCardProps {
   title: string;

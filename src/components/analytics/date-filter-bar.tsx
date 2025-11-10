@@ -2,14 +2,13 @@
 
 import { motion } from 'framer-motion';
 import { Calendar, ChevronDown } from 'lucide-react';
-import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
+import { format, startOfMonth, startOfWeek } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
@@ -39,7 +38,7 @@ export function DateFilterBar({ dateRange, onDateRangeChange, className }: DateF
     today.setHours(23, 59, 59, 999); // End of today
     
     let from: Date;
-    let to: Date = new Date(today);
+    const to: Date = new Date(today);
 
     if (preset.value === 'today') {
       from = new Date(today);
@@ -55,9 +54,9 @@ export function DateFilterBar({ dateRange, onDateRangeChange, className }: DateF
       console.log('📅 This month selected:', { from, to });
     } else {
       from = new Date(today);
-      from.setDate(from.getDate() - preset.days);
+      from.setDate(from.getDate() - (preset.days || 0));
       from.setHours(0, 0, 0, 0);
-      console.log(`📅 Last ${preset.days} days selected:`, { from, to });
+      console.log(`📅 Last ${preset.days || 0} days selected:`, { from, to });
     }
 
     const newRange = { from, to, preset: preset.value };
@@ -98,7 +97,7 @@ export function DateFilterBar({ dateRange, onDateRangeChange, className }: DateF
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[240px]">
-          {DATE_PRESETS.map((preset, index) => (
+          {DATE_PRESETS.map((preset) => (
             <DropdownMenuItem
               key={preset.value}
               onClick={() => handlePresetClick(preset)}

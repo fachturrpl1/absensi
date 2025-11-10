@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
   flexRender,
   getCoreRowModel,
@@ -17,7 +17,6 @@ import type {
 } from "@tanstack/react-table"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Table,
   TableBody,

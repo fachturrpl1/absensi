@@ -5,17 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
-import { format as formatDate, subDays } from 'date-fns';
 import {
-  Calendar,
   Clock,
-  Filter,
-  Download,
   Search,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Users,
   TrendingUp,
   TrendingDown,
   MapPin,
@@ -27,22 +19,16 @@ import {
   Edit,
   Trash2,
   MoreVertical,
-  CalendarDays,
-  Building2,
   UserCheck,
   UserX,
-  FileText,
   Mail,
   Plus,
-  Settings,
-  BarChart3,
   Grid3x3,
   List,
-  Zap,
   SlidersHorizontal,
   X,
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -62,25 +48,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Pagination,
   PaginationContent,
@@ -91,76 +61,13 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-
-// Sample data
-const sampleAttendance = [
-  {
-    id: '1',
-    employee: { name: 'John Doe', avatar: '/avatars/01.png', position: 'Senior Developer', department: 'Engineering' },
-    date: '2024-01-15',
-    checkIn: '08:55',
-    checkOut: '18:05',
-    workHours: '9h 10m',
-    status: 'present',
-    overtime: '1h 5m',
-    location: 'Main Office',
-    notes: '',
-  },
-  {
-    id: '2',
-    employee: { name: 'Jane Smith', avatar: '/avatars/02.png', position: 'Product Manager', department: 'Product' },
-    date: '2024-01-15',
-    checkIn: '09:15',
-    checkOut: '18:00',
-    workHours: '8h 45m',
-    status: 'late',
-    overtime: '',
-    location: 'Main Office',
-    notes: 'Traffic delay',
-  },
-  {
-    id: '3',
-    employee: { name: 'Mike Johnson', avatar: '/avatars/03.png', position: 'Designer', department: 'Design' },
-    date: '2024-01-15',
-    checkIn: '-',
-    checkOut: '-',
-    workHours: '0h',
-    status: 'absent',
-    overtime: '',
-    location: '-',
-    notes: 'Sick leave',
-  },
-  {
-    id: '4',
-    employee: { name: 'Sarah Williams', avatar: '/avatars/04.png', position: 'HR Manager', department: 'HR' },
-    date: '2024-01-15',
-    checkIn: '08:45',
-    checkOut: '17:30',
-    workHours: '8h 45m',
-    status: 'present',
-    overtime: '',
-    location: 'Branch Office',
-    notes: '',
-  },
-];
-
-const summaryStats = {
-  total: 156,
-  present: 142,
-  late: 8,
-  absent: 6,
-  onLeave: 4,
-  avgWorkHours: '8.5h',
-  attendanceRate: 91,
-};
 
 interface ModernAttendanceListProps {
   initialData?: any[];
   initialStats?: any;
 }
 
-export default function ModernAttendanceList({ initialData, initialStats }: ModernAttendanceListProps) {
+export default function ModernAttendanceList({ initialData: _initialData, initialStats: _initialStats }: ModernAttendanceListProps) {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
@@ -904,6 +811,7 @@ export default function ModernAttendanceList({ initialData, initialStats }: Mode
                     <PaginationItem>
                       <PaginationPrevious 
                         href="#"
+                        size="default"
                         onClick={(e) => {
                           e.preventDefault();
                           if (currentPage > 1) setCurrentPage(currentPage - 1);
@@ -919,6 +827,7 @@ export default function ModernAttendanceList({ initialData, initialStats }: Mode
                         {typeof page === 'number' ? (
                           <PaginationLink
                             href="#"
+                            size="default"
                             onClick={(e) => {
                               e.preventDefault();
                               setCurrentPage(page);
@@ -936,6 +845,7 @@ export default function ModernAttendanceList({ initialData, initialStats }: Mode
                     <PaginationItem>
                       <PaginationNext 
                         href="#"
+                        size="default"
                         onClick={(e) => {
                           e.preventDefault();
                           if (currentPage < totalPages) setCurrentPage(currentPage + 1);

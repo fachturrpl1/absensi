@@ -5,20 +5,19 @@ import { createClient } from '@/utils/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+// Removed unused spotlight components
 import {
   Clock,
   Users,
-  TrendingUp,
   CheckCircle2,
-  AlertCircle,
   BarChart3,
   Activity,
-  Calendar,
   UserCheck,
+  ArrowUp,
+  ArrowDown,
+  Minus,
 } from 'lucide-react';
 import {
-  BarChart,
-  Bar,
   AreaChart,
   Area,
   XAxis,
@@ -29,13 +28,14 @@ import {
   Cell,
   PieChart,
   Pie,
-  Legend,
 } from 'recharts';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
-import { DashboardSkeleton } from '@/components/ui/loading-skeleton';
+import { ActivityTimeline } from '@/components/dashboard/activity-timeline';
+import { LiveAttendanceTable } from '@/components/dashboard/live-attendance-table';
+import { EmptyState } from '@/components/dashboard/empty-state';
 
 // Types
 interface AttendanceRecord {
@@ -60,7 +60,7 @@ interface DashboardStats {
   activeMembers: number;
 }
 
-// Modern Color Palette 2025
+// Color Palette
 const COLORS = {
   primary: '#3B82F6',
   success: '#10B981',
@@ -68,25 +68,19 @@ const COLORS = {
   danger: '#EF4444',
   info: '#06B6D4',
   purple: '#8B5CF6',
-  gradient: {
-    blue: 'from-blue-500 to-blue-600',
-    green: 'from-green-500 to-green-600',
-    orange: 'from-orange-500 to-orange-600',
-    purple: 'from-purple-500 to-purple-600',
-  }
 };
 
 // Custom Tooltip
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-4">
-        <p className="font-semibold text-sm text-gray-900 dark:text-white mb-2">{label}</p>
+      <div className="bg-card border border-border rounded-lg shadow-lg p-3">
+        <p className="font-semibold text-sm mb-2">{label}</p>
         {payload.map((entry: any, index: number) => (
           <div key={index} className="flex items-center gap-2 text-xs">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-            <span className="text-gray-600 dark:text-gray-400">{entry.name}:</span>
-            <span className="font-bold text-gray-900 dark:text-white">{entry.value}</span>
+            <span className="text-muted-foreground">{entry.name}:</span>
+            <span className="font-bold">{entry.value}</span>
           </div>
         ))}
       </div>
@@ -95,26 +89,87 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export default function ModernDashboard() {
+// Enhanced Stat Card Component with proper dark/light mode
+const EnhancedStatCard = ({ 
+  title, 
+  value, 
+  icon: Icon, 
+  trend,
+  trendValue,
+  trendLabel,
+  color = 'blue',
+  delay = 0 
+}: {
+  title: string;
+  value: string | number;
+  icon: any;
+  trend?: 'up' | 'down' | 'neutral';
+  trendValue?: string;
+  trendLabel?: string;
+  color?: 'blue' | 'green' | 'orange' | 'purple';
+  delay?: number;
+}) => {
+  const iconColorClasses = {
+    blue: 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
+    green: 'bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400',
+    orange: 'bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400',
+    purple: 'bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400',
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.3 }}
+      className="h-full"
+    >
+      <Card className="h-full border-border bg-card hover:shadow-lg transition-shadow duration-200">
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-muted-foreground mb-2">{title}</p>
+              <h3 className="text-3xl font-bold text-foreground">{value}</h3>
+            </div>
+            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", iconColorClasses[color])}>
+              <Icon className="w-6 h-6" />
+            </div>
+          </div>
+          
+          {trend && (
+            <div className="flex items-center gap-1.5 text-sm">
+              {trend === 'up' && <ArrowUp className="w-4 h-4 text-green-600 dark:text-green-400" />}
+              {trend === 'down' && <ArrowDown className="w-4 h-4 text-red-600 dark:text-red-400" />}
+              {trend === 'neutral' && <Minus className="w-4 h-4 text-muted-foreground" />}
+              <span className={cn(
+                "font-semibold",
+                trend === 'up' && "text-green-600 dark:text-green-400",
+                trend === 'down' && "text-red-600 dark:text-red-400",
+                trend === 'neutral' && "text-muted-foreground"
+              )}>
+                {trendValue}
+              </span>
+              {trendLabel && (
+                <span className="text-muted-foreground text-xs ml-1">{trendLabel}</span>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+};
+
+export default function ImprovedDashboard() {
   const [loading, setLoading] = useState(true);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
-  const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   
-  // Date filter state - default to TODAY
+  // Date filter state
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const endOfToday = new Date(today);
     endOfToday.setHours(23, 59, 59, 999);
-    
-    console.log('🎯 Initial Date Range (TODAY):', {
-      from: today.toISOString(),
-      to: endOfToday.toISOString(),
-      preset: 'today'
-    });
-    
     return { from: today, to: endOfToday, preset: 'today' };
   });
 
@@ -128,21 +183,13 @@ export default function ModernDashboard() {
     activeMembers: 0,
   });
 
+  // Clock
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Debug: Watch dateRange changes
-  useEffect(() => {
-    console.log('🎯 DateRange State Changed:', {
-      from: dateRange.from.toISOString().split('T')[0],
-      to: dateRange.to.toISOString().split('T')[0],
-      preset: dateRange.preset,
-      timestamp: new Date().toISOString()
-    });
-  }, [dateRange]);
-
+  // Fetch data
   useEffect(() => {
     const supabase = createClient();
     
@@ -162,9 +209,8 @@ export default function ModernDashboard() {
         if (!orgMemberData) return;
         
         const orgId = String(orgMemberData.organization_id);
-        setOrganizationId(orgId);
 
-        const { data: attendanceData, error: attendanceError } = await supabase
+        const { data: attendanceData } = await supabase
           .from('attendance_records')
           .select(`
             id,
@@ -189,51 +235,19 @@ export default function ModernDashboard() {
           .order('attendance_date', { ascending: false })
           .limit(1000);
 
-        console.log('🔍 Supabase Query Response:', {
-          orgId,
-          hasError: !!attendanceError,
-          error: attendanceError,
-          dataLength: attendanceData?.length || 0,
-          sampleData: attendanceData?.slice(0, 2)
-        });
-
-        if (attendanceError) {
-          console.error('❌ Supabase Query Error:', attendanceError);
-          setAllRecords([]);
-          return;
-        }
-
-        const formattedRecords: AttendanceRecord[] = (attendanceData || []).map((record: any) => {
-          try {
-            return {
-              id: record.id,
-              member_name: `${record.organization_members.user_profiles.first_name} ${record.organization_members.user_profiles.last_name}`,
-              department_name: record.organization_members.departments?.name || 'N/A',
-              status: record.status,
-              actual_check_in: record.actual_check_in,
-              actual_check_out: record.actual_check_out,
-              work_duration_minutes: record.work_duration_minutes,
-              attendance_date: record.attendance_date,
-              profile_photo_url: record.organization_members.user_profiles.profile_photo_url,
-            };
-          } catch (err) {
-            console.error('❌ Error formatting record:', err, record);
-            return null;
-          }
-        }).filter(Boolean) as AttendanceRecord[];
-
-        console.log('📊 Dashboard Data Fetched:', {
-          totalRecords: formattedRecords.length,
-          orgId,
-          firstRecord: formattedRecords[0],
-          dateRange: formattedRecords.length > 0 ? {
-            oldest: formattedRecords[formattedRecords.length - 1]?.attendance_date,
-            newest: formattedRecords[0]?.attendance_date
-          } : null
-        });
+        const formattedRecords: AttendanceRecord[] = (attendanceData || []).map((record: any) => ({
+          id: record.id,
+          member_name: `${record.organization_members.user_profiles.first_name} ${record.organization_members.user_profiles.last_name}`,
+          department_name: record.organization_members.departments?.name || 'N/A',
+          status: record.status,
+          actual_check_in: record.actual_check_in,
+          actual_check_out: record.actual_check_out,
+          work_duration_minutes: record.work_duration_minutes,
+          attendance_date: record.attendance_date,
+          profile_photo_url: record.organization_members.user_profiles.profile_photo_url,
+        })).filter(Boolean);
 
         setAllRecords(formattedRecords);
-
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -244,111 +258,24 @@ export default function ModernDashboard() {
     fetchData();
   }, []);
 
-  // Apply date range filtering - Extract dates for better dependency tracking
+  // Filter records
   const fromDateStr = dateRange.from.toISOString().split('T')[0];
   const toDateStr = dateRange.to.toISOString().split('T')[0];
   
   const filteredRecords = useMemo(() => {
-    if (allRecords.length === 0) {
-      console.log('⚠️ No records to filter - allRecords is empty');
-      return [];
-    }
+    if (allRecords.length === 0) return [];
 
-    // Create fresh date objects from the string values
     const fromDate = new Date(fromDateStr + 'T00:00:00');
     const toDate = new Date(toDateStr + 'T23:59:59.999');
     
-    console.log('🔍 Starting Filter:', {
-      totalRecords: allRecords.length,
-      dateRange: { from: fromDateStr, to: toDateStr, preset: dateRange.preset },
-      fromDate: fromDate.toISOString(),
-      toDate: toDate.toISOString(),
-      sampleRecordDates: allRecords.slice(0, 5).map(r => r.attendance_date)
-    });
-    
-    const filtered = allRecords.filter(record => {
-      // Parse date string (format: YYYY-MM-DD) with explicit time
+    return allRecords.filter(record => {
       const recordDate = new Date(record.attendance_date + 'T00:00:00');
-      const isInRange = recordDate >= fromDate && recordDate <= toDate;
-      
-      if (allRecords.indexOf(record) < 3) {
-        console.log('🔍 Filter check:', {
-          date: record.attendance_date,
-          recordDate: recordDate.toISOString(),
-          fromDate: fromDate.toISOString(),
-          toDate: toDate.toISOString(),
-          isInRange,
-          comparison: {
-            afterFrom: recordDate >= fromDate,
-            beforeTo: recordDate <= toDate
-          }
-        });
-      }
-      
-      return isInRange;
+      return recordDate >= fromDate && recordDate <= toDate;
     });
+  }, [allRecords, fromDateStr, toDateStr]);
 
-    console.log('✅ Filter Complete:', {
-      filteredCount: filtered.length,
-      percentage: ((filtered.length / allRecords.length) * 100).toFixed(1) + '%',
-      sampleFiltered: filtered.slice(0, 3).map(r => ({
-        name: r.member_name,
-        date: r.attendance_date,
-        status: r.status
-      }))
-    });
-
-    return filtered;
-  }, [allRecords, fromDateStr, toDateStr, dateRange.preset]);
-
-  // Get chart title based on date filter preset
-  const getChartTitle = () => {
-    switch (dateRange.preset) {
-      case 'today':
-        return 'Today Data';
-      case 'yesterday':
-        return 'Yesterday Data';
-      case 'last7':
-        return 'Last 7 Days';
-      case 'last30':
-        return 'Last 30 Days';
-      case 'thisMonth':
-        return 'This Month';
-      case 'lastMonth':
-        return 'Last Month';
-      case 'custom':
-        return 'Custom Range';
-      default:
-        return 'Attendance Data';
-    }
-  };
-
-  // Get chart subtitle based on date filter
-  const getChartSubtitle = () => {
-    switch (dateRange.preset) {
-      case 'today':
-        return 'Real-time attendance for today';
-      case 'yesterday':
-        return 'Attendance data from yesterday';
-      case 'last7':
-        return 'Weekly attendance trend';
-      case 'last30':
-        return 'Monthly attendance trend';
-      case 'thisMonth':
-        return 'Current month overview';
-      case 'lastMonth':
-        return 'Previous month overview';
-      case 'custom':
-        return 'Custom date range analysis';
-      default:
-        return 'Attendance statistics';
-    }
-  };
-
-  // Recalculate stats from filtered data
+  // Calculate stats
   useEffect(() => {
-    setRecords(filteredRecords);
-
     const present = filteredRecords.filter(r => r.status === 'present' || r.status === 'late').length;
     const late = filteredRecords.filter(r => r.status === 'late').length;
     const absent = filteredRecords.filter(r => r.status === 'absent').length;
@@ -358,59 +285,96 @@ export default function ModernDashboard() {
     const avgHours = filteredRecords.length > 0 ? totalWorkMinutes / filteredRecords.length / 60 : 0;
 
     const uniqueMembers = new Set(
-      filteredRecords
-        .filter(r => r.actual_check_in)
-        .map(r => r.member_name)
+      filteredRecords.filter(r => r.actual_check_in).map(r => r.member_name)
     );
-    const activeMembers = uniqueMembers.size;
 
-    const newStats = {
+    setStats({
       totalPresent: present,
       totalLate: late,
       totalAbsent: absent,
       onTimeRate: present > 0 ? ((present - late) / present) * 100 : 0,
       avgWorkHours: avgHours,
       totalWorkHoursToday: totalWorkHours,
-      activeMembers: activeMembers,
+      activeMembers: uniqueMembers.size,
+    });
+  }, [filteredRecords]);
+
+  // Get filter period label and chart data
+  const getFilterLabel = () => {
+    if (!dateRange.preset) return 'Custom Range';
+    
+    const labels: Record<string, string> = {
+      'today': 'Today',
+      'last7': 'Last 7 Days',
+      'last30': 'Last 30 Days',
+      'thisWeek': 'This Week',
+      'thisMonth': 'This Month',
     };
-
-    console.log('📈 Stats Calculated:', newStats);
-
-    setStats(newStats);
-  }, [filteredRecords]);
-
-  // Generate weekly data
-  const weeklyData = useMemo(() => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const daysMap: Record<string, { present: number; late: number; absent: number }> = {};
     
-    days.forEach(day => {
-      daysMap[day] = { present: 0, late: 0, absent: 0 };
-    });
+    return labels[dateRange.preset] || 'Custom Range';
+  };
+
+  // Dynamic chart data based on filter
+  const chartData = useMemo(() => {
+    const isToday = dateRange.preset === 'today';
     
-    filteredRecords.forEach(record => {
-      const date = new Date(record.attendance_date);
-      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const dayName = dayNames[date.getDay()];
+    if (isToday) {
+      // Hourly data for today
+      const hours = Array.from({ length: 24 }, (_, i) => i);
+      const hourlyMap: Record<number, { present: number; late: number; absent: number }> = {};
       
-      if (dayName && daysMap[dayName]) {
-        if (record.status === 'present') daysMap[dayName].present++;
-        else if (record.status === 'late') daysMap[dayName].late++;
-        else if (record.status === 'absent') daysMap[dayName].absent++;
-      }
-    });
-    
-    const result = days.map(day => ({
-      day,
-      present: daysMap[day]?.present || 0,
-      late: daysMap[day]?.late || 0,
-      absent: daysMap[day]?.absent || 0,
-    }));
-
-    console.log('📊 Weekly Data Generated:', result);
-
-    return result;
-  }, [filteredRecords]);
+      hours.forEach(hour => {
+        hourlyMap[hour] = { present: 0, late: 0, absent: 0 };
+      });
+      
+      filteredRecords.forEach(record => {
+        if (record.actual_check_in) {
+          const checkInDate = new Date(record.actual_check_in);
+          const hour = checkInDate.getHours();
+          
+          if (hourlyMap[hour]) {
+            if (record.status === 'present') hourlyMap[hour].present++;
+            else if (record.status === 'late') hourlyMap[hour].late++;
+            else if (record.status === 'absent') hourlyMap[hour].absent++;
+          }
+        }
+      });
+      
+      return hours.map(hour => ({
+        label: `${hour.toString().padStart(2, '0')}:00`,
+        present: hourlyMap[hour]?.present || 0,
+        late: hourlyMap[hour]?.late || 0,
+        absent: hourlyMap[hour]?.absent || 0,
+      }));
+    } else {
+      // Daily data for other periods
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const daysMap: Record<string, { present: number; late: number; absent: number }> = {};
+      
+      days.forEach(day => {
+        daysMap[day] = { present: 0, late: 0, absent: 0 };
+      });
+      
+      filteredRecords.forEach(record => {
+        const date = new Date(record.attendance_date);
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayName = dayNames[date.getDay()];
+        
+        if (dayName && daysMap[dayName]) {
+          if (record.status === 'present') daysMap[dayName].present++;
+          else if (record.status === 'late') daysMap[dayName].late++;
+          else if (record.status === 'absent') daysMap[dayName].absent++;
+        }
+      });
+      
+      return days.map(day => ({
+        label: day,
+        present: daysMap[day]?.present || 0,
+        late: daysMap[day]?.late || 0,
+        absent: daysMap[day]?.absent || 0,
+      }));
+    }
+  }, [filteredRecords, dateRange.preset]);
 
   // Status distribution
   const statusData = useMemo(() => [
@@ -438,268 +402,166 @@ export default function ModernDashboard() {
       }
     });
     
-    const result = Array.from(memberStats.values())
+    return Array.from(memberStats.values())
       .sort((a, b) => b.workHours - a.workHours)
       .slice(0, 5);
-
-    console.log('🏆 Top Performers:', result);
-
-    return result;
   }, [filteredRecords]);
-
-  const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-  };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 md:p-6">
-        <div className="max-w-[1600px] mx-auto">
-          <DashboardSkeleton />
+      <div className="flex items-center justify-center p-12">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 md:p-6">
-      <div className="max-w-[1600px] mx-auto space-y-6">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            {format(currentTime, 'EEEE, MMMM dd, yyyy • HH:mm:ss')}
+          </p>
+        </div>
         
-        {/* Header Section - Compact */}
+        <DateFilterBar 
+          dateRange={dateRange} 
+          onDateRangeChange={setDateRange}
+        />
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <EnhancedStatCard
+          title="Total Work Hours"
+          value={`${stats.totalWorkHoursToday.toFixed(1)}h`}
+          icon={Clock}
+          trend="up"
+          trendValue="+12%"
+          trendLabel="from last period"
+          color="blue"
+          delay={0}
+        />
+        <EnhancedStatCard
+          title="Active Members"
+          value={stats.activeMembers}
+          icon={Users}
+          trend="up"
+          trendValue="+5"
+          trendLabel="new this week"
+          color="green"
+          delay={0.1}
+        />
+        <EnhancedStatCard
+          title="On-Time Rate"
+          value={`${stats.onTimeRate.toFixed(0)}%`}
+          icon={CheckCircle2}
+          trend="up"
+          trendValue="+8%"
+          trendLabel="improvement"
+          color="purple"
+          delay={0.2}
+        />
+        <EnhancedStatCard
+          title="Avg Hours/Member"
+          value={`${stats.avgWorkHours.toFixed(1)}h`}
+          icon={Activity}
+          trend="neutral"
+          trendValue="0%"
+          trendLabel="no change"
+          color="orange"
+          delay={0.3}
+        />
+      </div>
+
+      {/* Charts Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        {/* Weekly Trend */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+          transition={{ delay: 0.4 }}
+          className="lg:col-span-4"
         >
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
-              Dashboard
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {format(currentTime, 'EEEE, MMMM dd, yyyy • HH:mm:ss')}
-            </p>
-          </div>
-          
-          <DateFilterBar 
-            dateRange={dateRange} 
-            onDateRangeChange={(newRange) => {
-              console.log('🔄 DateFilterBar callback triggered:', {
-                old: {
-                  from: dateRange.from.toISOString().split('T')[0],
-                  to: dateRange.to.toISOString().split('T')[0],
-                  preset: dateRange.preset
-                },
-                new: {
-                  from: newRange.from.toISOString().split('T')[0],
-                  to: newRange.to.toISOString().split('T')[0],
-                  preset: newRange.preset
-                }
-              });
-              setDateRange(newRange);
-            }}
-            className="w-full md:w-auto"
-          />
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2 text-foreground">
+                    <BarChart3 className="w-5 h-5 text-primary" />
+                    {dateRange.preset === 'today' ? 'Hourly Attendance' : 'Attendance Trend'}
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground">
+                    {dateRange.preset === 'today' 
+                      ? 'Check-in patterns throughout the day' 
+                      : `Attendance patterns for ${getFilterLabel().toLowerCase()}`
+                    }
+                  </CardDescription>
+                </div>
+                <Badge variant="outline">{getFilterLabel()}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="colorPresent" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={COLORS.success} stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor={COLORS.success} stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorLate" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={COLORS.warning} stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor={COLORS.warning} stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
+                  <XAxis 
+                    dataKey="label" 
+                    stroke="currentColor" 
+                    opacity={0.5} 
+                    fontSize={12}
+                    angle={dateRange.preset === 'today' ? -45 : 0}
+                    textAnchor={dateRange.preset === 'today' ? 'end' : 'middle'}
+                    height={dateRange.preset === 'today' ? 60 : 30}
+                  />
+                  <YAxis stroke="currentColor" opacity={0.5} fontSize={12} />
+                  <RechartsTooltip content={<CustomTooltip />} />
+                  <Area type="monotone" dataKey="present" stroke={COLORS.success} fillOpacity={1} fill="url(#colorPresent)" />
+                  <Area type="monotone" dataKey="late" stroke={COLORS.warning} fillOpacity={1} fill="url(#colorLate)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </motion.div>
 
-        {/* Stats Cards - Perfect Grid, No Gaps, Equal Height */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          
-          {/* Card 1 - Total Work Hours */}
-          <motion.div
-            variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-            transition={{ delay: 0.1 }}
-          >
-            <Card className="border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full bg-gradient-to-br from-blue-500 to-blue-600">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-blue-100 text-sm font-medium mb-2">Total Work Hours</p>
-                    <h3 className="text-3xl font-bold text-white mb-1">
-                      {stats.totalWorkHoursToday.toFixed(1)}<span className="text-xl ml-1">hrs</span>
-                    </h3>
-                    <p className="text-blue-200 text-xs flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      {stats.activeMembers} active members
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Card 2 - Total Present */}
-          <motion.div
-            variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-            transition={{ delay: 0.2 }}
-          >
-            <Card className="border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full bg-gradient-to-br from-green-500 to-green-600">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-green-100 text-sm font-medium mb-2">Total Present</p>
-                    <h3 className="text-3xl font-bold text-white mb-1">{stats.totalPresent}</h3>
-                    <p className="text-green-200 text-xs flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" />
-                      {stats.onTimeRate.toFixed(1)}% on time
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                    <CheckCircle2 className="w-6 h-6 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Card 3 - Late Check-in */}
-          <motion.div
-            variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-            transition={{ delay: 0.3 }}
-          >
-            <Card className="border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full bg-gradient-to-br from-orange-500 to-orange-600">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-orange-100 text-sm font-medium mb-2">Late Check-in</p>
-                    <h3 className="text-3xl font-bold text-white mb-1">{stats.totalLate}</h3>
-                    <p className="text-orange-200 text-xs">Need attention</p>
-                  </div>
-                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                    <AlertCircle className="w-6 h-6 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Card 4 - Avg Work Hours */}
-          <motion.div
-            variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-            transition={{ delay: 0.4 }}
-          >
-            <Card className="border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full bg-gradient-to-br from-purple-500 to-purple-600">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-purple-100 text-sm font-medium mb-2">Avg Work Hours</p>
-                    <h3 className="text-3xl font-bold text-white mb-1">
-                      {stats.avgWorkHours.toFixed(1)}<span className="text-xl">h</span>
-                    </h3>
-                    <p className="text-purple-200 text-xs">Per employee</p>
-                  </div>
-                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                    <Activity className="w-6 h-6 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-        </div>
-
-        {/* Charts Section - 2 Column Grid, No Gaps */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          
-          {/* Weekly Trend - Takes 2 columns */}
-          <motion.div
-            variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-            transition={{ delay: 0.5 }}
-            className="lg:col-span-2"
-          >
-            <Card className="border-0 shadow-md h-full">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <BarChart3 className="w-5 h-5 text-blue-600" />
-                      {getChartTitle()}
-                    </CardTitle>
-                    <CardDescription>{getChartSubtitle()}</CardDescription>
-                  </div>
-                  <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
-                    {dateRange.preset === 'today' ? 'Today' 
-                      : dateRange.preset === 'yesterday' ? 'Yesterday'
-                      : dateRange.preset === 'last7' ? 'Last 7 Days'
-                      : dateRange.preset === 'last30' ? 'Last 30 Days'
-                      : dateRange.preset === 'thisMonth' ? 'This Month'
-                      : dateRange.preset === 'lastMonth' ? 'Last Month'
-                      : 'Custom'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={weeklyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-                    <XAxis dataKey="day" stroke="#6b7280" fontSize={12} />
-                    <YAxis stroke="#6b7280" fontSize={12} />
-                    <RechartsTooltip 
-                      content={<CustomTooltip />}
-                      wrapperStyle={{ 
-                        zIndex: 9999,
-                        pointerEvents: 'none',
-                        outline: 'none',
-                      }}
-                      cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
-                      isAnimationActive={false}
-                    />
-                    <Legend />
-                    <Bar dataKey="present" name="Present" fill={COLORS.success} radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="late" name="Late" fill={COLORS.warning} radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="absent" name="Absent" fill={COLORS.danger} radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Status Distribution - Takes 1 column */}
-          <motion.div
-            variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-            transition={{ delay: 0.6 }}
-          >
-            <Card className="border-0 shadow-md h-full">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-purple-600" />
-                  Status Distribution
-                </CardTitle>
-                <CardDescription>
-                  {dateRange.preset === 'today' 
-                    ? 'Today\'s breakdown' 
-                    : dateRange.preset === 'last7'
-                    ? 'Weekly breakdown'
-                    : dateRange.preset === 'last30'
-                    ? 'Monthly breakdown'
-                    : 'Breakdown by status'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {statusData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={280}>
+        {/* Status Distribution */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="lg:col-span-3"
+        >
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <CardTitle className="text-lg text-foreground">Status Distribution</CardTitle>
+              <CardDescription className="text-muted-foreground">Breakdown by status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {statusData.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={200}>
                     <PieChart>
                       <Pie
                         data={statusData}
                         cx="50%"
                         cy="50%"
                         innerRadius={60}
-                        outerRadius={90}
+                        outerRadius={80}
                         paddingAngle={2}
                         dataKey="value"
                       >
@@ -707,115 +569,123 @@ export default function ModernDashboard() {
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <RechartsTooltip 
-                        wrapperStyle={{ 
-                          zIndex: 9999,
-                          pointerEvents: 'none',
-                        }}
-                        contentStyle={{
-                          backgroundColor: '#ffffff',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          padding: '10px',
-                          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                        }}
-                        isAnimationActive={false}
-                      />
+                      <RechartsTooltip />
                     </PieChart>
                   </ResponsiveContainer>
-                ) : (
-                  <div className="flex items-center justify-center h-[280px] text-gray-400">
-                    <p className="text-sm">No data available</p>
-                  </div>
-                )}
-                <div className="mt-4 space-y-2">
-                  {statusData.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="text-gray-700 dark:text-gray-300">{item.name}</span>
+                  <div className="mt-4 space-y-2">
+                    {statusData.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                          <span className="text-foreground">{item.name}</span>
+                        </div>
+                        <span className="font-semibold text-foreground">{item.value}</span>
                       </div>
-                      <span className="font-semibold text-gray-900 dark:text-white">{item.value}</span>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                  No data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Top Performers */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+      >
+        <Card className="border-border bg-card">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2 text-foreground">
+                  <UserCheck className="w-5 h-5 text-primary" />
+                  Top Performers
+                </CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Members with highest work hours for {getFilterLabel().toLowerCase()}
+                </CardDescription>
+              </div>
+              <Badge variant="outline">{getFilterLabel()}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {topPerformers.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                {topPerformers.map((member, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.7 + idx * 0.1 }}
+                    className="flex flex-col items-center p-4 rounded-lg border border-border bg-card hover:shadow-md hover:border-primary/50 transition-all"
+                  >
+                    <div className="relative mb-3">
+                      <Avatar className="w-16 h-16 border-2 border-border">
+                        <AvatarImage src={member.avatar || undefined} />
+                        <AvatarFallback className="bg-primary text-primary-foreground font-bold">
+                          {member.name.split(' ').map(n => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      {idx === 0 && (
+                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-500 dark:bg-yellow-400 rounded-full flex items-center justify-center text-xs shadow-lg">
+                          🏆
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                    <p className="font-semibold text-sm text-center mb-1 line-clamp-2 text-foreground">
+                      {member.name}
+                    </p>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="w-3 h-3" />
+                      <span className="font-bold text-primary">
+                        {member.workHours.toFixed(1)}h
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={UserCheck}
+                title="No performance data yet"
+                description={`No attendance records found for ${getFilterLabel().toLowerCase()}. Check back after members start checking in.`}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
-        </div>
+      {/* Activity Timeline & Live Attendance Table */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Activity Timeline */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+        >
+          <ActivityTimeline limit={10} autoRefresh={true} />
+        </motion.div>
 
-        {/* Top Performers Section */}
-        {topPerformers.length > 0 && (
-          <motion.div
-            variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-            transition={{ delay: 0.7 }}
-          >
-            <Card className="border-0 shadow-md">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <UserCheck className="w-5 h-5 text-amber-600" />
-                      Top Performers
-                    </CardTitle>
-                    <CardDescription>
-                      {dateRange.preset === 'today' 
-                        ? 'Highest hours today' 
-                        : dateRange.preset === 'last7'
-                        ? 'Top contributors this week'
-                        : dateRange.preset === 'last30'
-                        ? 'Top contributors this month'
-                        : 'Members with highest work hours'}
-                    </CardDescription>
-                  </div>
-                  <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
-                    Top 5
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                  {topPerformers.map((member, idx) => (
-                    <motion.div
-                      key={idx}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.8 + idx * 0.1 }}
-                      className="flex flex-col items-center p-4 bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
-                    >
-                      <div className="relative">
-                        <Avatar className="w-16 h-16 border-2 border-blue-500">
-                          <AvatarImage src={member.avatar || undefined} />
-                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white font-bold">
-                            {member.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        {idx === 0 && (
-                          <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-amber-400 to-amber-500 rounded-full flex items-center justify-center shadow-lg">
-                            <span className="text-white text-xs font-bold">1</span>
-                          </div>
-                        )}
-                      </div>
-                      <p className="mt-3 text-sm font-semibold text-gray-900 dark:text-white text-center line-clamp-1">
-                        {member.name}
-                      </p>
-                      <div className="mt-2 flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                        <Clock className="w-3 h-3" />
-                        <span className="font-bold text-blue-600 dark:text-blue-400">
-                          {member.workHours.toFixed(1)}h
-                        </span>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-
+        {/* Live Attendance Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="lg:col-span-1"
+        >
+          <LiveAttendanceTable 
+            autoRefresh={true} 
+            refreshInterval={60000}
+            pageSize={5}
+          />
+        </motion.div>
       </div>
     </div>
   );

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Calendar, FileText, Clock } from "lucide-react";
 import { LeaveBalanceCard } from "@/components/leave/leave-balance-card";
 import { getMyLeaveBalance, getMyLeaveRequests } from "@/action/leaves";
-import { LeaveBalanceWithType, LeaveRequestWithDetails } from "@/lib/leave/types";
+import { LeaveBalanceWithType } from "@/lib/leave/types";
 import { formatLeaveDateRange, getStatusColor } from "@/lib/leave/utils";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";

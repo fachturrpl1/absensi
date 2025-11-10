@@ -5,8 +5,7 @@ import { CalendarIcon, Loader2, X } from "lucide-react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { useForm, useWatch } from "react-hook-form"
-import type { Control } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { createManualAttendance } from "@/action/attendance"
@@ -33,8 +32,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import type { IOrganization_member } from "@/interface"
 import { toast } from "sonner"
@@ -151,7 +148,7 @@ export function AttendanceFormClean() {
 
       const payload: AttendanceEntry = {
         organization_member_id: values.memberId,
-        attendance_date: values.checkInDate.toISOString().split("T")[0],
+        attendance_date: values.checkInDate.toISOString().split("T")[0] || "",
         actual_check_in: toTimestampWithTimezone(checkInDateTime),
         actual_check_out: checkOutDateTime ? toTimestampWithTimezone(checkOutDateTime) : null,
         status: values.status,

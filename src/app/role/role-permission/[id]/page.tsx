@@ -100,7 +100,7 @@ export default function RolePermissionPage() {
     router.back();
   };
 
-  const handleSelectAll = (moduleName: string, permissions: IPermission[]) => {
+  const handleSelectAll = (_moduleName: string, permissions: IPermission[]) => {
     const currentValues = form.getValues("permission_ids") || []
     const modulePermissionIds = permissions.map((p: IPermission) => p.id)
     const allSelected = modulePermissionIds.every(id => currentValues.includes(id))
@@ -178,12 +178,12 @@ export default function RolePermissionPage() {
                   <div className="space-y-6">
                     {Object.keys(groupedPermissions).map((moduleName) => {
                       const modulePermissions = groupedPermissions[moduleName]
+                      if (!modulePermissions) return null
                       const modulePermissionIds = modulePermissions.map((p: IPermission) => p.id)
                       const currentValues = field.value || []
                       const selectedCount = modulePermissionIds.filter(id => currentValues.includes(id)).length
                       const totalCount = modulePermissionIds.length
                       const allSelected = selectedCount === totalCount
-                      const someSelected = selectedCount > 0 && selectedCount < totalCount
 
                       return (
                         <Card key={moduleName} className="shadow-sm">
