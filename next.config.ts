@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === 'development';
 
-// Content Security Policy yang ketat untuk production
+// Content Security Policy untuk production dengan PWA support
 const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.supabase.co https://cdn.jsdelivr.net;
@@ -16,6 +16,7 @@ const cspHeader = `
   connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in;
   media-src 'self';
   worker-src 'self' blob:;
+  manifest-src 'self';
   ${!isDev ? 'upgrade-insecure-requests;' : ''}
 `;
 

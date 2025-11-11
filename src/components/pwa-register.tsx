@@ -7,46 +7,54 @@ export function PWARegister() {
     if (
       typeof window !== "undefined" &&
       "serviceWorker" in navigator &&
-      process.env.NODE_ENV === "production"
+      process.env.NODE_ENV === "production" &&
+      window.location.protocol === "https:"
     ) {
-      navigator.serviceWorker
-        .register("/sw.js")
-        .then((registration) => {
-          console.log("Service Worker registered:", registration);
+      // Wait for page load to avoid blocking render
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("/sw.js", {
+            scope: "/",
+            updateViaCache: "none"
+          })
+          .then((registration) => {
+            console.log("[PWA] Service Worker registered successfully");
 
-          // Check for updates
-          registration.addEventListener("updatefound", () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener("statechange", () => {
-                if (
-                  newWorker.state === "installed" &&
-                  navigator.serviceWorker.controller
-                ) {
-                  // New service worker available
-                  console.log("New service worker available");
-                  
-                  // Optionally show update notification
-                  if (confirm("Update tersedia! Muat ulang untuk mendapatkan versi terbaru?")) {
+            // Check for updates
+            registration.addEventListener("updatefound", () => {
+              const newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.addEventListener("statechange", () => {
+                  if (
+                    newWorker.state === "installed" &&
+                    navigator.serviceWorker.controller
+                  ) {
+                    console.log("[PWA] New service worker available");
+                    
+                    // Auto-update without user prompt for better UX
                     newWorker.postMessage({ type: "SKIP_WAITING" });
-                    window.location.reload();
                   }
-                }
-              });
-            }
-          });
-        })
-        .catch((error) => {
-          console.error("Service Worker registration failed:", error);
-        });
+                });
+              }
+            });
 
-      // Handle service worker controller change
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        if (!refreshing) {
-          refreshing = true;
-          window.location.reload();
-        }
+            // Check for updates periodically
+            setInterval(() => {
+              registration.update();
+            }, 60000); // Check every minute
+          })
+          .catch((error) => {
+            console.warn("[PWA] Service Worker registration failed:", error);
+          });
+
+        // Handle service worker controller change
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
       });
     }
   }, []);

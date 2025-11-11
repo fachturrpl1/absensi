@@ -1,27 +1,37 @@
-const CACHE_VERSION = 'v1';
+/* eslint-disable no-restricted-globals */
+const CACHE_VERSION = 'v2';
 const CACHE_NAME = `presensi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `presensi-runtime-${CACHE_VERSION}`;
 const IMAGE_CACHE = `presensi-images-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
-  '/',
-  '/offline',
+  '/manifest.json',
 ];
 
 const _MAX_CACHE_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
-const MAX_CACHE_ITEMS = 50;
+const MAX_CACHE_ITEMS = 30;
 
 // Install event - cache essential files
 self.addEventListener('install', (event) => {
+  console.log('[SW] Installing service worker...');
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(PRECACHE_URLS))
-      .then(() => self.skipWaiting())
+      .then((cache) => {
+        console.log('[SW] Caching essential files');
+        return cache.addAll(PRECACHE_URLS).catch((err) => {
+          console.warn('[SW] Failed to cache some files:', err);
+        });
+      })
+      .then(() => {
+        console.log('[SW] Skip waiting');
+        return self.skipWaiting();
+      })
   );
 });
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating service worker...');
   const currentCaches = [CACHE_NAME, RUNTIME_CACHE, IMAGE_CACHE];
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -29,11 +39,14 @@ self.addEventListener('activate', (event) => {
         cacheNames
           .filter((cacheName) => !currentCaches.includes(cacheName))
           .map((cacheName) => {
-            console.log('Deleting old cache:', cacheName);
+            console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => {
+      console.log('[SW] Claiming clients');
+      return self.clients.claim();
+    })
   );
 });
 
@@ -57,19 +70,27 @@ function isCacheable(response) {
 // Fetch event - Smart caching strategy
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  const url = new URL(request.url);
+  
+  try {
+    const url = new URL(request.url);
 
-  // Skip cross-origin requests
-  if (url.origin !== location.origin) {
-    return;
-  }
+    // Skip cross-origin requests (including Supabase)
+    if (url.origin !== self.location.origin) {
+      return;
+    }
 
-  // Skip API requests and Supabase requests - always fetch fresh
-  if (
-    url.pathname.startsWith('/api/') ||
-    url.pathname.startsWith('/_next/data/') ||
-    url.hostname.includes('supabase')
-  ) {
+    // Skip API requests, data fetching, and hot reload - always fetch fresh
+    if (
+      url.pathname.startsWith('/api/') ||
+      url.pathname.startsWith('/_next/data/') ||
+      url.pathname.includes('hot-update') ||
+      url.hostname.includes('supabase') ||
+      request.method !== 'GET'
+    ) {
+      return;
+    }
+  } catch (error) {
+    console.warn('[SW] Error parsing URL:', error);
     return;
   }
 
