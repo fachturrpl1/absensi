@@ -83,7 +83,8 @@ class RateLimiter {
     const now = Date.now();
     
     Object.keys(this.store).forEach(key => {
-      if (this.store[key].resetTime < now) {
+      const entry = this.store[key];
+      if (entry && entry.resetTime < now) {
         delete this.store[key];
       }
     });
@@ -174,7 +175,7 @@ export async function checkRateLimit(
 // Get client IP from request
 function getClientIp(request: Request): string {
   const forwarded = request.headers.get('x-forwarded-for');
-  const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
+  const ip = forwarded ? (forwarded.split(',')[0]?.trim() ?? 'unknown') : 'unknown';
   return ip;
 }
 

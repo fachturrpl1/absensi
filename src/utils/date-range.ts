@@ -1,5 +1,3 @@
-import { SupabaseClient } from "@supabase/supabase-js";
-
 export function getMonthRange(date: Date = new Date()) {
   const year = date.getFullYear();
   const month = date.getMonth() + 1;

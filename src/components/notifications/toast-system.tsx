@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle2,
   XCircle,
-  AlertCircle,
   Info,
   X,
   Bell,
@@ -92,6 +91,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
       }, toast.duration || 5000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [toast.duration, onDismiss, isLoading]);
 
   return (

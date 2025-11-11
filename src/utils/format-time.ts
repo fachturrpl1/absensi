@@ -28,7 +28,7 @@ export const parseTime = (timeStr: string): string => {
   
   // Parse 12-hour format (e.g., "2:30 PM")
   const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if (match) {
+  if (match && match[1] && match[2] && match[3]) {
     let hours = parseInt(match[1]);
     const minutes = match[2];
     const period = match[3].toUpperCase();

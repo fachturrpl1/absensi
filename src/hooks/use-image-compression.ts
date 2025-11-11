@@ -183,6 +183,10 @@ export function useImageCompression({
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       updateProgress(i, files.length, 'compressing');
+      if (!file) {
+        results.push(null);
+        continue;
+      }
       
       try {
         const result = await compressImage(file);

@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { 
-  getAllMemberSchedule, 
   createMemberSchedule, 
   updateMemberSchedule,
   deleteMemberSchedule 

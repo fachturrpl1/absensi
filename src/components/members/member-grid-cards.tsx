@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -34,12 +34,8 @@ import {
   Users,
   CheckCircle2,
   XCircle,
-  Clock,
-  TrendingUp,
   Shield,
-  User,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { IOrganization_member } from '@/interface';
 
@@ -85,7 +81,7 @@ export function MemberGridCards({ members, onView, onEdit, onDelete }: MemberGri
   });
 
   // Calculate member stats (mock data - replace with real data)
-  const getMemberStats = (member: IOrganization_member) => {
+  const getMemberStats = (_member: IOrganization_member) => {
     return {
       attendance: Math.floor(Math.random() * 30) + 70, // 70-100%
       hoursThisMonth: Math.floor(Math.random() * 80) + 120, // 120-200 hours

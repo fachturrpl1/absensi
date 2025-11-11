@@ -13,15 +13,6 @@ type MemberDistribution = {
   employment: Array<{ name: string; value: number; color: string }>
 }
 
-type AttendanceGroup = {
-  group: string
-  present_plus_late: number
-  not_in_others: number
-  percent_present: number
-  late_count: number
-  overall: number
-}
-
 type MonthlyTrendData = {
   month: string
   attendance: number
@@ -110,7 +101,7 @@ export function useMemberDistribution() {
   return { data: data?.memberDistribution, ...rest }
 }
 
-export function useAttendanceGroups(organizationId: string | null) {
+export function useAttendanceGroups(_organizationId: string | null) {
   const { data, ...rest } = useDashboardStats()
   
   return {

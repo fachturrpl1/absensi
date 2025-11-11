@@ -7,7 +7,6 @@ import {
   MapPin,
   Calendar,
   Building,
-  Briefcase,
   Clock,
   MoreVertical,
   Edit,
@@ -19,13 +18,10 @@ import {
   Award,
   TrendingUp,
   TrendingDown,
-  Star,
   MessageSquare,
   Share2,
   ChevronRight,
   ExternalLink,
-  Shield,
-  Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -98,13 +94,6 @@ export function ModernProfileCard({
     active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
     inactive: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
     'on-leave': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  };
-
-  const performanceColors = {
-    excellent: 'text-green-600 dark:text-green-400',
-    good: 'text-blue-600 dark:text-blue-400',
-    average: 'text-amber-600 dark:text-amber-400',
-    'needs-improvement': 'text-red-600 dark:text-red-400',
   };
 
   if (variant === 'compact') {

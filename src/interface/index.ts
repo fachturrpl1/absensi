@@ -340,6 +340,6 @@ export interface IMemberInvitation {
     organization?: IOrganization;
     inviter?: IUser;
     role?: IRole;
-    department?: IDepartment;
-    position?: IPosition;
+    department?: IDepartments;
+    position?: IPositions;
 }

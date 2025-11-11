@@ -1,27 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
   Building2,
   Users,
-  Calendar,
-  Settings,
   CheckCircle2,
   ChevronRight,
   ChevronLeft,
   Rocket,
-  Target,
   Shield,
   Zap,
   ArrowRight,
-  Upload,
   Plus,
   Globe,
   Clock,
   MapPin,
-  CreditCard,
   Award,
   X,
 } from 'lucide-react';
@@ -30,10 +25,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
 interface OnboardingStep {
@@ -230,7 +223,7 @@ function LocationsStep() {
                 value={location.name}
                 onChange={(e) => {
                   const updated = [...locations];
-                  updated[index].name = e.target.value;
+                  if (updated[index]) updated[index]!.name = e.target.value;
                   setLocations(updated);
                 }}
               />
@@ -239,7 +232,7 @@ function LocationsStep() {
                 value={location.address}
                 onChange={(e) => {
                   const updated = [...locations];
-                  updated[index].address = e.target.value;
+                  if (updated[index]) updated[index]!.address = e.target.value;
                   setLocations(updated);
                 }}
               />
@@ -531,7 +524,10 @@ export default function ModernOnboarding() {
 
   const handleNext = () => {
     if (currentStep < onboardingSteps.length - 1) {
-      setCompletedSteps([...completedSteps, onboardingSteps[currentStep].id]);
+      const currentStepId = onboardingSteps[currentStep]?.id;
+      if (currentStepId) {
+        setCompletedSteps([...completedSteps, currentStepId]);
+      }
       setCurrentStep(currentStep + 1);
     }
   };
@@ -547,7 +543,8 @@ export default function ModernOnboarding() {
   };
 
   const progress = ((currentStep + 1) / onboardingSteps.length) * 100;
-  const StepContent = onboardingSteps[currentStep].content;
+  const StepContent = onboardingSteps[currentStep]?.content;
+  const currentStepData = onboardingSteps[currentStep];
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === onboardingSteps.length - 1;
 
@@ -569,16 +566,16 @@ export default function ModernOnboarding() {
 
         {/* Main Card */}
         <Card className="overflow-hidden">
-          {!isFirstStep && !isLastStep && (
+          {!isFirstStep && !isLastStep && currentStepData && (
             <CardHeader>
               <div className="flex items-center gap-3">
-                {React.createElement(onboardingSteps[currentStep].icon, {
+                {React.createElement(currentStepData.icon, {
                   className: "h-8 w-8 text-primary"
                 })}
                 <div>
-                  <CardTitle>{onboardingSteps[currentStep].title}</CardTitle>
+                  <CardTitle>{currentStepData.title}</CardTitle>
                   <CardDescription>
-                    {onboardingSteps[currentStep].subtitle}
+                    {currentStepData.subtitle}
                   </CardDescription>
                 </div>
               </div>
@@ -596,7 +593,7 @@ export default function ModernOnboarding() {
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <StepContent onNext={handleNext} />
+                {StepContent && <StepContent onNext={handleNext} />}
               </motion.div>
             </AnimatePresence>
           </CardContent>

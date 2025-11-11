@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Bell,
-  Search,
   Sun,
   Moon,
   Monitor,
@@ -17,14 +16,12 @@ import {
   ClipboardList,
   Calendar,
   BarChart3,
-  Command,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,

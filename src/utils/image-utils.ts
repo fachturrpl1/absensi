@@ -227,6 +227,8 @@ export const batchCompressImages = async (
   
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
+    if (!file) continue;
+    
     onProgress?.(i + 1, files.length);
     
     try {

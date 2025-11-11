@@ -39,7 +39,12 @@ interface LoggerConfig {
 
 class Logger {
   private prefix: string
-  private config: Required<LoggerConfig>
+  private config: {
+    enableDebug: boolean
+    enableInfo: boolean
+    enableTimestamp: boolean
+    errorTracker?: (error: any, context?: any) => void
+  }
 
   constructor(prefix: string = '', config?: LoggerConfig) {
     this.prefix = prefix
@@ -50,7 +55,7 @@ class Logger {
       enableDebug: config?.enableDebug ?? isDev,
       enableInfo: config?.enableInfo ?? isDev,
       enableTimestamp: config?.enableTimestamp ?? true,
-      errorTracker: config?.errorTracker ?? undefined
+      errorTracker: config?.errorTracker
     }
   }
 

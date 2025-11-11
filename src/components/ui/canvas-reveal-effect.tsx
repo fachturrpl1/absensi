@@ -97,9 +97,9 @@ const DotMatrix: React.FC<DotMatrixProps> = ({
     return {
       u_colors: {
         value: colorsArray.map((color) => [
-          color[0] / 255,
-          color[1] / 255,
-          color[2] / 255,
+          (color?.[0] ?? 0) / 255,
+          (color?.[1] ?? 0) / 255,
+          (color?.[2] ?? 0) / 255,
         ]),
         type: "uniform3fv",
       },
@@ -192,13 +192,14 @@ const ShaderMaterial = ({
   uniforms: Uniforms;
 }) => {
   const { size } = useThree();
-  const ref = useRef<THREE.Mesh>();
+  const ref = useRef<THREE.Mesh>(null as any);
   let lastFrameTime = 0;
 
   useFrame(({ clock }) => {
     if (!ref.current) return;
     const timestamp = clock.getElapsedTime();
-    if (timestamp - lastFrameTime < 1 / maxFps) {
+    const fps = maxFps ?? 60;
+    if (timestamp - lastFrameTime < 1 / fps) {
       return;
     }
     lastFrameTime = timestamp;

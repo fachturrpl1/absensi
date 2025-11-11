@@ -10,7 +10,7 @@ interface OrganizationStatusCheckerProps {
 }
 
 export default function OrganizationStatusChecker({ children }: OrganizationStatusCheckerProps) {
-  const [status, setStatus] = useState<OrganizationStatus | null>(null);
+  const [_status, setStatus] = useState<OrganizationStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
@@ -36,9 +36,9 @@ export default function OrganizationStatusChecker({ children }: OrganizationStat
             let dateOnly = '';
             if (result.expirationDate) {
               try {
-                dateOnly = new Date(result.expirationDate).toISOString().split('T')[0];
+                dateOnly = new Date(result.expirationDate).toISOString().split('T')[0] || '';
               } catch {
-                dateOnly = result.expirationDate.split('T')[0]; // Fallback
+                dateOnly = result.expirationDate.split('T')[0] || ''; // Fallback
               }
             }
             const expiredUrl = dateOnly 

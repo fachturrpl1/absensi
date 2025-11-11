@@ -8,7 +8,7 @@ const PRECACHE_URLS = [
   '/offline',
 ];
 
-const MAX_CACHE_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
+const _MAX_CACHE_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 const MAX_CACHE_ITEMS = 50;
 
 // Install event - cache essential files

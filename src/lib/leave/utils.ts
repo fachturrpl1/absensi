@@ -274,7 +274,7 @@ export function getStatusColor(status: string): string {
     cancelled: 'bg-gray-100 text-gray-800 border-gray-300'
   };
   
-  return colors[status] || colors.pending;
+  return (colors[status] || colors.pending) as string;
 }
 
 /**

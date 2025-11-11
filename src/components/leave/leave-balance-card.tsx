@@ -61,9 +61,6 @@ export function LeaveBalanceCard({ balances, loading }: LeaveBalanceCardProps) {
       <CardContent className="space-y-6">
         {balances.map((balance) => {
           const totalAllocated = balance.entitled_days + balance.carried_forward_days;
-          const percentageUsed = totalAllocated > 0 
-            ? (balance.used_days / totalAllocated) * 100 
-            : 0;
           const percentageRemaining = totalAllocated > 0 
             ? (balance.remaining_days / totalAllocated) * 100 
             : 0;

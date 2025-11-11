@@ -19,7 +19,6 @@ import {
   Users,
   ClipboardList,
   Calendar,
-  Building2,
   BarChart3,
   Plus,
   UserPlus,
@@ -42,7 +41,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
 interface NavbarWithShortcutsProps {

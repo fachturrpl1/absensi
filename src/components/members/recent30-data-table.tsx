@@ -63,7 +63,6 @@ const columns: ColumnDef<RecentMemberRow, any>[] = [
     header: "Status",
     cell: ({ getValue }) => {
       const s = (getValue() as string) || "-"
-      const color = s === "present" ? "green" : s === "late" ? "amber" : s === "absent" ? "red" : "muted"
       return <Badge variant="outline" className="capitalize">{s}</Badge>
     },
   },
@@ -88,8 +87,8 @@ export function Recent30DataTable({ data }: { data: RecentMemberRow[] }) {
     const end = new Date()
     const start = new Date()
     start.setDate(end.getDate() - 6) // last 7 days inclusive
-    const startIso = start.toISOString().split("T")[0]
-    const endIso = end.toISOString().split("T")[0]
+    const startIso = start.toISOString().split("T")[0] as string
+    const endIso = end.toISOString().split("T")[0] as string
 
     return data
       .filter((r) => {
@@ -103,7 +102,7 @@ export function Recent30DataTable({ data }: { data: RecentMemberRow[] }) {
         else {
           // fallback to Date parsing
           const dt = new Date(s)
-          if (!isNaN(dt.getTime())) ds = dt.toISOString().split("T")[0]
+          if (!isNaN(dt.getTime())) ds = dt.toISOString().split("T")[0] || null
         }
         if (!ds) return false
         return ds >= startIso && ds <= endIso

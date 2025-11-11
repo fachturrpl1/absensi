@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Clock, 
   Building2, 
-  Mail, 
   CheckCircle2,
   AlertCircle,
   RefreshCw

@@ -50,7 +50,6 @@ import {
   ChevronsRight,
   MoreHorizontal,
   Search,
-  Filter,
   Download,
   Plus,
   Trash2,
@@ -59,7 +58,6 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Calendar,
   X,
   SlidersHorizontal,
 } from 'lucide-react';
@@ -291,7 +289,7 @@ export default function ModernDataTable<TData extends Employee, TValue>({
       {
         id: 'actions',
         enableHiding: false,
-        cell: ({ row }) => {
+        cell: ({ row: _ }) => {
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

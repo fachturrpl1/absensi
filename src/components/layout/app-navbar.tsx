@@ -48,7 +48,7 @@ interface AppNavbarProps {
   isMobile: boolean;
 }
 
-export function AppNavbar({ onMenuClick, sidebarCollapsed, isMobile }: AppNavbarProps) {
+export function AppNavbar({ onMenuClick, sidebarCollapsed: _, isMobile }: AppNavbarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [notificationCount] = useState(3);

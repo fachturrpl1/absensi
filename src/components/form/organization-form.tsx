@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import React, { useEffect } from "react"
+import React from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
@@ -27,9 +27,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 
 import { IOrganization } from "@/interface"
-import { addOrganization, deleteLogo, updateOrganization, uploadLogo } from "@/action/organization"
-import { X } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog"
+import { addOrganization, updateOrganization } from "@/action/organization"
 import ProfilePhotoDialog from "@/components/change-foto"
 
 
@@ -70,9 +68,6 @@ export default function OrganizationForm({
 }: OrganizationFormProps) {
   const router = useRouter()
   const [loading, setLoading] = React.useState(false)
-  const [selectedLogoFile, setSelectedLogoFile] = React.useState<File | null>(
-    null
-  )
 
   // ✅ Initialize form
   const form = useForm<z.infer<typeof OrganizationFormSchema>>({
@@ -132,24 +127,8 @@ export default function OrganizationForm({
     try {
       setLoading(true)
 
-      let logoUrl = values.logo_url; // default to existing logo
-
-      if (selectedLogoFile) {
-        // 1. Upload new logo
-        const uploaded = await uploadLogo(selectedLogoFile);
-        if (uploaded) {
-          // 2. Delete old logo if any
-          if (initialValues?.logo_url) {
-            await deleteLogo(initialValues.logo_url);
-          }
-          // 3. Update to new logo
-          logoUrl = uploaded;
-        }
-      }
-
       const payload = {
         ...values,
-        logo_url: logoUrl,
         subscription_expires_at:
           values.subscription_expires_at === ""
             ? null

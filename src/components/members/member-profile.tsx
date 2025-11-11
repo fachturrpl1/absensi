@@ -48,7 +48,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -210,7 +209,7 @@ export default function MemberProfileEnhanced({
   performance,
   recentAttendance,
   schedule,
-  emergencyContact,
+  emergencyContact: _emergencyContact,
 }: MemberProfileEnhancedProps) {
   const router = useRouter()
   const [isExporting, setIsExporting] = useState(false)

@@ -20,7 +20,7 @@ type MemberProfileClientProps = {
 
 export default function MemberProfileClient({ member, performance, schedule }: MemberProfileClientProps) {
   // Fetch real-time attendance data
-  const { data: recentAttendance, isLoading } = useMemberRecentAttendance(String(member.id), 14)
+  const { data: recentAttendance } = useMemberRecentAttendance(String(member.id), 14)
 
   return (
     <MemberProfile

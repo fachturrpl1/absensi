@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { AppSidebar } from './app-sidebar';
 import { NavbarWithShortcuts } from './navbar-with-shortcuts';
-import CommandPalette from '../command-palette/command-palette';
+// import CommandPalette from '../command-palette/command-palette';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 
 interface AppShellProps {
@@ -59,8 +59,8 @@ export function AppShell({ children }: AppShellProps) {
     }
   };
 
-  const sidebarWidth = sidebarCollapsed ? 80 : 280;
-  const mainLeftPadding = isMobile ? 0 : sidebarWidth;
+  // const sidebarWidth = sidebarCollapsed ? 80 : 280;
+  // const mainLeftPadding = isMobile ? 0 : sidebarWidth;
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-background via-background to-muted/10">
@@ -115,7 +115,7 @@ export function AppShell({ children }: AppShellProps) {
       </div>
 
       {/* Command Palette */}
-      <CommandPalette />
+      {/* <CommandPalette /> */}
     </div>
   );
 }

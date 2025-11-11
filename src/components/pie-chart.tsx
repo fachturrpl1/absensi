@@ -45,7 +45,7 @@ export function CustomPieChart({
   outerRadius = 100
 }: CustomPieChartProps) {
   // Create chart config from data
-  const chartConfig: ChartConfig = data.reduce((config, item, index) => {
+  const chartConfig: ChartConfig = data.reduce((config, item, _index) => {
     config[item.name.toLowerCase().replace(/\s+/g, '_')] = {
       label: item.name,
       color: item.color,
