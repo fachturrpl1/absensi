@@ -20,7 +20,6 @@ import {
 } from "@/lib/data-cache";
 
 import { Geist, Geist_Mono } from "next/font/google";
-import { PWARegister } from "@/components/pwa-register";
 import { InstallPrompt } from "@/components/install-prompt";
 
 const geistSans = Geist({
@@ -146,7 +145,6 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Presensi" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <PWARegister />
         <InstallPrompt />
         <UserProvider user={mappedUser} />
         {user && <PermissionInitializer userId={user.id} />}

@@ -151,6 +151,26 @@ const nextConfig: NextConfig = {
     ];
   },
   
+  // Configure rewrites for PWA files
+  async rewrites() {
+    return {
+      beforeFiles: [
+        // Explicitly serve service worker from public folder
+        {
+          source: '/sw.js',
+          destination: '/sw.js',
+          has: [
+            {
+              type: 'header',
+              key: 'accept',
+              value: '(.*text/javascript.*|.*application/javascript.*|.*\\*/\\*.*)',
+            },
+          ],
+        },
+      ],
+    };
+  },
+
   // Configure redirects for old pages
   async redirects() {
     return [
