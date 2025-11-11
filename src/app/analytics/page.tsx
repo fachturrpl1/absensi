@@ -79,7 +79,7 @@ export default function AnalyticsPage() {
         if (!orgMember) return;
         const orgId = orgMember.organization_id;
 
-        // Fetch master data
+        // Fetch master data - still safe as it only counts, doesn't return sensitive data
         const [membersResult, deptsResult] = await Promise.all([
           supabase
             .from('organization_members')
@@ -98,40 +98,16 @@ export default function AnalyticsPage() {
           averageTeamSize: (membersResult.count || 0) / (deptsResult.count || 1),
         });
 
-        // Fetch attendance records (last 90 days)
-        const { data: records } = await supabase
-          .from('attendance_records')
-          .select(`
-            id,
-            status,
-            actual_check_in,
-            actual_check_out,
-            work_duration_minutes,
-            late_minutes,
-            attendance_date,
-            organization_members!inner (
-              organization_id,
-              user_profiles (first_name, last_name),
-              departments!organization_members_department_id_fkey (name)
-            )
-          `)
-          .eq('organization_members.organization_id', orgId)
-          .gte('attendance_date', format(subDays(new Date(), 90), 'yyyy-MM-dd'))
-          .order('attendance_date', { ascending: false });
+        // Fetch attendance records using secure API route (last 90 days)
+        const startDate = format(subDays(new Date(), 90), 'yyyy-MM-dd');
+        const response = await fetch(`/api/attendance-records?startDate=${startDate}`);
+        const result = await response.json();
 
-        const formattedRecords: AttendanceRecord[] = (records || []).map((record: any) => ({
-          id: record.id,
-          member_name: `${record.organization_members.user_profiles.first_name} ${record.organization_members.user_profiles.last_name}`,
-          department_name: record.organization_members.departments?.name || 'N/A',
-          status: record.status,
-          actual_check_in: record.actual_check_in,
-          actual_check_out: record.actual_check_out,
-          work_duration_minutes: record.work_duration_minutes,
-          late_minutes: record.late_minutes,
-          attendance_date: record.attendance_date,
-        }));
-
-        setAllRecords(formattedRecords);
+        if (result.success && result.data) {
+          setAllRecords(result.data);
+        } else {
+          console.error('Failed to fetch attendance records:', result.message);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
       }

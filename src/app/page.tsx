@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -190,61 +189,17 @@ export default function ImprovedDashboard() {
 
   // Fetch data
   useEffect(() => {
-    const supabase = createClient();
-    
     const fetchData = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        // Use secure API route that auto-filters by organization
+        const response = await fetch('/api/attendance-records?limit=1000');
+        const result = await response.json();
 
-        const { data: orgMemberData } = await supabase
-          .from('organization_members')
-          .select('organization_id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (!orgMemberData) return;
-        
-        const orgId = String(orgMemberData.organization_id);
-
-        const { data: attendanceData } = await supabase
-          .from('attendance_records')
-          .select(`
-            id,
-            status,
-            actual_check_in,
-            actual_check_out,
-            work_duration_minutes,
-            attendance_date,
-            organization_members!inner (
-              organization_id,
-              user_profiles (
-                first_name,
-                last_name,
-                profile_photo_url
-              ),
-              departments!organization_members_department_id_fkey (
-                name
-              )
-            )
-          `)
-          .eq('organization_members.organization_id', orgId)
-          .order('attendance_date', { ascending: false })
-          .limit(1000);
-
-        const formattedRecords: AttendanceRecord[] = (attendanceData || []).map((record: any) => ({
-          id: record.id,
-          member_name: `${record.organization_members.user_profiles.first_name} ${record.organization_members.user_profiles.last_name}`,
-          department_name: record.organization_members.departments?.name || 'N/A',
-          status: record.status,
-          actual_check_in: record.actual_check_in,
-          actual_check_out: record.actual_check_out,
-          work_duration_minutes: record.work_duration_minutes,
-          attendance_date: record.attendance_date,
-          profile_photo_url: record.organization_members.user_profiles.profile_photo_url,
-        })).filter(Boolean);
-
-        setAllRecords(formattedRecords);
+        if (result.success && result.data) {
+          setAllRecords(result.data);
+        } else {
+          console.error('Failed to fetch attendance records:', result.message);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
       }

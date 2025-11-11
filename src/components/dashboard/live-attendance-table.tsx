@@ -126,6 +126,22 @@ export function LiveAttendanceTable({
       const supabase = createClient();
       const today = new Date().toISOString().split('T')[0];
 
+      // Get current user's organization
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data: orgMember } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!orgMember?.organization_id) {
+        throw new Error('Organization not found');
+      }
+
       const { data, error } = await supabase
         .from('attendance_records')
         .select(`
@@ -139,6 +155,7 @@ export function LiveAttendanceTable({
           organization_member_id,
           organization_members!inner (
             id,
+            organization_id,
             user_profiles!inner (
               first_name,
               last_name,
@@ -149,6 +166,7 @@ export function LiveAttendanceTable({
             )
           )
         `)
+        .eq('organization_members.organization_id', orgMember.organization_id)
         .eq('attendance_date', today)
         .order('actual_check_in', { ascending: false })
         .limit(50);
