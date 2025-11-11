@@ -25,6 +25,7 @@ export function DashboardLayoutWrapper({
     '/account-inactive',
     '/organization-inactive',
     '/subscription-expired',
+    '/offline',
   ];
 
   // Check if current path is public (no sidebar/navbar)

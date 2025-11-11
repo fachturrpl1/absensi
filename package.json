@@ -7,18 +7,10 @@
     "dev": "next dev --turbopack",
     "dev:network": "next dev --turbopack --hostname 0.0.0.0",
     "build": "next build",
-    "build:prod": "node build-prod.js",
     "start": "next start",
-    "start:prod": "npm run build:prod && npm start",
     "start:network": "next start --hostname 0.0.0.0",
     "lint": "eslint",
-    "network-info": "node scripts/network-info.js",
-    "network-info:port": "node scripts/network-info.js",
-    "dev:full": "node scripts/dev-with-network.js",
-    "analyze": "ANALYZE=true next build",
-    "analyze-bundle": "node scripts/analyze-bundle.js",
-    "verify-oauth": "node scripts/verify-oauth-config.js",
-    "debug-oauth": "node scripts/debug-oauth.js"
+    "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
