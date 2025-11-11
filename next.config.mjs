@@ -99,11 +99,7 @@ const nextConfig = {
   },
   
   async headers() {
-    return [
-      {
-        source: '/:path*',
-        headers: securityHeaders,
-      },
+    const headerRules = [
       {
         source: '/api/:path*',
         headers: [
@@ -123,6 +119,16 @@ const nextConfig = {
         ],
       },
     ];
+
+    // Only add security headers in production
+    if (!isDev && securityHeaders.length > 0) {
+      headerRules.unshift({
+        source: '/:path*',
+        headers: securityHeaders,
+      });
+    }
+
+    return headerRules;
   },
   
   async redirects() {

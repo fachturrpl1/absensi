@@ -47,7 +47,6 @@ const COLORS = {
 };
 
 export default function AnalyticsPage() {
-  const [loading, setLoading] = useState(true);
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [masterData, setMasterData] = useState<MasterData>({ totalMembers: 0, totalDepartments: 0, averageTeamSize: 0 });
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
@@ -66,7 +65,6 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
@@ -136,8 +134,6 @@ export default function AnalyticsPage() {
         setAllRecords(formattedRecords);
       } catch (error) {
         console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -267,17 +263,6 @@ export default function AnalyticsPage() {
       .sort((a, b) => b.rate - a.rate)
       .slice(0, 5);
   }, [filteredRecords]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading analytics...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">

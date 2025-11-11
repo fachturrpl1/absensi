@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,11 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+// Removed Collapsible - not compatible with table structure
 import { 
   ChevronDown, 
   ChevronRight, 
@@ -331,66 +327,70 @@ export function LiveAttendanceTable({
                     const StatusIcon = config.icon;
 
                     return (
-                      <Collapsible
-                        key={record.id}
-                        open={isExpanded}
-                        onOpenChange={() => toggleRow(record.id)}
-                        asChild
-                      >
-                        <>
-                          <TableRow className="hover:bg-muted/50 cursor-pointer">
-                            <TableCell>
-                              <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="sm" className="p-0 h-auto">
-                                  {isExpanded ? (
-                                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                                  ) : (
-                                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                                  )}
-                                </Button>
-                              </CollapsibleTrigger>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <Avatar className="w-8 h-8 border border-border">
-                                  <AvatarImage src={record.profile_photo_url || undefined} />
-                                  <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                                    {record.member_name.split(' ').map(n => n[0]).join('')}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="font-medium text-foreground">{record.member_name}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">{record.department_name}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={cn("text-xs", config.color)}>
-                                <StatusIcon className="w-3 h-3 mr-1" />
-                                {config.label}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-foreground">
-                              {record.actual_check_in 
-                                ? format(new Date(record.actual_check_in), 'HH:mm', { locale: idLocale })
-                                : '-'
-                              }
-                            </TableCell>
-                            <TableCell className="text-foreground">
-                              {record.work_duration_minutes 
-                                ? `${(record.work_duration_minutes / 60).toFixed(1)}h`
-                                : '-'
-                              }
-                            </TableCell>
-                          </TableRow>
-
-                          <TableRow>
+                      <React.Fragment key={record.id}>
+                        <TableRow 
+                          className="hover:bg-muted/50 cursor-pointer"
+                          onClick={() => toggleRow(record.id)}
+                        >
+                          <TableCell>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="p-0 h-auto"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleRow(record.id);
+                              }}
+                            >
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                              )}
+                            </Button>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="w-8 h-8 border border-border">
+                                <AvatarImage src={record.profile_photo_url || undefined} />
+                                <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                                  {record.member_name.split(' ').map(n => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium text-foreground">{record.member_name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{record.department_name}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={cn("text-xs", config.color)}>
+                              <StatusIcon className="w-3 h-3 mr-1" />
+                              {config.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-foreground">
+                            {record.actual_check_in 
+                              ? format(new Date(record.actual_check_in), 'HH:mm', { locale: idLocale })
+                              : '-'
+                            }
+                          </TableCell>
+                          <TableCell className="text-foreground">
+                            {record.work_duration_minutes 
+                              ? `${(record.work_duration_minutes / 60).toFixed(1)}h`
+                              : '-'
+                            }
+                          </TableCell>
+                        </TableRow>
+                        {isExpanded && (
+                          <TableRow key={`${record.id}-details`}>
                             <TableCell colSpan={6} className="p-0 border-0">
-                              <CollapsibleContent>
-                                <motion.div
-                                  initial={{ opacity: 0 }}
-                                  animate={{ opacity: 1 }}
-                                  exit={{ opacity: 0 }}
-                                  className="p-4 bg-muted/30 border-t border-border"
-                                >
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="p-4 bg-muted/30 border-t border-border">
                                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="space-y-2">
                                       <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -445,12 +445,12 @@ export function LiveAttendanceTable({
                                       </div>
                                     )}
                                   </div>
-                                </motion.div>
-                              </CollapsibleContent>
+                                </div>
+                              </motion.div>
                             </TableCell>
                           </TableRow>
-                        </>
-                      </Collapsible>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </TableBody>

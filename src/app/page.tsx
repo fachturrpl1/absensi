@@ -160,7 +160,6 @@ const EnhancedStatCard = ({
 };
 
 export default function ImprovedDashboard() {
-  const [loading, setLoading] = useState(true);
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   
@@ -195,8 +194,6 @@ export default function ImprovedDashboard() {
     
     const fetchData = async () => {
       try {
-        setLoading(true);
-        
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
@@ -250,8 +247,6 @@ export default function ImprovedDashboard() {
         setAllRecords(formattedRecords);
       } catch (error) {
         console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -406,17 +401,6 @@ export default function ImprovedDashboard() {
       .sort((a, b) => b.workHours - a.workHours)
       .slice(0, 5);
   }, [filteredRecords]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
