@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV === 'development';
 
 // Content Security Policy untuk production dengan PWA support
-const cspHeader = `
+const cspHeader = isDev ? '' : `
   default-src 'self';
   script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.supabase.co https://cdn.jsdelivr.net;
   style-src 'self' 'unsafe-inline';
@@ -17,10 +17,10 @@ const cspHeader = `
   media-src 'self';
   worker-src 'self' blob:;
   manifest-src 'self';
-  ${!isDev ? 'upgrade-insecure-requests;' : ''}
+  upgrade-insecure-requests;
 `;
 
-const securityHeaders = [
+const securityHeaders = isDev ? [] : [
   {
     key: 'X-DNS-Prefetch-Control',
     value: 'on',
@@ -49,10 +49,10 @@ const securityHeaders = [
     key: 'Permissions-Policy',
     value: 'camera=(), microphone=(), geolocation=(self), interest-cohort=()',
   },
-  {
+  ...(cspHeader ? [{
     key: 'Content-Security-Policy',
     value: cspHeader.replace(/\s{2,}/g, ' ').trim(),
-  },
+  }] : []),
 ];
 
 const nextConfig: NextConfig = {
@@ -95,6 +95,38 @@ const nextConfig: NextConfig = {
       {
         source: '/:path*',
         headers: securityHeaders,
+      },
+      // Service Worker - no cache
+      {
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+          {
+            key: 'Content-Type',
+            value: 'application/javascript; charset=utf-8',
+          },
+          {
+            key: 'Service-Worker-Allowed',
+            value: '/',
+          },
+        ],
+      },
+      // Manifest
+      {
+        source: '/manifest.json',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400',
+          },
+          {
+            key: 'Content-Type',
+            value: 'application/manifest+json',
+          },
+        ],
       },
       // Special headers for API routes
       {

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Command } from "lucide-react";
 
 import { SignUp } from "@/components/form/signup-form";
-import { GoogleButton } from "@/components/google-button";
 
 export default function SignUpPage() {
   return (
@@ -19,7 +18,6 @@ export default function SignUpPage() {
           </div>
           <div className="space-y-4">
             <SignUp />
-            <GoogleButton className="w-full" variant="outline" />
             <p className="text-muted-foreground text-center text-xs">
               Already have an account?{" "}
               <Link href="/auth/login" className="text-primary">

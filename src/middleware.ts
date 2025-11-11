@@ -165,9 +165,9 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Exclude static assets and ALL api routes from auth middleware
+  // Exclude static assets, api routes, and PWA files from auth middleware
   // API routes will handle their own authentication
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/|sw.js|manifest.json|offline.html).*)",
   ],
 }
