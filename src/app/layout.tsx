@@ -45,9 +45,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Attendance App",
+  title: "SMKN 1 Muhammadiyah Nganjuk - Sistem Presensi",
   description:
-    "A stunning and functional retractable sidebar for Next.js built on top of shadcn/ui complete with desktop and mobile responsiveness.",
+    "Sistem Presensi Digital SMKN 1 Muhammadiyah Nganjuk untuk mengelola kehadiran siswa dan guru dengan mudah dan efisien.",
   metadataBase: new URL(
     process.env.APP_URL
       ? `${process.env.APP_URL}`
@@ -60,21 +60,21 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Presensi",
+    title: "SMK Muh 1 Ngj",
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
     url: "/",
-    title: "Attendance App",
-    description: "A stunning and functional retractable sidebar for Next.js.",
+    title: "SMKN 1 Muhammadiyah Nganjuk",
+    description: "Sistem Presensi Digital SMKN 1 Muhammadiyah Nganjuk",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Attendance App",
-    description: "A stunning and functional retractable sidebar for Next.js.",
+    title: "SMKN 1 Muhammadiyah Nganjuk",
+    description: "Sistem Presensi Digital SMKN 1 Muhammadiyah Nganjuk",
   },
 };
 
@@ -142,7 +142,7 @@ export default async function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Presensi" />
+        <meta name="apple-mobile-web-app-title" content="SMK Muh 1 Ngj" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <InstallPrompt />

@@ -1,6 +1,23 @@
-import withPWA from 'next-pwa';
+import withPWAInit from '@ducanh2912/next-pwa';
 
 const isDev = process.env.NODE_ENV === 'development';
+
+// Configure PWA
+const withPWA = withPWAInit({
+  dest: 'public',
+  disable: isDev,
+  register: true,
+  skipWaiting: true,
+  reloadOnOnline: true,
+  sw: '/sw.js',
+  scope: '/',
+  fallbacks: {
+    document: '/offline',
+  },
+  workboxOptions: {
+    disableDevLogs: true,
+  },
+});
 
 // Content Security Policy untuk production dengan PWA support
 const cspHeader = isDev ? '' : `
@@ -57,46 +74,36 @@ const securityHeaders = isDev ? [] : [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Security: Disable x-powered-by header
   poweredByHeader: false,
-  
-  // Enable strict mode for better error handling
   reactStrictMode: true,
   
-  // Disable ESLint during build
   eslint: {
     ignoreDuringBuilds: true,
   },
   
-  // TypeScript checking
   typescript: {
     ignoreBuildErrors: false,
   },
   
-  // Allow access from other devices in the same network
   allowedDevOrigins: [
     'http://10.11.112.221:3000',
     'http://localhost:3000',
   ],
   
-  // External packages for server components
   serverExternalPackages: ['@supabase/ssr', 'sharp'],
   
-  // Configure experimental features
   experimental: {
     serverActions: {
       bodySizeLimit: "20mb",
     },
   },
   
-  // Configure headers untuk security
   async headers() {
     return [
       {
         source: '/:path*',
         headers: securityHeaders,
       },
-      // Special headers for API routes
       {
         source: '/api/:path*',
         headers: [
@@ -106,7 +113,6 @@ const nextConfig = {
           },
         ],
       },
-      // Headers for static assets
       {
         source: '/assets/:path*',
         headers: [
@@ -119,7 +125,6 @@ const nextConfig = {
     ];
   },
   
-  // Configure redirects for old pages
   async redirects() {
     return [
       {
@@ -130,7 +135,6 @@ const nextConfig = {
     ];
   },
   
-  // Image optimization configuration
   images: {
     remotePatterns: [
       {
@@ -146,10 +150,8 @@ const nextConfig = {
     minimumCacheTTL: 60,
   },
   
-  // Output configuration for production
   output: 'standalone',
   
-  // Configure dev indicators for development
   ...(isDev && {
     devIndicators: {
       position: 'bottom-right',
@@ -157,161 +159,4 @@ const nextConfig = {
   }),
 };
 
-// Configure PWA with next-pwa
-const pwaConfig = withPWA({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: isDev, // Disable PWA in development
-  buildExcludes: [/middleware-manifest\.json$/],
-  scope: '/',
-  sw: 'sw.js',
-  // Workbox options
-  runtimeCaching: [
-    {
-      urlPattern: /^https:\/\/fonts\.(?:gstatic)\.com\/.*/i,
-      handler: 'CacheFirst',
-      options: {
-        cacheName: 'google-fonts-webfonts',
-        expiration: {
-          maxEntries: 4,
-          maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
-        },
-      },
-    },
-    {
-      urlPattern: /^https:\/\/fonts\.(?:googleapis)\.com\/.*/i,
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'google-fonts-stylesheets',
-        expiration: {
-          maxEntries: 4,
-          maxAgeSeconds: 7 * 24 * 60 * 60, // 1 week
-        },
-      },
-    },
-    {
-      urlPattern: /\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'static-font-assets',
-        expiration: {
-          maxEntries: 4,
-          maxAgeSeconds: 7 * 24 * 60 * 60, // 1 week
-        },
-      },
-    },
-    {
-      urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'static-image-assets',
-        expiration: {
-          maxEntries: 64,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
-        },
-      },
-    },
-    {
-      urlPattern: /\/_next\/image\?url=.+$/i,
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'next-image',
-        expiration: {
-          maxEntries: 64,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
-        },
-      },
-    },
-    {
-      urlPattern: /\.(?:mp3|wav|ogg)$/i,
-      handler: 'CacheFirst',
-      options: {
-        rangeRequests: true,
-        cacheName: 'static-audio-assets',
-        expiration: {
-          maxEntries: 32,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
-        },
-      },
-    },
-    {
-      urlPattern: /\.(?:mp4)$/i,
-      handler: 'CacheFirst',
-      options: {
-        rangeRequests: true,
-        cacheName: 'static-video-assets',
-        expiration: {
-          maxEntries: 32,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
-        },
-      },
-    },
-    {
-      urlPattern: /\.(?:js)$/i,
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'static-js-assets',
-        expiration: {
-          maxEntries: 32,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
-        },
-      },
-    },
-    {
-      urlPattern: /\.(?:css|less)$/i,
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'static-style-assets',
-        expiration: {
-          maxEntries: 32,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
-        },
-      },
-    },
-    {
-      urlPattern: /\/_next\/data\/.+\/.+\.json$/i,
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'next-data',
-        expiration: {
-          maxEntries: 32,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
-        },
-      },
-    },
-    {
-      urlPattern: /\.(?:json|xml|csv)$/i,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'static-data-assets',
-        expiration: {
-          maxEntries: 32,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
-        },
-      },
-    },
-    {
-      urlPattern: ({ url }) => {
-        const isSameOrigin = self.origin === url.origin;
-        if (!isSameOrigin) return false;
-        const pathname = url.pathname;
-        // Exclude API routes and Supabase
-        if (pathname.startsWith('/api/')) return false;
-        if (pathname.includes('supabase')) return false;
-        return true;
-      },
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'others',
-        expiration: {
-          maxEntries: 32,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
-        },
-        networkTimeoutSeconds: 10,
-      },
-    },
-  ],
-});
-
-export default pwaConfig(nextConfig);
+export default withPWA(nextConfig);

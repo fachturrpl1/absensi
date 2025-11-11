@@ -1,7 +1,7 @@
 {
-  "name": "Presensi Dashboard",
-  "short_name": "Presensi",
-  "description": "Employee Attendance Management System",
+  "name": "SMKN 1 Muhammadiyah Nganjuk",
+  "short_name": "SMK Muh 1 Ngj",
+  "description": "Sistem Presensi SMKN 1 Muhammadiyah Nganjuk",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
