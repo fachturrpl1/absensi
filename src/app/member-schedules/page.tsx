@@ -26,10 +26,11 @@ export default async function MemberSchedulesPage() {
   }
 
   // Fetch all data di server - 1 round trip saja!
+  // All functions now automatically filter by user's organization
   const [schedulesRes, membersRes, workSchedulesRes] = await Promise.all([
-    getAllMemberSchedule(organizationId),
+    getAllMemberSchedule(),
     getAllOrganization_member(),
-    getAllWorkSchedules(organizationId),
+    getAllWorkSchedules(),
   ])
 
   const schedules = (schedulesRes.success ? schedulesRes.data : []) as IMemberSchedule[]

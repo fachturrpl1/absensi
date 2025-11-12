@@ -5,23 +5,32 @@ import { IWorkSchedule, IWorkScheduleDetail } from "@/interface"
 
 
 
-export const getAllWorkSchedules = async (organizationId?: string) => {
+export const getAllWorkSchedules = async () => {
     const supabase = await createClient();
     
-    let query = supabase.from("work_schedules").select("*, work_schedule_details(*)").order("created_at", { ascending: false })
-    
-    // Only filter if organizationId is provided and not empty
-    if (organizationId && organizationId !== '') {
-        // Convert to integer for proper comparison with database
-        const orgIdInt = parseInt(organizationId, 10)
-        if (!isNaN(orgIdInt)) {
-            query = query.eq("organization_id", orgIdInt)
-        } else {
-        }
-    } else {
+    // Get current user's organization
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+        return { success: false, message: "User not authenticated", data: [] };
     }
 
-    const { data, error } = await query
+    // Get user's organization membership
+    const { data: member, error: memberError } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+    if (memberError || !member) {
+        return { success: false, message: "User not in any organization", data: [] };
+    }
+
+    // Fetch work schedules ONLY for user's organization
+    const { data, error } = await supabase
+        .from("work_schedules")
+        .select("*, work_schedule_details(*)")
+        .eq("organization_id", member.organization_id)
+        .order("created_at", { ascending: false });
 
     if (error) {
         return { success: false, message: error.message, data: [] };

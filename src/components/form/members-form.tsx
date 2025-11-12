@@ -31,7 +31,7 @@ import {
     updateOrganizationMember,
 } from "@/action/members"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
-import { getAllUsers, getAllUsersNotRegistered } from "@/action/users"
+import { getOrganizationUsers, getAllUsersNotRegistered } from "@/action/users"
 import FormSkeleton from "../form-skeleton"
 import { createRfidCard, updateRfidCard } from "@/action/rfid_card"
 import { createClient } from "@/utils/supabase/client"
@@ -118,7 +118,9 @@ export default function MembersForm({
                 }
 
                 // 3. load users data (groups and positions are loaded via React Query hooks)
-                const usersRes = await (formType === "edit" ? getAllUsers() : getAllUsersNotRegistered());
+                // For edit: get organization users only (secure)
+                // For add: get users not yet registered in any organization
+                const usersRes = await (formType === "edit" ? getOrganizationUsers() : getAllUsersNotRegistered());
                 const r = usersRes as any;
                 if (r && r.success) setUsers(r.data || []);
 

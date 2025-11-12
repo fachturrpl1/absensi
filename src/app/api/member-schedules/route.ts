@@ -2,12 +2,10 @@ import { NextResponse } from 'next/server'
 import { getAllMemberSchedule } from '@/action/members_schedule'
 
 import { memberLogger } from '@/lib/logger';
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const url = new URL(req.url)
-    const organizationId = url.searchParams.get('organizationId') || undefined
-    
-    const response = await getAllMemberSchedule(organizationId)
+    // getAllMemberSchedule now automatically filters by user's organization
+    const response = await getAllMemberSchedule()
     
     if (!response.success) {
       return NextResponse.json(

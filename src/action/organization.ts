@@ -159,7 +159,10 @@ export const updateOrganization = async (id: string, organization: Partial<IOrga
   return { success: true, message: "Organization updated successfully", data: data as IOrganization };
 };
 
-// 📂 Get All Organizations
+// 📂 Get All Organizations (ADMIN ONLY - USE WITH CAUTION)
+// WARNING: This function returns ALL organizations
+// Only use this for admin/system-level operations
+// For regular user operations, use getUserOrganization() instead
 export const getAllOrganization = async () => {
   const supabase = await createSupabaseClient();
   const { data, error} = await supabase
@@ -172,6 +175,42 @@ export const getAllOrganization = async () => {
   }
 
   return { success: true, data: data as IOrganization[] };
+};
+
+// 📂 Get User's Organization (SECURE - FILTERED BY USER)
+// This function returns only the organization that the current user belongs to
+export const getUserOrganization = async () => {
+  const supabase = await createClient();
+
+  // Get current user
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return { success: false, message: "User not authenticated", data: null };
+  }
+
+  // Get user's organization membership
+  const { data: member, error: memberError } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (memberError || !member) {
+    return { success: false, message: "User not in any organization", data: null };
+  }
+
+  // Fetch ONLY the user's organization
+  const { data, error } = await supabase
+    .from("organizations")
+    .select("*")
+    .eq("id", member.organization_id)
+    .single();
+
+  if (error) {
+    return { success: false, message: error.message, data: null };
+  }
+
+  return { success: true, data: data as IOrganization };
 };
 
 export const uploadLogo = async (

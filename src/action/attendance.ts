@@ -13,6 +13,42 @@ async function getSupabase() {
 export const getAllAttendance = async () => {
   const supabase = await getSupabase();
 
+  // Get current user's organization
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    attendanceLogger.error("❌ User not authenticated");
+    return { success: false, data: [] };
+  }
+
+  // Get user's organization membership
+  const { data: userMember, error: memberError } = await supabase
+    .from("organization_members")
+    .select("organization_id, id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (memberError || !userMember) {
+    attendanceLogger.error("❌ User not in any organization");
+    return { success: false, data: [] };
+  }
+
+  // Get all member IDs in the same organization
+  const { data: orgMembers, error: orgMembersError } = await supabase
+    .from("organization_members")
+    .select("id")
+    .eq("organization_id", userMember.organization_id);
+
+  if (orgMembersError) {
+    attendanceLogger.error("❌ Error fetching organization members:", orgMembersError);
+    return { success: false, data: [] };
+  }
+
+  const memberIds = orgMembers?.map(m => m.id) || [];
+  if (memberIds.length === 0) {
+    return { success: true, data: [] };
+  }
+
+  // Fetch attendance records ONLY for members in the same organization
   const { data, error } = await supabase
     .from("attendance_records")
     .select(`
@@ -34,7 +70,8 @@ export const getAllAttendance = async () => {
           time_format
         )
       )
-    `);
+    `)
+    .in("organization_member_id", memberIds);
 
   if (error) {
     attendanceLogger.error("❌ Error fetching attendance:", error);
@@ -49,6 +86,7 @@ export const getAllAttendance = async () => {
     time_format: item.organization_members?.organizations?.time_format || "24h",
   }));
 
+  attendanceLogger.debug(`✅ Fetched ${mapped.length} attendance records for organization ${userMember.organization_id}`);
   return { success: true, data: mapped as IAttendance[] };
 };
 

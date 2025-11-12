@@ -2,10 +2,43 @@
 import { createClient } from "@/utils/supabase/server";
 import { IMemberSchedule } from "@/interface";
 
-export const getAllMemberSchedule = async (organizationId?: string) => {
+export const getAllMemberSchedule = async () => {
   const supabase = await createClient();
   
-  let query = supabase
+  // Get current user's organization
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return { success: false, message: "User not authenticated", data: [] };
+  }
+
+  // Get user's organization membership
+  const { data: userMember, error: memberError } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (memberError || !userMember) {
+    return { success: false, message: "User not in any organization", data: [] };
+  }
+
+  // Get all member IDs in the same organization
+  const { data: orgMembers, error: orgMembersError } = await supabase
+    .from("organization_members")
+    .select("id")
+    .eq("organization_id", userMember.organization_id);
+
+  if (orgMembersError) {
+    return { success: false, message: orgMembersError.message, data: [] };
+  }
+
+  const memberIds = orgMembers?.map(m => m.id) || [];
+  if (memberIds.length === 0) {
+    return { success: true, data: [] };
+  }
+
+  // Fetch member schedules ONLY for members in the same organization
+  const { data, error } = await supabase
     .from("member_schedules")
     .select(`
       *,
@@ -27,29 +60,8 @@ export const getAllMemberSchedule = async (organizationId?: string) => {
         schedule_type
       )
     `)
+    .in("organization_member_id", memberIds)
     .order("created_at", { ascending: false });
-
-  if (organizationId && organizationId !== '') {
-    // Convert to integer for proper comparison
-    const orgIdInt = parseInt(organizationId, 10)
-    
-    if (!isNaN(orgIdInt)) {
-      const { data: members } = await supabase
-        .from("organization_members")
-        .select("id")
-        .eq("organization_id", orgIdInt);
-      
-      if (members && members.length > 0) {
-        const memberIds = members.map(m => m.id);
-        query = query.in("organization_member_id", memberIds);
-      } else {
-      }
-    } else {
-    }
-  } else {
-  }
-
-  const { data, error } = await query;
 
   if (error) {
     return { success: false, message: error.message, data: [] };

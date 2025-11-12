@@ -1,10 +1,10 @@
 import { getAllWorkSchedules } from "@/action/schedule"
-import { getAllOrganization } from "@/action/organization"
+import { getUserOrganization } from "@/action/organization"
 import { createClient } from "@/utils/supabase/server"
 import ScheduleClient from "./schedule-client"
 import { IWorkSchedule } from "@/interface"
 
-// Server Component - fetch data di server
+// Server Component - fetch data di server (now with secure organization filtering)
 export default async function WorkSchedulesPage() {
   const supabase = await createClient()
 
@@ -26,19 +26,20 @@ export default async function WorkSchedulesPage() {
     }
   }
 
-  // Fetch all data in parallel - 1 server round trip!
-  const [schedulesRes, organizationsRes] = await Promise.all([
-    getAllWorkSchedules(organizationId),
-    getAllOrganization(),
+  // Fetch schedules (automatically filtered by user's organization)
+  // and user's organization data only
+  const [schedulesRes, organizationRes] = await Promise.all([
+    getAllWorkSchedules(),
+    getUserOrganization(),
   ])
 
   const schedules = (schedulesRes.success ? schedulesRes.data : []) as IWorkSchedule[]
-  const organizations = organizationsRes.success ? organizationsRes.data : []
+  const organization = organizationRes.success ? organizationRes.data : null
 
-  // Fallback organization name from all orgs
-  if (!organizationName && organizationId) {
-    const org = organizations.find((o: any) => String(o.id) === organizationId)
-    organizationName = org?.name || ""
+  // Use organization data from getUserOrganization
+  if (organization) {
+    organizationId = String(organization.id)
+    organizationName = organization.name || ""
   }
 
   // Show message if user has no organization

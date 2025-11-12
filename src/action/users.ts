@@ -155,14 +155,68 @@ export async function login(formData: FormData) {
 }
 
 // ======================
-// GET ALL USERS
+// GET ALL USERS (ADMIN ONLY - USE WITH CAUTION)
 // ======================
+// WARNING: This function returns ALL users from ALL organizations
+// Only use this for admin/system-level operations
+// For regular user operations, use getOrganizationUsers() instead
 export async function getAllUsers() {
   const supabase = await getSupabase()
 
   const { data, error } = await supabase
     .from("user_profiles")
     .select("*")
+    .order("created_at", { ascending: false })
+
+  if (error) return { success: false, message: error.message, data: [] }
+
+  return { success: true, data: data as IUser[] }
+}
+
+// ======================
+// GET ORGANIZATION USERS (SECURE - FILTERED BY ORGANIZATION)
+// ======================
+// This function returns only users from the current user's organization
+export async function getOrganizationUsers() {
+  const supabase = await getSupabase()
+
+  // Get current user's organization
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    return { success: false, message: "User not authenticated", data: [] }
+  }
+
+  // Get user's organization membership
+  const { data: member, error: memberError } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", user.id)
+    .maybeSingle()
+
+  if (memberError || !member) {
+    return { success: false, message: "User not in any organization", data: [] }
+  }
+
+  // Get all members in the same organization
+  const { data: orgMembers, error: orgMembersError } = await supabase
+    .from("organization_members")
+    .select("user_id")
+    .eq("organization_id", member.organization_id)
+
+  if (orgMembersError) {
+    return { success: false, message: orgMembersError.message, data: [] }
+  }
+
+  const userIds = orgMembers?.map(m => m.user_id) || []
+  if (userIds.length === 0) {
+    return { success: true, data: [] }
+  }
+
+  // Fetch user profiles ONLY for members in the same organization
+  const { data, error } = await supabase
+    .from("user_profiles")
+    .select("*")
+    .in("id", userIds)
     .order("created_at", { ascending: false })
 
   if (error) return { success: false, message: error.message, data: [] }
