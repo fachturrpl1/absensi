@@ -247,12 +247,10 @@ export function ModernProfileCard({
                 {profile.email}
               </a>
             </div>
-            {profile.phone && (
-              <div className="flex items-center gap-2 text-sm">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.phone}</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2 text-sm">
+              <Phone className="h-4 w-4 text-muted-foreground" />
+              <span>{profile.phone && profile.phone.trim() !== '' ? profile.phone : 'No Phone'}</span>
+            </div>
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <span>Joined {profile.joinDate}</span>

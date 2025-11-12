@@ -138,7 +138,7 @@ const formatDuration = (minutes?: number | null) => {
 const formatTime = (value?: string | null) => (value && value.trim() ? value : "-")
 
 const formatPhoneNumber = (phone?: string | null) => {
-  if (!phone || phone === "-") return "-"
+  if (!phone || phone === "-" || phone.trim() === "") return "No Phone"
   // Format: +62 812-3456-7890
   const cleaned = phone.replace(/\D/g, "")
   if (cleaned.startsWith("62")) {
@@ -216,7 +216,7 @@ export default function MemberProfileEnhanced({
 
   const user = member.user
   const email = user?.email ?? (member as { email?: string }).email ?? "-"
-  const phone = user?.mobile || user?.phone || "-"
+  const phone = user?.mobile || user?.phone || ""
   const photoUrl = useProfilePhotoUrl(user?.profile_photo_url ?? undefined) ?? undefined
 
   const extendedMember = member as IOrganization_member & {
@@ -238,7 +238,7 @@ export default function MemberProfileEnhanced({
     : "Name unavailable"
 
   const canEmail = email && email !== "-"
-  const canCall = phone && phone !== "-"
+  const canCall = phone && phone.trim() !== "" && phone !== "No Phone"
 
   const attendancePercentages = React.useMemo(
     () => ({

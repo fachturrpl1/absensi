@@ -186,12 +186,10 @@ export function MemberGridCards({ members, onView, onEdit, onDelete }: MemberGri
                     <span className="truncate">{user.email}</span>
                   </div>
                 )}
-                {user?.phone && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Phone className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span>{user.phone}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Phone className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span>{user?.phone && user.phone.trim() !== '' ? user.phone : 'No Phone'}</span>
+                </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Users className="h-3.5 w-3.5 flex-shrink-0" />
                   <span className="truncate">{department}</span>

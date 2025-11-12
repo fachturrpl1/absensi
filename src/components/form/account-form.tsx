@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Camera, User, Briefcase, Lock, Trash2, AlertCircle } from "lucide-react";
+import { Camera, User, Briefcase, Lock, Trash2 } from "lucide-react";
 import {
   updateUserProfile,
   changePassword,
@@ -42,8 +42,6 @@ import { IUser, IOrganization_member, IEmergencyContact } from "@/interface";
 import { useAuthStore } from "@/store/user-store";
 import { useProfileRefresh, useProfilePhotoDelete, useProfilePhotoUrl } from "@/hooks/use-profile";
 import { safeAvatarSrc, getUserInitials } from "@/lib/avatar-utils";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
 import { accountLogger } from '@/lib/logger';
 interface UserProfile extends Partial<IUser> {
   email?: string;
@@ -131,21 +129,6 @@ export function AccountForm({ initialData }: AccountFormProps) {
       confirmPassword: "",
     },
   });
-
-  const requiredFields = [
-    { label: "Email Address", value: profileForm.watch("email") },
-    { label: "First Name", value: profileForm.watch("first_name") },
-    { label: "Gender", value: profileForm.watch("gender") },
-    { label: "Phone Number", value: profileForm.watch("phone") },
-  ];
-
-  const missingRequired = requiredFields
-    .filter((field) => !field.value || String(field.value).trim() === "")
-    .map((field) => field.label);
-  const missingEmail = missingRequired.includes("Email Address");
-  const missingFirstName = missingRequired.includes("First Name");
-  const missingGender = missingRequired.includes("Gender");
-  const missingPhone = missingRequired.includes("Phone Number");
 
   const watchedDisplayName = profileForm.watch("display_name")?.trim();
 
@@ -535,15 +518,6 @@ export function AccountForm({ initialData }: AccountFormProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {missingRequired.length > 0 && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Lengkapi data wajib</AlertTitle>
-                  <AlertDescription>
-                    Silakan isi: {missingRequired.join(", ")} untuk melanjutkan.
-                  </AlertDescription>
-                </Alert>
-              )}
               <Form {...profileForm}>
                 <form onSubmit={profileForm.handleSubmit(handleProfileSubmit)} className="space-y-6">
 
@@ -559,7 +533,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                             <FormControl>
                               <Input {...field} readOnly className="bg-muted cursor-not-allowed" tabIndex={-1} />
                             </FormControl>
-                            <FormDescription className="text-xs text-muted-foreground">
+                            <FormDescription className="text-xs">
                               Employee code cannot be changed
                             </FormDescription>
                             <FormMessage />
@@ -571,13 +545,9 @@ export function AccountForm({ initialData }: AccountFormProps) {
                         name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Email Address</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="email"
-                            className={profileForm.formState.errors.email || missingEmail ? "border-destructive focus-visible:ring-destructive" : undefined}
-                          />
+                            <FormLabel>Email Address *</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="email" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -591,12 +561,9 @@ export function AccountForm({ initialData }: AccountFormProps) {
                         name="first_name"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>First Name</FormLabel>
+                            <FormLabel>First Name *</FormLabel>
                             <FormControl>
-                              <Input
-                                {...field}
-                                className={profileForm.formState.errors.first_name || missingFirstName ? "border-destructive focus-visible:ring-destructive" : undefined}
-                              />
+                              <Input {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -656,14 +623,9 @@ export function AccountForm({ initialData }: AccountFormProps) {
                         name="phone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Phone Number</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="tel"
-                              placeholder="+62 xxx xxx xxxx"
-                              className={profileForm.formState.errors.phone || missingPhone ? "border-destructive focus-visible:ring-destructive" : undefined}
-                            />
+                            <FormLabel>Phone Number *</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="tel" placeholder="+62 xxx xxx xxxx" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -685,8 +647,11 @@ export function AccountForm({ initialData }: AccountFormProps) {
                           <FormItem>
                             <FormLabel>Date of Birth</FormLabel>
                             <FormControl>
-                              <Input {...field} type="date" />
+                              <Input {...field} type="date" placeholder="Optional" />
                             </FormControl>
+                            <FormDescription className="text-xs">
+                              Optional field
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -696,10 +661,10 @@ export function AccountForm({ initialData }: AccountFormProps) {
                         name="gender"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Gender</FormLabel>
+                            <FormLabel>Gender *</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger className={profileForm.formState.errors.gender || missingGender ? "border-destructive focus-visible:ring-destructive" : undefined}>
+                                <SelectTrigger>
                                   <SelectValue placeholder="Select gender" />
                                 </SelectTrigger>
                               </FormControl>
