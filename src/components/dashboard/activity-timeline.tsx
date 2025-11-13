@@ -56,12 +56,12 @@ const activityCache: {
   isLoading: false,
 };
 
-const CACHE_DURATION = 5000; // 5 seconds cache
+const CACHE_DURATION = 60000; // 60 seconds cache (increased from 5s)
 
 export function ActivityTimeline({ 
   limit = 10, 
   autoRefresh = true,
-  refreshInterval = 30000 // 30 seconds
+  refreshInterval = 120000 // 2 minutes (increased from 30s)
 }: ActivityTimelineProps) {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,8 +78,9 @@ export function ActivityTimeline({
       return;
     }
 
-    // Prevent concurrent requests
-    if (activityCache.isLoading && !force) {
+    // Prevent concurrent requests (CRITICAL: blocks duplicates)
+    if (activityCache.isLoading) {
+      console.log('[ActivityTimeline] Request already in progress, skipping duplicate');
       return;
     }
 

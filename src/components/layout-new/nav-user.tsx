@@ -60,13 +60,17 @@ export function NavUser() {
       // Fetch user profile
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('first_name, last_name, email, profile_photo_url')
+        .select('first_name, middle_name, last_name, display_name, email, profile_photo_url')
         .eq('id', authUser.id)
         .single();
 
       if (profile) {
+        // Import utility for consistent display name logic
+        const { getUserDisplayName } = await import('@/utils/user-display-name');
+        const displayName = getUserDisplayName(profile);
+
         setUser({
-          name: `${profile.first_name} ${profile.last_name}`,
+          name: displayName,
           email: profile.email || authUser.email || '',
           avatar: profile.profile_photo_url,
         });
@@ -83,11 +87,16 @@ export function NavUser() {
             table: 'user_profiles',
             filter: `id=eq.${authUser.id}`,
           },
-          (payload) => {
+          async (payload) => {
             if (payload.new) {
               const newProfile = payload.new as any;
+              
+              // Import utility for consistent display name logic
+              const { getUserDisplayName } = await import('@/utils/user-display-name');
+              const displayName = getUserDisplayName(newProfile);
+
               setUser({
-                name: `${newProfile.first_name} ${newProfile.last_name}`,
+                name: displayName,
                 email: newProfile.email || authUser.email || '',
                 avatar: newProfile.profile_photo_url,
               });

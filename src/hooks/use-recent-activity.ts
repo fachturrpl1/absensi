@@ -27,10 +27,11 @@ export function useRecentActivity(limit: number = 15) {
       return json.data as ActivityItem[]
     },
     enabled: !!organizationId,
-    staleTime: 1000 * 30, // 30 seconds
-    gcTime: 1000 * 60 * 5, // 5 minutes
-    refetchInterval: 1000 * 60, // Auto-refresh every 60 seconds
-    refetchOnWindowFocus: true,
-    refetchOnMount: true
+    staleTime: 1000 * 60 * 2, // 2 minutes - data is fresh for longer
+    gcTime: 1000 * 60 * 10, // 10 minutes
+    refetchInterval: 1000 * 60 * 3, // Auto-refresh every 3 minutes (reduced frequency)
+    refetchOnWindowFocus: false, // Disable refetch on window focus to reduce requests
+    refetchOnMount: false, // Disable refetch on mount, rely on cache
+    refetchOnReconnect: true, // Only refetch when reconnecting
   })
 }

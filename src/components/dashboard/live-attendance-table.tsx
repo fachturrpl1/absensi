@@ -91,11 +91,11 @@ const attendanceCache: {
   isLoading: false,
 };
 
-const ATTENDANCE_CACHE_DURATION = 10000; // 10 seconds cache
+const ATTENDANCE_CACHE_DURATION = 120000; // 2 minutes cache (increased from 10s)
 
 export function LiveAttendanceTable({
   autoRefresh = true,
-  refreshInterval = 60000, // 60 seconds
+  refreshInterval = 180000, // 3 minutes (increased from 60s)
   pageSize = 10,
 }: LiveAttendanceTableProps) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -115,8 +115,9 @@ export function LiveAttendanceTable({
       return;
     }
 
-    // Prevent concurrent requests
-    if (attendanceCache.isLoading && !force) {
+    // Prevent concurrent requests (CRITICAL: blocks duplicates)
+    if (attendanceCache.isLoading) {
+      console.log('[LiveAttendance] Request already in progress, skipping duplicate');
       return;
     }
 

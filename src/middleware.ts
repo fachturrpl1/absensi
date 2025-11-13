@@ -95,7 +95,6 @@ export async function middleware(req: NextRequest) {
   )
 
   const hasSessionCookie = hasSupabaseSessionCookie(req)
-  console.log("[MIDDLEWARE DEBUG] Has session cookie:", hasSessionCookie)
 
   // Get user with error handling for malformed cookies
   let user = null
@@ -109,13 +108,6 @@ export async function middleware(req: NextRequest) {
       const networkError = isNetworkError(error)
       isOffline = networkError && hasSessionCookie
       
-      console.log("[MIDDLEWARE DEBUG] Auth error:", {
-        message: error.message,
-        isNetworkError: networkError,
-        hasSessionCookie,
-        isOffline
-      })
-      
       if (isOffline) {
         logger.warn("Supabase auth request failed due to network issues; assuming offline session")
       } else {
@@ -124,19 +116,10 @@ export async function middleware(req: NextRequest) {
           response.cookies.delete(cookieName)
         })
       }
-    } else {
-      console.log("[MIDDLEWARE DEBUG] Auth success, user:", user?.id)
     }
   } catch (error) {
     const networkError = isNetworkError(error)
     isOffline = networkError && hasSessionCookie
-    
-    console.log("[MIDDLEWARE DEBUG] Auth exception:", {
-      message: (error as Error).message,
-      isNetworkError: networkError,
-      hasSessionCookie,
-      isOffline
-    })
     
     if (isOffline) {
       logger.warn("Supabase auth network failure, assuming offline session")
@@ -154,33 +137,10 @@ export async function middleware(req: NextRequest) {
   // Don't require auth for public pages
   const publicPaths = ["/auth", "/invite"]
   const isPublicPath = publicPaths.some((path) => pathname.startsWith(path))
-  
-  // Check for HTML or Next.js client-side navigation (RSC)
-  const acceptHeader = req.headers.get("accept") || ""
-  const rscHeader = req.headers.get("rsc") || ""
-  const nextRouterHeader = req.headers.get("next-router-state-tree") || ""
-  
-  const isHtmlRequest = req.method === "GET" && acceptHeader.includes("text/html")
-  const isRscRequest = req.method === "GET" && rscHeader === "1"
-  const isNextNavigation = req.method === "GET" && nextRouterHeader !== ""
-  const isNavigationRequest = isHtmlRequest || isRscRequest || isNextNavigation
-  
-  console.log("[MIDDLEWARE DEBUG] Navigation check:", {
-    pathname,
-    method: req.method,
-    isHtmlRequest,
-    isRscRequest,
-    isNextNavigation,
-    isNavigationRequest,
-    isOffline,
-    user: !!user,
-    isPublicPath
-  })
 
   // Handle offline session - show offline page instead of login redirect
   // CRITICAL: This must come BEFORE the "!user && !isPublicPath" check
   if (isOffline && !user && !isPublicPath && !pathname.startsWith("/offline")) {
-    console.log("[OFFLINE DEBUG] Redirecting to offline page:", pathname)
     return NextResponse.redirect(new URL("/offline", req.url))
   }
 
@@ -205,7 +165,6 @@ export async function middleware(req: NextRequest) {
   }
 
   if (!user && !isPublicPath) {
-    console.log("[AUTH DEBUG] No user, redirecting to login:", pathname)
     return NextResponse.redirect(new URL("/auth/login", req.url))
   }
 
