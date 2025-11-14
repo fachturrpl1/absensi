@@ -33,6 +33,7 @@ import { motion } from 'framer-motion';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
 import { ActivityTimeline } from '@/components/dashboard/activity-timeline';
 import { LiveAttendanceTable } from '@/components/dashboard/live-attendance-table';
+import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton';
 
 // Types
 interface AttendanceRecord {
@@ -159,6 +160,7 @@ const EnhancedStatCard = ({
 export default function ImprovedDashboard() {
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isLoading, setIsLoading] = useState(true);
   const { organizationName } = useOrganizationName();
   
   // Date filter state
@@ -190,6 +192,7 @@ export default function ImprovedDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setIsLoading(true);
         // Use secure API route that auto-filters by organization
         const response = await fetch('/api/attendance-records?limit=1000');
         const result = await response.json();
@@ -201,6 +204,8 @@ export default function ImprovedDashboard() {
         }
       } catch (error) {
         console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -331,6 +336,10 @@ export default function ImprovedDashboard() {
     { name: 'Late', value: stats.totalLate, color: COLORS.warning },
     { name: 'Absent', value: stats.totalAbsent, color: COLORS.danger },
   ].filter(item => item.value > 0), [stats]);
+
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div className="space-y-6">

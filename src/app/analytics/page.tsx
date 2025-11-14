@@ -14,6 +14,7 @@ import { createClient } from '@/utils/supabase/client';
 import { format, subDays } from 'date-fns';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { AnalyticsSkeleton } from '@/components/analytics/analytics-skeleton';
 import {
   AreaChart, Area, 
   PieChart as RechartPie, Pie, Cell,
@@ -48,6 +49,7 @@ const COLORS = {
 
 export default function AnalyticsPage() {
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [masterData, setMasterData] = useState<MasterData>({ totalMembers: 0, totalDepartments: 0, averageTeamSize: 0 });
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
     const today = new Date();
@@ -66,9 +68,13 @@ export default function AnalyticsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setIsLoading(true);
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+          setIsLoading(false);
+          return;
+        }
 
         const { data: orgMember } = await supabase
           .from('organization_members')
@@ -110,6 +116,8 @@ export default function AnalyticsPage() {
         }
       } catch (error) {
         console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -239,6 +247,10 @@ export default function AnalyticsPage() {
       .sort((a, b) => b.rate - a.rate)
       .slice(0, 5);
   }, [filteredRecords]);
+
+  if (isLoading) {
+    return <AnalyticsSkeleton />;
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">

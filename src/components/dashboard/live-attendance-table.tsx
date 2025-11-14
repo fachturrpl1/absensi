@@ -99,7 +99,6 @@ export function LiveAttendanceTable({
   pageSize = 10,
 }: LiveAttendanceTableProps) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
-  const [loading, setLoading] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [currentPage, setCurrentPage] = useState(1);
@@ -111,7 +110,6 @@ export function LiveAttendanceTable({
     if (!force && attendanceCache.data && (now - attendanceCache.timestamp) < ATTENDANCE_CACHE_DURATION) {
       setRecords(attendanceCache.data);
       setLastUpdate(new Date(attendanceCache.timestamp));
-      setLoading(false);
       return;
     }
 
@@ -202,7 +200,6 @@ export function LiveAttendanceTable({
     } catch (error) {
       console.error('Failed to fetch attendance records:', error);
     } finally {
-      setLoading(false);
       attendanceCache.isLoading = false;
     }
   };
@@ -240,26 +237,10 @@ export function LiveAttendanceTable({
     absent: records.filter(r => r.status === 'absent').length,
   };
 
-  if (loading) {
-    return (
-      <Card className="border-border bg-card">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2 text-foreground">
-            <Users className="w-5 h-5 text-primary animate-pulse" />
-            Live Attendance
-          </CardTitle>
-          <CardDescription className="text-muted-foreground">Loading...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-16 bg-muted rounded animate-pulse" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Don't show loading state here - parent handles initial load
+  // if (loading && records.length === 0) {
+  //   return null; // Parent dashboard skeleton handles this
+  // }
 
   return (
     <Card className="border-border bg-card">
@@ -278,9 +259,8 @@ export function LiveAttendanceTable({
             variant="outline"
             size="sm"
             onClick={() => fetchAttendanceRecords()}
-            disabled={loading}
           >
-            <RefreshCw className={cn("w-4 h-4 mr-2", loading && "animate-spin")} />
+            <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
         </div>

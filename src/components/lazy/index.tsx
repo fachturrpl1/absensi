@@ -8,11 +8,15 @@
 import dynamic from 'next/dynamic'
 import { ComponentType, ReactElement } from 'react'
 
-// Loading fallback component
+// Loading fallback component - minimal skeleton instead of spinner
 const LoadingFallback = () => {
   return (
     <div className="flex items-center justify-center p-8">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+      <div className="w-full max-w-md space-y-3">
+        <div className="h-4 bg-muted rounded animate-pulse" />
+        <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
+        <div className="h-4 bg-muted rounded animate-pulse w-1/2" />
+      </div>
     </div>
   )
 }

@@ -11,14 +11,12 @@ interface OrganizationStatusCheckerProps {
 
 export default function OrganizationStatusChecker({ children }: OrganizationStatusCheckerProps) {
   const [_status, setStatus] = useState<OrganizationStatus | null>(null);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
     // Don't check if already on status pages
     if (pathname === '/organization-inactive' || pathname === '/subscription-expired') {
-      setLoading(false);
       return;
     }
 
@@ -54,8 +52,6 @@ export default function OrganizationStatusChecker({ children }: OrganizationStat
           organizationLogger.error("Failed to check organization status:", error);
         }
         setStatus({ isValid: true }); // Fail open untuk menghindari lock-out
-      } finally {
-        setLoading(false);
       }
     }
 
@@ -67,15 +63,6 @@ export default function OrganizationStatusChecker({ children }: OrganizationStat
     return () => clearInterval(interval);
   }, [pathname, router]);
 
-  // Show loading spinner while checking
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
-
-  // Organization is valid, show content
+  // Render children immediately without blocking loading state
   return <>{children}</>;
 }
