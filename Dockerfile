@@ -8,8 +8,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependency (tanpa peer conflict)
-# RUN npm ci --legacy-peer-deps
-RUN npm install --legacy-peer-deps
+RUN npm ci --legacy-peer-deps
+#RUN npm install --legacy-peer-deps
 
 # Salin semua source code
 COPY . .
