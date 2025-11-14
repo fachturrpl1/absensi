@@ -18,14 +18,14 @@ export async function generatePageMetadata(
     
     const organizationName = user ? await getCachedOrganizationName(user.id) : null;
     
-    // Generate title with organization name
+    // Generate title with organization name: [Page] - [Organization]
     const fullTitle = organizationName 
       ? `${pageTitle} - ${organizationName}`
-      : `${pageTitle} - Presensi`;
+      : pageTitle;
     
     const description = pageDescription 
       ? pageDescription 
-      : `${pageTitle} ${organizationName || 'Presensi'} - Sistem Presensi Digital`;
+      : `${pageTitle} - ${organizationName || 'Presensi'}`;
     
     return {
       title: fullTitle,
@@ -43,8 +43,8 @@ export async function generatePageMetadata(
   } catch (error) {
     // Fallback if there's an error
     return {
-      title: `${pageTitle} - Presensi`,
-      description: pageDescription || `${pageTitle} - Sistem Presensi Digital`,
+      title: pageTitle,
+      description: pageDescription || pageTitle,
     };
   }
 }
@@ -59,16 +59,16 @@ export function generateSimpleMetadata(
   pageDescription?: string
 ): Metadata {
   return {
-    title: `${pageTitle} - Presensi`,
-    description: pageDescription || `${pageTitle} - Sistem Presensi Digital`,
+    title: pageTitle,
+    description: pageDescription || pageTitle,
     openGraph: {
-      title: `${pageTitle} - Presensi`,
-      description: pageDescription || `${pageTitle} - Sistem Presensi Digital`,
+      title: pageTitle,
+      description: pageDescription || pageTitle,
     },
     twitter: {
       card: 'summary',
-      title: `${pageTitle} - Presensi`,
-      description: pageDescription || `${pageTitle} - Sistem Presensi Digital`,
+      title: pageTitle,
+      description: pageDescription || pageTitle,
     },
   };
 }

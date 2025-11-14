@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useOrganizationName } from '@/hooks/use-organization-name';
 // Removed unused spotlight components
 import {
   Clock,
@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   BarChart3,
   Activity,
-  UserCheck,
   ArrowUp,
   ArrowDown,
   Minus,
@@ -34,7 +33,6 @@ import { motion } from 'framer-motion';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
 import { ActivityTimeline } from '@/components/dashboard/activity-timeline';
 import { LiveAttendanceTable } from '@/components/dashboard/live-attendance-table';
-import { EmptyState } from '@/components/dashboard/empty-state';
 
 // Types
 interface AttendanceRecord {
@@ -161,6 +159,7 @@ const EnhancedStatCard = ({
 export default function ImprovedDashboard() {
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const { organizationName } = useOrganizationName();
   
   // Date filter state
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
@@ -333,36 +332,14 @@ export default function ImprovedDashboard() {
     { name: 'Absent', value: stats.totalAbsent, color: COLORS.danger },
   ].filter(item => item.value > 0), [stats]);
 
-  // Top performers
-  const topPerformers = useMemo(() => {
-    const memberStats = new Map<string, { name: string; workHours: number; avatar: string | null }>();
-    
-    filteredRecords.forEach(record => {
-      const existing = memberStats.get(record.member_name);
-      const hours = (record.work_duration_minutes || 0) / 60;
-      
-      if (existing) {
-        existing.workHours += hours;
-      } else {
-        memberStats.set(record.member_name, {
-          name: record.member_name,
-          workHours: hours,
-          avatar: record.profile_photo_url,
-        });
-      }
-    });
-    
-    return Array.from(memberStats.values())
-      .sort((a, b) => b.workHours - a.workHours)
-      .slice(0, 5);
-  }, [filteredRecords]);
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Dashboard{organizationName && ` — ${organizationName}`}
+          </h1>
           <p className="text-muted-foreground text-sm mt-1">
             {format(currentTime, 'EEEE, MMMM dd, yyyy • HH:mm:ss')}
           </p>
@@ -532,74 +509,6 @@ export default function ImprovedDashboard() {
           </Card>
         </motion.div>
       </div>
-
-      {/* Top Performers */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-      >
-        <Card className="border-border bg-card">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg flex items-center gap-2 text-foreground">
-                  <UserCheck className="w-5 h-5 text-primary" />
-                  Top Performers
-                </CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  Members with highest work hours for {getFilterLabel().toLowerCase()}
-                </CardDescription>
-              </div>
-              <Badge variant="outline">{getFilterLabel()}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {topPerformers.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                {topPerformers.map((member, idx) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.7 + idx * 0.1 }}
-                    className="flex flex-col items-center p-4 rounded-lg border border-border bg-card hover:shadow-md hover:border-primary/50 transition-all"
-                  >
-                    <div className="relative mb-3">
-                      <Avatar className="w-16 h-16 border-2 border-border">
-                        <AvatarImage src={member.avatar || undefined} />
-                        <AvatarFallback className="bg-primary text-primary-foreground font-bold">
-                          {member.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      {idx === 0 && (
-                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-500 dark:bg-yellow-400 rounded-full flex items-center justify-center text-xs shadow-lg">
-                          🏆
-                        </div>
-                      )}
-                    </div>
-                    <p className="font-semibold text-sm text-center mb-1 line-clamp-2 text-foreground">
-                      {member.name}
-                    </p>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="w-3 h-3" />
-                      <span className="font-bold text-primary">
-                        {member.workHours.toFixed(1)}h
-                      </span>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                icon={UserCheck}
-                title="No performance data yet"
-                description={`No attendance records found for ${getFilterLabel().toLowerCase()}. Check back after members start checking in.`}
-              />
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
 
       {/* Activity Timeline & Live Attendance Table */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

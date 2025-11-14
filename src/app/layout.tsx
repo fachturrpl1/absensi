@@ -47,43 +47,76 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
-// Base metadata - title will be dynamically updated by each page
-export const metadata: Metadata = {
-  title: {
-    template: '%s', // Allow pages to completely override title
-    default: 'Presensi - Manajemen Kehadiran',
-  },
-  description:
-    "Sistem manajemen kehadiran digital untuk organisasi Anda. Kelola absensi, jadwal, dan laporan kehadiran dengan mudah.",
-  metadataBase: new URL(
-    process.env.APP_URL
-      ? `${process.env.APP_URL}`
-      : process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : `http://localhost:${process.env.PORT || 3000}`
-  ),
-  alternates: { canonical: "/" },
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Presensi",
-  },
-  formatDetection: {
-    telephone: false,
-  },
-  openGraph: {
-    url: "/",
-    title: "Presensi - Manajemen Kehadiran",
-    description: "Sistem manajemen kehadiran digital untuk organisasi",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Presensi - Manajemen Kehadiran",
-    description: "Sistem manajemen kehadiran digital untuk organisasi",
-  },
-};
+// Base metadata will be generated dynamically
+export async function generateMetadata(): Promise<Metadata> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const organizationName = user ? await getCachedOrganizationName(user.id) : null;
+    
+    const defaultTitle = organizationName 
+      ? `${organizationName} - Presensi`
+      : 'Presensi';
+    
+    const description = organizationName
+      ? `Sistem presensi digital ${organizationName}. Kelola absensi, jadwal, dan laporan kehadiran dengan mudah.`
+      : "Sistem manajemen kehadiran digital untuk organisasi Anda. Kelola absensi, jadwal, dan laporan kehadiran dengan mudah.";
+    
+    return {
+      title: {
+        template: '%s', // Allow pages to completely override title
+        default: defaultTitle,
+      },
+      description,
+      metadataBase: new URL(
+        process.env.APP_URL
+          ? `${process.env.APP_URL}`
+          : process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : `http://localhost:${process.env.PORT || 3000}`
+      ),
+      alternates: { canonical: "/" },
+      manifest: "/manifest.json",
+      appleWebApp: {
+        capable: true,
+        statusBarStyle: "default",
+        title: organizationName?.split(' ').slice(0, 2).join(' ') || "Presensi",
+      },
+      formatDetection: {
+        telephone: false,
+      },
+      openGraph: {
+        url: "/",
+        title: defaultTitle,
+        description,
+        type: "website",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: defaultTitle,
+        description,
+      },
+    };
+  } catch (error) {
+    // Fallback metadata if there's an error
+    return {
+      title: {
+        template: '%s',
+        default: 'Presensi',
+      },
+      description: "Sistem manajemen kehadiran digital untuk organisasi Anda.",
+      metadataBase: new URL(
+        process.env.APP_URL
+          ? `${process.env.APP_URL}`
+          : process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : `http://localhost:${process.env.PORT || 3000}`
+      ),
+      alternates: { canonical: "/" },
+      manifest: "/manifest.json",
+    };
+  }
+}
 
 export const viewport = {
   width: "device-width",
