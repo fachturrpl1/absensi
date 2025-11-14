@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useUser } from '@/components/user-provider';
+import { useAuthStore } from '@/store/user-store';
 import { createClient } from '@/utils/supabase/client';
 
 /**
  * Custom hook to fetch and cache organization name for current user
  */
 export function useOrganizationName() {
-  const { user } = useUser();
+  const user = useAuthStore((state) => state.user);
   const [organizationName, setOrganizationName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 

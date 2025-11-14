@@ -141,11 +141,7 @@ export default async function RootLayout({
   const timezone = user ? await getCachedOrganizationTimezone(user.id) : "UTC"
   const organizationName = user ? await getCachedOrganizationName(user.id) : null
   
-  // Generate dynamic title based on organization
-  const dynamicTitle = organizationName 
-    ? `${organizationName} - Sistem Presensi`
-    : "Presensi - Sistem Kehadiran Digital"
-  
+  // Generate dynamic short title for mobile based on organization
   const dynamicShortTitle = organizationName 
     ? organizationName.split(' ').slice(0, 2).join(' ') // First 2 words for mobile
     : "Presensi"
