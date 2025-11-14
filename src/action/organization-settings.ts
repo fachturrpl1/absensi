@@ -177,12 +177,13 @@ export async function updateOrganization(updateData: OrganizationUpdateData): Pr
       return { success: false, message: "No organization found for this user" };
     }
 
-    // Update organization data
+    // Update organization data - legal_name always syncs with name
+    const organizationName = updateData.name.trim();
     const { error: updateError } = await supabase
       .from("organizations")
       .update({
-        name: updateData.name.trim(),
-        legal_name: updateData.legal_name?.trim() || null,
+        name: organizationName,
+        legal_name: organizationName, // Always sync legal_name with name
         description: updateData.description?.trim() || null,
         address: updateData.address?.trim() || null,
         city: updateData.city?.trim() || null,

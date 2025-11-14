@@ -16,12 +16,14 @@ import { DashboardLayoutWrapper } from "@/components/layout/dashboard-layout-wra
 import { createClient } from "@/utils/supabase/server";
 import { 
   getCachedUserProfile, 
-  getCachedOrganizationTimezone 
+  getCachedOrganizationTimezone,
+  getCachedOrganizationName 
 } from "@/lib/data-cache";
 
 import { Geist, Geist_Mono } from "next/font/google";
 import { InstallPrompt } from "@/components/install-prompt";
 import { OfflineDetector } from "@/components/offline-detector";
+import { GlobalTitleManager } from "@/components/global-title-manager";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -45,10 +47,14 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+// Base metadata - title will be dynamically updated by each page
 export const metadata: Metadata = {
-  title: "SMKN 1 Muhammadiyah Nganjuk - Sistem Presensi",
+  title: {
+    template: '%s', // Allow pages to completely override title
+    default: 'Presensi - Manajemen Kehadiran',
+  },
   description:
-    "Sistem Presensi Digital SMKN 1 Muhammadiyah Nganjuk untuk mengelola kehadiran siswa dan guru dengan mudah dan efisien.",
+    "Sistem manajemen kehadiran digital untuk organisasi Anda. Kelola absensi, jadwal, dan laporan kehadiran dengan mudah.",
   metadataBase: new URL(
     process.env.APP_URL
       ? `${process.env.APP_URL}`
@@ -61,21 +67,21 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "SMK Muh 1 Ngj",
+    title: "Presensi",
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
     url: "/",
-    title: "SMKN 1 Muhammadiyah Nganjuk",
-    description: "Sistem Presensi Digital SMKN 1 Muhammadiyah Nganjuk",
+    title: "Presensi - Manajemen Kehadiran",
+    description: "Sistem manajemen kehadiran digital untuk organisasi",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SMKN 1 Muhammadiyah Nganjuk",
-    description: "Sistem Presensi Digital SMKN 1 Muhammadiyah Nganjuk",
+    title: "Presensi - Manajemen Kehadiran",
+    description: "Sistem manajemen kehadiran digital untuk organisasi",
   },
 };
 
@@ -131,8 +137,18 @@ export default async function RootLayout({
       }
     : null;
 
-  // 🔹 Fetch timezone from the user's organization (cached)
+  // 🔹 Fetch timezone and organization name from the user's organization (cached)
   const timezone = user ? await getCachedOrganizationTimezone(user.id) : "UTC"
+  const organizationName = user ? await getCachedOrganizationName(user.id) : null
+  
+  // Generate dynamic title based on organization
+  const dynamicTitle = organizationName 
+    ? `${organizationName} - Sistem Presensi`
+    : "Presensi - Sistem Kehadiran Digital"
+  
+  const dynamicShortTitle = organizationName 
+    ? organizationName.split(' ').slice(0, 2).join(' ') // First 2 words for mobile
+    : "Presensi"
 
   return (
     <html lang="id" suppressHydrationWarning>
@@ -143,9 +159,10 @@ export default async function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="SMK Muh 1 Ngj" />
+        <meta name="apple-mobile-web-app-title" content={dynamicShortTitle} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <GlobalTitleManager />
         <InstallPrompt />
         <OfflineDetector />
         <UserProvider user={mappedUser} />

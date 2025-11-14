@@ -40,7 +40,6 @@ interface OrganizationFormProps {
 const OrganizationFormSchema = z.object({
   code: z.string().optional(),
   name: z.string().min(2, "Organization name must be at least 2 characters."),
-  legal_name: z.string().optional(),
   tax_id: z.string().optional(),
   industry: z.string().optional(),
   size_category: z.string().optional(),
@@ -75,7 +74,6 @@ export default function OrganizationForm({
     defaultValues: {
       code: "",
       name: "",
-      legal_name: "",
       tax_id: "",
       industry: "",
       size_category: "",
@@ -101,7 +99,6 @@ export default function OrganizationForm({
       form.reset({
         code: initialValues.code || "",
         name: initialValues.name || "",
-        legal_name: initialValues.legal_name || "",
         tax_id: initialValues.tax_id || "",
         industry: initialValues.industry || "",
         size_category: initialValues.size_category || "",
@@ -129,6 +126,7 @@ export default function OrganizationForm({
 
       const payload = {
         ...values,
+        legal_name: values.name, // Sync legal_name with name
         subscription_expires_at:
           values.subscription_expires_at === ""
             ? null
@@ -214,27 +212,15 @@ export default function OrganizationForm({
               control={form.control}
               name="name"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
+                <FormItem className="col-span-2">
+                  <FormLabel>Organization Name</FormLabel>
                   <FormControl>
                     <Input placeholder="Organization Name" {...field} />
                   </FormControl>
                   <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Legal Name */}
-            <FormField
-              control={form.control}
-              name="legal_name"
-              render={({ field }) => (
-                <FormItem className="col-span-2">
-                  <FormLabel>Legal Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Legal Entity Name" {...field} />
-                  </FormControl>
-                  <FormMessage />
+                  <p className="text-xs text-muted-foreground">
+                    This will be used as both display name and legal name
+                  </p>
                 </FormItem>
               )}
             />

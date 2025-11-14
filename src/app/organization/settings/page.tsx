@@ -73,7 +73,6 @@ export default function OrganizationSettingsPage() {
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [formData, setFormData] = useState<{
     name: string;
-    legal_name: string;
     description: string;
     address: string;
     city: string;
@@ -89,7 +88,6 @@ export default function OrganizationSettingsPage() {
     time_format: '12h' | '24h';
   }>({
     name: "",
-    legal_name: "",
     description: "",
     address: "",
     city: "",
@@ -127,7 +125,6 @@ export default function OrganizationSettingsPage() {
           setOrgData(data as OrganizationData);
           setFormData({
             name: data.name || "",
-            legal_name: data.legal_name || "",
             description: data.description || "",
             address: data.address || "",
             city: data.city || "",
@@ -323,7 +320,7 @@ export default function OrganizationSettingsPage() {
       
       const updateData: OrganizationUpdateData = {
         name: formData.name,
-        legal_name: formData.legal_name,
+        legal_name: formData.name, // Sync legal_name with name
         description: formData.description,
         address: formData.address,
         city: formData.city,
@@ -575,26 +572,17 @@ export default function OrganizationSettingsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="name">Organization Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder="Enter organization name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="legal_name">Legal Name</Label>
-              <Input
-                id="legal_name"
-                value={formData.legal_name}
-                onChange={(e) => setFormData({...formData, legal_name: e.target.value})}
-                placeholder="Legal business name"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="name">Organization Name *</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              placeholder="Enter organization name"
+            />
+            <p className="text-xs text-muted-foreground">
+              This will be used as both display name and legal name
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

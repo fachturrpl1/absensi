@@ -35,6 +35,21 @@ export const getCachedOrganizationTimezone = cache(async (userId: string) => {
   return (data.organizations as any)?.timezone || "UTC"
 })
 
+// Cache organization name fetch
+export const getCachedOrganizationName = cache(async (userId: string) => {
+  const supabase = await createSupabaseClient()
+  
+  const { data } = await supabase
+    .from("organization_members")
+    .select("organization_id, organizations(name)")
+    .eq("user_id", userId)
+    .maybeSingle()
+  
+  if (!data) return null
+  
+  return (data.organizations as any)?.name || null
+})
+
 // Cache organization ID fetch
 export const getCachedOrganizationId = cache(async (userId: string) => {
   const supabase = await createSupabaseClient()
