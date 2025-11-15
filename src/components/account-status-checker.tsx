@@ -2,20 +2,21 @@
 
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
-
+import { useOrganizationData } from "@/hooks/use-organization-data";
 import { accountLogger } from '@/lib/logger';
+
 /**
  * AccountStatusChecker Component
  * 
  * Checks if the current user's account (organization_member) is active.
  * If inactive, redirects to /account-inactive page.
  * 
- * This runs client-side to avoid blocking server rendering.
+ * Uses centralized organization data hook to avoid duplicate requests.
  */
 export default function AccountStatusChecker({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { data: orgData, isSuccess } = useOrganizationData();
 
   useEffect(() => {
     // Skip check on these pages
@@ -35,42 +36,14 @@ export default function AccountStatusChecker({ children }: { children: React.Rea
       return;
     }
 
-    async function checkAccountStatus() {
-      try {
-        const supabase = createClient();
-        
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError || !user) {
-          // Not authenticated, let auth handle it
-          return;
-        }
-
-        // Check member status
-        const { data: member, error: memberError } = await supabase
-          .from("organization_members")
-          .select("is_active")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (memberError) {
-          accountLogger.error("Error checking account status:", memberError);
-          return;
-        }
-
-        // If member exists but is inactive, redirect
-        if (member && member.is_active === false) {
-          accountLogger.debug("Account is inactive, redirecting to /account-inactive");
-          router.replace("/account-inactive");
-        }
-      } catch (error) {
-        accountLogger.error("Error in account status check:", error);
+    if (isSuccess && orgData) {
+      // If member exists but is inactive, redirect
+      if (orgData.memberIsActive === false) {
+        accountLogger.debug("Account is inactive, redirecting to /account-inactive");
+        router.replace("/account-inactive");
       }
     }
-
-    checkAccountStatus();
-  }, [pathname, router]);
+  }, [pathname, router, orgData, isSuccess]);
 
   // Render children
   return <>{children}</>;

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect } from 'react'
+import { useCallback } from 'react'
 import { IUser } from '@/interface'
 import { useAuthStore } from '@/store/user-store'
 import { getAccountData } from '@/action/account'
@@ -66,12 +66,13 @@ export function useProfileRefresh() {
     }
   }, [setUser, user?.id])
 
-  // Auto refresh profile data on mount if user exists
-  useEffect(() => {
-    if (user && user.id) {
-      refreshProfile()
-    }
-  }, [refreshProfile, user?.id])
+  // Auto refresh disabled to reduce duplicate requests
+  // Components should call refreshProfile() explicitly when needed
+  // useEffect(() => {
+  //   if (user && user.id) {
+  //     refreshProfile()
+  //   }
+  // }, [refreshProfile, user?.id])
 
   return {
     refreshProfile,

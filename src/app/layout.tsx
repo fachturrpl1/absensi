@@ -24,6 +24,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { InstallPrompt } from "@/components/install-prompt";
 import { OfflineDetector } from "@/components/offline-detector";
 import { GlobalTitleManager } from "@/components/global-title-manager";
+import { AuthErrorHandler } from "@/components/auth-error-handler";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -194,6 +195,7 @@ export default async function RootLayout({
         <GlobalTitleManager />
         <InstallPrompt />
         <OfflineDetector />
+        <AuthErrorHandler />
         <UserProvider user={mappedUser} />
         {user && <PermissionInitializer userId={user.id} />}
         <TimezoneProvider timezone={timezone}>

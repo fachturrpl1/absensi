@@ -99,36 +99,76 @@ export async function middleware(req: NextRequest) {
   // Get user with error handling for malformed cookies
   let user = null
   let isOffline = false
+  let isRefreshTokenError = false
   
   try {
     const { data, error } = await supabase.auth.getUser()
     user = data?.user
 
     if (error) {
+      // "Auth session missing!" is a normal case when user is not logged in
+      const isSessionMissing = error.message === 'Auth session missing!'
+      
+      if (isSessionMissing) {
+        // This is normal - user has no active session, don't log or clear cookies
+        // The middleware will handle the redirect to login
+      } else {
+        const networkError = isNetworkError(error)
+        const refreshTokenError = 
+          (error.message?.toLowerCase().includes('refresh') && 
+           error.message?.toLowerCase().includes('token')) ||
+          error.message?.includes('Invalid Refresh Token') ||
+          (error.status === 400 && hasSessionCookie)
+        
+        isOffline = networkError && hasSessionCookie && !refreshTokenError
+        isRefreshTokenError = refreshTokenError
+        
+        if (isOffline) {
+          logger.warn("Supabase auth request failed due to network issues; assuming offline session")
+        } else if (isRefreshTokenError) {
+          logger.warn("Invalid refresh token detected, clearing auth cookies:", error.message)
+          authCookieNames.forEach((cookieName) => {
+            response.cookies.delete(cookieName)
+          })
+        } else {
+          logger.warn("Error getting user, clearing auth cookies:", error)
+          authCookieNames.forEach((cookieName) => {
+            response.cookies.delete(cookieName)
+          })
+        }
+      }
+    }
+  } catch (error: any) {
+    // "Auth session missing!" is a normal case when user is not logged in
+    const isSessionMissing = error?.message === 'Auth session missing!'
+    
+    if (isSessionMissing) {
+      // This is normal - user has no active session, don't log or clear cookies
+    } else {
       const networkError = isNetworkError(error)
-      isOffline = networkError && hasSessionCookie
+      const refreshTokenError = 
+        (error?.message?.toLowerCase().includes('refresh') && 
+         error?.message?.toLowerCase().includes('token')) ||
+        error?.message?.includes('Invalid Refresh Token') ||
+        (error?.status === 400 && hasSessionCookie)
+      
+      isOffline = networkError && hasSessionCookie && !refreshTokenError
+      isRefreshTokenError = refreshTokenError
       
       if (isOffline) {
-        logger.warn("Supabase auth request failed due to network issues; assuming offline session")
+        logger.warn("Supabase auth network failure, assuming offline session")
+      } else if (isRefreshTokenError) {
+        logger.warn("Invalid refresh token detected, clearing auth cookies:", error?.message)
+        authCookieNames.forEach((cookieName) => {
+          response.cookies.delete(cookieName)
+        })
       } else {
+        // If there's an error (likely due to malformed cookies), clear auth cookies
         logger.warn("Error getting user, clearing auth cookies:", error)
         authCookieNames.forEach((cookieName) => {
           response.cookies.delete(cookieName)
         })
       }
-    }
-  } catch (error) {
-    const networkError = isNetworkError(error)
-    isOffline = networkError && hasSessionCookie
-    
-    if (isOffline) {
-      logger.warn("Supabase auth network failure, assuming offline session")
-    } else {
-      // If there's an error (likely due to malformed cookies), clear auth cookies
-      logger.warn("Error getting user, clearing auth cookies:", error)
-      authCookieNames.forEach((cookieName) => {
-        response.cookies.delete(cookieName)
-      })
     }
   }
 
@@ -137,6 +177,12 @@ export async function middleware(req: NextRequest) {
   // Don't require auth for public pages
   const publicPaths = ["/auth", "/invite"]
   const isPublicPath = publicPaths.some((path) => pathname.startsWith(path))
+
+  // Handle refresh token error - redirect to login immediately
+  if (isRefreshTokenError && !isPublicPath) {
+    logger.warn("Redirecting to login due to invalid refresh token")
+    return NextResponse.redirect(new URL("/auth/login", req.url))
+  }
 
   // Handle offline session - show offline page instead of login redirect
   // CRITICAL: This must come BEFORE the "!user && !isPublicPath" check
