@@ -282,6 +282,33 @@ const securityHeaders = isDev ? [] : [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Optimize package imports to reduce bundle size
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-icons',
+      '@radix-ui/react-alert-dialog',
+      '@radix-ui/react-avatar',
+      '@radix-ui/react-checkbox',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tabs',
+      'recharts',
+      'date-fns',
+      'framer-motion',
+    ],
+    // Turbotrace for faster builds
+    turbotrace: {
+      logLevel: 'error',
+    },
+  },
+  
+  // Compiler optimizations
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
   poweredByHeader: false,
   reactStrictMode: true,
   
@@ -299,6 +326,9 @@ const nextConfig = {
   ],
   
   serverExternalPackages: ['@supabase/ssr', 'sharp'],
+  
+  // Disable standalone output to avoid Windows symlink permission issues
+  // output: 'standalone',
   
   experimental: {
     serverActions: {
@@ -323,6 +353,26 @@ const nextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      // Static assets caching
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      // Image optimization caching
+      {
+        source: '/_next/image/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=2592000, s-maxage=2592000, stale-while-revalidate=86400',
           },
         ],
       },
@@ -364,7 +414,7 @@ const nextConfig = {
     minimumCacheTTL: 60,
   },
   
-  output: 'standalone',
+  // output: 'standalone', // Disabled - causes Windows symlink permission errors
   
   ...(isDev && {
     devIndicators: {

@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/utils/supabase/client'
 import { useSession } from './use-session'
 
 interface OrganizationData {
@@ -23,43 +22,25 @@ export function useOrganizationData() {
     queryFn: async (): Promise<OrganizationData | null> => {
       if (!user?.id) return null
 
-      const supabase = createClient()
+      // ✅ USE SECURE API ROUTE - hides database structure
+      const response = await fetch('/api/organization/info', {
+        credentials: 'include',
+      })
 
-      // Single query to get all organization data
-      const { data: member, error } = await supabase
-        .from('organization_members')
-        .select(`
-          organization_id,
-          is_active,
-          organizations (
-            name,
-            time_format,
-            timezone,
-            is_active
-          )
-        `)
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (error) throw error
-      if (!member || !member.organizations) return null
-
-      const org = member.organizations as any
-
-      // Normalize time format to include 'h' suffix
-      const normalizeTimeFormat = (format: string | null | undefined): '12h' | '24h' => {
-        if (!format) return '24h'
-        if (format === '12' || format === '12h') return '12h'
-        return '24h'
+      if (!response.ok) {
+        if (response.status === 401) return null
+        throw new Error('Failed to fetch organization data')
       }
 
+      const { data } = await response.json()
+
       return {
-        organizationId: member.organization_id,
-        organizationName: org.name,
-        timeFormat: normalizeTimeFormat(org.time_format),
-        timezone: org.timezone || 'UTC',
-        isActive: org.is_active,
-        memberIsActive: member.is_active,
+        organizationId: data.id,
+        organizationName: data.name,
+        timeFormat: data.timeFormat,
+        timezone: data.timezone,
+        isActive: data.isActive,
+        memberIsActive: data.memberIsActive,
       }
     },
     enabled: !!user?.id,
