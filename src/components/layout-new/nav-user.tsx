@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { EllipsisVertical, CircleUser, Settings, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -39,7 +38,6 @@ interface UserProfile {
 
 export function NavUser() {
   const { isMobile } = useSidebar();
-  const router = useRouter();
   const [user, setUser] = useState<UserProfile>({
     name: 'Loading...',
     email: '',
@@ -120,10 +118,10 @@ export function NavUser() {
     if (isLoggingOut) return;
     
     setIsLoggingOut(true);
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push('/login');
-    router.refresh();
+    
+    // Import complete logout handler
+    const { handleCompleteLogout } = await import('@/utils/logout-handler');
+    await handleCompleteLogout();
   };
 
   return (

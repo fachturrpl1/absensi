@@ -1,34 +1,15 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { logout } from "@/action/users"
-import { useRouter } from "next/navigation"
 import { LogOut } from "lucide-react"
-import { useAuthStore } from "@/store/user-store"
 import { cn } from "@/lib/utils"
-import { useQueryClient } from "@tanstack/react-query"
 
 export default function LogoutButton({ className, compact }: { className?: string; compact?: boolean }) {
-  const router = useRouter()
-  const setUser = useAuthStore((state) => state.setUser)
-  const queryClient = useQueryClient()
-
-const handleLogout = async () => {
-  const result = await logout()
-  if (result.success) {
-    // Clear all React Query cache to prevent data leakage
-    queryClient.clear()
-    
-    // Clear user state
-    setUser(null)
-    
-    // Refresh server state and navigate
-    router.refresh()
-    router.replace("/auth/login")
-  } else {
-    alert(result.error)
+  const handleLogout = async () => {
+    // Use complete logout handler to clear all caches and state
+    const { handleCompleteLogout } = await import('@/utils/logout-handler')
+    await handleCompleteLogout()
   }
-}
 
   if (compact) {
     return (
