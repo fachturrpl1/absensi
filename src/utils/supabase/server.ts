@@ -16,17 +16,14 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              // Add error handling for malformed cookies
-              try {
-                cookieStore.set(name, value, options)
-              } catch (error) {
-                logger.warn(`Failed to set cookie ${name}:`, error)
-              }
+              // Silently attempt to set cookies
+              // This may fail in Server Components, which is expected
+              cookieStore.set(name, value, options)
             })
           } catch {
             // The `setAll` method was called from a Server Component.
             // This can be ignored if you have middleware refreshing
-            // user sessions.
+            // user sessions. Supabase will handle auth via middleware.
           }
         },
       },

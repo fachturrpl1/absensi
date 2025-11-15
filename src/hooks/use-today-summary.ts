@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useOrganizationId } from './use-organization-id'
 
 type TodaySummaryData = {
   totalMembers: number
@@ -10,8 +11,10 @@ type TodaySummaryData = {
 }
 
 export function useTodaySummary() {
+  const { data: organizationId } = useOrganizationId()
+  
   return useQuery({
-    queryKey: ['dashboard', 'today-summary'],
+    queryKey: ['dashboard', 'today-summary', organizationId],
     queryFn: async () => {
       const res = await fetch('/api/dashboard/today-summary', {
         credentials: 'same-origin',
@@ -23,6 +26,7 @@ export function useTodaySummary() {
       }
       return json.data as TodaySummaryData
     },
+    enabled: !!organizationId,
     staleTime: 1000 * 60 * 3, // 3 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes
     refetchOnWindowFocus: false,
