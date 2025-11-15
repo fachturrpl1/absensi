@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr"
 
 import { logger } from "@/lib/logger"
 
+
 const getProjectRef = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   return supabaseUrl?.split("//")[1]?.split(".")[0]
