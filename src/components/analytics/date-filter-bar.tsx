@@ -28,8 +28,8 @@ const DATE_PRESETS = [
   { label: 'Today', value: 'today', days: 0 },
   { label: 'Last 7 days', value: 'last7', days: 7 },
   { label: 'Last 30 days', value: 'last30', days: 30 },
-  { label: 'This week', value: 'thisWeek', special: 'week' },
-  { label: 'This month', value: 'thisMonth', special: 'month' },
+  { label: 'This year', value: 'thisYear', special: 'year' },
+  { label: 'Last year', value: 'lastYear', special: 'lastYear' },
 ];
 
 export function DateFilterBar({ dateRange, onDateRangeChange, className }: DateFilterBarProps) {
@@ -38,7 +38,7 @@ export function DateFilterBar({ dateRange, onDateRangeChange, className }: DateF
     today.setHours(23, 59, 59, 999); // End of today
     
     let from: Date;
-    const to: Date = new Date(today);
+    let to: Date = new Date(today);
 
     if (preset.value === 'today') {
       from = new Date(today);
@@ -52,6 +52,22 @@ export function DateFilterBar({ dateRange, onDateRangeChange, className }: DateF
       from = startOfMonth(today);
       from.setHours(0, 0, 0, 0);
       console.log('📅 This month selected:', { from, to });
+    } else if (preset.special === 'year') {
+      // Start of this year
+      from = new Date(today.getFullYear(), 0, 1);
+      from.setHours(0, 0, 0, 0);
+      // End of this year (today or Dec 31, whichever is earlier)
+      to = new Date(today);
+      to.setHours(23, 59, 59, 999);
+      console.log('📅 This year selected:', { from, to });
+    } else if (preset.special === 'lastYear') {
+      // Start of last year
+      from = new Date(today.getFullYear() - 1, 0, 1);
+      from.setHours(0, 0, 0, 0);
+      // End of last year
+      to = new Date(today.getFullYear() - 1, 11, 31);
+      to.setHours(23, 59, 59, 999);
+      console.log('📅 Last year selected:', { from, to });
     } else {
       from = new Date(today);
       from.setDate(from.getDate() - (preset.days || 0));

@@ -32,6 +32,32 @@ export async function handleCompleteLogout() {
       }
     }
 
+    // 4.5. Clear Service Worker Cache API (CRITICAL for API response caching)
+    if ('caches' in window) {
+      try {
+        const cacheNames = await caches.keys()
+        await Promise.all(
+          cacheNames.map(cacheName => caches.delete(cacheName))
+        )
+        console.log('Cleared all service worker caches:', cacheNames)
+      } catch (error) {
+        console.warn('Failed to clear service worker caches:', error)
+      }
+    }
+
+    // 4.6. Unregister Service Worker (force clean state)
+    if ('serviceWorker' in navigator) {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations()
+        await Promise.all(
+          registrations.map(registration => registration.unregister())
+        )
+        console.log('Unregistered service workers:', registrations.length)
+      } catch (error) {
+        console.warn('Failed to unregister service workers:', error)
+      }
+    }
+
     // 5. Clear all cookies (optional but recommended)
     if (typeof document !== 'undefined') {
       document.cookie.split(';').forEach(cookie => {

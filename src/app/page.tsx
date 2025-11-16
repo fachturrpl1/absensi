@@ -261,8 +261,8 @@ export default function ImprovedDashboard() {
       'today': 'Today',
       'last7': 'Last 7 Days',
       'last30': 'Last 30 Days',
-      'thisWeek': 'This Week',
-      'thisMonth': 'This Month',
+      'thisYear': 'This Year',
+      'lastYear': 'Last Year',
     };
     
     return labels[dateRange.preset] || 'Custom Range';
@@ -271,6 +271,7 @@ export default function ImprovedDashboard() {
   // Dynamic chart data based on filter
   const chartData = useMemo(() => {
     const isToday = dateRange.preset === 'today';
+    const isYearView = dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear';
     
     if (isToday) {
       // Hourly data for today
@@ -299,6 +300,32 @@ export default function ImprovedDashboard() {
         present: hourlyMap[hour]?.present || 0,
         late: hourlyMap[hour]?.late || 0,
         absent: hourlyMap[hour]?.absent || 0,
+      }));
+    } else if (isYearView) {
+      // Monthly data for year views
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthlyMap: Record<string, { present: number; late: number; absent: number }> = {};
+      
+      months.forEach(month => {
+        monthlyMap[month] = { present: 0, late: 0, absent: 0 };
+      });
+      
+      filteredRecords.forEach(record => {
+        const date = new Date(record.attendance_date);
+        const monthName = months[date.getMonth()];
+        
+        if (monthName && monthlyMap[monthName]) {
+          if (record.status === 'present') monthlyMap[monthName].present++;
+          else if (record.status === 'late') monthlyMap[monthName].late++;
+          else if (record.status === 'absent') monthlyMap[monthName].absent++;
+        }
+      });
+      
+      return months.map(month => ({
+        label: month,
+        present: monthlyMap[month]?.present || 0,
+        late: monthlyMap[month]?.late || 0,
+        absent: monthlyMap[month]?.absent || 0,
       }));
     } else {
       // Daily data for other periods
@@ -419,11 +446,18 @@ export default function ImprovedDashboard() {
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2 text-foreground">
                     <BarChart3 className="w-5 h-5 text-primary" />
-                    {dateRange.preset === 'today' ? 'Hourly Attendance' : 'Attendance Trend'}
+                    {dateRange.preset === 'today' 
+                      ? 'Hourly Attendance' 
+                      : (dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear')
+                      ? 'Monthly Attendance'
+                      : 'Attendance Trend'
+                    }
                   </CardTitle>
                   <CardDescription className="text-muted-foreground">
                     {dateRange.preset === 'today' 
-                      ? 'Check-in patterns throughout the day' 
+                      ? 'Check-in patterns throughout the day'
+                      : (dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear')
+                      ? `Monthly attendance patterns for ${getFilterLabel().toLowerCase()}`
                       : `Attendance patterns for ${getFilterLabel().toLowerCase()}`
                     }
                   </CardDescription>

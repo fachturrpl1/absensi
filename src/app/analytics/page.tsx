@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Users, Clock, Target,
-  Building2, BarChart3, PieChart, Activity,
+  Building2, BarChart3, Activity,
   CheckCircle2, XCircle, Award, Timer
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -125,15 +125,20 @@ export default function AnalyticsPage() {
   }, []);
 
   const getFilterLabel = () => {
-    if (!dateRange.preset) return 'Custom Range';
+    if (!dateRange.preset) {
+      // Generate label from actual date range
+      const fromDate = format(dateRange.from, 'MMM dd');
+      const toDate = format(dateRange.to, 'MMM dd, yyyy');
+      return `${fromDate} - ${toDate}`;
+    }
     const labels: Record<string, string> = {
       'today': 'Today',
       'last7': 'Last 7 Days',
       'last30': 'Last 30 Days',
-      'thisWeek': 'This Week',
-      'thisMonth': 'This Month',
+      'thisYear': 'This Year',
+      'lastYear': 'Last Year',
     };
-    return labels[dateRange.preset] || 'Custom Range';
+    return labels[dateRange.preset] || format(dateRange.from, 'MMM dd') + ' - ' + format(dateRange.to, 'MMM dd, yyyy');
   };
 
   const filteredRecords = useMemo(() => {
@@ -185,23 +190,35 @@ export default function AnalyticsPage() {
     };
   }, [filteredRecords]);
 
-  // Status distribution
+  // Status distribution - always show all statuses
   const statusData = useMemo(() => {
-    if (!metrics) return [];
+    if (!metrics) {
+      return [
+        { name: 'Present', value: 0, color: COLORS.present },
+        { name: 'Late', value: 0, color: COLORS.late },
+        { name: 'Absent', value: 0, color: COLORS.absent },
+        { name: 'Leave', value: 0, color: COLORS.leave },
+      ];
+    }
     return [
       { name: 'Present', value: metrics.presentCount, color: COLORS.present },
       { name: 'Late', value: metrics.lateCount, color: COLORS.late },
       { name: 'Absent', value: metrics.absentCount, color: COLORS.absent },
       { name: 'Leave', value: metrics.leaveCount, color: COLORS.leave },
-    ].filter(item => item.value > 0);
+    ];
   }, [metrics]);
 
-  // Daily trend
+  // Daily trend - supports both daily and monthly views
   const dailyTrend = useMemo(() => {
+    const isYearView = dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear';
     const dateMap: Record<string, { present: number; late: number; absent: number }> = {};
     
     filteredRecords.forEach(record => {
-      const dateKey = format(new Date(record.attendance_date), 'MMM dd');
+      // For year views, group by month; otherwise by day
+      const dateKey = isYearView 
+        ? format(new Date(record.attendance_date), 'MMM')
+        : format(new Date(record.attendance_date), 'MMM dd');
+      
       if (!dateMap[dateKey]) {
         dateMap[dateKey] = { present: 0, late: 0, absent: 0 };
       }
@@ -210,15 +227,24 @@ export default function AnalyticsPage() {
       else if (record.status === 'absent') dateMap[dateKey].absent++;
     });
 
-    return Object.entries(dateMap)
-      .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
-      .slice(-14) // Last 14 days
-      .map(([date, data]) => ({
-        date,
-        ...data,
-        total: data.present + data.late + data.absent,
-      }));
-  }, [filteredRecords]);
+    const sortedEntries = Object.entries(dateMap).sort(([a], [b]) => {
+      if (isYearView) {
+        // Sort by month order
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return months.indexOf(a) - months.indexOf(b);
+      }
+      return new Date(a).getTime() - new Date(b).getTime();
+    });
+
+    // For daily view, show last 14 days; for year view, show all months
+    const slicedEntries = isYearView ? sortedEntries : sortedEntries.slice(-14);
+    
+    return slicedEntries.map(([date, data]) => ({
+      date,
+      ...data,
+      total: data.present + data.late + data.absent,
+    }));
+  }, [filteredRecords, dateRange.preset]);
 
   // Department performance
   const departmentData = useMemo(() => {
@@ -341,82 +367,70 @@ export default function AnalyticsPage() {
           <Badge variant="outline" className="ml-auto">{getFilterLabel()}</Badge>
         </div>
         
-        {metrics ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  Attendance Rate
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-green-600">{metrics.attendanceRate.toFixed(1)}%</div>
-                <Progress value={metrics.attendanceRate} className="mt-2 h-2" />
-                <p className="text-xs text-muted-foreground mt-2">
-                  {metrics.presentCount + metrics.lateCount} of {metrics.total} attended
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Timer className="w-4 h-4 text-blue-600" />
-                  Punctuality Rate
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-blue-600">{metrics.punctualityRate.toFixed(1)}%</div>
-                <Progress value={metrics.punctualityRate} className="mt-2 h-2" />
-                <p className="text-xs text-muted-foreground mt-2">
-                  {metrics.presentCount} on-time arrivals
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-orange-500 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/20 dark:to-background">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-orange-600" />
-                  Avg Work Hours
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-orange-600">{metrics.avgWorkHours.toFixed(1)}h</div>
-                <p className="text-xs text-muted-foreground mt-4">
-                  Per member per day average
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-red-500 bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <XCircle className="w-4 h-4 text-red-600" />
-                  Absenteeism Rate
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-red-600">{metrics.absenteeismRate.toFixed(1)}%</div>
-                <Progress value={metrics.absenteeismRate} className="mt-2 h-2" />
-                <p className="text-xs text-muted-foreground mt-2">
-                  {metrics.absentCount} absences recorded
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <Card>
-            <CardContent className="py-12">
-              <EmptyState
-                icon={BarChart3}
-                title="No data available"
-                description={`No attendance records found for ${getFilterLabel().toLowerCase()}. Adjust your date range to see metrics.`}
-              />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-green-600" />
+                Attendance Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600">{metrics?.attendanceRate.toFixed(1) || '0.0'}%</div>
+              <Progress value={metrics?.attendanceRate || 0} className="mt-2 h-2" />
+              <p className="text-xs text-muted-foreground mt-2">
+                {metrics ? `${metrics.presentCount + metrics.lateCount} of ${metrics.total} attended` : 'No data available'}
+              </p>
             </CardContent>
           </Card>
-        )}
+
+          <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Timer className="w-4 h-4 text-blue-600" />
+                Punctuality Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-600">{metrics?.punctualityRate.toFixed(1) || '0.0'}%</div>
+              <Progress value={metrics?.punctualityRate || 0} className="mt-2 h-2" />
+              <p className="text-xs text-muted-foreground mt-2">
+                {metrics ? `${metrics.presentCount} on-time arrivals` : 'No data available'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-orange-500 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/20 dark:to-background">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Clock className="w-4 h-4 text-orange-600" />
+                Avg Work Hours
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-orange-600">{metrics?.avgWorkHours.toFixed(1) || '0.0'}h</div>
+              <p className="text-xs text-muted-foreground mt-4">
+                {metrics ? 'Per member per day average' : 'No data available'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-red-500 bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <XCircle className="w-4 h-4 text-red-600" />
+                Absenteeism Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-red-600">{metrics?.absenteeismRate.toFixed(1) || '0.0'}%</div>
+              <Progress value={metrics?.absenteeismRate || 0} className="mt-2 h-2" />
+              <p className="text-xs text-muted-foreground mt-2">
+                {metrics ? `${metrics.absentCount} absences recorded` : 'No data available'}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </motion.div>
 
       {/* SECTION 3: ATTENDANCE TRENDS */}
@@ -430,11 +444,19 @@ export default function AnalyticsPage() {
           <h2 className="text-xl font-semibold">Attendance Trends</h2>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Daily Trend Chart */}
+          {/* Daily/Monthly Trend Chart */}
           <Card className="border-border">
             <CardHeader>
-              <CardTitle className="text-base">Daily Attendance Trend</CardTitle>
-              <CardDescription>Last 14 days attendance pattern</CardDescription>
+              <CardTitle className="text-base">
+                {dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear' 
+                  ? 'Monthly Attendance Trend' 
+                  : 'Daily Attendance Trend'}
+              </CardTitle>
+              <CardDescription>
+                {dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear'
+                  ? `Attendance pattern for ${getFilterLabel().toLowerCase()}`
+                  : 'Last 14 days attendance pattern'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {dailyTrend.length > 0 ? (
@@ -477,45 +499,35 @@ export default function AnalyticsPage() {
               <CardDescription>Breakdown by attendance status</CardDescription>
             </CardHeader>
             <CardContent>
-              {statusData.length > 0 ? (
-                <div className="flex flex-col gap-4">
-                  <ResponsiveContainer width="100%" height={200}>
-                    <RechartPie>
-                      <Pie
-                        data={statusData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={2}
-                        dataKey="value"
-                      >
-                        {statusData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </RechartPie>
-                  </ResponsiveContainer>
-                  <div className="grid grid-cols-2 gap-2">
-                    {statusData.map((item) => (
-                      <div key={item.name} className="flex items-center gap-2 text-sm">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="text-muted-foreground">{item.name}:</span>
-                        <span className="font-semibold">{item.value}</span>
-                      </div>
-                    ))}
-                  </div>
+              <div className="flex flex-col gap-4">
+                <ResponsiveContainer width="100%" height={200}>
+                  <RechartPie>
+                    <Pie
+                      data={statusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </RechartPie>
+                </ResponsiveContainer>
+                <div className="grid grid-cols-2 gap-2">
+                  {statusData.map((item) => (
+                    <div key={item.name} className="flex items-center gap-2 text-sm">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-muted-foreground">{item.name}:</span>
+                      <span className="font-semibold">{item.value}</span>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <div className="h-[200px] flex items-center justify-center">
-                  <EmptyState
-                    icon={PieChart}
-                    title="No distribution data"
-                    description="No status breakdown available"
-                  />
-                </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -571,55 +583,53 @@ export default function AnalyticsPage() {
       </motion.div>
 
       {/* SECTION 5: ADDITIONAL METRICS */}
-      {metrics && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <BarChart3 className="w-5 h-5 text-primary" />
-            <h2 className="text-xl font-semibold">Additional Insights</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Active Members</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{metrics.activeMembers}</div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Unique members with attendance records
-                </p>
-              </CardContent>
-            </Card>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <BarChart3 className="w-5 h-5 text-primary" />
+          <h2 className="text-xl font-semibold">Additional Insights</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="border-border">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Active Members</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{metrics?.activeMembers || 0}</div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {metrics ? 'Unique members with attendance records' : 'No data available'}
+              </p>
+            </CardContent>
+          </Card>
 
-            <Card className="border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Work Hours</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{metrics.totalWorkHours.toFixed(0)}h</div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Combined hours for the period
-                </p>
-              </CardContent>
-            </Card>
+          <Card className="border-border">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Work Hours</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{metrics?.totalWorkHours.toFixed(0) || '0'}h</div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {metrics ? 'Combined hours for the period' : 'No data available'}
+              </p>
+            </CardContent>
+          </Card>
 
-            <Card className="border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Avg Late Time</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{metrics.avgLateMinutes.toFixed(0)} min</div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Average lateness when late
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </motion.div>
-      )}
+          <Card className="border-border">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Avg Late Time</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{metrics?.avgLateMinutes.toFixed(0) || '0'} min</div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {metrics ? 'Average lateness when late' : 'No data available'}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </motion.div>
     </div>
   );
 }
