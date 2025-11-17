@@ -55,7 +55,10 @@ export async function GET(_request: NextRequest) {
       },
       {
         headers: {
-          'Cache-Control': 'private, max-age=3600, s-maxage=3600', // 1 hour cache
+          // ✅ CRITICAL: No browser cache to prevent stale organization data when switching accounts
+          'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
       }
     )

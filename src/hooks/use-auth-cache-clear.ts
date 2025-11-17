@@ -42,6 +42,7 @@ export function useAuthCacheClear() {
       setPermissions([])
       
       // Invalidate all queries that should be organization-specific
+      queryClient.invalidateQueries({ queryKey: ['organization'] }) // ✅ CRITICAL: Clear organization data query
       queryClient.invalidateQueries({ queryKey: ['members'] })
       queryClient.invalidateQueries({ queryKey: ['groups'] })
       queryClient.invalidateQueries({ queryKey: ['positions'] })

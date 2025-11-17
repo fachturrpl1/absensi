@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useOrganizationName } from '@/hooks/use-organization-name';
 // Removed unused spotlight components
 import {
@@ -161,7 +162,7 @@ export default function ImprovedDashboard() {
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isLoading, setIsLoading] = useState(true);
-  const { organizationName } = useOrganizationName();
+  const { organizationName, loading: orgLoading } = useOrganizationName();
   
   // Date filter state
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
@@ -373,9 +374,13 @@ export default function ImprovedDashboard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Dashboard{organizationName && ` — ${organizationName}`}
-          </h1>
+          {orgLoading ? (
+            <Skeleton className="h-9 w-80 mb-2" />
+          ) : (
+            <h1 className="text-3xl font-bold tracking-tight">
+              Dashboard{organizationName && ` — ${organizationName}`}
+            </h1>
+          )}
           <p className="text-muted-foreground text-sm mt-1">
             {format(currentTime, 'EEEE, MMMM dd, yyyy • HH:mm:ss')}
           </p>
