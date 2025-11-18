@@ -1131,6 +1131,7 @@ Get organization info.
 #### `GET /api/positions`
 Get positions list.
 
+
 #### `GET /api/groups`
 Get groups (departments).
 
