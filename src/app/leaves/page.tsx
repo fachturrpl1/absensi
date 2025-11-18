@@ -64,7 +64,8 @@ export default function LeavesPage() {
   
   const { role, permissions } = useUserStore();
   const { organizationId } = useOrgStore();
-  const isAdmin = role === 'ADMIN_ORG' || role === 'SUPER_ADMIN';
+  // Role codes: A001 = Admin Org, SA001 = Super Admin
+  const isAdmin = role === 'A001' || role === 'SA001';
   const canManageLeaveTypes = permissions?.includes('leaves:type:manage') || isAdmin;
   const canViewAllRequests = permissions?.includes('leaves:request:read_all') || isAdmin;
   const canApproveRequests = permissions?.includes('leaves:approval:create') || isAdmin;

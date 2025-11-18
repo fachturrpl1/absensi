@@ -69,12 +69,14 @@ Setelah login ulang:
 
 ## Role Codes di Sistem
 
+⚠️ **PENTING**: Role code di database menggunakan format singkat!
+
 | Role Code | Role Name | Akses Manage Types |
 |-----------|-----------|-------------------|
-| `SUPER_ADMIN` | Super Admin | ✅ Yes |
-| `ADMIN_ORG` | Admin Organization | ✅ Yes |
-| `MANAGER` | Manager | ❌ No |
-| `USER` | User/Employee | ❌ No |
+| `SA001` | Super Admin | ✅ Yes |
+| `A001` | Admin Organization | ✅ Yes |
+| `M001` | Manager | ❌ No |
+| `S001` | User/Employee | ❌ No |
 
 ## Troubleshooting
 
@@ -84,9 +86,9 @@ Setelah login ulang:
 
 1. **Role di database belum diupdate**
    ```sql
-   -- Update role menjadi ADMIN_ORG
+   -- Update role menjadi Admin Org (A001)
    UPDATE organization_members
-   SET role_id = (SELECT id FROM system_roles WHERE code = 'ADMIN_ORG')
+   SET role_id = (SELECT id FROM system_roles WHERE code = 'A001')
    WHERE user_id = (SELECT id FROM user_profiles WHERE email = 'ahmad.husni@example.com');
    ```
 
@@ -120,7 +122,8 @@ Cek browser console untuk error message. Kemungkinan:
 ### Permission Check di Sidebar (`app-sidebar-new.tsx`)
 ```typescript
 const { role, permissions } = useUserStore();
-const isAdmin = role === 'ADMIN_ORG' || role === 'SUPER_ADMIN';
+// Role codes: A001 = Admin Org, SA001 = Super Admin
+const isAdmin = role === 'A001' || role === 'SA001';
 const canManageLeaveTypes = permissions?.includes('leaves:type:manage') || isAdmin;
 
 // Menu hanya muncul jika canManageLeaveTypes = true
@@ -139,15 +142,15 @@ item.subItems?.filter(subItem => {
 
 ## Testing Checklist
 
-- [ ] Database: Role = ADMIN_ORG atau SUPER_ADMIN
+- [ ] Database: Role code = `A001` (Admin Org) atau `SA001` (Super Admin)
 - [ ] Database: is_active = true
 - [ ] Logout dari aplikasi
 - [ ] Clear browser cache (optional)
 - [ ] Login ulang dengan ahmad.husni@example.com
-- [ ] Buka browser console, cek `useAuthStore.getState().role`
-- [ ] Role harus = 'ADMIN_ORG' atau 'SUPER_ADMIN'
+- [ ] Buka browser console (F12), cek `useAuthStore.getState().role`
+- [ ] Role harus = `'A001'` atau `'SA001'`
 - [ ] Buka sidebar menu "Leaves"
-- [ ] Menu "Manage Types" harus muncul
+- [ ] Menu "Manage Types" harus muncul ✅
 - [ ] Klik "Manage Types" → Redirect ke `/leaves/types`
 
 ## Kontak Support

@@ -22,7 +22,8 @@ export default function LeaveTypesPage() {
   const { organizationId } = useOrgStore();
   const router = useRouter();
   
-  const isAdmin = role === 'ADMIN_ORG' || role === 'SUPER_ADMIN';
+  // Role codes: A001 = Admin Org, SA001 = Super Admin
+  const isAdmin = role === 'A001' || role === 'SA001';
   const canManageLeaveTypes = permissions?.includes('leaves:type:manage') || isAdmin;
 
   // Load leave types

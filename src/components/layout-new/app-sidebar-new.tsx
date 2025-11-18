@@ -142,8 +142,15 @@ const getSidebarGroups = (): NavGroup[] => [
 function NavMain({ items }: { items: NavMainItem[] }) {
   const pathname = usePathname();
   const { role, permissions } = useUserStore();
-  const isAdmin = role === 'ADMIN_ORG' || role === 'SUPER_ADMIN';
+  
+  // Debug logging
+  console.log('🔍 Sidebar Debug:', { role, permissions });
+  
+  // Role codes: A001 = Admin Org, SA001 = Super Admin
+  const isAdmin = role === 'A001' || role === 'SA001';
   const canManageLeaveTypes = permissions?.includes('leaves:type:manage') || isAdmin;
+  
+  console.log('✅ Admin Check:', { isAdmin, canManageLeaveTypes });
 
   return (
     <SidebarMenu>

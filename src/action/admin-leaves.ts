@@ -36,7 +36,8 @@ async function checkAdminPermission(organizationId: number) {
     return { error: "Member not found", hasPermission: false };
   }
   
-  const isAdmin = member.role?.code === 'ADMIN_ORG' || member.role?.code === 'SUPER_ADMIN';
+  // Role codes: A001 = Admin Org, SA001 = Super Admin
+  const isAdmin = member.role?.code === 'A001' || member.role?.code === 'SA001';
   
   if (!isAdmin) {
     return { error: "Permission denied", hasPermission: false };
