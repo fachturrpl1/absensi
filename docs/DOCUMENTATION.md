@@ -1137,6 +1137,7 @@ Get groups (departments).
 #### `POST /api/log-client-error`
 Log client-side errors untuk monitoring.
 
+
 **Request Body**:
 ```json
 {
