@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useUserStore } from '@/store/user-store';
 import {
   LayoutDashboard,
   Users,
@@ -15,6 +16,9 @@ import {
   FileText,
   Command,
   ChevronRight,
+  CalendarDays,
+  Plus,
+  ListChecks,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -44,6 +48,7 @@ interface NavSubItem {
   url: string;
   icon?: any;
   badge?: string;
+  requiresAdmin?: boolean;
 }
 
 interface NavMainItem {
@@ -59,7 +64,7 @@ interface NavGroup {
   items: NavMainItem[];
 }
 
-const sidebarGroups: NavGroup[] = [
+const getSidebarGroups = (): NavGroup[] => [
   {
     label: 'Overview',
     items: [
@@ -103,9 +108,12 @@ const sidebarGroups: NavGroup[] = [
       },
       {
         title: 'Leaves',
-        url: '/leaves',
-        icon: FileText,
-        badge: 'Beta',
+        icon: CalendarDays,
+        subItems: [
+          { title: 'Dashboard', url: '/leaves', icon: BarChart3 },
+          { title: 'New Request', url: '/leaves/new', icon: Plus },
+          { title: 'Manage Types', url: '/leaves/types', icon: ListChecks, requiresAdmin: true },
+        ],
       },
     ],
   },
@@ -133,6 +141,9 @@ const sidebarGroups: NavGroup[] = [
 
 function NavMain({ items }: { items: NavMainItem[] }) {
   const pathname = usePathname();
+  const { role, permissions } = useUserStore();
+  const isAdmin = role === 'ADMIN_ORG' || role === 'SUPER_ADMIN';
+  const canManageLeaveTypes = permissions?.includes('leaves:type:manage') || isAdmin;
 
   return (
     <SidebarMenu>
@@ -158,7 +169,13 @@ function NavMain({ items }: { items: NavMainItem[] }) {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub>
-                    {item.subItems?.map((subItem) => {
+                    {item.subItems?.filter(subItem => {
+                      // Filter out admin-only items if user is not admin
+                      if (subItem.requiresAdmin && !canManageLeaveTypes) {
+                        return false;
+                      }
+                      return true;
+                    }).map((subItem) => {
                       const isSubActive = subItem.url === pathname;
                       return (
                         <SidebarMenuSubItem key={subItem.title}>
@@ -204,6 +221,8 @@ function NavMain({ items }: { items: NavMainItem[] }) {
 }
 
 export function AppSidebarNew({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const sidebarGroups = getSidebarGroups();
+  
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>

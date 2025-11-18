@@ -55,6 +55,10 @@ export function LoginForm() {
     } else {
       useAuthStore.getState().setUser(result.user);
       useAuthStore.getState().setPermissions(result.permissions!.map((p) => p.code));
+      // Set role from organization_members if available
+      if ('orgRole' in result && result.orgRole) {
+        useAuthStore.getState().setRole(result.orgRole);
+      }
       router.push("/");
     }
   };
