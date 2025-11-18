@@ -109,6 +109,19 @@ export async function login(formData: FormData) {
 
   if (profileError) return { success: false, message: profileError.message }
 
+  // Get organization role
+  const { data: orgMember } = await supabase
+    .from("organization_members")
+    .select(`
+      role:system_roles(code, name)
+    `)
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .maybeSingle()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orgRole = orgMember?.role ? (Array.isArray(orgMember.role) ? orgMember.role[0]?.code : (orgMember.role as any)?.code) : null
+
   const { data: rolesData, error: roleError } = await supabase
     .from("user_roles")
     .select("role:system_roles(id, name)")
@@ -151,6 +164,7 @@ export async function login(formData: FormData) {
     },
     roles,
     permissions,
+    orgRole, // Organization role code (e.g., 'ADMIN_ORG', 'SUPER_ADMIN')
   }
 }
 

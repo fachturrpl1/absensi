@@ -19,6 +19,10 @@ import {
   PanelsTopLeft,
   ChevronsLeft,
   ChevronsRight,
+  CalendarDays,
+  FileText,
+  BarChart3,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -76,6 +80,15 @@ const menuItems: MenuItem[] = [
     children: [
       { title: 'Work Schedules', href: '/schedule', icon: Calendar },
       { title: 'Member Schedules', href: '/member-schedules', icon: Users },
+    ],
+  },
+  {
+    title: 'Leaves',
+    icon: CalendarDays,
+    children: [
+      { title: 'Dashboard', href: '/leaves', icon: BarChart3 },
+      { title: 'New Request', href: '/leaves/new', icon: Plus },
+  
     ],
   },
   {
