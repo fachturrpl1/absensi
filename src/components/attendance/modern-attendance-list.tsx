@@ -61,6 +61,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
+import { formatLocalTime } from '@/utils/timezone';
 
 interface ModernAttendanceListProps {
   initialData?: any[];
@@ -71,15 +72,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
-  const [stats, setStats] = useState({
-    total: 0,
-    present: 0,
-    late: 0,
-    absent: 0,
-    onLeave: 0,
-    avgWorkHours: '0h',
-    attendanceRate: 0,
-  });
+  const [userTimezone, setUserTimezone] = useState('UTC');
   
   // Date filter state (same as Dashboard)
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
@@ -128,6 +121,36 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       return matchDate && matchSearch && matchStatus && matchDepartment && matchLocation;
     });
   }, [attendanceData, dateRange, searchQuery, statusFilter, departmentFilter, locationFilter]);
+
+  // Calculate stats from filtered data (based on date range)
+  const filteredStats = useMemo(() => {
+    // First filter only by date range (ignore status filter for stats calculation)
+    const dateFilteredData = attendanceData.filter((record: any) => {
+      const recordDate = new Date(record.date);
+      recordDate.setHours(0, 0, 0, 0);
+      const fromDate = new Date(dateRange.from);
+      fromDate.setHours(0, 0, 0, 0);
+      const toDate = new Date(dateRange.to);
+      toDate.setHours(23, 59, 59, 999);
+      
+      return recordDate >= fromDate && recordDate <= toDate;
+    });
+
+    const present = dateFilteredData.filter((r: any) => r.status === 'present').length;
+    const late = dateFilteredData.filter((r: any) => r.status === 'late').length;
+    const absent = dateFilteredData.filter((r: any) => r.status === 'absent').length;
+    const total = dateFilteredData.length;
+
+    return {
+      total,
+      present,
+      late,
+      absent,
+      onLeave: 0,
+      avgWorkHours: '8.5h',
+      attendanceRate: total > 0 ? Math.round((present / total) * 100) : 0,
+    };
+  }, [attendanceData, dateRange]);
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -228,10 +251,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           return;
         }
 
-        // Get organization_id
+        // Get organization_id and timezone
         const { data: orgMember } = await supabase
           .from('organization_members')
-          .select('organization_id')
+          .select('organization_id, organizations!inner(timezone)')
           .eq('user_id', user.id)
           .single();
 
@@ -239,6 +262,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           setLoading(false);
           return;
         }
+
+        // Set user timezone from organization
+        const timezone = (orgMember as any).organizations?.timezone || 'UTC';
+        setUserTimezone(timezone);
 
         // Fetch attendance records with organization filter through organization_members
         const { data: records, error } = await supabase
@@ -271,8 +298,8 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             department: r.organization_members?.departments?.name || 'No Department',
           },
           date: r.attendance_date,
-          checkIn: r.actual_check_in || '-',
-          checkOut: r.actual_check_out || '-',
+          checkIn: r.actual_check_in || null,
+          checkOut: r.actual_check_out || null,
           workHours: r.work_duration_minutes ? `${Math.floor(r.work_duration_minutes / 60)}h ${r.work_duration_minutes % 60}m` : '0h',
           status: r.status,
           overtime: '',
@@ -287,21 +314,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           transformed.map((r: any) => r.employee.department)
         )).filter(dept => dept && dept !== 'No Department').sort();
         setDepartments(uniqueDepts);
-
-        // Calculate stats
-        const present = records.filter((r: any) => r.status === 'present').length;
-        const late = records.filter((r: any) => r.status === 'late').length;
-        const absent = records.filter((r: any) => r.status === 'absent').length;
-
-        setStats({
-          total: records.length,
-          present,
-          late,
-          absent,
-          onLeave: 0,
-          avgWorkHours: '8.5h',
-          attendanceRate: records.length > 0 ? Math.round((present / records.length) * 100) : 0,
-        });
         }
       } catch (error) {
         console.error('Error in fetchRealtimeData:', error);
@@ -354,61 +366,88 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         </div>
       </div>
 
-      {/* Summary Stats */}
+      {/* Summary Stats - Interactive Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="relative overflow-hidden">
+        <Card 
+          className={cn(
+            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
+            statusFilter === 'present' && "ring-2 ring-green-500"
+          )}
+          onClick={() => {
+            console.log('Present card clicked! Current filter:', statusFilter);
+            setStatusFilter(statusFilter === 'present' ? 'all' : 'present');
+          }}
+        >
           <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent" />
           <CardHeader className="relative flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Present</CardTitle>
             <UserCheck className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent className="relative">
-            <div className="text-2xl font-bold">{stats.present}</div>
+            <div className="text-2xl font-bold">{filteredStats.present}</div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <TrendingUp className="h-3 w-3 text-green-600" />
-              <span>{stats.attendanceRate}% of total</span>
+              <span>{filteredStats.attendanceRate}% of total</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden">
+        <Card 
+          className={cn(
+            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
+            statusFilter === 'late' && "ring-2 ring-amber-500"
+          )}
+          onClick={() => setStatusFilter(statusFilter === 'late' ? 'all' : 'late')}
+        >
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent" />
           <CardHeader className="relative flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Late Arrivals</CardTitle>
             <Timer className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent className="relative">
-            <div className="text-2xl font-bold">{stats.late}</div>
+            <div className="text-2xl font-bold">{filteredStats.late}</div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <span>{((stats.late / stats.total) * 100).toFixed(1)}% of total</span>
+              <span>{filteredStats.total > 0 ? ((filteredStats.late / filteredStats.total) * 100).toFixed(1) : '0.0'}% of total</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden">
+        <Card 
+          className={cn(
+            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
+            statusFilter === 'absent' && "ring-2 ring-red-500"
+          )}
+          onClick={() => setStatusFilter(statusFilter === 'absent' ? 'all' : 'absent')}
+        >
           <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent" />
           <CardHeader className="relative flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Absent</CardTitle>
             <UserX className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent className="relative">
-            <div className="text-2xl font-bold">{stats.absent}</div>
+            <div className="text-2xl font-bold">{filteredStats.absent}</div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <TrendingDown className="h-3 w-3 text-green-600" />
-              <span>Down from yesterday</span>
+              <span>Click to filter</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden">
+        <Card 
+          className={cn(
+            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
+            statusFilter === 'all' && "ring-2 ring-blue-500"
+          )}
+          onClick={() => setStatusFilter('all')}
+        >
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent" />
           <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Avg Work Hours</CardTitle>
+            <CardTitle className="text-sm font-medium">All Records</CardTitle>
             <Clock className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent className="relative">
-            <div className="text-2xl font-bold">{stats.avgWorkHours}</div>
-            <Progress value={85} className="h-1 mt-2" />
+            <div className="text-2xl font-bold">{filteredStats.total}</div>
+            <Progress value={100} className="h-1 mt-2" />
           </CardContent>
         </Card>
       </div>
@@ -742,10 +781,14 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className="font-mono text-sm">{record.checkIn}</span>
+                        <span className="font-mono text-sm">
+                          {formatLocalTime(record.checkIn, userTimezone, '24h', true)}
+                        </span>
                       </td>
                       <td className="p-4">
-                        <span className="font-mono text-sm">{record.checkOut}</span>
+                        <span className="font-mono text-sm">
+                          {formatLocalTime(record.checkOut, userTimezone, '24h', true)}
+                        </span>
                       </td>
                       <td className="p-4">
                         <div className="flex flex-col gap-1">
@@ -915,11 +958,15 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-muted-foreground">Check In</p>
-                      <p className="font-mono font-medium">{record.checkIn}</p>
+                      <p className="font-mono font-medium">
+                        {formatLocalTime(record.checkIn, userTimezone, '24h', true)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Check Out</p>
-                      <p className="font-mono font-medium">{record.checkOut}</p>
+                      <p className="font-mono font-medium">
+                        {formatLocalTime(record.checkOut, userTimezone, '24h', true)}
+                      </p>
                     </div>
                   </div>
                   <Separator />
