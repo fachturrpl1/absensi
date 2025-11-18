@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { login, signInWithGoogle } from "@/action/users";
 import { useAuthStore } from "@/store/user-store";
+import { GoogleIcon } from "@/components/ui/google-icon";
 
 const FormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -92,13 +92,7 @@ export function LoginForm() {
             "Connecting to Google..."
           ) : (
             <>
-              <Image
-                src="/google-logo.png"
-                alt="Google"
-                width={16}
-                height={16}
-                className="mr-2"
-              />
+              <GoogleIcon size={20} className="mr-2" />
               Continue with Google
             </>
           )}

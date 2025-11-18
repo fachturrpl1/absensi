@@ -5,12 +5,12 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { signUp, signInWithGoogle } from "@/action/users";
+import { GoogleIcon } from "@/components/ui/google-icon";
 
 const FormSchema = z
   .object({
@@ -100,13 +100,7 @@ export function SignUp() {
                 "Connecting to Google..."
               ) : (
                 <>
-                  <Image
-                    src="/google-logo.png"
-                    alt="Google"
-                    width={16}
-                    height={16}
-                    className="mr-2"
-                  />
+                  <GoogleIcon size={20} className="mr-2" />
                   Continue with Google
                 </>
               )}
