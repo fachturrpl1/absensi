@@ -15,11 +15,6 @@ import {
   Moon,
   Monitor,
   Command,
-  Home,
-  Users,
-  ClipboardList,
-  Calendar,
-  BarChart3,
   Plus,
   UserPlus,
   MapPin,
@@ -53,39 +48,7 @@ export function NavbarWithShortcuts({ onMenuClick, isMobile }: NavbarWithShortcu
   const { theme, setTheme } = useTheme();
   const [notificationCount] = useState(3);
 
-  // Quick access shortcuts
-  const shortcuts = [
-    {
-      icon: Home,
-      label: 'Dashboard',
-      href: '/',
-      shortcut: '⌘D',
-    },
-    {
-      icon: Users,
-      label: 'Members',
-      href: '/members',
-      shortcut: '⌘M',
-    },
-    {
-      icon: ClipboardList,
-      label: 'Attendance',
-      href: '/attendance',
-      shortcut: '⌘A',
-    },
-    {
-      icon: Calendar,
-      label: 'Schedules',
-      href: '/schedule',
-      shortcut: '⌘S',
-    },
-    {
-      icon: BarChart3,
-      label: 'Analytics',
-      href: '/analytics',
-      shortcut: '⌘R',
-    },
-  ];
+
 
   const quickActions = [
     {
@@ -125,26 +88,6 @@ export function NavbarWithShortcuts({ onMenuClick, isMobile }: NavbarWithShortcu
         >
           <Menu className="h-5 w-5" />
         </Button>
-
-        {/* Quick Access Shortcuts - Desktop Only */}
-        {!isMobile && (
-          <div className="hidden lg:flex items-center gap-1 border-r pr-4">
-            {shortcuts.map((shortcut) => (
-              <Button
-                key={shortcut.href}
-                variant="ghost"
-                size="sm"
-                asChild
-                className="gap-2"
-              >
-                <Link href={shortcut.href}>
-                  <shortcut.icon className="h-4 w-4" />
-                  <span className="hidden xl:inline">{shortcut.label}</span>
-                </Link>
-              </Button>
-            ))}
-          </div>
-        )}
 
         <div className="flex-1" />
 
