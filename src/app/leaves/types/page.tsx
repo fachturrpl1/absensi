@@ -65,7 +65,7 @@ export default function LeaveTypesPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -91,7 +91,7 @@ export default function LeaveTypesPage() {
       </div>
 
       {/* Info Alert */}
-      <Alert>
+      <Alert className="mb-4 mt-4">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Information</AlertTitle>
         <AlertDescription>
@@ -99,6 +99,35 @@ export default function LeaveTypesPage() {
           Make sure to configure settings correctly before activating leave types.
         </AlertDescription>
       </Alert>
+
+
+      {/* Statistics */}
+      {!loading && leaveTypes.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Total Leave Types</CardDescription>
+              <CardTitle className="text-3xl">{leaveTypes.length}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Active Types</CardDescription>
+              <CardTitle className="text-3xl">
+                {leaveTypes.filter(t => t.is_active).length}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Paid Types</CardDescription>
+              <CardTitle className="text-3xl">
+                {leaveTypes.filter(t => t.is_paid).length}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
+      )}
 
       {/* Main Content */}
       {loading ? (
@@ -130,33 +159,6 @@ export default function LeaveTypesPage() {
         </Card>
       )}
 
-      {/* Statistics */}
-      {!loading && leaveTypes.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total Leave Types</CardDescription>
-              <CardTitle className="text-3xl">{leaveTypes.length}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Active Types</CardDescription>
-              <CardTitle className="text-3xl">
-                {leaveTypes.filter(t => t.is_active).length}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Paid Types</CardDescription>
-              <CardTitle className="text-3xl">
-                {leaveTypes.filter(t => t.is_paid).length}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }
