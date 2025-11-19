@@ -7,7 +7,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
-import { ILeaveType, ILeaveRequest } from "@/lib/leave/types";
+import { ILeaveType } from "@/lib/leave/types";
 import { logger } from "@/lib/logger";
 
 // ============================================
@@ -380,7 +380,6 @@ export async function updateLeaveType(
     // Update balances if days_per_year changed
     if (data.days_per_year !== undefined && data.days_per_year !== existing.days_per_year) {
       const currentYear = new Date().getFullYear();
-      const difference = data.days_per_year - existing.days_per_year;
       
       await supabase.rpc("update_leave_balances_entitled", {
         p_leave_type_id: leaveTypeId,

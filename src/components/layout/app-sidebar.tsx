@@ -20,7 +20,6 @@ import {
   ChevronsLeft,
   ChevronsRight,
   CalendarDays,
-  FileText,
   BarChart3,
   Plus,
 } from 'lucide-react';

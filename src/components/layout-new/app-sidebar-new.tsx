@@ -13,7 +13,6 @@ import {
   Briefcase,
   BarChart3,
   Settings,
-  FileText,
   Command,
   ChevronRight,
   CalendarDays,

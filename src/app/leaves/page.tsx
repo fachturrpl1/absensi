@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -11,34 +10,33 @@ import {
   Calendar, 
   FileText, 
   Clock, 
-  Users, 
   CheckCircle, 
-  XCircle, 
-  AlertCircle,
   TrendingUp,
   CalendarDays,
   Settings,
   PieChart,
   BarChart3,
-  Activity,
   UserCheck,
-  CalendarOff,
   Briefcase
 } from "lucide-react";
 import { getMyLeaveBalance, getMyLeaveRequests, getLeaveTypes } from "@/action/leaves";
 import { getLeaveStatistics, getAllLeaveRequests, getOrganizationLeaveTypes } from "@/action/admin-leaves";
 import { LeaveBalanceWithType, ILeaveRequest, ILeaveType } from "@/lib/leave/types";
-import { formatLeaveDateRange, getStatusColor } from "@/lib/leave/utils";
 import { useUserStore } from "@/store/user-store";
+
+// Helper to parse number from string or number
+function parseNumber(value: string | number | undefined): number {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return parseFloat(value) || 0;
+  return 0;
+}
 import { useOrgStore } from "@/store/org-store";
 import Link from "next/link";
-import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
 import { LeaveRequestList } from "@/components/leave/leave-request-list";
 import { LeaveCalendar } from "@/components/leave/leave-calendar";
 import { LeaveAnalytics } from "@/components/leave/leave-analytics";
-import { cn } from "@/lib/utils";
 
 import { logger } from '@/lib/logger';
 
@@ -67,7 +65,6 @@ export default function LeavesPage() {
   // Role codes: A001 = Admin Org, SA001 = Super Admin
   const isAdmin = role === 'A001' || role === 'SA001';
   const canManageLeaveTypes = permissions?.includes('leaves:type:manage') || isAdmin;
-  const canViewAllRequests = permissions?.includes('leaves:request:read_all') || isAdmin;
   const canApproveRequests = permissions?.includes('leaves:approval:create') || isAdmin;
 
   // Load data based on user role
@@ -85,7 +82,11 @@ export default function LeavesPage() {
         ]);
 
         if (statsResult.success && statsResult.data) {
-          setStatistics(statsResult.data);
+          const statsData = statsResult.data;
+          setStatistics({
+            ...statsData,
+            averageLeaveDays: parseNumber(statsData.averageLeaveDays)
+          });
         }
 
         if (allRequestsResult.success && allRequestsResult.data) {
@@ -174,7 +175,7 @@ export default function LeavesPage() {
   }, [loadData]);
 
   // Calculate dynamic statistics
-  const calculateStats = () => {
+  const calculateStats = (): { totalBalance: number; usedDays: number; pendingDays: number; approvedCount: number } | LeaveStatistics | null => {
     if (!isAdmin) {
       // User statistics
       const totalBalance = balances.reduce((sum, b) => sum + (b.remaining_days || 0), 0);
@@ -195,6 +196,11 @@ export default function LeavesPage() {
   };
 
   const stats = calculateStats();
+  
+  // Type guard untuk user stats
+  const isUserStats = (s: typeof stats): s is { totalBalance: number; usedDays: number; pendingDays: number; approvedCount: number } => {
+    return s !== null && !isAdmin && 'totalBalance' in s;
+  };
 
   return (
     <div className="flex flex-1 flex-col gap-4">
@@ -251,13 +257,13 @@ export default function LeavesPage() {
                 <div className="text-2xl font-bold">
                   {isAdmin 
                     ? statistics?.totalRequests || 0
-                    : `${stats?.totalBalance || 0} days`
+                    : `${isUserStats(stats) ? stats.totalBalance : 0} days`
                   }
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {isAdmin
                     ? `${statistics?.pendingRequests || 0} pending approval`
-                    : `${stats?.usedDays || 0} used this year`
+                    : `${isUserStats(stats) ? stats.usedDays : 0} used this year`
                   }
                 </p>
               </>
@@ -291,7 +297,7 @@ export default function LeavesPage() {
                 <p className="text-xs text-muted-foreground">
                   {isAdmin
                     ? `${((statistics?.approvedRequests || 0) / Math.max(statistics?.totalRequests || 1, 1) * 100).toFixed(0)}% approval rate`
-                    : `${stats?.pendingDays || 0} days pending`
+                    : `${isUserStats(stats) ? stats.pendingDays : 0} days pending`
                   }
                 </p>
               </>
@@ -319,7 +325,7 @@ export default function LeavesPage() {
                 <div className="text-2xl font-bold">
                   {isAdmin 
                     ? statistics?.employeesOnLeave || 0
-                    : stats?.approvedCount || 0
+                    : isUserStats(stats) ? stats.approvedCount : 0
                   }
                 </div>
                 <p className="text-xs text-muted-foreground">

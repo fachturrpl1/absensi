@@ -3,23 +3,20 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Edit, Trash2, Save, X, Loader2, Palette } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, Loader2 } from "lucide-react";
 import { ILeaveType } from "@/lib/leave/types";
 import { createLeaveType, updateLeaveType, deleteLeaveType } from "@/action/admin-leaves";
 import { useOrgStore } from "@/store/org-store";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 const leaveTypeSchema = z.object({
   code: z.string().min(1, "Code is required").max(20, "Code must be less than 20 characters"),

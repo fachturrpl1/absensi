@@ -40,10 +40,9 @@ import { motion } from 'framer-motion';
 
 interface NavbarWithShortcutsProps {
   onMenuClick: () => void;
-  isMobile: boolean;
 }
 
-export function NavbarWithShortcuts({ onMenuClick, isMobile }: NavbarWithShortcutsProps) {
+export function NavbarWithShortcuts({ onMenuClick }: NavbarWithShortcutsProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [notificationCount] = useState(3);

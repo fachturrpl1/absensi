@@ -4,8 +4,7 @@ import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ILeaveRequest } from "@/lib/leave/types";
-import { parseISO, format, startOfMonth, endOfMonth } from "date-fns";
-import { cn } from "@/lib/utils";
+import { parseISO, format } from "date-fns";
 
 interface LeaveAnalyticsProps {
   requests: ILeaveRequest[];
@@ -137,8 +136,8 @@ export function LeaveAnalytics({
     const deptCounts: Record<string, number> = {};
     
     requests.forEach(r => {
-      if (r.organization_member?.department) {
-        const dept = r.organization_member.department.name;
+      if (r.organization_member?.departments) {
+        const dept = r.organization_member.departments.name;
         deptCounts[dept] = (deptCounts[dept] || 0) + 1;
       }
     });

@@ -98,7 +98,6 @@ export function AppShell({ children }: AppShellProps) {
         {/* Navbar */}
         <NavbarWithShortcuts
           onMenuClick={toggleSidebar}
-          isMobile={isMobile}
         />
 
         {/* Page Content with Animation */}

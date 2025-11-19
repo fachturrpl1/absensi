@@ -1,8 +1,6 @@
 import type { GeoCountry } from "@/types/geo";
 import manifest from "@/lib/data/geo/manifest.json";
 
-type CountryCode = keyof typeof geoLoaders;
-
 const geoLoaders = {
   ID: () => import("@/lib/data/geo/ID.json").then((mod) => mod.default as GeoCountry),
   MY: () => import("@/lib/data/geo/MY.json").then((mod) => mod.default as GeoCountry),

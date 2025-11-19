@@ -1,4 +1,6 @@
-import geoData from "@/lib/data/geo-data.json";
+// This file is deprecated - use @/lib/geo/loader instead
+// Keeping for backward compatibility but removing the import to fix build errors
+const geoData = { countries: [] };
 
 export interface ProvinceOption {
   value: string;

@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
 import { loadGeoCountry } from "@/lib/geo/loader";
 
-interface Params {
-  country: string;
-}
-
 export async function GET(
-  request: Request,
-  { params }: { params: Params },
+  _request: Request,
+  { params }: { params: Promise<{ country: string }> },
 ) {
-  const countryCode = params.country?.toUpperCase();
+  const { country } = await params;
+  const countryCode = country?.toUpperCase();
   if (!countryCode) {
     return NextResponse.json({ error: "Country code is required" }, { status: 400 });
   }
