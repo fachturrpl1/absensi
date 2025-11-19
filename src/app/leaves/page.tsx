@@ -208,7 +208,7 @@ export default function LeavesPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">
-            {isAdmin ? 'Leave Management Dashboard' : 'My Leave Dashboard'}
+            {isAdmin ? 'Leave Dashboard' : 'Leave Dashboard'}
           </h1>
           <p className="text-muted-foreground">
             {isAdmin 
