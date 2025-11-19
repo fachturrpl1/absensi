@@ -181,22 +181,21 @@ export default function NewLeaveRequestPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4">
-      <div className="max-w-3xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Link href="/leaves">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold">Request Leave</h1>
-            <p className="text-muted-foreground">Submit a new leave request</p>
-          </div>
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Link href="/leaves">
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold">Request Leave</h1>
+          <p className="text-muted-foreground">Submit a new leave request</p>
         </div>
+      </div>
 
-        {/* Form Card */}
-        <Card>
+      {/* Form Card */}
+      <Card>
           <CardHeader>
             <CardTitle>Leave Request Form</CardTitle>
             <CardDescription>Fill in the details for your leave request</CardDescription>
@@ -490,7 +489,6 @@ export default function NewLeaveRequestPage() {
             </Form>
           </CardContent>
         </Card>
-      </div>
     </div>
   );
 }

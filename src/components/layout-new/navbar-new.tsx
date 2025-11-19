@@ -11,11 +11,6 @@ import {
   UserPlus,
   Clock,
   MapPin,
-  LayoutDashboard,
-  Users,
-  ClipboardList,
-  Calendar,
-  BarChart3,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
@@ -74,14 +69,7 @@ export function NavbarNew() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [router]);
 
-  // Quick access shortcuts - Removed keyboard shortcuts
-  const quickAccess = [
-    { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
-    { icon: Users, label: 'Members', href: '/members' },
-    { icon: ClipboardList, label: 'Attendance', href: '/attendance' },
-    { icon: Calendar, label: 'Schedules', href: '/schedule' },
-    { icon: BarChart3, label: 'Analytics', href: '/analytics' },
-  ];
+
 
   const quickActions = [
     { icon: UserPlus, label: 'Invite Member', href: '/members?action=invite', kbd: '⌘N' },
@@ -107,25 +95,8 @@ export function NavbarNew() {
         </Breadcrumb>
       </div>
 
-      {/* Quick Access - Desktop */}
-      <div className="ml-auto hidden lg:flex items-center gap-1">
-        {quickAccess.map((item) => (
-          <Button
-            key={item.href}
-            variant="ghost"
-            size="sm"
-            className="gap-2"
-            onClick={() => router.push(item.href)}
-          >
-            <item.icon className="h-4 w-4" />
-            <span className="hidden xl:inline">{item.label}</span>
-          </Button>
-        ))}
-        <Separator orientation="vertical" className="mx-2 h-4" />
-      </div>
-
       {/* Right Side Actions */}
-      <div className="ml-auto lg:ml-0 flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-2">
         {/* Search */}
         <SearchDialog />
         

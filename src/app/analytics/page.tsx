@@ -16,9 +16,16 @@ import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filt
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { AnalyticsSkeleton } from '@/components/analytics/analytics-skeleton';
 import {
-  AreaChart, Area, 
-  PieChart as RechartPie, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  AreaChart, 
+  Area, 
+  PieChart as RechartsDonutChart, 
+  Pie, 
+  Cell,
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer
 } from 'recharts';
 
 interface AttendanceRecord {
@@ -501,7 +508,7 @@ export default function AnalyticsPage() {
             <CardContent>
               <div className="flex flex-col gap-4">
                 <ResponsiveContainer width="100%" height={200}>
-                  <RechartPie>
+                  <RechartsDonutChart>
                     <Pie
                       data={statusData}
                       cx="50%"
@@ -516,7 +523,7 @@ export default function AnalyticsPage() {
                       ))}
                     </Pie>
                     <Tooltip />
-                  </RechartPie>
+                  </RechartsDonutChart>
                 </ResponsiveContainer>
                 <div className="grid grid-cols-2 gap-2">
                   {statusData.map((item) => (
