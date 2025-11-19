@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Plus, 
   Calendar, 
@@ -17,7 +21,10 @@ import {
   PieChart,
   BarChart3,
   UserCheck,
-  Briefcase
+  Briefcase,
+  AlertTriangle,
+  Loader2,
+  RefreshCw
 } from "lucide-react";
 import { getMyLeaveBalance, getMyLeaveRequests, getLeaveTypes } from "@/action/leaves";
 import { getLeaveStatistics, getAllLeaveRequests, getOrganizationLeaveTypes } from "@/action/admin-leaves";
@@ -203,31 +210,49 @@ export default function LeavesPage() {
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">
-            {isAdmin ? 'Leave Management Dashboard' : 'My Leave Dashboard'}
-          </h1>
-          <p className="text-muted-foreground">
-            {isAdmin 
-              ? 'Manage employee leaves, approve requests, and view analytics'
-              : 'Track your leave balance, requests, and history'
-            }
-          </p>
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                {isAdmin ? 'Leave Management' : 'My Leaves'}
+              </h1>
+              <p className="text-muted-foreground">
+                {isAdmin 
+                  ? 'Manage employee leaves, approve requests, and view analytics'
+                  : 'Track your leave balance, requests, and history'
+                }
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadData}
+            disabled={loading}
+            className="gap-2"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Refresh
+          </Button>
           {canManageLeaveTypes && (
             <Link href="/leaves/types">
-              <Button variant="outline" className="gap-2">
+              <Button variant="outline" className="gap-2 w-full sm:w-auto">
                 <Settings className="h-4 w-4" />
                 Manage Types
               </Button>
             </Link>
           )}
           <Link href="/leaves/new">
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Request Leave
             </Button>
@@ -235,23 +260,38 @@ export default function LeavesPage() {
         </div>
       </div>
 
+      {/* Error State */}
+      {!loading && (!stats || (isAdmin && !statistics)) && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Failed to load dashboard data. Please try refreshing the page.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Card 1: Total/Balance */}
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               {isAdmin ? 'Total Requests' : 'Leave Balance'}
             </CardTitle>
-            {isAdmin ? (
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <Briefcase className="h-4 w-4 text-muted-foreground" />
-            )}
+            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+              {isAdmin ? (
+                <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              ) : (
+                <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <Skeleton className="h-8 w-20" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-4 w-32" />
+              </div>
             ) : (
               <>
                 <div className="text-2xl font-bold">
@@ -260,11 +300,22 @@ export default function LeavesPage() {
                     : `${isUserStats(stats) ? stats.totalBalance : 0} days`
                   }
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {isAdmin
-                    ? `${statistics?.pendingRequests || 0} pending approval`
-                    : `${isUserStats(stats) ? stats.usedDays : 0} used this year`
-                  }
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  {isAdmin ? (
+                    <>
+                      <Badge variant="secondary" className="text-xs px-1">
+                        {statistics?.pendingRequests || 0}
+                      </Badge>
+                      pending approval
+                    </>
+                  ) : (
+                    <>
+                      <Badge variant="outline" className="text-xs px-1">
+                        {isUserStats(stats) ? stats.usedDays : 0}
+                      </Badge>
+                      used this year
+                    </>
+                  )}
                 </p>
               </>
             )}
@@ -272,20 +323,25 @@ export default function LeavesPage() {
         </Card>
 
         {/* Card 2: Approved/Pending */}
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               {isAdmin ? 'Approved Requests' : 'Pending Requests'}
             </CardTitle>
-            {isAdmin ? (
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            )}
+            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+              {isAdmin ? (
+                <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+              ) : (
+                <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <Skeleton className="h-8 w-20" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-4 w-32" />
+              </div>
             ) : (
               <>
                 <div className="text-2xl font-bold">
@@ -294,32 +350,48 @@ export default function LeavesPage() {
                     : requests.filter(r => r.status === 'pending').length
                   }
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {isAdmin
-                    ? `${((statistics?.approvedRequests || 0) / Math.max(statistics?.totalRequests || 1, 1) * 100).toFixed(0)}% approval rate`
-                    : `${isUserStats(stats) ? stats.pendingDays : 0} days pending`
-                  }
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  {isAdmin ? (
+                    <>
+                      <Badge variant="secondary" className="text-xs px-1 bg-green-100 text-green-800">
+                        {((statistics?.approvedRequests || 0) / Math.max(statistics?.totalRequests || 1, 1) * 100).toFixed(0)}%
+                      </Badge>
+                      approval rate
+                    </>
+                  ) : (
+                    <>
+                      <Badge variant="outline" className="text-xs px-1">
+                        {isUserStats(stats) ? stats.pendingDays : 0}
+                      </Badge>
+                      days pending
+                    </>
+                  )}
                 </p>
               </>
             )}
           </CardContent>
         </Card>
 
-        {/* Card 3: On Leave/Rejected */}
-        <Card>
+        {/* Card 3: On Leave/Approved */}
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               {isAdmin ? 'Employees on Leave' : 'Approved Leaves'}
             </CardTitle>
-            {isAdmin ? (
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            )}
+            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+              {isAdmin ? (
+                <UserCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              ) : (
+                <CheckCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <Skeleton className="h-8 w-20" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-4 w-32" />
+              </div>
             ) : (
               <>
                 <div className="text-2xl font-bold">
@@ -328,11 +400,22 @@ export default function LeavesPage() {
                     : isUserStats(stats) ? stats.approvedCount : 0
                   }
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {isAdmin
-                    ? `Out of ${statistics?.totalEmployees || 0} employees`
-                    : 'This year'
-                  }
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  {isAdmin ? (
+                    <>
+                      Out of{' '}
+                      <Badge variant="outline" className="text-xs px-1">
+                        {statistics?.totalEmployees || 0}
+                      </Badge>
+                      employees
+                    </>
+                  ) : (
+                    <>
+                      <Badge variant="secondary" className="text-xs px-1">
+                        This year
+                      </Badge>
+                    </>
+                  )}
                 </p>
               </>
             )}
@@ -340,20 +423,25 @@ export default function LeavesPage() {
         </Card>
 
         {/* Card 4: Upcoming/Types */}
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               {isAdmin ? 'Upcoming Leaves' : 'Leave Types'}
             </CardTitle>
-            {isAdmin ? (
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            )}
+            <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
+              {isAdmin ? (
+                <TrendingUp className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              ) : (
+                <CalendarDays className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <Skeleton className="h-8 w-20" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-4 w-32" />
+              </div>
             ) : (
               <>
                 <div className="text-2xl font-bold">
@@ -362,11 +450,21 @@ export default function LeavesPage() {
                     : leaveTypes.length
                   }
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {isAdmin
-                    ? 'Next 30 days'
-                    : 'Available types'
-                  }
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  {isAdmin ? (
+                    <>
+                      <Badge variant="secondary" className="text-xs px-1">
+                        Next 30 days
+                      </Badge>
+                    </>
+                  ) : (
+                    <>
+                      <Badge variant="outline" className="text-xs px-1">
+                        {leaveTypes.filter(t => t.is_active).length}
+                      </Badge>
+                      active types
+                    </>
+                  )}
                 </p>
               </>
             )}
@@ -375,40 +473,63 @@ export default function LeavesPage() {
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
-          <TabsTrigger value="dashboard" className="gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="requests" className="gap-2">
-            <FileText className="h-4 w-4" />
-            Requests
-          </TabsTrigger>
-          {isAdmin && (
-            <TabsTrigger value="calendar" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              Calendar
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <TabsList className={`grid w-full sm:w-auto ${isAdmin ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2'}`}>
+            <TabsTrigger value="dashboard" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Overview</span>
+              <span className="sm:hidden">Home</span>
             </TabsTrigger>
-          )}
-          {isAdmin && (
-            <TabsTrigger value="analytics" className="gap-2">
-              <PieChart className="h-4 w-4" />
-              Analytics
+            <TabsTrigger value="requests" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Requests</span>
+              <span className="sm:hidden">List</span>
             </TabsTrigger>
-          )}
-        </TabsList>
+            {isAdmin && (
+              <TabsTrigger value="calendar" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Calendar className="h-4 w-4" />
+                <span className="hidden sm:inline">Calendar</span>
+                <span className="sm:hidden">Cal</span>
+              </TabsTrigger>
+            )}
+            {isAdmin && (
+              <TabsTrigger value="analytics" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <PieChart className="h-4 w-4" />
+                <span className="hidden sm:inline">Analytics</span>
+                <span className="sm:hidden">Stats</span>
+              </TabsTrigger>
+            )}
+          </TabsList>
+          
+          {/* Tab Actions */}
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs">
+              {activeTab === 'dashboard' ? 'Overview' : 
+               activeTab === 'requests' ? `${(isAdmin ? allRequests : requests).length} items` :
+               activeTab === 'calendar' ? 'Calendar View' :
+               'Analytics'}
+            </Badge>
+          </div>
+        </div>
 
         {/* Dashboard Tab */}
-        <TabsContent value="dashboard" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+        <TabsContent value="dashboard" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
             {/* Status Distribution Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Request Status Distribution</CardTitle>
-                <CardDescription>
-                  {isAdmin ? 'Organization-wide leave request status' : 'Your leave request status'}
-                </CardDescription>
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">Request Status Distribution</CardTitle>
+                    <CardDescription className="mt-1">
+                      {isAdmin ? 'Organization-wide leave request status' : 'Your leave request status'}
+                    </CardDescription>
+                  </div>
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                    <PieChart className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <LeaveAnalytics 
@@ -420,12 +541,19 @@ export default function LeavesPage() {
             </Card>
 
             {/* Monthly Trend Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Monthly Leave Trend</CardTitle>
-                <CardDescription>
-                  {isAdmin ? 'Organization leave trends' : 'Your leave history'}
-                </CardDescription>
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">Monthly Leave Trend</CardTitle>
+                    <CardDescription className="mt-1">
+                      {isAdmin ? 'Organization leave trends' : 'Your leave history'}
+                    </CardDescription>
+                  </div>
+                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                    <BarChart3 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <LeaveAnalytics 
@@ -438,64 +566,116 @@ export default function LeavesPage() {
           </div>
 
           {/* Recent Requests */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Leave Requests</CardTitle>
-              <CardDescription>
-                {isAdmin ? 'Latest requests from all employees' : 'Your recent leave requests'}
-              </CardDescription>
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">Recent Leave Requests</CardTitle>
+                  <CardDescription className="mt-1">
+                    {isAdmin ? 'Latest requests from all employees' : 'Your recent leave requests'}
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">
+                    {(isAdmin ? allRequests : requests).slice(0, 5).length} of {(isAdmin ? allRequests : requests).length}
+                  </Badge>
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                    <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <LeaveRequestList 
-                requests={(isAdmin ? allRequests : requests).slice(0, 5)}
-                loading={loading}
-                isAdmin={isAdmin}
-                onUpdate={loadData}
-                compact
-              />
+              <ScrollArea className="h-[400px] pr-4">
+                <LeaveRequestList 
+                  requests={(isAdmin ? allRequests : requests).slice(0, 5)}
+                  loading={loading}
+                  isAdmin={isAdmin}
+                  onUpdate={loadData}
+                  compact
+                />
+              </ScrollArea>
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Requests Tab */}
-        <TabsContent value="requests" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>All Leave Requests</CardTitle>
-              <CardDescription>
-                {isAdmin 
-                  ? 'Manage and approve employee leave requests'
-                  : 'View and manage your leave requests'
-                }
-              </CardDescription>
+        <TabsContent value="requests" className="space-y-6">
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    All Leave Requests
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    {isAdmin 
+                      ? 'Manage and approve employee leave requests'
+                      : 'View and manage your leave requests'
+                    }
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">
+                    {(isAdmin ? allRequests : requests).length} total
+                  </Badge>
+                  {isAdmin && canApproveRequests && (
+                    <Badge variant="secondary">
+                      {(isAdmin ? allRequests : requests).filter(r => r.status === 'pending').length} pending
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <Separator className="mt-4" />
             </CardHeader>
             <CardContent>
-              <LeaveRequestList 
-                requests={isAdmin ? allRequests : requests}
-                loading={loading}
-                isAdmin={isAdmin}
-                canApprove={canApproveRequests}
-                onUpdate={loadData}
-              />
+              <ScrollArea className="h-[600px] pr-4">
+                <LeaveRequestList 
+                  requests={isAdmin ? allRequests : requests}
+                  loading={loading}
+                  isAdmin={isAdmin}
+                  canApprove={canApproveRequests}
+                  onUpdate={loadData}
+                />
+              </ScrollArea>
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Calendar Tab (Admin Only) */}
         {isAdmin && (
-          <TabsContent value="calendar" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Leave Calendar</CardTitle>
-                <CardDescription>
-                  View all employee leaves in calendar format
-                </CardDescription>
+          <TabsContent value="calendar" className="space-y-6">
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Calendar className="h-5 w-5" />
+                      Leave Calendar
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      View all employee leaves in calendar format
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">
+                      {allRequests.filter(r => r.status === 'approved').length} approved
+                    </Badge>
+                    <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
+                      <Calendar className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                  </div>
+                </div>
+                <Separator className="mt-4" />
               </CardHeader>
               <CardContent>
-                <LeaveCalendar 
-                  requests={allRequests}
-                  loading={loading}
-                />
+                <div className="min-h-[500px]">
+                  <LeaveCalendar 
+                    requests={allRequests}
+                    loading={loading}
+                  />
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -503,15 +683,22 @@ export default function LeavesPage() {
 
         {/* Analytics Tab (Admin Only) */}
         {isAdmin && (
-          <TabsContent value="analytics" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+          <TabsContent value="analytics" className="space-y-6">
+            <div className="grid gap-6 lg:grid-cols-2">
               {/* Leave Type Distribution */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Leave Type Distribution</CardTitle>
-                  <CardDescription>
-                    Breakdown by leave type
-                  </CardDescription>
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">Leave Type Distribution</CardTitle>
+                      <CardDescription className="mt-1">
+                        Breakdown by leave type
+                      </CardDescription>
+                    </div>
+                    <div className="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg">
+                      <PieChart className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <LeaveAnalytics 
@@ -523,12 +710,19 @@ export default function LeavesPage() {
               </Card>
 
               {/* Department Distribution */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Department Distribution</CardTitle>
-                  <CardDescription>
-                    Leave requests by department
-                  </CardDescription>
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">Department Distribution</CardTitle>
+                      <CardDescription className="mt-1">
+                        Leave requests by department
+                      </CardDescription>
+                    </div>
+                    <div className="p-2 bg-rose-100 dark:bg-rose-900 rounded-lg">
+                      <BarChart3 className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <LeaveAnalytics 
@@ -541,20 +735,35 @@ export default function LeavesPage() {
             </div>
 
             {/* Detailed Analytics */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Detailed Analytics</CardTitle>
-                <CardDescription>
-                  Comprehensive leave statistics and trends
-                </CardDescription>
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">Detailed Analytics</CardTitle>
+                    <CardDescription className="mt-1">
+                      Comprehensive leave statistics and trends
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">
+                      {statistics?.averageLeaveDays.toFixed(1)} avg days
+                    </Badge>
+                    <div className="p-2 bg-violet-100 dark:bg-violet-900 rounded-lg">
+                      <TrendingUp className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                    </div>
+                  </div>
+                </div>
+                <Separator className="mt-4" />
               </CardHeader>
               <CardContent>
-                <LeaveAnalytics 
-                  requests={allRequests}
-                  type="detailed"
-                  loading={loading}
-                  statistics={statistics}
-                />
+                <ScrollArea className="h-[400px] pr-4">
+                  <LeaveAnalytics 
+                    requests={allRequests}
+                    type="detailed"
+                    loading={loading}
+                    statistics={statistics}
+                  />
+                </ScrollArea>
               </CardContent>
             </Card>
           </TabsContent>
