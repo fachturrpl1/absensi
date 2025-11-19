@@ -5,14 +5,13 @@ function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="skeleton"
       className={cn(
-        "relative overflow-hidden rounded-lg",
+        "skeleton-shimmer relative overflow-hidden rounded-lg",
         "bg-gray-300 dark:bg-gray-700",
         "before:absolute before:inset-0",
         "before:-translate-x-full",
-        "before:animate-[shimmer_2s_infinite]",
         "before:bg-gradient-to-r",
-        "before:from-transparent before:via-white/50 before:to-transparent",
-        "dark:before:via-gray-500/50",
+        "before:from-transparent before:via-white/60 before:to-transparent",
+        "dark:before:via-white/20",
         "isolate",
         className
       )}

@@ -10,9 +10,11 @@
     "start": "next start",
     "start:network": "next start --hostname 0.0.0.0",
     "lint": "eslint",
-    "analyze": "ANALYZE=true next build"
+    "analyze": "ANALYZE=true next build",
+    "geo:generate": "node scripts/fetch-geo-data.mjs"
   },
   "dependencies": {
+    "@countrystatecity/countries": "^1.0.4",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -52,6 +54,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "country-state-city": "^3.2.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "eslint-plugin-import": "^2.32.0",

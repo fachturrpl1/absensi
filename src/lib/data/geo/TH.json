@@ -1,0 +1,5511 @@
+{
+  "code": "TH",
+  "name": "Thailand",
+  "states": [
+    {
+      "value": "th-37",
+      "label": "Amnat Charoen",
+      "state_code": "37",
+      "cities": [
+        {
+          "value": "th-37-amnat-charoen",
+          "label": "Amnat Charoen"
+        },
+        {
+          "value": "th-37-amphoe-chanuman",
+          "label": "Amphoe Chanuman"
+        },
+        {
+          "value": "th-37-amphoe-hua-taphan",
+          "label": "Amphoe Hua Taphan"
+        },
+        {
+          "value": "th-37-amphoe-lue-amnat",
+          "label": "Amphoe Lue Amnat"
+        },
+        {
+          "value": "th-37-amphoe-mueang-amnat-charoen",
+          "label": "Amphoe Mueang Amnat Charoen"
+        },
+        {
+          "value": "th-37-amphoe-pathum-ratchawongsa",
+          "label": "Amphoe Pathum Ratchawongsa"
+        },
+        {
+          "value": "th-37-amphoe-phana",
+          "label": "Amphoe Phana"
+        },
+        {
+          "value": "th-37-amphoe-senangkhanikhom",
+          "label": "Amphoe Senangkhanikhom"
+        }
+      ]
+    },
+    {
+      "value": "th-15",
+      "label": "Ang Thong",
+      "state_code": "15",
+      "cities": [
+        {
+          "value": "th-15-amphoe-chaiyo",
+          "label": "Amphoe Chaiyo"
+        },
+        {
+          "value": "th-15-amphoe-mueang-ang-thong",
+          "label": "Amphoe Mueang Ang Thong"
+        },
+        {
+          "value": "th-15-amphoe-pa-mok",
+          "label": "Amphoe Pa Mok"
+        },
+        {
+          "value": "th-15-amphoe-pho-thong",
+          "label": "Amphoe Pho Thong"
+        },
+        {
+          "value": "th-15-amphoe-sawaeng-ha",
+          "label": "Amphoe Sawaeng Ha"
+        },
+        {
+          "value": "th-15-amphoe-wiset-chai-chan",
+          "label": "Amphoe Wiset Chai Chan"
+        },
+        {
+          "value": "th-15-ang-thong",
+          "label": "Ang Thong"
+        },
+        {
+          "value": "th-15-ban-thai-tan",
+          "label": "Ban Thai Tan"
+        },
+        {
+          "value": "th-15-chaiyo",
+          "label": "Chaiyo"
+        },
+        {
+          "value": "th-15-pho-thong",
+          "label": "Pho Thong"
+        },
+        {
+          "value": "th-15-wiset-chaichan",
+          "label": "Wiset Chaichan"
+        }
+      ]
+    },
+    {
+      "value": "th-10",
+      "label": "Bangkok",
+      "state_code": "10",
+      "cities": [
+        {
+          "value": "th-10-bang-bon",
+          "label": "Bang Bon"
+        },
+        {
+          "value": "th-10-bang-kapi",
+          "label": "Bang Kapi"
+        },
+        {
+          "value": "th-10-bang-khae",
+          "label": "Bang Khae"
+        },
+        {
+          "value": "th-10-bang-khen",
+          "label": "Bang Khen"
+        },
+        {
+          "value": "th-10-bang-kho-laen",
+          "label": "Bang Kho laen"
+        },
+        {
+          "value": "th-10-bang-khun-thain",
+          "label": "Bang Khun thain"
+        },
+        {
+          "value": "th-10-bang-na",
+          "label": "Bang Na"
+        },
+        {
+          "value": "th-10-bang-phlat",
+          "label": "Bang Phlat"
+        },
+        {
+          "value": "th-10-bang-rak",
+          "label": "Bang Rak"
+        },
+        {
+          "value": "th-10-bang-sue",
+          "label": "Bang Sue"
+        },
+        {
+          "value": "th-10-bangkok",
+          "label": "Bangkok"
+        },
+        {
+          "value": "th-10-bangkok-noi",
+          "label": "Bangkok Noi"
+        },
+        {
+          "value": "th-10-bangkok-yai",
+          "label": "Bangkok Yai"
+        },
+        {
+          "value": "th-10-bueng-kum",
+          "label": "Bueng Kum"
+        },
+        {
+          "value": "th-10-chatu-chak",
+          "label": "Chatu Chak"
+        },
+        {
+          "value": "th-10-chom-thong",
+          "label": "Chom Thong"
+        },
+        {
+          "value": "th-10-din-daeng",
+          "label": "Din Daeng"
+        },
+        {
+          "value": "th-10-don-mueang",
+          "label": "Don Mueang"
+        },
+        {
+          "value": "th-10-dusit",
+          "label": "Dusit"
+        },
+        {
+          "value": "th-10-huai-khwang",
+          "label": "Huai Khwang"
+        },
+        {
+          "value": "th-10-khan-na-yao",
+          "label": "Khan Na Yao"
+        },
+        {
+          "value": "th-10-khlong-sam-wa",
+          "label": "Khlong Sam Wa"
+        },
+        {
+          "value": "th-10-khlong-san",
+          "label": "Khlong San"
+        },
+        {
+          "value": "th-10-khlong-toei",
+          "label": "Khlong Toei"
+        },
+        {
+          "value": "th-10-lak-si",
+          "label": "Lak Si"
+        },
+        {
+          "value": "th-10-lat-krabang",
+          "label": "Lat Krabang"
+        },
+        {
+          "value": "th-10-lat-phrao",
+          "label": "Lat Phrao"
+        },
+        {
+          "value": "th-10-min-buri",
+          "label": "Min Buri"
+        },
+        {
+          "value": "th-10-nong-chok",
+          "label": "Nong Chok"
+        },
+        {
+          "value": "th-10-nong-khaem",
+          "label": "Nong Khaem"
+        },
+        {
+          "value": "th-10-parthum-wan",
+          "label": "Parthum Wan"
+        },
+        {
+          "value": "th-10-phasi-charoen",
+          "label": "Phasi Charoen"
+        },
+        {
+          "value": "th-10-phaya-thai",
+          "label": "Phaya Thai"
+        },
+        {
+          "value": "th-10-phra-khanong",
+          "label": "Phra Khanong"
+        },
+        {
+          "value": "th-10-phra-nakhon",
+          "label": "Phra Nakhon"
+        },
+        {
+          "value": "th-10-pom-prap-sattru-phai",
+          "label": "Pom Prap Sattru Phai"
+        },
+        {
+          "value": "th-10-pra-wet",
+          "label": "Pra Wet"
+        },
+        {
+          "value": "th-10-rat-burana",
+          "label": "Rat Burana"
+        },
+        {
+          "value": "th-10-ratchathewi",
+          "label": "Ratchathewi"
+        },
+        {
+          "value": "th-10-sai-mai",
+          "label": "Sai Mai"
+        },
+        {
+          "value": "th-10-samphanthawong",
+          "label": "Samphanthawong"
+        },
+        {
+          "value": "th-10-saphan-sung",
+          "label": "Saphan Sung"
+        },
+        {
+          "value": "th-10-sathon",
+          "label": "Sathon"
+        },
+        {
+          "value": "th-10-suanluang",
+          "label": "Suanluang"
+        },
+        {
+          "value": "th-10-taling-chan",
+          "label": "Taling Chan"
+        },
+        {
+          "value": "th-10-thawi-watthana",
+          "label": "Thawi Watthana"
+        },
+        {
+          "value": "th-10-thon-buri",
+          "label": "Thon buri"
+        },
+        {
+          "value": "th-10-thung-khru",
+          "label": "Thung khru"
+        },
+        {
+          "value": "th-10-vadhana",
+          "label": "Vadhana"
+        },
+        {
+          "value": "th-10-wang-thong-lang",
+          "label": "Wang Thong Lang"
+        },
+        {
+          "value": "th-10-yan-na-wa",
+          "label": "Yan na wa"
+        }
+      ]
+    },
+    {
+      "value": "th-38",
+      "label": "Bueng Kan",
+      "state_code": "38",
+      "cities": [
+        {
+          "value": "th-38-amphoe-bueng-khong-long",
+          "label": "Amphoe Bueng Khong Long"
+        },
+        {
+          "value": "th-38-amphoe-bung-khla",
+          "label": "Amphoe Bung Khla"
+        },
+        {
+          "value": "th-38-amphoe-mueang-bueng-kan",
+          "label": "Amphoe Mueang Bueng Kan"
+        },
+        {
+          "value": "th-38-amphoe-pak-khat",
+          "label": "Amphoe Pak Khat"
+        },
+        {
+          "value": "th-38-amphoe-phon-charoen",
+          "label": "Amphoe Phon Charoen"
+        },
+        {
+          "value": "th-38-amphoe-seka",
+          "label": "Amphoe Seka"
+        },
+        {
+          "value": "th-38-amphoe-si-wilai",
+          "label": "Amphoe Si Wilai"
+        },
+        {
+          "value": "th-38-amphoe-so-phisai",
+          "label": "Amphoe So Phisai"
+        },
+        {
+          "value": "th-38-bueng-kan",
+          "label": "Bueng Kan"
+        },
+        {
+          "value": "th-38-seka",
+          "label": "Seka"
+        }
+      ]
+    },
+    {
+      "value": "th-31",
+      "label": "Buri Ram",
+      "state_code": "31",
+      "cities": [
+        {
+          "value": "th-31-amphoe-ban-dan",
+          "label": "Amphoe Ban Dan"
+        },
+        {
+          "value": "th-31-amphoe-ban-kruat",
+          "label": "Amphoe Ban Kruat"
+        },
+        {
+          "value": "th-31-amphoe-ban-mai-chaiyaphot",
+          "label": "Amphoe Ban Mai Chaiyaphot"
+        },
+        {
+          "value": "th-31-amphoe-chaloem-phra-kiat",
+          "label": "Amphoe Chaloem Phra Kiat"
+        },
+        {
+          "value": "th-31-amphoe-chamni",
+          "label": "Amphoe Chamni"
+        },
+        {
+          "value": "th-31-amphoe-huai-rat",
+          "label": "Amphoe Huai Rat"
+        },
+        {
+          "value": "th-31-amphoe-khaen-dong",
+          "label": "Amphoe Khaen Dong"
+        },
+        {
+          "value": "th-31-amphoe-khu-mueang",
+          "label": "Amphoe Khu Mueang"
+        },
+        {
+          "value": "th-31-amphoe-krasang",
+          "label": "Amphoe Krasang"
+        },
+        {
+          "value": "th-31-amphoe-lahan-sai",
+          "label": "Amphoe Lahan Sai"
+        },
+        {
+          "value": "th-31-amphoe-lam-plai-mat",
+          "label": "Amphoe Lam Plai Mat"
+        },
+        {
+          "value": "th-31-amphoe-mueang-buriram",
+          "label": "Amphoe Mueang Buriram"
+        },
+        {
+          "value": "th-31-amphoe-na-pho",
+          "label": "Amphoe Na Pho"
+        },
+        {
+          "value": "th-31-amphoe-nang-rong",
+          "label": "Amphoe Nang Rong"
+        },
+        {
+          "value": "th-31-amphoe-non-din-daeng",
+          "label": "Amphoe Non Din Daeng"
+        },
+        {
+          "value": "th-31-amphoe-non-suwan",
+          "label": "Amphoe Non Suwan"
+        },
+        {
+          "value": "th-31-amphoe-nong-hong",
+          "label": "Amphoe Nong Hong"
+        },
+        {
+          "value": "th-31-amphoe-nong-ki",
+          "label": "Amphoe Nong Ki"
+        },
+        {
+          "value": "th-31-amphoe-pa-kham",
+          "label": "Amphoe Pa Kham"
+        },
+        {
+          "value": "th-31-amphoe-phlapphla-chai",
+          "label": "Amphoe Phlapphla Chai"
+        },
+        {
+          "value": "th-31-amphoe-phutthaisong",
+          "label": "Amphoe Phutthaisong"
+        },
+        {
+          "value": "th-31-amphoe-prakhon-chai",
+          "label": "Amphoe Prakhon Chai"
+        },
+        {
+          "value": "th-31-amphoe-satuek",
+          "label": "Amphoe Satuek"
+        },
+        {
+          "value": "th-31-buri-ram",
+          "label": "Buri Ram"
+        },
+        {
+          "value": "th-31-nang-rong",
+          "label": "Nang Rong"
+        },
+        {
+          "value": "th-31-nong-ki",
+          "label": "Nong Ki"
+        },
+        {
+          "value": "th-31-prakhon-chai",
+          "label": "Prakhon Chai"
+        },
+        {
+          "value": "th-31-satuek",
+          "label": "Satuek"
+        }
+      ]
+    },
+    {
+      "value": "th-24",
+      "label": "Chachoengsao",
+      "state_code": "24",
+      "cities": [
+        {
+          "value": "th-24-amphoe-ban-pho",
+          "label": "Amphoe Ban Pho"
+        },
+        {
+          "value": "th-24-amphoe-bang-khla",
+          "label": "Amphoe Bang Khla"
+        },
+        {
+          "value": "th-24-amphoe-bang-nam-priao",
+          "label": "Amphoe Bang Nam Priao"
+        },
+        {
+          "value": "th-24-amphoe-bang-pakong",
+          "label": "Amphoe Bang Pakong"
+        },
+        {
+          "value": "th-24-amphoe-khlong-khuean",
+          "label": "Amphoe Khlong Khuean"
+        },
+        {
+          "value": "th-24-amphoe-mueang-chachoengsao",
+          "label": "Amphoe Mueang Chachoengsao"
+        },
+        {
+          "value": "th-24-amphoe-phanom-sarakham",
+          "label": "Amphoe Phanom Sarakham"
+        },
+        {
+          "value": "th-24-amphoe-plaeng-yao",
+          "label": "Amphoe Plaeng Yao"
+        },
+        {
+          "value": "th-24-amphoe-ratchasan",
+          "label": "Amphoe Ratchasan"
+        },
+        {
+          "value": "th-24-amphoe-sanam-chai-khet",
+          "label": "Amphoe Sanam Chai Khet"
+        },
+        {
+          "value": "th-24-amphoe-tha-takiap",
+          "label": "Amphoe Tha Takiap"
+        },
+        {
+          "value": "th-24-bang-khla",
+          "label": "Bang Khla"
+        },
+        {
+          "value": "th-24-bang-nam-priao",
+          "label": "Bang Nam Priao"
+        },
+        {
+          "value": "th-24-bang-pakong",
+          "label": "Bang Pakong"
+        },
+        {
+          "value": "th-24-chachoengsao",
+          "label": "Chachoengsao"
+        },
+        {
+          "value": "th-24-khlong-khuean",
+          "label": "Khlong Khuean"
+        },
+        {
+          "value": "th-24-phanom-sarakham",
+          "label": "Phanom Sarakham"
+        }
+      ]
+    },
+    {
+      "value": "th-18",
+      "label": "Chai Nat",
+      "state_code": "18",
+      "cities": [
+        {
+          "value": "th-18-amphoe-hankha",
+          "label": "Amphoe Hankha"
+        },
+        {
+          "value": "th-18-amphoe-manorom",
+          "label": "Amphoe Manorom"
+        },
+        {
+          "value": "th-18-amphoe-mueang-chainat",
+          "label": "Amphoe Mueang Chainat"
+        },
+        {
+          "value": "th-18-amphoe-noen-kham",
+          "label": "Amphoe Noen Kham"
+        },
+        {
+          "value": "th-18-amphoe-nong-mamong",
+          "label": "Amphoe Nong Mamong"
+        },
+        {
+          "value": "th-18-amphoe-sankhaburi",
+          "label": "Amphoe Sankhaburi"
+        },
+        {
+          "value": "th-18-amphoe-sapphaya",
+          "label": "Amphoe Sapphaya"
+        },
+        {
+          "value": "th-18-amphoe-wat-sing",
+          "label": "Amphoe Wat Sing"
+        },
+        {
+          "value": "th-18-chai-nat",
+          "label": "Chai Nat"
+        }
+      ]
+    },
+    {
+      "value": "th-36",
+      "label": "Chaiyaphum",
+      "state_code": "36",
+      "cities": [
+        {
+          "value": "th-36-bamnet-narong",
+          "label": "Bamnet Narong"
+        },
+        {
+          "value": "th-36-chaiyaphum",
+          "label": "Chaiyaphum"
+        },
+        {
+          "value": "th-36-kaeng-khro",
+          "label": "Kaeng Khro"
+        },
+        {
+          "value": "th-36-kaset-sombun",
+          "label": "Kaset Sombun"
+        },
+        {
+          "value": "th-36-nakhon-nayok",
+          "label": "Nakhon Nayok"
+        },
+        {
+          "value": "th-36-phu-khiao",
+          "label": "Phu Khiao"
+        }
+      ]
+    },
+    {
+      "value": "th-22",
+      "label": "Chanthaburi",
+      "state_code": "22",
+      "cities": [
+        {
+          "value": "th-22-amphoe-kaeng-hang-maeo",
+          "label": "Amphoe Kaeng Hang Maeo"
+        },
+        {
+          "value": "th-22-amphoe-khao-khitchakut",
+          "label": "Amphoe Khao Khitchakut"
+        },
+        {
+          "value": "th-22-amphoe-khlung",
+          "label": "Amphoe Khlung"
+        },
+        {
+          "value": "th-22-amphoe-laem-sing",
+          "label": "Amphoe Laem Sing"
+        },
+        {
+          "value": "th-22-amphoe-makham",
+          "label": "Amphoe Makham"
+        },
+        {
+          "value": "th-22-amphoe-mueang-chanthaburi",
+          "label": "Amphoe Mueang Chanthaburi"
+        },
+        {
+          "value": "th-22-amphoe-na-yai-am",
+          "label": "Amphoe Na Yai Am"
+        },
+        {
+          "value": "th-22-amphoe-pong-nam-ron",
+          "label": "Amphoe Pong Nam Ron"
+        },
+        {
+          "value": "th-22-amphoe-soi-dao",
+          "label": "Amphoe Soi Dao"
+        },
+        {
+          "value": "th-22-amphoe-tha-mai",
+          "label": "Amphoe Tha Mai"
+        },
+        {
+          "value": "th-22-chanthaburi",
+          "label": "Chanthaburi"
+        },
+        {
+          "value": "th-22-khlung",
+          "label": "Khlung"
+        },
+        {
+          "value": "th-22-laem-sing",
+          "label": "Laem Sing"
+        },
+        {
+          "value": "th-22-pong-nam-ron",
+          "label": "Pong Nam Ron"
+        },
+        {
+          "value": "th-22-tha-mai",
+          "label": "Tha Mai"
+        }
+      ]
+    },
+    {
+      "value": "th-50",
+      "label": "Chiang Mai",
+      "state_code": "50",
+      "cities": [
+        {
+          "value": "th-50-amphoe-chai-prakan",
+          "label": "Amphoe Chai Prakan"
+        },
+        {
+          "value": "th-50-amphoe-chiang-dao",
+          "label": "Amphoe Chiang Dao"
+        },
+        {
+          "value": "th-50-amphoe-chom-thong",
+          "label": "Amphoe Chom Thong"
+        },
+        {
+          "value": "th-50-amphoe-doi-lo",
+          "label": "Amphoe Doi Lo"
+        },
+        {
+          "value": "th-50-amphoe-doi-saket",
+          "label": "Amphoe Doi Saket"
+        },
+        {
+          "value": "th-50-amphoe-doi-tao",
+          "label": "Amphoe Doi Tao"
+        },
+        {
+          "value": "th-50-amphoe-fang",
+          "label": "Amphoe Fang"
+        },
+        {
+          "value": "th-50-amphoe-galyani-vadhana",
+          "label": "Amphoe Galyani Vadhana"
+        },
+        {
+          "value": "th-50-amphoe-hang-dong",
+          "label": "Amphoe Hang Dong"
+        },
+        {
+          "value": "th-50-amphoe-hot",
+          "label": "Amphoe Hot"
+        },
+        {
+          "value": "th-50-amphoe-mae-ai",
+          "label": "Amphoe Mae Ai"
+        },
+        {
+          "value": "th-50-amphoe-mae-chaem",
+          "label": "Amphoe Mae Chaem"
+        },
+        {
+          "value": "th-50-amphoe-mae-on",
+          "label": "Amphoe Mae On"
+        },
+        {
+          "value": "th-50-amphoe-mae-rim",
+          "label": "Amphoe Mae Rim"
+        },
+        {
+          "value": "th-50-amphoe-mae-taeng",
+          "label": "Amphoe Mae Taeng"
+        },
+        {
+          "value": "th-50-amphoe-mae-wang",
+          "label": "Amphoe Mae Wang"
+        },
+        {
+          "value": "th-50-amphoe-mueang-chiang-mai",
+          "label": "Amphoe Mueang Chiang Mai"
+        },
+        {
+          "value": "th-50-amphoe-om-koi",
+          "label": "Amphoe Om Koi"
+        },
+        {
+          "value": "th-50-amphoe-phrao",
+          "label": "Amphoe Phrao"
+        },
+        {
+          "value": "th-50-amphoe-samoeng",
+          "label": "Amphoe Samoeng"
+        },
+        {
+          "value": "th-50-amphoe-san-kamphaeng",
+          "label": "Amphoe San Kamphaeng"
+        },
+        {
+          "value": "th-50-amphoe-san-pa-tong",
+          "label": "Amphoe San Pa Tong"
+        },
+        {
+          "value": "th-50-amphoe-san-sai",
+          "label": "Amphoe San Sai"
+        },
+        {
+          "value": "th-50-amphoe-saraphi",
+          "label": "Amphoe Saraphi"
+        },
+        {
+          "value": "th-50-amphoe-wiang-haeng",
+          "label": "Amphoe Wiang Haeng"
+        },
+        {
+          "value": "th-50-chai-prakan",
+          "label": "Chai Prakan"
+        },
+        {
+          "value": "th-50-chiang-mai",
+          "label": "Chiang Mai"
+        },
+        {
+          "value": "th-50-chom-thong",
+          "label": "Chom Thong"
+        },
+        {
+          "value": "th-50-fang",
+          "label": "Fang"
+        },
+        {
+          "value": "th-50-hang-dong",
+          "label": "Hang Dong"
+        },
+        {
+          "value": "th-50-pai",
+          "label": "Pai"
+        },
+        {
+          "value": "th-50-san-kamphaeng",
+          "label": "San Kamphaeng"
+        },
+        {
+          "value": "th-50-san-pa-tong",
+          "label": "San Pa Tong"
+        }
+      ]
+    },
+    {
+      "value": "th-57",
+      "label": "Chiang Rai",
+      "state_code": "57",
+      "cities": [
+        {
+          "value": "th-57-amphoe-chiang-khong",
+          "label": "Amphoe Chiang Khong"
+        },
+        {
+          "value": "th-57-amphoe-chiang-saen",
+          "label": "Amphoe Chiang Saen"
+        },
+        {
+          "value": "th-57-amphoe-doi-luang",
+          "label": "Amphoe Doi Luang"
+        },
+        {
+          "value": "th-57-amphoe-khun-tan",
+          "label": "Amphoe Khun Tan"
+        },
+        {
+          "value": "th-57-amphoe-mae-chan",
+          "label": "Amphoe Mae Chan"
+        },
+        {
+          "value": "th-57-amphoe-mae-fa-luang",
+          "label": "Amphoe Mae Fa Luang"
+        },
+        {
+          "value": "th-57-amphoe-mae-lao",
+          "label": "Amphoe Mae Lao"
+        },
+        {
+          "value": "th-57-amphoe-mae-sai",
+          "label": "Amphoe Mae Sai"
+        },
+        {
+          "value": "th-57-amphoe-mae-suai",
+          "label": "Amphoe Mae Suai"
+        },
+        {
+          "value": "th-57-amphoe-mueang-chiang-rai",
+          "label": "Amphoe Mueang Chiang Rai"
+        },
+        {
+          "value": "th-57-amphoe-pa-daet",
+          "label": "Amphoe Pa Daet"
+        },
+        {
+          "value": "th-57-amphoe-phan",
+          "label": "Amphoe Phan"
+        },
+        {
+          "value": "th-57-amphoe-phaya-mengrai",
+          "label": "Amphoe Phaya Mengrai"
+        },
+        {
+          "value": "th-57-amphoe-thoeng",
+          "label": "Amphoe Thoeng"
+        },
+        {
+          "value": "th-57-amphoe-wiang-chai",
+          "label": "Amphoe Wiang Chai"
+        },
+        {
+          "value": "th-57-amphoe-wiang-chiang-rung",
+          "label": "Amphoe Wiang Chiang Rung"
+        },
+        {
+          "value": "th-57-amphoe-wiang-kaen",
+          "label": "Amphoe Wiang Kaen"
+        },
+        {
+          "value": "th-57-amphoe-wiang-pa-pao",
+          "label": "Amphoe Wiang Pa Pao"
+        },
+        {
+          "value": "th-57-chiang-khong",
+          "label": "Chiang Khong"
+        },
+        {
+          "value": "th-57-chiang-rai",
+          "label": "Chiang Rai"
+        },
+        {
+          "value": "th-57-chiang-saen",
+          "label": "Chiang Saen"
+        },
+        {
+          "value": "th-57-mae-chan",
+          "label": "Mae Chan"
+        },
+        {
+          "value": "th-57-mae-sai",
+          "label": "Mae Sai"
+        },
+        {
+          "value": "th-57-pa-daet",
+          "label": "Pa Daet"
+        }
+      ]
+    },
+    {
+      "value": "th-20",
+      "label": "Chon Buri",
+      "state_code": "20",
+      "cities": [
+        {
+          "value": "th-20-amphoe-ban-bueng",
+          "label": "Amphoe Ban Bueng"
+        },
+        {
+          "value": "th-20-amphoe-bo-thong",
+          "label": "Amphoe Bo Thong"
+        },
+        {
+          "value": "th-20-amphoe-ko-chan",
+          "label": "Amphoe Ko Chan"
+        },
+        {
+          "value": "th-20-amphoe-ko-si-chang",
+          "label": "Amphoe Ko Si Chang"
+        },
+        {
+          "value": "th-20-amphoe-nong-yai",
+          "label": "Amphoe Nong Yai"
+        },
+        {
+          "value": "th-20-amphoe-phan-thong",
+          "label": "Amphoe Phan Thong"
+        },
+        {
+          "value": "th-20-amphoe-phanat-nikhom",
+          "label": "Amphoe Phanat Nikhom"
+        },
+        {
+          "value": "th-20-amphoe-sattahip",
+          "label": "Amphoe Sattahip"
+        },
+        {
+          "value": "th-20-amphoe-si-racha",
+          "label": "Amphoe Si Racha"
+        },
+        {
+          "value": "th-20-ban-bueng",
+          "label": "Ban Bueng"
+        },
+        {
+          "value": "th-20-ban-ko-lan",
+          "label": "Ban Ko Lan"
+        },
+        {
+          "value": "th-20-ban-talat-bueng",
+          "label": "Ban Talat Bueng"
+        },
+        {
+          "value": "th-20-bang-lamung",
+          "label": "Bang Lamung"
+        },
+        {
+          "value": "th-20-bang-lamung-district",
+          "label": "Bang Lamung District"
+        },
+        {
+          "value": "th-20-chon-buri",
+          "label": "Chon Buri"
+        },
+        {
+          "value": "th-20-ko-si-chang",
+          "label": "Ko Si Chang"
+        },
+        {
+          "value": "th-20-mueang-chonburi-district",
+          "label": "Mueang Chonburi District"
+        },
+        {
+          "value": "th-20-pattaya",
+          "label": "Pattaya"
+        },
+        {
+          "value": "th-20-phan-thong",
+          "label": "Phan Thong"
+        },
+        {
+          "value": "th-20-phanat-nikhom",
+          "label": "Phanat Nikhom"
+        },
+        {
+          "value": "th-20-sattahip",
+          "label": "Sattahip"
+        },
+        {
+          "value": "th-20-si-racha",
+          "label": "Si Racha"
+        }
+      ]
+    },
+    {
+      "value": "th-86",
+      "label": "Chumphon",
+      "state_code": "86",
+      "cities": [
+        {
+          "value": "th-86-amphoe-lamae",
+          "label": "Amphoe Lamae"
+        },
+        {
+          "value": "th-86-amphoe-lang-suan",
+          "label": "Amphoe Lang Suan"
+        },
+        {
+          "value": "th-86-amphoe-mueang-chumphon",
+          "label": "Amphoe Mueang Chumphon"
+        },
+        {
+          "value": "th-86-amphoe-pathio",
+          "label": "Amphoe Pathio"
+        },
+        {
+          "value": "th-86-amphoe-phato",
+          "label": "Amphoe Phato"
+        },
+        {
+          "value": "th-86-amphoe-sawi",
+          "label": "Amphoe Sawi"
+        },
+        {
+          "value": "th-86-amphoe-tha-sae",
+          "label": "Amphoe Tha Sae"
+        },
+        {
+          "value": "th-86-amphoe-thung-tako",
+          "label": "Amphoe Thung Tako"
+        },
+        {
+          "value": "th-86-ban-nam-yuen",
+          "label": "Ban Nam Yuen"
+        },
+        {
+          "value": "th-86-chumphon",
+          "label": "Chumphon"
+        },
+        {
+          "value": "th-86-lang-suan",
+          "label": "Lang Suan"
+        }
+      ]
+    },
+    {
+      "value": "th-46",
+      "label": "Kalasin",
+      "state_code": "46",
+      "cities": [
+        {
+          "value": "th-46-amphoe-don-chan",
+          "label": "Amphoe Don Chan"
+        },
+        {
+          "value": "th-46-amphoe-huai-mek",
+          "label": "Amphoe Huai Mek"
+        },
+        {
+          "value": "th-46-amphoe-huai-phueng",
+          "label": "Amphoe Huai Phueng"
+        },
+        {
+          "value": "th-46-amphoe-kamalasai",
+          "label": "Amphoe Kamalasai"
+        },
+        {
+          "value": "th-46-amphoe-kham-muang",
+          "label": "Amphoe Kham Muang"
+        },
+        {
+          "value": "th-46-amphoe-khao-wong",
+          "label": "Amphoe Khao Wong"
+        },
+        {
+          "value": "th-46-amphoe-khong-chai",
+          "label": "Amphoe Khong Chai"
+        },
+        {
+          "value": "th-46-amphoe-kuchinarai",
+          "label": "Amphoe Kuchinarai"
+        },
+        {
+          "value": "th-46-amphoe-mueang-kalasin",
+          "label": "Amphoe Mueang Kalasin"
+        },
+        {
+          "value": "th-46-amphoe-na-khu",
+          "label": "Amphoe Na Khu"
+        },
+        {
+          "value": "th-46-amphoe-na-mon",
+          "label": "Amphoe Na Mon"
+        },
+        {
+          "value": "th-46-amphoe-nong-kung-si",
+          "label": "Amphoe Nong Kung Si"
+        },
+        {
+          "value": "th-46-amphoe-rong-kham",
+          "label": "Amphoe Rong Kham"
+        },
+        {
+          "value": "th-46-amphoe-sahatsakhan",
+          "label": "Amphoe Sahatsakhan"
+        },
+        {
+          "value": "th-46-amphoe-sam-chai",
+          "label": "Amphoe Sam Chai"
+        },
+        {
+          "value": "th-46-amphoe-somdet",
+          "label": "Amphoe Somdet"
+        },
+        {
+          "value": "th-46-amphoe-tha-khantho",
+          "label": "Amphoe Tha Khantho"
+        },
+        {
+          "value": "th-46-amphoe-yang-talat",
+          "label": "Amphoe Yang Talat"
+        },
+        {
+          "value": "th-46-huai-mek",
+          "label": "Huai Mek"
+        },
+        {
+          "value": "th-46-kalasin",
+          "label": "Kalasin"
+        },
+        {
+          "value": "th-46-kamalasai",
+          "label": "Kamalasai"
+        },
+        {
+          "value": "th-46-khao-wong",
+          "label": "Khao Wong"
+        },
+        {
+          "value": "th-46-kuchinarai",
+          "label": "Kuchinarai"
+        },
+        {
+          "value": "th-46-nong-kung-si",
+          "label": "Nong Kung Si"
+        },
+        {
+          "value": "th-46-yang-talat",
+          "label": "Yang Talat"
+        }
+      ]
+    },
+    {
+      "value": "th-62",
+      "label": "Kamphaeng Phet",
+      "state_code": "62",
+      "cities": [
+        {
+          "value": "th-62-amphoe-bueng-samakkhi",
+          "label": "Amphoe Bueng Samakkhi"
+        },
+        {
+          "value": "th-62-amphoe-khanu-woralaksaburi",
+          "label": "Amphoe Khanu Woralaksaburi"
+        },
+        {
+          "value": "th-62-amphoe-khlong-khlung",
+          "label": "Amphoe Khlong Khlung"
+        },
+        {
+          "value": "th-62-amphoe-khlong-lan",
+          "label": "Amphoe Khlong Lan"
+        },
+        {
+          "value": "th-62-amphoe-kosamphi-nakhon",
+          "label": "Amphoe Kosamphi Nakhon"
+        },
+        {
+          "value": "th-62-amphoe-lan-krabue",
+          "label": "Amphoe Lan Krabue"
+        },
+        {
+          "value": "th-62-amphoe-mueang-kamphaeng-phet",
+          "label": "Amphoe Mueang Kamphaeng Phet"
+        },
+        {
+          "value": "th-62-amphoe-pang-sila-thong",
+          "label": "Amphoe Pang Sila Thong"
+        },
+        {
+          "value": "th-62-amphoe-phran-kratai",
+          "label": "Amphoe Phran Kratai"
+        },
+        {
+          "value": "th-62-amphoe-sai-ngam",
+          "label": "Amphoe Sai Ngam"
+        },
+        {
+          "value": "th-62-amphoe-sai-thong-watthana",
+          "label": "Amphoe Sai Thong Watthana"
+        },
+        {
+          "value": "th-62-kamphaeng-phet",
+          "label": "Kamphaeng Phet"
+        },
+        {
+          "value": "th-62-khanu-woralaksaburi",
+          "label": "Khanu Woralaksaburi"
+        },
+        {
+          "value": "th-62-lan-krabue",
+          "label": "Lan Krabue"
+        }
+      ]
+    },
+    {
+      "value": "th-71",
+      "label": "Kanchanaburi",
+      "state_code": "71",
+      "cities": [
+        {
+          "value": "th-71-amphoe-bo-phloi",
+          "label": "Amphoe Bo Phloi"
+        },
+        {
+          "value": "th-71-amphoe-dan-makham-tia",
+          "label": "Amphoe Dan Makham Tia"
+        },
+        {
+          "value": "th-71-amphoe-huai-krachao",
+          "label": "Amphoe Huai Krachao"
+        },
+        {
+          "value": "th-71-amphoe-lao-khwan",
+          "label": "Amphoe Lao Khwan"
+        },
+        {
+          "value": "th-71-amphoe-mueang-kanchanaburi",
+          "label": "Amphoe Mueang Kanchanaburi"
+        },
+        {
+          "value": "th-71-amphoe-nong-prue",
+          "label": "Amphoe Nong Prue"
+        },
+        {
+          "value": "th-71-amphoe-phanom-thuan",
+          "label": "Amphoe Phanom Thuan"
+        },
+        {
+          "value": "th-71-amphoe-sai-yok",
+          "label": "Amphoe Sai Yok"
+        },
+        {
+          "value": "th-71-amphoe-sangkhla-buri",
+          "label": "Amphoe Sangkhla Buri"
+        },
+        {
+          "value": "th-71-amphoe-si-sawat",
+          "label": "Amphoe Si Sawat"
+        },
+        {
+          "value": "th-71-amphoe-tha-maka",
+          "label": "Amphoe Tha Maka"
+        },
+        {
+          "value": "th-71-amphoe-tha-muang",
+          "label": "Amphoe Tha Muang"
+        },
+        {
+          "value": "th-71-amphoe-thong-pha-phum",
+          "label": "Amphoe Thong Pha Phum"
+        },
+        {
+          "value": "th-71-bo-phloi",
+          "label": "Bo Phloi"
+        },
+        {
+          "value": "th-71-kanchanaburi",
+          "label": "Kanchanaburi"
+        },
+        {
+          "value": "th-71-phanom-thuan",
+          "label": "Phanom Thuan"
+        },
+        {
+          "value": "th-71-sangkhla-buri",
+          "label": "Sangkhla Buri"
+        },
+        {
+          "value": "th-71-tha-maka",
+          "label": "Tha Maka"
+        },
+        {
+          "value": "th-71-tha-muang",
+          "label": "Tha Muang"
+        }
+      ]
+    },
+    {
+      "value": "th-40",
+      "label": "Khon Kaen",
+      "state_code": "40",
+      "cities": [
+        {
+          "value": "th-40-amphoe-ban-fang",
+          "label": "Amphoe Ban Fang"
+        },
+        {
+          "value": "th-40-amphoe-ban-haet",
+          "label": "Amphoe Ban Haet"
+        },
+        {
+          "value": "th-40-amphoe-ban-phai",
+          "label": "Amphoe Ban Phai"
+        },
+        {
+          "value": "th-40-amphoe-chonnabot",
+          "label": "Amphoe Chonnabot"
+        },
+        {
+          "value": "th-40-amphoe-chum-phae",
+          "label": "Amphoe Chum Phae"
+        },
+        {
+          "value": "th-40-amphoe-khao-suan-kwang",
+          "label": "Amphoe Khao Suan Kwang"
+        },
+        {
+          "value": "th-40-amphoe-khok-pho-chai",
+          "label": "Amphoe Khok Pho Chai"
+        },
+        {
+          "value": "th-40-amphoe-kranuan",
+          "label": "Amphoe Kranuan"
+        },
+        {
+          "value": "th-40-amphoe-mancha-khiri",
+          "label": "Amphoe Mancha Khiri"
+        },
+        {
+          "value": "th-40-amphoe-mueang-khon-kaen",
+          "label": "Amphoe Mueang Khon Kaen"
+        },
+        {
+          "value": "th-40-amphoe-nam-phong",
+          "label": "Amphoe Nam Phong"
+        },
+        {
+          "value": "th-40-amphoe-non-sila",
+          "label": "Amphoe Non Sila"
+        },
+        {
+          "value": "th-40-amphoe-nong-na-kham",
+          "label": "Amphoe Nong Na Kham"
+        },
+        {
+          "value": "th-40-amphoe-nong-ruea",
+          "label": "Amphoe Nong Ruea"
+        },
+        {
+          "value": "th-40-amphoe-nong-song-hong",
+          "label": "Amphoe Nong Song Hong"
+        },
+        {
+          "value": "th-40-amphoe-phon",
+          "label": "Amphoe Phon"
+        },
+        {
+          "value": "th-40-amphoe-phra-yuen",
+          "label": "Amphoe Phra Yuen"
+        },
+        {
+          "value": "th-40-amphoe-phu-pha-man",
+          "label": "Amphoe Phu Pha Man"
+        },
+        {
+          "value": "th-40-amphoe-phu-wiang",
+          "label": "Amphoe Phu Wiang"
+        },
+        {
+          "value": "th-40-amphoe-pueai-noi",
+          "label": "Amphoe Pueai Noi"
+        },
+        {
+          "value": "th-40-amphoe-sam-sung",
+          "label": "Amphoe Sam Sung"
+        },
+        {
+          "value": "th-40-amphoe-si-chom-phu",
+          "label": "Amphoe Si Chom Phu"
+        },
+        {
+          "value": "th-40-amphoe-ubolratana",
+          "label": "Amphoe Ubolratana"
+        },
+        {
+          "value": "th-40-amphoe-waeng-noi",
+          "label": "Amphoe Waeng Noi"
+        },
+        {
+          "value": "th-40-amphoe-waeng-yai",
+          "label": "Amphoe Waeng Yai"
+        },
+        {
+          "value": "th-40-amphoe-wiang-kao",
+          "label": "Amphoe Wiang Kao"
+        },
+        {
+          "value": "th-40-ban-phai",
+          "label": "Ban Phai"
+        },
+        {
+          "value": "th-40-chum-phae",
+          "label": "Chum Phae"
+        },
+        {
+          "value": "th-40-khon-kaen",
+          "label": "Khon Kaen"
+        },
+        {
+          "value": "th-40-kranuan",
+          "label": "Kranuan"
+        },
+        {
+          "value": "th-40-phon",
+          "label": "Phon"
+        },
+        {
+          "value": "th-40-pueai-noi",
+          "label": "Pueai Noi"
+        }
+      ]
+    },
+    {
+      "value": "th-81",
+      "label": "Krabi",
+      "state_code": "81",
+      "cities": [
+        {
+          "value": "th-81-amphoe-ao-luek",
+          "label": "Amphoe Ao Luek"
+        },
+        {
+          "value": "th-81-amphoe-khao-phanom",
+          "label": "Amphoe Khao Phanom"
+        },
+        {
+          "value": "th-81-amphoe-khlong-thom",
+          "label": "Amphoe Khlong Thom"
+        },
+        {
+          "value": "th-81-amphoe-ko-lanta",
+          "label": "Amphoe Ko Lanta"
+        },
+        {
+          "value": "th-81-amphoe-lam-thap",
+          "label": "Amphoe Lam Thap"
+        },
+        {
+          "value": "th-81-amphoe-mueang-krabi",
+          "label": "Amphoe Mueang Krabi"
+        },
+        {
+          "value": "th-81-amphoe-nuea-khlong",
+          "label": "Amphoe Nuea Khlong"
+        },
+        {
+          "value": "th-81-amphoe-plai-phraya",
+          "label": "Amphoe Plai Phraya"
+        },
+        {
+          "value": "th-81-ao-luek",
+          "label": "Ao Luek"
+        },
+        {
+          "value": "th-81-ko-lanta",
+          "label": "Ko Lanta"
+        },
+        {
+          "value": "th-81-krabi",
+          "label": "Krabi"
+        },
+        {
+          "value": "th-81-nuea-khlong",
+          "label": "Nuea Khlong"
+        },
+        {
+          "value": "th-81-saladan",
+          "label": "Saladan"
+        }
+      ]
+    },
+    {
+      "value": "th-52",
+      "label": "Lampang",
+      "state_code": "52",
+      "cities": [
+        {
+          "value": "th-52-amphoe-chae-hom",
+          "label": "Amphoe Chae Hom"
+        },
+        {
+          "value": "th-52-amphoe-hang-chat",
+          "label": "Amphoe Hang Chat"
+        },
+        {
+          "value": "th-52-amphoe-ko-kha",
+          "label": "Amphoe Ko Kha"
+        },
+        {
+          "value": "th-52-amphoe-mae-mo",
+          "label": "Amphoe Mae Mo"
+        },
+        {
+          "value": "th-52-amphoe-mae-phrik",
+          "label": "Amphoe Mae Phrik"
+        },
+        {
+          "value": "th-52-amphoe-mae-tha",
+          "label": "Amphoe Mae Tha"
+        },
+        {
+          "value": "th-52-amphoe-mueang-lampang",
+          "label": "Amphoe Mueang Lampang"
+        },
+        {
+          "value": "th-52-amphoe-mueang-pan",
+          "label": "Amphoe Mueang Pan"
+        },
+        {
+          "value": "th-52-amphoe-ngao",
+          "label": "Amphoe Ngao"
+        },
+        {
+          "value": "th-52-amphoe-soem-ngam",
+          "label": "Amphoe Soem Ngam"
+        },
+        {
+          "value": "th-52-amphoe-sop-prap",
+          "label": "Amphoe Sop Prap"
+        },
+        {
+          "value": "th-52-amphoe-thoen",
+          "label": "Amphoe Thoen"
+        },
+        {
+          "value": "th-52-amphoe-wang-nuea",
+          "label": "Amphoe Wang Nuea"
+        },
+        {
+          "value": "th-52-lampang",
+          "label": "Lampang"
+        },
+        {
+          "value": "th-52-thoen",
+          "label": "Thoen"
+        },
+        {
+          "value": "th-52-wang-nuea",
+          "label": "Wang Nuea"
+        }
+      ]
+    },
+    {
+      "value": "th-51",
+      "label": "Lamphun",
+      "state_code": "51",
+      "cities": [
+        {
+          "value": "th-51-amphoe-ban-hong",
+          "label": "Amphoe Ban Hong"
+        },
+        {
+          "value": "th-51-amphoe-ban-thi",
+          "label": "Amphoe Ban Thi"
+        },
+        {
+          "value": "th-51-amphoe-li",
+          "label": "Amphoe Li"
+        },
+        {
+          "value": "th-51-amphoe-mae-tha",
+          "label": "Amphoe Mae Tha"
+        },
+        {
+          "value": "th-51-amphoe-mueang-lamphun",
+          "label": "Amphoe Mueang Lamphun"
+        },
+        {
+          "value": "th-51-amphoe-pa-sang",
+          "label": "Amphoe Pa Sang"
+        },
+        {
+          "value": "th-51-amphoe-thung-hua-chang",
+          "label": "Amphoe Thung Hua Chang"
+        },
+        {
+          "value": "th-51-amphoe-wiang-nong-long",
+          "label": "Amphoe Wiang Nong Long"
+        },
+        {
+          "value": "th-51-lamphun",
+          "label": "Lamphun"
+        },
+        {
+          "value": "th-51-mae-tha",
+          "label": "Mae Tha"
+        },
+        {
+          "value": "th-51-pa-sang",
+          "label": "Pa Sang"
+        }
+      ]
+    },
+    {
+      "value": "th-42",
+      "label": "Loei",
+      "state_code": "42",
+      "cities": [
+        {
+          "value": "th-42-amphoe-chiang-khan",
+          "label": "Amphoe Chiang Khan"
+        },
+        {
+          "value": "th-42-amphoe-dan-sai",
+          "label": "Amphoe Dan Sai"
+        },
+        {
+          "value": "th-42-amphoe-erawan",
+          "label": "Amphoe Erawan"
+        },
+        {
+          "value": "th-42-amphoe-mueang-loei",
+          "label": "Amphoe Mueang Loei"
+        },
+        {
+          "value": "th-42-amphoe-na-duang",
+          "label": "Amphoe Na Duang"
+        },
+        {
+          "value": "th-42-amphoe-na-haeo",
+          "label": "Amphoe Na Haeo"
+        },
+        {
+          "value": "th-42-amphoe-nong-hin",
+          "label": "Amphoe Nong Hin"
+        },
+        {
+          "value": "th-42-amphoe-pak-chom",
+          "label": "Amphoe Pak Chom"
+        },
+        {
+          "value": "th-42-amphoe-pha-khao",
+          "label": "Amphoe Pha Khao"
+        },
+        {
+          "value": "th-42-amphoe-phu-kradueng",
+          "label": "Amphoe Phu Kradueng"
+        },
+        {
+          "value": "th-42-amphoe-phu-luang",
+          "label": "Amphoe Phu Luang"
+        },
+        {
+          "value": "th-42-amphoe-phu-ruea",
+          "label": "Amphoe Phu Ruea"
+        },
+        {
+          "value": "th-42-amphoe-tha-li",
+          "label": "Amphoe Tha Li"
+        },
+        {
+          "value": "th-42-amphoe-wang-saphung",
+          "label": "Amphoe Wang Saphung"
+        },
+        {
+          "value": "th-42-loei",
+          "label": "Loei"
+        },
+        {
+          "value": "th-42-phu-kradueng",
+          "label": "Phu Kradueng"
+        },
+        {
+          "value": "th-42-wang-saphung",
+          "label": "Wang Saphung"
+        }
+      ]
+    },
+    {
+      "value": "th-16",
+      "label": "Lop Buri",
+      "state_code": "16",
+      "cities": [
+        {
+          "value": "th-16-amphoe-ban-mi",
+          "label": "Amphoe Ban Mi"
+        },
+        {
+          "value": "th-16-amphoe-chai-badan",
+          "label": "Amphoe Chai Badan"
+        },
+        {
+          "value": "th-16-amphoe-khok-charoen",
+          "label": "Amphoe Khok Charoen"
+        },
+        {
+          "value": "th-16-amphoe-khok-samrong",
+          "label": "Amphoe Khok Samrong"
+        },
+        {
+          "value": "th-16-amphoe-lam-sonthi",
+          "label": "Amphoe Lam Sonthi"
+        },
+        {
+          "value": "th-16-amphoe-nong-muang",
+          "label": "Amphoe Nong Muang"
+        },
+        {
+          "value": "th-16-amphoe-phatthana-nikhom",
+          "label": "Amphoe Phatthana Nikhom"
+        },
+        {
+          "value": "th-16-amphoe-sa-bot",
+          "label": "Amphoe Sa Bot"
+        },
+        {
+          "value": "th-16-amphoe-tha-luang",
+          "label": "Amphoe Tha Luang"
+        },
+        {
+          "value": "th-16-amphoe-tha-wung",
+          "label": "Amphoe Tha Wung"
+        },
+        {
+          "value": "th-16-chai-badan",
+          "label": "Chai Badan"
+        },
+        {
+          "value": "th-16-lop-buri",
+          "label": "Lop Buri"
+        },
+        {
+          "value": "th-16-muang-lop-buri-district",
+          "label": "Muang Lop Buri District"
+        }
+      ]
+    },
+    {
+      "value": "th-58",
+      "label": "Mae Hong Son",
+      "state_code": "58",
+      "cities": [
+        {
+          "value": "th-58-amphoe-khun-yuam",
+          "label": "Amphoe Khun Yuam"
+        },
+        {
+          "value": "th-58-amphoe-mae-la-noi",
+          "label": "Amphoe Mae La Noi"
+        },
+        {
+          "value": "th-58-amphoe-mae-sariang",
+          "label": "Amphoe Mae Sariang"
+        },
+        {
+          "value": "th-58-amphoe-mueang-mae-hong-son",
+          "label": "Amphoe Mueang Mae Hong Son"
+        },
+        {
+          "value": "th-58-amphoe-pai",
+          "label": "Amphoe Pai"
+        },
+        {
+          "value": "th-58-amphoe-pang-mapha",
+          "label": "Amphoe Pang Mapha"
+        },
+        {
+          "value": "th-58-amphoe-sop-moei",
+          "label": "Amphoe Sop Moei"
+        },
+        {
+          "value": "th-58-mae-hong-son",
+          "label": "Mae Hong Son"
+        }
+      ]
+    },
+    {
+      "value": "th-44",
+      "label": "Maha Sarakham",
+      "state_code": "44",
+      "cities": [
+        {
+          "value": "th-44-amphoe-borabue",
+          "label": "Amphoe Borabue"
+        },
+        {
+          "value": "th-44-amphoe-chiang-yuen",
+          "label": "Amphoe Chiang Yuen"
+        },
+        {
+          "value": "th-44-amphoe-chuen-chom",
+          "label": "Amphoe Chuen Chom"
+        },
+        {
+          "value": "th-44-amphoe-kae-dam",
+          "label": "Amphoe Kae Dam"
+        },
+        {
+          "value": "th-44-amphoe-kantharawichai",
+          "label": "Amphoe Kantharawichai"
+        },
+        {
+          "value": "th-44-amphoe-kosum-phisai",
+          "label": "Amphoe Kosum Phisai"
+        },
+        {
+          "value": "th-44-amphoe-kut-rang",
+          "label": "Amphoe Kut Rang"
+        },
+        {
+          "value": "th-44-amphoe-mueang-maha-sarakham",
+          "label": "Amphoe Mueang Maha Sarakham"
+        },
+        {
+          "value": "th-44-amphoe-na-chueak",
+          "label": "Amphoe Na Chueak"
+        },
+        {
+          "value": "th-44-amphoe-na-dun",
+          "label": "Amphoe Na Dun"
+        },
+        {
+          "value": "th-44-amphoe-phayakkhaphum-phisai",
+          "label": "Amphoe Phayakkhaphum Phisai"
+        },
+        {
+          "value": "th-44-amphoe-wapi-pathum",
+          "label": "Amphoe Wapi Pathum"
+        },
+        {
+          "value": "th-44-amphoe-yang-si-surat",
+          "label": "Amphoe Yang Si Surat"
+        },
+        {
+          "value": "th-44-kosum-phisai",
+          "label": "Kosum Phisai"
+        },
+        {
+          "value": "th-44-maha-sarakham",
+          "label": "Maha Sarakham"
+        },
+        {
+          "value": "th-44-phayakkhaphum-phisai",
+          "label": "Phayakkhaphum Phisai"
+        },
+        {
+          "value": "th-44-wapi-pathum",
+          "label": "Wapi Pathum"
+        }
+      ]
+    },
+    {
+      "value": "th-49",
+      "label": "Mukdahan",
+      "state_code": "49",
+      "cities": [
+        {
+          "value": "th-49-amphoe-don-tan",
+          "label": "Amphoe Don Tan"
+        },
+        {
+          "value": "th-49-amphoe-dong-luang",
+          "label": "Amphoe Dong Luang"
+        },
+        {
+          "value": "th-49-amphoe-khamcha-i",
+          "label": "Amphoe Khamcha-i"
+        },
+        {
+          "value": "th-49-amphoe-mueang-mukdahan",
+          "label": "Amphoe Mueang Mukdahan"
+        },
+        {
+          "value": "th-49-amphoe-nikhom-kham-soi",
+          "label": "Amphoe Nikhom Kham Soi"
+        },
+        {
+          "value": "th-49-amphoe-nong-sung",
+          "label": "Amphoe Nong Sung"
+        },
+        {
+          "value": "th-49-amphoe-wan-yai",
+          "label": "Amphoe Wan Yai"
+        },
+        {
+          "value": "th-49-mukdahan",
+          "label": "Mukdahan"
+        }
+      ]
+    },
+    {
+      "value": "th-26",
+      "label": "Nakhon Nayok",
+      "state_code": "26",
+      "cities": [
+        {
+          "value": "th-26-amphoe-ban-na",
+          "label": "Amphoe Ban Na"
+        },
+        {
+          "value": "th-26-amphoe-mueang-nakhon-nayok",
+          "label": "Amphoe Mueang Nakhon Nayok"
+        },
+        {
+          "value": "th-26-amphoe-ongkharak",
+          "label": "Amphoe Ongkharak"
+        },
+        {
+          "value": "th-26-amphoe-pak-phli",
+          "label": "Amphoe Pak Phli"
+        },
+        {
+          "value": "th-26-nakhon-nayok",
+          "label": "Nakhon Nayok"
+        }
+      ]
+    },
+    {
+      "value": "th-73",
+      "label": "Nakhon Pathom",
+      "state_code": "73",
+      "cities": [
+        {
+          "value": "th-73-amphoe-bang-len",
+          "label": "Amphoe Bang Len"
+        },
+        {
+          "value": "th-73-amphoe-don-tum",
+          "label": "Amphoe Don Tum"
+        },
+        {
+          "value": "th-73-amphoe-mueang-nakhon-pathom",
+          "label": "Amphoe Mueang Nakhon Pathom"
+        },
+        {
+          "value": "th-73-amphoe-nakhon-chai-si",
+          "label": "Amphoe Nakhon Chai Si"
+        },
+        {
+          "value": "th-73-amphoe-phutthamonthon",
+          "label": "Amphoe Phutthamonthon"
+        },
+        {
+          "value": "th-73-amphoe-sam-phran",
+          "label": "Amphoe Sam Phran"
+        },
+        {
+          "value": "th-73-bang-len",
+          "label": "Bang Len"
+        },
+        {
+          "value": "th-73-kamphaeng-saen-district",
+          "label": "Kamphaeng Saen District"
+        },
+        {
+          "value": "th-73-nakhon-pathom",
+          "label": "Nakhon Pathom"
+        },
+        {
+          "value": "th-73-sam-phran",
+          "label": "Sam Phran"
+        }
+      ]
+    },
+    {
+      "value": "th-48",
+      "label": "Nakhon Phanom",
+      "state_code": "48",
+      "cities": [
+        {
+          "value": "th-48-amphoe-ban-phaeng",
+          "label": "Amphoe Ban Phaeng"
+        },
+        {
+          "value": "th-48-amphoe-mueang-nakhon-phanom",
+          "label": "Amphoe Mueang Nakhon Phanom"
+        },
+        {
+          "value": "th-48-amphoe-na-kae",
+          "label": "Amphoe Na Kae"
+        },
+        {
+          "value": "th-48-amphoe-na-thom",
+          "label": "Amphoe Na Thom"
+        },
+        {
+          "value": "th-48-amphoe-na-wa",
+          "label": "Amphoe Na Wa"
+        },
+        {
+          "value": "th-48-amphoe-phon-sawan",
+          "label": "Amphoe Phon Sawan"
+        },
+        {
+          "value": "th-48-amphoe-pla-pak",
+          "label": "Amphoe Pla Pak"
+        },
+        {
+          "value": "th-48-amphoe-renu-nakhon",
+          "label": "Amphoe Renu Nakhon"
+        },
+        {
+          "value": "th-48-amphoe-si-songkhram",
+          "label": "Amphoe Si Songkhram"
+        },
+        {
+          "value": "th-48-amphoe-tha-uthen",
+          "label": "Amphoe Tha Uthen"
+        },
+        {
+          "value": "th-48-amphoe-that-phanom",
+          "label": "Amphoe That Phanom"
+        },
+        {
+          "value": "th-48-amphoe-wangyang",
+          "label": "Amphoe Wangyang"
+        },
+        {
+          "value": "th-48-na-wa",
+          "label": "Na Wa"
+        },
+        {
+          "value": "th-48-nakhon-phanom",
+          "label": "Nakhon Phanom"
+        },
+        {
+          "value": "th-48-that-phanom",
+          "label": "That Phanom"
+        }
+      ]
+    },
+    {
+      "value": "th-30",
+      "label": "Nakhon Ratchasima",
+      "state_code": "30",
+      "cities": [
+        {
+          "value": "th-30-amphoe-ban-lueam",
+          "label": "Amphoe Ban Lueam"
+        },
+        {
+          "value": "th-30-amphoe-bua-lai",
+          "label": "Amphoe Bua Lai"
+        },
+        {
+          "value": "th-30-amphoe-bua-yai",
+          "label": "Amphoe Bua Yai"
+        },
+        {
+          "value": "th-30-amphoe-chakkarat",
+          "label": "Amphoe Chakkarat"
+        },
+        {
+          "value": "th-30-amphoe-chaloem-phra-kiat",
+          "label": "Amphoe Chaloem Phra Kiat"
+        },
+        {
+          "value": "th-30-amphoe-chok-chai",
+          "label": "Amphoe Chok Chai"
+        },
+        {
+          "value": "th-30-amphoe-chum-phuang",
+          "label": "Amphoe Chum Phuang"
+        },
+        {
+          "value": "th-30-amphoe-dan-khun-thot",
+          "label": "Amphoe Dan Khun Thot"
+        },
+        {
+          "value": "th-30-amphoe-huai-thalaeng",
+          "label": "Amphoe Huai Thalaeng"
+        },
+        {
+          "value": "th-30-amphoe-kaeng-sanam-nang",
+          "label": "Amphoe Kaeng Sanam Nang"
+        },
+        {
+          "value": "th-30-amphoe-kham-sakae-saeng",
+          "label": "Amphoe Kham Sakae Saeng"
+        },
+        {
+          "value": "th-30-amphoe-kham-thale-so",
+          "label": "Amphoe Kham Thale So"
+        },
+        {
+          "value": "th-30-amphoe-khon-buri",
+          "label": "Amphoe Khon Buri"
+        },
+        {
+          "value": "th-30-amphoe-khong",
+          "label": "Amphoe Khong"
+        },
+        {
+          "value": "th-30-amphoe-lam-thamen-chai",
+          "label": "Amphoe Lam Thamen Chai"
+        },
+        {
+          "value": "th-30-amphoe-mueang-nakhon-ratchasima",
+          "label": "Amphoe Mueang Nakhon Ratchasima"
+        },
+        {
+          "value": "th-30-amphoe-mueang-yang",
+          "label": "Amphoe Mueang Yang"
+        },
+        {
+          "value": "th-30-amphoe-non-daeng",
+          "label": "Amphoe Non Daeng"
+        },
+        {
+          "value": "th-30-amphoe-non-sung",
+          "label": "Amphoe Non Sung"
+        },
+        {
+          "value": "th-30-amphoe-non-thai",
+          "label": "Amphoe Non Thai"
+        },
+        {
+          "value": "th-30-amphoe-nong-bun-mak",
+          "label": "Amphoe Nong Bun Mak"
+        },
+        {
+          "value": "th-30-amphoe-pak-chong",
+          "label": "Amphoe Pak Chong"
+        },
+        {
+          "value": "th-30-amphoe-pak-thong-chai",
+          "label": "Amphoe Pak Thong Chai"
+        },
+        {
+          "value": "th-30-amphoe-phimai",
+          "label": "Amphoe Phimai"
+        },
+        {
+          "value": "th-30-amphoe-phra-thong-kham",
+          "label": "Amphoe Phra Thong Kham"
+        },
+        {
+          "value": "th-30-amphoe-prathai",
+          "label": "Amphoe Prathai"
+        },
+        {
+          "value": "th-30-amphoe-sida",
+          "label": "Amphoe Sida"
+        },
+        {
+          "value": "th-30-amphoe-sikhio",
+          "label": "Amphoe Sikhio"
+        },
+        {
+          "value": "th-30-amphoe-sikhiu",
+          "label": "Amphoe Sikhiu"
+        },
+        {
+          "value": "th-30-amphoe-soeng-sang",
+          "label": "Amphoe Soeng Sang"
+        },
+        {
+          "value": "th-30-amphoe-sung-noen",
+          "label": "Amphoe Sung Noen"
+        },
+        {
+          "value": "th-30-amphoe-thepharak",
+          "label": "Amphoe Thepharak"
+        },
+        {
+          "value": "th-30-amphoe-wang-nam-khiao",
+          "label": "Amphoe Wang Nam Khiao"
+        },
+        {
+          "value": "th-30-ban-huai-thalaeng",
+          "label": "Ban Huai Thalaeng"
+        },
+        {
+          "value": "th-30-bua-yai",
+          "label": "Bua Yai"
+        },
+        {
+          "value": "th-30-chok-chai",
+          "label": "Chok Chai"
+        },
+        {
+          "value": "th-30-dan-khun-thot",
+          "label": "Dan Khun Thot"
+        },
+        {
+          "value": "th-30-kham-sakae-saeng",
+          "label": "Kham Sakae Saeng"
+        },
+        {
+          "value": "th-30-khon-buri",
+          "label": "Khon Buri"
+        },
+        {
+          "value": "th-30-nakhon-ratchasima",
+          "label": "Nakhon Ratchasima"
+        },
+        {
+          "value": "th-30-non-sung",
+          "label": "Non Sung"
+        },
+        {
+          "value": "th-30-non-thai",
+          "label": "Non Thai"
+        },
+        {
+          "value": "th-30-pak-chong",
+          "label": "Pak Chong"
+        },
+        {
+          "value": "th-30-pak-thong-chai",
+          "label": "Pak Thong Chai"
+        },
+        {
+          "value": "th-30-phimai",
+          "label": "Phimai"
+        },
+        {
+          "value": "th-30-soeng-sang",
+          "label": "Soeng Sang"
+        },
+        {
+          "value": "th-30-sung-noen",
+          "label": "Sung Noen"
+        }
+      ]
+    },
+    {
+      "value": "th-60",
+      "label": "Nakhon Sawan",
+      "state_code": "60",
+      "cities": [
+        {
+          "value": "th-60-amphoe-banphot-phisai",
+          "label": "Amphoe Banphot Phisai"
+        },
+        {
+          "value": "th-60-amphoe-chum-ta-bong",
+          "label": "Amphoe Chum Ta Bong"
+        },
+        {
+          "value": "th-60-amphoe-chumsaeng",
+          "label": "Amphoe Chumsaeng"
+        },
+        {
+          "value": "th-60-amphoe-kao-liao",
+          "label": "Amphoe Kao Liao"
+        },
+        {
+          "value": "th-60-amphoe-krok-phra",
+          "label": "Amphoe Krok Phra"
+        },
+        {
+          "value": "th-60-amphoe-lat-yao",
+          "label": "Amphoe Lat Yao"
+        },
+        {
+          "value": "th-60-amphoe-mae-poen",
+          "label": "Amphoe Mae Poen"
+        },
+        {
+          "value": "th-60-amphoe-mae-wong",
+          "label": "Amphoe Mae Wong"
+        },
+        {
+          "value": "th-60-amphoe-mueang-nakhon-sawan",
+          "label": "Amphoe Mueang Nakhon Sawan"
+        },
+        {
+          "value": "th-60-amphoe-nong-bua",
+          "label": "Amphoe Nong Bua"
+        },
+        {
+          "value": "th-60-amphoe-phai-sali",
+          "label": "Amphoe Phai Sali"
+        },
+        {
+          "value": "th-60-amphoe-phayuha-khiri",
+          "label": "Amphoe Phayuha Khiri"
+        },
+        {
+          "value": "th-60-amphoe-tak-fa",
+          "label": "Amphoe Tak Fa"
+        },
+        {
+          "value": "th-60-amphoe-takhli",
+          "label": "Amphoe Takhli"
+        },
+        {
+          "value": "th-60-amphoe-tha-tako",
+          "label": "Amphoe Tha Tako"
+        },
+        {
+          "value": "th-60-kao-liao",
+          "label": "Kao Liao"
+        },
+        {
+          "value": "th-60-lat-yao",
+          "label": "Lat Yao"
+        },
+        {
+          "value": "th-60-nakhon-sawan",
+          "label": "Nakhon Sawan"
+        },
+        {
+          "value": "th-60-nong-bua",
+          "label": "Nong Bua"
+        },
+        {
+          "value": "th-60-phai-sali",
+          "label": "Phai Sali"
+        },
+        {
+          "value": "th-60-phayuha-khiri",
+          "label": "Phayuha Khiri"
+        },
+        {
+          "value": "th-60-takhli",
+          "label": "Takhli"
+        }
+      ]
+    },
+    {
+      "value": "th-80",
+      "label": "Nakhon Si Thammarat",
+      "state_code": "80",
+      "cities": [
+        {
+          "value": "th-80-amphoe-bang-khan",
+          "label": "Amphoe Bang Khan"
+        },
+        {
+          "value": "th-80-amphoe-cha-uat",
+          "label": "Amphoe Cha-uat"
+        },
+        {
+          "value": "th-80-amphoe-chaloem-phra-kiat",
+          "label": "Amphoe Chaloem Phra Kiat"
+        },
+        {
+          "value": "th-80-amphoe-chang-klang",
+          "label": "Amphoe Chang Klang"
+        },
+        {
+          "value": "th-80-amphoe-chawang",
+          "label": "Amphoe Chawang"
+        },
+        {
+          "value": "th-80-amphoe-chian-yai",
+          "label": "Amphoe Chian Yai"
+        },
+        {
+          "value": "th-80-amphoe-chulabhorn",
+          "label": "Amphoe Chulabhorn"
+        },
+        {
+          "value": "th-80-amphoe-hua-sai",
+          "label": "Amphoe Hua Sai"
+        },
+        {
+          "value": "th-80-amphoe-khanom",
+          "label": "Amphoe Khanom"
+        },
+        {
+          "value": "th-80-amphoe-lan-saka",
+          "label": "Amphoe Lan Saka"
+        },
+        {
+          "value": "th-80-amphoe-mueang-nakhon-si-thammarat",
+          "label": "Amphoe Mueang Nakhon Si Thammarat"
+        },
+        {
+          "value": "th-80-amphoe-na-bon",
+          "label": "Amphoe Na Bon"
+        },
+        {
+          "value": "th-80-amphoe-nopphitam",
+          "label": "Amphoe Nopphitam"
+        },
+        {
+          "value": "th-80-amphoe-pak-phanang",
+          "label": "Amphoe Pak Phanang"
+        },
+        {
+          "value": "th-80-amphoe-phipun",
+          "label": "Amphoe Phipun"
+        },
+        {
+          "value": "th-80-amphoe-phra-phrom",
+          "label": "Amphoe Phra Phrom"
+        },
+        {
+          "value": "th-80-amphoe-phrom-khiri",
+          "label": "Amphoe Phrom Khiri"
+        },
+        {
+          "value": "th-80-amphoe-ron-phibun",
+          "label": "Amphoe Ron Phibun"
+        },
+        {
+          "value": "th-80-amphoe-sichon",
+          "label": "Amphoe Sichon"
+        },
+        {
+          "value": "th-80-amphoe-tha-sala",
+          "label": "Amphoe Tha Sala"
+        },
+        {
+          "value": "th-80-amphoe-tham-phannara",
+          "label": "Amphoe Tham Phannara"
+        },
+        {
+          "value": "th-80-amphoe-thung-song",
+          "label": "Amphoe Thung Song"
+        },
+        {
+          "value": "th-80-amphoe-thung-yai",
+          "label": "Amphoe Thung Yai"
+        },
+        {
+          "value": "th-80-chawang",
+          "label": "Chawang"
+        },
+        {
+          "value": "th-80-nakhon-si-thammarat",
+          "label": "Nakhon Si Thammarat"
+        },
+        {
+          "value": "th-80-pak-phanang",
+          "label": "Pak Phanang"
+        },
+        {
+          "value": "th-80-ron-phibun",
+          "label": "Ron Phibun"
+        },
+        {
+          "value": "th-80-tham-phannara",
+          "label": "Tham Phannara"
+        },
+        {
+          "value": "th-80-thung-song",
+          "label": "Thung Song"
+        }
+      ]
+    },
+    {
+      "value": "th-55",
+      "label": "Nan",
+      "state_code": "55",
+      "cities": [
+        {
+          "value": "th-55-amphoe-ban-luang",
+          "label": "Amphoe Ban Luang"
+        },
+        {
+          "value": "th-55-amphoe-bo-kluea",
+          "label": "Amphoe Bo Kluea"
+        },
+        {
+          "value": "th-55-amphoe-chaloem-phra-kiat",
+          "label": "Amphoe Chaloem Phra Kiat"
+        },
+        {
+          "value": "th-55-amphoe-chiang-klang",
+          "label": "Amphoe Chiang Klang"
+        },
+        {
+          "value": "th-55-amphoe-mae-charim",
+          "label": "Amphoe Mae Charim"
+        },
+        {
+          "value": "th-55-amphoe-mueang-nan",
+          "label": "Amphoe Mueang Nan"
+        },
+        {
+          "value": "th-55-amphoe-na-muen",
+          "label": "Amphoe Na Muen"
+        },
+        {
+          "value": "th-55-amphoe-na-noi",
+          "label": "Amphoe Na Noi"
+        },
+        {
+          "value": "th-55-amphoe-phu-phiang",
+          "label": "Amphoe Phu Phiang"
+        },
+        {
+          "value": "th-55-amphoe-pua",
+          "label": "Amphoe Pua"
+        },
+        {
+          "value": "th-55-amphoe-santi-suk",
+          "label": "Amphoe Santi Suk"
+        },
+        {
+          "value": "th-55-amphoe-song-khwae",
+          "label": "Amphoe Song Khwae"
+        },
+        {
+          "value": "th-55-amphoe-tha-wang-pha",
+          "label": "Amphoe Tha Wang Pha"
+        },
+        {
+          "value": "th-55-amphoe-thung-chang",
+          "label": "Amphoe Thung Chang"
+        },
+        {
+          "value": "th-55-amphoe-wiang-sa",
+          "label": "Amphoe Wiang Sa"
+        },
+        {
+          "value": "th-55-chiang-klang",
+          "label": "Chiang Klang"
+        },
+        {
+          "value": "th-55-nan",
+          "label": "Nan"
+        }
+      ]
+    },
+    {
+      "value": "th-96",
+      "label": "Narathiwat",
+      "state_code": "96",
+      "cities": [
+        {
+          "value": "th-96-amphoe-ba-cho",
+          "label": "Amphoe Ba Cho"
+        },
+        {
+          "value": "th-96-amphoe-chanae",
+          "label": "Amphoe Chanae"
+        },
+        {
+          "value": "th-96-amphoe-cho-airong",
+          "label": "Amphoe Cho-airong"
+        },
+        {
+          "value": "th-96-amphoe-mueang-narathiwat",
+          "label": "Amphoe Mueang Narathiwat"
+        },
+        {
+          "value": "th-96-amphoe-ra-ngae",
+          "label": "Amphoe Ra-ngae"
+        },
+        {
+          "value": "th-96-amphoe-rueso",
+          "label": "Amphoe Rueso"
+        },
+        {
+          "value": "th-96-amphoe-si-sakhon",
+          "label": "Amphoe Si Sakhon"
+        },
+        {
+          "value": "th-96-amphoe-su-ngai-kolok",
+          "label": "Amphoe Su-ngai Kolok"
+        },
+        {
+          "value": "th-96-amphoe-su-ngai-padi",
+          "label": "Amphoe Su-ngai Padi"
+        },
+        {
+          "value": "th-96-amphoe-sukhirin",
+          "label": "Amphoe Sukhirin"
+        },
+        {
+          "value": "th-96-amphoe-tak-bai",
+          "label": "Amphoe Tak Bai"
+        },
+        {
+          "value": "th-96-amphoe-waeng",
+          "label": "Amphoe Waeng"
+        },
+        {
+          "value": "th-96-amphoe-yi-ngo",
+          "label": "Amphoe Yi-ngo"
+        },
+        {
+          "value": "th-96-ban-su-ngai-pa-di",
+          "label": "Ban Su-ngai Pa Di"
+        },
+        {
+          "value": "th-96-narathiwat",
+          "label": "Narathiwat"
+        },
+        {
+          "value": "th-96-ra-ngae",
+          "label": "Ra-ngae"
+        },
+        {
+          "value": "th-96-su-ngai-kolok",
+          "label": "Su-ngai Kolok"
+        },
+        {
+          "value": "th-96-tak-bai",
+          "label": "Tak Bai"
+        }
+      ]
+    },
+    {
+      "value": "th-39",
+      "label": "Nong Bua Lam Phu",
+      "state_code": "39",
+      "cities": [
+        {
+          "value": "th-39-amphoe-mueang-nong-bua-lamphu",
+          "label": "Amphoe Mueang Nong Bua Lamphu"
+        },
+        {
+          "value": "th-39-amphoe-na-klang",
+          "label": "Amphoe Na Klang"
+        },
+        {
+          "value": "th-39-amphoe-na-wang",
+          "label": "Amphoe Na Wang"
+        },
+        {
+          "value": "th-39-amphoe-non-sang",
+          "label": "Amphoe Non Sang"
+        },
+        {
+          "value": "th-39-amphoe-si-bun-rueang",
+          "label": "Amphoe Si Bun Rueang"
+        },
+        {
+          "value": "th-39-amphoe-suwannakhuha",
+          "label": "Amphoe Suwannakhuha"
+        },
+        {
+          "value": "th-39-na-klang",
+          "label": "Na Klang"
+        },
+        {
+          "value": "th-39-non-sang",
+          "label": "Non Sang"
+        },
+        {
+          "value": "th-39-nong-bua-lamphu",
+          "label": "Nong Bua Lamphu"
+        },
+        {
+          "value": "th-39-si-bun-rueang",
+          "label": "Si Bun Rueang"
+        }
+      ]
+    },
+    {
+      "value": "th-43",
+      "label": "Nong Khai",
+      "state_code": "43",
+      "cities": [
+        {
+          "value": "th-43-amphoe-fao-rai",
+          "label": "Amphoe Fao Rai"
+        },
+        {
+          "value": "th-43-amphoe-mueang-nong-khai",
+          "label": "Amphoe Mueang Nong Khai"
+        },
+        {
+          "value": "th-43-amphoe-pho-tak",
+          "label": "Amphoe Pho Tak"
+        },
+        {
+          "value": "th-43-amphoe-phonphisai",
+          "label": "Amphoe Phonphisai"
+        },
+        {
+          "value": "th-43-amphoe-rattanawapi",
+          "label": "Amphoe Rattanawapi"
+        },
+        {
+          "value": "th-43-amphoe-sa-khrai",
+          "label": "Amphoe Sa Khrai"
+        },
+        {
+          "value": "th-43-amphoe-sangkhom",
+          "label": "Amphoe Sangkhom"
+        },
+        {
+          "value": "th-43-amphoe-si-chiang-mai",
+          "label": "Amphoe Si Chiang Mai"
+        },
+        {
+          "value": "th-43-amphoe-tha-bo",
+          "label": "Amphoe Tha Bo"
+        },
+        {
+          "value": "th-43-nong-khai",
+          "label": "Nong Khai"
+        },
+        {
+          "value": "th-43-phon-charoen",
+          "label": "Phon Charoen"
+        },
+        {
+          "value": "th-43-sangkhom",
+          "label": "Sangkhom"
+        },
+        {
+          "value": "th-43-si-chiang-mai",
+          "label": "Si Chiang Mai"
+        },
+        {
+          "value": "th-43-tha-bo",
+          "label": "Tha Bo"
+        }
+      ]
+    },
+    {
+      "value": "th-12",
+      "label": "Nonthaburi",
+      "state_code": "12",
+      "cities": [
+        {
+          "value": "th-12-amphoe-bang-bua-thong",
+          "label": "Amphoe Bang Bua Thong"
+        },
+        {
+          "value": "th-12-amphoe-bang-kruai",
+          "label": "Amphoe Bang Kruai"
+        },
+        {
+          "value": "th-12-amphoe-bang-yai",
+          "label": "Amphoe Bang Yai"
+        },
+        {
+          "value": "th-12-amphoe-mueang-nonthaburi",
+          "label": "Amphoe Mueang Nonthaburi"
+        },
+        {
+          "value": "th-12-amphoe-pak-kret",
+          "label": "Amphoe Pak Kret"
+        },
+        {
+          "value": "th-12-amphoe-sai-noi",
+          "label": "Amphoe Sai Noi"
+        },
+        {
+          "value": "th-12-bang-bua-thong",
+          "label": "Bang Bua Thong"
+        },
+        {
+          "value": "th-12-bang-kruai",
+          "label": "Bang Kruai"
+        },
+        {
+          "value": "th-12-bang-yai",
+          "label": "Bang Yai"
+        },
+        {
+          "value": "th-12-mueang-nonthaburi",
+          "label": "Mueang Nonthaburi"
+        },
+        {
+          "value": "th-12-pak-kret",
+          "label": "Pak Kret"
+        }
+      ]
+    },
+    {
+      "value": "th-13",
+      "label": "Pathum Thani",
+      "state_code": "13",
+      "cities": [
+        {
+          "value": "th-13-amphoe-khlong-luang",
+          "label": "Amphoe Khlong Luang"
+        },
+        {
+          "value": "th-13-amphoe-lam-luk-ka",
+          "label": "Amphoe Lam Luk Ka"
+        },
+        {
+          "value": "th-13-amphoe-lat-lum-kaeo",
+          "label": "Amphoe Lat Lum Kaeo"
+        },
+        {
+          "value": "th-13-amphoe-mueang-pathum-thani",
+          "label": "Amphoe Mueang Pathum Thani"
+        },
+        {
+          "value": "th-13-amphoe-nong-suea",
+          "label": "Amphoe Nong Suea"
+        },
+        {
+          "value": "th-13-amphoe-thanyaburi",
+          "label": "Amphoe Thanyaburi"
+        },
+        {
+          "value": "th-13-ban-lam-luk-ka",
+          "label": "Ban Lam Luk Ka"
+        },
+        {
+          "value": "th-13-khlong-luang",
+          "label": "Khlong Luang"
+        },
+        {
+          "value": "th-13-pathum-thani",
+          "label": "Pathum Thani"
+        }
+      ]
+    },
+    {
+      "value": "th-94",
+      "label": "Pattani",
+      "state_code": "94",
+      "cities": [
+        {
+          "value": "th-94-amphoe-kapho",
+          "label": "Amphoe Kapho"
+        },
+        {
+          "value": "th-94-amphoe-khok-pho",
+          "label": "Amphoe Khok Pho"
+        },
+        {
+          "value": "th-94-amphoe-mae-lan",
+          "label": "Amphoe Mae Lan"
+        },
+        {
+          "value": "th-94-amphoe-mai-kaen",
+          "label": "Amphoe Mai Kaen"
+        },
+        {
+          "value": "th-94-amphoe-mayo",
+          "label": "Amphoe Mayo"
+        },
+        {
+          "value": "th-94-amphoe-mueang-pattani",
+          "label": "Amphoe Mueang Pattani"
+        },
+        {
+          "value": "th-94-amphoe-nong-chik",
+          "label": "Amphoe Nong Chik"
+        },
+        {
+          "value": "th-94-amphoe-panare",
+          "label": "Amphoe Panare"
+        },
+        {
+          "value": "th-94-amphoe-sai-buri",
+          "label": "Amphoe Sai Buri"
+        },
+        {
+          "value": "th-94-amphoe-thung-yang-daeng",
+          "label": "Amphoe Thung Yang Daeng"
+        },
+        {
+          "value": "th-94-amphoe-yarang",
+          "label": "Amphoe Yarang"
+        },
+        {
+          "value": "th-94-amphoe-yaring",
+          "label": "Amphoe Yaring"
+        },
+        {
+          "value": "th-94-nong-chik",
+          "label": "Nong Chik"
+        },
+        {
+          "value": "th-94-pattani",
+          "label": "Pattani"
+        },
+        {
+          "value": "th-94-sai-buri",
+          "label": "Sai Buri"
+        },
+        {
+          "value": "th-94-yaring",
+          "label": "Yaring"
+        }
+      ]
+    },
+    {
+      "value": "th-s",
+      "label": "Pattaya",
+      "state_code": "S",
+      "cities": []
+    },
+    {
+      "value": "th-82",
+      "label": "Phangnga",
+      "state_code": "82",
+      "cities": [
+        {
+          "value": "th-82-amphoe-kapong",
+          "label": "Amphoe Kapong"
+        },
+        {
+          "value": "th-82-amphoe-khura-buri",
+          "label": "Amphoe Khura Buri"
+        },
+        {
+          "value": "th-82-amphoe-ko-yao",
+          "label": "Amphoe Ko Yao"
+        },
+        {
+          "value": "th-82-amphoe-mueang-phangnga",
+          "label": "Amphoe Mueang Phangnga"
+        },
+        {
+          "value": "th-82-amphoe-takua-pa",
+          "label": "Amphoe Takua Pa"
+        },
+        {
+          "value": "th-82-amphoe-takua-thung",
+          "label": "Amphoe Takua Thung"
+        },
+        {
+          "value": "th-82-amphoe-thai-mueang",
+          "label": "Amphoe Thai Mueang"
+        },
+        {
+          "value": "th-82-amphoe-thap-put",
+          "label": "Amphoe Thap Put"
+        },
+        {
+          "value": "th-82-ban-ao-nang",
+          "label": "Ban Ao Nang"
+        },
+        {
+          "value": "th-82-ban-khao-lak",
+          "label": "Ban Khao Lak"
+        },
+        {
+          "value": "th-82-ban-phru-nai",
+          "label": "Ban Phru Nai"
+        },
+        {
+          "value": "th-82-phang-nga",
+          "label": "Phang Nga"
+        }
+      ]
+    },
+    {
+      "value": "th-93",
+      "label": "Phatthalung",
+      "state_code": "93",
+      "cities": [
+        {
+          "value": "th-93-amphoe-bang-kaeo",
+          "label": "Amphoe Bang Kaeo"
+        },
+        {
+          "value": "th-93-amphoe-khao-chaison",
+          "label": "Amphoe Khao Chaison"
+        },
+        {
+          "value": "th-93-amphoe-khuan-khanun",
+          "label": "Amphoe Khuan Khanun"
+        },
+        {
+          "value": "th-93-amphoe-kong-ra",
+          "label": "Amphoe Kong Ra"
+        },
+        {
+          "value": "th-93-amphoe-mueang-phatthalung",
+          "label": "Amphoe Mueang Phatthalung"
+        },
+        {
+          "value": "th-93-amphoe-pa-bon",
+          "label": "Amphoe Pa Bon"
+        },
+        {
+          "value": "th-93-amphoe-pa-phayom",
+          "label": "Amphoe Pa Phayom"
+        },
+        {
+          "value": "th-93-amphoe-pak-phayun",
+          "label": "Amphoe Pak Phayun"
+        },
+        {
+          "value": "th-93-amphoe-si-banphot",
+          "label": "Amphoe Si Banphot"
+        },
+        {
+          "value": "th-93-amphoe-srinagarindra",
+          "label": "Amphoe Srinagarindra"
+        },
+        {
+          "value": "th-93-amphoe-tamot",
+          "label": "Amphoe Tamot"
+        },
+        {
+          "value": "th-93-phatthalung",
+          "label": "Phatthalung"
+        }
+      ]
+    },
+    {
+      "value": "th-56",
+      "label": "Phayao",
+      "state_code": "56",
+      "cities": [
+        {
+          "value": "th-56-amphoe-chiang-kham",
+          "label": "Amphoe Chiang Kham"
+        },
+        {
+          "value": "th-56-amphoe-chiang-muan",
+          "label": "Amphoe Chiang Muan"
+        },
+        {
+          "value": "th-56-amphoe-chun",
+          "label": "Amphoe Chun"
+        },
+        {
+          "value": "th-56-amphoe-dok-kham-tai",
+          "label": "Amphoe Dok Kham Tai"
+        },
+        {
+          "value": "th-56-amphoe-mae-chai",
+          "label": "Amphoe Mae Chai"
+        },
+        {
+          "value": "th-56-amphoe-mueang-phayao",
+          "label": "Amphoe Mueang Phayao"
+        },
+        {
+          "value": "th-56-amphoe-phu-kam-yao",
+          "label": "Amphoe Phu Kam Yao"
+        },
+        {
+          "value": "th-56-amphoe-phu-sang",
+          "label": "Amphoe Phu Sang"
+        },
+        {
+          "value": "th-56-amphoe-pong",
+          "label": "Amphoe Pong"
+        },
+        {
+          "value": "th-56-chiang-kham",
+          "label": "Chiang Kham"
+        },
+        {
+          "value": "th-56-dok-kham-tai",
+          "label": "Dok Kham Tai"
+        },
+        {
+          "value": "th-56-mae-chai",
+          "label": "Mae Chai"
+        },
+        {
+          "value": "th-56-phayao",
+          "label": "Phayao"
+        },
+        {
+          "value": "th-56-pong",
+          "label": "Pong"
+        }
+      ]
+    },
+    {
+      "value": "th-67",
+      "label": "Phetchabun",
+      "state_code": "67",
+      "cities": [
+        {
+          "value": "th-67-amphoe-bueng-sam-phan",
+          "label": "Amphoe Bueng Sam Phan"
+        },
+        {
+          "value": "th-67-amphoe-chon-daen",
+          "label": "Amphoe Chon Daen"
+        },
+        {
+          "value": "th-67-amphoe-khao-kho",
+          "label": "Amphoe Khao Kho"
+        },
+        {
+          "value": "th-67-amphoe-lom-kao",
+          "label": "Amphoe Lom Kao"
+        },
+        {
+          "value": "th-67-amphoe-lom-sak",
+          "label": "Amphoe Lom Sak"
+        },
+        {
+          "value": "th-67-amphoe-mueang-phetchabun",
+          "label": "Amphoe Mueang Phetchabun"
+        },
+        {
+          "value": "th-67-amphoe-nam-nao",
+          "label": "Amphoe Nam Nao"
+        },
+        {
+          "value": "th-67-amphoe-nong-phai",
+          "label": "Amphoe Nong Phai"
+        },
+        {
+          "value": "th-67-amphoe-si-thep",
+          "label": "Amphoe Si Thep"
+        },
+        {
+          "value": "th-67-amphoe-wang-pong",
+          "label": "Amphoe Wang Pong"
+        },
+        {
+          "value": "th-67-amphoe-wichian-buri",
+          "label": "Amphoe Wichian Buri"
+        },
+        {
+          "value": "th-67-chon-daen",
+          "label": "Chon Daen"
+        },
+        {
+          "value": "th-67-lom-sak",
+          "label": "Lom Sak"
+        },
+        {
+          "value": "th-67-nong-phai",
+          "label": "Nong Phai"
+        },
+        {
+          "value": "th-67-phetchabun",
+          "label": "Phetchabun"
+        },
+        {
+          "value": "th-67-wichian-buri",
+          "label": "Wichian Buri"
+        }
+      ]
+    },
+    {
+      "value": "th-76",
+      "label": "Phetchaburi",
+      "state_code": "76",
+      "cities": [
+        {
+          "value": "th-76-amphoe-ban-laem",
+          "label": "Amphoe Ban Laem"
+        },
+        {
+          "value": "th-76-amphoe-ban-lat",
+          "label": "Amphoe Ban Lat"
+        },
+        {
+          "value": "th-76-amphoe-cha-am",
+          "label": "Amphoe Cha-am"
+        },
+        {
+          "value": "th-76-amphoe-kaeng-krachan",
+          "label": "Amphoe Kaeng Krachan"
+        },
+        {
+          "value": "th-76-amphoe-khao-yoi",
+          "label": "Amphoe Khao Yoi"
+        },
+        {
+          "value": "th-76-amphoe-mueang-phetchaburi",
+          "label": "Amphoe Mueang Phetchaburi"
+        },
+        {
+          "value": "th-76-amphoe-nong-ya-plong",
+          "label": "Amphoe Nong Ya Plong"
+        },
+        {
+          "value": "th-76-amphoe-tha-yang",
+          "label": "Amphoe Tha Yang"
+        },
+        {
+          "value": "th-76-cha-am",
+          "label": "Cha-am"
+        },
+        {
+          "value": "th-76-khao-yoi",
+          "label": "Khao Yoi"
+        },
+        {
+          "value": "th-76-phetchaburi",
+          "label": "Phetchaburi"
+        },
+        {
+          "value": "th-76-tha-yang",
+          "label": "Tha Yang"
+        }
+      ]
+    },
+    {
+      "value": "th-66",
+      "label": "Phichit",
+      "state_code": "66",
+      "cities": [
+        {
+          "value": "th-66-amphoe-bang-mun-nak",
+          "label": "Amphoe Bang Mun Nak"
+        },
+        {
+          "value": "th-66-amphoe-bueng-na-rang",
+          "label": "Amphoe Bueng Na Rang"
+        },
+        {
+          "value": "th-66-amphoe-dong-charoen",
+          "label": "Amphoe Dong Charoen"
+        },
+        {
+          "value": "th-66-amphoe-mueang-phichit",
+          "label": "Amphoe Mueang Phichit"
+        },
+        {
+          "value": "th-66-amphoe-pho-prathap-chang",
+          "label": "Amphoe Pho Prathap Chang"
+        },
+        {
+          "value": "th-66-amphoe-pho-thale",
+          "label": "Amphoe Pho Thale"
+        },
+        {
+          "value": "th-66-amphoe-sak-lek",
+          "label": "Amphoe Sak Lek"
+        },
+        {
+          "value": "th-66-amphoe-taphan-hin",
+          "label": "Amphoe Taphan Hin"
+        },
+        {
+          "value": "th-66-amphoe-thap-khlo",
+          "label": "Amphoe Thap Khlo"
+        },
+        {
+          "value": "th-66-amphoe-wachira-barami",
+          "label": "Amphoe Wachira Barami"
+        },
+        {
+          "value": "th-66-amphoe-wang-sai-phun",
+          "label": "Amphoe Wang Sai Phun"
+        },
+        {
+          "value": "th-66-bang-mun-nak",
+          "label": "Bang Mun Nak"
+        },
+        {
+          "value": "th-66-bueng-na-rang",
+          "label": "Bueng Na Rang"
+        },
+        {
+          "value": "th-66-phichit",
+          "label": "Phichit"
+        },
+        {
+          "value": "th-66-taphan-hin",
+          "label": "Taphan Hin"
+        },
+        {
+          "value": "th-66-thap-khlo",
+          "label": "Thap Khlo"
+        },
+        {
+          "value": "th-66-wang-sai-phun",
+          "label": "Wang Sai Phun"
+        }
+      ]
+    },
+    {
+      "value": "th-65",
+      "label": "Phitsanulok",
+      "state_code": "65",
+      "cities": [
+        {
+          "value": "th-65-amphoe-bang-krathum",
+          "label": "Amphoe Bang Krathum"
+        },
+        {
+          "value": "th-65-amphoe-bang-rakam",
+          "label": "Amphoe Bang Rakam"
+        },
+        {
+          "value": "th-65-amphoe-chat-trakan",
+          "label": "Amphoe Chat Trakan"
+        },
+        {
+          "value": "th-65-amphoe-mueang-phitsanulok",
+          "label": "Amphoe Mueang Phitsanulok"
+        },
+        {
+          "value": "th-65-amphoe-nakhon-thai",
+          "label": "Amphoe Nakhon Thai"
+        },
+        {
+          "value": "th-65-amphoe-noen-maprang",
+          "label": "Amphoe Noen Maprang"
+        },
+        {
+          "value": "th-65-amphoe-phrom-phiram",
+          "label": "Amphoe Phrom Phiram"
+        },
+        {
+          "value": "th-65-amphoe-wang-thong",
+          "label": "Amphoe Wang Thong"
+        },
+        {
+          "value": "th-65-amphoe-wat-bot",
+          "label": "Amphoe Wat Bot"
+        },
+        {
+          "value": "th-65-bang-krathum",
+          "label": "Bang Krathum"
+        },
+        {
+          "value": "th-65-bang-rakam",
+          "label": "Bang Rakam"
+        },
+        {
+          "value": "th-65-chat-trakan",
+          "label": "Chat Trakan"
+        },
+        {
+          "value": "th-65-nakhon-thai",
+          "label": "Nakhon Thai"
+        },
+        {
+          "value": "th-65-phitsanulok",
+          "label": "Phitsanulok"
+        }
+      ]
+    },
+    {
+      "value": "th-14",
+      "label": "Phra Nakhon Si Ayutthaya",
+      "state_code": "14",
+      "cities": [
+        {
+          "value": "th-14-amphoe-ban-phraek",
+          "label": "Amphoe Ban Phraek"
+        },
+        {
+          "value": "th-14-amphoe-bang-ban",
+          "label": "Amphoe Bang Ban"
+        },
+        {
+          "value": "th-14-amphoe-bang-pa-in",
+          "label": "Amphoe Bang Pa-in"
+        },
+        {
+          "value": "th-14-amphoe-bang-pahan",
+          "label": "Amphoe Bang Pahan"
+        },
+        {
+          "value": "th-14-amphoe-bang-sai",
+          "label": "Amphoe Bang Sai"
+        },
+        {
+          "value": "th-14-amphoe-lat-bua-luang",
+          "label": "Amphoe Lat Bua Luang"
+        },
+        {
+          "value": "th-14-amphoe-maha-rat",
+          "label": "Amphoe Maha Rat"
+        },
+        {
+          "value": "th-14-amphoe-nakhon-luang",
+          "label": "Amphoe Nakhon Luang"
+        },
+        {
+          "value": "th-14-amphoe-phachi",
+          "label": "Amphoe Phachi"
+        },
+        {
+          "value": "th-14-amphoe-phak-hai",
+          "label": "Amphoe Phak Hai"
+        },
+        {
+          "value": "th-14-amphoe-phra-nakhon-si-ayutthaya",
+          "label": "Amphoe Phra Nakhon Si Ayutthaya"
+        },
+        {
+          "value": "th-14-amphoe-sena",
+          "label": "Amphoe Sena"
+        },
+        {
+          "value": "th-14-amphoe-tha-ruea",
+          "label": "Amphoe Tha Ruea"
+        },
+        {
+          "value": "th-14-amphoe-uthai",
+          "label": "Amphoe Uthai"
+        },
+        {
+          "value": "th-14-amphoe-wang-noi",
+          "label": "Amphoe Wang Noi"
+        },
+        {
+          "value": "th-14-ban-bang-kadi-pathum-thani",
+          "label": "Ban Bang Kadi Pathum Thani"
+        },
+        {
+          "value": "th-14-bang-ban",
+          "label": "Bang Ban"
+        },
+        {
+          "value": "th-14-bang-pa-in",
+          "label": "Bang Pa-in"
+        },
+        {
+          "value": "th-14-nakhon-luang",
+          "label": "Nakhon Luang"
+        },
+        {
+          "value": "th-14-phak-hai",
+          "label": "Phak Hai"
+        },
+        {
+          "value": "th-14-phra-nakhon-si-ayutthaya",
+          "label": "Phra Nakhon Si Ayutthaya"
+        },
+        {
+          "value": "th-14-tha-ruea",
+          "label": "Tha Ruea"
+        },
+        {
+          "value": "th-14-wang-noi",
+          "label": "Wang Noi"
+        }
+      ]
+    },
+    {
+      "value": "th-54",
+      "label": "Phrae",
+      "state_code": "54",
+      "cities": [
+        {
+          "value": "th-54-amphoe-den-chai",
+          "label": "Amphoe Den Chai"
+        },
+        {
+          "value": "th-54-amphoe-long",
+          "label": "Amphoe Long"
+        },
+        {
+          "value": "th-54-amphoe-mueang-phrae",
+          "label": "Amphoe Mueang Phrae"
+        },
+        {
+          "value": "th-54-amphoe-nong-muang-khai",
+          "label": "Amphoe Nong Muang Khai"
+        },
+        {
+          "value": "th-54-amphoe-rong-kwang",
+          "label": "Amphoe Rong Kwang"
+        },
+        {
+          "value": "th-54-amphoe-song",
+          "label": "Amphoe Song"
+        },
+        {
+          "value": "th-54-amphoe-sung-men",
+          "label": "Amphoe Sung Men"
+        },
+        {
+          "value": "th-54-amphoe-wang-chin",
+          "label": "Amphoe Wang Chin"
+        },
+        {
+          "value": "th-54-den-chai",
+          "label": "Den Chai"
+        },
+        {
+          "value": "th-54-long",
+          "label": "Long"
+        },
+        {
+          "value": "th-54-phrae",
+          "label": "Phrae"
+        },
+        {
+          "value": "th-54-rong-kwang",
+          "label": "Rong Kwang"
+        }
+      ]
+    },
+    {
+      "value": "th-83",
+      "label": "Phuket",
+      "state_code": "83",
+      "cities": [
+        {
+          "value": "th-83-amphoe-kathu",
+          "label": "Amphoe Kathu"
+        },
+        {
+          "value": "th-83-amphoe-mueang-phuket",
+          "label": "Amphoe Mueang Phuket"
+        },
+        {
+          "value": "th-83-amphoe-thalang",
+          "label": "Amphoe Thalang"
+        },
+        {
+          "value": "th-83-ban-chalong",
+          "label": "Ban Chalong"
+        },
+        {
+          "value": "th-83-ban-karon",
+          "label": "Ban Karon"
+        },
+        {
+          "value": "th-83-ban-kata",
+          "label": "Ban Kata"
+        },
+        {
+          "value": "th-83-ban-ko-kaeo",
+          "label": "Ban Ko Kaeo"
+        },
+        {
+          "value": "th-83-ban-mai-khao",
+          "label": "Ban Mai Khao"
+        },
+        {
+          "value": "th-83-ban-ratsada",
+          "label": "Ban Ratsada"
+        },
+        {
+          "value": "th-83-ban-talat-nua",
+          "label": "Ban Talat Nua"
+        },
+        {
+          "value": "th-83-ban-talat-yai",
+          "label": "Ban Talat Yai"
+        },
+        {
+          "value": "th-83-kathu",
+          "label": "Kathu"
+        },
+        {
+          "value": "th-83-nai-harn",
+          "label": "Nai Harn"
+        },
+        {
+          "value": "th-83-patong",
+          "label": "Patong"
+        },
+        {
+          "value": "th-83-phuket",
+          "label": "Phuket"
+        },
+        {
+          "value": "th-83-rawai",
+          "label": "Rawai"
+        },
+        {
+          "value": "th-83-wichit",
+          "label": "Wichit"
+        }
+      ]
+    },
+    {
+      "value": "th-25",
+      "label": "Prachin Buri",
+      "state_code": "25",
+      "cities": [
+        {
+          "value": "th-25-amphoe-ban-sang",
+          "label": "Amphoe Ban Sang"
+        },
+        {
+          "value": "th-25-amphoe-kabin-buri",
+          "label": "Amphoe Kabin Buri"
+        },
+        {
+          "value": "th-25-amphoe-mueang-prachin-buri",
+          "label": "Amphoe Mueang Prachin Buri"
+        },
+        {
+          "value": "th-25-amphoe-na-di",
+          "label": "Amphoe Na Di"
+        },
+        {
+          "value": "th-25-amphoe-prachantakham",
+          "label": "Amphoe Prachantakham"
+        },
+        {
+          "value": "th-25-amphoe-si-maha-phot",
+          "label": "Amphoe Si Maha Phot"
+        },
+        {
+          "value": "th-25-amphoe-si-mahosot",
+          "label": "Amphoe Si Mahosot"
+        },
+        {
+          "value": "th-25-kabin-buri",
+          "label": "Kabin Buri"
+        },
+        {
+          "value": "th-25-prachin-buri",
+          "label": "Prachin Buri"
+        }
+      ]
+    },
+    {
+      "value": "th-77",
+      "label": "Prachuap Khiri Khan",
+      "state_code": "77",
+      "cities": [
+        {
+          "value": "th-77-amphoe-bang-saphan",
+          "label": "Amphoe Bang Saphan"
+        },
+        {
+          "value": "th-77-amphoe-bang-saphan-noi",
+          "label": "Amphoe Bang Saphan Noi"
+        },
+        {
+          "value": "th-77-amphoe-hua-hin",
+          "label": "Amphoe Hua Hin"
+        },
+        {
+          "value": "th-77-amphoe-kui-buri",
+          "label": "Amphoe Kui Buri"
+        },
+        {
+          "value": "th-77-amphoe-mueang-prachuap-khiri-khan",
+          "label": "Amphoe Mueang Prachuap Khiri Khan"
+        },
+        {
+          "value": "th-77-amphoe-pran-buri",
+          "label": "Amphoe Pran Buri"
+        },
+        {
+          "value": "th-77-amphoe-sam-roi-yot",
+          "label": "Amphoe Sam Roi Yot"
+        },
+        {
+          "value": "th-77-amphoe-thap-sakae",
+          "label": "Amphoe Thap Sakae"
+        },
+        {
+          "value": "th-77-bang-saphan",
+          "label": "Bang Saphan"
+        },
+        {
+          "value": "th-77-hua-hin",
+          "label": "Hua Hin"
+        },
+        {
+          "value": "th-77-kui-buri",
+          "label": "Kui Buri"
+        },
+        {
+          "value": "th-77-prachuap-khiri-khan",
+          "label": "Prachuap Khiri Khan"
+        },
+        {
+          "value": "th-77-pran-buri",
+          "label": "Pran Buri"
+        },
+        {
+          "value": "th-77-sam-roi-yot",
+          "label": "Sam Roi Yot"
+        }
+      ]
+    },
+    {
+      "value": "th-85",
+      "label": "Ranong",
+      "state_code": "85",
+      "cities": [
+        {
+          "value": "th-85-amphoe-kapoe",
+          "label": "Amphoe Kapoe"
+        },
+        {
+          "value": "th-85-amphoe-kra-buri",
+          "label": "Amphoe Kra Buri"
+        },
+        {
+          "value": "th-85-amphoe-la-un",
+          "label": "Amphoe La-un"
+        },
+        {
+          "value": "th-85-amphoe-mueang-ranong",
+          "label": "Amphoe Mueang Ranong"
+        },
+        {
+          "value": "th-85-amphoe-suk-samran",
+          "label": "Amphoe Suk Samran"
+        },
+        {
+          "value": "th-85-ranong",
+          "label": "Ranong"
+        }
+      ]
+    },
+    {
+      "value": "th-70",
+      "label": "Ratchaburi",
+      "state_code": "70",
+      "cities": [
+        {
+          "value": "th-70-amphoe-ban-kha",
+          "label": "Amphoe Ban Kha"
+        },
+        {
+          "value": "th-70-amphoe-ban-pong",
+          "label": "Amphoe Ban Pong"
+        },
+        {
+          "value": "th-70-amphoe-bang-phae",
+          "label": "Amphoe Bang Phae"
+        },
+        {
+          "value": "th-70-amphoe-chom-bueng",
+          "label": "Amphoe Chom Bueng"
+        },
+        {
+          "value": "th-70-amphoe-damnoen-saduak",
+          "label": "Amphoe Damnoen Saduak"
+        },
+        {
+          "value": "th-70-amphoe-mueang-ratchaburi",
+          "label": "Amphoe Mueang Ratchaburi"
+        },
+        {
+          "value": "th-70-amphoe-pak-tho",
+          "label": "Amphoe Pak Tho"
+        },
+        {
+          "value": "th-70-amphoe-photharam",
+          "label": "Amphoe Photharam"
+        },
+        {
+          "value": "th-70-amphoe-suan-phueng",
+          "label": "Amphoe Suan Phueng"
+        },
+        {
+          "value": "th-70-amphoe-wat-phleng",
+          "label": "Amphoe Wat Phleng"
+        },
+        {
+          "value": "th-70-ban-pong",
+          "label": "Ban Pong"
+        },
+        {
+          "value": "th-70-bang-phae",
+          "label": "Bang Phae"
+        },
+        {
+          "value": "th-70-chom-bueng",
+          "label": "Chom Bueng"
+        },
+        {
+          "value": "th-70-damnoen-saduak",
+          "label": "Damnoen Saduak"
+        },
+        {
+          "value": "th-70-photharam",
+          "label": "Photharam"
+        },
+        {
+          "value": "th-70-ratchaburi",
+          "label": "Ratchaburi"
+        }
+      ]
+    },
+    {
+      "value": "th-21",
+      "label": "Rayong",
+      "state_code": "21",
+      "cities": [
+        {
+          "value": "th-21-amphoe-ban-chang",
+          "label": "Amphoe Ban Chang"
+        },
+        {
+          "value": "th-21-amphoe-ban-khai",
+          "label": "Amphoe Ban Khai"
+        },
+        {
+          "value": "th-21-amphoe-khao-chamao",
+          "label": "Amphoe Khao Chamao"
+        },
+        {
+          "value": "th-21-amphoe-klaeng",
+          "label": "Amphoe Klaeng"
+        },
+        {
+          "value": "th-21-amphoe-mueang-rayong",
+          "label": "Amphoe Mueang Rayong"
+        },
+        {
+          "value": "th-21-amphoe-nikhom-phattana",
+          "label": "Amphoe Nikhom Phattana"
+        },
+        {
+          "value": "th-21-amphoe-pluak-daeng",
+          "label": "Amphoe Pluak Daeng"
+        },
+        {
+          "value": "th-21-amphoe-wang-chan",
+          "label": "Amphoe Wang Chan"
+        },
+        {
+          "value": "th-21-ban-chang",
+          "label": "Ban Chang"
+        },
+        {
+          "value": "th-21-ban-phe",
+          "label": "Ban Phe"
+        },
+        {
+          "value": "th-21-klaeng",
+          "label": "Klaeng"
+        },
+        {
+          "value": "th-21-rayong",
+          "label": "Rayong"
+        }
+      ]
+    },
+    {
+      "value": "th-45",
+      "label": "Roi Et",
+      "state_code": "45",
+      "cities": [
+        {
+          "value": "th-45-amphoe-at-samat",
+          "label": "Amphoe At Samat"
+        },
+        {
+          "value": "th-45-amphoe-changhan",
+          "label": "Amphoe Changhan"
+        },
+        {
+          "value": "th-45-amphoe-chaturaphak-phiman",
+          "label": "Amphoe Chaturaphak Phiman"
+        },
+        {
+          "value": "th-45-amphoe-chiang-khwan",
+          "label": "Amphoe Chiang Khwan"
+        },
+        {
+          "value": "th-45-amphoe-kaset-wisai",
+          "label": "Amphoe Kaset Wisai"
+        },
+        {
+          "value": "th-45-amphoe-moeiwadi",
+          "label": "Amphoe Moeiwadi"
+        },
+        {
+          "value": "th-45-amphoe-mueang-roi-et",
+          "label": "Amphoe Mueang Roi Et"
+        },
+        {
+          "value": "th-45-amphoe-mueang-suang",
+          "label": "Amphoe Mueang Suang"
+        },
+        {
+          "value": "th-45-amphoe-nong-hi",
+          "label": "Amphoe Nong Hi"
+        },
+        {
+          "value": "th-45-amphoe-nong-phok",
+          "label": "Amphoe Nong Phok"
+        },
+        {
+          "value": "th-45-amphoe-pathum-rat",
+          "label": "Amphoe Pathum Rat"
+        },
+        {
+          "value": "th-45-amphoe-phanom-phrai",
+          "label": "Amphoe Phanom Phrai"
+        },
+        {
+          "value": "th-45-amphoe-pho-chai",
+          "label": "Amphoe Pho Chai"
+        },
+        {
+          "value": "th-45-amphoe-phon-sai",
+          "label": "Amphoe Phon Sai"
+        },
+        {
+          "value": "th-45-amphoe-phon-thong",
+          "label": "Amphoe Phon Thong"
+        },
+        {
+          "value": "th-45-amphoe-selaphum",
+          "label": "Amphoe Selaphum"
+        },
+        {
+          "value": "th-45-amphoe-si-somdet",
+          "label": "Amphoe Si Somdet"
+        },
+        {
+          "value": "th-45-amphoe-suwannaphum",
+          "label": "Amphoe Suwannaphum"
+        },
+        {
+          "value": "th-45-amphoe-thawatchaburi",
+          "label": "Amphoe Thawatchaburi"
+        },
+        {
+          "value": "th-45-amphoe-thung-khao-luang",
+          "label": "Amphoe Thung Khao Luang"
+        },
+        {
+          "value": "th-45-ban-selaphum",
+          "label": "Ban Selaphum"
+        },
+        {
+          "value": "th-45-kaset-wisai",
+          "label": "Kaset Wisai"
+        },
+        {
+          "value": "th-45-moeiwadi",
+          "label": "Moeiwadi"
+        },
+        {
+          "value": "th-45-pho-chai",
+          "label": "Pho Chai"
+        },
+        {
+          "value": "th-45-roi-et",
+          "label": "Roi Et"
+        },
+        {
+          "value": "th-45-suwannaphum",
+          "label": "Suwannaphum"
+        },
+        {
+          "value": "th-45-waeng",
+          "label": "Waeng"
+        }
+      ]
+    },
+    {
+      "value": "th-27",
+      "label": "Sa Kaeo",
+      "state_code": "27",
+      "cities": [
+        {
+          "value": "th-27-amphoe-aranyaprathet",
+          "label": "Amphoe Aranyaprathet"
+        },
+        {
+          "value": "th-27-amphoe-khao-chakan",
+          "label": "Amphoe Khao Chakan"
+        },
+        {
+          "value": "th-27-amphoe-khlong-hat",
+          "label": "Amphoe Khlong Hat"
+        },
+        {
+          "value": "th-27-amphoe-khok-sung",
+          "label": "Amphoe Khok Sung"
+        },
+        {
+          "value": "th-27-amphoe-mueang-sa-kaeo",
+          "label": "Amphoe Mueang Sa Kaeo"
+        },
+        {
+          "value": "th-27-amphoe-ta-phraya",
+          "label": "Amphoe Ta Phraya"
+        },
+        {
+          "value": "th-27-amphoe-wang-nam-yen",
+          "label": "Amphoe Wang Nam Yen"
+        },
+        {
+          "value": "th-27-amphoe-wang-sombun",
+          "label": "Amphoe Wang Sombun"
+        },
+        {
+          "value": "th-27-amphoe-watthana-nakhon",
+          "label": "Amphoe Watthana Nakhon"
+        },
+        {
+          "value": "th-27-aranyaprathet",
+          "label": "Aranyaprathet"
+        },
+        {
+          "value": "th-27-sa-kaeo",
+          "label": "Sa Kaeo"
+        },
+        {
+          "value": "th-27-wang-nam-yen",
+          "label": "Wang Nam Yen"
+        }
+      ]
+    },
+    {
+      "value": "th-47",
+      "label": "Sakon Nakhon",
+      "state_code": "47",
+      "cities": [
+        {
+          "value": "th-47-amphoe-akat-amnuai",
+          "label": "Amphoe Akat Amnuai"
+        },
+        {
+          "value": "th-47-amphoe-ban-muang",
+          "label": "Amphoe Ban Muang"
+        },
+        {
+          "value": "th-47-amphoe-charoen-sin",
+          "label": "Amphoe Charoen Sin"
+        },
+        {
+          "value": "th-47-amphoe-kham-ta-kla",
+          "label": "Amphoe Kham Ta Kla"
+        },
+        {
+          "value": "th-47-amphoe-khok-si-suphan",
+          "label": "Amphoe Khok Si Suphan"
+        },
+        {
+          "value": "th-47-amphoe-kusuman",
+          "label": "Amphoe Kusuman"
+        },
+        {
+          "value": "th-47-amphoe-kut-bak",
+          "label": "Amphoe Kut Bak"
+        },
+        {
+          "value": "th-47-amphoe-mueang-sakon-nakhon",
+          "label": "Amphoe Mueang Sakon Nakhon"
+        },
+        {
+          "value": "th-47-amphoe-nikhom-nam-un",
+          "label": "Amphoe Nikhom Nam Un"
+        },
+        {
+          "value": "th-47-amphoe-phang-khon",
+          "label": "Amphoe Phang Khon"
+        },
+        {
+          "value": "th-47-amphoe-phanna-nikhom",
+          "label": "Amphoe Phanna Nikhom"
+        },
+        {
+          "value": "th-47-amphoe-phon-na-kaeo",
+          "label": "Amphoe Phon Na Kaeo"
+        },
+        {
+          "value": "th-47-amphoe-phu-phan",
+          "label": "Amphoe Phu Phan"
+        },
+        {
+          "value": "th-47-amphoe-sawang-daen-din",
+          "label": "Amphoe Sawang Daen Din"
+        },
+        {
+          "value": "th-47-amphoe-song-dao",
+          "label": "Amphoe Song Dao"
+        },
+        {
+          "value": "th-47-amphoe-tao-ngoi",
+          "label": "Amphoe Tao Ngoi"
+        },
+        {
+          "value": "th-47-amphoe-wanon-niwat",
+          "label": "Amphoe Wanon Niwat"
+        },
+        {
+          "value": "th-47-amphoe-waritchaphum",
+          "label": "Amphoe Waritchaphum"
+        },
+        {
+          "value": "th-47-sakon-nakhon",
+          "label": "Sakon Nakhon"
+        },
+        {
+          "value": "th-47-sawang-daen-din",
+          "label": "Sawang Daen Din"
+        }
+      ]
+    },
+    {
+      "value": "th-11",
+      "label": "Samut Prakan",
+      "state_code": "11",
+      "cities": [
+        {
+          "value": "th-11-amphoe-bang-bo",
+          "label": "Amphoe Bang Bo"
+        },
+        {
+          "value": "th-11-amphoe-bang-phli",
+          "label": "Amphoe Bang Phli"
+        },
+        {
+          "value": "th-11-amphoe-bang-sao-thong",
+          "label": "Amphoe Bang Sao Thong"
+        },
+        {
+          "value": "th-11-amphoe-mueang-samut-prakan",
+          "label": "Amphoe Mueang Samut Prakan"
+        },
+        {
+          "value": "th-11-amphoe-phra-pradaeng",
+          "label": "Amphoe Phra Pradaeng"
+        },
+        {
+          "value": "th-11-amphoe-phra-samut-chedi",
+          "label": "Amphoe Phra Samut Chedi"
+        },
+        {
+          "value": "th-11-ban-khlong-bang-sao-thong",
+          "label": "Ban Khlong Bang Sao Thong"
+        },
+        {
+          "value": "th-11-bang-bo-district",
+          "label": "Bang Bo District"
+        },
+        {
+          "value": "th-11-phra-pradaeng",
+          "label": "Phra Pradaeng"
+        },
+        {
+          "value": "th-11-samut-prakan",
+          "label": "Samut Prakan"
+        }
+      ]
+    },
+    {
+      "value": "th-74",
+      "label": "Samut Sakhon",
+      "state_code": "74",
+      "cities": [
+        {
+          "value": "th-74-amphoe-ban-phaeo",
+          "label": "Amphoe Ban Phaeo"
+        },
+        {
+          "value": "th-74-amphoe-krathum-baen",
+          "label": "Amphoe Krathum Baen"
+        },
+        {
+          "value": "th-74-amphoe-mueang-samut-sakhon",
+          "label": "Amphoe Mueang Samut Sakhon"
+        },
+        {
+          "value": "th-74-ban-phaeo",
+          "label": "Ban Phaeo"
+        },
+        {
+          "value": "th-74-krathum-baen",
+          "label": "Krathum Baen"
+        },
+        {
+          "value": "th-74-samut-sakhon",
+          "label": "Samut Sakhon"
+        }
+      ]
+    },
+    {
+      "value": "th-75",
+      "label": "Samut Songkhram",
+      "state_code": "75",
+      "cities": [
+        {
+          "value": "th-75-amphoe-amphawa",
+          "label": "Amphoe Amphawa"
+        },
+        {
+          "value": "th-75-amphoe-bang-khonthi",
+          "label": "Amphoe Bang Khonthi"
+        },
+        {
+          "value": "th-75-amphoe-mueang-samut-songkhram",
+          "label": "Amphoe Mueang Samut Songkhram"
+        },
+        {
+          "value": "th-75-samut-songkhram",
+          "label": "Samut Songkhram"
+        }
+      ]
+    },
+    {
+      "value": "th-19",
+      "label": "Saraburi",
+      "state_code": "19",
+      "cities": [
+        {
+          "value": "th-19-amphoe-ban-mo",
+          "label": "Amphoe Ban Mo"
+        },
+        {
+          "value": "th-19-amphoe-chaloem-phra-kiat",
+          "label": "Amphoe Chaloem Phra Kiat"
+        },
+        {
+          "value": "th-19-amphoe-don-phut",
+          "label": "Amphoe Don Phut"
+        },
+        {
+          "value": "th-19-amphoe-kaeng-khoi",
+          "label": "Amphoe Kaeng Khoi"
+        },
+        {
+          "value": "th-19-amphoe-muak-lek",
+          "label": "Amphoe Muak Lek"
+        },
+        {
+          "value": "th-19-amphoe-mueang-sara-buri",
+          "label": "Amphoe Mueang Sara Buri"
+        },
+        {
+          "value": "th-19-amphoe-nong-don",
+          "label": "Amphoe Nong Don"
+        },
+        {
+          "value": "th-19-amphoe-nong-khae",
+          "label": "Amphoe Nong Khae"
+        },
+        {
+          "value": "th-19-amphoe-nong-saeng",
+          "label": "Amphoe Nong Saeng"
+        },
+        {
+          "value": "th-19-amphoe-phra-phutthabat",
+          "label": "Amphoe Phra Phutthabat"
+        },
+        {
+          "value": "th-19-amphoe-sao-hai",
+          "label": "Amphoe Sao Hai"
+        },
+        {
+          "value": "th-19-amphoe-wang-muang",
+          "label": "Amphoe Wang Muang"
+        },
+        {
+          "value": "th-19-amphoe-wihan-daeng",
+          "label": "Amphoe Wihan Daeng"
+        },
+        {
+          "value": "th-19-ban-mo",
+          "label": "Ban Mo"
+        },
+        {
+          "value": "th-19-kaeng-khoi",
+          "label": "Kaeng Khoi"
+        },
+        {
+          "value": "th-19-nong-khae",
+          "label": "Nong Khae"
+        },
+        {
+          "value": "th-19-phra-phutthabat",
+          "label": "Phra Phutthabat"
+        },
+        {
+          "value": "th-19-saraburi",
+          "label": "Saraburi"
+        }
+      ]
+    },
+    {
+      "value": "th-91",
+      "label": "Satun",
+      "state_code": "91",
+      "cities": [
+        {
+          "value": "th-91-amphoe-khuan-don",
+          "label": "Amphoe Khuan Don"
+        },
+        {
+          "value": "th-91-amphoe-khuan-kalong",
+          "label": "Amphoe Khuan Kalong"
+        },
+        {
+          "value": "th-91-amphoe-la-ngu",
+          "label": "Amphoe La-Ngu"
+        },
+        {
+          "value": "th-91-amphoe-manang",
+          "label": "Amphoe Manang"
+        },
+        {
+          "value": "th-91-amphoe-mueang-satun",
+          "label": "Amphoe Mueang Satun"
+        },
+        {
+          "value": "th-91-amphoe-tha-phae",
+          "label": "Amphoe Tha Phae"
+        },
+        {
+          "value": "th-91-amphoe-thung-wa",
+          "label": "Amphoe Thung Wa"
+        },
+        {
+          "value": "th-91-satun",
+          "label": "Satun"
+        }
+      ]
+    },
+    {
+      "value": "th-33",
+      "label": "Si Sa Ket",
+      "state_code": "33",
+      "cities": [
+        {
+          "value": "th-33-amphoe-benchalak",
+          "label": "Amphoe Benchalak"
+        },
+        {
+          "value": "th-33-amphoe-bueng-bun",
+          "label": "Amphoe Bueng Bun"
+        },
+        {
+          "value": "th-33-amphoe-huai-thap-than",
+          "label": "Amphoe Huai Thap Than"
+        },
+        {
+          "value": "th-33-amphoe-kantharalak",
+          "label": "Amphoe Kantharalak"
+        },
+        {
+          "value": "th-33-amphoe-kanthararom",
+          "label": "Amphoe Kanthararom"
+        },
+        {
+          "value": "th-33-amphoe-khukhan",
+          "label": "Amphoe Khukhan"
+        },
+        {
+          "value": "th-33-amphoe-khun-han",
+          "label": "Amphoe Khun Han"
+        },
+        {
+          "value": "th-33-amphoe-mueang-chan",
+          "label": "Amphoe Mueang Chan"
+        },
+        {
+          "value": "th-33-amphoe-mueang-sisaket",
+          "label": "Amphoe Mueang Sisaket"
+        },
+        {
+          "value": "th-33-amphoe-nam-kliang",
+          "label": "Amphoe Nam Kliang"
+        },
+        {
+          "value": "th-33-amphoe-non-khun",
+          "label": "Amphoe Non Khun"
+        },
+        {
+          "value": "th-33-amphoe-phayu",
+          "label": "Amphoe Phayu"
+        },
+        {
+          "value": "th-33-amphoe-pho-si-suwan",
+          "label": "Amphoe Pho Si Suwan"
+        },
+        {
+          "value": "th-33-amphoe-phrai-bueng",
+          "label": "Amphoe Phrai Bueng"
+        },
+        {
+          "value": "th-33-amphoe-phu-sing",
+          "label": "Amphoe Phu Sing"
+        },
+        {
+          "value": "th-33-amphoe-prang-ku",
+          "label": "Amphoe Prang Ku"
+        },
+        {
+          "value": "th-33-amphoe-rasi-salai",
+          "label": "Amphoe Rasi Salai"
+        },
+        {
+          "value": "th-33-amphoe-si-rattana",
+          "label": "Amphoe Si Rattana"
+        },
+        {
+          "value": "th-33-amphoe-sila-lat",
+          "label": "Amphoe Sila Lat"
+        },
+        {
+          "value": "th-33-amphoe-uthumphon-phisai",
+          "label": "Amphoe Uthumphon Phisai"
+        },
+        {
+          "value": "th-33-amphoe-wang-hin",
+          "label": "Amphoe Wang Hin"
+        },
+        {
+          "value": "th-33-amphoe-yang-chum-noi",
+          "label": "Amphoe Yang Chum Noi"
+        },
+        {
+          "value": "th-33-kantharalak",
+          "label": "Kantharalak"
+        },
+        {
+          "value": "th-33-phrai-bueng",
+          "label": "Phrai Bueng"
+        },
+        {
+          "value": "th-33-si-sa-ket",
+          "label": "Si Sa Ket"
+        }
+      ]
+    },
+    {
+      "value": "th-17",
+      "label": "Sing Buri",
+      "state_code": "17",
+      "cities": [
+        {
+          "value": "th-17-amphoe-bang-rachan",
+          "label": "Amphoe Bang Rachan"
+        },
+        {
+          "value": "th-17-amphoe-in-buri",
+          "label": "Amphoe In Buri"
+        },
+        {
+          "value": "th-17-amphoe-khai-bang-rachan",
+          "label": "Amphoe Khai Bang Rachan"
+        },
+        {
+          "value": "th-17-amphoe-mueang-sing-buri",
+          "label": "Amphoe Mueang Sing Buri"
+        },
+        {
+          "value": "th-17-amphoe-phrom-buri",
+          "label": "Amphoe Phrom Buri"
+        },
+        {
+          "value": "th-17-amphoe-tha-chang",
+          "label": "Amphoe Tha Chang"
+        },
+        {
+          "value": "th-17-bang-racham",
+          "label": "Bang Racham"
+        },
+        {
+          "value": "th-17-in-buri",
+          "label": "In Buri"
+        },
+        {
+          "value": "th-17-sing-buri",
+          "label": "Sing Buri"
+        }
+      ]
+    },
+    {
+      "value": "th-90",
+      "label": "Songkhla",
+      "state_code": "90",
+      "cities": [
+        {
+          "value": "th-90-amphoe-bang-klam",
+          "label": "Amphoe Bang Klam"
+        },
+        {
+          "value": "th-90-amphoe-chana",
+          "label": "Amphoe Chana"
+        },
+        {
+          "value": "th-90-amphoe-hat-yai",
+          "label": "Amphoe Hat Yai"
+        },
+        {
+          "value": "th-90-amphoe-khlong-hoi-khong",
+          "label": "Amphoe Khlong Hoi Khong"
+        },
+        {
+          "value": "th-90-amphoe-khuan-niang",
+          "label": "Amphoe Khuan Niang"
+        },
+        {
+          "value": "th-90-amphoe-krasae-sin",
+          "label": "Amphoe Krasae Sin"
+        },
+        {
+          "value": "th-90-amphoe-mueang-songkhla",
+          "label": "Amphoe Mueang Songkhla"
+        },
+        {
+          "value": "th-90-amphoe-na-mom",
+          "label": "Amphoe Na Mom"
+        },
+        {
+          "value": "th-90-amphoe-na-thawi",
+          "label": "Amphoe Na Thawi"
+        },
+        {
+          "value": "th-90-amphoe-ranot",
+          "label": "Amphoe Ranot"
+        },
+        {
+          "value": "th-90-amphoe-rattaphum",
+          "label": "Amphoe Rattaphum"
+        },
+        {
+          "value": "th-90-amphoe-saba-yoi",
+          "label": "Amphoe Saba Yoi"
+        },
+        {
+          "value": "th-90-amphoe-sadao",
+          "label": "Amphoe Sadao"
+        },
+        {
+          "value": "th-90-amphoe-sathing-phra",
+          "label": "Amphoe Sathing Phra"
+        },
+        {
+          "value": "th-90-amphoe-singhanakhon",
+          "label": "Amphoe Singhanakhon"
+        },
+        {
+          "value": "th-90-amphoe-thepha",
+          "label": "Amphoe Thepha"
+        },
+        {
+          "value": "th-90-ban-mai",
+          "label": "Ban Mai"
+        },
+        {
+          "value": "th-90-hat-yai",
+          "label": "Hat Yai"
+        },
+        {
+          "value": "th-90-na-mom",
+          "label": "Na Mom"
+        },
+        {
+          "value": "th-90-ranot",
+          "label": "Ranot"
+        },
+        {
+          "value": "th-90-sadao",
+          "label": "Sadao"
+        },
+        {
+          "value": "th-90-songkhla",
+          "label": "Songkhla"
+        }
+      ]
+    },
+    {
+      "value": "th-64",
+      "label": "Sukhothai",
+      "state_code": "64",
+      "cities": [
+        {
+          "value": "th-64-amphoe-ban-dan-lan-hoi",
+          "label": "Amphoe Ban Dan Lan Hoi"
+        },
+        {
+          "value": "th-64-amphoe-khiri-mat",
+          "label": "Amphoe Khiri Mat"
+        },
+        {
+          "value": "th-64-amphoe-kong-krailat",
+          "label": "Amphoe Kong Krailat"
+        },
+        {
+          "value": "th-64-amphoe-mueang-sukhothai",
+          "label": "Amphoe Mueang Sukhothai"
+        },
+        {
+          "value": "th-64-amphoe-sawankhalok",
+          "label": "Amphoe Sawankhalok"
+        },
+        {
+          "value": "th-64-amphoe-si-nakhon",
+          "label": "Amphoe Si Nakhon"
+        },
+        {
+          "value": "th-64-amphoe-si-samrong",
+          "label": "Amphoe Si Samrong"
+        },
+        {
+          "value": "th-64-amphoe-si-satchanalai",
+          "label": "Amphoe Si Satchanalai"
+        },
+        {
+          "value": "th-64-amphoe-thung-saliam",
+          "label": "Amphoe Thung Saliam"
+        },
+        {
+          "value": "th-64-ban-dan-lan-hoi",
+          "label": "Ban Dan Lan Hoi"
+        },
+        {
+          "value": "th-64-ban-na",
+          "label": "Ban Na"
+        },
+        {
+          "value": "th-64-khiri-mat",
+          "label": "Khiri Mat"
+        },
+        {
+          "value": "th-64-sawankhalok",
+          "label": "Sawankhalok"
+        },
+        {
+          "value": "th-64-si-satchanalai",
+          "label": "Si Satchanalai"
+        },
+        {
+          "value": "th-64-sukhothai",
+          "label": "Sukhothai"
+        }
+      ]
+    },
+    {
+      "value": "th-72",
+      "label": "Suphan Buri",
+      "state_code": "72",
+      "cities": [
+        {
+          "value": "th-72-amphoe-bang-pla-ma",
+          "label": "Amphoe Bang Pla Ma"
+        },
+        {
+          "value": "th-72-amphoe-dan-chang",
+          "label": "Amphoe Dan Chang"
+        },
+        {
+          "value": "th-72-amphoe-doembang-nangbuat",
+          "label": "Amphoe Doembang Nangbuat"
+        },
+        {
+          "value": "th-72-amphoe-don-chedi",
+          "label": "Amphoe Don Chedi"
+        },
+        {
+          "value": "th-72-amphoe-mueang-suphan-buri",
+          "label": "Amphoe Mueang Suphan Buri"
+        },
+        {
+          "value": "th-72-amphoe-nong-yasai",
+          "label": "Amphoe Nong Yasai"
+        },
+        {
+          "value": "th-72-amphoe-si-prachan",
+          "label": "Amphoe Si Prachan"
+        },
+        {
+          "value": "th-72-amphoe-song-phi-nong",
+          "label": "Amphoe Song Phi Nong"
+        },
+        {
+          "value": "th-72-amphoe-u-thong",
+          "label": "Amphoe U Thong"
+        },
+        {
+          "value": "th-72-ban-sam-chuk",
+          "label": "Ban Sam Chuk"
+        },
+        {
+          "value": "th-72-doembang-nangbuat",
+          "label": "Doembang Nangbuat"
+        },
+        {
+          "value": "th-72-suphan-buri",
+          "label": "Suphan Buri"
+        }
+      ]
+    },
+    {
+      "value": "th-84",
+      "label": "Surat Thani",
+      "state_code": "84",
+      "cities": [
+        {
+          "value": "th-84-amphoe-ban-na-doem",
+          "label": "Amphoe Ban Na Doem"
+        },
+        {
+          "value": "th-84-amphoe-ban-na-san",
+          "label": "Amphoe Ban Na San"
+        },
+        {
+          "value": "th-84-amphoe-ban-takhun",
+          "label": "Amphoe Ban Takhun"
+        },
+        {
+          "value": "th-84-amphoe-chai-buri",
+          "label": "Amphoe Chai Buri"
+        },
+        {
+          "value": "th-84-amphoe-chaiya",
+          "label": "Amphoe Chaiya"
+        },
+        {
+          "value": "th-84-amphoe-don-sak",
+          "label": "Amphoe Don Sak"
+        },
+        {
+          "value": "th-84-amphoe-kanchanadit",
+          "label": "Amphoe Kanchanadit"
+        },
+        {
+          "value": "th-84-amphoe-khian-sa",
+          "label": "Amphoe Khian Sa"
+        },
+        {
+          "value": "th-84-amphoe-khiri-rat-nikhom",
+          "label": "Amphoe Khiri Rat Nikhom"
+        },
+        {
+          "value": "th-84-amphoe-ko-pha-ngan",
+          "label": "Amphoe Ko Pha-ngan"
+        },
+        {
+          "value": "th-84-amphoe-ko-samui",
+          "label": "Amphoe Ko Samui"
+        },
+        {
+          "value": "th-84-amphoe-mueang-surat-thani",
+          "label": "Amphoe Mueang Surat Thani"
+        },
+        {
+          "value": "th-84-amphoe-phanom",
+          "label": "Amphoe Phanom"
+        },
+        {
+          "value": "th-84-amphoe-phrasaeng",
+          "label": "Amphoe Phrasaeng"
+        },
+        {
+          "value": "th-84-amphoe-phunphin",
+          "label": "Amphoe Phunphin"
+        },
+        {
+          "value": "th-84-amphoe-tha-chana",
+          "label": "Amphoe Tha Chana"
+        },
+        {
+          "value": "th-84-amphoe-tha-chang",
+          "label": "Amphoe Tha Chang"
+        },
+        {
+          "value": "th-84-amphoe-wiang-sa",
+          "label": "Amphoe Wiang Sa"
+        },
+        {
+          "value": "th-84-amphoe-wiphawadi",
+          "label": "Amphoe Wiphawadi"
+        },
+        {
+          "value": "th-84-ban-na-san",
+          "label": "Ban Na San"
+        },
+        {
+          "value": "th-84-chai-buri",
+          "label": "Chai Buri"
+        },
+        {
+          "value": "th-84-chaiya",
+          "label": "Chaiya"
+        },
+        {
+          "value": "th-84-don-sak",
+          "label": "Don Sak"
+        },
+        {
+          "value": "th-84-kanchanadit",
+          "label": "Kanchanadit"
+        },
+        {
+          "value": "th-84-ko-pha-ngan",
+          "label": "Ko Pha Ngan"
+        },
+        {
+          "value": "th-84-ko-samui",
+          "label": "Ko Samui"
+        },
+        {
+          "value": "th-84-koh-tao",
+          "label": "Koh Tao"
+        },
+        {
+          "value": "th-84-surat-thani",
+          "label": "Surat Thani"
+        },
+        {
+          "value": "th-84-tha-kham",
+          "label": "Tha Kham"
+        },
+        {
+          "value": "th-84-tha-khanon",
+          "label": "Tha Khanon"
+        },
+        {
+          "value": "th-84-wiang-sa",
+          "label": "Wiang Sa"
+        }
+      ]
+    },
+    {
+      "value": "th-32",
+      "label": "Surin",
+      "state_code": "32",
+      "cities": [
+        {
+          "value": "th-32-amphoe-bua-chet",
+          "label": "Amphoe Bua Chet"
+        },
+        {
+          "value": "th-32-amphoe-chom-phra",
+          "label": "Amphoe Chom Phra"
+        },
+        {
+          "value": "th-32-amphoe-chumphon-buri",
+          "label": "Amphoe Chumphon Buri"
+        },
+        {
+          "value": "th-32-amphoe-kap-choeng",
+          "label": "Amphoe Kap Choeng"
+        },
+        {
+          "value": "th-32-amphoe-khwao-sinarin",
+          "label": "Amphoe Khwao Sinarin"
+        },
+        {
+          "value": "th-32-amphoe-lamduan",
+          "label": "Amphoe Lamduan"
+        },
+        {
+          "value": "th-32-amphoe-mueang-surin",
+          "label": "Amphoe Mueang Surin"
+        },
+        {
+          "value": "th-32-amphoe-non-narai",
+          "label": "Amphoe Non Narai"
+        },
+        {
+          "value": "th-32-amphoe-phanom-dong-rak",
+          "label": "Amphoe Phanom Dong Rak"
+        },
+        {
+          "value": "th-32-amphoe-prasat",
+          "label": "Amphoe Prasat"
+        },
+        {
+          "value": "th-32-amphoe-rattanaburi",
+          "label": "Amphoe Rattanaburi"
+        },
+        {
+          "value": "th-32-amphoe-samrong-thap",
+          "label": "Amphoe Samrong Thap"
+        },
+        {
+          "value": "th-32-amphoe-sangkha",
+          "label": "Amphoe Sangkha"
+        },
+        {
+          "value": "th-32-amphoe-sanom",
+          "label": "Amphoe Sanom"
+        },
+        {
+          "value": "th-32-amphoe-si-khoraphum",
+          "label": "Amphoe Si Khoraphum"
+        },
+        {
+          "value": "th-32-amphoe-si-narong",
+          "label": "Amphoe Si Narong"
+        },
+        {
+          "value": "th-32-amphoe-tha-tum",
+          "label": "Amphoe Tha Tum"
+        },
+        {
+          "value": "th-32-surin",
+          "label": "Surin"
+        }
+      ]
+    },
+    {
+      "value": "th-63",
+      "label": "Tak",
+      "state_code": "63",
+      "cities": [
+        {
+          "value": "th-63-amphoe-ban-tak",
+          "label": "Amphoe Ban Tak"
+        },
+        {
+          "value": "th-63-amphoe-mae-ramat",
+          "label": "Amphoe Mae Ramat"
+        },
+        {
+          "value": "th-63-amphoe-mae-sot",
+          "label": "Amphoe Mae Sot"
+        },
+        {
+          "value": "th-63-amphoe-mueang-tak",
+          "label": "Amphoe Mueang Tak"
+        },
+        {
+          "value": "th-63-amphoe-phop-phra",
+          "label": "Amphoe Phop Phra"
+        },
+        {
+          "value": "th-63-amphoe-tha-song-yang",
+          "label": "Amphoe Tha Song Yang"
+        },
+        {
+          "value": "th-63-amphoe-umphang",
+          "label": "Amphoe Umphang"
+        },
+        {
+          "value": "th-63-amphoe-wang-chao",
+          "label": "Amphoe Wang Chao"
+        },
+        {
+          "value": "th-63-ban-tak",
+          "label": "Ban Tak"
+        },
+        {
+          "value": "th-63-mae-ramat",
+          "label": "Mae Ramat"
+        },
+        {
+          "value": "th-63-mae-sot",
+          "label": "Mae Sot"
+        },
+        {
+          "value": "th-63-tak",
+          "label": "Tak"
+        }
+      ]
+    },
+    {
+      "value": "th-92",
+      "label": "Trang",
+      "state_code": "92",
+      "cities": [
+        {
+          "value": "th-92-amphoe-hat-samran",
+          "label": "Amphoe Hat Samran"
+        },
+        {
+          "value": "th-92-amphoe-huai-yot",
+          "label": "Amphoe Huai Yot"
+        },
+        {
+          "value": "th-92-amphoe-kantang",
+          "label": "Amphoe Kantang"
+        },
+        {
+          "value": "th-92-amphoe-mueang-trang",
+          "label": "Amphoe Mueang Trang"
+        },
+        {
+          "value": "th-92-amphoe-na-yong",
+          "label": "Amphoe Na Yong"
+        },
+        {
+          "value": "th-92-amphoe-palian",
+          "label": "Amphoe Palian"
+        },
+        {
+          "value": "th-92-amphoe-ratsada",
+          "label": "Amphoe Ratsada"
+        },
+        {
+          "value": "th-92-amphoe-sikao",
+          "label": "Amphoe Sikao"
+        },
+        {
+          "value": "th-92-amphoe-wang-wiset",
+          "label": "Amphoe Wang Wiset"
+        },
+        {
+          "value": "th-92-amphoe-yan-ta-khao",
+          "label": "Amphoe Yan Ta Khao"
+        },
+        {
+          "value": "th-92-huai-yot",
+          "label": "Huai Yot"
+        },
+        {
+          "value": "th-92-kantang",
+          "label": "Kantang"
+        },
+        {
+          "value": "th-92-trang",
+          "label": "Trang"
+        }
+      ]
+    },
+    {
+      "value": "th-23",
+      "label": "Trat",
+      "state_code": "23",
+      "cities": [
+        {
+          "value": "th-23-amphoe-bo-rai",
+          "label": "Amphoe Bo Rai"
+        },
+        {
+          "value": "th-23-amphoe-khao-saming",
+          "label": "Amphoe Khao Saming"
+        },
+        {
+          "value": "th-23-amphoe-khlong-yai",
+          "label": "Amphoe Khlong Yai"
+        },
+        {
+          "value": "th-23-amphoe-ko-chang",
+          "label": "Amphoe Ko Chang"
+        },
+        {
+          "value": "th-23-amphoe-ko-kut",
+          "label": "Amphoe Ko Kut"
+        },
+        {
+          "value": "th-23-amphoe-laem-ngop",
+          "label": "Amphoe Laem Ngop"
+        },
+        {
+          "value": "th-23-amphoe-mueang-trat",
+          "label": "Amphoe Mueang Trat"
+        },
+        {
+          "value": "th-23-bo-rai",
+          "label": "Bo Rai"
+        },
+        {
+          "value": "th-23-khlong-yai",
+          "label": "Khlong Yai"
+        },
+        {
+          "value": "th-23-ko-chang-tai",
+          "label": "Ko Chang Tai"
+        },
+        {
+          "value": "th-23-trat",
+          "label": "Trat"
+        }
+      ]
+    },
+    {
+      "value": "th-34",
+      "label": "Ubon Ratchathani",
+      "state_code": "34",
+      "cities": [
+        {
+          "value": "th-34-amphoe-buntharik",
+          "label": "Amphoe Buntharik"
+        },
+        {
+          "value": "th-34-amphoe-det-udom",
+          "label": "Amphoe Det Udom"
+        },
+        {
+          "value": "th-34-amphoe-don-mot-daeng",
+          "label": "Amphoe Don Mot Daeng"
+        },
+        {
+          "value": "th-34-amphoe-khemmarat",
+          "label": "Amphoe Khemmarat"
+        },
+        {
+          "value": "th-34-amphoe-khong-chiam",
+          "label": "Amphoe Khong Chiam"
+        },
+        {
+          "value": "th-34-amphoe-khueang-nai",
+          "label": "Amphoe Khueang Nai"
+        },
+        {
+          "value": "th-34-amphoe-kut-khaopun",
+          "label": "Amphoe Kut Khaopun"
+        },
+        {
+          "value": "th-34-amphoe-lao-suea-kok",
+          "label": "Amphoe Lao Suea Kok"
+        },
+        {
+          "value": "th-34-amphoe-muang-sam-sip",
+          "label": "Amphoe Muang Sam Sip"
+        },
+        {
+          "value": "th-34-amphoe-mueang-ubon-ratchathani",
+          "label": "Amphoe Mueang Ubon Ratchathani"
+        },
+        {
+          "value": "th-34-amphoe-na-chaluai",
+          "label": "Amphoe Na Chaluai"
+        },
+        {
+          "value": "th-34-amphoe-na-tan",
+          "label": "Amphoe Na Tan"
+        },
+        {
+          "value": "th-34-amphoe-na-yia",
+          "label": "Amphoe Na Yia"
+        },
+        {
+          "value": "th-34-amphoe-nam-khun",
+          "label": "Amphoe Nam Khun"
+        },
+        {
+          "value": "th-34-amphoe-nam-yuen",
+          "label": "Amphoe Nam Yuen"
+        },
+        {
+          "value": "th-34-amphoe-phibun-mangsahan",
+          "label": "Amphoe Phibun Mangsahan"
+        },
+        {
+          "value": "th-34-amphoe-pho-sai",
+          "label": "Amphoe Pho Sai"
+        },
+        {
+          "value": "th-34-amphoe-samrong",
+          "label": "Amphoe Samrong"
+        },
+        {
+          "value": "th-34-amphoe-sawang-wirawong",
+          "label": "Amphoe Sawang Wirawong"
+        },
+        {
+          "value": "th-34-amphoe-si-mueang-mai",
+          "label": "Amphoe Si Mueang Mai"
+        },
+        {
+          "value": "th-34-amphoe-sirindhorn",
+          "label": "Amphoe Sirindhorn"
+        },
+        {
+          "value": "th-34-amphoe-tan-sum",
+          "label": "Amphoe Tan Sum"
+        },
+        {
+          "value": "th-34-amphoe-thung-si-udom",
+          "label": "Amphoe Thung Si Udom"
+        },
+        {
+          "value": "th-34-amphoe-trakan-phuet-phon",
+          "label": "Amphoe Trakan Phuet Phon"
+        },
+        {
+          "value": "th-34-amphoe-warin-chamrap",
+          "label": "Amphoe Warin Chamrap"
+        },
+        {
+          "value": "th-34-det-udom",
+          "label": "Det Udom"
+        },
+        {
+          "value": "th-34-phibun-mangsahan",
+          "label": "Phibun Mangsahan"
+        },
+        {
+          "value": "th-34-sawang-wirawong",
+          "label": "Sawang Wirawong"
+        },
+        {
+          "value": "th-34-ubon-ratchathani",
+          "label": "Ubon Ratchathani"
+        },
+        {
+          "value": "th-34-warin-chamrap",
+          "label": "Warin Chamrap"
+        }
+      ]
+    },
+    {
+      "value": "th-41",
+      "label": "Udon Thani",
+      "state_code": "41",
+      "cities": [
+        {
+          "value": "th-41-amphoe-ban-dung",
+          "label": "Amphoe Ban Dung"
+        },
+        {
+          "value": "th-41-amphoe-ban-phue",
+          "label": "Amphoe Ban Phue"
+        },
+        {
+          "value": "th-41-amphoe-chai-wan",
+          "label": "Amphoe Chai Wan"
+        },
+        {
+          "value": "th-41-amphoe-ku-kaeo",
+          "label": "Amphoe Ku Kaeo"
+        },
+        {
+          "value": "th-41-amphoe-kumphawapi",
+          "label": "Amphoe Kumphawapi"
+        },
+        {
+          "value": "th-41-amphoe-kut-chap",
+          "label": "Amphoe Kut Chap"
+        },
+        {
+          "value": "th-41-amphoe-mueang-udon-thani",
+          "label": "Amphoe Mueang Udon Thani"
+        },
+        {
+          "value": "th-41-amphoe-na-yung",
+          "label": "Amphoe Na Yung"
+        },
+        {
+          "value": "th-41-amphoe-nam-som",
+          "label": "Amphoe Nam Som"
+        },
+        {
+          "value": "th-41-amphoe-non-sa-at",
+          "label": "Amphoe Non Sa-at"
+        },
+        {
+          "value": "th-41-amphoe-nong-han",
+          "label": "Amphoe Nong Han"
+        },
+        {
+          "value": "th-41-amphoe-nong-saeng",
+          "label": "Amphoe Nong Saeng"
+        },
+        {
+          "value": "th-41-amphoe-nong-wua-so",
+          "label": "Amphoe Nong Wua So"
+        },
+        {
+          "value": "th-41-amphoe-phen",
+          "label": "Amphoe Phen"
+        },
+        {
+          "value": "th-41-amphoe-phibun-rak",
+          "label": "Amphoe Phibun Rak"
+        },
+        {
+          "value": "th-41-amphoe-prachak-sinlapakhom",
+          "label": "Amphoe Prachak Sinlapakhom"
+        },
+        {
+          "value": "th-41-amphoe-sang-khom",
+          "label": "Amphoe Sang Khom"
+        },
+        {
+          "value": "th-41-amphoe-si-that",
+          "label": "Amphoe Si That"
+        },
+        {
+          "value": "th-41-amphoe-thung-fon",
+          "label": "Amphoe Thung Fon"
+        },
+        {
+          "value": "th-41-amphoe-wang-sam-mo",
+          "label": "Amphoe Wang Sam Mo"
+        },
+        {
+          "value": "th-41-ban-dung",
+          "label": "Ban Dung"
+        },
+        {
+          "value": "th-41-ban-nong-wua-so",
+          "label": "Ban Nong Wua So"
+        },
+        {
+          "value": "th-41-ban-phan-don",
+          "label": "Ban Phan Don"
+        },
+        {
+          "value": "th-41-kumphawapi",
+          "label": "Kumphawapi"
+        },
+        {
+          "value": "th-41-kut-chap",
+          "label": "Kut Chap"
+        },
+        {
+          "value": "th-41-nam-som",
+          "label": "Nam Som"
+        },
+        {
+          "value": "th-41-nong-wua-so",
+          "label": "Nong Wua So"
+        },
+        {
+          "value": "th-41-udon-thani",
+          "label": "Udon Thani"
+        }
+      ]
+    },
+    {
+      "value": "th-61",
+      "label": "Uthai Thani",
+      "state_code": "61",
+      "cities": [
+        {
+          "value": "th-61-amphoe-ban-rai",
+          "label": "Amphoe Ban Rai"
+        },
+        {
+          "value": "th-61-amphoe-huai-khot",
+          "label": "Amphoe Huai Khot"
+        },
+        {
+          "value": "th-61-amphoe-lan-sak",
+          "label": "Amphoe Lan Sak"
+        },
+        {
+          "value": "th-61-amphoe-mueang-uthai-thani",
+          "label": "Amphoe Mueang Uthai Thani"
+        },
+        {
+          "value": "th-61-amphoe-nong-chang",
+          "label": "Amphoe Nong Chang"
+        },
+        {
+          "value": "th-61-amphoe-nong-khayang",
+          "label": "Amphoe Nong Khayang"
+        },
+        {
+          "value": "th-61-amphoe-sawang-arom",
+          "label": "Amphoe Sawang Arom"
+        },
+        {
+          "value": "th-61-amphoe-thap-than",
+          "label": "Amphoe Thap Than"
+        },
+        {
+          "value": "th-61-huai-khot",
+          "label": "Huai Khot"
+        },
+        {
+          "value": "th-61-lan-sak",
+          "label": "Lan Sak"
+        },
+        {
+          "value": "th-61-thap-than",
+          "label": "Thap Than"
+        },
+        {
+          "value": "th-61-uthai-thani",
+          "label": "Uthai Thani"
+        }
+      ]
+    },
+    {
+      "value": "th-53",
+      "label": "Uttaradit",
+      "state_code": "53",
+      "cities": [
+        {
+          "value": "th-53-amphoe-ban-khok",
+          "label": "Amphoe Ban Khok"
+        },
+        {
+          "value": "th-53-amphoe-fak-tha",
+          "label": "Amphoe Fak Tha"
+        },
+        {
+          "value": "th-53-amphoe-lap-lae",
+          "label": "Amphoe Lap Lae"
+        },
+        {
+          "value": "th-53-amphoe-mueang-uttaradit",
+          "label": "Amphoe Mueang Uttaradit"
+        },
+        {
+          "value": "th-53-amphoe-nam-pat",
+          "label": "Amphoe Nam Pat"
+        },
+        {
+          "value": "th-53-amphoe-phichai",
+          "label": "Amphoe Phichai"
+        },
+        {
+          "value": "th-53-amphoe-tha-pla",
+          "label": "Amphoe Tha Pla"
+        },
+        {
+          "value": "th-53-amphoe-thong-saen-khan",
+          "label": "Amphoe Thong Saen Khan"
+        },
+        {
+          "value": "th-53-amphoe-tron",
+          "label": "Amphoe Tron"
+        },
+        {
+          "value": "th-53-uttaradit",
+          "label": "Uttaradit"
+        }
+      ]
+    },
+    {
+      "value": "th-95",
+      "label": "Yala",
+      "state_code": "95",
+      "cities": [
+        {
+          "value": "th-95-amphoe-bannang-sata",
+          "label": "Amphoe Bannang Sata"
+        },
+        {
+          "value": "th-95-amphoe-betong",
+          "label": "Amphoe Betong"
+        },
+        {
+          "value": "th-95-amphoe-kabang",
+          "label": "Amphoe Kabang"
+        },
+        {
+          "value": "th-95-amphoe-krong-pinang",
+          "label": "Amphoe Krong Pinang"
+        },
+        {
+          "value": "th-95-amphoe-mueang-yala",
+          "label": "Amphoe Mueang Yala"
+        },
+        {
+          "value": "th-95-amphoe-raman",
+          "label": "Amphoe Raman"
+        },
+        {
+          "value": "th-95-amphoe-than-to",
+          "label": "Amphoe Than To"
+        },
+        {
+          "value": "th-95-amphoe-yaha",
+          "label": "Amphoe Yaha"
+        },
+        {
+          "value": "th-95-betong",
+          "label": "Betong"
+        },
+        {
+          "value": "th-95-yala",
+          "label": "Yala"
+        }
+      ]
+    },
+    {
+      "value": "th-35",
+      "label": "Yasothon",
+      "state_code": "35",
+      "cities": [
+        {
+          "value": "th-35-amphoe-kham-khuan-kaeo",
+          "label": "Amphoe Kham Khuan Kaeo"
+        },
+        {
+          "value": "th-35-amphoe-kho-wang",
+          "label": "Amphoe Kho Wang"
+        },
+        {
+          "value": "th-35-amphoe-kut-chum",
+          "label": "Amphoe Kut Chum"
+        },
+        {
+          "value": "th-35-amphoe-loeng-nok-tha",
+          "label": "Amphoe Loeng Nok Tha"
+        },
+        {
+          "value": "th-35-amphoe-maha-chana-chai",
+          "label": "Amphoe Maha Chana Chai"
+        },
+        {
+          "value": "th-35-amphoe-mueang-yasothon",
+          "label": "Amphoe Mueang Yasothon"
+        },
+        {
+          "value": "th-35-amphoe-pa-tio",
+          "label": "Amphoe Pa Tio"
+        },
+        {
+          "value": "th-35-amphoe-sai-mun",
+          "label": "Amphoe Sai Mun"
+        },
+        {
+          "value": "th-35-amphoe-thai-charoen",
+          "label": "Amphoe Thai Charoen"
+        },
+        {
+          "value": "th-35-yasothon",
+          "label": "Yasothon"
+        }
+      ]
+    }
+  ]
+}

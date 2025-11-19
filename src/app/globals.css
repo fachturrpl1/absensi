@@ -178,23 +178,17 @@
   animation: bounceSlow 2s infinite;
 }
 
-/* Skeleton shimmer */
-.skeleton {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(90deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.04) 20%, rgba(0,0,0,0.03) 40%);
-}
-.skeleton::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -150px;
-  height: 100%;
-  width: 150px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
-  animation: shimmer 1.2s infinite;
-}
+/* Skeleton shimmer animation */
 @keyframes shimmer {
-  100% { transform: translateX(300px); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-shimmer::before {
+  animation: shimmer 2s ease-in-out infinite;
 }
 

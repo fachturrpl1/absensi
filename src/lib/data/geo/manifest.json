@@ -1,0 +1,60 @@
+{
+  "generatedAt": "2025-11-19T02:21:33.471Z",
+  "source": "country-state-city",
+  "countries": [
+    {
+      "code": "ID",
+      "name": "Indonesia",
+      "states": 34,
+      "cities": 889
+    },
+    {
+      "code": "MY",
+      "name": "Malaysia",
+      "states": 16,
+      "cities": 179
+    },
+    {
+      "code": "SG",
+      "name": "Singapore",
+      "states": 5,
+      "cities": 2
+    },
+    {
+      "code": "TH",
+      "name": "Thailand",
+      "states": 78,
+      "cities": 1240
+    },
+    {
+      "code": "PH",
+      "name": "Philippines",
+      "states": 97,
+      "cities": 6520
+    },
+    {
+      "code": "VN",
+      "name": "Vietnam",
+      "states": 63,
+      "cities": 467
+    },
+    {
+      "code": "US",
+      "name": "United States",
+      "states": 66,
+      "cities": 19821
+    },
+    {
+      "code": "GB",
+      "name": "United Kingdom",
+      "states": 247,
+      "cities": 3871
+    },
+    {
+      "code": "AU",
+      "name": "Australia",
+      "states": 8,
+      "cities": 4152
+    }
+  ]
+}

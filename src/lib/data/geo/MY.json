@@ -1,0 +1,834 @@
+{
+  "code": "MY",
+  "name": "Malaysia",
+  "states": [
+    {
+      "value": "my-01",
+      "label": "Johor",
+      "state_code": "01",
+      "cities": [
+        {
+          "value": "my-01-bakri",
+          "label": "Bakri"
+        },
+        {
+          "value": "my-01-batu-pahat",
+          "label": "Batu Pahat"
+        },
+        {
+          "value": "my-01-buloh-kasap",
+          "label": "Buloh Kasap"
+        },
+        {
+          "value": "my-01-chaah",
+          "label": "Chaah"
+        },
+        {
+          "value": "my-01-daerah-batu-pahat",
+          "label": "Daerah Batu Pahat"
+        },
+        {
+          "value": "my-01-daerah-johor-baharu",
+          "label": "Daerah Johor Baharu"
+        },
+        {
+          "value": "my-01-daerah-keluang",
+          "label": "Daerah Keluang"
+        },
+        {
+          "value": "my-01-daerah-kota-tinggi",
+          "label": "Daerah Kota Tinggi"
+        },
+        {
+          "value": "my-01-daerah-mersing",
+          "label": "Daerah Mersing"
+        },
+        {
+          "value": "my-01-daerah-muar",
+          "label": "Daerah Muar"
+        },
+        {
+          "value": "my-01-daerah-pontian",
+          "label": "Daerah Pontian"
+        },
+        {
+          "value": "my-01-daerah-segamat",
+          "label": "Daerah Segamat"
+        },
+        {
+          "value": "my-01-johor-bahru",
+          "label": "Johor Bahru"
+        },
+        {
+          "value": "my-01-kampung-pasir-gudang-baru",
+          "label": "Kampung Pasir Gudang Baru"
+        },
+        {
+          "value": "my-01-kampung-simpang-renggam",
+          "label": "Kampung Simpang Renggam"
+        },
+        {
+          "value": "my-01-kelapa-sawit",
+          "label": "Kelapa Sawit"
+        },
+        {
+          "value": "my-01-kluang",
+          "label": "Kluang"
+        },
+        {
+          "value": "my-01-kota-tinggi",
+          "label": "Kota Tinggi"
+        },
+        {
+          "value": "my-01-kulai",
+          "label": "Kulai"
+        },
+        {
+          "value": "my-01-labis",
+          "label": "Labis"
+        },
+        {
+          "value": "my-01-mersing",
+          "label": "Mersing"
+        },
+        {
+          "value": "my-01-muar",
+          "label": "Muar"
+        },
+        {
+          "value": "my-01-parit-raja",
+          "label": "Parit Raja"
+        },
+        {
+          "value": "my-01-pekan-nenas",
+          "label": "Pekan Nenas"
+        },
+        {
+          "value": "my-01-pontian-kechil",
+          "label": "Pontian Kechil"
+        },
+        {
+          "value": "my-01-segamat",
+          "label": "Segamat"
+        },
+        {
+          "value": "my-01-skudai",
+          "label": "Skudai"
+        },
+        {
+          "value": "my-01-taman-senai",
+          "label": "Taman Senai"
+        },
+        {
+          "value": "my-01-tangkak",
+          "label": "Tangkak"
+        },
+        {
+          "value": "my-01-ulu-tiram",
+          "label": "Ulu Tiram"
+        },
+        {
+          "value": "my-01-yong-peng",
+          "label": "Yong Peng"
+        }
+      ]
+    },
+    {
+      "value": "my-02",
+      "label": "Kedah",
+      "state_code": "02",
+      "cities": [
+        {
+          "value": "my-02-alor-setar",
+          "label": "Alor Setar"
+        },
+        {
+          "value": "my-02-ayer-hangat",
+          "label": "Ayer Hangat"
+        },
+        {
+          "value": "my-02-bedong",
+          "label": "Bedong"
+        },
+        {
+          "value": "my-02-gurun",
+          "label": "Gurun"
+        },
+        {
+          "value": "my-02-jitra",
+          "label": "Jitra"
+        },
+        {
+          "value": "my-02-kampung-kilim",
+          "label": "Kampung Kilim"
+        },
+        {
+          "value": "my-02-kampung-kok",
+          "label": "Kampung Kok"
+        },
+        {
+          "value": "my-02-kuah",
+          "label": "Kuah"
+        },
+        {
+          "value": "my-02-kuala-kedah",
+          "label": "Kuala Kedah"
+        },
+        {
+          "value": "my-02-kuala-teriang",
+          "label": "Kuala Teriang"
+        },
+        {
+          "value": "my-02-kulim",
+          "label": "Kulim"
+        },
+        {
+          "value": "my-02-langkawi",
+          "label": "Langkawi"
+        },
+        {
+          "value": "my-02-padang-mat-sirat",
+          "label": "Padang Mat Sirat"
+        },
+        {
+          "value": "my-02-sungai-petani",
+          "label": "Sungai Petani"
+        }
+      ]
+    },
+    {
+      "value": "my-03",
+      "label": "Kelantan",
+      "state_code": "03",
+      "cities": [
+        {
+          "value": "my-03-gua-musang",
+          "label": "Gua Musang"
+        },
+        {
+          "value": "my-03-kampong-kadok",
+          "label": "Kampong Kadok"
+        },
+        {
+          "value": "my-03-kampong-pangkal-kalong",
+          "label": "Kampong Pangkal Kalong"
+        },
+        {
+          "value": "my-03-kota-bharu",
+          "label": "Kota Bharu"
+        },
+        {
+          "value": "my-03-pasir-mas",
+          "label": "Pasir Mas"
+        },
+        {
+          "value": "my-03-peringat",
+          "label": "Peringat"
+        },
+        {
+          "value": "my-03-tumpat",
+          "label": "Tumpat"
+        }
+      ]
+    },
+    {
+      "value": "my-14",
+      "label": "Kuala Lumpur",
+      "state_code": "14",
+      "cities": [
+        {
+          "value": "my-14-kuala-lumpur",
+          "label": "Kuala Lumpur"
+        }
+      ]
+    },
+    {
+      "value": "my-15",
+      "label": "Labuan",
+      "state_code": "15",
+      "cities": [
+        {
+          "value": "my-15-labuan",
+          "label": "Labuan"
+        }
+      ]
+    },
+    {
+      "value": "my-04",
+      "label": "Malacca",
+      "state_code": "04",
+      "cities": [
+        {
+          "value": "my-04-alor-gajah",
+          "label": "Alor Gajah"
+        },
+        {
+          "value": "my-04-batu-berendam",
+          "label": "Batu Berendam"
+        },
+        {
+          "value": "my-04-bemban",
+          "label": "Bemban"
+        },
+        {
+          "value": "my-04-bukit-rambai",
+          "label": "Bukit Rambai"
+        },
+        {
+          "value": "my-04-kampong-masjid-tanah",
+          "label": "Kampong Masjid Tanah"
+        },
+        {
+          "value": "my-04-kampung-ayer-keroh",
+          "label": "Kampung Ayer Keroh"
+        },
+        {
+          "value": "my-04-kampung-ayer-molek",
+          "label": "Kampung Ayer Molek"
+        },
+        {
+          "value": "my-04-kampung-bukit-baharu",
+          "label": "Kampung Bukit Baharu"
+        },
+        {
+          "value": "my-04-klebang-besar",
+          "label": "Klebang Besar"
+        },
+        {
+          "value": "my-04-kuala-sungai-baru",
+          "label": "Kuala Sungai Baru"
+        },
+        {
+          "value": "my-04-malacca",
+          "label": "Malacca"
+        },
+        {
+          "value": "my-04-pulau-sebang",
+          "label": "Pulau Sebang"
+        },
+        {
+          "value": "my-04-sungai-udang",
+          "label": "Sungai Udang"
+        }
+      ]
+    },
+    {
+      "value": "my-05",
+      "label": "Negeri Sembilan",
+      "state_code": "05",
+      "cities": [
+        {
+          "value": "my-05-bahau",
+          "label": "Bahau"
+        },
+        {
+          "value": "my-05-kampung-baharu-nilai",
+          "label": "Kampung Baharu Nilai"
+        },
+        {
+          "value": "my-05-kuala-pilah",
+          "label": "Kuala Pilah"
+        },
+        {
+          "value": "my-05-port-dickson",
+          "label": "Port Dickson"
+        },
+        {
+          "value": "my-05-seremban",
+          "label": "Seremban"
+        },
+        {
+          "value": "my-05-tampin",
+          "label": "Tampin"
+        }
+      ]
+    },
+    {
+      "value": "my-06",
+      "label": "Pahang",
+      "state_code": "06",
+      "cities": [
+        {
+          "value": "my-06-bentong-town",
+          "label": "Bentong Town"
+        },
+        {
+          "value": "my-06-jerantut",
+          "label": "Jerantut"
+        },
+        {
+          "value": "my-06-kampung-bukit-tinggi-bentong",
+          "label": "Kampung Bukit Tinggi, Bentong"
+        },
+        {
+          "value": "my-06-kampung-tekek",
+          "label": "Kampung Tekek"
+        },
+        {
+          "value": "my-06-kuala-lipis",
+          "label": "Kuala Lipis"
+        },
+        {
+          "value": "my-06-kuantan",
+          "label": "Kuantan"
+        },
+        {
+          "value": "my-06-mentekab",
+          "label": "Mentekab"
+        },
+        {
+          "value": "my-06-pekan",
+          "label": "Pekan"
+        },
+        {
+          "value": "my-06-raub",
+          "label": "Raub"
+        },
+        {
+          "value": "my-06-tanah-rata",
+          "label": "Tanah Rata"
+        },
+        {
+          "value": "my-06-temerluh",
+          "label": "Temerluh"
+        }
+      ]
+    },
+    {
+      "value": "my-07",
+      "label": "Penang",
+      "state_code": "07",
+      "cities": [
+        {
+          "value": "my-07-batu-feringgi",
+          "label": "Batu Feringgi"
+        },
+        {
+          "value": "my-07-bukit-mertajam",
+          "label": "Bukit Mertajam"
+        },
+        {
+          "value": "my-07-butterworth",
+          "label": "Butterworth"
+        },
+        {
+          "value": "my-07-george-town",
+          "label": "George Town"
+        },
+        {
+          "value": "my-07-juru",
+          "label": "Juru"
+        },
+        {
+          "value": "my-07-kampung-batu-feringgi",
+          "label": "Kampung Batu Feringgi"
+        },
+        {
+          "value": "my-07-kampung-sungai-ara",
+          "label": "Kampung Sungai Ara"
+        },
+        {
+          "value": "my-07-kepala-batas",
+          "label": "Kepala Batas"
+        },
+        {
+          "value": "my-07-nibong-tebal",
+          "label": "Nibong Tebal"
+        },
+        {
+          "value": "my-07-perai",
+          "label": "Perai"
+        },
+        {
+          "value": "my-07-permatang-kuching",
+          "label": "Permatang Kuching"
+        },
+        {
+          "value": "my-07-seberang-perai",
+          "label": "Seberang Perai"
+        },
+        {
+          "value": "my-07-tanjung-tokong",
+          "label": "Tanjung Tokong"
+        },
+        {
+          "value": "my-07-tasek-glugor",
+          "label": "Tasek Glugor"
+        },
+        {
+          "value": "my-07-telaga-batu",
+          "label": "Telaga Batu"
+        }
+      ]
+    },
+    {
+      "value": "my-08",
+      "label": "Perak",
+      "state_code": "08",
+      "cities": [
+        {
+          "value": "my-08-bagan-serai",
+          "label": "Bagan Serai"
+        },
+        {
+          "value": "my-08-batu-gajah",
+          "label": "Batu Gajah"
+        },
+        {
+          "value": "my-08-bidur",
+          "label": "Bidur"
+        },
+        {
+          "value": "my-08-ipoh",
+          "label": "Ipoh"
+        },
+        {
+          "value": "my-08-kampar",
+          "label": "Kampar"
+        },
+        {
+          "value": "my-08-kampong-dungun",
+          "label": "Kampong Dungun"
+        },
+        {
+          "value": "my-08-kuala-kangsar",
+          "label": "Kuala Kangsar"
+        },
+        {
+          "value": "my-08-lumut",
+          "label": "Lumut"
+        },
+        {
+          "value": "my-08-pantai-remis",
+          "label": "Pantai Remis"
+        },
+        {
+          "value": "my-08-parit-buntar",
+          "label": "Parit Buntar"
+        },
+        {
+          "value": "my-08-simpang-empat",
+          "label": "Simpang Empat"
+        },
+        {
+          "value": "my-08-taiping",
+          "label": "Taiping"
+        },
+        {
+          "value": "my-08-tapah-road",
+          "label": "Tapah Road"
+        },
+        {
+          "value": "my-08-teluk-intan",
+          "label": "Teluk Intan"
+        }
+      ]
+    },
+    {
+      "value": "my-09",
+      "label": "Perlis",
+      "state_code": "09",
+      "cities": [
+        {
+          "value": "my-09-kangar",
+          "label": "Kangar"
+        },
+        {
+          "value": "my-09-kuala-perlis",
+          "label": "Kuala Perlis"
+        },
+        {
+          "value": "my-09-pantai-cenang",
+          "label": "Pantai Cenang"
+        }
+      ]
+    },
+    {
+      "value": "my-16",
+      "label": "Putrajaya",
+      "state_code": "16",
+      "cities": [
+        {
+          "value": "my-16-putrajaya",
+          "label": "Putrajaya"
+        }
+      ]
+    },
+    {
+      "value": "my-12",
+      "label": "Sabah",
+      "state_code": "12",
+      "cities": [
+        {
+          "value": "my-12-bandar-labuan",
+          "label": "Bandar Labuan"
+        },
+        {
+          "value": "my-12-beaufort",
+          "label": "Beaufort"
+        },
+        {
+          "value": "my-12-donggongon",
+          "label": "Donggongon"
+        },
+        {
+          "value": "my-12-keningau",
+          "label": "Keningau"
+        },
+        {
+          "value": "my-12-kinarut",
+          "label": "Kinarut"
+        },
+        {
+          "value": "my-12-kota-belud",
+          "label": "Kota Belud"
+        },
+        {
+          "value": "my-12-kota-kinabalu",
+          "label": "Kota Kinabalu"
+        },
+        {
+          "value": "my-12-kudat",
+          "label": "Kudat"
+        },
+        {
+          "value": "my-12-lahad-datu",
+          "label": "Lahad Datu"
+        },
+        {
+          "value": "my-12-papar",
+          "label": "Papar"
+        },
+        {
+          "value": "my-12-putatan",
+          "label": "Putatan"
+        },
+        {
+          "value": "my-12-ranau",
+          "label": "Ranau"
+        },
+        {
+          "value": "my-12-sandakan",
+          "label": "Sandakan"
+        },
+        {
+          "value": "my-12-semporna",
+          "label": "Semporna"
+        },
+        {
+          "value": "my-12-taman-rajawali",
+          "label": "Taman Rajawali"
+        },
+        {
+          "value": "my-12-tawau",
+          "label": "Tawau"
+        }
+      ]
+    },
+    {
+      "value": "my-13",
+      "label": "Sarawak",
+      "state_code": "13",
+      "cities": [
+        {
+          "value": "my-13-bintulu",
+          "label": "Bintulu"
+        },
+        {
+          "value": "my-13-data-kakus",
+          "label": "Data Kakus"
+        },
+        {
+          "value": "my-13-kapit",
+          "label": "Kapit"
+        },
+        {
+          "value": "my-13-kuching",
+          "label": "Kuching"
+        },
+        {
+          "value": "my-13-lawas",
+          "label": "Lawas"
+        },
+        {
+          "value": "my-13-lidung-jelo",
+          "label": "Lidung Jelo"
+        },
+        {
+          "value": "my-13-limbang",
+          "label": "Limbang"
+        },
+        {
+          "value": "my-13-long-ampan-aing-or-abanang",
+          "label": "Long Ampan Aing or Abanang"
+        },
+        {
+          "value": "my-13-marudi",
+          "label": "Marudi"
+        },
+        {
+          "value": "my-13-miri",
+          "label": "Miri"
+        },
+        {
+          "value": "my-13-mukah",
+          "label": "Mukah"
+        },
+        {
+          "value": "my-13-sarikei",
+          "label": "Sarikei"
+        },
+        {
+          "value": "my-13-sibu",
+          "label": "Sibu"
+        },
+        {
+          "value": "my-13-simanggang",
+          "label": "Simanggang"
+        }
+      ]
+    },
+    {
+      "value": "my-10",
+      "label": "Selangor",
+      "state_code": "10",
+      "cities": [
+        {
+          "value": "my-10-ampang",
+          "label": "Ampang"
+        },
+        {
+          "value": "my-10-bagan-pulau-ketam",
+          "label": "Bagan Pulau Ketam"
+        },
+        {
+          "value": "my-10-banting",
+          "label": "Banting"
+        },
+        {
+          "value": "my-10-batang-berjuntai",
+          "label": "Batang Berjuntai"
+        },
+        {
+          "value": "my-10-batu-arang",
+          "label": "Batu Arang"
+        },
+        {
+          "value": "my-10-jenjarum",
+          "label": "Jenjarum"
+        },
+        {
+          "value": "my-10-kampong-baharu-balakong",
+          "label": "Kampong Baharu Balakong"
+        },
+        {
+          "value": "my-10-kampung-baru-subang",
+          "label": "Kampung Baru Subang"
+        },
+        {
+          "value": "my-10-kampung-tanjung-karang",
+          "label": "Kampung Tanjung Karang"
+        },
+        {
+          "value": "my-10-klang",
+          "label": "Klang"
+        },
+        {
+          "value": "my-10-kuala-selangor",
+          "label": "Kuala Selangor"
+        },
+        {
+          "value": "my-10-kuang",
+          "label": "Kuang"
+        },
+        {
+          "value": "my-10-ladang-seri-kundang",
+          "label": "Ladang Seri Kundang"
+        },
+        {
+          "value": "my-10-pelabuhan-klang",
+          "label": "Pelabuhan Klang"
+        },
+        {
+          "value": "my-10-petaling-jaya",
+          "label": "Petaling Jaya"
+        },
+        {
+          "value": "my-10-putra-heights",
+          "label": "Putra Heights"
+        },
+        {
+          "value": "my-10-rawang",
+          "label": "Rawang"
+        },
+        {
+          "value": "my-10-semenyih",
+          "label": "Semenyih"
+        },
+        {
+          "value": "my-10-serendah",
+          "label": "Serendah"
+        },
+        {
+          "value": "my-10-shah-alam",
+          "label": "Shah Alam"
+        },
+        {
+          "value": "my-10-subang-jaya",
+          "label": "Subang Jaya"
+        },
+        {
+          "value": "my-10-sungai-besar",
+          "label": "Sungai Besar"
+        },
+        {
+          "value": "my-10-sungai-pelek-new-village",
+          "label": "Sungai Pelek New Village"
+        },
+        {
+          "value": "my-10-tanjung-sepat",
+          "label": "Tanjung Sepat"
+        }
+      ]
+    },
+    {
+      "value": "my-11",
+      "label": "Terengganu",
+      "state_code": "11",
+      "cities": [
+        {
+          "value": "my-11-cukai",
+          "label": "Cukai"
+        },
+        {
+          "value": "my-11-jertih",
+          "label": "Jertih"
+        },
+        {
+          "value": "my-11-kampung-kuala-besut",
+          "label": "Kampung Kuala Besut"
+        },
+        {
+          "value": "my-11-kertih",
+          "label": "Kertih"
+        },
+        {
+          "value": "my-11-kuala-besut",
+          "label": "Kuala Besut"
+        },
+        {
+          "value": "my-11-kuala-terengganu",
+          "label": "Kuala Terengganu"
+        },
+        {
+          "value": "my-11-marang",
+          "label": "Marang"
+        },
+        {
+          "value": "my-11-paka",
+          "label": "Paka"
+        }
+      ]
+    }
+  ]
+}
