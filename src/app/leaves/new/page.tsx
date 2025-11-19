@@ -13,6 +13,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -180,27 +183,56 @@ export default function NewLeaveRequestPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/leaves">
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="hover:bg-muted">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <div>
-          <h1 className="text-3xl font-bold">Request Leave</h1>
-          <p className="text-muted-foreground">Submit a new leave request</p>
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">Request Leave</h1>
+          <p className="text-muted-foreground">Submit a new leave request for approval</p>
         </div>
       </div>
 
+      {/* Progress Indicator */}
+      <Card className="border-primary/20">
+        <CardContent className="pt-6">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Form Progress</span>
+              <span className="font-medium">
+                {Object.values(form.formState.dirtyFields).length} / 6 fields completed
+              </span>
+            </div>
+            <Progress 
+              value={(Object.values(form.formState.dirtyFields).length / 6) * 100} 
+              className="h-2"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Form Card */}
-      <Card>
-          <CardHeader>
-            <CardTitle>Leave Request Form</CardTitle>
-            <CardDescription>Fill in the details for your leave request</CardDescription>
+      <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <CalendarIcon className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">Leave Request Form</CardTitle>
+                <CardDescription className="mt-1">
+                  Fill in the details for your leave request. All required fields are marked with *
+                </CardDescription>
+              </div>
+            </div>
+            <Separator className="mt-4" />
           </CardHeader>
           <CardContent>
+            <ScrollArea className="h-[600px] pr-4">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 {/* Leave Type */}
@@ -208,28 +240,38 @@ export default function NewLeaveRequestPage() {
                   control={form.control}
                   name="leave_type_id"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Leave Type *</FormLabel>
+                    <FormItem className="space-y-3">
+                      <FormLabel className="text-base font-medium">Leave Type *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select leave type" />
+                          <SelectTrigger className="h-12">
+                            <SelectValue placeholder="Choose your leave type" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {leaveTypes.map((type) => (
-                            <SelectItem key={type.id} value={type.id.toString()}>
-                              <div className="flex items-center gap-2">
+                            <SelectItem key={type.id} value={type.id.toString()} className="py-3">
+                              <div className="flex items-center gap-3">
                                 <div
-                                  className="w-3 h-3 rounded-full"
+                                  className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
                                   style={{ backgroundColor: type.color_code || '#10B981' }}
                                 />
-                                {type.name}
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{type.name}</span>
+                                  {type.description && (
+                                    <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                      {type.description}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormDescription>
+                        Select the type of leave you want to request
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -269,131 +311,153 @@ export default function NewLeaveRequestPage() {
                 )}
 
                 {/* Date Range */}
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="start_date"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Start Date *</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) => date < new Date()}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="start_date"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col space-y-3">
+                          <FormLabel className="text-base font-medium">Start Date *</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "h-12 pl-3 text-left font-normal justify-start",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Select start date</span>
+                                  )}
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => date < new Date()}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormDescription>
+                            Choose when your leave will start
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="end_date"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>End Date *</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) => date < (watchStartDate || new Date())}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="end_date"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col space-y-3">
+                          <FormLabel className="text-base font-medium">End Date *</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "h-12 pl-3 text-left font-normal justify-start",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Select end date</span>
+                                  )}
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => date < (watchStartDate || new Date())}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormDescription>
+                            Choose when your leave will end
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
 
                 {/* Half Day Options */}
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="start_half_day"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Start Half Day</FormLabel>
-                          <FormDescription>
-                            Leave starts at noon
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <h4 className="text-base font-medium">Half Day Options</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Select if you want to take half days for the start or end of your leave
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="start_half_day"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              className="mt-1"
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-base font-medium cursor-pointer">
+                              Start Half Day
+                            </FormLabel>
+                            <FormDescription className="text-sm">
+                              Leave starts at noon (0.5 day deduction)
+                            </FormDescription>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="end_half_day"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>End Half Day</FormLabel>
-                          <FormDescription>
-                            Leave ends at noon
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="end_half_day"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              className="mt-1"
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-base font-medium cursor-pointer">
+                              End Half Day
+                            </FormLabel>
+                            <FormDescription className="text-sm">
+                              Leave ends at noon (0.5 day deduction)
+                            </FormDescription>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
 
                 {/* Calculated Days */}
@@ -425,18 +489,23 @@ export default function NewLeaveRequestPage() {
                   control={form.control}
                   name="reason"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Reason *</FormLabel>
+                    <FormItem className="space-y-3">
+                      <FormLabel className="text-base font-medium">Reason for Leave *</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Please provide a detailed reason for your leave..."
-                          className="min-h-[100px]"
+                          placeholder="Please provide a detailed reason for your leave request. Include any relevant information that would help with the approval process..."
+                          className="min-h-[120px] resize-none"
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Minimum 10 characters
-                      </FormDescription>
+                      <div className="flex items-center justify-between">
+                        <FormDescription>
+                          Minimum 10 characters required
+                        </FormDescription>
+                        <span className="text-xs text-muted-foreground">
+                          {field.value?.length || 0} characters
+                        </span>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -447,46 +516,56 @@ export default function NewLeaveRequestPage() {
                   control={form.control}
                   name="emergency_contact"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Emergency Contact (Optional)</FormLabel>
+                    <FormItem className="space-y-3">
+                      <FormLabel className="text-base font-medium">Emergency Contact (Optional)</FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Phone number or email to reach you during leave"
+                          className="h-12"
                           {...field}
                         />
                       </FormControl>
+                      <FormDescription>
+                        Provide a way to contact you in case of emergency during your leave
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
                 {/* Submit Buttons */}
-                <div className="flex gap-3">
+                <Separator className="my-6" />
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => router.back()}
                     disabled={submitting}
+                    className="h-12 flex-1 sm:flex-none sm:w-32"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
-                    disabled={submitting || !!noticeWarning}
-                    className="flex-1"
+                    disabled={submitting || !!noticeWarning || !form.formState.isValid}
+                    className="h-12 flex-1"
                   >
                     {submitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting...
+                        Submitting Request...
                       </>
                     ) : (
-                      "Submit Request"
+                      <>
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Submit Leave Request
+                      </>
                     )}
                   </Button>
                 </div>
               </form>
             </Form>
+            </ScrollArea>
           </CardContent>
         </Card>
     </div>

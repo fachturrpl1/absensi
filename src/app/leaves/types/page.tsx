@@ -4,7 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Settings, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ArrowLeft, Settings, AlertCircle, RefreshCw, Loader2, Plus } from "lucide-react";
 import { getOrganizationLeaveTypes } from "@/action/admin-leaves";
 import { ILeaveType } from "@/lib/leave/types";
 import { useUserStore } from "@/store/user-store";
@@ -65,36 +68,53 @@ export default function LeaveTypesPage() {
   }
 
   return (
-    <div className="container mx-auto space-y-6">
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => router.push("/leaves")}
-              className="gap-2"
+              className="hover:bg-muted"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back
             </Button>
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Settings className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Manage Leave Types</h1>
+              <p className="text-muted-foreground mt-1">
+                Configure and manage leave types available in your organization
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Settings className="h-6 w-6" />
-            <h1 className="text-3xl font-bold">Manage Leave Types</h1>
-          </div>
-          <p className="text-muted-foreground">
-            Configure and manage leave types available in your organization
-          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadLeaveTypes}
+            disabled={loading}
+            className="gap-2"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Refresh
+          </Button>
         </div>
       </div>
 
       {/* Info Alert */}
-      <Alert className='mb-4 mt-4'>
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Information</AlertTitle>
-        <AlertDescription>
+      <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+        <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        <AlertTitle className="text-blue-800 dark:text-blue-200">Important Information</AlertTitle>
+        <AlertDescription className="text-blue-700 dark:text-blue-300">
           Leave types you create will be available to all employees in the organization. 
           Make sure to configure settings correctly before activating leave types.
         </AlertDescription>
@@ -103,26 +123,50 @@ export default function LeaveTypesPage() {
       {/* Statistics */}
       {!loading && leaveTypes.length > 0 && (
         <div className="grid gap-4 md:grid-cols-3">
-          <Card>
+          <Card className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
-              <CardDescription>Total Leave Types</CardDescription>
-              <CardTitle className="text-3xl">{leaveTypes.length}</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardDescription>Total Leave Types</CardDescription>
+                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                  <Settings className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+              </div>
+              <CardTitle className="text-3xl font-bold">{leaveTypes.length}</CardTitle>
+              <Badge variant="outline" className="w-fit mt-2">
+                Total configured
+              </Badge>
             </CardHeader>
           </Card>
-          <Card>
+          <Card className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
-              <CardDescription>Active Types</CardDescription>
-              <CardTitle className="text-3xl">
+              <div className="flex items-center justify-between">
+                <CardDescription>Active Types</CardDescription>
+                <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                  <Settings className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </div>
+              </div>
+              <CardTitle className="text-3xl font-bold">
                 {leaveTypes.filter(t => t.is_active).length}
               </CardTitle>
+              <Badge variant="secondary" className="w-fit mt-2 bg-green-100 text-green-800">
+                Currently available
+              </Badge>
             </CardHeader>
           </Card>
-          <Card>
+          <Card className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
-              <CardDescription>Paid Types</CardDescription>
-              <CardTitle className="text-3xl">
+              <div className="flex items-center justify-between">
+                <CardDescription>Paid Types</CardDescription>
+                <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                  <Settings className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                </div>
+              </div>
+              <CardTitle className="text-3xl font-bold">
                 {leaveTypes.filter(t => t.is_paid).length}
               </CardTitle>
+              <Badge variant="outline" className="w-fit mt-2">
+                With salary
+              </Badge>
             </CardHeader>
           </Card>
         </div>
@@ -130,30 +174,73 @@ export default function LeaveTypesPage() {
 
       {/* Main Content */}
       {loading ? (
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-96" />
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-96" />
+              </div>
+              <Skeleton className="h-9 w-24" />
+            </div>
+            <Separator className="mt-4" />
           </CardHeader>
-          <CardContent className="space-y-4">
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
+          <CardContent>
+            <ScrollArea className="h-[500px] pr-4">
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="p-4 border rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <Skeleton className="h-4 w-4 rounded-full" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-5 w-32" />
+                          <Skeleton className="h-4 w-48" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-6 w-16" />
+                        <Skeleton className="h-8 w-8" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Leave Types List</CardTitle>
-            <CardDescription>
-              Total {leaveTypes.length} leave types registered
-            </CardDescription>
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="pb-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Leave Types Management
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Total {leaveTypes.length} leave types registered in your organization
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">
+                  {leaveTypes.filter(t => t.is_active).length} active
+                </Badge>
+                <Button size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Type
+                </Button>
+              </div>
+            </div>
+            <Separator className="mt-4" />
           </CardHeader>
           <CardContent>
-            <LeaveTypeManager 
-              leaveTypes={leaveTypes} 
-              onUpdate={loadLeaveTypes}
-            />
+            <ScrollArea className="h-[600px] pr-4">
+              <LeaveTypeManager 
+                leaveTypes={leaveTypes} 
+                onUpdate={loadLeaveTypes}
+              />
+            </ScrollArea>
           </CardContent>
         </Card>
       )}
