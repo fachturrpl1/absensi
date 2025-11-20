@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Settings, AlertCircle, RefreshCw, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, Settings, AlertCircle, RefreshCw, Loader2, Plus, Layers, CheckCircle, DollarSign } from "lucide-react";
 import { getOrganizationLeaveTypes } from "@/action/admin-leaves";
 import { ILeaveType } from "@/lib/leave/types";
 import { useUserStore } from "@/store/user-store";
@@ -128,7 +128,7 @@ export default function LeaveTypesPage() {
               <div className="flex items-center justify-between">
                 <CardDescription>Total Leave Types</CardDescription>
                 <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                  <Settings className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <Layers className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
               <CardTitle className="text-3xl font-bold">{leaveTypes.length}</CardTitle>
@@ -142,7 +142,7 @@ export default function LeaveTypesPage() {
               <div className="flex items-center justify-between">
                 <CardDescription>Active Types</CardDescription>
                 <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                  <Settings className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                 </div>
               </div>
               <CardTitle className="text-3xl font-bold">
@@ -158,7 +158,7 @@ export default function LeaveTypesPage() {
               <div className="flex items-center justify-between">
                 <CardDescription>Paid Types</CardDescription>
                 <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                  <Settings className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  <DollarSign className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 </div>
               </div>
               <CardTitle className="text-3xl font-bold">

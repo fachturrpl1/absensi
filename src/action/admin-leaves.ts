@@ -76,7 +76,11 @@ export async function getLeaveStatistics(organizationId: number) {
       `)
       .eq("organization_member.organization_id", organizationId);
     
+    logger.debug("🔍 Query for organizationId:", organizationId);
+    logger.debug("📊 All requests found:", allRequests?.length || 0);
+    
     if (requestsError) {
+      logger.error("❌ Error fetching requests:", requestsError);
       throw requestsError;
     }
     
@@ -168,16 +172,20 @@ export async function getAllLeaveRequests(organizationId: number) {
         leave_type:leave_types(*),
         organization_member:organization_members!inner(
           *,
-          user:user_profiles(*),
-          department:departments(*),
-          position:positions(*),
+          user:user_profiles(id, employee_code, first_name, middle_name, last_name, display_name, profile_photo_url),
+          departments:department_id(id, code, name),
+          positions:position_id(id, code, title),
           organization_id
         )
       `)
       .eq("organization_member.organization_id", organizationId)
       .order("requested_at", { ascending: false });
     
+    logger.debug("🔍 getAllLeaveRequests for organizationId:", organizationId);
+    logger.debug("📋 Requests found:", requests?.length || 0);
+    
     if (error) {
+      logger.error("❌ Error fetching all requests:", error);
       throw error;
     }
     

@@ -137,8 +137,8 @@ export async function createInvitation(data: CreateInvitationData) {
         *,
         organization:organizations(*),
         role:system_roles(*),
-        department:departments(*),
-        position:positions(*)
+        departments:department_id(id, code, name),
+        positions:position_id(id, code, title)
       `
       )
       .single();
@@ -220,8 +220,8 @@ export async function getInvitationByToken(token: string) {
         *,
         organization:organizations(*),
         role:system_roles(*),
-        department:departments(*),
-        position:positions(*)
+        departments:department_id(id, code, name),
+        positions:position_id(id, code, title)
       `
       )
       .eq("invitation_token", token)
@@ -426,8 +426,8 @@ export async function getAllInvitations(status?: string) {
         *,
         inviter:user_profiles!invited_by(*),
         role:system_roles(*),
-        department:departments(*),
-        position:positions(*)
+        departments:department_id(id, code, name),
+        positions:position_id(id, code, title)
       `
       )
       .eq("organization_id", member.organization_id)
