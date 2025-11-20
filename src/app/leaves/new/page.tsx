@@ -14,7 +14,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -183,7 +182,7 @@ export default function NewLeaveRequestPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+    <div className="flex flex-col gap-6 p-4 md:p-6 max-w-4xl mx-auto w-full">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/leaves">
@@ -232,7 +231,6 @@ export default function NewLeaveRequestPage() {
             <Separator className="mt-4" />
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[600px] pr-4">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 {/* Leave Type */}
@@ -565,7 +563,6 @@ export default function NewLeaveRequestPage() {
                 </div>
               </form>
             </Form>
-            </ScrollArea>
           </CardContent>
         </Card>
     </div>

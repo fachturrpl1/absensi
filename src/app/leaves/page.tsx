@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
@@ -82,6 +81,9 @@ export default function LeavesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  
+  // Monthly Leave Trend filter state
+  const [monthlyTrendFilter, setMonthlyTrendFilter] = useState<'7days' | '1week' | 'thisweek' | '30days' | '1month' | 'thismonth' | 'lastyear' | 'thisyear'>('thisyear');
   
   const { role, permissions } = useUserStore();
   const { organizationId } = useOrgStore();
@@ -611,14 +613,31 @@ export default function LeavesPage() {
             <Card className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">Monthly Leave Trend</CardTitle>
+                  <div className="flex-1">
+                    <CardTitle className="text-lg">Leave Trend</CardTitle>
                     <CardDescription className="mt-1">
                       {isAdmin ? 'Organization leave trends' : 'Your leave history'}
                     </CardDescription>
                   </div>
-                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                    <BarChart3 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div className="flex items-center gap-2">
+                    <Select value={monthlyTrendFilter} onValueChange={(value: typeof monthlyTrendFilter) => setMonthlyTrendFilter(value)}>
+                      <SelectTrigger className="w-[160px] h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="7days">Last 7 Days</SelectItem>
+                        <SelectItem value="1week">Last Week</SelectItem>
+                        <SelectItem value="thisweek">This Week</SelectItem>
+                        <SelectItem value="30days">Last 30 Days</SelectItem>
+                        <SelectItem value="1month">Last Month</SelectItem>
+                        <SelectItem value="thismonth">This Month</SelectItem>
+                        <SelectItem value="lastyear">Last Year</SelectItem>
+                        <SelectItem value="thisyear">This Year</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                      <BarChart3 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -627,6 +646,7 @@ export default function LeavesPage() {
                   requests={isAdmin ? allRequests : requests}
                   type="monthly"
                   loading={loading}
+                  periodFilter={monthlyTrendFilter}
                 />
               </CardContent>
             </Card>
@@ -644,8 +664,15 @@ export default function LeavesPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">
-                    {(isAdmin ? allRequests : requests).slice(0, 5).length} of {(isAdmin ? allRequests : requests).length}
+                    {Math.min(3, (isAdmin ? allRequests : requests).length)} of {(isAdmin ? allRequests : requests).length}
                   </Badge>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setActiveTab("requests")}
+                  >
+                    See All
+                  </Button>
                   <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
                     <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                   </div>
@@ -653,15 +680,15 @@ export default function LeavesPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[400px] pr-4">
+              <div>
                 <LeaveRequestList 
-                  requests={(isAdmin ? allRequests : requests).slice(0, 5)}
+                  requests={(isAdmin ? allRequests : requests).slice(0, 3)}
                   loading={loading}
                   isAdmin={isAdmin}
                   onUpdate={loadData}
                   compact
                 />
-              </ScrollArea>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -698,10 +725,10 @@ export default function LeavesPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {/* Search and Filters */}
-                <div className="grid gap-4 md:grid-cols-4">
+                {/* Search, Filters, and Pagination - Single Row */}
+                <div className="flex flex-wrap items-center gap-2">
                   {/* Search Bar */}
-                  <div className="md:col-span-2 relative">
+                  <div className="flex-1 min-w-[200px] relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search by name, type, reason, or number..."
@@ -713,10 +740,10 @@ export default function LeavesPage() {
 
                   {/* Status Filter */}
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-[140px]">
                       <div className="flex items-center gap-2">
                         <Filter className="h-4 w-4" />
-                        <SelectValue placeholder="Filter by status" />
+                        <SelectValue placeholder="All Status" />
                       </div>
                     </SelectTrigger>
                     <SelectContent>
@@ -730,23 +757,21 @@ export default function LeavesPage() {
 
                   {/* Sort Order */}
                   <Select value={sortOrder} onValueChange={(value: 'newest' | 'oldest') => setSortOrder(value)}>
-                    <SelectTrigger>
-                      <div className="flex items-left gap-2">
+                    <SelectTrigger className="w-[150px]">
+                      <div className="flex items-center gap-2">
                         <ArrowUpDown className="h-4 w-4" />
                         <SelectValue />
                       </div>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="newest">Newest First</SelectItem>
-                      <SelectItem value="oldest">Oldest First</SelectItem>
+                      <SelectItem value="newest">Newest</SelectItem>
+                      <SelectItem value="oldest">Oldest</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
 
-                {/* Pagination Controls */}
-                <div className="flex items-center justify-between">
+                  {/* Show Items */}
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Show:</span>
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">Show:</span>
                     <Select 
                       value={itemsPerPage.toString()} 
                       onValueChange={(value) => {
@@ -754,30 +779,21 @@ export default function LeavesPage() {
                         setCurrentPage(1);
                       }}
                     >
-                      <SelectTrigger className="w-[100px]">
+                      <SelectTrigger className="w-[70px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="3">3</SelectItem>
                         <SelectItem value="5">5</SelectItem>
                         <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
                         <SelectItem value="all">All</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  
-                  {/* Results Info */}
-                  <div className="text-sm text-muted-foreground">
-                    {itemsPerPage !== 'all' ? (
-                      <>Page {currentPage} of {Math.ceil(getFilteredAndSortedRequests().length / (itemsPerPage as number))}</>
-                    ) : (
-                      <>{getFilteredAndSortedRequests().length} results</>
-                    )}
-                  </div>
                 </div>
 
                 {/* Request List */}
-                <ScrollArea className="h-[500px] pr-4">
+                <div>
                   <LeaveRequestList 
                     requests={
                       itemsPerPage === 'all'
@@ -792,52 +808,66 @@ export default function LeavesPage() {
                     canApprove={canApproveRequests}
                     onUpdate={loadData}
                   />
-                </ScrollArea>
+                </div>
 
-                {/* Pagination Navigation */}
-                {itemsPerPage !== 'all' && getFilteredAndSortedRequests().length > 0 && (
-                  <div className="flex items-center justify-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Button>
-                    
-                    <div className="flex items-center gap-1">
-                      {Array.from(
-                        { length: Math.ceil(getFilteredAndSortedRequests().length / (itemsPerPage as number)) },
-                        (_, i) => i + 1
-                      ).map((page) => (
-                        <Button
-                          key={page}
-                          size="sm"
-                          variant={currentPage === page ? "default" : "outline"}
-                          onClick={() => setCurrentPage(page)}
-                          className="w-8 h-8 p-0"
-                        >
-                          {page}
-                        </Button>
-                      ))}
+                {/* Footer: Page Info (Left) and Pagination (Right) */}
+                {getFilteredAndSortedRequests().length > 0 && (
+                  <div className="flex items-center justify-between">
+                    {/* Page Info - Left */}
+                    <div className="text-sm text-muted-foreground">
+                      {itemsPerPage !== 'all' ? (
+                        <>Page {currentPage} of {Math.ceil(getFilteredAndSortedRequests().length / (itemsPerPage as number))}</>
+                      ) : (
+                        <>{getFilteredAndSortedRequests().length} results</>
+                      )}
                     </div>
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setCurrentPage(prev => 
-                        Math.min(
-                          Math.ceil(getFilteredAndSortedRequests().length / (itemsPerPage as number)),
-                          prev + 1
-                        )
-                      )}
-                      disabled={currentPage >= Math.ceil(getFilteredAndSortedRequests().length / (itemsPerPage as number))}
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
+                    {/* Pagination Navigation - Right */}
+                    {itemsPerPage !== 'all' && (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          Previous
+                        </Button>
+                        
+                        <div className="flex items-center gap-1">
+                          {Array.from(
+                            { length: Math.ceil(getFilteredAndSortedRequests().length / (itemsPerPage as number)) },
+                            (_, i) => i + 1
+                          ).map((page) => (
+                            <Button
+                              key={page}
+                              size="sm"
+                              variant={currentPage === page ? "default" : "outline"}
+                              onClick={() => setCurrentPage(page)}
+                              className="w-8 h-8 p-0"
+                            >
+                              {page}
+                            </Button>
+                          ))}
+                        </div>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setCurrentPage(prev => 
+                            Math.min(
+                              Math.ceil(getFilteredAndSortedRequests().length / (itemsPerPage as number)),
+                              prev + 1
+                            )
+                          )}
+                          disabled={currentPage >= Math.ceil(getFilteredAndSortedRequests().length / (itemsPerPage as number))}
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -886,18 +916,18 @@ export default function LeavesPage() {
         {/* Analytics Tab (Admin Only) */}
         {isAdmin && (
           <TabsContent value="analytics" className="space-y-6">
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
               {/* Leave Type Distribution */}
               <Card className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
+                <CardHeader className="pb-4 min-h-[88px]">
+                  <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-lg">Leave Type Distribution</CardTitle>
                       <CardDescription className="mt-1">
                         Breakdown by leave type
                       </CardDescription>
                     </div>
-                    <div className="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg">
+                    <div className="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg flex-shrink-0">
                       <PieChart className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                     </div>
                   </div>
@@ -911,61 +941,59 @@ export default function LeavesPage() {
                 </CardContent>
               </Card>
 
-              {/* Department Distribution */}
+              {/* Detailed Analytics */}
               <Card className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
+                <CardHeader className="min-h-[88px]">
+                  <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="text-lg">Department Distribution</CardTitle>
+                      <CardTitle className="text-lg">Detailed Analytics</CardTitle>
                       <CardDescription className="mt-1">
-                        Leave requests by department
+                        Comprehensive leave statistics and trends
                       </CardDescription>
                     </div>
-                    <div className="p-2 bg-rose-100 dark:bg-rose-900 rounded-lg">
-                      <BarChart3 className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Badge variant="secondary" className="whitespace-nowrap">
+                        {statistics?.averageLeaveDays.toFixed(1)} avg leave days/request
+                      </Badge>
+                      <div className="p-2 bg-violet-100 dark:bg-violet-900 rounded-lg">
+                        <TrendingUp className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <LeaveAnalytics 
                     requests={allRequests}
-                    type="department"
+                    type="detailed"
                     loading={loading}
+                    statistics={statistics}
                   />
                 </CardContent>
               </Card>
             </div>
 
-            {/* Detailed Analytics */}
+            {/* Department Distribution */}
             <Card className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg">Detailed Analytics</CardTitle>
+                    <CardTitle className="text-lg">Department Distribution</CardTitle>
                     <CardDescription className="mt-1">
-                      Comprehensive leave statistics and trends
+                      Leave requests by department
                     </CardDescription>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">
-                      {statistics?.averageLeaveDays.toFixed(1)} avg days
-                    </Badge>
-                    <div className="p-2 bg-violet-100 dark:bg-violet-900 rounded-lg">
-                      <TrendingUp className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                    </div>
+                  <div className="p-2 bg-rose-100 dark:bg-rose-900 rounded-lg">
+                    <BarChart3 className="h-5 w-5 text-rose-600 dark:text-rose-400" />
                   </div>
                 </div>
                 <Separator className="mt-4" />
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[400px] pr-4">
-                  <LeaveAnalytics 
-                    requests={allRequests}
-                    type="detailed"
-                    loading={loading}
-                    statistics={statistics}
-                  />
-                </ScrollArea>
+                <LeaveAnalytics 
+                  requests={allRequests}
+                  type="department"
+                  loading={loading}
+                />
               </CardContent>
             </Card>
           </TabsContent>
