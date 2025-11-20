@@ -237,7 +237,6 @@ export default function LeaveTypesPage() {
           <CardContent>
             <ScrollArea className="h-[600px] pr-4">
               <LeaveTypeManager 
-                leaveTypes={leaveTypes} 
                 onUpdate={loadLeaveTypes}
               />
             </ScrollArea>

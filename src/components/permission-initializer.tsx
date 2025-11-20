@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { useAuthStore } from "@/store/user-store"
+import { useOrgStore } from "@/store/org-store"
 import { getUserPermissions, getUserOrgRole } from "@/lib/rbac"
 
 import { logger } from '@/lib/logger';
@@ -13,6 +14,7 @@ import { logger } from '@/lib/logger';
 export function PermissionInitializer({ userId }: { userId: string }) {
   const setPermissions = useAuthStore((state) => state.setPermissions)
   const setRole = useAuthStore((state) => state.setRole)
+  const setOrganizationId = useOrgStore((state) => state.setOrganizationId)
 
   useEffect(() => {
     const loadPermissionsAndRole = async () => {
@@ -22,8 +24,8 @@ export function PermissionInitializer({ userId }: { userId: string }) {
         setPermissions(permissions)
         logger.debug("✅ Permissions loaded:", permissions)
 
-        // Load organization role
-        const { role } = await getUserOrgRole(userId)
+        // Load organization role and organizationId
+        const { role, organizationId } = await getUserOrgRole(userId)
         if (role?.code) {
           setRole(role.code)
           logger.debug("✅ Role loaded:", role.code)
@@ -31,17 +33,27 @@ export function PermissionInitializer({ userId }: { userId: string }) {
           setRole(null)
           logger.debug("⚠️ No organization role found")
         }
+
+        // Set organizationId to store
+        if (organizationId) {
+          setOrganizationId(Number(organizationId))
+          logger.debug("✅ Organization ID loaded:", organizationId)
+        } else {
+          setOrganizationId(null)
+          logger.debug("⚠️ No organization ID found")
+        }
       } catch (error) {
         logger.error("❌ Failed to load permissions and role:", error)
         setPermissions([])
         setRole(null)
+        setOrganizationId(null)
       }
     }
 
     if (userId) {
       loadPermissionsAndRole()
     }
-  }, [userId, setPermissions, setRole])
+  }, [userId, setPermissions, setRole, setOrganizationId])
 
   return null
 }
