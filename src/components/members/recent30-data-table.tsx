@@ -21,6 +21,12 @@ const computeDuration = (row: RecentMemberRow) => {
   }
 
   const { actual_check_in: checkIn, actual_check_out: checkOut } = row
+  
+  // If checked in but not checked out, return estimated 8 hours (480 minutes)
+  if (checkIn && !checkOut) {
+    return 480; // Default 8 hours estimated
+  }
+  
   if (!checkIn || !checkOut) return null
 
   const parseTime = (value: string) => {

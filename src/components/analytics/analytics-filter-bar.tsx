@@ -12,7 +12,17 @@ import {
   Check,
   RotateCcw,
 } from 'lucide-react';
-import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
+import { 
+  format, 
+  subDays, 
+  subYears,
+  startOfMonth, 
+  endOfMonth, 
+  startOfWeek, 
+  endOfWeek,
+  startOfYear,
+  endOfYear,
+} from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -62,13 +72,22 @@ interface AnalyticsFilterBarProps {
   className?: string;
 }
 
+// Grouped filters for better UX
 const DATE_PRESETS = [
-  { label: 'Today', value: 'today', days: 0 },
-  { label: 'Last 7 days', value: 'last7', days: 7 },
-  { label: 'Last 30 days', value: 'last30', days: 30 },
-  { label: 'This week', value: 'thisWeek', special: 'week' },
-  { label: 'This month', value: 'thisMonth', special: 'month' },
-  { label: 'Custom range', value: 'custom', custom: true },
+  // Quick Access
+  { label: 'Today', value: 'today', days: 0, group: 'quick' },
+  { label: 'Yesterday', value: 'yesterday', special: 'yesterday', group: 'quick' },
+  
+  // Current Periods
+  { label: 'This week', value: 'thisWeek', special: 'thisWeek', group: 'period' },
+  { label: 'This month', value: 'thisMonth', special: 'thisMonth', group: 'period' },
+  { label: 'This year', value: 'thisYear', special: 'thisYear', group: 'period' },
+  { label: 'Last year', value: 'lastYear', special: 'lastYear', group: 'period' },
+  
+  // Historical
+  { label: 'Last 7 days', value: 'last7', days: 7, group: 'historical' },
+  { label: 'Last 30 days', value: 'last30', days: 30, group: 'historical' },
+  { label: 'Custom range', value: 'custom', custom: true, group: 'historical' },
 ];
 
 const STATUS_OPTIONS = [
@@ -96,17 +115,27 @@ export function AnalyticsFilterBar({
 
   const getDateRangeFromPreset = (preset: string) => {
     const today = new Date();
+    const yesterday = subDays(today, 1);
+    
     switch (preset) {
       case 'today':
         return { from: today, to: today };
-      case 'last7':
-        return { from: subDays(today, 7), to: today };
-      case 'last30':
-        return { from: subDays(today, 30), to: today };
+      case 'yesterday':
+        return { from: yesterday, to: yesterday };
       case 'thisWeek':
         return { from: startOfWeek(today, { weekStartsOn: 1 }), to: endOfWeek(today, { weekStartsOn: 1 }) };
       case 'thisMonth':
         return { from: startOfMonth(today), to: endOfMonth(today) };
+      case 'thisYear':
+        return { from: startOfYear(today), to: endOfYear(today) };
+      case 'lastYear': {
+        const lastYear = subYears(today, 1);
+        return { from: startOfYear(lastYear), to: endOfYear(lastYear) };
+      }
+      case 'last7':
+        return { from: subDays(today, 7), to: today };
+      case 'last30':
+        return { from: subDays(today, 30), to: today };
       default:
         return { from: subDays(today, 30), to: today };
     }
@@ -205,8 +234,48 @@ export function AnalyticsFilterBar({
           <PopoverContent className="w-auto p-0" align="start">
             <div className="flex">
               {/* Presets */}
-              <div className="border-r p-2 space-y-1">
-                {DATE_PRESETS.map((preset) => (
+              <div className="border-r p-2 space-y-1 min-w-[180px]">
+                {/* Quick Access */}
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                  📅 Quick
+                </div>
+                {DATE_PRESETS.filter(p => p.group === 'quick').map((preset) => (
+                  <Button
+                    key={preset.value}
+                    variant={filters.dateRange.preset === preset.value ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => handleDatePresetSelect(preset.value)}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+                
+                <div className="h-px bg-border my-1" />
+                
+                {/* Current Periods */}
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                  📊 Period
+                </div>
+                {DATE_PRESETS.filter(p => p.group === 'period').map((preset) => (
+                  <Button
+                    key={preset.value}
+                    variant={filters.dateRange.preset === preset.value ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => handleDatePresetSelect(preset.value)}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+                
+                <div className="h-px bg-border my-1" />
+                
+                {/* Historical */}
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                  🔙 Historical
+                </div>
+                {DATE_PRESETS.filter(p => p.group === 'historical').map((preset) => (
                   <Button
                     key={preset.value}
                     variant={filters.dateRange.preset === preset.value ? 'secondary' : 'ghost'}

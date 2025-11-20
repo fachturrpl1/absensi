@@ -2,13 +2,25 @@
 
 import { motion } from 'framer-motion';
 import { Calendar, ChevronDown } from 'lucide-react';
-import { format, startOfMonth, startOfWeek } from 'date-fns';
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth,
+  startOfWeek, 
+  endOfWeek,
+  startOfYear,
+  endOfYear,
+  subDays,
+  subYears,
+} from 'date-fns';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
@@ -24,55 +36,90 @@ interface DateFilterBarProps {
   className?: string;
 }
 
+// Grouped filters for better UX
 const DATE_PRESETS = [
-  { label: 'Today', value: 'today', days: 0 },
-  { label: 'Last 7 days', value: 'last7', days: 7 },
-  { label: 'Last 30 days', value: 'last30', days: 30 },
-  { label: 'This year', value: 'thisYear', special: 'year' },
-  { label: 'Last year', value: 'lastYear', special: 'lastYear' },
+  // Quick Access
+  { label: 'Today', value: 'today', days: 0, group: 'quick' },
+  { label: 'Yesterday', value: 'yesterday', special: 'yesterday', group: 'quick' },
+  
+  // Current Periods
+  { label: 'This week', value: 'thisWeek', special: 'thisWeek', group: 'period' },
+  { label: 'This month', value: 'thisMonth', special: 'thisMonth', group: 'period' },
+  { label: 'This year', value: 'thisYear', special: 'thisYear', group: 'period' },
+  { label: 'Last year', value: 'lastYear', special: 'lastYear', group: 'period' },
+  
+  // Historical
+  { label: 'Last 7 days', value: 'last7', days: 7, group: 'historical' },
+  { label: 'Last 30 days', value: 'last30', days: 30, group: 'historical' },
 ];
 
 export function DateFilterBar({ dateRange, onDateRangeChange, className }: DateFilterBarProps) {
   const handlePresetClick = (preset: typeof DATE_PRESETS[0]) => {
-    const today = new Date();
-    today.setHours(23, 59, 59, 999); // End of today
-    
+    const now = new Date();
     let from: Date;
-    let to: Date = new Date(today);
+    let to: Date;
 
-    if (preset.value === 'today') {
-      from = new Date(today);
-      from.setHours(0, 0, 0, 0);
-      console.log('📅 Today selected:', { from, to });
-    } else if (preset.special === 'week') {
-      from = startOfWeek(today, { weekStartsOn: 1 });
-      from.setHours(0, 0, 0, 0);
-      console.log('📅 This week selected:', { from, to });
-    } else if (preset.special === 'month') {
-      from = startOfMonth(today);
-      from.setHours(0, 0, 0, 0);
-      console.log('📅 This month selected:', { from, to });
-    } else if (preset.special === 'year') {
-      // Start of this year
-      from = new Date(today.getFullYear(), 0, 1);
-      from.setHours(0, 0, 0, 0);
-      // End of this year (today or Dec 31, whichever is earlier)
-      to = new Date(today);
-      to.setHours(23, 59, 59, 999);
-      console.log('📅 This year selected:', { from, to });
-    } else if (preset.special === 'lastYear') {
-      // Start of last year
-      from = new Date(today.getFullYear() - 1, 0, 1);
-      from.setHours(0, 0, 0, 0);
-      // End of last year
-      to = new Date(today.getFullYear() - 1, 11, 31);
-      to.setHours(23, 59, 59, 999);
-      console.log('📅 Last year selected:', { from, to });
-    } else {
-      from = new Date(today);
-      from.setDate(from.getDate() - (preset.days || 0));
-      from.setHours(0, 0, 0, 0);
-      console.log(`📅 Last ${preset.days || 0} days selected:`, { from, to });
+    switch (preset.special) {
+      case 'yesterday':
+        // Yesterday: start to end of yesterday
+        from = subDays(now, 1);
+        from.setHours(0, 0, 0, 0);
+        to = subDays(now, 1);
+        to.setHours(23, 59, 59, 999);
+        console.log('📅 Yesterday selected:', { from, to });
+        break;
+
+      case 'thisWeek':
+        // This week: Monday to today (or Sunday)
+        from = startOfWeek(now, { weekStartsOn: 1 }); // Monday
+        to = endOfWeek(now, { weekStartsOn: 1 }); // Sunday
+        console.log('📅 This week selected:', { from, to });
+        break;
+
+      case 'thisMonth':
+        // This month: 1st to last day of current month
+        from = startOfMonth(now);
+        to = endOfMonth(now);
+        console.log('📅 This month selected:', { from, to });
+        break;
+
+      case 'thisYear':
+        // This year: Jan 1 to today (or Dec 31)
+        from = startOfYear(now);
+        to = endOfYear(now);
+        console.log('📅 This year selected:', { from, to });
+        break;
+
+      case 'lastYear':
+        // Last year: Jan 1 to Dec 31 of previous year
+        const lastYear = subYears(now, 1);
+        from = startOfYear(lastYear);
+        to = endOfYear(lastYear);
+        console.log('📅 Last year selected:', { from, to });
+        break;
+
+      default:
+        // Today or custom days range
+        if (preset.value === 'today') {
+          from = new Date(now);
+          from.setHours(0, 0, 0, 0);
+          to = new Date(now);
+          to.setHours(23, 59, 59, 999);
+          console.log('📅 Today selected:', { from, to });
+        } else if (preset.days !== undefined) {
+          // Last X days
+          from = subDays(now, preset.days);
+          from.setHours(0, 0, 0, 0);
+          to = new Date(now);
+          to.setHours(23, 59, 59, 999);
+          console.log(`📅 Last ${preset.days} days selected:`, { from, to });
+        } else {
+          // Fallback
+          from = new Date(now);
+          from.setHours(0, 0, 0, 0);
+          to = new Date(now);
+          to.setHours(23, 59, 59, 999);
+        }
     }
 
     const newRange = { from, to, preset: preset.value };
@@ -113,7 +160,55 @@ export function DateFilterBar({ dateRange, onDateRangeChange, className }: DateF
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[240px]">
-          {DATE_PRESETS.map((preset) => (
+          {/* Quick Access */}
+          <DropdownMenuLabel className="text-xs text-muted-foreground">
+            📅 Quick
+          </DropdownMenuLabel>
+          {DATE_PRESETS.filter(p => p.group === 'quick').map((preset) => (
+            <DropdownMenuItem
+              key={preset.value}
+              onClick={() => handlePresetClick(preset)}
+              className={cn(
+                'cursor-pointer',
+                dateRange.preset === preset.value && 'bg-accent'
+              )}
+            >
+              <span className="flex-1">{preset.label}</span>
+              {dateRange.preset === preset.value && (
+                <span className="text-xs text-muted-foreground">✓</span>
+              )}
+            </DropdownMenuItem>
+          ))}
+          
+          <DropdownMenuSeparator />
+          
+          {/* Current Periods */}
+          <DropdownMenuLabel className="text-xs text-muted-foreground">
+            📊 Period
+          </DropdownMenuLabel>
+          {DATE_PRESETS.filter(p => p.group === 'period').map((preset) => (
+            <DropdownMenuItem
+              key={preset.value}
+              onClick={() => handlePresetClick(preset)}
+              className={cn(
+                'cursor-pointer',
+                dateRange.preset === preset.value && 'bg-accent'
+              )}
+            >
+              <span className="flex-1">{preset.label}</span>
+              {dateRange.preset === preset.value && (
+                <span className="text-xs text-muted-foreground">✓</span>
+              )}
+            </DropdownMenuItem>
+          ))}
+          
+          <DropdownMenuSeparator />
+          
+          {/* Historical */}
+          <DropdownMenuLabel className="text-xs text-muted-foreground">
+            🔙 Historical
+          </DropdownMenuLabel>
+          {DATE_PRESETS.filter(p => p.group === 'historical').map((preset) => (
             <DropdownMenuItem
               key={preset.value}
               onClick={() => handlePresetClick(preset)}

@@ -571,7 +571,7 @@ export default function MemberEditFormImproved({
                             Cancel
                         </Button>
                         <Button type="submit" disabled={loading}>
-                            {loading ? "Saving..." : "Save Changes"}
+                            {loading ? "Saving..." : "Save"}
                         </Button>
                     </div>
                 </form>

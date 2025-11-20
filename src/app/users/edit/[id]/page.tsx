@@ -340,7 +340,7 @@ export default function EditUserPage() {
                     className="flex-1 sm:flex-none sm:min-w-[120px]"
                     disabled={form.formState.isSubmitting}
                   >
-                    {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
+                    {form.formState.isSubmitting ? "Saving..." : "Save"}
                   </Button>
                 </div>
               </form>

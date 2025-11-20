@@ -779,7 +779,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                   {/* Submit Button */}
                   <div className="flex justify-end pt-4">
                     <Button type="submit" disabled={loading} className="min-w-24">
-                      {loading ? "Saving..." : "Save Changes"}
+                      {loading ? "Saving..." : "Save"}
                     </Button>
                   </div>
                 </form>
