@@ -172,9 +172,9 @@ export async function getAllLeaveRequests(organizationId: number) {
         leave_type:leave_types(*),
         organization_member:organization_members!inner(
           *,
-          user:user_profiles(*),
-          department:departments(*),
-          position:positions(*),
+          user:user_profiles(id, employee_code, first_name, middle_name, last_name, display_name, profile_photo_url),
+          departments:department_id(id, code, name),
+          positions:position_id(id, code, title),
           organization_id
         )
       `)

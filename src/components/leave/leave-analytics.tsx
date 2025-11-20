@@ -143,14 +143,12 @@ export function LeaveAnalytics({
     });
     
     const total = Object.values(deptCounts).reduce((sum, val) => sum + val, 0);
-    const maxCount = Math.max(...Object.values(deptCounts), 1);
     
     return Object.entries(deptCounts)
       .map(([name, count]) => ({
         name,
         count,
-        percentage: total > 0 ? (count / total * 100).toFixed(1) : '0',
-        barPercentage: (count / maxCount * 100).toFixed(1)
+        percentage: total > 0 ? (count / total * 100).toFixed(1) : '0'
       }))
       .sort((a, b) => b.count - a.count);
   }, [requests]);
@@ -165,7 +163,6 @@ export function LeaveAnalytics({
 
   // Status Distribution Chart
   if (type === 'status') {
-    const maxCount = Math.max(...statusData.map(d => d.count), 1);
     const hasData = requests.length > 0;
     
     if (!hasData) {
@@ -203,7 +200,7 @@ export function LeaveAnalytics({
               <div
                 className="h-full transition-all duration-500"
                 style={{
-                  width: `${(item.count / maxCount * 100).toFixed(1)}%`,
+                  width: `${item.percentage}%`,
                   backgroundColor: item.color
                 }}
               />
@@ -307,7 +304,7 @@ export function LeaveAnalytics({
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
                 className="h-full bg-primary transition-all duration-500"
-                style={{ width: `${item.barPercentage}%` }}
+                style={{ width: `${item.percentage}%` }}
               />
             </div>
           </div>

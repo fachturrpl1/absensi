@@ -487,8 +487,8 @@ export async function getLeaveRequestDetail(requestId: number) {
         organization_member:organization_members(
           *,
           user:user_profiles(*),
-          department:departments(*),
-          position:positions(*)
+          departments:department_id(id, code, name),
+          positions:position_id(id, code, title)
         ),
         approvals:leave_approvals(
           *,
