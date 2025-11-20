@@ -47,13 +47,13 @@ export default function TopBar() {
         <BreadcrumbList>
           {paths.length === 0 ? (
             <BreadcrumbItem>
-              <BreadcrumbPage>Dashboard</BreadcrumbPage>
+              <BreadcrumbPage>Home</BreadcrumbPage>
             </BreadcrumbItem>
           ) : (
             <>
               <BreadcrumbItem className="hidden md:block">
                 <BreadcrumbLink asChild>
-                  <Link href="/">Dashboard</Link>
+                  <Link href="/">Home</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               {paths.map((segment, index) => {

@@ -27,8 +27,8 @@ import {
 } from '@/components/ui/command';
 
 const searchItems = [
-  { group: 'Overview', icon: LayoutDashboard, label: 'Dashboard', url: '/' },
-  { group: 'Overview', icon: BarChart3, label: 'Analytics', url: '/analytics' },
+  { group: 'Home', icon: LayoutDashboard, label: 'Home', url: '/' },
+  { group: 'Home', icon: BarChart3, label: 'Analytics', url: '/analytics' },
   { group: 'Management', icon: Users, label: 'Members', url: '/members' },
   { group: 'Management', icon: ClipboardList, label: 'Attendance', url: '/attendance' },
   { group: 'Management', icon: Calendar, label: 'Work Schedules', url: '/schedule' },

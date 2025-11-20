@@ -36,6 +36,7 @@ interface AttendanceRecord {
   actual_check_in: string | null;
   actual_check_out: string | null;
   work_duration_minutes: number | null;
+  scheduled_duration_minutes?: number; // Default 8 jam (480 min) jika belum check out
   late_minutes: number | null;
   attendance_date: string;
 }
@@ -140,10 +141,13 @@ export default function AnalyticsPage() {
     }
     const labels: Record<string, string> = {
       'today': 'Today',
-      'last7': 'Last 7 Days',
-      'last30': 'Last 30 Days',
+      'yesterday': 'Yesterday',
+      'thisWeek': 'This Week',
+      'thisMonth': 'This Month',
       'thisYear': 'This Year',
       'lastYear': 'Last Year',
+      'last7': 'Last 7 Days',
+      'last30': 'Last 30 Days',
     };
     return labels[dateRange.preset] || format(dateRange.from, 'MMM dd') + ' - ' + format(dateRange.to, 'MMM dd, yyyy');
   };
@@ -170,7 +174,11 @@ export default function AnalyticsPage() {
     const absentCount = filteredRecords.filter(r => r.status === 'absent').length;
     const leaveCount = filteredRecords.filter(r => r.status === 'leave' || r.status === 'excused').length;
 
-    const totalWorkMinutes = filteredRecords.reduce((sum, r) => sum + (r.work_duration_minutes || 0), 0);
+    // Use actual duration if available, otherwise use scheduled duration (estimated)
+    const totalWorkMinutes = filteredRecords.reduce((sum, r) => {
+      const duration = r.work_duration_minutes || r.scheduled_duration_minutes || 0;
+      return sum + duration;
+    }, 0);
     const totalLateMinutes = filteredRecords.reduce((sum, r) => sum + (r.late_minutes || 0), 0);
     
     const attendanceRate = ((presentCount + lateCount) / total) * 100;

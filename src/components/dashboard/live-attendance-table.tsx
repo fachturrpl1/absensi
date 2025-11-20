@@ -41,6 +41,7 @@ interface AttendanceRecord {
   actual_check_in: string | null;
   actual_check_out: string | null;
   work_duration_minutes: number | null;
+  scheduled_duration_minutes?: number; // Default 8 jam (480 min) untuk estimasi
   late_minutes: number | null;
   notes: string | null;
   location: string | null;
@@ -186,6 +187,7 @@ export function LiveAttendanceTable({
           actual_check_in: record.actual_check_in,
           actual_check_out: record.actual_check_out,
           work_duration_minutes: record.work_duration_minutes,
+          scheduled_duration_minutes: 480, // Default 8 jam untuk estimasi
           late_minutes: record.late_minutes,
           notes: record.notes,
           location: null, // Can be populated if location tracking exists
@@ -373,10 +375,13 @@ export function LiveAttendanceTable({
                             }
                           </TableCell>
                           <TableCell className="text-foreground">
-                            {record.work_duration_minutes 
-                              ? `${(record.work_duration_minutes / 60).toFixed(1)}h`
-                              : '-'
-                            }
+                            {record.work_duration_minutes ? (
+                              <span className="font-medium">{(record.work_duration_minutes / 60).toFixed(1)}h</span>
+                            ) : record.scheduled_duration_minutes && record.actual_check_in ? (
+                              <span className="text-muted-foreground">{(record.scheduled_duration_minutes / 60).toFixed(1)}h</span>
+                            ) : (
+                              '-'
+                            )}
                           </TableCell>
                         </TableRow>
                         {isExpanded && (

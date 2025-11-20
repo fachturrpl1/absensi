@@ -45,6 +45,7 @@ interface AttendanceRecord {
   actual_check_in: string | null;
   actual_check_out: string | null;
   work_duration_minutes: number | null;
+  scheduled_duration_minutes?: number; // Default 8 jam (480 min) untuk estimasi
   attendance_date: string;
   profile_photo_url: string | null;
 }
@@ -235,7 +236,11 @@ export default function ImprovedDashboard() {
     const late = filteredRecords.filter(r => r.status === 'late').length;
     const absent = filteredRecords.filter(r => r.status === 'absent').length;
     
-    const totalWorkMinutes = filteredRecords.reduce((sum, r) => sum + (r.work_duration_minutes || 0), 0);
+    // Use actual duration if available, otherwise use scheduled duration (estimated)
+    const totalWorkMinutes = filteredRecords.reduce((sum, r) => {
+      const duration = r.work_duration_minutes || r.scheduled_duration_minutes || 0;
+      return sum + duration;
+    }, 0);
     const totalWorkHours = totalWorkMinutes / 60;
     const avgHours = filteredRecords.length > 0 ? totalWorkMinutes / filteredRecords.length / 60 : 0;
 
