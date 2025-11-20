@@ -290,7 +290,7 @@ export function LeaveRequestList({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="gap-1"
+                        className="gap-1 border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700 dark:border-green-500 dark:text-green-500 dark:hover:bg-green-950"
                         onClick={() => handleAction(request, 'approve')}
                       >
                         <CheckCircle className="h-3 w-3" />
@@ -299,7 +299,7 @@ export function LeaveRequestList({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="gap-1"
+                        className="gap-1 border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-500 dark:text-red-500 dark:hover:bg-red-950"
                         onClick={() => handleAction(request, 'reject')}
                       >
                         <XCircle className="h-3 w-3" />
@@ -337,26 +337,26 @@ export function LeaveRequestList({
             <DialogTitle>
               {actionType === 'approve' ? 'Approve Leave Request' : 'Reject Leave Request'}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription asChild>
               {selectedRequest && (
                 <div className="space-y-2 mt-2">
-                  <p>
+                  <div>
                     <strong>Employee:</strong> {selectedRequest.organization_member?.user?.first_name} {selectedRequest.organization_member?.user?.last_name}
-                  </p>
-                  <p>
+                  </div>
+                  <div>
                     <strong>Type:</strong> {selectedRequest.leave_type?.name}
-                  </p>
-                  <p>
+                  </div>
+                  <div>
                     <strong>Duration:</strong> {selectedRequest.total_days} day{selectedRequest.total_days !== 1 ? 's' : ''}
-                  </p>
-                  <p>
+                  </div>
+                  <div>
                     <strong>Dates:</strong> {formatLeaveDateRange(
                       selectedRequest.start_date,
                       selectedRequest.end_date,
                       selectedRequest.start_half_day,
                       selectedRequest.end_half_day
                     )}
-                  </p>
+                  </div>
                 </div>
               )}
             </DialogDescription>

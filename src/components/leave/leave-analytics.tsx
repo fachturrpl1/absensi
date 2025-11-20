@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ILeaveRequest } from "@/lib/leave/types";
 import { parseISO, format } from "date-fns";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 interface LeaveAnalyticsProps {
   requests: ILeaveRequest[];
@@ -249,16 +250,64 @@ export function LeaveAnalytics({
     );
   }
 
-  // Leave Type Distribution
+  // Leave Type Distribution - Donut Chart
   if (type === 'type') {
+    if (typeData.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="p-3 bg-muted rounded-full mb-3">
+            <svg className="w-8 h-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+            </svg>
+          </div>
+          <p className="text-sm font-medium text-muted-foreground">No data available</p>
+          <p className="text-xs text-muted-foreground mt-1">Leave type distribution will appear here</p>
+        </div>
+      );
+    }
+
+    const chartData = typeData.map(item => ({
+      name: item.name,
+      value: item.count,
+      color: item.color
+    }));
+
     return (
       <div className="space-y-4">
-        {typeData.map((item) => (
-          <div key={item.code} className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
+        <ResponsiveContainer width="100%" height={250}>
+          <PieChart>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={90}
+              paddingAngle={2}
+              dataKey="value"
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip 
+              contentStyle={{ 
+                backgroundColor: 'hsl(var(--background))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '6px'
+              }}
+              formatter={(value: number) => [`${value} requests`, 'Count']}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+        
+        {/* Legend */}
+        <div className="space-y-2">
+          {typeData.map((item) => (
+            <div key={item.code} className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <div 
-                  className="w-3 h-3 rounded"
+                  className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: item.color }}
                 />
                 <span className="font-medium">{item.name}</span>
@@ -268,22 +317,8 @@ export function LeaveAnalytics({
                 <span className="font-medium">{item.percentage}%</span>
               </div>
             </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full transition-all duration-500"
-                style={{
-                  width: `${item.percentage}%`,
-                  backgroundColor: item.color
-                }}
-              />
-            </div>
-          </div>
-        ))}
-        {typeData.length === 0 && (
-          <p className="text-center text-muted-foreground py-8">
-            No leave types data available
-          </p>
-        )}
+          ))}
+        </div>
       </div>
     );
   }
@@ -322,24 +357,6 @@ export function LeaveAnalytics({
   if (type === 'detailed' && statistics) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardContent className="p-4">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Total Requests</p>
-              <p className="text-3xl font-bold">{statistics.totalRequests}</p>
-              <div className="flex gap-2 text-xs">
-                <span className="text-yellow-600">
-                  {statistics.pendingRequests} pending
-                </span>
-                <span className="text-muted-foreground">•</span>
-                <span className="text-green-600">
-                  {statistics.approvedRequests} approved
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         <Card>
           <CardContent className="p-4">
             <div className="space-y-2">
@@ -382,30 +399,6 @@ export function LeaveAnalytics({
                   }}
                 />
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Employees on Leave</p>
-              <p className="text-3xl font-bold">{statistics.employeesOnLeave}</p>
-              <p className="text-xs text-muted-foreground">
-                Out of {statistics.totalEmployees} total employees
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Upcoming Leaves</p>
-              <p className="text-3xl font-bold">{statistics.upcomingLeaves}</p>
-              <p className="text-xs text-muted-foreground">
-                In the next 30 days
-              </p>
             </div>
           </CardContent>
         </Card>

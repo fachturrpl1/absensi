@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Plus, 
   Calendar,   
@@ -24,7 +26,12 @@ import {
   Briefcase,
   AlertTriangle,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Filter,
+  ArrowUpDown
 } from "lucide-react";
 import { getMyLeaveBalance, getMyLeaveRequests, getLeaveTypes } from "@/action/leaves";
 import { getLeaveStatistics, getAllLeaveRequests, getOrganizationLeaveTypes } from "@/action/admin-leaves";
@@ -66,6 +73,15 @@ export default function LeavesPage() {
   const [statistics, setStatistics] = useState<LeaveStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number | 'all'>(5);
+  
+  // Filter and search states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   
   const { role, permissions } = useUserStore();
   const { organizationId } = useOrgStore();
@@ -147,6 +163,48 @@ export default function LeavesPage() {
       setLoading(false);
     }
   }, [isAdmin, organizationId]);
+
+  // Filter, search, and sort logic
+  const getFilteredAndSortedRequests = useCallback(() => {
+    let filtered = isAdmin ? allRequests : requests;
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(req => {
+        const searchLower = searchQuery.toLowerCase();
+        const employeeName = isAdmin 
+          ? `${req.organization_member?.user?.first_name} ${req.organization_member?.user?.last_name}`.toLowerCase()
+          : '';
+        const leaveType = req.leave_type?.name.toLowerCase() || '';
+        const reason = req.reason.toLowerCase();
+        const requestNumber = req.request_number.toLowerCase();
+        
+        return employeeName.includes(searchLower) ||
+               leaveType.includes(searchLower) ||
+               reason.includes(searchLower) ||
+               requestNumber.includes(searchLower);
+      });
+    }
+    
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(req => req.status === statusFilter);
+    }
+    
+    // Apply sort
+    filtered = [...filtered].sort((a, b) => {
+      const dateA = new Date(a.requested_at).getTime();
+      const dateB = new Date(b.requested_at).getTime();
+      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+    });
+    
+    return filtered;
+  }, [isAdmin, allRequests, requests, searchQuery, statusFilter, sortOrder]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, sortOrder, allRequests.length, requests.length]);
 
   // Setup real-time subscription
   useEffect(() => {
@@ -639,15 +697,150 @@ export default function LeavesPage() {
               <Separator className="mt-4" />
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[600px] pr-4">
-                <LeaveRequestList 
-                  requests={isAdmin ? allRequests : requests}
-                  loading={loading}
-                  isAdmin={isAdmin}
-                  canApprove={canApproveRequests}
-                  onUpdate={loadData}
-                />
-              </ScrollArea>
+              <div className="space-y-4">
+                {/* Search and Filters */}
+                <div className="grid gap-4 md:grid-cols-4">
+                  {/* Search Bar */}
+                  <div className="md:col-span-2 relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name, type, reason, or number..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+
+                  {/* Status Filter */}
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <div className="flex items-center gap-2">
+                        <Filter className="h-4 w-4" />
+                        <SelectValue placeholder="Filter by status" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Sort Order */}
+                  <Select value={sortOrder} onValueChange={(value: 'newest' | 'oldest') => setSortOrder(value)}>
+                    <SelectTrigger>
+                      <div className="flex items-left gap-2">
+                        <ArrowUpDown className="h-4 w-4" />
+                        <SelectValue />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="newest">Newest First</SelectItem>
+                      <SelectItem value="oldest">Oldest First</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Show:</span>
+                    <Select 
+                      value={itemsPerPage.toString()} 
+                      onValueChange={(value) => {
+                        setItemsPerPage(value === 'all' ? 'all' : parseInt(value));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-[100px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="3">3</SelectItem>
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="all">All</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Results Info */}
+                  <div className="text-sm text-muted-foreground">
+                    {itemsPerPage !== 'all' ? (
+                      <>Page {currentPage} of {Math.ceil(getFilteredAndSortedRequests().length / (itemsPerPage as number))}</>
+                    ) : (
+                      <>{getFilteredAndSortedRequests().length} results</>
+                    )}
+                  </div>
+                </div>
+
+                {/* Request List */}
+                <ScrollArea className="h-[500px] pr-4">
+                  <LeaveRequestList 
+                    requests={
+                      itemsPerPage === 'all'
+                        ? getFilteredAndSortedRequests()
+                        : getFilteredAndSortedRequests().slice(
+                            (currentPage - 1) * (itemsPerPage as number),
+                            currentPage * (itemsPerPage as number)
+                          )
+                    }
+                    loading={loading}
+                    isAdmin={isAdmin}
+                    canApprove={canApproveRequests}
+                    onUpdate={loadData}
+                  />
+                </ScrollArea>
+
+                {/* Pagination Navigation */}
+                {itemsPerPage !== 'all' && getFilteredAndSortedRequests().length > 0 && (
+                  <div className="flex items-center justify-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    
+                    <div className="flex items-center gap-1">
+                      {Array.from(
+                        { length: Math.ceil(getFilteredAndSortedRequests().length / (itemsPerPage as number)) },
+                        (_, i) => i + 1
+                      ).map((page) => (
+                        <Button
+                          key={page}
+                          size="sm"
+                          variant={currentPage === page ? "default" : "outline"}
+                          onClick={() => setCurrentPage(page)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCurrentPage(prev => 
+                        Math.min(
+                          Math.ceil(getFilteredAndSortedRequests().length / (itemsPerPage as number)),
+                          prev + 1
+                        )
+                      )}
+                      disabled={currentPage >= Math.ceil(getFilteredAndSortedRequests().length / (itemsPerPage as number))}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
