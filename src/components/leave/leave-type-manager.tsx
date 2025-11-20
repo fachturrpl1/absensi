@@ -249,6 +249,9 @@ export function LeaveTypeManager({ leaveTypes, onUpdate }: LeaveTypeManagerProps
                             <FormControl>
                               <Input placeholder="Annual Leave" {...field} />
                             </FormControl>
+                            <FormDescription className="opacity-0">
+                              Placeholder for alignment
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -328,21 +331,27 @@ export function LeaveTypeManager({ leaveTypes, onUpdate }: LeaveTypeManagerProps
                         <FormItem>
                           <FormLabel>Color</FormLabel>
                           <FormControl>
-                            <div className="flex gap-2">
-                              <Input 
-                                type="color" 
-                                {...field} 
-                                className="w-20 h-10"
-                              />
-                              <div className="flex gap-1 flex-wrap">
+                            <div className="flex gap-2 items-center">
+                              <div className="relative">
+                                <input
+                                  type="color"
+                                  {...field}
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <div 
+                                  className="w-12 h-12 rounded-lg border-2 border-border cursor-pointer hover:border-primary transition-colors"
+                                  style={{ backgroundColor: field.value }}
+                                />
+                              </div>
+                              <div className="flex gap-2 flex-wrap">
                                 {DEFAULT_COLORS.map(color => (
                                   <button
                                     key={color}
                                     type="button"
-                                    className="w-8 h-8 rounded border-2"
+                                    className="w-8 h-8 rounded border-2 hover:scale-110 transition-transform"
                                     style={{ 
                                       backgroundColor: color,
-                                      borderColor: field.value === color ? '#000' : 'transparent'
+                                      borderColor: field.value === color ? 'hsl(var(--primary))' : 'transparent'
                                     }}
                                     onClick={() => field.onChange(color)}
                                   />

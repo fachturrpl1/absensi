@@ -78,8 +78,11 @@ export default function LeavesPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      logger.debug("🔄 Loading data - isAdmin:", isAdmin, "organizationId:", organizationId);
+      
       if (isAdmin && organizationId) {
         // Admin: Load all organization data
+        logger.debug("👑 Loading admin data for organization:", organizationId);
         const [statsResult, allRequestsResult, typesResult, balanceResult, myRequestsResult] = await Promise.all([
           getLeaveStatistics(organizationId),
           getAllLeaveRequests(organizationId),
@@ -94,10 +97,16 @@ export default function LeavesPage() {
             ...statsData,
             averageLeaveDays: parseNumber(statsData.averageLeaveDays)
           });
+          logger.debug("📊 Statistics loaded:", statsData);
+        } else {
+          logger.error("❌ Failed to load statistics:", statsResult.message);
         }
 
         if (allRequestsResult.success && allRequestsResult.data) {
           setAllRequests(allRequestsResult.data);
+          logger.debug("📋 All requests loaded:", allRequestsResult.data.length, "items");
+        } else {
+          logger.error("❌ Failed to load all requests:", allRequestsResult.message);
         }
 
         if (typesResult.success && typesResult.data) {
