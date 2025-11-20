@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Settings, AlertCircle, RefreshCw, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, Settings, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { getOrganizationLeaveTypes } from "@/action/admin-leaves";
 import { ILeaveType } from "@/lib/leave/types";
 import { useUserStore } from "@/store/user-store";
@@ -210,38 +210,10 @@ export default function LeaveTypesPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Leave Types Management
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  Total {leaveTypes.length} leave types registered in your organization
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">
-                  {leaveTypes.filter(t => t.is_active).length} active
-                </Badge>
-                <Button size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Type
-                </Button>
-              </div>
-            </div>
-            <Separator className="mt-4" />
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[600px] pr-4">
-              <LeaveTypeManager 
-                onUpdate={loadLeaveTypes}
-              />
-            </ScrollArea>
-          </CardContent>
-        </Card>
+        <LeaveTypeManager 
+          leaveTypes={leaveTypes} 
+          onUpdate={loadLeaveTypes}
+        />
       )}
     </div>
   );

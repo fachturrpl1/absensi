@@ -183,7 +183,7 @@ export function LeaveTypeManager({ leaveTypes, onUpdate }: LeaveTypeManagerProps
         <div>
           <h3 className="text-lg font-semibold">Leave Types</h3>
           <p className="text-sm text-muted-foreground">
-            Configure leave types available in your organization
+            You have {leaveTypes.length} leave types in your organization
           </p>
         </div>
         {!isCreating && !editingType && (
