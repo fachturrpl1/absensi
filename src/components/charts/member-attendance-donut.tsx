@@ -77,4 +77,47 @@ export function MemberAttendanceDonut({ data }: { data?: Partial<Record<Slice["k
   )
 }
 
+// Compact version for Performance Highlights
+export function MemberAttendanceDonutCompact({ data }: { data?: Partial<Record<Slice["key"], number>> }) {
+  const chartData = React.useMemo(() => {
+    const rows = slices.map((slice) => {
+      const value = Number(data?.[slice.key] ?? 0)
+      return { ...slice, value }
+    })
+    const total = rows.reduce((acc, item) => acc + item.value, 0)
+    return total
+      ? rows.map((row) => ({ ...row, percentage: Math.round((row.value / total) * 100) }))
+      : rows.map((row) => ({ ...row, percentage: 0 }))
+  }, [data])
+
+  const total = React.useMemo(() => chartData.reduce((acc, item) => acc + item.value, 0), [chartData])
+  
+  // For the compact version, we'll show only present data with black color
+  const presentValue = chartData.find(item => item.key === "present")?.value || 0
+  const presentPercentage = total > 0 ? Math.round((presentValue / total) * 100) : 0
+
+  return (
+    <ChartContainer config={chartConfig} className="h-32 w-32">
+      <PieChart>
+        <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+        <Pie
+          data={chartData}
+          dataKey="value"
+          nameKey="label"
+          innerRadius={35}
+          outerRadius={50}
+          strokeWidth={0}
+        >
+          {chartData.map((entry) => (
+            <Cell 
+              key={entry.key} 
+              fill={entry.key === "present" ? "#000000" : "#e5e7eb"} 
+            />
+          ))}
+        </Pie>
+      </PieChart>
+    </ChartContainer>
+  )
+}
+
 export default MemberAttendanceDonut
