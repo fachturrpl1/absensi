@@ -86,10 +86,13 @@ export function DynamicBreadcrumb() {
 
       // Check if this and next segment form a combined path
       if (index < paths.length - 1) {
-        const combinedPath = `/${segment}/${paths[index + 1]}`;
+        const nextSegment = paths[index + 1];
+        if (!nextSegment) return;
+        const combinedPath = `/${segment}/${nextSegment}`;
         if (combinedPaths[combinedPath]) {
           pathsToSkip.add(index + 1); // Skip next segment
-          const isLast = index === paths.length - 2 || (index === paths.length - 3 && isId(paths[paths.length - 1]));
+          const lastSegment = paths[paths.length - 1];
+          const isLast = index === paths.length - 2 || (index === paths.length - 3 && !!lastSegment && isId(lastSegment));
           items.push({
             label: combinedPaths[combinedPath],
             href: combinedPath,
@@ -106,7 +109,7 @@ export function DynamicBreadcrumb() {
       currentPath += `/${segment}`;
       const isLast = index === paths.length - 1;
       const label = pathMapping[segment] || segment.split('-').map(word => 
-        word.charAt(0).toUpperCase() + word.slice(1)
+        word ? word.charAt(0).toUpperCase() + word.slice(1) : ''
       ).join(' ');
 
       items.push({
