@@ -80,18 +80,24 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform data
-    const formattedRecords = records?.map((record: any) => ({
-      id: record.id,
-      member_name: `${record.organization_members?.user_profiles?.first_name || ''} ${record.organization_members?.user_profiles?.last_name || ''}`.trim() || 'Unknown',
-      department_name: record.organization_members?.departments?.name || 'N/A',
-      status: record.status,
-      actual_check_in: record.actual_check_in,
-      actual_check_out: record.actual_check_out,
-      work_duration_minutes: record.work_duration_minutes,
-      late_minutes: record.late_minutes,
-      attendance_date: record.attendance_date,
-      profile_photo_url: record.organization_members?.user_profiles?.profile_photo_url,
-    })) || []
+    const formattedRecords = records?.map((record: any) => {
+      // Default scheduled work hours: 8 hours = 480 minutes
+      const scheduledDuration = 480;
+      
+      return {
+        id: record.id,
+        member_name: `${record.organization_members?.user_profiles?.first_name || ''} ${record.organization_members?.user_profiles?.last_name || ''}`.trim() || 'Unknown',
+        department_name: record.organization_members?.departments?.name || 'N/A',
+        status: record.status,
+        actual_check_in: record.actual_check_in,
+        actual_check_out: record.actual_check_out,
+        work_duration_minutes: record.work_duration_minutes,
+        scheduled_duration_minutes: scheduledDuration, // Default 8 jam jika belum check out
+        late_minutes: record.late_minutes,
+        attendance_date: record.attendance_date,
+        profile_photo_url: record.organization_members?.user_profiles?.profile_photo_url,
+      };
+    }) || []
 
     return NextResponse.json(
       { success: true, data: formattedRecords },

@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Settings, AlertCircle, RefreshCw, Loader2, Plus, Layers, CheckCircle, DollarSign } from "lucide-react";
+import { ArrowLeft, Settings, AlertCircle, RefreshCw, Loader2, Plus, FolderKanban, ToggleRight, Banknote } from "lucide-react";
 import { getOrganizationLeaveTypes } from "@/action/admin-leaves";
 import { ILeaveType } from "@/lib/leave/types";
 import { useUserStore } from "@/store/user-store";
@@ -20,6 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export default function LeaveTypesPage() {
   const [leaveTypes, setLeaveTypes] = useState<ILeaveType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [triggerCreate, setTriggerCreate] = useState(false);
   
   const { role, permissions } = useUserStore();
   const { organizationId } = useOrgStore();
@@ -128,7 +129,7 @@ export default function LeaveTypesPage() {
               <div className="flex items-center justify-between">
                 <CardDescription>Total Leave Types</CardDescription>
                 <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                  <Layers className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <FolderKanban className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
               <CardTitle className="text-3xl font-bold">{leaveTypes.length}</CardTitle>
@@ -142,7 +143,7 @@ export default function LeaveTypesPage() {
               <div className="flex items-center justify-between">
                 <CardDescription>Active Types</CardDescription>
                 <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <ToggleRight className="h-4 w-4 text-green-600 dark:text-green-400" />
                 </div>
               </div>
               <CardTitle className="text-3xl font-bold">
@@ -158,7 +159,7 @@ export default function LeaveTypesPage() {
               <div className="flex items-center justify-between">
                 <CardDescription>Paid Types</CardDescription>
                 <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                  <DollarSign className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  <Banknote className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 </div>
               </div>
               <CardTitle className="text-3xl font-bold">
@@ -226,7 +227,11 @@ export default function LeaveTypesPage() {
                 <Badge variant="outline">
                   {leaveTypes.filter(t => t.is_active).length} active
                 </Badge>
-                <Button size="sm" className="gap-2">
+                <Button 
+                  size="sm" 
+                  className="gap-2"
+                  onClick={() => setTriggerCreate(prev => !prev)}
+                >
                   <Plus className="h-4 w-4" />
                   Add Type
                 </Button>
@@ -239,6 +244,7 @@ export default function LeaveTypesPage() {
               <LeaveTypeManager 
                 leaveTypes={leaveTypes} 
                 onUpdate={loadLeaveTypes}
+                triggerCreate={triggerCreate}
               />
             </ScrollArea>
           </CardContent>

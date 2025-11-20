@@ -25,7 +25,6 @@ import {
   Plus,
   Grid3x3,
   List,
-  SlidersHorizontal,
   X,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,7 +49,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { Label } from '@/components/ui/label';
 import {
   Pagination,
   PaginationContent,
@@ -92,12 +90,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
-  const [locationFilter, setLocationFilter] = useState('all');
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   // Filter data by date range and other filters
   const filteredData = useMemo(() => {
@@ -116,11 +112,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                          record.employee.department.toLowerCase().includes(searchQuery.toLowerCase());
       const matchStatus = statusFilter === 'all' || record.status === statusFilter;
       const matchDepartment = departmentFilter === 'all' || record.employee.department === departmentFilter;
-      const matchLocation = locationFilter === 'all' || record.location === locationFilter;
       
-      return matchDate && matchSearch && matchStatus && matchDepartment && matchLocation;
+      return matchDate && matchSearch && matchStatus && matchDepartment;
     });
-  }, [attendanceData, dateRange, searchQuery, statusFilter, departmentFilter, locationFilter]);
+  }, [attendanceData, dateRange, searchQuery, statusFilter, departmentFilter]);
 
   // Calculate stats from filtered data (based on date range)
   const filteredStats = useMemo(() => {
@@ -163,7 +158,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, departmentFilter, locationFilter, dateRange]);
+  }, [searchQuery, statusFilter, departmentFilter, dateRange]);
 
   // Generate page numbers with ellipsis
   const getPageNumbers = () => {
@@ -300,7 +295,9 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           date: r.attendance_date,
           checkIn: r.actual_check_in || null,
           checkOut: r.actual_check_out || null,
-          workHours: r.work_duration_minutes ? `${Math.floor(r.work_duration_minutes / 60)}h ${r.work_duration_minutes % 60}m` : '0h',
+          workHours: r.work_duration_minutes 
+            ? `${Math.floor(r.work_duration_minutes / 60)}h ${r.work_duration_minutes % 60}m` 
+            : (r.actual_check_in ? '8h' : '0h'),
           status: r.status,
           overtime: '',
           location: '-',
@@ -542,18 +539,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 </SelectContent>
               </Select>
 
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setShowMoreFilters(!showMoreFilters)}
-                className={showMoreFilters ? 'bg-accent' : ''}
-              >
-                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                More Filters
-                {showMoreFilters && <X className="ml-2 h-3 w-3" />}
-              </Button>
-
-              {(searchQuery || statusFilter !== 'all' || departmentFilter !== 'all' || locationFilter !== 'all' || dateRange.preset !== 'today') && (
+              {(searchQuery || statusFilter !== 'all' || departmentFilter !== 'all' || dateRange.preset !== 'today') && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -562,7 +548,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     setSearchQuery('');
                     setStatusFilter('all');
                     setDepartmentFilter('all');
-                    setLocationFilter('all');
                     // Reset to today
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
@@ -576,96 +561,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 </Button>
               )}
             </div>
-
-            {/* More Filters - Expanded Section */}
-            <AnimatePresence>
-              {showMoreFilters && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="border-t pt-4"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-muted-foreground">Additional Filters:</span>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      {/* Location Filter */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Location</Label>
-                        <Select value={locationFilter} onValueChange={setLocationFilter}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="All Locations" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Locations</SelectItem>
-                            <SelectItem value="Main Office">Main Office</SelectItem>
-                            <SelectItem value="Branch Office">Branch Office</SelectItem>
-                            <SelectItem value="Remote">Remote</SelectItem>
-                            <SelectItem value="WFH">Work From Home</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Work Hours Range */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Work Hours</Label>
-                        <Select defaultValue="all">
-                          <SelectTrigger>
-                            <SelectValue placeholder="Any Duration" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Any Duration</SelectItem>
-                            <SelectItem value="0-4">0-4 hours</SelectItem>
-                            <SelectItem value="4-8">4-8 hours</SelectItem>
-                            <SelectItem value="8+">8+ hours</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Has Notes */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Notes</Label>
-                        <Select defaultValue="all">
-                          <SelectTrigger>
-                            <SelectValue placeholder="Any" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Records</SelectItem>
-                            <SelectItem value="with-notes">With Notes</SelectItem>
-                            <SelectItem value="no-notes">No Notes</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setLocationFilter('all');
-                          // Reset other advanced filters here
-                        }}
-                      >
-                        Reset Advanced Filters
-                      </Button>
-                      
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => setShowMoreFilters(false)}
-                      >
-                        Apply Filters
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {/* Selected Actions */}
             <AnimatePresence>

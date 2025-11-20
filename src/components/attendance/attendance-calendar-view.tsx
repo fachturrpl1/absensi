@@ -72,7 +72,8 @@ export function AttendanceCalendarView({
   // Get intensity for heatmap (based on work duration)
   const getIntensity = (attendance?: IAttendance) => {
     if (!attendance) return 0;
-    const duration = attendance.work_duration_minutes || 0;
+    // Use actual duration or default to 8 hours if checked in but not checked out
+    const duration = attendance.work_duration_minutes || (attendance.actual_check_in && !attendance.actual_check_out ? 480 : 0);
     if (duration >= 480) return 1; // 8+ hours
     if (duration >= 360) return 0.7; // 6+ hours
     if (duration >= 240) return 0.4; // 4+ hours
@@ -405,7 +406,7 @@ export function AttendanceCalendarView({
                     <p className="text-lg font-semibold">
                       {selectedAttendance.work_duration_minutes 
                         ? `${Math.floor(selectedAttendance.work_duration_minutes / 60)}h ${selectedAttendance.work_duration_minutes % 60}m`
-                        : 'N/A'
+                        : (selectedAttendance.actual_check_in ? '8h' : 'N/A')
                       }
                     </p>
                   </div>
