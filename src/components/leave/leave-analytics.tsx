@@ -100,30 +100,34 @@ export function LeaveAnalytics({
         label: 'Pending', 
         count: counts.pending, 
         percentage: total > 0 ? (counts.pending / total * 100).toFixed(1) : '0',
-        color: '#F59E0B'
+        color: 'hsl(38 92% 50%)', // Orange - better visibility in dark mode
+        darkColor: 'hsl(38 92% 60%)'
       },
       { 
         label: 'Approved', 
         count: counts.approved, 
         percentage: total > 0 ? (counts.approved / total * 100).toFixed(1) : '0',
-        color: '#10B981'
+        color: 'hsl(142.1 76.2% 36.3%)', // Green
+        darkColor: 'hsl(142.1 76.2% 50%)'
       },
       { 
         label: 'Rejected', 
         count: counts.rejected, 
         percentage: total > 0 ? (counts.rejected / total * 100).toFixed(1) : '0',
-        color: '#EF4444'
+        color: 'hsl(0 84.2% 60.2%)', // Red
+        darkColor: 'hsl(0 84.2% 70%)'
       },
       { 
         label: 'Cancelled', 
         count: counts.cancelled, 
         percentage: total > 0 ? (counts.cancelled / total * 100).toFixed(1) : '0',
-        color: '#6B7280'
+        color: 'hsl(215 16% 47%)', // Gray
+        darkColor: 'hsl(215 16% 65%)'
       }
     ];
   }, [requests]);
 
-  // Monthly Trend
+  // Monthly Trend with status breakdown
   const monthlyData = useMemo(() => {
     if (type !== 'monthly') return [];
     
@@ -186,21 +190,39 @@ export function LeaveAnalytics({
       }
     }
     
-    // Count requests by date
-    const dateCounts: Record<string, number> = {};
+    // Count requests by date and status
+    const dateCounts: Record<string, { approved: number; rejected: number; pending: number; cancelled: number }> = {};
     
     filteredRequests.forEach(r => {
       const requestDate = parseISO(r.requested_at);
       const dateLabel = format(requestDate, dateFormat);
-      dateCounts[dateLabel] = (dateCounts[dateLabel] || 0) + 1;
+      
+      if (!dateCounts[dateLabel]) {
+        dateCounts[dateLabel] = { approved: 0, rejected: 0, pending: 0, cancelled: 0 };
+      }
+      
+      if (r.status === 'approved') {
+        dateCounts[dateLabel].approved += 1;
+      } else if (r.status === 'rejected') {
+        dateCounts[dateLabel].rejected += 1;
+      } else if (r.status === 'pending') {
+        dateCounts[dateLabel].pending += 1;
+      } else if (r.status === 'cancelled') {
+        dateCounts[dateLabel].cancelled += 1;
+      }
     });
     
     // Map all dates to data points (including 0 counts)
     return allDates.map(date => {
       const dateLabel = format(date, dateFormat);
+      const counts = dateCounts[dateLabel] || { approved: 0, rejected: 0, pending: 0, cancelled: 0 };
       return {
         month: dateLabel,
-        count: dateCounts[dateLabel] || 0
+        approved: counts.approved,
+        rejected: counts.rejected,
+        pending: counts.pending,
+        cancelled: counts.cancelled,
+        total: counts.approved + counts.rejected + counts.pending + counts.cancelled
       };
     });
   }, [filteredRequests, type, periodFilter]);
@@ -291,8 +313,12 @@ export function LeaveAnalytics({
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <div 
-                  className="w-3 h-3 rounded"
-                  style={{ backgroundColor: item.color }}
+                  className={`w-3 h-3 rounded ${
+                    item.label === 'Pending' ? 'bg-orange-500 dark:bg-orange-400' :
+                    item.label === 'Approved' ? 'bg-green-600 dark:bg-green-500' :
+                    item.label === 'Rejected' ? 'bg-red-500 dark:bg-red-400' :
+                    'bg-gray-500 dark:bg-gray-400'
+                  }`}
                 />
                 <span className="font-medium">{item.label}</span>
               </div>
@@ -303,11 +329,13 @@ export function LeaveAnalytics({
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full transition-all duration-500"
-                style={{
-                  width: `${item.percentage}%`,
-                  backgroundColor: item.color
-                }}
+                className={`h-full transition-all duration-500 ${
+                  item.label === 'Pending' ? 'bg-orange-500 dark:bg-orange-400' :
+                  item.label === 'Approved' ? 'bg-green-600 dark:bg-green-500' :
+                  item.label === 'Rejected' ? 'bg-red-500 dark:bg-red-400' :
+                  'bg-gray-500 dark:bg-gray-400'
+                }`}
+                style={{ width: `${item.percentage}%` }}
               />
             </div>
           </div>
@@ -333,14 +361,26 @@ export function LeaveAnalytics({
     }
     
     // Calculate max value for Y-axis
-    const maxValue = Math.max(...monthlyData.map(d => d.count), 0);
+    const maxValue = Math.max(...monthlyData.map(d => d.total), 0);
     const yAxisMax = maxValue > 10 ? Math.ceil(maxValue / 10) * 10 : 10;
     
-    // Chart config for shadcn
+    // Chart config for shadcn with 4 status lines
     const chartConfig = {
-      count: {
-        label: "Leave Requests",
-        color: "hsl(var(--primary))",
+      approved: {
+        label: "Approved",
+        color: "hsl(142.1 76.2% 36.3%)", // Green
+      },
+      rejected: {
+        label: "Rejected",
+        color: "hsl(0 84.2% 60.2%)", // Red
+      },
+      pending: {
+        label: "Pending",
+        color: "hsl(38 92% 50%)", // Orange/Amber
+      },
+      cancelled: {
+        label: "Cancelled",
+        color: "hsl(215 16% 47%)", // Gray
       },
     };
     
@@ -348,9 +388,21 @@ export function LeaveAnalytics({
       <ChartContainer config={chartConfig} className="h-[250px] w-full">
         <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <defs>
-            <linearGradient id="fillCount" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.1} />
+            <linearGradient id="fillApproved" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="hsl(142.1 76.2% 36.3%)" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="hsl(142.1 76.2% 36.3%)" stopOpacity={0.05} />
+            </linearGradient>
+            <linearGradient id="fillRejected" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="hsl(0 84.2% 60.2%)" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="hsl(0 84.2% 60.2%)" stopOpacity={0.05} />
+            </linearGradient>
+            <linearGradient id="fillPending" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="hsl(38 92% 50%)" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="hsl(38 92% 50%)" stopOpacity={0.05} />
+            </linearGradient>
+            <linearGradient id="fillCancelled" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="hsl(215 16% 47%)" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="hsl(215 16% 47%)" stopOpacity={0.05} />
             </linearGradient>
           </defs>
           <CartesianGrid 
@@ -381,14 +433,47 @@ export function LeaveAnalytics({
           />
           <Area 
             type="monotone" 
-            dataKey="count" 
-            stroke="hsl(var(--primary))" 
-            strokeWidth={2.5}
-            fill="url(#fillCount)"
+            dataKey="approved" 
+            stroke="hsl(142.1 76.2% 36.3%)" 
+            strokeWidth={2}
+            fill="url(#fillApproved)"
             fillOpacity={1}
             connectNulls={true}
             isAnimationActive={true}
             animationDuration={800}
+          />
+          <Area 
+            type="monotone" 
+            dataKey="rejected" 
+            stroke="hsl(0 84.2% 60.2%)" 
+            strokeWidth={2}
+            fill="url(#fillRejected)"
+            fillOpacity={1}
+            connectNulls={true}
+            isAnimationActive={true}
+            animationDuration={1000}
+          />
+          <Area 
+            type="monotone" 
+            dataKey="pending" 
+            stroke="hsl(38 92% 50%)" 
+            strokeWidth={2}
+            fill="url(#fillPending)"
+            fillOpacity={1}
+            connectNulls={true}
+            isAnimationActive={true}
+            animationDuration={1200}
+          />
+          <Area 
+            type="monotone" 
+            dataKey="cancelled" 
+            stroke="hsl(215 16% 47%)" 
+            strokeWidth={2}
+            fill="url(#fillCancelled)"
+            fillOpacity={1}
+            connectNulls={true}
+            isAnimationActive={true}
+            animationDuration={1400}
           />
         </AreaChart>
       </ChartContainer>

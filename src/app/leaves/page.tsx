@@ -544,26 +544,38 @@ export default function LeavesPage() {
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <TabsList className={`grid w-full sm:w-auto ${isAdmin ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2'}`}>
-            <TabsTrigger value="dashboard" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+          <TabsList className={`grid w-full sm:w-auto ${isAdmin ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2'} bg-muted p-1 h-10`}>
+            <TabsTrigger 
+              value="dashboard" 
+              className="gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+            >
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
               <span className="sm:hidden">Home</span>
             </TabsTrigger>
-            <TabsTrigger value="requests" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <TabsTrigger 
+              value="requests" 
+              className="gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+            >
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Requests</span>
               <span className="sm:hidden">List</span>
             </TabsTrigger>
             {isAdmin && (
-              <TabsTrigger value="calendar" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <TabsTrigger 
+                value="calendar" 
+                className="gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+              >
                 <Calendar className="h-4 w-4" />
                 <span className="hidden sm:inline">Calendar</span>
                 <span className="sm:hidden">Cal</span>
               </TabsTrigger>
             )}
             {isAdmin && (
-              <TabsTrigger value="analytics" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <TabsTrigger 
+                value="analytics" 
+                className="gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+              >
                 <PieChart className="h-4 w-4" />
                 <span className="hidden sm:inline">Analytics</span>
                 <span className="sm:hidden">Stats</span>
@@ -687,6 +699,8 @@ export default function LeavesPage() {
                   isAdmin={isAdmin}
                   onUpdate={loadData}
                   compact
+                  hideExpandButton
+                  onViewAll={() => setActiveTab("requests")}
                 />
               </div>
             </CardContent>
@@ -928,7 +942,7 @@ export default function LeavesPage() {
                       </CardDescription>
                     </div>
                     <div className="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg flex-shrink-0">
-                      <PieChart className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                      <PieChart className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />
                     </div>
                   </div>
                 </CardHeader>

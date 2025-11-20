@@ -8,13 +8,13 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
+import { CalendarCustom } from "@/components/ui/calendar-custom";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
+// import { Progress } from "@/components/ui/progress";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -196,7 +196,7 @@ export default function NewLeaveRequestPage() {
         </div>
       </div>
 
-      {/* Progress Indicator */}
+      {/* Progress Indicator
       <Card className="border-primary/20">
         <CardContent className="pt-6">
           <div className="space-y-2">
@@ -212,7 +212,7 @@ export default function NewLeaveRequestPage() {
             />
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Form Card */}
       <Card className="hover:shadow-md transition-shadow">
@@ -296,7 +296,7 @@ export default function NewLeaveRequestPage() {
                           </Badge>
                         )}
                         {selectedLeaveType.is_paid && (
-                          <Badge variant="outline" className="bg-green-50">Paid</Badge>
+                          <Badge variant="outline">Paid</Badge>
                         )}
                       </div>
                       {selectedLeaveType.days_per_year > 0 && (
@@ -336,13 +336,12 @@ export default function NewLeaveRequestPage() {
                                 </Button>
                               </FormControl>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
+                            <PopoverContent className="w-fit p-0" align="start">
+                              <CalendarCustom
                                 mode="single"
                                 selected={field.value}
                                 onSelect={field.onChange}
                                 disabled={(date) => date < new Date()}
-                                initialFocus
                               />
                             </PopoverContent>
                           </Popover>
@@ -379,13 +378,12 @@ export default function NewLeaveRequestPage() {
                                 </Button>
                               </FormControl>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
+                            <PopoverContent className="w-fit p-0" align="start">
+                              <CalendarCustom
                                 mode="single"
                                 selected={field.value}
                                 onSelect={field.onChange}
                                 disabled={(date) => date < (watchStartDate || new Date())}
-                                initialFocus
                               />
                             </PopoverContent>
                           </Popover>
