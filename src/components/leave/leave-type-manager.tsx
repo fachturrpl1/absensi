@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Edit, Trash2, Save, X, Loader2 } from "lucide-react";
+import { Edit, Trash2, Save, X, Loader2 } from "lucide-react";
 import { ILeaveType } from "@/lib/leave/types";
 import { createLeaveType, updateLeaveType, deleteLeaveType } from "@/action/admin-leaves";
 import { useOrgStore } from "@/store/org-store";
@@ -38,6 +38,7 @@ type LeaveTypeForm = z.infer<typeof leaveTypeSchema>;
 interface LeaveTypeManagerProps {
   leaveTypes: ILeaveType[];
   onUpdate: () => void;
+  triggerCreate?: boolean;
 }
 
 const DEFAULT_COLORS = [
@@ -53,7 +54,7 @@ const DEFAULT_COLORS = [
   "#84CC16", // Lime
 ];
 
-export function LeaveTypeManager({ leaveTypes, onUpdate }: LeaveTypeManagerProps) {
+export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveTypeManagerProps) {
   const [editingType, setEditingType] = useState<ILeaveType | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
@@ -96,6 +97,13 @@ export function LeaveTypeManager({ leaveTypes, onUpdate }: LeaveTypeManagerProps
     setIsCreating(true);
     setEditingType(null);
   };
+
+  // Trigger create mode from parent
+  useEffect(() => {
+    if (triggerCreate) {
+      handleCreate();
+    }
+  }, [triggerCreate]);
 
   const handleEdit = (type: ILeaveType) => {
     form.reset({
@@ -178,22 +186,6 @@ export function LeaveTypeManager({ leaveTypes, onUpdate }: LeaveTypeManagerProps
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Leave Types</h3>
-          <p className="text-sm text-muted-foreground">
-            You have {leaveTypes.length} leave types in your organization
-          </p>
-        </div>
-        {!isCreating && !editingType && (
-          <Button onClick={handleCreate} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Type
-          </Button>
-        )}
-      </div>
-
       <Tabs defaultValue="list" className="space-y-4">
         <TabsList>
           <TabsTrigger value="list">All Types</TabsTrigger>
