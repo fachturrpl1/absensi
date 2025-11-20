@@ -91,12 +91,7 @@ export function DynamicBreadcrumb() {
         const combinedPath = `/${segment}/${nextSegment}`;
         if (combinedPaths[combinedPath]) {
           pathsToSkip.add(index + 1); // Skip next segment
-<<<<<<< HEAD
-          const lastSegment = paths[paths.length - 1];
-          const isLast = index === paths.length - 2 || (index === paths.length - 3 && !!lastSegment && isId(lastSegment));
-=======
           const isLast = index === paths.length - 2 || (index === paths.length - 3 && isId(paths[paths.length - 1] ?? ''));
->>>>>>> 1add6908a35d117a0b106b00b21ffbb338160230
           items.push({
             label: combinedPaths[combinedPath],
             href: combinedPath,
