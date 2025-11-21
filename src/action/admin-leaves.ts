@@ -176,7 +176,17 @@ export async function getAllLeaveRequests(organizationId: number) {
           departments:department_id(id, code, name),
           positions:position_id(id, code, title),
           organization_id
-        )
+        ),
+        approvals:leave_approvals(
+          id,
+          approver_id,
+          approval_level,
+          status,
+          comments,
+          responded_at,
+          approver:approver_id(id, first_name, middle_name, last_name, display_name, profile_photo_url)
+        ),
+        approved_by_user:approved_by(id, first_name, middle_name, last_name, display_name, profile_photo_url)
       `)
       .eq("organization_member.organization_id", organizationId)
       .order("requested_at", { ascending: false });

@@ -20,6 +20,7 @@ import {
   AlertCircle,
   FileText,
   ChevronRight,
+  ChevronDown,
   Loader2
 } from "lucide-react";
 import { ILeaveRequest } from "@/lib/leave/types";
@@ -29,7 +30,6 @@ import { useOrgStore } from "@/store/org-store";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
 
 interface LeaveRequestListProps {
   requests: ILeaveRequest[];
@@ -38,6 +38,8 @@ interface LeaveRequestListProps {
   canApprove?: boolean;
   onUpdate?: () => void;
   compact?: boolean;
+  onViewAll?: () => void;
+  hideExpandButton?: boolean;
 }
 
 export function LeaveRequestList({
@@ -46,13 +48,27 @@ export function LeaveRequestList({
   isAdmin = false,
   canApprove = false,
   onUpdate,
-  compact = false
+  compact = false,
+  hideExpandButton = false
 }: LeaveRequestListProps) {
   const [selectedRequest, setSelectedRequest] = useState<ILeaveRequest | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
   const [actionReason, setActionReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const { organizationId } = useOrgStore();
+
+  const toggleExpanded = (requestId: number) => {
+    setExpandedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(requestId)) {
+        newSet.delete(requestId);
+      } else {
+        newSet.add(requestId);
+      }
+      return newSet;
+    });
+  };
 
   const handleAction = (request: ILeaveRequest, type: 'approve' | 'reject') => {
     setSelectedRequest(request);
@@ -229,10 +245,37 @@ export function LeaveRequestList({
                       )}
                     </div>
 
-                    {/* Request Number & Date */}
-                    <div className="text-right text-sm text-muted-foreground">
-                      <p className="font-mono text-xs">{request.request_number}</p>
-                      <p>{format(parseISO(request.requested_at), 'MMM d, yyyy')}</p>
+                    {/* Actions & Request Info */}
+                    <div className="flex items-center gap-3">
+                      {/* Approve/Reject Buttons */}
+                      {canApprove && request.status === 'pending' && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1 border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700 dark:border-green-500 dark:text-green-500 dark:hover:bg-green-950"
+                            onClick={() => handleAction(request, 'approve')}
+                          >
+                            <CheckCircle className="h-3 w-3" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1 border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-500 dark:text-red-500 dark:hover:bg-red-950"
+                            onClick={() => handleAction(request, 'reject')}
+                          >
+                            <XCircle className="h-3 w-3" />
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                      
+                      {/* Request Number & Date */}
+                      <div className="text-right text-sm text-muted-foreground">
+                        <p className="font-mono text-xs">{request.request_number}</p>
+                        <p>{format(parseISO(request.requested_at), 'MMM d, yyyy')}</p>
+                      </div>
                     </div>
                   </div>
 
@@ -257,11 +300,62 @@ export function LeaveRequestList({
                     </div>
                   </div>
 
-                  {/* Reason */}
-                  {!compact && (
+                  {/* Reason - Only show preview when not expanded */}
+                  {!compact && !expandedItems.has(request.id) && (
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {request.reason}
                     </p>
+                  )}
+
+                  {/* Expanded Details */}
+                  {expandedItems.has(request.id) && (
+                    <div className="space-y-3 pt-3 border-t border-muted">
+                      {/* Full Reason */}
+                      <div>
+                        <h5 className="text-sm font-medium mb-1">Reason for Leave:</h5>
+                        <p className="text-sm text-muted-foreground">
+                          {request.reason}
+                        </p>
+                      </div>
+
+                      {/* Emergency Contact */}
+                      {request.emergency_contact && (
+                        <div>
+                          <h5 className="text-sm font-medium mb-1">Emergency Contact:</h5>
+                          <p className="text-sm text-muted-foreground">
+                            {request.emergency_contact}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Request Details */}
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <h5 className="font-medium mb-1">Request Details:</h5>
+                          <div className="space-y-1 text-muted-foreground">
+                            <p>Request Number: <span className="font-mono">{request.request_number}</span></p>
+                            <p>Requested: {format(parseISO(request.requested_at), 'PPP')}</p>
+                            {request.start_half_day && <p>• Starts at noon (half day)</p>}
+                            {request.end_half_day && <p>• Ends at noon (half day)</p>}
+                          </div>
+                        </div>
+                        <div>
+                          <h5 className="font-medium mb-1">Leave Type Info:</h5>
+                          <div className="space-y-1 text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: request.leave_type?.color_code || '#10B981' }}
+                              />
+                              <span>{request.leave_type?.name}</span>
+                            </div>
+                            {request.leave_type?.description && (
+                              <p className="text-xs">{request.leave_type.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   )}
 
                   {/* Status Details */}
@@ -285,34 +379,20 @@ export function LeaveRequestList({
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
-                  {canApprove && request.status === 'pending' && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1 border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700 dark:border-green-500 dark:text-green-500 dark:hover:bg-green-950"
-                        onClick={() => handleAction(request, 'approve')}
-                      >
-                        <CheckCircle className="h-3 w-3" />
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1 border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-500 dark:text-red-500 dark:hover:bg-red-950"
-                        onClick={() => handleAction(request, 'reject')}
-                      >
-                        <XCircle className="h-3 w-3" />
-                        Reject
-                      </Button>
-                    </>
-                  )}
-                  {!canApprove && (
-                    <Link href={`/leaves/${request.id}`}>
-                      <Button size="sm" variant="ghost">
+                  {/* Expand/Collapse Button */}
+                  {!hideExpandButton && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => toggleExpanded(request.id)}
+                      className="h-8 w-8 p-0 hover:bg-muted"
+                    >
+                      {expandedItems.has(request.id) ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
                         <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
+                      )}
+                    </Button>
                   )}
                 </div>
               </div>

@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -59,6 +60,9 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
   const [isCreating, setIsCreating] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'create' | 'edit' | null>(null);
+  const [pendingEditType, setPendingEditType] = useState<ILeaveType | null>(null);
   const { organizationId } = useOrgStore();
 
   const form = useForm<LeaveTypeForm>({
@@ -80,6 +84,20 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
   });
 
   const handleCreate = () => {
+    // Check if currently editing or creating (form is active)
+    const isFormActive = editingType !== null || isCreating;
+    
+    if (isFormActive) {
+      setPendingAction('create');
+      setShowConfirmDialog(true);
+      return;
+    }
+    
+    // Proceed with create
+    executeCreate();
+  };
+
+  const executeCreate = () => {
     form.reset({
       code: "",
       name: "",
@@ -106,6 +124,26 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
   }, [triggerCreate]);
 
   const handleEdit = (type: ILeaveType) => {
+    // If editing the same item, no need for confirmation
+    if (editingType && editingType.id === type.id) {
+      return;
+    }
+    
+    // Check if currently creating or editing different item (form is active)
+    const isFormActive = isCreating || editingType !== null;
+    
+    if (isFormActive) {
+      setPendingAction('edit');
+      setPendingEditType(type);
+      setShowConfirmDialog(true);
+      return;
+    }
+    
+    // Proceed with edit
+    executeEdit(type);
+  };
+
+  const executeEdit = (type: ILeaveType) => {
     form.reset({
       code: type.code,
       name: type.name,
@@ -128,6 +166,25 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
     form.reset();
     setEditingType(null);
     setIsCreating(false);
+  };
+
+  const handleConfirmSwitch = () => {
+    if (pendingAction === 'create') {
+      executeCreate();
+    } else if (pendingAction === 'edit' && pendingEditType) {
+      executeEdit(pendingEditType);
+    }
+    
+    // Reset dialog state
+    setShowConfirmDialog(false);
+    setPendingAction(null);
+    setPendingEditType(null);
+  };
+
+  const handleCancelSwitch = () => {
+    setShowConfirmDialog(false);
+    setPendingAction(null);
+    setPendingEditType(null);
   };
 
   const handleSubmit = async (data: LeaveTypeForm) => {
@@ -485,7 +542,7 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
                     </div>
 
                     {/* Actions */}
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-2 pt-4">
                       <Button
                         type="button"
                         variant="outline"
@@ -501,7 +558,7 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
                         ) : (
                           <Save className="h-4 w-4 mr-2" />
                         )}
-                        {isCreating ? "Create" : "Update"}
+                        {isCreating ? "Create" : "Save Changes"}
                       </Button>
                     </div>
                   </form>
@@ -541,7 +598,7 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
                           <Badge variant="outline">Unlimited</Badge>
                         )}
                         {type.is_paid && (
-                          <Badge variant="outline" className="bg-green-50">Paid</Badge>
+                          <Badge variant="outline">Paid</Badge>
                         )}
                         {type.requires_approval && (
                           <Badge variant="outline">Approval Required</Badge>
@@ -562,9 +619,9 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        variant="ghost"
+                        variant={editingType?.id === type.id ? "default" : "ghost"}
                         onClick={() => handleEdit(type)}
-                        disabled={loading || isCreating || editingType !== null}
+                        disabled={loading}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -592,7 +649,7 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
                           size="sm"
                           variant="ghost"
                           onClick={() => setDeleteConfirmId(type.id)}
-                          disabled={loading || isCreating || editingType !== null}
+                          disabled={loading}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -648,6 +705,31 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unsaved Changes</DialogTitle>
+            <div className="text-muted-foreground text-sm space-y-2">
+              <div>You have unsaved changes in the current form.</div>
+              {pendingAction === 'create' ? (
+                <div>Do you want to discard these changes and <strong>create a new leave type</strong>?</div>
+              ) : (
+                <div>Do you want to discard these changes and <strong>edit "{pendingEditType?.name}"</strong>?</div>
+              )}
+            </div>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelSwitch}>
+              No, Stay Here
+            </Button>
+            <Button onClick={handleConfirmSwitch}>
+              Yes, Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

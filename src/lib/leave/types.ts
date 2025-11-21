@@ -62,6 +62,7 @@ export interface ILeaveRequest {
   leave_type?: ILeaveType;
   approver?: IUser;
   approvals?: ILeaveApproval[];
+  approved_by_user?: IUser; // Fallback: populated from approved_by field
 }
 
 // ============================================
@@ -101,6 +102,7 @@ export interface ILeaveApproval {
   decision?: 'approved' | 'rejected';
   decision_at?: string;
   comments?: string;
+  responded_at?: string; // timestamptz - when approver responded
   delegated_from?: string; // user_id if delegated
   created_at: string;
   updated_at: string;
