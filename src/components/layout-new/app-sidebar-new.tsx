@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUserStore } from '@/store/user-store';
+import { useOrganizationName } from '@/hooks/use-organization-name';
 import {
   LayoutDashboard,
   Users,
@@ -228,6 +229,7 @@ function NavMain({ items }: { items: NavMainItem[] }) {
 
 export function AppSidebarNew({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const sidebarGroups = getSidebarGroups();
+  const { organizationName } = useOrganizationName();
   
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -240,7 +242,7 @@ export function AppSidebarNew({ ...props }: React.ComponentProps<typeof Sidebar>
                   <Command className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Attendance</span>
+                  <span className="truncate font-semibold">{organizationName || 'Attendance'}</span>
                 </div>
               </Link>
             </SidebarMenuButton>

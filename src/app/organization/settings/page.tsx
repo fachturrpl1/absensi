@@ -3,6 +3,7 @@
 
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { Button } from "@/components/ui/button";
@@ -193,6 +194,7 @@ interface OrganizationData {
 
 
 export default function OrganizationSettingsPage() {
+  const queryClient = useQueryClient();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -800,6 +802,9 @@ export default function OrganizationSettingsPage() {
       if (result.success) {
 
         toast.success("Organization settings updated successfully!");
+
+        // Invalidate organization query cache for immediate update across all components
+        queryClient.invalidateQueries({ queryKey: ['organization', 'full-data'] });
 
         // Reset logo file after successful upload
 

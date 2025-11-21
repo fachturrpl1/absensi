@@ -84,8 +84,8 @@ export async function getLeaveStatistics(organizationId: number) {
       throw requestsError;
     }
     
-    // Get total employees
-    const { count: totalEmployees } = await supabase
+    // Get total members
+    const { count: totalMembers } = await supabase
       .from("organization_members")
       .select("*", { count: "exact", head: true })
       .eq("organization_id", organizationId)
@@ -125,8 +125,8 @@ export async function getLeaveStatistics(organizationId: number) {
       pendingRequests: allRequests?.filter(r => r.status === 'pending').length || 0,
       approvedRequests: allRequests?.filter(r => r.status === 'approved').length || 0,
       rejectedRequests: allRequests?.filter(r => r.status === 'rejected').length || 0,
-      totalEmployees: totalEmployees || 0,
-      employeesOnLeave: new Set(currentLeaves?.map(l => l.organization_member_id)).size || 0,
+      totalMembers: totalMembers || 0,
+      membersOnLeave: new Set(currentLeaves?.map(l => l.organization_member_id)).size || 0,
       upcomingLeaves: upcomingLeaves?.length || 0,
       averageLeaveDays: allRequests?.length > 0 
         ? (allRequests.reduce((sum, r) => sum + (r.total_days || 0), 0) / allRequests.length).toFixed(1)
