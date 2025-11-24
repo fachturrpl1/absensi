@@ -3,7 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUserStore } from '@/store/user-store';
+<<<<<<< HEAD
 import { useMounted } from '@/hooks/use-mounted';
+=======
+import { useOrganizationName } from '@/hooks/use-organization-name';
+>>>>>>> 0664b054fc627a08c7149ad5794417e83e19a6f6
 import {
   LayoutDashboard,
   Users,
@@ -234,7 +238,11 @@ function NavMain({ items }: { items: NavMainItem[] }) {
 
 export function AppSidebarNew({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const sidebarGroups = getSidebarGroups();
+<<<<<<< HEAD
   const mounted = useMounted();
+=======
+  const { organizationName } = useOrganizationName();
+>>>>>>> 0664b054fc627a08c7149ad5794417e83e19a6f6
   
   return (
     <Sidebar collapsible="icon" suppressHydrationWarning {...props}>
@@ -247,7 +255,7 @@ export function AppSidebarNew({ ...props }: React.ComponentProps<typeof Sidebar>
                   <Command className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Attendance</span>
+                  <span className="truncate font-semibold">{organizationName || 'Attendance'}</span>
                 </div>
               </Link>
             </SidebarMenuButton>

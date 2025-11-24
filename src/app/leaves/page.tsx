@@ -60,8 +60,8 @@ interface LeaveStatistics {
   pendingRequests: number;
   approvedRequests: number;
   rejectedRequests: number;
-  totalEmployees: number;
-  employeesOnLeave: number;
+  totalMembers: number;
+  membersOnLeave: number;
   upcomingLeaves: number;
   averageLeaveDays: number;
 }
@@ -134,6 +134,7 @@ export default function LeavesPage() {
             getMyLeaveRequests()
           ]);
 
+<<<<<<< HEAD
           // Handle statistics result
           if (statsResult.status === 'fulfilled' && statsResult.value?.success && statsResult.value?.data) {
             const statsData = statsResult.value.data;
@@ -147,6 +148,24 @@ export default function LeavesPage() {
             logger.warn("⚠️ Statistics not available:", error);
             setStatistics(null);
           }
+=======
+        if (statsResult.success && statsResult.data) {
+          const statsData = statsResult.data;
+          setStatistics({
+            totalRequests: statsData.totalRequests,
+            pendingRequests: statsData.pendingRequests,
+            approvedRequests: statsData.approvedRequests,
+            rejectedRequests: statsData.rejectedRequests,
+            totalMembers: statsData.totalMembers || 0,
+            membersOnLeave: statsData.membersOnLeave || 0,
+            upcomingLeaves: statsData.upcomingLeaves,
+            averageLeaveDays: parseNumber(statsData.averageLeaveDays)
+          });
+          logger.debug("📊 Statistics loaded:", statsData);
+        } else {
+          logger.error("❌ Failed to load statistics:", statsResult.message);
+        }
+>>>>>>> 0664b054fc627a08c7149ad5794417e83e19a6f6
 
           // Handle all requests result
           if (allRequestsResult.status === 'fulfilled' && allRequestsResult.value?.success && allRequestsResult.value?.data) {
@@ -254,14 +273,14 @@ export default function LeavesPage() {
     if (searchQuery.trim()) {
       filtered = filtered.filter(req => {
         const searchLower = searchQuery.toLowerCase();
-        const employeeName = isAdmin 
+        const memberName = isAdmin 
           ? `${req.organization_member?.user?.first_name} ${req.organization_member?.user?.last_name}`.toLowerCase()
           : '';
         const leaveType = req.leave_type?.name.toLowerCase() || '';
         const reason = req.reason.toLowerCase();
         const requestNumber = req.request_number.toLowerCase();
         
-        return employeeName.includes(searchLower) ||
+        return memberName.includes(searchLower) ||
                leaveType.includes(searchLower) ||
                reason.includes(searchLower) ||
                requestNumber.includes(searchLower);
@@ -370,7 +389,7 @@ export default function LeavesPage() {
               </h1>
               <p className="text-muted-foreground">
                 {isAdmin 
-                  ? 'Manage employee leaves, approve requests, and view analytics'
+                  ? 'Manage member leaves, approve requests, and view analytics'
                   : 'Track your leave balance, requests, and history'
                 }
               </p>
@@ -524,7 +543,7 @@ export default function LeavesPage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {isAdmin ? 'Employees on Leave' : 'Approved Leaves'}
+              {isAdmin ? 'Members on Leave' : 'Approved Leaves'}
             </CardTitle>
             <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
               {isAdmin ? (
@@ -544,7 +563,7 @@ export default function LeavesPage() {
               <>
                 <div className="text-2xl font-bold">
                   {isAdmin 
-                    ? statistics?.employeesOnLeave || 0
+                    ? statistics?.membersOnLeave || 0
                     : isUserStats(stats) ? stats.approvedCount : 0
                   }
                 </div>
@@ -553,9 +572,9 @@ export default function LeavesPage() {
                     <>
                       Out of{' '}
                       <Badge variant="outline" className="text-xs px-1">
-                        {statistics?.totalEmployees || 0}
+                        {statistics?.totalMembers || 0}
                       </Badge>
-                      employees
+                      members
                     </>
                   ) : (
                     <>
@@ -772,7 +791,7 @@ export default function LeavesPage() {
                 <div>
                   <CardTitle className="text-lg">Recent Leave Requests</CardTitle>
                   <CardDescription className="mt-1">
-                    {isAdmin ? 'Latest requests from all employees' : 'Your recent leave requests'}
+                    {isAdmin ? 'Latest requests from all members' : 'Your recent leave requests'}
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
@@ -820,7 +839,7 @@ export default function LeavesPage() {
                   </CardTitle>
                   <CardDescription className="mt-1">
                     {isAdmin 
-                      ? 'Manage and approve employee leave requests'
+                      ? 'Manage and approve member leave requests'
                       : 'View and manage your leave requests'
                     }
                   </CardDescription>
@@ -1002,7 +1021,7 @@ export default function LeavesPage() {
                       Leave Calendar
                     </CardTitle>
                     <CardDescription className="mt-1">
-                      View all employee leaves in calendar format
+                      View all member leaves in calendar format
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">

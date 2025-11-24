@@ -18,8 +18,8 @@ interface LeaveAnalyticsProps {
     pendingRequests: number;
     approvedRequests: number;
     rejectedRequests: number;
-    totalEmployees: number;
-    employeesOnLeave: number;
+    totalMembers: number;
+    membersOnLeave: number;
     upcomingLeaves: number;
     averageLeaveDays: number;
   } | null;

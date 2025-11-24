@@ -44,11 +44,11 @@ export function useOrganizationData() {
       }
     },
     enabled: !!user?.id,
-    staleTime: 1000 * 60 * 60, // 1 hour - organization data rarely changes
+    staleTime: 0, // Always fetch fresh data to ensure immediate updates
     gcTime: 1000 * 60 * 60 * 24, // 24 hours
     retry: 1,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
+    refetchOnMount: true, // Refetch when component mounts (e.g., navigating to dashboard)
   })
 }
 
