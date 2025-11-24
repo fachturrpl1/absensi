@@ -134,7 +134,6 @@ export default function LeavesPage() {
             getMyLeaveRequests()
           ]);
 
-<<<<<<< HEAD
           // Handle statistics result
           if (statsResult.status === 'fulfilled' && statsResult.value?.success && statsResult.value?.data) {
             const statsData = statsResult.value.data;
@@ -148,24 +147,6 @@ export default function LeavesPage() {
             logger.warn("⚠️ Statistics not available:", error);
             setStatistics(null);
           }
-=======
-        if (statsResult.success && statsResult.data) {
-          const statsData = statsResult.data;
-          setStatistics({
-            totalRequests: statsData.totalRequests,
-            pendingRequests: statsData.pendingRequests,
-            approvedRequests: statsData.approvedRequests,
-            rejectedRequests: statsData.rejectedRequests,
-            totalMembers: statsData.totalMembers || 0,
-            membersOnLeave: statsData.membersOnLeave || 0,
-            upcomingLeaves: statsData.upcomingLeaves,
-            averageLeaveDays: parseNumber(statsData.averageLeaveDays)
-          });
-          logger.debug("📊 Statistics loaded:", statsData);
-        } else {
-          logger.error("❌ Failed to load statistics:", statsResult.message);
-        }
->>>>>>> 0664b054fc627a08c7149ad5794417e83e19a6f6
 
           // Handle all requests result
           if (allRequestsResult.status === 'fulfilled' && allRequestsResult.value?.success && allRequestsResult.value?.data) {
