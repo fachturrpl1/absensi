@@ -3,8 +3,6 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUserStore } from '@/store/user-store';
-import { useOrgStore } from '@/store/org-store';
-import { useMounted } from '@/hooks/use-mounted';
 import {
   LayoutDashboard,
   Users,
@@ -143,7 +141,6 @@ const getSidebarGroups = (): NavGroup[] => [
 function NavMain({ items }: { items: NavMainItem[] }) {
   const pathname = usePathname();
   const { role, permissions } = useUserStore();
-  const mounted = useMounted();
   
   // Debug logging
   console.log('🔍 Sidebar Debug:', { role, permissions });
@@ -153,10 +150,6 @@ function NavMain({ items }: { items: NavMainItem[] }) {
   const canManageLeaveTypes = permissions?.includes('leaves:type:manage') || isAdmin;
   
   console.log('✅ Admin Check:', { isAdmin, canManageLeaveTypes });
-
-  if (!mounted) {
-    return <div suppressHydrationWarning />;
-  }
 
   return (
     <SidebarMenu>
@@ -235,10 +228,9 @@ function NavMain({ items }: { items: NavMainItem[] }) {
 
 export function AppSidebarNew({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const sidebarGroups = getSidebarGroups();
-  const mounted = useMounted();
   
   return (
-    <Sidebar collapsible="icon" suppressHydrationWarning {...props}>
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -248,7 +240,7 @@ export function AppSidebarNew({ ...props }: React.ComponentProps<typeof Sidebar>
                   <Command className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{organizationName || 'Attendance'}</span>
+                  <span className="truncate font-semibold">Attendance</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -257,7 +249,7 @@ export function AppSidebarNew({ ...props }: React.ComponentProps<typeof Sidebar>
       </SidebarHeader>
       
       <SidebarContent>
-        {mounted && sidebarGroups.map((group) => (
+        {sidebarGroups.map((group) => (
           <SidebarGroup key={group.label || 'default'}>
             {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
             <SidebarGroupContent>
