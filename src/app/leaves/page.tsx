@@ -11,6 +11,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { 
   Plus, 
   Calendar,   
@@ -32,9 +35,11 @@ import {
   Search,
   Filter,
   ArrowUpDown,
-  ChevronDown
+  ChevronDown,
+  List,
+  Grid3x3
 } from "lucide-react";
-import { getMyLeaveBalance, getMyLeaveRequests, getLeaveTypes } from "@/action/leaves";
+import { getMyLeaveBalance, getMyLeaveRequests, getLeaveTypes, cancelLeaveRequest } from "@/action/leaves";
 import { getLeaveStatistics, getAllLeaveRequests, getOrganizationLeaveTypes } from "@/action/admin-leaves";
 import { LeaveBalanceWithType, ILeaveRequest, ILeaveType } from "@/lib/leave/types";
 import { useUserStore } from "@/store/user-store";
@@ -75,14 +80,24 @@ export default function LeavesPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   
+  // View mode states
+  const [recentViewMode, setRecentViewMode] = useState<'list' | 'grid'>('list');
+  const [allRequestsViewMode, setAllRequestsViewMode] = useState<'list' | 'grid'>('list');
+  
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number | 'all'>(5);
+  const [itemsPerPage, setItemsPerPage] = useState<number | 'all'>(6);
   
   // Filter and search states
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  
+  // Cancel dialog states
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [selectedRequestToCancel, setSelectedRequestToCancel] = useState<ILeaveRequest | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelLoading, setCancelLoading] = useState(false);
   
   // Monthly Leave Trend filter state
   const [monthlyTrendFilter, setMonthlyTrendFilter] = useState<'7days' | '1week' | 'thisweek' | '30days' | '1month' | 'thismonth' | 'lastyear' | 'thisyear'>('thisyear');
@@ -282,6 +297,45 @@ export default function LeavesPage() {
     
     return filtered;
   }, [isAdmin, allRequests, requests, searchQuery, statusFilter, sortOrder]);
+
+  // Handle cancel leave request
+  const handleCancelRequest = useCallback((request: ILeaveRequest) => {
+    setSelectedRequestToCancel(request);
+    setCancelReason("");
+    setCancelDialogOpen(true);
+  }, []);
+
+  // Confirm cancel leave request
+  const handleConfirmCancel = useCallback(async () => {
+    if (!selectedRequestToCancel || !cancelReason.trim()) {
+      toast.error("Please provide a reason for cancellation");
+      return;
+    }
+
+    setCancelLoading(true);
+    try {
+      const result = await cancelLeaveRequest({
+        request_id: selectedRequestToCancel.id,
+        reason: cancelReason.trim()
+      });
+
+      if (result.success) {
+        toast.success("Leave request cancelled successfully");
+        setCancelDialogOpen(false);
+        setSelectedRequestToCancel(null);
+        setCancelReason("");
+        // Reload data to reflect changes
+        await loadData();
+      } else {
+        toast.error(result.message || "Failed to cancel leave request");
+      }
+    } catch (error) {
+      console.error("Error cancelling leave request:", error);
+      toast.error("An error occurred while cancelling the request");
+    } finally {
+      setCancelLoading(false);
+    }
+  }, [selectedRequestToCancel, cancelReason, loadData]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -779,6 +833,27 @@ export default function LeavesPage() {
                   <Badge variant="secondary">
                     {Math.min(3, (isAdmin ? allRequests : requests).length)} of {(isAdmin ? allRequests : requests).length}
                   </Badge>
+                  
+                  {/* View Mode Toggle for Recent */}
+                  <div className="flex items-center rounded-lg border">
+                    <Button
+                      variant={recentViewMode === 'list' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => setRecentViewMode('list')}
+                      className="rounded-r-none h-8"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={recentViewMode === 'grid' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => setRecentViewMode('grid')}
+                      className="rounded-l-none border-l h-8"
+                    >
+                      <Grid3x3 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -799,9 +874,13 @@ export default function LeavesPage() {
                   loading={loading}
                   isAdmin={isAdmin}
                   onUpdate={loadData}
-                  compact
+                  onDelete={handleCancelRequest}
+                  compact={false}
                   hideExpandButton
                   onViewAll={() => setActiveTab("requests")}
+                  viewMode={recentViewMode}
+                  onViewModeChange={setRecentViewMode}
+                  showViewToggle={false}
                 />
               </div>
             </CardContent>
@@ -898,12 +977,31 @@ export default function LeavesPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="5">5</SelectItem>
-                        <SelectItem value="10">10</SelectItem>
-                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="6">6</SelectItem>
+                        <SelectItem value="9">9</SelectItem>
                         <SelectItem value="all">All</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  {/* View Mode Toggle */}
+                  <div className="flex items-center rounded-lg border">
+                    <Button
+                      variant={allRequestsViewMode === 'list' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => setAllRequestsViewMode('list')}
+                      className="rounded-r-none"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={allRequestsViewMode === 'grid' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => setAllRequestsViewMode('grid')}
+                      className="rounded-l-none border-l"
+                    >
+                      <Grid3x3 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
 
@@ -922,6 +1020,10 @@ export default function LeavesPage() {
                     isAdmin={isAdmin}
                     canApprove={canApproveRequests}
                     onUpdate={loadData}
+                    onDelete={handleCancelRequest}
+                    viewMode={allRequestsViewMode}
+                    onViewModeChange={setAllRequestsViewMode}
+                    showViewToggle={false}
                   />
                 </div>
 
@@ -1034,15 +1136,15 @@ export default function LeavesPage() {
             <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
               {/* Leave Type Distribution */}
               <Card className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-4 min-h-[88px]">
-                  <div className="flex items-start justify-between">
-                    <div>
+                <CardHeader className="pb-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
                       <CardTitle className="text-lg">Leave Type Distribution</CardTitle>
                       <CardDescription className="mt-1">
                         Breakdown by leave type
                       </CardDescription>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
                       <Select value={typeDistributionFilter} onValueChange={(value: typeof typeDistributionFilter) => setTypeDistributionFilter(value)}>
                       </Select>
                       <DropdownMenu>
@@ -1083,43 +1185,45 @@ export default function LeavesPage() {
 
               {/* Detailed Analytics */}
               <Card className="hover:shadow-md transition-shadow">
-                <CardHeader className="min-h-[88px]">
-                  <div className="flex items-start justify-between">
-                    <div>
+                <CardHeader className="pb-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
                       <CardTitle className="text-lg">Detailed Analytics</CardTitle>
                       <CardDescription className="mt-1">
                         Comprehensive leave statistics and trends
                       </CardDescription>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <Badge variant="secondary" className="whitespace-nowrap">
-                        {statistics?.averageLeaveDays.toFixed(1)} avg leave days/request
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+                      <Badge variant="secondary" className="text-xs px-2 py-1 whitespace-nowrap">
+                        {statistics?.averageLeaveDays.toFixed(1)} avg days/req
                       </Badge>
-                      <div className="p-2 bg-violet-100 dark:bg-violet-900 rounded-lg">
-                        <TrendingUp className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 bg-violet-100 dark:bg-violet-900 rounded-lg">
+                          <TrendingUp className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="gap-2">
+                              {getChartIcon(detailedChartType)}
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setDetailedChartType('donut')}>
+                              <PieChart className="h-4 w-4 mr-2" />
+                              Donut Chart
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setDetailedChartType('pie')}>
+                              <PieChart className="h-4 w-4 mr-2" />
+                              Pie Chart
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setDetailedChartType('bar')}>
+                              <BarChart3 className="h-4 w-4 mr-2" />
+                              Bar Chart
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="gap-2">
-                            {getChartIcon(detailedChartType)}
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setDetailedChartType('donut')}>
-                            <PieChart className="h-4 w-4 mr-2" />
-                            Donut Chart
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setDetailedChartType('pie')}>
-                            <PieChart className="h-4 w-4 mr-2" />
-                            Pie Chart
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setDetailedChartType('bar')}>
-                            <BarChart3 className="h-4 w-4 mr-2" />
-                            Bar Chart
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </div>
                   </div>
                 </CardHeader>
@@ -1367,6 +1471,76 @@ export default function LeavesPage() {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* Cancel Leave Request Confirmation Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancel Leave Request</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this leave request? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedRequestToCancel && (
+            <div className="space-y-4">
+              {/* Request Details */}
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Request #{selectedRequestToCancel.request_number}</span>
+                  <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                    {selectedRequestToCancel.status}
+                  </Badge>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  <div>Type: {selectedRequestToCancel.leave_type?.name}</div>
+                  <div>Duration: {selectedRequestToCancel.total_days} day(s)</div>
+                  <div>
+                    Period: {new Date(selectedRequestToCancel.start_date).toLocaleDateString()} - {new Date(selectedRequestToCancel.end_date).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Cancellation Reason */}
+              <div className="space-y-2">
+                <Label htmlFor="cancel-reason">
+                  Reason for cancellation <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="cancel-reason"
+                  placeholder="Please provide a reason for cancelling this leave request..."
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  className="resize-none"
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCancelDialogOpen(false);
+                setSelectedRequestToCancel(null);
+                setCancelReason("");
+              }}
+              disabled={cancelLoading}
+            >
+              Keep Request
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmCancel}
+              disabled={cancelLoading || !cancelReason.trim()}
+            >
+              {cancelLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Cancel Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

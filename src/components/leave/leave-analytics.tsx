@@ -348,96 +348,106 @@ export function LeaveAnalytics({
       switch (chartType) {
       case 'pie':
         return (
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="50%"
-                outerRadius={90}
-                paddingAngle={2}
-                dataKey="count"
-                animationBegin={0}
-                animationDuration={800}
-                animationEasing="ease-out"
-              >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Pie>
-              <Tooltip 
-                content={<CustomTooltip />}
-                wrapperStyle={{ outline: 'none' }}
-                cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="w-full h-[200px] sm:h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius="75%"
+                  paddingAngle={2}
+                  dataKey="count"
+                  animationBegin={0}
+                  animationDuration={800}
+                  animationEasing="ease-out"
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  content={<CustomTooltip />}
+                  wrapperStyle={{ outline: 'none' }}
+                  cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         );
 
       case 'bar':
         return (
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis 
-                dataKey="name" 
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                className="text-xs"
-                tick={{ fill: 'hsl(var(--muted-foreground))' }}
-              />
-              <YAxis 
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                className="text-xs"
-                tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                domain={[0, 'dataMax']}
-              />
-              <Tooltip 
-                content={<CustomTooltip />}
-                wrapperStyle={{ outline: 'none' }}
-                cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
-              />
-              <Bar 
-                dataKey="count" 
-                radius={[4, 4, 0, 0]}
-                animationDuration={800}
-                animationBegin={0}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="w-full h-[200px] sm:h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="name" 
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  className="text-xs"
+                  tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  interval={0}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis 
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  className="text-xs"
+                  tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  domain={[0, 'dataMax']}
+                />
+                <Tooltip 
+                  content={<CustomTooltip />}
+                  wrapperStyle={{ outline: 'none' }}
+                  cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+                />
+                <Bar 
+                  dataKey="count" 
+                  radius={[4, 4, 0, 0]}
+                  animationDuration={800}
+                  animationBegin={0}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         );
 
       case 'donut':
       default:
         return (
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={90}
-                paddingAngle={2}
-                dataKey="count"
-                animationBegin={0}
-                animationDuration={800}
-                animationEasing="ease-out"
-              >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Pie>
-              <Tooltip 
-                content={<CustomTooltip />}
-                wrapperStyle={{ outline: 'none' }}
-                cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="w-full h-[200px] sm:h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="40%"
+                  outerRadius="75%"
+                  paddingAngle={2}
+                  dataKey="count"
+                  animationBegin={0}
+                  animationDuration={800}
+                  animationEasing="ease-out"
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  content={<CustomTooltip />}
+                  wrapperStyle={{ outline: 'none' }}
+                  cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         );
       }
     })();
