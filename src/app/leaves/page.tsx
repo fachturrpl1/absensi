@@ -1044,19 +1044,6 @@ export default function LeavesPage() {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <Select value={typeDistributionFilter} onValueChange={(value: typeof typeDistributionFilter) => setTypeDistributionFilter(value)}>
-                        <SelectTrigger className="w-[140px] h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="7days">Last 7 Days</SelectItem>
-                          <SelectItem value="1week">Last Week</SelectItem>
-                          <SelectItem value="thisweek">This Week</SelectItem>
-                          <SelectItem value="30days">Last 30 Days</SelectItem>
-                          <SelectItem value="1month">Last Month</SelectItem>
-                          <SelectItem value="thismonth">This Month</SelectItem>
-                          <SelectItem value="lastyear">Last Year</SelectItem>
-                          <SelectItem value="thisyear">This Year</SelectItem>
-                        </SelectContent>
                       </Select>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
