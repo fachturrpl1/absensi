@@ -618,7 +618,7 @@ async function getTodaySummaryData(organizationIdParam?: number | null, memberId
 }
 
 // Get attendance groups data
-export async function getAttendanceGroupsData(organizationIdParam?: number | null, memberIdsParam?: string[]) {
+export async function getAttendanceGroupsData(organizationIdParam?: number | null) {
   try {
     const organizationId = await resolveOrganizationId(organizationIdParam);
     if (!organizationId) {
@@ -863,7 +863,7 @@ export async function getDashboardStats(): Promise<{
     getMonthlyLateStats(organizationId, activeMemberIds),
     getActiveMembersStats(organizationId),
     getActiveRfidStats(organizationId, activeMemberIds),
-    getAttendanceGroupsData(organizationId, activeMemberIds),
+    getAttendanceGroupsData(organizationId),
     getGroupComparisonStats(String(organizationId)),
     getMonthlyTrendData(organizationId, activeMemberIds),
     getTodaySummaryData(organizationId, activeMemberIds)

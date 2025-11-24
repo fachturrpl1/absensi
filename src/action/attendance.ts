@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/utils/supabase/server";
-import { IAttendance } from "@/interface";
 
 import { attendanceLogger } from '@/lib/logger';
 async function getSupabase() {
