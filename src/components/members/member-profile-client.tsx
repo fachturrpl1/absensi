@@ -2,8 +2,8 @@
 
 import React from "react"
 import MemberProfile from "./member-profile"
-import { useMemberRecentAttendance } from "@/hooks/use-member-recent-attendance"
 import type { IOrganization_member, IMemberPerformance } from "@/interface"
+import { useMemberRecentAttendance } from "@/hooks/use-member-recent-attendance"
 
 type WorkSchedule = {
   name: string
@@ -19,7 +19,6 @@ type MemberProfileClientProps = {
 }
 
 export default function MemberProfileClient({ member, performance, schedule }: MemberProfileClientProps) {
-  // Fetch real-time attendance data
   const { data: recentAttendance } = useMemberRecentAttendance(String(member.id), 14)
 
   return (

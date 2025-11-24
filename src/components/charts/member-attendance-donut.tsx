@@ -12,10 +12,10 @@ type Slice = {
 }
 
 const slices: Slice[] = [
-  { key: "present", label: "Present", color: "var(--primary, #2563eb)" },
-  { key: "late", label: "Late", color: "#f97316" },
-  { key: "absent", label: "Absent", color: "#dc2626" },
-  { key: "excused", label: "Excused", color: "#10b981" },
+  { key: "present", label: "Present", color: "#22c55e" }, // green-500 - hijau
+  { key: "late", label: "Late", color: "#f97316" }, // orange-500 - orange/kuning
+  { key: "absent", label: "Absent", color: "#dc2626" }, // red-600 - merah
+  { key: "excused", label: "Excused", color: "#2563eb" }, // blue-600 - biru
 ]
 
 const chartConfig: ChartConfig = slices.reduce((acc, slice) => {
@@ -23,7 +23,12 @@ const chartConfig: ChartConfig = slices.reduce((acc, slice) => {
   return acc
 }, {} as ChartConfig)
 
-export function MemberAttendanceDonut({ data }: { data?: Partial<Record<Slice["key"], number>> }) {
+type MemberAttendanceDonutProps = {
+  data?: Partial<Record<Slice["key"], number>>
+  showLegend?: boolean
+}
+
+export function MemberAttendanceDonut({ data, showLegend = true }: MemberAttendanceDonutProps) {
   const chartData = React.useMemo(() => {
     const rows = slices.map((slice) => {
       const value = Number(data?.[slice.key] ?? 0)
@@ -61,62 +66,24 @@ export function MemberAttendanceDonut({ data }: { data?: Partial<Record<Slice["k
             </Pie>
           </PieChart>
         </ChartContainer>
-        <div className="grid flex-1 gap-3 sm:grid-cols-2">
-          {chartData.map((item) => (
-            <div key={item.key} className="flex items-center justify-between gap-3 rounded-xl border border-muted-foreground/10 bg-card/70 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className="text-sm font-medium text-foreground">{item.label}</span>
+        {showLegend ? (
+          <div className="grid flex-1 gap-3 sm:grid-cols-2">
+            {chartData.map((item) => (
+              <div
+                key={item.key}
+                className="flex items-center justify-between gap-3 rounded-xl border border-muted-foreground/10 bg-card/70 px-4 py-3"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-sm font-medium text-foreground">{item.label}</span>
+                </div>
+                <span className="text-sm font-semibold text-foreground">{total ? `${item.percentage}%` : "0%"}</span>
               </div>
-              <span className="text-sm font-semibold text-foreground">{total ? `${item.percentage}%` : "0%"}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
-  )
-}
-
-// Compact version for Performance Highlights
-export function MemberAttendanceDonutCompact({ data }: { data?: Partial<Record<Slice["key"], number>> }) {
-  const chartData = React.useMemo(() => {
-    const rows = slices.map((slice) => {
-      const value = Number(data?.[slice.key] ?? 0)
-      return { ...slice, value }
-    })
-    const total = rows.reduce((acc, item) => acc + item.value, 0)
-    return total
-      ? rows.map((row) => ({ ...row, percentage: Math.round((row.value / total) * 100) }))
-      : rows.map((row) => ({ ...row, percentage: 0 }))
-  }, [data])
-
-  const total = React.useMemo(() => chartData.reduce((acc, item) => acc + item.value, 0), [chartData])
-  
-  // For the compact version, we'll show only present data with black color
-  const presentValue = chartData.find(item => item.key === "present")?.value || 0
-  const presentPercentage = total > 0 ? Math.round((presentValue / total) * 100) : 0
-
-  return (
-    <ChartContainer config={chartConfig} className="h-32 w-32">
-      <PieChart>
-        <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-        <Pie
-          data={chartData}
-          dataKey="value"
-          nameKey="label"
-          innerRadius={35}
-          outerRadius={50}
-          strokeWidth={0}
-        >
-          {chartData.map((entry) => (
-            <Cell 
-              key={entry.key} 
-              fill={entry.key === "present" ? "#000000" : "#e5e7eb"} 
-            />
-          ))}
-        </Pie>
-      </PieChart>
-    </ChartContainer>
   )
 }
 

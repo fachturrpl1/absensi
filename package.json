@@ -10,6 +10,13 @@
     "start": "next start",
     "start:network": "next start --hostname 0.0.0.0",
     "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "type-check": "tsc --noEmit",
+    "check": "npm run type-check && npm run lint && npm run build",
+    "pre-push": "npm run check",
+    "clean": "rm -rf .next && rm -rf node_modules/.cache",
+    "clean:win": "if exist .next rmdir /s /q .next && if exist node_modules\\.cache rmdir /s /q node_modules\\.cache",
+    "clean:build": "npm run clean:win && npm run build",
     "analyze": "ANALYZE=true next build",
     "geo:generate": "node scripts/fetch-geo-data.mjs"
   },
