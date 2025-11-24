@@ -95,6 +95,44 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
+  // Helper component to display device location
+  const LocationDisplay = ({ checkInLocationName, checkOutLocationName }: any) => {
+    // No device location data
+    if (!checkInLocationName && !checkOutLocationName) {
+      return <span className="text-muted-foreground text-xs">No device</span>;
+    }
+
+    // Same location for check-in and check-out
+    if (checkInLocationName && checkOutLocationName && checkInLocationName === checkOutLocationName) {
+      return (
+        <div className="flex items-center gap-1 text-sm">
+          <MapPin className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+          <span className="text-foreground">{checkInLocationName}</span>
+        </div>
+      );
+    }
+
+    // Different locations
+    return (
+      <div className="flex flex-col gap-1">
+        {checkInLocationName && (
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-green-600 dark:text-green-400 font-medium">IN:</span>
+            <MapPin className="h-3 w-3 text-green-600 dark:text-green-400" />
+            <span className="text-foreground">{checkInLocationName}</span>
+          </div>
+        )}
+        {checkOutLocationName && (
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-red-600 dark:text-red-400 font-medium">OUT:</span>
+            <MapPin className="h-3 w-3 text-red-600 dark:text-red-400" />
+            <span className="text-foreground">{checkOutLocationName}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Filter data by date range and other filters
   const filteredData = useMemo(() => {
     return attendanceData.filter((record: any) => {
@@ -108,10 +146,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       
       const matchDate = recordDate >= fromDate && recordDate <= toDate;
       
-      const matchSearch = record.employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         record.employee.department.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchSearch = record.member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         record.member.department.toLowerCase().includes(searchQuery.toLowerCase());
       const matchStatus = statusFilter === 'all' || record.status === statusFilter;
-      const matchDepartment = departmentFilter === 'all' || record.employee.department === departmentFilter;
+      const matchDepartment = departmentFilter === 'all' || record.member.department === departmentFilter;
       
       return matchDate && matchSearch && matchStatus && matchDepartment;
     });
@@ -262,7 +300,13 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         const timezone = (orgMember as any).organizations?.timezone || 'UTC';
         setUserTimezone(timezone);
 
-        // Fetch attendance records with organization filter through organization_members
+        // Format dates for PostgreSQL query (YYYY-MM-DD format)
+        const fromDate = new Date(dateRange.from);
+        fromDate.setHours(0, 0, 0, 0);
+        const toDate = new Date(dateRange.to);
+        toDate.setHours(23, 59, 59, 999);
+        
+        // Fetch attendance records with organization, date filter, AND devices
         const { data: records, error } = await supabase
           .from('attendance_records')
           .select(`
@@ -271,9 +315,19 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
               user_profiles (first_name, last_name, profile_photo_url),
               departments:department_id (name),
               organization_id
+            ),
+            check_in_device:attendance_devices!check_in_device_id (
+              device_name,
+              location
+            ),
+            check_out_device:attendance_devices!check_out_device_id (
+              device_name,
+              location
             )
           `)
           .eq('organization_members.organization_id', orgMember.organization_id)
+          .gte('attendance_date', fromDate.toISOString().split('T')[0])
+          .lte('attendance_date', toDate.toISOString().split('T')[0])
           .order('attendance_date', { ascending: false });
 
         if (error) {
@@ -286,7 +340,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         // Transform data to match component structure
         const transformed = records.map((r: any) => ({
           id: r.id,
-          employee: {
+          member: {
             name: `${r.organization_members?.user_profiles?.first_name || ''} ${r.organization_members?.user_profiles?.last_name || ''}`,
             avatar: r.organization_members?.user_profiles?.profile_photo_url,
             position: '',
@@ -300,7 +354,9 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             : (r.actual_check_in ? '8h' : '0h'),
           status: r.status,
           overtime: '',
-          location: '-',
+          // Get location from attendance_devices (prioritize location name, fallback to device_name)
+          checkInLocationName: r.check_in_device?.location || r.check_in_device?.device_name || null,
+          checkOutLocationName: r.check_out_device?.location || r.check_out_device?.device_name || null,
           notes: r.remarks || '',
         }));
 
@@ -308,7 +364,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
         // Extract unique departments from records
         const uniqueDepts = Array.from(new Set(
-          transformed.map((r: any) => r.employee.department)
+          transformed.map((r: any) => r.member.department)
         )).filter(dept => dept && dept !== 'No Department').sort();
         setDepartments(uniqueDepts);
         }
@@ -340,17 +396,14 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [dateRange]);
 
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Attendance Records</h1>
-          <p className="text-muted-foreground">
-            Track and manage employee attendance records
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
         </div>
         
         <div className="flex items-center gap-2">
@@ -361,92 +414,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             </Button>
           </Link>
         </div>
-      </div>
-
-      {/* Summary Stats - Interactive Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card 
-          className={cn(
-            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
-            statusFilter === 'present' && "ring-2 ring-green-500"
-          )}
-          onClick={() => {
-            console.log('Present card clicked! Current filter:', statusFilter);
-            setStatusFilter(statusFilter === 'present' ? 'all' : 'present');
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent" />
-          <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Present</CardTitle>
-            <UserCheck className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent className="relative">
-            <div className="text-2xl font-bold">{filteredStats.present}</div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3 text-green-600" />
-              <span>{filteredStats.attendanceRate}% of total</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className={cn(
-            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
-            statusFilter === 'late' && "ring-2 ring-amber-500"
-          )}
-          onClick={() => setStatusFilter(statusFilter === 'late' ? 'all' : 'late')}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent" />
-          <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Late Arrivals</CardTitle>
-            <Timer className="h-4 w-4 text-amber-600" />
-          </CardHeader>
-          <CardContent className="relative">
-            <div className="text-2xl font-bold">{filteredStats.late}</div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <span>{filteredStats.total > 0 ? ((filteredStats.late / filteredStats.total) * 100).toFixed(1) : '0.0'}% of total</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className={cn(
-            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
-            statusFilter === 'absent' && "ring-2 ring-red-500"
-          )}
-          onClick={() => setStatusFilter(statusFilter === 'absent' ? 'all' : 'absent')}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent" />
-          <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Absent</CardTitle>
-            <UserX className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent className="relative">
-            <div className="text-2xl font-bold">{filteredStats.absent}</div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <TrendingDown className="h-3 w-3 text-green-600" />
-              <span>Click to filter</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className={cn(
-            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
-            statusFilter === 'all' && "ring-2 ring-blue-500"
-          )}
-          onClick={() => setStatusFilter('all')}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent" />
-          <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">All Records</CardTitle>
-            <Clock className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent className="relative">
-            <div className="text-2xl font-bold">{filteredStats.total}</div>
-            <Progress value={100} className="h-1 mt-2" />
-          </CardContent>
-        </Card>
       </div>
 
       {/* Filters & Actions */}
@@ -598,6 +565,92 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         </CardContent>
       </Card>
 
+      {/* Summary Stats - Interactive Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card 
+          className={cn(
+            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
+            statusFilter === 'present' && "ring-2 ring-green-500"
+          )}
+          onClick={() => {
+            console.log('Present card clicked! Current filter:', statusFilter);
+            setStatusFilter(statusFilter === 'present' ? 'all' : 'present');
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent" />
+          <CardHeader className="relative flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Present</CardTitle>
+            <UserCheck className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent className="relative">
+            <div className="text-2xl font-bold">{filteredStats.present}</div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <TrendingUp className="h-3 w-3 text-green-600" />
+              <span>{filteredStats.attendanceRate}% of total</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className={cn(
+            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
+            statusFilter === 'late' && "ring-2 ring-amber-500"
+          )}
+          onClick={() => setStatusFilter(statusFilter === 'late' ? 'all' : 'late')}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent" />
+          <CardHeader className="relative flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Late Arrivals</CardTitle>
+            <Timer className="h-4 w-4 text-amber-600" />
+          </CardHeader>
+          <CardContent className="relative">
+            <div className="text-2xl font-bold">{filteredStats.late}</div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span>{filteredStats.total > 0 ? ((filteredStats.late / filteredStats.total) * 100).toFixed(1) : '0.0'}% of total</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className={cn(
+            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
+            statusFilter === 'absent' && "ring-2 ring-red-500"
+          )}
+          onClick={() => setStatusFilter(statusFilter === 'absent' ? 'all' : 'absent')}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent" />
+          <CardHeader className="relative flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Absent</CardTitle>
+            <UserX className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent className="relative">
+            <div className="text-2xl font-bold">{filteredStats.absent}</div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <TrendingDown className="h-3 w-3 text-green-600" />
+              <span>Click to filter</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className={cn(
+            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
+            statusFilter === 'all' && "ring-2 ring-blue-500"
+          )}
+          onClick={() => setStatusFilter('all')}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent" />
+          <CardHeader className="relative flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">All Records</CardTitle>
+            <Clock className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent className="relative">
+            <div className="text-2xl font-bold">{filteredStats.total}</div>
+            <Progress value={100} className="h-1 mt-2" />
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Attendance List */}
       {viewMode === 'list' && (
         <Card>
@@ -614,7 +667,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                         className="rounded border-gray-300"
                       />
                     </th>
-                    <th className="p-4 text-left text-sm font-medium">Employee</th>
+                    <th className="p-4 text-left text-sm font-medium">Member</th>
                     <th className="p-4 text-left text-sm font-medium">Check In</th>
                     <th className="p-4 text-left text-sm font-medium">Check Out</th>
                     <th className="p-4 text-left text-sm font-medium">Work Hours</th>
@@ -664,14 +717,14 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={record.employee.avatar} />
+                            <AvatarImage src={record.member.avatar} />
                             <AvatarFallback>
-                              {record.employee.name.split(' ').map((n: string) => n[0]).join('')}
+                              {record.member.name.split(' ').map((n: string) => n[0]).join('')}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium">{record.employee.name}</p>
-                            <p className="text-sm text-muted-foreground">{record.employee.position}</p>
+                            <p className="font-medium">{record.member.name}</p>
+                            <p className="text-sm text-muted-foreground">{record.member.position}</p>
                           </div>
                         </div>
                       </td>
@@ -702,10 +755,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                         </Badge>
                       </td>
                       <td className="p-4">
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <MapPin className="h-3 w-3" />
-                          {record.location}
-                        </div>
+                        <LocationDisplay 
+                          checkInLocationName={record.checkInLocationName}
+                          checkOutLocationName={record.checkOutLocationName}
+                        />
                       </td>
                       <td className="p-4">
                         <DropdownMenu>
@@ -833,14 +886,14 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src={record.employee.avatar} />
+                        <AvatarImage src={record.member.avatar} />
                         <AvatarFallback>
-                          {record.employee.name.split(' ').map((n: string) => n[0]).join('')}
+                          {record.member.name.split(' ').map((n: string) => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-semibold">{record.employee.name}</p>
-                        <p className="text-sm text-muted-foreground">{record.employee.position}</p>
+                        <p className="font-semibold">{record.member.name}</p>
+                        <p className="text-sm text-muted-foreground">{record.member.position}</p>
                       </div>
                     </div>
                     <Badge className={cn('gap-1', getStatusColor(record.status))}>
@@ -869,10 +922,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     <span className="text-muted-foreground">Work Hours</span>
                     <span className="font-semibold">{record.workHours}</span>
                   </div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
-                    {record.location}
-                  </div>
+                  <LocationDisplay 
+                    checkInLocationName={record.checkInLocationName}
+                    checkOutLocationName={record.checkOutLocationName}
+                  />
                 </CardContent>
               </Card>
             </motion.div>

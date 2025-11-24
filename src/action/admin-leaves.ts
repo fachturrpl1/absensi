@@ -84,8 +84,8 @@ export async function getLeaveStatistics(organizationId: number) {
       throw requestsError;
     }
     
-    // Get total employees
-    const { count: totalEmployees } = await supabase
+    // Get total members
+    const { count: totalMembers } = await supabase
       .from("organization_members")
       .select("*", { count: "exact", head: true })
       .eq("organization_id", organizationId)
@@ -125,8 +125,8 @@ export async function getLeaveStatistics(organizationId: number) {
       pendingRequests: allRequests?.filter(r => r.status === 'pending').length || 0,
       approvedRequests: allRequests?.filter(r => r.status === 'approved').length || 0,
       rejectedRequests: allRequests?.filter(r => r.status === 'rejected').length || 0,
-      totalEmployees: totalEmployees || 0,
-      employeesOnLeave: new Set(currentLeaves?.map(l => l.organization_member_id)).size || 0,
+      totalMembers: totalMembers || 0,
+      membersOnLeave: new Set(currentLeaves?.map(l => l.organization_member_id)).size || 0,
       upcomingLeaves: upcomingLeaves?.length || 0,
       averageLeaveDays: allRequests?.length > 0 
         ? (allRequests.reduce((sum, r) => sum + (r.total_days || 0), 0) / allRequests.length).toFixed(1)
@@ -176,7 +176,17 @@ export async function getAllLeaveRequests(organizationId: number) {
           departments:department_id(id, code, name),
           positions:position_id(id, code, title),
           organization_id
-        )
+        ),
+        approvals:leave_approvals(
+          id,
+          approver_id,
+          approval_level,
+          status,
+          comments,
+          responded_at,
+          approver:approver_id(id, first_name, middle_name, last_name, display_name, profile_photo_url)
+        ),
+        approved_by_user:approved_by(id, first_name, middle_name, last_name, display_name, profile_photo_url)
       `)
       .eq("organization_member.organization_id", organizationId)
       .order("requested_at", { ascending: false });
@@ -530,6 +540,23 @@ export async function approveLeaveRequest(
       };
     }
     
+    // Create approval record first
+    const { error: approvalError } = await supabase
+      .from("leave_approvals")
+      .insert({
+        leave_request_id: requestId,
+        approver_id: user?.id,
+        approval_level: 1, // Default level
+        status: 'approved',
+        comments: comments || null,
+        responded_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      });
+    
+    if (approvalError) {
+      throw approvalError;
+    }
+
     // Update request status
     const { error: updateError } = await supabase
       .from("leave_requests")
@@ -630,6 +657,23 @@ export async function rejectLeaveRequest(
       };
     }
     
+    // Create approval record first
+    const { error: approvalError } = await supabase
+      .from("leave_approvals")
+      .insert({
+        leave_request_id: requestId,
+        approver_id: user?.id,
+        approval_level: 1, // Default level
+        status: 'rejected',
+        comments: reason || null,
+        responded_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      });
+    
+    if (approvalError) {
+      throw approvalError;
+    }
+
     // Update request status
     const { error: updateError } = await supabase
       .from("leave_requests")

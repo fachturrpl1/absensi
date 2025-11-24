@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { DayPicker } from "react-day-picker"
-import { ChevronLeft } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -13,31 +13,31 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      className={cn("p-4", className)}
       classNames={{
-        months: "flex flex-col sm:flex-row space-y-3 sm:space-x-4 sm:space-y-0",
-        month: "space-y-3",
+        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+        month: "space-y-4",
         caption: "flex justify-center pt-1 relative items-center",
         caption_label: "text-sm font-medium",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
-          "size-7 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
         ),
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
         table: "w-full border-collapse space-y-1",
         head_row: "flex",
-        head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
+        head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
         row: "flex w-full mt-2",
         cell: cn(
-          "h-8 w-8 text-center text-sm p-0 relative",
+          "h-9 w-9 text-center text-sm p-0 relative",
           "[&:has([aria-selected].rdp-day_outside)]:opacity-50",
           "focus-within:relative focus-within:z-20"
         ),
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-8 w-8 p-0 font-normal aria-selected:opacity-100"
+          "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
         ),
         day_selected:
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
@@ -49,7 +49,12 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
         ...classNames,
       }}
       components={{
-        Chevron: ({ ...iconProps }) => <ChevronLeft className="h-4 w-4" {...iconProps} />,
+        Chevron: ({ orientation, ...iconProps }) => {
+          if (orientation === "left") {
+            return <ChevronLeft className="h-4 w-4" {...iconProps} />
+          }
+          return <ChevronRight className="h-4 w-4" {...iconProps} />
+        },
       }}
       {...props}
     />

@@ -46,11 +46,24 @@ export default function OrganizationStatusChecker({ children }: OrganizationStat
           }
         }
       } catch (error) {
-        // Silently fail open - don't log network errors to console
-        // Only log if it's not a network error
-        if (error && !(error instanceof TypeError && error.message.includes('fetch'))) {
-          organizationLogger.error("Failed to check organization status:", error);
+        // Handle different types of errors more gracefully
+        if (error instanceof Error) {
+          // Network errors (fetch failures)
+          if (error.message.includes('fetch') || error.message.includes('NetworkError')) {
+            organizationLogger.warn("Network error checking organization status - failing open");
+          }
+          // Server response errors
+          else if (error.message.includes('unexpected response')) {
+            organizationLogger.warn("Server response error checking organization status - failing open");
+          }
+          // Other errors
+          else {
+            organizationLogger.error("Failed to check organization status:", error.message);
+          }
+        } else {
+          organizationLogger.warn("Unknown error checking organization status - failing open");
         }
+        
         setStatus({ isValid: true }); // Fail open untuk menghindari lock-out
       }
     }

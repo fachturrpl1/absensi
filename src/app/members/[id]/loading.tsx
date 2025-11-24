@@ -1,5 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function MemberProfileLoading() {
   return (
@@ -17,10 +17,10 @@ export default function MemberProfileLoading() {
                 <Skeleton className="h-7 w-[200px] sm:h-8 sm:w-[250px]" />
                 <Skeleton className="h-6 w-16 rounded-full" />
               </div>
-              <Skeleton className="h-4 w-[180px] mx-auto lg:mx-0" />
+              <Skeleton className="h-4 w-[180px] sm:h-4 sm:w-[220px]" />
               <div className="flex flex-wrap justify-center gap-2 lg:justify-start">
-                <Skeleton className="h-5 w-12 rounded-full" />
-                <Skeleton className="h-5 w-16 rounded-full" />
+                <Skeleton className="h-5 w-20 rounded-md" />
+                <Skeleton className="h-5 w-24 rounded-md" />
               </div>
             </div>
           </div>
@@ -40,7 +40,7 @@ export default function MemberProfileLoading() {
       </Card>
 
       <div className="mt-4 space-y-4">
-        {/* Grid Layout */}
+        {/* Grid Layout for Top Cards */}
         <div className="grid gap-4 lg:grid-cols-2">
           {/* Contact & Information */}
           <Card className="border-muted-foreground/20">
@@ -54,7 +54,7 @@ export default function MemberProfileLoading() {
                     <Skeleton className="h-4 w-[200px] mt-1" />
                   </CardDescription>
                 </div>
-                <Skeleton className="h-8 w-[200px]" />
+                <Skeleton className="h-8 w-[200px] rounded-md" />
               </div>
             </CardHeader>
             <CardContent className="grid gap-4 text-sm">
@@ -63,7 +63,7 @@ export default function MemberProfileLoading() {
                   <Skeleton className="h-8 w-8 rounded-full" />
                   <div className="flex-1 space-y-0.5">
                     <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-4 w-[180px]" />
+                    <Skeleton className="h-4 w-[140px]" />
                   </div>
                 </div>
               ))}
@@ -86,9 +86,9 @@ export default function MemberProfileLoading() {
                 <div className="flex items-center justify-between rounded-lg border bg-card/60 p-3">
                   <div className="space-y-1">
                     <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-5 w-[160px]" />
+                    <Skeleton className="h-5 w-32" />
                   </div>
-                  <Skeleton className="h-6 w-12 rounded-full" />
+                  <Skeleton className="h-6 w-16 rounded-md" />
                 </div>
 
                 <div className="grid gap-6 sm:grid-cols-2">
@@ -96,7 +96,7 @@ export default function MemberProfileLoading() {
                     <Skeleton className="h-8 w-8 rounded-full" />
                     <div className="space-y-0">
                       <Skeleton className="h-3 w-20" />
-                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-3 w-24 mt-0.5" />
                     </div>
                   </div>
 
@@ -104,7 +104,7 @@ export default function MemberProfileLoading() {
                     <Skeleton className="h-8 w-8 rounded-full" />
                     <div className="space-y-0">
                       <Skeleton className="h-3 w-20" />
-                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-32 mt-0.5" />
                     </div>
                   </div>
                 </div>
@@ -128,21 +128,21 @@ export default function MemberProfileLoading() {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Skeleton className="h-8 w-[110px]" />
-                    <Skeleton className="h-8 w-[130px]" />
-                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-8 w-[110px] rounded-md" />
+                    <Skeleton className="h-8 w-[130px] rounded-md" />
+                    <Skeleton className="h-8 w-20 rounded-md" />
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="min-h-[200px]">
-                <div className="space-y-2.5">
-                  {[...Array(3)].map((_, i) => (
+                <div className="max-h-64 space-y-2.5">
+                  {[...Array(4)].map((_, i) => (
                     <div key={i} className="flex items-center gap-3 rounded-lg border bg-card/60 p-3">
                       <Skeleton className="h-9 w-9 rounded-full" />
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <Skeleton className="h-4 w-20" />
-                          <Skeleton className="h-5 w-16 rounded-full" />
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-5 w-16 rounded-md" />
                         </div>
                         <div className="mt-1 flex items-center gap-3">
                           <Skeleton className="h-3 w-16" />
@@ -179,10 +179,10 @@ export default function MemberProfileLoading() {
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex items-center justify-between gap-4 rounded-2xl border border-muted-foreground/10 bg-card/70 px-5 py-4">
+                <div key={i} className="flex items-center justify-between gap-3 rounded-2xl border border-muted-foreground/10 bg-card/70 px-5 py-4">
                   <div className="space-y-1.5">
                     <Skeleton className="h-3 w-24" />
-                    <Skeleton className="h-6 w-12" />
+                    <Skeleton className="h-7 w-12" />
                   </div>
                   <Skeleton className="h-12 w-12 rounded-full" />
                 </div>

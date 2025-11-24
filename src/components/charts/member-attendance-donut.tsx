@@ -23,12 +23,17 @@ const chartConfig: ChartConfig = slices.reduce((acc, slice) => {
   return acc
 }, {} as ChartConfig)
 
-type MemberAttendanceDonutProps = {
+export type MemberAttendanceDonutProps = {
   data?: Partial<Record<Slice["key"], number>>
   showLegend?: boolean
+  hideTitle?: boolean
 }
 
-export function MemberAttendanceDonut({ data, showLegend = true }: MemberAttendanceDonutProps) {
+export const MemberAttendanceDonut: React.FC<MemberAttendanceDonutProps> = ({ 
+  data, 
+  showLegend = true, 
+  hideTitle = false 
+}) => {
   const chartData = React.useMemo(() => {
     const rows = slices.map((slice) => {
       const value = Number(data?.[slice.key] ?? 0)
@@ -44,10 +49,12 @@ export function MemberAttendanceDonut({ data, showLegend = true }: MemberAttenda
 
   return (
     <div className="space-y-5">
-      <div className="space-y-1">
-        <h3 className="text-base font-semibold text-foreground">Attendance Percentage</h3>
-        <p className="text-sm text-muted-foreground">Attendance distribution across the evaluation period.</p>
-      </div>
+      {!hideTitle && (
+        <div className="space-y-1 text-left">
+          <h3 className="text-base font-semibold text-foreground">Attendance Percentage</h3>
+          <p className="text-sm text-muted-foreground">Attendance distribution across the evaluation period.</p>
+        </div>
+      )}
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:gap-8">
         <ChartContainer config={chartConfig} className="mx-auto aspect-square h-64 w-full max-w-xs">
           <PieChart>

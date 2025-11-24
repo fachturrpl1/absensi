@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { createClient } from '@/utils/supabase/client';
-import { format, subDays } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { AnalyticsSkeleton } from '@/components/analytics/analytics-skeleton';
@@ -61,15 +61,15 @@ export default function AnalyticsPage() {
   const [masterData, setMasterData] = useState<MasterData>({ totalMembers: 0, totalDepartments: 0, averageTeamSize: 0 });
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
     const today = new Date();
-    const startOfToday = new Date(today);
-    startOfToday.setHours(0, 0, 0, 0);
-    const endOfToday = new Date(today);
-    endOfToday.setHours(23, 59, 59, 999);
+    const monthStart = startOfMonth(today);
+    monthStart.setHours(0, 0, 0, 0);
+    const monthEnd = endOfMonth(today);
+    monthEnd.setHours(23, 59, 59, 999);
     
     return {
-      from: startOfToday,
-      to: endOfToday,
-      preset: 'today',
+      from: monthStart,
+      to: monthEnd,
+      preset: 'thisMonth',
     };
   });
 
@@ -338,7 +338,7 @@ export default function AnalyticsPage() {
                 <div className="text-3xl font-bold">{masterData.totalMembers}</div>
                 <Users className="w-8 h-8 text-blue-500 opacity-50" />
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Active employees in organization</p>
+              <p className="text-xs text-muted-foreground mt-2">Active members in organization</p>
             </CardContent>
           </Card>
 

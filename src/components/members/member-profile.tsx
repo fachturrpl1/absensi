@@ -672,8 +672,8 @@ export default function MemberProfileEnhanced({
             <CardHeader className="pb-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex-1">
-                  <CardTitle className="text-base font-semibold">Performance Highlights</CardTitle>
-                  <CardDescription>Attendance metrics and work activity.</CardDescription>
+                  <CardTitle className="text-base font-semibold">Attendance Percentage</CardTitle>
+                  <CardDescription>Attendance distribution across the evaluation period.</CardDescription>
                 </div>
                 {/* Attendance Rate with Trend */}
                 <div className="flex items-center gap-2 rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 px-3 py-2 shadow-sm">
@@ -695,7 +695,7 @@ export default function MemberProfileEnhanced({
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="mx-auto w-full max-w-[240px] md:max-w-[320px]">
-                <MemberAttendanceDonut data={attendancePercentages} showLegend={false} />
+                <MemberAttendanceDonut data={attendancePercentages} showLegend={false} hideTitle />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <StatPill
