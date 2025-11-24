@@ -676,20 +676,21 @@ export default function MemberProfileEnhanced({
                   <CardDescription>Attendance distribution across the evaluation period.</CardDescription>
                 </div>
                 {/* Attendance Rate with Trend */}
-                <div className="flex items-center gap-2 rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 px-3 py-2 shadow-sm">
-                  <div className="text-right">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                      Attendance Rate
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="rounded-lg border-transparent bg-secondary text-secondary-foreground px-4 py-2.5 text-center whitespace-nowrap">
+                    <p className="text-sm font-medium">
+                      {attendanceRate}% Attendance Rate
                     </p>
-                    <p className="text-2xl font-bold text-primary">{attendanceRate}%</p>
                   </div>
-                  {trend === "up" ? (
-                    <TrendingUp className="h-5 w-5 text-green-500" />
-                  ) : trend === "down" ? (
-                    <TrendingDown className="h-5 w-5 text-red-500" />
-                  ) : (
-                    <Minus className="h-5 w-5 text-gray-500" />
-                  )}
+                  <div className="p-2.5 bg-violet-100 dark:bg-violet-900 rounded-lg w-10 h-10 flex items-center justify-center shrink-0">
+                    {trend === "up" ? (
+                      <TrendingUp className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                    ) : trend === "down" ? (
+                      <TrendingDown className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                    ) : (
+                      <Minus className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                    )}
+                  </div>
                 </div>
               </div>
             </CardHeader>
