@@ -3,15 +3,46 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/utils/supabase/server";
-import { IAttendance } from "@/interface";
 
 import { attendanceLogger } from '@/lib/logger';
 async function getSupabase() {
   return await createClient();
 }
 
-export const getAllAttendance = async () => {
+export type GetAttendanceParams = {
+  page?: number;
+  limit?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  search?: string;
+  status?: string;
+  department?: string;
+};
+
+export type GetAttendanceResult = {
+  success: boolean;
+  data: any[];
+  meta?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+  message?: string;
+};
+
+export const getAllAttendance = async (params: GetAttendanceParams = {}): Promise<GetAttendanceResult> => {
   const supabase = await getSupabase();
+  
+  const {
+    page = 1,
+    limit = 10,
+    dateFrom,
+    dateTo,
+    search,
+    status,
+    department
+  } = params;
 
   // Get current user's organization
   const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -32,24 +63,8 @@ export const getAllAttendance = async () => {
     return { success: false, data: [] };
   }
 
-  // Get all member IDs in the same organization
-  const { data: orgMembers, error: orgMembersError } = await supabase
-    .from("organization_members")
-    .select("id")
-    .eq("organization_id", userMember.organization_id);
-
-  if (orgMembersError) {
-    attendanceLogger.error("❌ Error fetching organization members:", orgMembersError);
-    return { success: false, data: [] };
-  }
-
-  const memberIds = orgMembers?.map(m => m.id) || [];
-  if (memberIds.length === 0) {
-    return { success: true, data: [] };
-  }
-
-  // Fetch attendance records ONLY for members in the same organization
-  const { data, error } = await supabase
+  // Start building the query
+  let query = supabase
     .from("attendance_records")
     .select(`
       id,
@@ -59,35 +74,107 @@ export const getAllAttendance = async () => {
       actual_check_out,
       status,
       created_at,
-      organization_members:organization_member_id (
+      work_duration_minutes,
+      remarks,
+      organization_members!inner (
         id,
         user_id,
         organization_id,
-        organizations:organization_id (
+        department_id,
+        user_profiles!inner (
+          first_name,
+          last_name,
+          profile_photo_url
+        ),
+        departments:departments!organization_members_department_id_fkey (
+          id,
+          name
+        ),
+        organizations (
           id,
           name,
           timezone,
           time_format
         )
+      ),
+      check_in_device:attendance_devices!check_in_device_id (
+        device_name,
+        location
+      ),
+      check_out_device:attendance_devices!check_out_device_id (
+        device_name,
+        location
       )
-    `)
-    .in("organization_member_id", memberIds);
+    `, { count: 'exact' })
+    .eq("organization_members.organization_id", userMember.organization_id);
+
+  // Apply filters
+  if (dateFrom) {
+    query = query.gte("attendance_date", dateFrom);
+  }
+  
+  if (dateTo) {
+    query = query.lte("attendance_date", dateTo);
+  }
+
+  if (status && status !== 'all') {
+    query = query.eq("status", status);
+  }
+
+  if (department && department !== 'all') {
+    // Rely on client side filtering for now
+  }
+
+  if (search) {
+    // Full text search implementation would go here.
+  }
+
+  // Apply pagination
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+  
+  query = query.range(from, to).order("attendance_date", { ascending: false });
+
+  const { data, error, count } = await query;
 
   if (error) {
     attendanceLogger.error("❌ Error fetching attendance:", error);
     return { success: false, data: [] };
   }
 
-  // Transform format so timezone and time_format are available directly
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // Transform format
   const mapped = (data || []).map((item: any) => ({
-    ...item,
+    id: item.id,
+    member: {
+      name: `${item.organization_members?.user_profiles?.first_name || ''} ${item.organization_members?.user_profiles?.last_name || ''}`,
+      avatar: item.organization_members?.user_profiles?.profile_photo_url,
+      position: '', // Position not fetched in query above, add if needed
+      department: item.organization_members?.departments?.name || 'No Department',
+    },
+    date: item.attendance_date,
+    checkIn: item.actual_check_in,
+    checkOut: item.actual_check_out,
+    workHours: item.work_duration_minutes 
+      ? `${Math.floor(item.work_duration_minutes / 60)}h ${item.work_duration_minutes % 60}m` 
+      : (item.actual_check_in ? '-' : '-'),
+    status: item.status,
+    checkInLocationName: item.check_in_device?.location || item.check_in_device?.device_name || null,
+    checkOutLocationName: item.check_out_device?.location || item.check_out_device?.device_name || null,
+    notes: item.remarks || '',
     timezone: item.organization_members?.organizations?.timezone || "Asia/Jakarta",
     time_format: item.organization_members?.organizations?.time_format || "24h",
   }));
 
-  attendanceLogger.debug(`✅ Fetched ${mapped.length} attendance records for organization ${userMember.organization_id}`);
-  return { success: true, data: mapped as IAttendance[] };
+  return { 
+    success: true, 
+    data: mapped,
+    meta: {
+      total: count || 0,
+      page,
+      limit,
+      totalPages: Math.ceil((count || 0) / limit)
+    }
+  };
 };
 
 export async function updateAttendanceStatus(id: string, status: string) {
