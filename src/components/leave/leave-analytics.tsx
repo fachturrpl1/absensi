@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ILeaveRequest } from "@/lib/leave/types";
 import { parseISO, format, subDays, subMonths, subYears, startOfYear, endOfYear, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
-import { Area, AreaChart, CartesianGrid, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart, Bar } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 interface LeaveAnalyticsProps {
@@ -12,6 +12,7 @@ interface LeaveAnalyticsProps {
   type: 'status' | 'monthly' | 'type' | 'department' | 'detailed';
   loading?: boolean;
   periodFilter?: '7days' | '1week' | 'thisweek' | '30days' | '1month' | 'thismonth' | 'lastyear' | 'thisyear';
+  chartType?: 'donut' | 'pie' | 'bar';
   statistics?: {
     totalRequests: number;
     pendingRequests: number;
@@ -29,12 +30,13 @@ export function LeaveAnalytics({
   type, 
   loading = false,
   periodFilter = 'thisyear',
+  chartType = 'donut',
   statistics 
 }: LeaveAnalyticsProps) {
   
   // Filter requests based on period
   const filteredRequests = useMemo(() => {
-    if (type !== 'monthly') return requests;
+    if (type !== 'monthly' && type !== 'type') return requests;
     
     const now = new Date();
     let startDate: Date;
@@ -100,8 +102,8 @@ export function LeaveAnalytics({
         label: 'Pending', 
         count: counts.pending, 
         percentage: total > 0 ? (counts.pending / total * 100).toFixed(1) : '0',
-        color: 'hsl(38 92% 50%)', // Orange - better visibility in dark mode
-        darkColor: 'hsl(38 92% 60%)'
+        color: 'hsl(45 93% 58%)', // Yellow/Amber - consistent color
+        darkColor: 'hsl(45 93% 68%)'
       },
       { 
         label: 'Approved', 
@@ -231,7 +233,10 @@ export function LeaveAnalytics({
   const typeData = useMemo(() => {
     const typeCounts: Record<string, { count: number; color: string; name: string }> = {};
     
-    requests.forEach(r => {
+    // Use filteredRequests for type distribution when type is 'type'
+    const requestsToUse = type === 'type' ? filteredRequests : requests;
+    
+    requestsToUse.forEach(r => {
       if (r.leave_type) {
         const key = r.leave_type.code;
         if (!typeCounts[key]) {
@@ -256,7 +261,7 @@ export function LeaveAnalytics({
         color: data.color
       }))
       .sort((a, b) => b.count - a.count);
-  }, [requests]);
+  }, [requests, filteredRequests, type]);
 
   // Department Distribution
   const departmentData = useMemo(() => {
@@ -279,6 +284,173 @@ export function LeaveAnalytics({
       }))
       .sort((a, b) => b.count - a.count);
   }, [requests]);
+
+  // Color mapping for consistent colors
+  const getColorForName = (name: string): string => {
+    const colorMap: Record<string, string> = {
+      'Pending': '#EAB308', // Yellow
+      'Approved': '#22C55E', // Green  
+      'Rejected': '#EF4444', // Red
+      'Cancelled': '#6B7280', // Gray
+      'Sick': '#EF4444', // Red for Sick
+      'Annual': '#22C55E', // Green for Annual
+      'Personal': '#3B82F6', // Blue for Personal
+      'Maternity': '#EC4899', // Pink for Maternity
+      'Paternity': '#8B5CF6', // Purple for Paternity
+    };
+    return colorMap[name] || '#10B981'; // Default green
+  };
+
+  // Custom Tooltip Component for better dark mode support
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg p-3 min-w-[160px]">
+          {label && <p className="text-gray-900 dark:text-gray-100 font-semibold text-sm mb-2">{label}</p>}
+          {payload.map((entry: any, index: number) => {
+            // Get color from multiple sources with fallback
+            const dotColor = entry.color || entry.fill || entry.payload?.fill || getColorForName(entry.name) || '#10B981';
+            
+            return (
+              <div key={index} className="flex items-center justify-between gap-3 text-sm py-1">
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-3 h-3 rounded-full flex-shrink-0" 
+                    style={{ 
+                      backgroundColor: dotColor,
+                      border: `2px solid ${dotColor}`,
+                      boxShadow: `0 0 0 1px rgba(255,255,255,0.3)`
+                    }}
+                  />
+                  </div>
+                  <span className="text-gray-900 dark:text-gray-100 font-medium">{entry.name}</span>
+                <div className="flex items-center">
+                  <span className="text-gray-900 dark:text-gray-100 font-semibold">{entry.value}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Helper function to render chart based on chartType
+  const renderChart = (data: any[], colors: string[], chartType: string) => {
+    const chartData = data.map((item, index) => ({
+      ...item,
+      fill: colors[index % colors.length],
+      color: colors[index % colors.length] // Add explicit color property
+    }));
+
+    const chartContent = (() => {
+      switch (chartType) {
+      case 'pie':
+        return (
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                outerRadius={90}
+                paddingAngle={2}
+                dataKey="count"
+                animationBegin={0}
+                animationDuration={800}
+                animationEasing="ease-out"
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Pie>
+              <Tooltip 
+                content={<CustomTooltip />}
+                wrapperStyle={{ outline: 'none' }}
+                cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        );
+
+      case 'bar':
+        return (
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis 
+                dataKey="name" 
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                className="text-xs"
+                tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              />
+              <YAxis 
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                className="text-xs"
+                tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                domain={[0, 'dataMax']}
+              />
+              <Tooltip 
+                content={<CustomTooltip />}
+                wrapperStyle={{ outline: 'none' }}
+                cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+              />
+              <Bar 
+                dataKey="count" 
+                radius={[4, 4, 0, 0]}
+                animationDuration={800}
+                animationBegin={0}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        );
+
+      case 'donut':
+      default:
+        return (
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={90}
+                paddingAngle={2}
+                dataKey="count"
+                animationBegin={0}
+                animationDuration={800}
+                animationEasing="ease-out"
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Pie>
+              <Tooltip 
+                content={<CustomTooltip />}
+                wrapperStyle={{ outline: 'none' }}
+                cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        );
+      }
+    })();
+
+    return (
+      <div 
+        key={chartType}
+        className="animate-in fade-in-0 zoom-in-95 duration-500"
+      >
+        {chartContent}
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -306,15 +478,35 @@ export function LeaveAnalytics({
       );
     }
     
+    // Prepare data for chart
+    const chartData = statusData.map(item => ({
+      name: item.label,
+      count: item.count,
+      percentage: parseFloat(item.percentage)
+    }));
+
+    const colors = [
+      'hsl(45 93% 58%)', // Yellow for Pending
+      'hsl(142.1 76.2% 36.3%)', // Green for Approved  
+      'hsl(0 84.2% 60.2%)', // Red for Rejected
+      'hsl(215 16% 47%)' // Gray for Cancelled
+    ];
+
     return (
       <div className="space-y-4">
-        {statusData.map((item) => (
-          <div key={item.label} className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
+        {/* Chart */}
+        <div>
+          {renderChart(chartData, colors, chartType)}
+        </div>
+        
+        {/* Legend */}
+        <div className="space-y-2">
+          {statusData.map((item) => (
+            <div key={item.label} className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <div 
                   className={`w-3 h-3 rounded ${
-                    item.label === 'Pending' ? 'bg-orange-500 dark:bg-orange-400' :
+                    item.label === 'Pending' ? 'bg-yellow-500 dark:bg-yellow-400' :
                     item.label === 'Approved' ? 'bg-green-600 dark:bg-green-500' :
                     item.label === 'Rejected' ? 'bg-red-500 dark:bg-red-400' :
                     'bg-gray-500 dark:bg-gray-400'
@@ -327,19 +519,8 @@ export function LeaveAnalytics({
                 <span className="font-medium">{item.percentage}%</span>
               </div>
             </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-500 ${
-                  item.label === 'Pending' ? 'bg-orange-500 dark:bg-orange-400' :
-                  item.label === 'Approved' ? 'bg-green-600 dark:bg-green-500' :
-                  item.label === 'Rejected' ? 'bg-red-500 dark:bg-red-400' :
-                  'bg-gray-500 dark:bg-gray-400'
-                }`}
-                style={{ width: `${item.percentage}%` }}
-              />
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     );
   }
@@ -376,7 +557,7 @@ export function LeaveAnalytics({
       },
       pending: {
         label: "Pending",
-        color: "hsl(38 92% 50%)", // Orange/Amber
+        color: "hsl(45 93% 58%)", // Yellow/Amber - consistent color
       },
       cancelled: {
         label: "Cancelled",
@@ -386,23 +567,27 @@ export function LeaveAnalytics({
     
     return (
       <ChartContainer config={chartConfig} className="h-[250px] w-full">
-        <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 50 }}>
           <defs>
-            <linearGradient id="fillApproved" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(142.1 76.2% 36.3%)" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="hsl(142.1 76.2% 36.3%)" stopOpacity={0.05} />
+            <linearGradient id="fillApproved" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="hsl(142.1 76.2% 36.3%)" stopOpacity={0.4} />
+              <stop offset="50%" stopColor="hsl(142.1 76.2% 36.3%)" stopOpacity={0.2} />
+              <stop offset="100%" stopColor="hsl(142.1 76.2% 36.3%)" stopOpacity={0.02} />
             </linearGradient>
-            <linearGradient id="fillRejected" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(0 84.2% 60.2%)" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="hsl(0 84.2% 60.2%)" stopOpacity={0.05} />
+            <linearGradient id="fillRejected" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="hsl(0 84.2% 60.2%)" stopOpacity={0.4} />
+              <stop offset="50%" stopColor="hsl(0 84.2% 60.2%)" stopOpacity={0.2} />
+              <stop offset="100%" stopColor="hsl(0 84.2% 60.2%)" stopOpacity={0.02} />
             </linearGradient>
-            <linearGradient id="fillPending" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(38 92% 50%)" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="hsl(38 92% 50%)" stopOpacity={0.05} />
+            <linearGradient id="fillPending" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="hsl(45 93% 58%)" stopOpacity={0.4} />
+              <stop offset="50%" stopColor="hsl(45 93% 58%)" stopOpacity={0.2} />
+              <stop offset="100%" stopColor="hsl(45 93% 58%)" stopOpacity={0.02} />
             </linearGradient>
-            <linearGradient id="fillCancelled" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(215 16% 47%)" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="hsl(215 16% 47%)" stopOpacity={0.05} />
+            <linearGradient id="fillCancelled" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="hsl(215 16% 47%)" stopOpacity={0.4} />
+              <stop offset="50%" stopColor="hsl(215 16% 47%)" stopOpacity={0.2} />
+              <stop offset="100%" stopColor="hsl(215 16% 47%)" stopOpacity={0.02} />
             </linearGradient>
           </defs>
           <CartesianGrid 
@@ -416,7 +601,10 @@ export function LeaveAnalytics({
             axisLine={false}
             tickMargin={8}
             className="text-xs"
-            tick={{ fill: 'hsl(var(--muted-foreground))' }}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+            angle={-45}
+            textAnchor="end"
+            height={60}
           />
           <YAxis 
             tickLine={false}
@@ -430,12 +618,13 @@ export function LeaveAnalytics({
           />
           <ChartTooltip 
             content={<ChartTooltipContent indicator="dot" />}
+            cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }}
           />
           <Area 
-            type="monotone" 
+            type="natural" 
             dataKey="approved" 
             stroke="hsl(142.1 76.2% 36.3%)" 
-            strokeWidth={2}
+            strokeWidth={2.5}
             fill="url(#fillApproved)"
             fillOpacity={1}
             connectNulls={true}
@@ -443,10 +632,10 @@ export function LeaveAnalytics({
             animationDuration={800}
           />
           <Area 
-            type="monotone" 
+            type="natural" 
             dataKey="rejected" 
             stroke="hsl(0 84.2% 60.2%)" 
-            strokeWidth={2}
+            strokeWidth={2.5}
             fill="url(#fillRejected)"
             fillOpacity={1}
             connectNulls={true}
@@ -454,10 +643,10 @@ export function LeaveAnalytics({
             animationDuration={1000}
           />
           <Area 
-            type="monotone" 
+            type="natural" 
             dataKey="pending" 
-            stroke="hsl(38 92% 50%)" 
-            strokeWidth={2}
+            stroke="hsl(45 93% 58%)" 
+            strokeWidth={2.5}
             fill="url(#fillPending)"
             fillOpacity={1}
             connectNulls={true}
@@ -465,10 +654,10 @@ export function LeaveAnalytics({
             animationDuration={1200}
           />
           <Area 
-            type="monotone" 
+            type="natural" 
             dataKey="cancelled" 
             stroke="hsl(215 16% 47%)" 
-            strokeWidth={2}
+            strokeWidth={2.5}
             fill="url(#fillCancelled)"
             fillOpacity={1}
             connectNulls={true}
@@ -497,39 +686,21 @@ export function LeaveAnalytics({
       );
     }
 
+    // Prepare data for chart
     const chartData = typeData.map(item => ({
       name: item.name,
-      value: item.count,
-      color: item.color
+      count: item.count,
+      percentage: parseFloat(item.percentage)
     }));
+
+    const colors = typeData.map(item => item.color);
 
     return (
       <div className="space-y-4">
-        <ResponsiveContainer width="100%" height={250}>
-          <PieChart>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={90}
-              paddingAngle={2}
-              dataKey="value"
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'hsl(var(--background))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '6px'
-              }}
-              formatter={(value: number) => [`${value} requests`, 'Count']}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+        {/* Chart */}
+        <div>
+          {renderChart(chartData, colors, chartType)}
+        </div>
         
         {/* Legend */}
         <div className="space-y-2">
@@ -604,28 +775,31 @@ export function LeaveAnalytics({
     const chartData = [
       {
         name: "Pending",
-        value: statistics.pendingRequests,
-        percentage: pendingRate,
-        color: "#F59E0B" // Orange
+        count: statistics.pendingRequests,
+        percentage: pendingRate
       },
       {
         name: "Approved",
-        value: statistics.approvedRequests,
-        percentage: approvalRate,
-        color: "#10B981" // Green
+        count: statistics.approvedRequests,
+        percentage: approvalRate
       },
       {
         name: "Rejected",
-        value: statistics.rejectedRequests,
-        percentage: rejectionRate,
-        color: "#EF4444" // Red
+        count: statistics.rejectedRequests,
+        percentage: rejectionRate
       },
       {
         name: "Cancelled",
-        value: cancelledCount,
-        percentage: cancelledRate,
-        color: "#6B7280" // Gray
+        count: cancelledCount,
+        percentage: cancelledRate
       }
+    ];
+
+    const colors = [
+      "#EAB308", // Yellow - consistent color
+      "#10B981", // Green
+      "#EF4444", // Red
+      "#6B7280"  // Gray
     ];
 
     if (statistics.totalRequests === 0) {
@@ -645,48 +819,24 @@ export function LeaveAnalytics({
 
     return (
       <div className="space-y-4">
-        <ResponsiveContainer width="100%" height={250}>
-          <PieChart>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={90}
-              paddingAngle={2}
-              dataKey="value"
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'hsl(var(--background))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '6px'
-              }}
-              formatter={(value: number, name: string, props) => {
-                const percentage = (props as { payload?: { percentage?: number } })?.payload?.percentage || 0;
-                return [`${value} requests (${percentage}%)`, name];
-              }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+        {/* Chart */}
+        <div>
+          {renderChart(chartData, colors, chartType)}
+        </div>
         
         {/* Legend */}
         <div className="space-y-2">
-          {chartData.map((item) => (
+          {chartData.map((item, index) => (
             <div key={item.name} className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <div 
                   className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: item.color }}
+                  style={{ backgroundColor: colors[index] }}
                 />
                 <span className="font-medium">{item.name}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">{item.value}</span>
+                <span className="text-muted-foreground">{item.count}</span>
                 <span className="font-medium">{item.percentage}%</span>
               </div>
             </div>

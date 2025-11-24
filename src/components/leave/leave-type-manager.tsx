@@ -61,8 +61,9 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'create' | 'edit' | null>(null);
+  const [pendingAction, setPendingAction] = useState<'create' | 'edit' | 'delete' | null>(null);
   const [pendingEditType, setPendingEditType] = useState<ILeaveType | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const { organizationId } = useOrgStore();
 
   const form = useForm<LeaveTypeForm>({
@@ -173,18 +174,22 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
       executeCreate();
     } else if (pendingAction === 'edit' && pendingEditType) {
       executeEdit(pendingEditType);
+    } else if (pendingAction === 'delete' && pendingDeleteId) {
+      executeDelete(pendingDeleteId);
     }
     
     // Reset dialog state
     setShowConfirmDialog(false);
     setPendingAction(null);
     setPendingEditType(null);
+    setPendingDeleteId(null);
   };
 
   const handleCancelSwitch = () => {
     setShowConfirmDialog(false);
     setPendingAction(null);
     setPendingEditType(null);
+    setPendingDeleteId(null);
   };
 
   const handleSubmit = async (data: LeaveTypeForm) => {
@@ -215,6 +220,29 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteClick = (id: number) => {
+    // Check if currently creating or editing (form is active)
+    const isFormActive = isCreating || editingType !== null;
+    
+    if (isFormActive) {
+      setPendingAction('delete');
+      setPendingDeleteId(id);
+      setShowConfirmDialog(true);
+      return;
+    }
+    
+    // Proceed with delete confirmation
+    setDeleteConfirmId(id);
+  };
+
+  const executeDelete = (id: number) => {
+    setDeleteConfirmId(id);
+    // Close any active forms
+    setIsCreating(false);
+    setEditingType(null);
+    form.reset();
   };
 
   const handleDelete = async (id: number) => {
@@ -265,13 +293,13 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
               <CardContent>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Code */}
                       <FormField
                         control={form.control}
                         name="code"
                         render={({ field }) => (
-                          <FormItem>
+                          <FormItem className="min-h-[120px]">
                             <FormLabel>Code</FormLabel>
                             <FormControl>
                               <Input 
@@ -293,7 +321,7 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
                         control={form.control}
                         name="name"
                         render={({ field }) => (
-                          <FormItem>
+                          <FormItem className="min-h-[120px]">
                             <FormLabel>Name</FormLabel>
                             <FormControl>
                               <Input placeholder="Annual Leave" {...field} />
@@ -648,7 +676,7 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => setDeleteConfirmId(type.id)}
+                          onClick={() => handleDeleteClick(type.id)}
                           disabled={loading}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -715,8 +743,10 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
               <div>You have unsaved changes in the current form.</div>
               {pendingAction === 'create' ? (
                 <div>Do you want to discard these changes and <strong>create a new leave type</strong>?</div>
-              ) : (
+              ) : pendingAction === 'edit' ? (
                 <div>Do you want to discard these changes and <strong>edit "{pendingEditType?.name}"</strong>?</div>
+              ) : (
+                <div>Do you want to discard these changes and <strong>delete a leave type</strong>?</div>
               )}
             </div>
           </DialogHeader>

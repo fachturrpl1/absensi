@@ -540,6 +540,23 @@ export async function approveLeaveRequest(
       };
     }
     
+    // Create approval record first
+    const { error: approvalError } = await supabase
+      .from("leave_approvals")
+      .insert({
+        leave_request_id: requestId,
+        approver_id: user?.id,
+        approval_level: 1, // Default level
+        status: 'approved',
+        comments: comments || null,
+        responded_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      });
+    
+    if (approvalError) {
+      throw approvalError;
+    }
+
     // Update request status
     const { error: updateError } = await supabase
       .from("leave_requests")
@@ -640,6 +657,23 @@ export async function rejectLeaveRequest(
       };
     }
     
+    // Create approval record first
+    const { error: approvalError } = await supabase
+      .from("leave_approvals")
+      .insert({
+        leave_request_id: requestId,
+        approver_id: user?.id,
+        approval_level: 1, // Default level
+        status: 'rejected',
+        comments: reason || null,
+        responded_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      });
+    
+    if (approvalError) {
+      throw approvalError;
+    }
+
     // Update request status
     const { error: updateError } = await supabase
       .from("leave_requests")

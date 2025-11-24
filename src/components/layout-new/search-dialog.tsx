@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import { useMounted } from '@/hooks/use-mounted';
 import {
   LayoutDashboard,
   Users,
@@ -44,8 +45,11 @@ const searchItems = [
 export function SearchDialog() {
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
+  const mounted = useMounted();
 
   React.useEffect(() => {
+    if (!mounted) return;
+    
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
@@ -54,7 +58,7 @@ export function SearchDialog() {
     };
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
-  }, []);
+  }, [mounted]);
 
   const handleSelect = (url: string) => {
     setOpen(false);
@@ -74,31 +78,33 @@ export function SearchDialog() {
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>
-      <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search pages, members, and more..." />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          {[...new Set(searchItems.map((item) => item.group))].map((group, i) => (
-            <React.Fragment key={group}>
-              {i !== 0 && <CommandSeparator />}
-              <CommandGroup heading={group}>
-                {searchItems
-                  .filter((item) => item.group === group)
-                  .map((item) => (
-                    <CommandItem
-                      key={item.url}
-                      onSelect={() => handleSelect(item.url)}
-                      className="cursor-pointer"
-                    >
-                      {item.icon && <item.icon className="mr-2 h-4 w-4" />}
-                      <span>{item.label}</span>
-                    </CommandItem>
-                  ))}
-              </CommandGroup>
-            </React.Fragment>
-          ))}
-        </CommandList>
-      </CommandDialog>
+      {mounted && (
+        <CommandDialog open={open} onOpenChange={setOpen}>
+          <CommandInput placeholder="Search pages, members, and more..." />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            {[...new Set(searchItems.map((item) => item.group))].map((group, i) => (
+              <React.Fragment key={group}>
+                {i !== 0 && <CommandSeparator />}
+                <CommandGroup heading={group}>
+                  {searchItems
+                    .filter((item) => item.group === group)
+                    .map((item) => (
+                      <CommandItem
+                        key={item.url}
+                        onSelect={() => handleSelect(item.url)}
+                        className="cursor-pointer"
+                      >
+                        {item.icon && <item.icon className="mr-2 h-4 w-4" />}
+                        <span>{item.label}</span>
+                      </CommandItem>
+                    ))}
+                </CommandGroup>
+              </React.Fragment>
+            ))}
+          </CommandList>
+        </CommandDialog>
+      )}
     </>
   );
 }

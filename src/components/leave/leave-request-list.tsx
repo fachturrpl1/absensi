@@ -198,9 +198,9 @@ export function LeaveRequestList({
                 {/* Main Content */}
                 <div className="flex-1 space-y-2">
                   {/* Header */}
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                    <div className="space-y-1 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
                         {isAdmin && request.organization_member?.user && (
                           <h4 className="font-semibold">
                             {request.organization_member.user.first_name} {request.organization_member.user.last_name}
@@ -222,7 +222,7 @@ export function LeaveRequestList({
                       
                       {/* Employee Info (Admin View) */}
                       {isAdmin && request.organization_member && (
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                           {request.organization_member.employee_id && (
                             <div className="flex items-center gap-1">
                               <User className="h-3 w-3" />
@@ -246,33 +246,35 @@ export function LeaveRequestList({
                     </div>
 
                     {/* Actions & Request Info */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
                       {/* Approve/Reject Buttons */}
                       {canApprove && request.status === 'pending' && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
                           <Button
                             size="sm"
                             variant="outline"
-                            className="gap-1 border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700 dark:border-green-500 dark:text-green-500 dark:hover:bg-green-950"
+                            className="gap-1 border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700 dark:border-green-500 dark:text-green-500 dark:hover:bg-green-950 flex-1 sm:flex-none"
                             onClick={() => handleAction(request, 'approve')}
                           >
                             <CheckCircle className="h-3 w-3" />
-                            Approve
+                            <span className="hidden sm:inline">Approve</span>
+                            <span className="sm:hidden">✓</span>
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="gap-1 border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-500 dark:text-red-500 dark:hover:bg-red-950"
+                            className="gap-1 border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-500 dark:text-red-500 dark:hover:bg-red-950 flex-1 sm:flex-none"
                             onClick={() => handleAction(request, 'reject')}
                           >
                             <XCircle className="h-3 w-3" />
-                            Reject
+                            <span className="hidden sm:inline">Reject</span>
+                            <span className="sm:hidden">✗</span>
                           </Button>
                         </div>
                       )}
                       
                       {/* Request Number & Date */}
-                      <div className="text-right text-sm text-muted-foreground">
+                      <div className="text-left sm:text-right text-sm text-muted-foreground w-full sm:w-auto">
                         <p className="font-mono text-xs">{request.request_number}</p>
                         <p>{format(parseISO(request.requested_at), 'MMM d, yyyy')}</p>
                       </div>
@@ -329,7 +331,7 @@ export function LeaveRequestList({
                       )}
 
                       {/* Request Details */}
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
                           <h5 className="font-medium mb-1">Request Details:</h5>
                           <div className="space-y-1 text-muted-foreground">

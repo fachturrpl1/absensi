@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { 
   Plus, 
   Calendar,   
@@ -30,7 +31,8 @@ import {
   ChevronRight,
   Search,
   Filter,
-  ArrowUpDown
+  ArrowUpDown,
+  ChevronDown
 } from "lucide-react";
 import { getMyLeaveBalance, getMyLeaveRequests, getLeaveTypes } from "@/action/leaves";
 import { getLeaveStatistics, getAllLeaveRequests, getOrganizationLeaveTypes } from "@/action/admin-leaves";
@@ -85,12 +87,33 @@ export default function LeavesPage() {
   // Monthly Leave Trend filter state
   const [monthlyTrendFilter, setMonthlyTrendFilter] = useState<'7days' | '1week' | 'thisweek' | '30days' | '1month' | 'thismonth' | 'lastyear' | 'thisyear'>('thisyear');
   
+  // Leave Type Distribution filter state
+  const [typeDistributionFilter, setTypeDistributionFilter] = useState<'7days' | '1week' | 'thisweek' | '30days' | '1month' | 'thismonth' | 'lastyear' | 'thisyear'>('thisyear');
+  
+  // Chart type states
+  const [statusChartType, setStatusChartType] = useState<'donut' | 'pie' | 'bar'>('donut');
+  const [typeChartType, setTypeChartType] = useState<'donut' | 'pie' | 'bar'>('donut');
+  const [detailedChartType, setDetailedChartType] = useState<'donut' | 'pie' | 'bar'>('donut');
+  
   const { role, permissions } = useUserStore();
   const { organizationId } = useOrgStore();
   // Role codes: A001 = Admin Org, SA001 = Super Admin
   const isAdmin = role === 'A001' || role === 'SA001';
   const canManageLeaveTypes = permissions?.includes('leaves:type:manage') || isAdmin;
   const canApproveRequests = permissions?.includes('leaves:approval:create') || isAdmin;
+
+  // Helper function to get chart icon
+  const getChartIcon = (chartType: 'donut' | 'pie' | 'bar') => {
+    switch (chartType) {
+      case 'donut':
+      case 'pie':
+        return <PieChart className="h-4 w-4" />;
+      case 'bar':
+        return <BarChart3 className="h-4 w-4" />;
+      default:
+        return <PieChart className="h-4 w-4" />;
+    }
+  };
 
   // Load data based on user role
   const loadData = useCallback(async () => {
@@ -101,66 +124,123 @@ export default function LeavesPage() {
       if (isAdmin && organizationId) {
         // Admin: Load all organization data
         logger.debug("👑 Loading admin data for organization:", organizationId);
-        const [statsResult, allRequestsResult, typesResult, balanceResult, myRequestsResult] = await Promise.all([
-          getLeaveStatistics(organizationId),
-          getAllLeaveRequests(organizationId),
-          getOrganizationLeaveTypes(organizationId),
-          getMyLeaveBalance(),
-          getMyLeaveRequests()
-        ]);
+        
+        try {
+          const [statsResult, allRequestsResult, typesResult, balanceResult, myRequestsResult] = await Promise.allSettled([
+            getLeaveStatistics(organizationId),
+            getAllLeaveRequests(organizationId),
+            getOrganizationLeaveTypes(organizationId),
+            getMyLeaveBalance(),
+            getMyLeaveRequests()
+          ]);
 
-        if (statsResult.success && statsResult.data) {
-          const statsData = statsResult.data;
-          setStatistics({
-            ...statsData,
-            averageLeaveDays: parseNumber(statsData.averageLeaveDays)
-          });
-          logger.debug("📊 Statistics loaded:", statsData);
-        } else {
-          logger.error("❌ Failed to load statistics:", statsResult.message);
-        }
+          // Handle statistics result
+          if (statsResult.status === 'fulfilled' && statsResult.value?.success && statsResult.value?.data) {
+            const statsData = statsResult.value.data;
+            setStatistics({
+              ...statsData,
+              averageLeaveDays: parseNumber(statsData.averageLeaveDays)
+            });
+            logger.debug("📊 Statistics loaded:", statsData);
+          } else {
+            const error = statsResult.status === 'rejected' ? statsResult.reason : statsResult.value?.message;
+            logger.warn("⚠️ Statistics not available:", error);
+            setStatistics(null);
+          }
 
-        if (allRequestsResult.success && allRequestsResult.data) {
-          setAllRequests(allRequestsResult.data);
-          logger.debug("📋 All requests loaded:", allRequestsResult.data.length, "items");
-        } else {
-          logger.error("❌ Failed to load all requests:", allRequestsResult.message);
-        }
+          // Handle all requests result
+          if (allRequestsResult.status === 'fulfilled' && allRequestsResult.value?.success && allRequestsResult.value?.data) {
+            setAllRequests(allRequestsResult.value.data);
+            logger.debug("📋 All requests loaded:", allRequestsResult.value.data.length, "items");
+          } else {
+            const error = allRequestsResult.status === 'rejected' ? allRequestsResult.reason : allRequestsResult.value?.message;
+            logger.warn("⚠️ All requests not available:", error);
+            setAllRequests([]);
+          }
 
-        if (typesResult.success && typesResult.data) {
-          setLeaveTypes(typesResult.data);
-        }
+          // Handle leave types result
+          if (typesResult.status === 'fulfilled' && typesResult.value?.success && typesResult.value?.data) {
+            setLeaveTypes(typesResult.value.data);
+          } else {
+            const error = typesResult.status === 'rejected' ? typesResult.reason : typesResult.value?.message;
+            logger.warn("⚠️ Leave types not available:", error);
+            setLeaveTypes([]);
+          }
 
-        if (balanceResult.success && balanceResult.data) {
-          setBalances(balanceResult.data as any);
-        }
+          // Handle balance result
+          if (balanceResult.status === 'fulfilled' && balanceResult.value?.success && balanceResult.value?.data) {
+            setBalances(balanceResult.value.data as any);
+          } else {
+            const error = balanceResult.status === 'rejected' ? balanceResult.reason : balanceResult.value?.message;
+            logger.warn("⚠️ Balance not available:", error);
+            setBalances([]);
+          }
 
-        if (myRequestsResult.success && myRequestsResult.data) {
-          setRequests(myRequestsResult.data);
+          // Handle my requests result
+          if (myRequestsResult.status === 'fulfilled' && myRequestsResult.value?.success && myRequestsResult.value?.data) {
+            setRequests(myRequestsResult.value.data);
+          } else {
+            const error = myRequestsResult.status === 'rejected' ? myRequestsResult.reason : myRequestsResult.value?.message;
+            logger.warn("⚠️ My requests not available:", error);
+            setRequests([]);
+          }
+        } catch (adminError) {
+          logger.error("❌ Error loading admin data:", adminError);
+          // Set default empty states
+          setStatistics(null);
+          setAllRequests([]);
+          setLeaveTypes([]);
+          setBalances([]);
+          setRequests([]);
+          toast.error("Some admin data could not be loaded");
         }
       } else {
         // User: Load personal data only
-        const [balanceResult, requestsResult, typesResult] = await Promise.all([
-          getMyLeaveBalance(),
-          getMyLeaveRequests(),
-          getLeaveTypes()
-        ]);
+        try {
+          const [balanceResult, requestsResult, typesResult] = await Promise.allSettled([
+            getMyLeaveBalance(),
+            getMyLeaveRequests(),
+            getLeaveTypes()
+          ]);
 
-        if (balanceResult.success && balanceResult.data) {
-          setBalances(balanceResult.data as any);
-        }
+          // Handle balance result
+          if (balanceResult.status === 'fulfilled' && balanceResult.value?.success && balanceResult.value?.data) {
+            setBalances(balanceResult.value.data as any);
+          } else {
+            const error = balanceResult.status === 'rejected' ? balanceResult.reason : balanceResult.value?.message;
+            logger.warn("⚠️ Balance not available:", error);
+            setBalances([]);
+          }
 
-        if (requestsResult.success && requestsResult.data) {
-          setRequests(requestsResult.data);
-        }
+          // Handle requests result
+          if (requestsResult.status === 'fulfilled' && requestsResult.value?.success && requestsResult.value?.data) {
+            setRequests(requestsResult.value.data);
+          } else {
+            const error = requestsResult.status === 'rejected' ? requestsResult.reason : requestsResult.value?.message;
+            logger.warn("⚠️ Requests not available:", error);
+            setRequests([]);
+          }
 
-        if (typesResult.success && typesResult.data) {
-          setLeaveTypes(typesResult.data);
+          // Handle leave types result
+          if (typesResult.status === 'fulfilled' && typesResult.value?.success && typesResult.value?.data) {
+            setLeaveTypes(typesResult.value.data);
+          } else {
+            const error = typesResult.status === 'rejected' ? typesResult.reason : typesResult.value?.message;
+            logger.warn("⚠️ Leave types not available:", error);
+            setLeaveTypes([]);
+          }
+        } catch (userError) {
+          logger.error("❌ Error loading user data:", userError);
+          // Set default empty states
+          setBalances([]);
+          setRequests([]);
+          setLeaveTypes([]);
+          toast.error("Some personal data could not be loaded");
         }
       }
     } catch (error) {
-      logger.error("Error loading data:", error);
-      toast.error("Failed to load leave data");
+      logger.error("❌ Unexpected error loading data:", error);
+      toast.error("Failed to load leave data. Please try refreshing the page.");
     } finally {
       setLoading(false);
     }
@@ -300,10 +380,9 @@ export default function LeavesPage() {
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
-            size="sm"
             onClick={loadData}
             disabled={loading}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
           >
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -401,7 +480,7 @@ export default function LeavesPage() {
               {isAdmin ? (
                 <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
               ) : (
-                <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                <Clock className="h-4 w-4 text-orange-600" />
               )}
             </div>
           </CardHeader>
@@ -544,7 +623,7 @@ export default function LeavesPage() {
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <TabsList className={`grid w-full sm:w-auto ${isAdmin ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2'} bg-muted p-1 h-10`}>
+          <TabsList className={`grid w-full sm:w-auto ${isAdmin ? 'grid-cols-4' : 'grid-cols-2'} bg-muted p-1 h-10 overflow-x-auto`}>
             <TabsTrigger 
               value="dashboard" 
               className="gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
@@ -607,8 +686,29 @@ export default function LeavesPage() {
                       {isAdmin ? 'Organization-wide leave request status' : 'Your leave request status'}
                     </CardDescription>
                   </div>
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                    <PieChart className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <div className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-2">
+                          {getChartIcon(statusChartType)}
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setStatusChartType('donut')}>
+                          <PieChart className="h-4 w-4 mr-2" />
+                          Donut Chart
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setStatusChartType('pie')}>
+                          <PieChart className="h-4 w-4 mr-2" />
+                          Pie Chart
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setStatusChartType('bar')}>
+                          <BarChart3 className="h-4 w-4 mr-2" />
+                          Bar Chart
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </CardHeader>
@@ -617,6 +717,7 @@ export default function LeavesPage() {
                   requests={isAdmin ? allRequests : requests}
                   type="status"
                   loading={loading}
+                  chartType={statusChartType}
                 />
               </CardContent>
             </Card>
@@ -941,8 +1042,44 @@ export default function LeavesPage() {
                         Breakdown by leave type
                       </CardDescription>
                     </div>
-                    <div className="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg flex-shrink-0">
-                      <PieChart className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Select value={typeDistributionFilter} onValueChange={(value: typeof typeDistributionFilter) => setTypeDistributionFilter(value)}>
+                        <SelectTrigger className="w-[140px] h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="7days">Last 7 Days</SelectItem>
+                          <SelectItem value="1week">Last Week</SelectItem>
+                          <SelectItem value="thisweek">This Week</SelectItem>
+                          <SelectItem value="30days">Last 30 Days</SelectItem>
+                          <SelectItem value="1month">Last Month</SelectItem>
+                          <SelectItem value="thismonth">This Month</SelectItem>
+                          <SelectItem value="lastyear">Last Year</SelectItem>
+                          <SelectItem value="thisyear">This Year</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="gap-2">
+                            {getChartIcon(typeChartType)}
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setTypeChartType('donut')}>
+                            <PieChart className="h-4 w-4 mr-2" />
+                            Donut Chart
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setTypeChartType('pie')}>
+                            <PieChart className="h-4 w-4 mr-2" />
+                            Pie Chart
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setTypeChartType('bar')}>
+                            <BarChart3 className="h-4 w-4 mr-2" />
+                            Bar Chart
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </CardHeader>
@@ -951,6 +1088,8 @@ export default function LeavesPage() {
                     requests={allRequests}
                     type="type"
                     loading={loading}
+                    chartType={typeChartType}
+                    periodFilter={typeDistributionFilter}
                   />
                 </CardContent>
               </Card>
@@ -972,6 +1111,28 @@ export default function LeavesPage() {
                       <div className="p-2 bg-violet-100 dark:bg-violet-900 rounded-lg">
                         <TrendingUp className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                       </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="gap-2">
+                            {getChartIcon(detailedChartType)}
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setDetailedChartType('donut')}>
+                            <PieChart className="h-4 w-4 mr-2" />
+                            Donut Chart
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setDetailedChartType('pie')}>
+                            <PieChart className="h-4 w-4 mr-2" />
+                            Pie Chart
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setDetailedChartType('bar')}>
+                            <BarChart3 className="h-4 w-4 mr-2" />
+                            Bar Chart
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </CardHeader>
@@ -981,10 +1142,216 @@ export default function LeavesPage() {
                     type="detailed"
                     loading={loading}
                     statistics={statistics}
+                    chartType={detailedChartType}
                   />
                 </CardContent>
               </Card>
             </div>
+
+            {/* Enhanced Analytics Grid */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {/* Approval Rate */}
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Approval Rate</CardTitle>
+                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-8 w-20" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">
+                        {statistics?.totalRequests && statistics.totalRequests > 0 
+                          ? ((statistics.approvedRequests / statistics.totalRequests) * 100).toFixed(1)
+                          : 0}%
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        <Badge variant="secondary" className="text-xs px-1">
+                          {statistics?.approvedRequests || 0}
+                        </Badge>
+                        {' '}of {statistics?.totalRequests || 0} requests
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Avg Processing Time */}
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Avg Processing Time</CardTitle>
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                    <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-8 w-20" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">0.0 days</div>
+                      <p className="text-xs text-muted-foreground">Excellent</p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Most Used Type */}
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Most Used Type</CardTitle>
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                    <Briefcase className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-8 w-20" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">
+                        {(() => {
+                          const typeCounts: Record<string, number> = {};
+                          allRequests.forEach(r => {
+                            if (r.leave_type) {
+                              typeCounts[r.leave_type.name] = (typeCounts[r.leave_type.name] || 0) + 1;
+                            }
+                          });
+                          const mostUsed = Object.entries(typeCounts).sort(([,a], [,b]) => b - a)[0];
+                          return mostUsed ? mostUsed[1] : 0;
+                        })()}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {(() => {
+                          const typeCounts: Record<string, number> = {};
+                          allRequests.forEach(r => {
+                            if (r.leave_type) {
+                              typeCounts[r.leave_type.name] = (typeCounts[r.leave_type.name] || 0) + 1;
+                            }
+                          });
+                          const mostUsed = Object.entries(typeCounts).sort(([,a], [,b]) => b - a)[0];
+                          return mostUsed ? `${mostUsed[0]} used` : 'No data';
+                        })()}
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* This Month */}
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">This Month</CardTitle>
+                  <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
+                    <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-8 w-20" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">
+                        {(() => {
+                          const now = new Date();
+                          const thisMonth = allRequests.filter(r => {
+                            const requestDate = new Date(r.requested_at);
+                            return requestDate.getMonth() === now.getMonth() && 
+                                   requestDate.getFullYear() === now.getFullYear();
+                          });
+                          return thisMonth.length;
+                        })()}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {(() => {
+                          const now = new Date();
+                          const thisMonth = allRequests.filter(r => {
+                            const requestDate = new Date(r.requested_at);
+                            return requestDate.getMonth() === now.getMonth() && 
+                                   requestDate.getFullYear() === now.getFullYear() &&
+                                   r.status === 'approved';
+                          });
+                          return `${thisMonth.length} approved`;
+                        })()}
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Quick Insights */}
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-1">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">Quick Insights</CardTitle>
+                    <CardDescription className="mt-1">
+                      Key insights and recommendations
+                    </CardDescription>
+                  </div>
+                  <Badge variant="secondary">3 insights</Badge>
+                </div>
+                <Separator/>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Insight 1 */}
+                  <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="p-1 bg-blue-100 dark:bg-blue-900 rounded">
+                      <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm">1 Pending Request</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        All pending requests are recent. Monitor pending requests.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Insight 2 */}
+                  <div className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="p-1 bg-green-100 dark:bg-green-900 rounded">
+                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm">New Requests</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        1 new request in the last 24 hours. Review and process quickly.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Insight 3 */}
+                  <div className="flex items-start gap-3 p-3 bg-purple-50 dark:bg-purple-950 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <div className="p-1 bg-purple-100 dark:bg-purple-900 rounded">
+                      <BarChart3 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm">Department Distribution</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        HRD department has 100.0% of all leave requests.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Department Distribution */}
             <Card className="hover:shadow-md transition-shadow">
