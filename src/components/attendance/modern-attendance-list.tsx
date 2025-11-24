@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { createClient } from '@/utils/supabase/client';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
 import {
   Clock,
@@ -60,6 +59,8 @@ import {
 } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
 import { formatLocalTime } from '@/utils/timezone';
+import { getAllAttendance } from '@/action/attendance';
+import { toast } from 'sonner';
 
 interface ModernAttendanceListProps {
   initialData?: any[];
@@ -94,15 +95,111 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  
+  // Auto-refresh state
+  const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Fetch data using Server Action with pagination
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    // Pause auto-refresh while loading to avoid overlapping
+    setIsAutoRefreshPaused(true); 
+    try {
+      const result = await getAllAttendance({
+        page: currentPage,
+        limit: itemsPerPage,
+        dateFrom: dateRange.from.toISOString().split('T')[0],
+        dateTo: dateRange.to.toISOString().split('T')[0],
+        search: searchQuery || undefined,
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        department: departmentFilter === 'all' ? undefined : departmentFilter,
+      });
+
+      if (result.success) {
+        setAttendanceData(result.data);
+        setTotalItems(result.meta?.total || 0);
+        
+        // Set timezone from first record if available (fallback to UTC)
+        if (result.data.length > 0) {
+          setUserTimezone(result.data[0].timezone || 'UTC');
+        }
+
+        // Extract unique departments from current page (simple solution for now)
+        const uniqueDepts = Array.from(new Set(
+          result.data.map((r: any) => r.member.department)
+        )).filter(dept => dept && dept !== 'No Department').sort();
+        
+        if (departments.length === 0 && uniqueDepts.length > 0) {
+          setDepartments(uniqueDepts);
+        }
+      } else {
+        toast.error('Failed to load attendance data');
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+      toast.error('An error occurred while fetching data');
+    } finally {
+      setLoading(false);
+      setIsAutoRefreshPaused(false); // Resume countdown
+    }
+  }, [currentPage, itemsPerPage, dateRange, searchQuery, statusFilter, departmentFilter]);
+
+  // Trigger fetch when filters change (and initial load)
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Reset to page 1 when filters change (except pagination itself)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [dateRange, searchQuery, statusFilter, departmentFilter]);
+
+  // Auto-refresh Timer
+  useEffect(() => {
+    // Only run timer if not loading and not paused
+    if (loading || isAutoRefreshPaused) return;
+
+    const timer = setInterval(() => {
+      fetchData();
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(timer);
+  }, [loading, isAutoRefreshPaused, fetchData]);
+
+  // Stats calculation
+  const filteredStats = useMemo(() => {
+    // Placeholder stats based on current page only
+    const total = attendanceData.length; 
+    const present = attendanceData.filter((r: any) => r.status === 'present').length;
+    const late = attendanceData.filter((r: any) => r.status === 'late').length;
+    const absent = attendanceData.filter((r: any) => r.status === 'absent').length;
+
+    return {
+      total: totalItems, 
+      present,
+      late,
+      absent,
+      onLeave: 0,
+      avgWorkHours: '8.5h',
+      attendanceRate: total > 0 ? Math.round((present / total) * 100) : 0,
+    };
+  }, [attendanceData, totalItems]);
 
   // Helper component to display device location
   const LocationDisplay = ({ checkInLocationName, checkOutLocationName }: any) => {
-    // No device location data
     if (!checkInLocationName && !checkOutLocationName) {
       return <span className="text-muted-foreground text-xs">No device</span>;
     }
 
-    // Same location for check-in and check-out
     if (checkInLocationName && checkOutLocationName && checkInLocationName === checkOutLocationName) {
       return (
         <div className="flex items-center gap-1 text-sm">
@@ -112,7 +209,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       );
     }
 
-    // Different locations
     return (
       <div className="flex flex-col gap-1">
         {checkInLocationName && (
@@ -133,105 +229,32 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     );
   };
 
-  // Filter data by date range and other filters
-  const filteredData = useMemo(() => {
-    return attendanceData.filter((record: any) => {
-      // Filter by date range (like Dashboard)
-      const recordDate = new Date(record.date);
-      recordDate.setHours(0, 0, 0, 0);
-      const fromDate = new Date(dateRange.from);
-      fromDate.setHours(0, 0, 0, 0);
-      const toDate = new Date(dateRange.to);
-      toDate.setHours(23, 59, 59, 999);
-      
-      const matchDate = recordDate >= fromDate && recordDate <= toDate;
-      
-      const matchSearch = record.member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         record.member.department.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchStatus = statusFilter === 'all' || record.status === statusFilter;
-      const matchDepartment = departmentFilter === 'all' || record.member.department === departmentFilter;
-      
-      return matchDate && matchSearch && matchStatus && matchDepartment;
-    });
-  }, [attendanceData, dateRange, searchQuery, statusFilter, departmentFilter]);
-
-  // Calculate stats from filtered data (based on date range)
-  const filteredStats = useMemo(() => {
-    // First filter only by date range (ignore status filter for stats calculation)
-    const dateFilteredData = attendanceData.filter((record: any) => {
-      const recordDate = new Date(record.date);
-      recordDate.setHours(0, 0, 0, 0);
-      const fromDate = new Date(dateRange.from);
-      fromDate.setHours(0, 0, 0, 0);
-      const toDate = new Date(dateRange.to);
-      toDate.setHours(23, 59, 59, 999);
-      
-      return recordDate >= fromDate && recordDate <= toDate;
-    });
-
-    const present = dateFilteredData.filter((r: any) => r.status === 'present').length;
-    const late = dateFilteredData.filter((r: any) => r.status === 'late').length;
-    const absent = dateFilteredData.filter((r: any) => r.status === 'absent').length;
-    const total = dateFilteredData.length;
-
-    return {
-      total,
-      present,
-      late,
-      absent,
-      onLeave: 0,
-      avgWorkHours: '8.5h',
-      attendanceRate: total > 0 ? Math.round((present / total) * 100) : 0,
-    };
-  }, [attendanceData, dateRange]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredData.slice(startIndex, endIndex);
-  }, [filteredData, currentPage, itemsPerPage]);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, statusFilter, departmentFilter, dateRange]);
-
-  // Generate page numbers with ellipsis
+  // Pagination Logic
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
     const maxPagesToShow = 5;
 
     if (totalPages <= maxPagesToShow) {
-      // Show all pages if total is small
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
-      // Always show first page
       pages.push(1);
-
       if (currentPage > 3) {
         pages.push('ellipsis-start');
       }
-
-      // Show pages around current page
       const startPage = Math.max(2, currentPage - 1);
       const endPage = Math.min(totalPages - 1, currentPage + 1);
-
       for (let i = startPage; i <= endPage; i++) {
         pages.push(i);
       }
-
       if (currentPage < totalPages - 2) {
         pages.push('ellipsis-end');
       }
-
-      // Always show last page
       pages.push(totalPages);
     }
-
     return pages;
   };
 
@@ -264,139 +287,12 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   };
 
   const handleSelectAll = () => {
-    if (selectedRecords.length === filteredData.length) {
+    if (selectedRecords.length === attendanceData.length) {
       setSelectedRecords([]);
     } else {
-      setSelectedRecords(filteredData.map((r: any) => r.id));
+      setSelectedRecords(attendanceData.map((r: any) => r.id));
     }
   };
-
-  // Realtime data fetching
-  useEffect(() => {
-    const supabase = createClient();
-
-    const fetchRealtimeData = async () => {
-      setLoading(true);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setLoading(false);
-          return;
-        }
-
-        // Get organization_id and timezone
-        const { data: orgMember } = await supabase
-          .from('organization_members')
-          .select('organization_id, organizations!inner(timezone)')
-          .eq('user_id', user.id)
-          .single();
-
-        if (!orgMember) {
-          setLoading(false);
-          return;
-        }
-
-        // Set user timezone from organization
-        const timezone = (orgMember as any).organizations?.timezone || 'UTC';
-        setUserTimezone(timezone);
-
-        // Format dates for PostgreSQL query (YYYY-MM-DD format)
-        const fromDate = new Date(dateRange.from);
-        fromDate.setHours(0, 0, 0, 0);
-        const toDate = new Date(dateRange.to);
-        toDate.setHours(23, 59, 59, 999);
-        
-        // Fetch attendance records with organization, date filter, AND devices
-        const { data: records, error } = await supabase
-          .from('attendance_records')
-          .select(`
-            *,
-            organization_members!inner (
-              user_profiles (first_name, last_name, profile_photo_url),
-              departments:department_id (name),
-              organization_id
-            ),
-            check_in_device:attendance_devices!check_in_device_id (
-              device_name,
-              location
-            ),
-            check_out_device:attendance_devices!check_out_device_id (
-              device_name,
-              location
-            )
-          `)
-          .eq('organization_members.organization_id', orgMember.organization_id)
-          .gte('attendance_date', fromDate.toISOString().split('T')[0])
-          .lte('attendance_date', toDate.toISOString().split('T')[0])
-          .order('attendance_date', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching attendance:', error);
-          setLoading(false);
-          return;
-        }
-
-        if (records) {
-        // Transform data to match component structure
-        const transformed = records.map((r: any) => ({
-          id: r.id,
-          member: {
-            name: `${r.organization_members?.user_profiles?.first_name || ''} ${r.organization_members?.user_profiles?.last_name || ''}`,
-            avatar: r.organization_members?.user_profiles?.profile_photo_url,
-            position: '',
-            department: r.organization_members?.departments?.name || 'No Department',
-          },
-          date: r.attendance_date,
-          checkIn: r.actual_check_in || null,
-          checkOut: r.actual_check_out || null,
-          workHours: r.work_duration_minutes 
-            ? `${Math.floor(r.work_duration_minutes / 60)}h ${r.work_duration_minutes % 60}m` 
-            : (r.actual_check_in ? '8h' : '0h'),
-          status: r.status,
-          overtime: '',
-          // Get location from attendance_devices (prioritize location name, fallback to device_name)
-          checkInLocationName: r.check_in_device?.location || r.check_in_device?.device_name || null,
-          checkOutLocationName: r.check_out_device?.location || r.check_out_device?.device_name || null,
-          notes: r.remarks || '',
-        }));
-
-        setAttendanceData(transformed);
-
-        // Extract unique departments from records
-        const uniqueDepts = Array.from(new Set(
-          transformed.map((r: any) => r.member.department)
-        )).filter(dept => dept && dept !== 'No Department').sort();
-        setDepartments(uniqueDepts);
-        }
-      } catch (error) {
-        console.error('Error in fetchRealtimeData:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRealtimeData();
-
-    // Subscribe to realtime changes
-    const channel = supabase
-      .channel('attendance_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'attendance_records',
-        },
-        () => {
-          fetchRealtimeData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [dateRange]);
 
   return (
     <div className="space-y-6 p-6">
@@ -435,22 +331,9 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                   <Input
                     placeholder="Search by name or department..."
                     value={searchInput}
-                    onChange={(e) => {
-                      setSearchInput(e.target.value);
-                      if (e.target.value === '') setSearchQuery('');
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') setSearchQuery(searchInput);
-                    }}
+                    onChange={(e) => setSearchInput(e.target.value)}
                     className="pl-9 pr-20"
                   />
-                  <Button
-                    size="sm"
-                    className="absolute right-1 top-1/2 h-7 -translate-y-1/2"
-                    onClick={() => setSearchQuery(searchInput)}
-                  >
-                    Search
-                  </Button>
                 </div>
               </div>
 
@@ -572,21 +455,18 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
             statusFilter === 'present' && "ring-2 ring-green-500"
           )}
-          onClick={() => {
-            console.log('Present card clicked! Current filter:', statusFilter);
-            setStatusFilter(statusFilter === 'present' ? 'all' : 'present');
-          }}
+          onClick={() => setStatusFilter(statusFilter === 'present' ? 'all' : 'present')}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent" />
           <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Present</CardTitle>
+            <CardTitle className="text-sm font-medium">Present (Page)</CardTitle>
             <UserCheck className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent className="relative">
             <div className="text-2xl font-bold">{filteredStats.present}</div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <TrendingUp className="h-3 w-3 text-green-600" />
-              <span>{filteredStats.attendanceRate}% of total</span>
+              <span>On current page</span>
             </div>
           </CardContent>
         </Card>
@@ -600,13 +480,13 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         >
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent" />
           <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Late Arrivals</CardTitle>
+            <CardTitle className="text-sm font-medium">Late (Page)</CardTitle>
             <Timer className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent className="relative">
             <div className="text-2xl font-bold">{filteredStats.late}</div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <span>{filteredStats.total > 0 ? ((filteredStats.late / filteredStats.total) * 100).toFixed(1) : '0.0'}% of total</span>
+              <span>On current page</span>
             </div>
           </CardContent>
         </Card>
@@ -620,14 +500,14 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         >
           <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent" />
           <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Absent</CardTitle>
+            <CardTitle className="text-sm font-medium">Absent (Page)</CardTitle>
             <UserX className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent className="relative">
             <div className="text-2xl font-bold">{filteredStats.absent}</div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <TrendingDown className="h-3 w-3 text-green-600" />
-              <span>Click to filter</span>
+              <span>On current page</span>
             </div>
           </CardContent>
         </Card>
@@ -641,7 +521,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         >
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent" />
           <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">All Records</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Records</CardTitle>
             <Clock className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent className="relative">
@@ -662,7 +542,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     <th className="p-4 text-left">
                       <input
                         type="checkbox"
-                        checked={selectedRecords.length === filteredData.length}
+                        checked={selectedRecords.length === attendanceData.length && attendanceData.length > 0}
                         onChange={handleSelectAll}
                         className="rounded border-gray-300"
                       />
@@ -677,7 +557,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                   </tr>
                 </thead>
                 <tbody>
-                  {loading ? (
+                  {loading && attendanceData.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="text-center py-8">
                         <div className="flex items-center justify-center gap-2">
@@ -686,13 +566,13 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                         </div>
                       </td>
                     </tr>
-                  ) : paginatedData.length === 0 ? (
+                  ) : attendanceData.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="text-center py-8 text-muted-foreground">
                         No attendance records found
                       </td>
                     </tr>
-                  ) : paginatedData.map((record: any, index: number) => (
+                  ) : attendanceData.map((record: any, index: number) => (
                     <motion.tr
                       key={record.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -724,7 +604,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                           </Avatar>
                           <div>
                             <p className="font-medium">{record.member.name}</p>
-                            <p className="text-sm text-muted-foreground">{record.member.position}</p>
+                            <p className="text-sm text-muted-foreground">{record.member.department}</p>
                           </div>
                         </div>
                       </td>
@@ -792,10 +672,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             </div>
 
             {/* Pagination */}
-            {!loading && paginatedData.length > 0 && (
+            {!loading && totalItems > 0 && (
               <div className="flex items-center justify-between border-t px-4 py-4">
                 <div className="text-sm text-muted-foreground">
-                  Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length} entries
+                  Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} entries
                 </div>
                 <Pagination>
                   <PaginationContent>
@@ -857,7 +737,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       {/* Grid View */}
       {viewMode === 'grid' && (
         <>
-          {loading ? (
+          {loading && attendanceData.length === 0 ? (
             <Card>
               <CardContent className="flex items-center justify-center py-12">
                 <div className="flex items-center gap-2">
@@ -866,7 +746,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 </div>
               </CardContent>
             </Card>
-          ) : paginatedData.length === 0 ? (
+          ) : attendanceData.length === 0 ? (
             <Card>
               <CardContent className="flex items-center justify-center py-12">
                 <p className="text-muted-foreground">No attendance records found</p>
@@ -874,7 +754,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {paginatedData.map((record: any, index: number) => (
+              {attendanceData.map((record: any, index: number) => (
             <motion.div
               key={record.id}
               initial={{ opacity: 0, scale: 0.9 }}
@@ -893,7 +773,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       </Avatar>
                       <div>
                         <p className="font-semibold">{record.member.name}</p>
-                        <p className="text-sm text-muted-foreground">{record.member.position}</p>
+                        <p className="text-sm text-muted-foreground">{record.member.department}</p>
                       </div>
                     </div>
                     <Badge className={cn('gap-1', getStatusColor(record.status))}>

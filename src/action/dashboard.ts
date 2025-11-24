@@ -1,7 +1,8 @@
 "use server";
 import { createClient } from "@/utils/supabase/server";
-
 import { dashboardLogger } from '@/lib/logger';
+import { getGroupComparisonStats } from './group-comparison';
+
 // Helper function to get the supabase client
 async function getSupabase() {
   return await createClient();
@@ -25,9 +26,26 @@ async function getUserOrganizationId() {
   return member?.organization_id || null;
 }
 
+// Helper to resolve organization ID
+async function resolveOrganizationId(orgId?: number | string | null) {
+  if (orgId) return Number(orgId);
+  return await getUserOrganizationId();
+}
+
+// Helper to resolve member IDs
+async function resolveMemberIds(supabase: any, orgId: number, providedMemberIds?: string[]) {
+  if (providedMemberIds) return providedMemberIds;
+  const { data } = await supabase
+    .from('organization_members')
+    .select('id')
+    .eq('organization_id', orgId)
+    .eq('is_active', true);
+  return data?.map((m: any) => m.id) || [];
+}
+
 // Get total active members in organization
-export async function getTotalActiveMembers() {
-  const organizationId = await getUserOrganizationId();
+export async function getTotalActiveMembers(organizationIdParam?: number | null) {
+  const organizationId = await resolveOrganizationId(organizationIdParam);
   if (!organizationId) {
     return { success: false, data: 0 };
   }
@@ -47,8 +65,8 @@ export async function getTotalActiveMembers() {
 }
 
 // Get total members in organization (all members including inactive)
-export async function getTotalMembers() {
-  const organizationId = await getUserOrganizationId();
+export async function getTotalMembers(organizationIdParam?: number | null) {
+  const organizationId = await resolveOrganizationId(organizationIdParam);
   if (!organizationId) {
     return { success: false, data: 0 };
   }
@@ -67,8 +85,8 @@ export async function getTotalMembers() {
 }
 
 // Get today's attendance count
-export async function getTodayAttendance() {
-  const organizationId = await getUserOrganizationId();
+export async function getTodayAttendance(organizationIdParam?: number | null, memberIdsParam?: string[]) {
+  const organizationId = await resolveOrganizationId(organizationIdParam);
   if (!organizationId) {
     return { success: false, data: 0 };
   }
@@ -76,17 +94,12 @@ export async function getTodayAttendance() {
   const supabase = await getSupabase();
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
 
-  // Get authorized member IDs first
-  const { data: memberIds } = await supabase
-    .from('organization_members')
-    .select('id')
-    .eq('organization_id', organizationId)
-    .eq('is_active', true);
+  const memberIds = await resolveMemberIds(supabase, organizationId, memberIdsParam);
 
   const { count, error } = await supabase
     .from("attendance_records")
     .select('id', { count: 'exact', head: true })
-    .in('organization_member_id', memberIds?.map(m => m.id) || [])
+    .in('organization_member_id', memberIds)
     .eq("attendance_date", today)
     .in("status", ["present", "late"]);
 
@@ -98,8 +111,8 @@ export async function getTodayAttendance() {
 }
 
 // Get today's late attendance count
-export async function getTodayLateAttendance() {
-  const organizationId = await getUserOrganizationId();
+export async function getTodayLateAttendance(organizationIdParam?: number | null, memberIdsParam?: string[]) {
+  const organizationId = await resolveOrganizationId(organizationIdParam);
   if (!organizationId) {
     return { success: false, data: 0 };
   }
@@ -107,17 +120,12 @@ export async function getTodayLateAttendance() {
   const supabase = await getSupabase();
   const today = new Date().toISOString().split('T')[0];
 
-  // Get authorized member IDs first
-  const { data: memberIds } = await supabase
-    .from('organization_members')
-    .select('id')
-    .eq('organization_id', organizationId)
-    .eq('is_active', true);
+  const memberIds = await resolveMemberIds(supabase, organizationId, memberIdsParam);
 
   const { count, error } = await supabase
     .from("attendance_records")
     .select('id', { count: 'exact', head: true })
-    .in('organization_member_id', memberIds?.map(m => m.id) || [])
+    .in('organization_member_id', memberIds)
     .eq("attendance_date", today)
     .eq("status", "late");
 
@@ -129,8 +137,8 @@ export async function getTodayLateAttendance() {
 }
 
 // Get today's absent count
-export async function getTodayAbsent() {
-  const organizationId = await getUserOrganizationId();
+export async function getTodayAbsent(organizationIdParam?: number | null, memberIdsParam?: string[]) {
+  const organizationId = await resolveOrganizationId(organizationIdParam);
   if (!organizationId) {
     return { success: false, data: 0 };
   }
@@ -138,17 +146,12 @@ export async function getTodayAbsent() {
   const supabase = await getSupabase();
   const today = new Date().toISOString().split('T')[0];
 
-  // Get authorized member IDs first
-  const { data: memberIds } = await supabase
-    .from('organization_members')
-    .select('id')
-    .eq('organization_id', organizationId)
-    .eq('is_active', true);
+  const memberIds = await resolveMemberIds(supabase, organizationId, memberIdsParam);
 
   const { count, error } = await supabase
     .from("attendance_records")
     .select('id', { count: 'exact', head: true })
-    .in('organization_member_id', memberIds?.map(m => m.id) || [])
+    .in('organization_member_id', memberIds)
     .eq("attendance_date", today)
     .eq("status", "absent");
 
@@ -160,8 +163,8 @@ export async function getTodayAbsent() {
 }
 
 // Get today's excused count
-export async function getTodayExcused() {
-  const organizationId = await getUserOrganizationId();
+export async function getTodayExcused(organizationIdParam?: number | null, memberIdsParam?: string[]) {
+  const organizationId = await resolveOrganizationId(organizationIdParam);
   if (!organizationId) {
     return { success: false, data: 0 };
   }
@@ -169,17 +172,12 @@ export async function getTodayExcused() {
   const supabase = await getSupabase();
   const today = new Date().toISOString().split('T')[0];
 
-  // Get authorized member IDs first
-  const { data: memberIds } = await supabase
-    .from('organization_members')
-    .select('id')
-    .eq('organization_id', organizationId)
-    .eq('is_active', true);
+  const memberIds = await resolveMemberIds(supabase, organizationId, memberIdsParam);
 
   const { count, error } = await supabase
     .from("attendance_records")
     .select('id', { count: 'exact', head: true })
-    .in('organization_member_id', memberIds?.map(m => m.id) || [])
+    .in('organization_member_id', memberIds)
     .eq("attendance_date", today)
     .eq("status", "excused");
 
@@ -191,25 +189,19 @@ export async function getTodayExcused() {
 }
 
 // Get pending approvals count
-export async function getPendingApprovals() {
-  const organizationId = await getUserOrganizationId();
+export async function getPendingApprovals(organizationIdParam?: number | null, memberIdsParam?: string[]) {
+  const organizationId = await resolveOrganizationId(organizationIdParam);
   if (!organizationId) {
     return { success: false, data: 0 };
   }
 
   const supabase = await getSupabase();
-
-  // Get authorized member IDs first
-  const { data: memberIds } = await supabase
-    .from('organization_members')
-    .select('id')
-    .eq('organization_id', organizationId)
-    .eq('is_active', true);
+  const memberIds = await resolveMemberIds(supabase, organizationId, memberIdsParam);
 
   const { count, error } = await supabase
     .from("attendance_records")
     .select('id', { count: 'exact', head: true })
-    .in('organization_member_id', memberIds?.map(m => m.id) || [])
+    .in('organization_member_id', memberIds)
     .eq("validation_status", "pending");
 
   if (error) {
@@ -220,8 +212,8 @@ export async function getPendingApprovals() {
 }
 
 // Get total groups
-export async function getTotalGroups() {
-  const organizationId = await getUserOrganizationId();
+export async function getTotalGroups(organizationIdParam?: number | null) {
+  const organizationId = await resolveOrganizationId(organizationIdParam);
   if (!organizationId) {
     return { success: false, data: 0 };
   }
@@ -241,8 +233,8 @@ export async function getTotalGroups() {
 }
 
 // Get member status distribution
-export async function getMemberStatusDistribution() {
-  const organizationId = await getUserOrganizationId();
+export async function getMemberStatusDistribution(organizationIdParam?: number | null) {
+  const organizationId = await resolveOrganizationId(organizationIdParam);
   const defaultData = {
     status: [
       { name: "Active", value: 0, color: "#10b981" },
@@ -300,8 +292,8 @@ export async function getMemberStatusDistribution() {
 }
 
 // Get attendance distribution for today
-export async function getTodayAttendanceDistribution() {
-  const organizationId = await getUserOrganizationId();
+export async function getTodayAttendanceDistribution(organizationIdParam?: number | null, memberIdsParam?: string[]) {
+  const organizationId = await resolveOrganizationId(organizationIdParam);
   if (!organizationId) {
     return { success: false, data: [] };
   }
@@ -309,12 +301,7 @@ export async function getTodayAttendanceDistribution() {
   const supabase = await getSupabase();
   const today = new Date().toISOString().split('T')[0];
 
-  // Get authorized member IDs first
-  const { data: memberIds } = await supabase
-    .from('organization_members')
-    .select('id')
-    .eq('organization_id', organizationId)
-    .eq('is_active', true);
+  const memberIds = await resolveMemberIds(supabase, organizationId, memberIdsParam);
 
   // Get all possible attendance statuses for today
   const statuses = ['present', 'late', 'absent', 'excused'];
@@ -323,7 +310,7 @@ export async function getTodayAttendanceDistribution() {
       const { count } = await supabase
         .from("attendance_records")
         .select('id', { count: 'exact', head: true })
-        .in('organization_member_id', memberIds?.map(m => m.id) || [])
+        .in('organization_member_id', memberIds)
         .eq("attendance_date", today)
         .eq("status", status);
       
@@ -356,19 +343,15 @@ export async function getTodayAttendanceDistribution() {
 }
 
 // Get monthly late attendance stats
-export async function getMonthlyLateStats() {
+export async function getMonthlyLateStats(organizationIdParam?: number | null, memberIdsParam?: string[]) {
   try {
-    const supabase = await getSupabase();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
-    }
-
-    const organizationId = await getUserOrganizationId();
+    const organizationId = await resolveOrganizationId(organizationIdParam);
     if (!organizationId) {
       return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
     }
+    
+    const supabase = await getSupabase();
+    const memberIds = await resolveMemberIds(supabase, organizationId, memberIdsParam);
 
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -391,26 +374,18 @@ export async function getMonthlyLateStats() {
     const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
     const prevRange = monthRange(prevYear, prevMonth);
 
-    const { data: memberIds } = await supabase
-      .from('organization_members')
-      .select('id')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true);
-
-    const memberIdList = (memberIds || []).map((m: any) => m.id);
-
     const [currentRes, previousRes] = await Promise.all([
       supabase
         .from('attendance_records')
         .select('id', { count: 'exact', head: true })
-        .in('organization_member_id', memberIdList)
+        .in('organization_member_id', memberIds)
         .gte('attendance_date', curRange.start)
         .lte('attendance_date', curRange.end)
         .eq('status', 'late'),
       supabase
         .from('attendance_records')
         .select('id', { count: 'exact', head: true })
-        .in('organization_member_id', memberIdList)
+        .in('organization_member_id', memberIds)
         .gte('attendance_date', prevRange.start)
         .lte('attendance_date', prevRange.end)
         .eq('status', 'late')
@@ -435,13 +410,13 @@ export async function getMonthlyLateStats() {
 }
 
 // Get active members stats
-export async function getActiveMembersStats() {
+export async function getActiveMembersStats(organizationIdParam?: number | null) {
   try {
-    const supabase = await getSupabase();
-    const organizationId = await getUserOrganizationId();
+    const organizationId = await resolveOrganizationId(organizationIdParam);
     if (!organizationId) {
       return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
     }
+    const supabase = await getSupabase();
 
     const { data: currentMembers } = await supabase
       .from('organization_members')
@@ -478,21 +453,15 @@ export async function getActiveMembersStats() {
 }
 
 // Get active RFID stats
-export async function getActiveRfidStats() {
+export async function getActiveRfidStats(organizationIdParam?: number | null, memberIdsParam?: string[]) {
   try {
-    const supabase = await getSupabase();
-    const organizationId = await getUserOrganizationId();
+    const organizationId = await resolveOrganizationId(organizationIdParam);
     if (!organizationId) {
       return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
     }
-
-    const { data: members } = await supabase
-      .from("organization_members")
-      .select("id")
-      .eq("organization_id", organizationId)
-      .eq("is_active", true);
-
-    const memberIds = members?.map((m: any) => m.id) || [];
+    const supabase = await getSupabase();
+    const memberIds = await resolveMemberIds(supabase, organizationId, memberIdsParam);
+    
     if (memberIds.length === 0) {
       return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
     }
@@ -512,23 +481,17 @@ export async function getActiveRfidStats() {
 }
 
 // Get monthly trend data (last 6 months)
-async function getMonthlyTrendData(organizationId: string) {
+async function getMonthlyTrendData(organizationIdParam?: number | null, memberIdsParam?: string[]) {
   try {
+    const organizationId = await resolveOrganizationId(organizationIdParam);
     if (!organizationId) {
       return []
     }
 
     const supabase = await getSupabase()
-    
-    // Get member IDs for the organization
-    const { data: memberIds } = await supabase
-      .from('organization_members')
-      .select('id')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true)
+    const memberIds = await resolveMemberIds(supabase, organizationId, memberIdsParam);
 
-    const memberIdList = (memberIds || []).map((m: any) => m.id)
-    if (memberIdList.length === 0) {
+    if (memberIds.length === 0) {
       return []
     }
 
@@ -556,7 +519,7 @@ async function getMonthlyTrendData(organizationId: string) {
       const { count: attendanceCount } = await supabase
         .from('attendance_records')
         .select('id', { count: 'exact', head: true })
-        .in('organization_member_id', memberIdList)
+        .in('organization_member_id', memberIds)
         .gte('attendance_date', formatDate(startDate))
         .lte('attendance_date', formatDate(endDate))
         .in('status', ['present', 'late'])
@@ -565,7 +528,7 @@ async function getMonthlyTrendData(organizationId: string) {
       const { count: lateCount } = await supabase
         .from('attendance_records')
         .select('id', { count: 'exact', head: true })
-        .in('organization_member_id', memberIdList)
+        .in('organization_member_id', memberIds)
         .gte('attendance_date', formatDate(startDate))
         .lte('attendance_date', formatDate(endDate))
         .eq('status', 'late')
@@ -587,8 +550,9 @@ async function getMonthlyTrendData(organizationId: string) {
 }
 
 // Get today's summary data
-async function getTodaySummaryData(organizationId: string) {
+async function getTodaySummaryData(organizationIdParam?: number | null, memberIdsParam?: string[]) {
   try {
+    const organizationId = await resolveOrganizationId(organizationIdParam);
     if (!organizationId) {
       return {
         totalMembers: 0,
@@ -603,21 +567,14 @@ async function getTodaySummaryData(organizationId: string) {
     const supabase = await getSupabase()
     const today = new Date().toISOString().split('T')[0]
 
-    // Get all active members
-    const { data: memberIds } = await supabase
-      .from('organization_members')
-      .select('id')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true)
-
-    const memberIdList = (memberIds || []).map((m: any) => m.id)
-    const totalMembers = memberIdList.length
+    const memberIds = await resolveMemberIds(supabase, organizationId, memberIdsParam);
+    const totalMembers = memberIds.length
 
     // Get today's attendance records
     const { data: attendanceRecords } = await supabase
       .from('attendance_records')
       .select('status, late_minutes')
-      .in('organization_member_id', memberIdList)
+      .in('organization_member_id', memberIds)
       .eq('attendance_date', today)
 
     // Calculate stats
@@ -661,13 +618,17 @@ async function getTodaySummaryData(organizationId: string) {
 }
 
 // Get attendance groups data
-export async function getAttendanceGroupsData(organizationId: string) {
+export async function getAttendanceGroupsData(organizationIdParam?: number | null, memberIdsParam?: string[]) {
   try {
-    const supabase = await getSupabase();
+    const organizationId = await resolveOrganizationId(organizationIdParam);
     if (!organizationId) {
       return { success: false, data: [] };
     }
 
+    const supabase = await getSupabase();
+    // Note: This function needs to join with departments, so passing just IDs isn't enough
+    // We need to fetch members with department info
+    
     const { data: members } = await supabase
       .from('organization_members')
       .select(`
@@ -721,107 +682,16 @@ export async function getAttendanceGroupsData(organizationId: string) {
   }
 }
 
-// Get all dashboard stats at once - CONSOLIDATED with single org ID fetch
-export async function getDashboardStats(): Promise<{
-  totalActiveMembers: number
-  totalMembers: number
-  todayAttendance: number
-  todayLate: number
-  todayAbsent: number
-  todayExcused: number
-  pendingApprovals: number
-  totalGroups: number
-  memberDistribution: { status: Array<{ name: string; value: number; color: string }>; employment: Array<{ name: string; value: number; color: string }> } | null
-  monthlyAttendance: { currentMonth: number; previousMonth: number; percentChange: number }
-  monthlyLate: { currentMonth: number; previousMonth: number; percentChange: number }
-  activeMembers: { currentMonth: number; previousMonth: number; percentChange: number }
-  activeRfid: { currentMonth: number; previousMonth: number; percentChange: number }
-  attendanceGroups: any[]
-  groupComparison: any[]
-  monthlyTrend: Array<{ month: string; attendance: number; late: number }>
-  todaySummary: { totalMembers: number; checkedIn: number; onTime: number; late: number; absent: number; attendanceRate: number }
-}> {
-  // Call getUserOrganizationId once at the top - prevents multiple DB calls
-  const organizationId = await getUserOrganizationId();
-  
-  // Import group comparison function
-  const { getGroupComparisonStats } = await import('./group-comparison')
-  
-  // All these functions internally call getUserOrganizationId again
-  // TODO: Refactor to accept organizationId as parameter to avoid redundant calls
-  const [
-    totalActiveMembers, 
-    totalMembers, 
-    todayAttendance, 
-    todayLate, 
-    todayAbsent, 
-    todayExcused, 
-    pendingApprovals, 
-    totalGroups, 
-    memberDistribution,
-    monthlyAttendance,
-    monthlyLate,
-    activeMembers,
-    activeRfid,
-    attendanceGroups,
-    groupComparison,
-    monthlyTrend,
-    todaySummary
-  ] = await Promise.all([
-    getTotalActiveMembers(),
-    getTotalMembers(),
-    getTodayAttendance(),
-    getTodayLateAttendance(),
-    getTodayAbsent(),
-    getTodayExcused(),
-    getPendingApprovals(),
-    getTotalGroups(),
-    getMemberStatusDistribution(),
-    getMonthlyAttendanceStats(),
-    getMonthlyLateStats(),
-    getActiveMembersStats(),
-    getActiveRfidStats(),
-    getAttendanceGroupsData(organizationId || ''),
-    getGroupComparisonStats(organizationId || ''),
-    getMonthlyTrendData(organizationId || ''),
-    getTodaySummaryData(organizationId || '')
-  ]);
-
-  return {
-    totalActiveMembers: totalActiveMembers.data,
-    totalMembers: totalMembers.data,
-    todayAttendance: todayAttendance.data,
-    todayLate: todayLate.data,
-    todayAbsent: todayAbsent.data,
-    todayExcused: todayExcused.data,
-    pendingApprovals: pendingApprovals.data,
-    totalGroups: totalGroups.data,
-    memberDistribution: memberDistribution.success ? memberDistribution.data : null,
-    monthlyAttendance: monthlyAttendance.data,
-    monthlyLate: monthlyLate.data,
-    activeMembers: activeMembers.data,
-    activeRfid: activeRfid.data,
-    attendanceGroups: attendanceGroups.data,
-    groupComparison: groupComparison,
-    monthlyTrend: monthlyTrend,
-    todaySummary: todaySummary
-  };
-}
-
 // Get monthly attendance stats
-export async function getMonthlyAttendanceStats() {
+export async function getMonthlyAttendanceStats(organizationIdParam?: number | null, memberIdsParam?: string[]) {
   try {
-    const supabase = await getSupabase();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
-    }
-
-    const organizationId = await getUserOrganizationId();
+    const organizationId = await resolveOrganizationId(organizationIdParam);
     if (!organizationId) {
       return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 } };
     }
+
+    const supabase = await getSupabase();
+    const memberIds = await resolveMemberIds(supabase, organizationId, memberIdsParam);
 
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -850,21 +720,6 @@ export async function getMonthlyAttendanceStats() {
     const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
     const prevRange = monthRange(prevYear, prevMonth);
 
-    // Get authorized member IDs first
-    const { data: memberIds, error: memberIdsError } = await supabase
-      .from('organization_members')
-      .select('id')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true);
-
-    if (memberIdsError) {
-      dashboardLogger.error('Failed to fetch organization member ids', memberIdsError);
-      return { success: false, data: { currentMonth: 0, previousMonth: 0, percentChange: 0 }, error: memberIdsError };
-    }
-
-    type MemberIdRow = { id: string };
-    const memberIdList = (memberIds || []).map((member) => (member as MemberIdRow).id);
-
     // small retry wrapper for transient network errors
     async function queryWithRetry<T>(queryFn: () => Promise<T>, retries = 1): Promise<T> {
       try {
@@ -884,7 +739,7 @@ export async function getMonthlyAttendanceStats() {
           supabase
             .from('attendance_records')
             .select('id', { count: 'exact', head: true })
-            .in('organization_member_id', memberIdList || [])
+            .in('organization_member_id', memberIds || [])
             .gte('attendance_date', curRange.start)
             .lte('attendance_date', curRange.end)
             .in('status', ['present', 'late'])
@@ -897,7 +752,7 @@ export async function getMonthlyAttendanceStats() {
           supabase
             .from('attendance_records')
             .select('id', { count: 'exact', head: true })
-            .in('organization_member_id', memberIdList || [])
+            .in('organization_member_id', memberIds || [])
             .gte('attendance_date', prevRange.start)
             .lte('attendance_date', prevRange.end)
             .in('status', ['present', 'late'])
@@ -937,4 +792,100 @@ export async function getMonthlyAttendanceStats() {
       error,
     };
   }
+}
+
+// Get all dashboard stats at once - CONSOLIDATED
+export async function getDashboardStats(): Promise<{
+  totalActiveMembers: number
+  totalMembers: number
+  todayAttendance: number
+  todayLate: number
+  todayAbsent: number
+  todayExcused: number
+  pendingApprovals: number
+  totalGroups: number
+  memberDistribution: { status: Array<{ name: string; value: number; color: string }>; employment: Array<{ name: string; value: number; color: string }> } | null
+  monthlyAttendance: { currentMonth: number; previousMonth: number; percentChange: number }
+  monthlyLate: { currentMonth: number; previousMonth: number; percentChange: number }
+  activeMembers: { currentMonth: number; previousMonth: number; percentChange: number }
+  activeRfid: { currentMonth: number; previousMonth: number; percentChange: number }
+  attendanceGroups: any[]
+  groupComparison: any[]
+  monthlyTrend: Array<{ month: string; attendance: number; late: number }>
+  todaySummary: { totalMembers: number; checkedIn: number; onTime: number; late: number; absent: number; attendanceRate: number }
+}> {
+  // 1. Fetch Organization ID ONCE
+  const organizationId = await getUserOrganizationId();
+  if (!organizationId) {
+     throw new Error("User does not belong to an organization");
+  }
+  
+  // 2. Fetch Active Members ONCE (needed for most stats)
+  const supabase = await getSupabase();
+  const { data: members } = await supabase
+    .from('organization_members')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .eq('is_active', true);
+    
+  const activeMemberIds = members?.map(m => m.id) || [];
+
+  // 3. Pass context to all functions
+  const [
+    totalActiveMembers, 
+    totalMembers, 
+    todayAttendance, 
+    todayLate, 
+    todayAbsent, 
+    todayExcused, 
+    pendingApprovals, 
+    totalGroups, 
+    memberDistribution,
+    monthlyAttendance,
+    monthlyLate,
+    activeMembers,
+    activeRfid,
+    attendanceGroups,
+    groupComparison,
+    monthlyTrend,
+    todaySummary
+  ] = await Promise.all([
+    getTotalActiveMembers(organizationId),
+    getTotalMembers(organizationId),
+    getTodayAttendance(organizationId, activeMemberIds),
+    getTodayLateAttendance(organizationId, activeMemberIds),
+    getTodayAbsent(organizationId, activeMemberIds),
+    getTodayExcused(organizationId, activeMemberIds),
+    getPendingApprovals(organizationId, activeMemberIds),
+    getTotalGroups(organizationId),
+    getMemberStatusDistribution(organizationId),
+    getMonthlyAttendanceStats(organizationId, activeMemberIds),
+    getMonthlyLateStats(organizationId, activeMemberIds),
+    getActiveMembersStats(organizationId),
+    getActiveRfidStats(organizationId, activeMemberIds),
+    getAttendanceGroupsData(organizationId, activeMemberIds),
+    getGroupComparisonStats(String(organizationId)),
+    getMonthlyTrendData(organizationId, activeMemberIds),
+    getTodaySummaryData(organizationId, activeMemberIds)
+  ]);
+
+  return {
+    totalActiveMembers: totalActiveMembers.data,
+    totalMembers: totalMembers.data,
+    todayAttendance: todayAttendance.data,
+    todayLate: todayLate.data,
+    todayAbsent: todayAbsent.data,
+    todayExcused: todayExcused.data,
+    pendingApprovals: pendingApprovals.data,
+    totalGroups: totalGroups.data,
+    memberDistribution: memberDistribution.success ? memberDistribution.data : null,
+    monthlyAttendance: monthlyAttendance.data,
+    monthlyLate: monthlyLate.data,
+    activeMembers: activeMembers.data,
+    activeRfid: activeRfid.data,
+    attendanceGroups: attendanceGroups.data,
+    groupComparison: groupComparison,
+    monthlyTrend: monthlyTrend,
+    todaySummary: todaySummary
+  };
 }
