@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,15 +22,20 @@ import {
   FileText,
   ChevronRight,
   ChevronDown,
-  Loader2
+  Loader2,
+  Grid3x3,
+  List,
+  Trash2
 } from "lucide-react";
 import { ILeaveRequest } from "@/lib/leave/types";
 import { formatLeaveDateRange, getStatusColor } from "@/lib/leave/utils";
 import { approveLeaveRequest, rejectLeaveRequest } from "@/action/admin-leaves";
 import { useOrgStore } from "@/store/org-store";
+import { useUserStore } from "@/store/user-store";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { LeaveRequestCard } from "./leave-request-card";
 
 interface LeaveRequestListProps {
   requests: ILeaveRequest[];
@@ -37,9 +43,13 @@ interface LeaveRequestListProps {
   isAdmin?: boolean;
   canApprove?: boolean;
   onUpdate?: () => void;
+  onDelete?: (request: ILeaveRequest) => void;
   compact?: boolean;
   onViewAll?: () => void;
   hideExpandButton?: boolean;
+  viewMode?: 'list' | 'grid';
+  onViewModeChange?: (mode: 'list' | 'grid') => void;
+  showViewToggle?: boolean;
 }
 
 export function LeaveRequestList({
@@ -48,8 +58,12 @@ export function LeaveRequestList({
   isAdmin = false,
   canApprove = false,
   onUpdate,
+  onDelete,
   compact = false,
-  hideExpandButton = false
+  hideExpandButton = false,
+  viewMode = 'list',
+  onViewModeChange,
+  showViewToggle = false
 }: LeaveRequestListProps) {
   const [selectedRequest, setSelectedRequest] = useState<ILeaveRequest | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
@@ -57,6 +71,12 @@ export function LeaveRequestList({
   const [actionLoading, setActionLoading] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const { organizationId } = useOrgStore();
+  const { user } = useUserStore();
+
+  // Check if current user is the owner of the request
+  const isRequestOwner = (request: ILeaveRequest) => {
+    return request.organization_member?.user?.id === user?.id;
+  };
 
   const toggleExpanded = (requestId: number) => {
     setExpandedItems(prev => {
@@ -137,49 +157,158 @@ export function LeaveRequestList({
 
   if (loading) {
     return (
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <Card key={i}>
-            <CardContent className="p-4">
-              <div className="flex items-start gap-4">
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-48" />
-                  <Skeleton className="h-3 w-64" />
+      <>
+        {/* View Toggle - Show even when loading */}
+        {showViewToggle && (
+          <div className="flex items-center justify-end mb-4">
+            <div className="flex items-center rounded-lg border">
+              <Button
+                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => onViewModeChange?.('list')}
+                className="rounded-r-none"
+                disabled={loading}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => onViewModeChange?.('grid')}
+                className="rounded-l-none border-l"
+                disabled={loading}
+              >
+                <Grid3x3 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-4">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-48" />
+                    <Skeleton className="h-3 w-64" />
+                  </div>
+                  <Skeleton className="h-8 w-20" />
                 </div>
-                <Skeleton className="h-8 w-20" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </>
     );
   }
 
   if (requests.length === 0) {
     return (
-      <div className="text-center py-12">
-        <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <h3 className="text-lg font-semibold mb-2">No leave requests</h3>
-        <p className="text-muted-foreground">
-          {isAdmin 
-            ? "No leave requests to review at this time"
-            : "You haven't made any leave requests yet"
-          }
-        </p>
-      </div>
+      <>
+        {/* View Toggle - Show even when no data */}
+        {showViewToggle && (
+          <div className="flex items-center justify-end mb-4">
+            <div className="flex items-center rounded-lg border">
+              <Button
+                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => onViewModeChange?.('list')}
+                className="rounded-r-none"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => onViewModeChange?.('grid')}
+                className="rounded-l-none border-l"
+              >
+                <Grid3x3 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        <div className="text-center py-12">
+          <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No leave requests</h3>
+          <p className="text-muted-foreground">
+            {isAdmin 
+              ? "No leave requests to review at this time"
+              : "You haven't made any leave requests yet"
+            }
+          </p>
+        </div>
+      </>
     );
   }
 
   return (
     <>
-      <div className="space-y-3">
-        {requests.map((request) => (
-          <Card key={request.id} className={cn(
-            "transition-colors",
-            request.status === 'pending' && "border-yellow-200 bg-yellow-50/50 dark:border-yellow-900 dark:bg-yellow-950/20"
-          )}>
+      {/* View Toggle */}
+      {showViewToggle && (
+        <div className="flex items-center justify-end mb-4">
+          <div className="flex items-center rounded-lg border">
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => onViewModeChange?.('list')}
+              className="rounded-r-none"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => onViewModeChange?.('grid')}
+              className="rounded-l-none border-l"
+            >
+              <Grid3x3 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Content */}
+      {viewMode === 'grid' ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {requests.map((request, index) => (
+            <motion.div
+              key={request.id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <LeaveRequestCard
+                request={request}
+                isAdmin={isAdmin}
+                canApprove={canApprove}
+                onUpdate={onUpdate}
+                onDelete={onDelete}
+                onApprove={(req) => handleAction(req, 'approve')}
+                onReject={(req) => handleAction(req, 'reject')}
+              />
+            </motion.div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+        {requests.map((request, index) => (
+          <motion.div
+            key={request.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+          >
+            <Card className={cn(
+              "transition-colors hover:shadow-md border-l-4",
+              request.status === 'pending' 
+                ? "border-l-yellow-400 border-yellow-200 bg-yellow-50/50 dark:border-yellow-900 dark:bg-yellow-950/20 shadow-md" 
+                : "border-l-transparent"
+            )}>
             <CardContent className="p-4">
               <div className="flex items-start gap-4">
                 {/* Avatar (Admin View) */}
@@ -247,31 +376,47 @@ export function LeaveRequestList({
 
                     {/* Actions & Request Info */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
-                      {/* Approve/Reject Buttons */}
-                      {canApprove && request.status === 'pending' && (
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        {/* Approve/Reject Buttons (Admin only for others' requests) */}
+                        {canApprove && request.status === 'pending' && !isRequestOwner(request) && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700 dark:border-green-500 dark:text-green-500 dark:hover:bg-green-950 flex-1 sm:flex-none"
+                              onClick={() => handleAction(request, 'approve')}
+                            >
+                              <CheckCircle className="h-3 w-3" />
+                              <span className="hidden sm:inline">Approve</span>
+                              <span className="sm:hidden">✓</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-500 dark:text-red-500 dark:hover:bg-red-950 flex-1 sm:flex-none"
+                              onClick={() => handleAction(request, 'reject')}
+                            >
+                              <XCircle className="h-3 w-3" />
+                              <span className="hidden sm:inline">Reject</span>
+                              <span className="sm:hidden">✗</span>
+                            </Button>
+                          </>
+                        )}
+                        
+                        {/* Cancel Button (Owner only for pending requests) */}
+                        {request.status === 'pending' && onDelete && isRequestOwner(request) && (
                           <Button
                             size="sm"
                             variant="outline"
-                            className="gap-1 border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700 dark:border-green-500 dark:text-green-500 dark:hover:bg-green-950 flex-1 sm:flex-none"
-                            onClick={() => handleAction(request, 'approve')}
+                            className="gap-1 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700 dark:border-orange-500 dark:text-orange-500 dark:hover:bg-orange-950 w-full sm:w-auto"
+                            onClick={() => onDelete?.(request)}
                           >
-                            <CheckCircle className="h-3 w-3" />
-                            <span className="hidden sm:inline">Approve</span>
-                            <span className="sm:hidden">✓</span>
+                            <Trash2 className="h-3 w-3" />
+                            <span className="ml-1">Cancel</span>
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1 border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-500 dark:text-red-500 dark:hover:bg-red-950 flex-1 sm:flex-none"
-                            onClick={() => handleAction(request, 'reject')}
-                          >
-                            <XCircle className="h-3 w-3" />
-                            <span className="hidden sm:inline">Reject</span>
-                            <span className="sm:hidden">✗</span>
-                          </Button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                       
                       {/* Request Number & Date */}
                       <div className="text-left sm:text-right text-sm text-muted-foreground w-full sm:w-auto">
@@ -400,8 +545,10 @@ export function LeaveRequestList({
               </div>
             </CardContent>
           </Card>
+          </motion.div>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* Action Confirmation Dialog */}
       <Dialog 

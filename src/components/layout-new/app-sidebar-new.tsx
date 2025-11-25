@@ -89,8 +89,12 @@ const getSidebarGroups = (): NavGroup[] => [
       },
       {
         title: 'Attendance',
-        url: '/attendance',
         icon: ClipboardList,
+        subItems: [
+          { title: 'Dashboard', url: '/attendance', icon: BarChart3 },
+          { title: 'Attendance List', url: '/attendance/list', icon: ListChecks },
+          { title: 'Locations', url: '/attendance/locations', icon: MapPin },
+        ],
       },
       {
         title: 'Schedules',
@@ -99,11 +103,6 @@ const getSidebarGroups = (): NavGroup[] => [
           { title: 'Work Schedules', url: '/schedule', icon: Calendar },
           { title: 'Member Schedules', url: '/member-schedules', icon: Users },
         ],
-      },
-      {
-        title: 'Locations',
-        url: '/attendance/locations',
-        icon: MapPin,
       },
       {
         title: 'Leaves',
