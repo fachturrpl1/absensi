@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Settings, AlertCircle, RefreshCw, Loader2, Plus, FolderKanban, ToggleRight, Banknote } from "lucide-react";
+import { ArrowLeft, Settings, RefreshCw, Loader2, Plus, FolderKanban, ToggleRight, Banknote } from "lucide-react";
 import { getOrganizationLeaveTypes } from "@/action/admin-leaves";
 import { ILeaveType } from "@/lib/leave/types";
 import { useUserStore } from "@/store/user-store";
@@ -15,7 +15,6 @@ import { useOrgStore } from "@/store/org-store";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { LeaveTypeManager } from "@/components/leave/leave-type-manager";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function LeaveTypesPage() {
   const [leaveTypes, setLeaveTypes] = useState<ILeaveType[]>([]);
