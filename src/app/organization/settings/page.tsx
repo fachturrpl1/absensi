@@ -82,8 +82,6 @@ import {
 
   MapPin,
 
-  Calendar,
-
   Clock,
 
   Settings,
@@ -919,301 +917,163 @@ export default function OrganizationSettingsPage() {
 
   return (
 
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+    <div className="flex flex-1 flex-col">
+      <div className="max-w-5xl mx-auto p-6 w-full">
+        <div className="space-y-4">
 
-      <div className="space-y-6">
-
-      {/* Organization Status */}
-
-        <Card className="border shadow-sm">
-
-          <CardHeader className="pb-4">
-
-            <CardTitle className="flex items-center gap-2 text-xl">
-
-              <Building2 className="h-5 w-5 text-primary" />
-
-            Organization Status
-
-          </CardTitle>
-
-            <CardDescription>
-
-              View and manage your organization&apos;s status and invitation settings
-
-            </CardDescription>
-
-        </CardHeader>
-
-          <CardContent className="space-y-6">
-
-            {/* Current Status */}
-
-            <div className="p-4 rounded-lg bg-muted/50 space-y-3">
-
-              <div className="space-y-1">
-
-                <Label className="text-base font-semibold">Current Status</Label>
-
-                <p className="text-sm text-muted-foreground">
-
-                  Your organization&apos;s current activation status
-
-                </p>
-
-            </div>
-
-              <Badge 
-
-                variant="secondary"
-
-                className={
-
-                  orgData?.is_active
-
-                    ? "w-fit text-sm px-3 py-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-400/30"
-
-                    : "w-fit text-sm px-3 py-1.5 bg-amber-100 text-amber-700 dark:bg-amber-400/20 dark:text-amber-200 border border-amber-200 dark:border-amber-400/30"
-
-                }
-
-              >
-
-              {orgData?.is_active ? "Active" : "Inactive"}
-
-            </Badge>
-
-          </div>
-
-          
-          
-          <Separator />
-          
-          
-
-            {/* Invitation Code */}
-
-            <div className="p-4 rounded-lg bg-muted/50 space-y-3">
-
-              <div className="space-y-1">
-
-                <Label className="text-base font-semibold">Invitation Code</Label>
-
-                <p className="text-sm text-muted-foreground">
-
-                  Share this code to invite new members to your organization
-
-                </p>
-
-              </div>
-
-              <div className="flex flex-col gap-2">
-
-                <div className="flex items-center gap-2 px-3 py-2 bg-background border rounded-md w-fit max-w-full">
-
-                  <code className="text-sm font-mono tracking-wider">
-
-                  {showInviteCode ? orgData?.inv_code : "••••••••"}
-
-                </code>
-
+          {/* Organization Overview */}
+          <Card className="border shadow-sm">
+            <CardContent className="p-6 space-y-4">
+              {/* Header - Bagian Kiri Atas */}
+              <div className="flex flex-col md:flex-row gap-4 items-start">
+                {/* Logo */}
+                <div className="shrink-0">
+                  {logoPreview || orgData?.logo_url ? (
+                    <div className="w-24 h-24 rounded-md border border-border bg-muted overflow-hidden flex items-center justify-center">
+                      <img 
+                        src={logoPreview || orgData?.logo_url || ''} 
+                        alt={`${orgData?.name || 'Organization'} logo`}
+                        className="block w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-24 h-24 rounded-md border border-border bg-muted overflow-hidden flex items-center justify-center">
+                      <Building2 className="h-12 w-12 text-muted-foreground/50" />
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-
-                <Button
-
-                  size="sm"
-
-                  variant="ghost"
-
-                  onClick={() => setShowInviteCode(!showInviteCode)}
-
-                  className="h-9 w-9 p-0"
-
-                >
-
-                  {showInviteCode ? (
-
-                    <EyeOff className="h-4 w-4" />
-
-                  ) : (
-
-                    <Eye className="h-4 w-4" />
-
-                  )}
-
-                </Button>
-
-                <Button
-
-                  size="sm"
-
-                  variant="ghost"
-
-                  onClick={copyInviteCode}
-
-                  disabled={!showInviteCode}
-
-                  className="h-9 w-9 p-0"
-
-                  title="Copy invitation code"
-
-                >
-
-                  {inviteCodeCopied ? (
-
-                    <Check className="h-4 w-4 text-green-600" />
-
-                  ) : (
-
-                    <ClipboardCheck className="h-4 w-4" />
-
-                  )}
-
-                </Button>
-
-                <AlertDialog>
-
-                  <AlertDialogTrigger asChild>
-
-                    <Button
-
-                      size="sm"
-
-                      variant="ghost"
-
-                      disabled={regenerating}
-
-                      className="h-9 w-9 p-0"
-
-                      title="Generate new invitation code"
-
+                {/* Organization Info */}
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h1 className="text-2xl font-bold">{orgData?.name || 'Organization'}</h1>
+                    <Badge 
+                      variant="secondary"
+                      className={
+                        orgData?.is_active
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-400/30"
+                          : "bg-amber-100 text-amber-700 dark:bg-amber-400/20 dark:text-amber-200 border border-amber-200 dark:border-amber-400/30"
+                      }
                     >
+                      {orgData?.is_active ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+                  
+                  {orgData?.industry && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Building2 className="h-4 w-4" />
+                      <span>Category: {getIndustryLabel(orgData.industry)}</span>
+                    </div>
+                  )}
 
-                      {regenerating ? (
-
-                        <Loader2 className="h-4 w-4 animate-spin" />
-
-                        ) : (
-
-                        <RefreshCw className="h-4 w-4" />
-
-                      )}
-
-                    </Button>
-
-                  </AlertDialogTrigger>
-
-                  <AlertDialogContent>
-
-                    <AlertDialogHeader>
-
-                      <AlertDialogTitle>Regenerate invite code?</AlertDialogTitle>
-
-                      <AlertDialogDescription>
-
-                        This action will deactivate the current invitation code immediately. New members must use the new
-
-                        code.
-
-                      </AlertDialogDescription>
-
-                    </AlertDialogHeader>
-
-                    <AlertDialogFooter>
-
-                      <AlertDialogCancel disabled={regenerating}>Cancel</AlertDialogCancel>
-
-                      <AlertDialogAction onClick={handleRegenerateInviteCode} disabled={regenerating}>
-
-                        {regenerating ? (
-
-                          <>
-
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-
-                            Regenerating...
-
-                          </>
-
-                        ) : (
-
-                          "Yes, regenerate"
-
-                        )}
-
-                      </AlertDialogAction>
-
-                    </AlertDialogFooter>
-
-                  </AlertDialogContent>
-
-                </AlertDialog>
-
+                  {/* Created Date - DI BAWAH nama organisasi */}
+                  {orgData?.created_at && (
+                    <p className="text-sm opacity-70">
+                      Created: {new Date(orgData.created_at).toLocaleDateString('id-ID', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  )}
+                </div>
               </div>
 
-            </div>
-
-            </div>
-
-
-
-            <Separator />
-
-
-
-            {/* Created Date */}
-
-            <div className="p-4 rounded-lg bg-muted/50 space-y-3">
-
-              <div className="space-y-1">
-
-                <Label className="text-base font-semibold flex items-center gap-2">
-
-                  <Calendar className="h-4 w-4" />
-
-                  Created
-
+              {/* Invitation Code Card - Full Width */}
+              <div 
+                className="rounded-xl p-4 space-y-3 w-full"
+                style={{
+                  background: '#18181b',
+                  border: '1px solid #27272a'
+                }}
+              >
+                {/* Label */}
+                <Label className="text-base font-semibold text-foreground">
+                  Invitation Code
                 </Label>
 
-                <p className="text-sm text-muted-foreground">
+                {/* Code Box */}
+                <div className="px-3 py-2 bg-background border border-border rounded-md">
+                  <code className="text-sm font-mono tracking-wider text-foreground">
+                    {showInviteCode ? orgData?.inv_code : "••••••••"}
+                  </code>
+                </div>
 
-                  Organization creation date
+                {/* Icon Buttons */}
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShowInviteCode(!showInviteCode)}
+                    className="h-9 w-9 p-0 hover:bg-muted"
+                  >
+                    {showInviteCode ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
 
-                </p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={copyInviteCode}
+                    disabled={!showInviteCode}
+                    className="h-9 w-9 p-0 hover:bg-muted"
+                    title="Copy invitation code"
+                  >
+                    {inviteCodeCopied ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <ClipboardCheck className="h-4 w-4" />
+                    )}
+                  </Button>
 
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={regenerating}
+                        className="h-9 w-9 p-0 hover:bg-muted"
+                        title="Generate new invitation code"
+                      >
+                        {regenerating ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Regenerate invite code?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action will deactivate the current invitation code immediately. New members must use the new code.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={regenerating}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleRegenerateInviteCode} disabled={regenerating}>
+                          {regenerating ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Regenerating...
+                            </>
+                          ) : (
+                            "Yes, regenerate"
+                          )}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <p className="text-sm font-medium">
-
-                {orgData?.created_at 
-
-                  ? new Date(orgData.created_at).toLocaleDateString('id-ID', {
-
-                      year: 'numeric',
-
-                      month: 'long',
-
-                      day: 'numeric'
-
-                    })
-
-                  : "-"
-
-                }
-
-              </p>
-
-              </div>
-
-        </CardContent>
-
-      </Card>
-
-
-
-      {/* Organization Information */}
+          {/* Organization Information */}
+          {/* Organization Information */}
 
         <Card className="border shadow-sm">
 
@@ -2200,11 +2060,9 @@ export default function OrganizationSettingsPage() {
           )}
 
         </Button>
-
+        </div>
+        </div>
       </div>
-
-      </div>
-
     </div>
 
   );
