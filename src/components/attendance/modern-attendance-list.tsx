@@ -1,14 +1,10 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
 import {
-  Clock,
   Search,
-  TrendingUp,
-  TrendingDown,
   MapPin,
   CheckCircle2,
   XCircle,
@@ -18,15 +14,12 @@ import {
   Edit,
   Trash2,
   MoreVertical,
-  UserCheck,
-  UserX,
   Mail,
-  Plus,
   Grid3x3,
   List,
   X,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -46,7 +39,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import {
   Pagination,
@@ -59,18 +51,8 @@ import {
 } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
 import { formatLocalTime } from '@/utils/timezone';
-import { getAllAttendance, getAttendanceStats, AttendanceStatsResult } from '@/action/attendance';
+import { getAllAttendance } from '@/action/attendance';
 import { toast } from 'sonner';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  Legend
-} from 'recharts';
 
 interface ModernAttendanceListProps {
   initialData?: any[];
@@ -82,7 +64,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [userTimezone, setUserTimezone] = useState('UTC');
-  const [stats, setStats] = useState<AttendanceStatsResult | null>(null);
   
   // Date filter state (same as Dashboard)
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
@@ -125,19 +106,13 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     // Pause auto-refresh while loading to avoid overlapping
     setIsAutoRefreshPaused(true); 
     try {
-      const [listResult, statsResult] = await Promise.all([
+      const [listResult] = await Promise.all([
         getAllAttendance({
           page: currentPage,
           limit: itemsPerPage,
           dateFrom: dateRange.from.toISOString().split('T')[0],
           dateTo: dateRange.to.toISOString().split('T')[0],
           search: searchQuery || undefined,
-          status: statusFilter === 'all' ? undefined : statusFilter,
-          department: departmentFilter === 'all' ? undefined : departmentFilter,
-        }),
-        getAttendanceStats({
-          dateFrom: dateRange.from.toISOString().split('T')[0],
-          dateTo: dateRange.to.toISOString().split('T')[0],
           status: statusFilter === 'all' ? undefined : statusFilter,
           department: departmentFilter === 'all' ? undefined : departmentFilter,
         })
@@ -162,10 +137,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         }
       } else {
         toast.error('Failed to load attendance data');
-      }
-
-      if (statsResult.success && statsResult.data) {
-        setStats(statsResult.data);
       }
     } catch (error) {
       console.error('Fetch error:', error);
@@ -197,38 +168,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
     return () => clearInterval(timer);
   }, [loading, isAutoRefreshPaused, fetchData]);
-
-  // Stats calculation
-  const filteredStats = useMemo(() => {
-    if (stats) {
-      const total = stats.total;
-      return {
-        total,
-        present: stats.present,
-        late: stats.late,
-        absent: stats.absent,
-        onLeave: stats.leave,
-        avgWorkHours: '-', // Need backend calc for this
-        attendanceRate: total > 0 ? Math.round((stats.present / total) * 100) : 0,
-      };
-    }
-
-    // Fallback to client-side calculation if no stats
-    const total = attendanceData.length; 
-    const present = attendanceData.filter((r: any) => r.status === 'present').length;
-    const late = attendanceData.filter((r: any) => r.status === 'late').length;
-    const absent = attendanceData.filter((r: any) => r.status === 'absent').length;
-
-    return {
-      total: totalItems, 
-      present,
-      late,
-      absent,
-      onLeave: 0,
-      avgWorkHours: '8.5h',
-      attendanceRate: total > 0 ? Math.round((present / total) * 100) : 0,
-    };
-  }, [attendanceData, totalItems, stats]);
 
   // Helper component to display device location
   const LocationDisplay = ({ checkInLocationName, checkOutLocationName }: any) => {

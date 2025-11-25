@@ -245,7 +245,7 @@ export type AttendanceStatsResult = {
 
 export const getAttendanceStats = async (params: GetAttendanceParams = {}): Promise<{ success: boolean; data?: AttendanceStatsResult }> => {
   const supabase = await getSupabase();
-  const { dateFrom, dateTo, department, status } = params;
+  const { dateFrom, dateTo, status } = params;
 
   // Get current user's organization (same auth check as getAllAttendance)
   const { data: { user } } = await supabase.auth.getUser();
@@ -261,24 +261,10 @@ export const getAttendanceStats = async (params: GetAttendanceParams = {}): Prom
 
   // Base query builder
   const buildQuery = (statusFilter?: string) => {
+    // We use a single query construction to avoid type mismatches from reassignment
     let q = supabase
       .from("attendance_records")
-      .select("id", { count: 'exact', head: true })
-      .eq("organization_members.organization_id", userMember.organization_id);
-
-    // We need to join organization_members to filter by organization_id
-    // Note: For simple count with filter, we might need inner join syntax in the select or use filtering on embedded resource
-    // But 'head: true' doesn't support embedding well for filtering parent. 
-    // Strategy: Use the !inner join on organization_members in the select string if we were selecting data,
-    // but for count, it's trickier. 
-    // Actually, Supabase/PostgREST allows filtering on embedded resources.
-    
-    // Let's use a more robust approach: Filter by organization_members IDs if needed, or use the existing relation logic
-    // Replicating getAllAttendance logic but optimized for count
-    
-    q = supabase
-      .from("attendance_records")
-      .select("organization_members!inner(organization_id)", { count: 'exact', head: true })
+      .select("id, organization_members!inner(organization_id)", { count: 'exact', head: true })
       .eq("organization_members.organization_id", userMember.organization_id);
 
     if (dateFrom) q = q.gte("attendance_date", dateFrom);
@@ -299,7 +285,7 @@ export const getAttendanceStats = async (params: GetAttendanceParams = {}): Prom
 
     // For Trend Chart (Daily counts in the range)
     // This requires a separate data fetch, not just head:true
-    let trendData = [];
+    let trendData: any[] = [];
     if (dateFrom && dateTo) {
       const { data: trend } = await supabase
         .from("attendance_records")
