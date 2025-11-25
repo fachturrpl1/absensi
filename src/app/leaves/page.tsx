@@ -1062,15 +1062,16 @@ export default function LeavesPage() {
         {/* Analytics Tab (Admin Only) */}
         {isAdmin && (
           <TabsContent value="analytics" className="space-y-6">
+            {/* Leave Types Usage Trend & Leave Type Distribution */}
             <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-              {/* Leave Type Distribution */}
+              {/* Leave Types Usage Trend */}
               <Card className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg">Leave Type Distribution</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">Leave Types Usage Trend</CardTitle>
                     </div>
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+                    <div className="flex items-center gap-2">
                       <Select value={typeDistributionFilter} onValueChange={(value: typeof typeDistributionFilter) => setTypeDistributionFilter(value)}>
                         <SelectTrigger className="w-[160px] h-9">
                           <SelectValue />
@@ -1086,6 +1087,37 @@ export default function LeavesPage() {
                           <SelectItem value="thisyear">This Year</SelectItem>
                         </SelectContent>
                       </Select>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActiveTab("calendar")}
+                        className="h-9 px-3 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                        title="Go to Calendar"
+                      >
+                        <Calendar className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <Separator className="mt-4" />
+                </CardHeader>
+                <CardContent>
+                  <LeaveAnalytics 
+                    requests={allRequests}
+                    type="type-trend"
+                    loading={loading}
+                    periodFilter={typeDistributionFilter}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Leave Type Distribution */}
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg">Leave Type Distribution</CardTitle>
+                    </div>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" size="sm" className="gap-2">
@@ -1121,7 +1153,10 @@ export default function LeavesPage() {
                   />
                 </CardContent>
               </Card>
+            </div>
 
+            {/* Detailed Analytics & Department Distribution */}
+            <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
               {/* Detailed Analytics */}
               <Card className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-4">
@@ -1173,151 +1208,196 @@ export default function LeavesPage() {
                   />
                 </CardContent>
               </Card>
+
+              {/* Department Distribution */}
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">Department Distribution</CardTitle>
+                      <CardDescription className="mt-1">
+                        Leave requests by department
+                      </CardDescription>
+                    </div>
+                    <div className="p-2 bg-rose-100 dark:bg-rose-900 rounded-lg">
+                      <BarChart3 className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+                    </div>
+                  </div>
+                  <Separator className="mt-4" />
+                </CardHeader>
+                <CardContent>
+                  <LeaveAnalytics 
+                    requests={allRequests}
+                    type="department"
+                    loading={loading}
+                  />
+                </CardContent>
+              </Card>
             </div>
 
             {/* Enhanced Analytics Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               {/* Approval Rate */}
               <Card className="hover:shadow-md transition-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Approval Rate</CardTitle>
-                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-8 w-20" />
-                      <Skeleton className="h-4 w-24" />
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      {loading ? (
+                        <div className="space-y-2">
+                          <Skeleton className="h-8 w-20" />
+                          <Skeleton className="h-4 w-32" />
+                        </div>
+                      ) : (
+                        <>
+                          <div className="text-3xl font-bold text-foreground mb-1">
+                            {statistics?.totalRequests && statistics.totalRequests > 0 
+                              ? ((statistics.approvedRequests / statistics.totalRequests) * 100).toFixed(1)
+                              : 0}%
+                          </div>
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Approval Rate
+                          </p>
+                        </>
+                      )}
                     </div>
-                  ) : (
-                    <>
-                      <div className="text-2xl font-bold">
-                        {statistics?.totalRequests && statistics.totalRequests > 0 
-                          ? ((statistics.approvedRequests / statistics.totalRequests) * 100).toFixed(1)
-                          : 0}%
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        <Badge variant="secondary" className="text-xs px-1">
-                          {statistics?.approvedRequests || 0}
-                        </Badge>
-                        {' '}of {statistics?.totalRequests || 0} requests
-                      </p>
-                    </>
-                  )}
+                    <div className="w-12 h-12 flex items-center justify-center text-green-600 dark:text-green-400">
+                      <CheckCircle className="w-6 h-6" />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
               {/* Avg Processing Time */}
               <Card className="hover:shadow-md transition-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Avg Processing Time</CardTitle>
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                    <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-8 w-20" />
-                      <Skeleton className="h-4 w-24" />
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      {loading ? (
+                        <div className="space-y-2">
+                          <Skeleton className="h-8 w-20" />
+                          <Skeleton className="h-4 w-32" />
+                        </div>
+                      ) : (
+                        <>
+                          <div className="text-3xl font-bold text-foreground mb-1">0.0</div>
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Avg Processing Time
+                          </p>
+                        </>
+                      )}
                     </div>
-                  ) : (
-                    <>
-                      <div className="text-2xl font-bold">0.0 days</div>
-                      <p className="text-xs text-muted-foreground">Excellent</p>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Most Used Type */}
-              <Card className="hover:shadow-md transition-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Most Used Type</CardTitle>
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                    <Briefcase className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-8 w-20" />
-                      <Skeleton className="h-4 w-24" />
+                    <div className="w-12 h-12 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                      <Clock className="w-6 h-6" />
                     </div>
-                  ) : (
-                    <>
-                      <div className="text-2xl font-bold">
-                        {(() => {
-                          const typeCounts: Record<string, number> = {};
-                          allRequests.forEach(r => {
-                            if (r.leave_type) {
-                              typeCounts[r.leave_type.name] = (typeCounts[r.leave_type.name] || 0) + 1;
-                            }
-                          });
-                          const mostUsed = Object.entries(typeCounts).sort(([,a], [,b]) => b - a)[0];
-                          return mostUsed ? mostUsed[1] : 0;
-                        })()}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {(() => {
-                          const typeCounts: Record<string, number> = {};
-                          allRequests.forEach(r => {
-                            if (r.leave_type) {
-                              typeCounts[r.leave_type.name] = (typeCounts[r.leave_type.name] || 0) + 1;
-                            }
-                          });
-                          const mostUsed = Object.entries(typeCounts).sort(([,a], [,b]) => b - a)[0];
-                          return mostUsed ? `${mostUsed[0]} used` : 'No data';
-                        })()}
-                      </p>
-                    </>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
 
               {/* This Month */}
               <Card className="hover:shadow-md transition-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">This Month</CardTitle>
-                  <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
-                    <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-8 w-20" />
-                      <Skeleton className="h-4 w-24" />
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      {loading ? (
+                        <div className="space-y-2">
+                          <Skeleton className="h-8 w-20" />
+                          <Skeleton className="h-4 w-32" />
+                        </div>
+                      ) : (
+                        <>
+                          <div className="text-3xl font-bold text-foreground mb-1">
+                            {(() => {
+                              const now = new Date();
+                              const thisMonth = allRequests.filter(r => {
+                                const requestDate = new Date(r.requested_at);
+                                return requestDate.getMonth() === now.getMonth() && 
+                                       requestDate.getFullYear() === now.getFullYear();
+                              });
+                              return thisMonth.length;
+                            })()}
+                          </div>
+                          <p className="text-sm font-medium text-muted-foreground">
+                            This Month
+                          </p>
+                        </>
+                      )}
                     </div>
-                  ) : (
-                    <>
-                      <div className="text-2xl font-bold">
-                        {(() => {
-                          const now = new Date();
-                          const thisMonth = allRequests.filter(r => {
-                            const requestDate = new Date(r.requested_at);
-                            return requestDate.getMonth() === now.getMonth() && 
-                                   requestDate.getFullYear() === now.getFullYear();
-                          });
-                          return thisMonth.length;
-                        })()}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {(() => {
-                          const now = new Date();
-                          const thisMonth = allRequests.filter(r => {
-                            const requestDate = new Date(r.requested_at);
-                            return requestDate.getMonth() === now.getMonth() && 
-                                   requestDate.getFullYear() === now.getFullYear() &&
-                                   r.status === 'approved';
-                          });
-                          return `${thisMonth.length} approved`;
-                        })()}
-                      </p>
-                    </>
-                  )}
+                    <div className="w-12 h-12 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                      <Calendar className="w-6 h-6" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Most Used Type */}
+              <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      {loading ? (
+                        <div className="space-y-2">
+                          <Skeleton className="h-8 w-20" />
+                          <Skeleton className="h-4 w-32" />
+                        </div>
+                      ) : (
+                        <>
+                          {(() => {
+                            const typeData: Record<string, { count: number; color: string; name: string }> = {};
+                            allRequests.forEach(r => {
+                              if (r.leave_type) {
+                                const key = r.leave_type.code;
+                                if (!typeData[key]) {
+                                  typeData[key] = {
+                                    count: 0,
+                                    color: r.leave_type.color_code || '#10B981',
+                                    name: r.leave_type.name
+                                  };
+                                }
+                                typeData[key].count++;
+                              }
+                            });
+                            const mostUsed = Object.entries(typeData).sort(([,a], [,b]) => b.count - a.count)[0];
+                            
+                            if (mostUsed) {
+                              return (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <div 
+                                      className="w-4 h-4 rounded-full flex-shrink-0"
+                                      style={{ backgroundColor: mostUsed[1].color }}
+                                    />
+                                    <span className="text-lg font-bold text-foreground truncate">
+                                      {mostUsed[1].name}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm font-medium text-muted-foreground">
+                                    Most Used Type
+                                  </p>
+                                </div>
+                              );
+                            } else {
+                              return (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
+                                    <span className="text-lg font-bold text-foreground">
+                                      No Data
+                                    </span>
+                                  </div>
+                                  <p className="text-sm font-medium text-muted-foreground">
+                                    Most Used Type
+                                  </p>
+                                </div>
+                              );
+                            }
+                          })()}
+                        </>
+                      )}
+                    </div>
+                    <div className="w-12 h-12 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                      <Briefcase className="w-6 h-6" />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -1380,73 +1460,6 @@ export default function LeavesPage() {
               </CardContent>
             </Card>
 
-            {/* Leave Types Usage Trend */}
-            <Card className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">Leave Types Usage Trend</CardTitle>
-                    <CardDescription className="mt-1">
-                      Usage trend by leave type over time
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Select value={typeDistributionFilter} onValueChange={(value: typeof typeDistributionFilter) => setTypeDistributionFilter(value)}>
-                      <SelectTrigger className="w-[160px] h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="7days">Last 7 Days</SelectItem>
-                        <SelectItem value="1week">Last Week</SelectItem>
-                        <SelectItem value="thisweek">This Week</SelectItem>
-                        <SelectItem value="30days">Last 30 Days</SelectItem>
-                        <SelectItem value="1month">Last Month</SelectItem>
-                        <SelectItem value="thismonth">This Month</SelectItem>
-                        <SelectItem value="lastyear">Last Year</SelectItem>
-                        <SelectItem value="thisyear">This Year</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-                      <TrendingUp className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                  </div>
-                </div>
-                <Separator className="mt-4" />
-              </CardHeader>
-              <CardContent>
-                <LeaveAnalytics 
-                  requests={allRequests}
-                  type="type-trend"
-                  loading={loading}
-                  periodFilter={typeDistributionFilter}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Department Distribution */}
-            <Card className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">Department Distribution</CardTitle>
-                    <CardDescription className="mt-1">
-                      Leave requests by department
-                    </CardDescription>
-                  </div>
-                  <div className="p-2 bg-rose-100 dark:bg-rose-900 rounded-lg">
-                    <BarChart3 className="h-5 w-5 text-rose-600 dark:text-rose-400" />
-                  </div>
-                </div>
-                <Separator className="mt-4" />
-              </CardHeader>
-              <CardContent>
-                <LeaveAnalytics 
-                  requests={allRequests}
-                  type="department"
-                  loading={loading}
-                />
-              </CardContent>
-            </Card>
           </TabsContent>
         )}
       </Tabs>
@@ -1520,6 +1533,7 @@ export default function LeavesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

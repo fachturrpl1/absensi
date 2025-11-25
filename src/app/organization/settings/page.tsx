@@ -980,13 +980,7 @@ export default function OrganizationSettingsPage() {
               </div>
 
               {/* Invitation Code Card - Full Width */}
-              <div 
-                className="rounded-xl p-4 space-y-3 w-full"
-                style={{
-                  background: '#18181b',
-                  border: '1px solid #27272a'
-                }}
-              >
+              <div className="rounded-xl p-4 space-y-3 w-full bg-muted/50 border border-border">
                 {/* Label */}
                 <Label className="text-base font-semibold text-foreground">
                   Invitation Code
@@ -2024,24 +2018,17 @@ export default function OrganizationSettingsPage() {
         <div className="flex justify-end gap-3 pt-4">
 
           <Button 
-
             onClick={handleSave} 
-
             disabled={saving}
-
             size="lg"
-
-            className="min-w-[160px] gap-2 px-6 py-3 text-base font-semibold rounded-xl text-white border shadow-[0_6px_18px_rgba(0,0,0,0.35)] hover:brightness-110 active:brightness-90 disabled:opacity-60"
-
-            style={{ backgroundColor: "#2b2b2b", borderColor: "#3c3c3c" }}
-
+            className="min-w-[160px] gap-2 px-6 py-3 text-base font-semibold rounded-xl bg-primary text-primary-foreground border border-primary shadow-lg hover:bg-primary/90 active:bg-primary/80 disabled:opacity-60"
           >
 
           {saving ? (
 
             <>
 
-                <Loader2 className="h-4 w-4 animate-spin text-white" />
+                <Loader2 className="h-4 w-4 animate-spin" />
 
               Saving...
 
@@ -2051,7 +2038,7 @@ export default function OrganizationSettingsPage() {
 
             <>
 
-                <Save className="h-4 w-4 text-white" />
+                <Save className="h-4 w-4" />
 
                 Save
 
