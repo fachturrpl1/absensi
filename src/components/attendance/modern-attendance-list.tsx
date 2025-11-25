@@ -59,8 +59,18 @@ import {
 } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
 import { formatLocalTime } from '@/utils/timezone';
-import { getAllAttendance } from '@/action/attendance';
+import { getAllAttendance, getAttendanceStats, AttendanceStatsResult } from '@/action/attendance';
 import { toast } from 'sonner';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Legend
+} from 'recharts';
 
 interface ModernAttendanceListProps {
   initialData?: any[];
@@ -72,6 +82,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [userTimezone, setUserTimezone] = useState('UTC');
+  const [stats, setStats] = useState<AttendanceStatsResult | null>(null);
   
   // Date filter state (same as Dashboard)
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
@@ -114,28 +125,36 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     // Pause auto-refresh while loading to avoid overlapping
     setIsAutoRefreshPaused(true); 
     try {
-      const result = await getAllAttendance({
-        page: currentPage,
-        limit: itemsPerPage,
-        dateFrom: dateRange.from.toISOString().split('T')[0],
-        dateTo: dateRange.to.toISOString().split('T')[0],
-        search: searchQuery || undefined,
-        status: statusFilter === 'all' ? undefined : statusFilter,
-        department: departmentFilter === 'all' ? undefined : departmentFilter,
-      });
+      const [listResult, statsResult] = await Promise.all([
+        getAllAttendance({
+          page: currentPage,
+          limit: itemsPerPage,
+          dateFrom: dateRange.from.toISOString().split('T')[0],
+          dateTo: dateRange.to.toISOString().split('T')[0],
+          search: searchQuery || undefined,
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          department: departmentFilter === 'all' ? undefined : departmentFilter,
+        }),
+        getAttendanceStats({
+          dateFrom: dateRange.from.toISOString().split('T')[0],
+          dateTo: dateRange.to.toISOString().split('T')[0],
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          department: departmentFilter === 'all' ? undefined : departmentFilter,
+        })
+      ]);
 
-      if (result.success) {
-        setAttendanceData(result.data);
-        setTotalItems(result.meta?.total || 0);
+      if (listResult.success) {
+        setAttendanceData(listResult.data);
+        setTotalItems(listResult.meta?.total || 0);
         
         // Set timezone from first record if available (fallback to UTC)
-        if (result.data.length > 0) {
-          setUserTimezone(result.data[0].timezone || 'UTC');
+        if (listResult.data.length > 0) {
+          setUserTimezone(listResult.data[0].timezone || 'UTC');
         }
 
         // Extract unique departments from current page (simple solution for now)
         const uniqueDepts = Array.from(new Set(
-          result.data.map((r: any) => r.member.department)
+          listResult.data.map((r: any) => r.member.department)
         )).filter(dept => dept && dept !== 'No Department').sort();
         
         if (departments.length === 0 && uniqueDepts.length > 0) {
@@ -143,6 +162,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         }
       } else {
         toast.error('Failed to load attendance data');
+      }
+
+      if (statsResult.success && statsResult.data) {
+        setStats(statsResult.data);
       }
     } catch (error) {
       console.error('Fetch error:', error);
@@ -177,7 +200,20 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   // Stats calculation
   const filteredStats = useMemo(() => {
-    // Placeholder stats based on current page only
+    if (stats) {
+      const total = stats.total;
+      return {
+        total,
+        present: stats.present,
+        late: stats.late,
+        absent: stats.absent,
+        onLeave: stats.leave,
+        avgWorkHours: '-', // Need backend calc for this
+        attendanceRate: total > 0 ? Math.round((stats.present / total) * 100) : 0,
+      };
+    }
+
+    // Fallback to client-side calculation if no stats
     const total = attendanceData.length; 
     const present = attendanceData.filter((r: any) => r.status === 'present').length;
     const late = attendanceData.filter((r: any) => r.status === 'late').length;
@@ -192,7 +228,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       avgWorkHours: '8.5h',
       attendanceRate: total > 0 ? Math.round((present / total) * 100) : 0,
     };
-  }, [attendanceData, totalItems]);
+  }, [attendanceData, totalItems, stats]);
 
   // Helper component to display device location
   const LocationDisplay = ({ checkInLocationName, checkOutLocationName }: any) => {
@@ -295,23 +331,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   };
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Link href="/attendance/add">
-            <Button size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Manual Entry
-            </Button>
-          </Link>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       {/* Filters & Actions */}
       <Card>
         <CardContent className="pt-6">
@@ -448,88 +468,9 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         </CardContent>
       </Card>
 
-      {/* Summary Stats - Interactive Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card 
-          className={cn(
-            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
-            statusFilter === 'present' && "ring-2 ring-green-500"
-          )}
-          onClick={() => setStatusFilter(statusFilter === 'present' ? 'all' : 'present')}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent" />
-          <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Present (Page)</CardTitle>
-            <UserCheck className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent className="relative">
-            <div className="text-2xl font-bold">{filteredStats.present}</div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3 text-green-600" />
-              <span>On current page</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className={cn(
-            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
-            statusFilter === 'late' && "ring-2 ring-amber-500"
-          )}
-          onClick={() => setStatusFilter(statusFilter === 'late' ? 'all' : 'late')}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent" />
-          <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Late (Page)</CardTitle>
-            <Timer className="h-4 w-4 text-amber-600" />
-          </CardHeader>
-          <CardContent className="relative">
-            <div className="text-2xl font-bold">{filteredStats.late}</div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <span>On current page</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className={cn(
-            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
-            statusFilter === 'absent' && "ring-2 ring-red-500"
-          )}
-          onClick={() => setStatusFilter(statusFilter === 'absent' ? 'all' : 'absent')}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent" />
-          <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Absent (Page)</CardTitle>
-            <UserX className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent className="relative">
-            <div className="text-2xl font-bold">{filteredStats.absent}</div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <TrendingDown className="h-3 w-3 text-green-600" />
-              <span>On current page</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className={cn(
-            "relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
-            statusFilter === 'all' && "ring-2 ring-blue-500"
-          )}
-          onClick={() => setStatusFilter('all')}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent" />
-          <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Records</CardTitle>
-            <Clock className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent className="relative">
-            <div className="text-2xl font-bold">{filteredStats.total}</div>
-            <Progress value={100} className="h-1 mt-2" />
-          </CardContent>
-        </Card>
-      </div>
+      {/* Summary Stats - Interactive Cards - REMOVED as requested */}
+      
+      {/* Charts Section - REMOVED as requested */}
 
       {/* Attendance List */}
       {viewMode === 'list' && (

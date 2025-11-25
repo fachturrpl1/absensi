@@ -234,6 +234,112 @@ export async function checkExistingAttendance(
   }
 }
 
+export type AttendanceStatsResult = {
+  total: number;
+  present: number;
+  late: number;
+  absent: number;
+  leave: number;
+  trend: any[]; // For chart
+};
+
+export const getAttendanceStats = async (params: GetAttendanceParams = {}): Promise<{ success: boolean; data?: AttendanceStatsResult }> => {
+  const supabase = await getSupabase();
+  const { dateFrom, dateTo, department, status } = params;
+
+  // Get current user's organization (same auth check as getAllAttendance)
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false };
+
+  const { data: userMember } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!userMember) return { success: false };
+
+  // Base query builder
+  const buildQuery = (statusFilter?: string) => {
+    let q = supabase
+      .from("attendance_records")
+      .select("id", { count: 'exact', head: true })
+      .eq("organization_members.organization_id", userMember.organization_id);
+
+    // We need to join organization_members to filter by organization_id
+    // Note: For simple count with filter, we might need inner join syntax in the select or use filtering on embedded resource
+    // But 'head: true' doesn't support embedding well for filtering parent. 
+    // Strategy: Use the !inner join on organization_members in the select string if we were selecting data,
+    // but for count, it's trickier. 
+    // Actually, Supabase/PostgREST allows filtering on embedded resources.
+    
+    // Let's use a more robust approach: Filter by organization_members IDs if needed, or use the existing relation logic
+    // Replicating getAllAttendance logic but optimized for count
+    
+    q = supabase
+      .from("attendance_records")
+      .select("organization_members!inner(organization_id)", { count: 'exact', head: true })
+      .eq("organization_members.organization_id", userMember.organization_id);
+
+    if (dateFrom) q = q.gte("attendance_date", dateFrom);
+    if (dateTo) q = q.lte("attendance_date", dateTo);
+    if (statusFilter) q = q.eq("status", statusFilter);
+    
+    return q;
+  };
+
+  try {
+    const [totalRes, presentRes, lateRes, absentRes, leaveRes] = await Promise.all([
+      buildQuery(status !== 'all' ? status : undefined), // Total (respecting status filter if set)
+      buildQuery('present'),
+      buildQuery('late'),
+      buildQuery('absent'),
+      buildQuery('leave') // Assuming 'leave' status exists or map it
+    ]);
+
+    // For Trend Chart (Daily counts in the range)
+    // This requires a separate data fetch, not just head:true
+    let trendData = [];
+    if (dateFrom && dateTo) {
+      const { data: trend } = await supabase
+        .from("attendance_records")
+        .select("attendance_date, status, organization_members!inner(organization_id)")
+        .eq("organization_members.organization_id", userMember.organization_id)
+        .gte("attendance_date", dateFrom)
+        .lte("attendance_date", dateTo);
+      
+      if (trend) {
+        // Group by date
+        const grouped = trend.reduce((acc: any, curr: any) => {
+          const date = curr.attendance_date;
+          if (!acc[date]) acc[date] = { date, present: 0, late: 0, absent: 0, total: 0 };
+          acc[date].total++;
+          if (curr.status === 'present') acc[date].present++;
+          if (curr.status === 'late') acc[date].late++;
+          if (curr.status === 'absent') acc[date].absent++;
+          return acc;
+        }, {});
+        trendData = Object.values(grouped).sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        total: totalRes.count || 0,
+        present: presentRes.count || 0,
+        late: lateRes.count || 0,
+        absent: absentRes.count || 0,
+        leave: leaveRes.count || 0,
+        trend: trendData
+      }
+    };
+  } catch (error) {
+    console.error("Error fetching attendance stats:", error);
+    return { success: false };
+  }
+};
+
 export async function createManualAttendance(payload: ManualAttendancePayload) {
   try {
     const supabase = await getSupabase();
