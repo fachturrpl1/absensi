@@ -9,7 +9,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 
 interface LeaveAnalyticsProps {
   requests: ILeaveRequest[];
-  type: 'status' | 'monthly' | 'type' | 'department' | 'detailed';
+  type: 'status' | 'monthly' | 'type' | 'department' | 'detailed' | 'type-trend';
   loading?: boolean;
   periodFilter?: '7days' | '1week' | 'thisweek' | '30days' | '1month' | 'thismonth' | 'lastyear' | 'thisyear';
   chartType?: 'donut' | 'pie' | 'bar';
@@ -263,6 +263,124 @@ export function LeaveAnalytics({
       .sort((a, b) => b.count - a.count);
   }, [requests, filteredRequests, type]);
 
+  // Leave Type Trend Data - Always computed but only used when type is 'type-trend'
+  const typeTrendData = useMemo(() => {
+    if (type !== 'type-trend') return [];
+    
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date = now;
+    let dateFormat = 'MMM yyyy';
+    
+    // Determine date range and format based on period filter
+    switch (periodFilter) {
+      case '7days':
+      case '1week':
+        startDate = subDays(now, 6);
+        dateFormat = 'MMM d';
+        break;
+      case 'thisweek':
+        startDate = startOfWeek(now, { weekStartsOn: 1 });
+        endDate = endOfWeek(now, { weekStartsOn: 1 });
+        dateFormat = 'MMM d';
+        break;
+      case '30days':
+        startDate = subDays(now, 29);
+        dateFormat = 'MMM d';
+        break;
+      case '1month':
+        startDate = subMonths(now, 1);
+        dateFormat = 'MMM d';
+        break;
+      case 'thismonth':
+        startDate = startOfMonth(now);
+        endDate = endOfMonth(now);
+        dateFormat = 'MMM d';
+        break;
+      case 'lastyear':
+        startDate = subYears(now, 1);
+        dateFormat = 'MMM yyyy';
+        break;
+      case 'thisyear':
+        startDate = startOfYear(now);
+        endDate = endOfYear(now);
+        dateFormat = 'MMM yyyy';
+        break;
+      default:
+        startDate = startOfYear(now);
+        dateFormat = 'MMM yyyy';
+    }
+    
+    // Generate all dates in range
+    const allDates: Date[] = [];
+    let currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      allDates.push(new Date(currentDate));
+      
+      if (dateFormat.includes('MMM d')) {
+        currentDate = subDays(currentDate, -1); // Add 1 day
+      } else {
+        currentDate = subMonths(currentDate, -1); // Add 1 month
+      }
+    }
+    
+    // Get unique leave types
+    const leaveTypes = Array.from(new Set(
+      filteredRequests
+        .filter(r => r.leave_type && r.status === 'approved')
+        .map(r => r.leave_type!.code)
+    ));
+    
+    // Count requests by date and leave type
+    const dateCounts: Record<string, Record<string, number>> = {};
+    
+    filteredRequests.forEach(r => {
+      if (r.leave_type && r.status === 'approved') {
+        const requestDate = parseISO(r.requested_at);
+        const dateLabel = format(requestDate, dateFormat);
+        
+        if (!dateCounts[dateLabel]) {
+          dateCounts[dateLabel] = {};
+        }
+        
+        const typeCode = r.leave_type.code;
+        dateCounts[dateLabel][typeCode] = (dateCounts[dateLabel][typeCode] || 0) + (r.total_days || 1);
+      }
+    });
+    
+    // Map all dates to data points
+    return allDates.map(date => {
+      const dateLabel = format(date, dateFormat);
+      const counts = dateCounts[dateLabel] || {};
+      
+      const dataPoint: any = { date: dateLabel };
+      leaveTypes.forEach(typeCode => {
+        dataPoint[typeCode] = counts[typeCode] || 0;
+      });
+      
+      return dataPoint;
+    });
+  }, [filteredRequests, periodFilter, type]);
+
+  // Leave Type Info for trend chart - Always computed but only used when type is 'type-trend'
+  const leaveTypeInfo = useMemo(() => {
+    if (type !== 'type-trend') return {};
+    
+    const typeInfo: Record<string, { name: string; color: string }> = {};
+    
+    filteredRequests.forEach(r => {
+      if (r.leave_type) {
+        typeInfo[r.leave_type.code] = {
+          name: r.leave_type.name,
+          color: r.leave_type.color_code || '#10B981'
+        };
+      }
+    });
+    
+    return typeInfo;
+  }, [filteredRequests, type]);
+
   // Department Distribution
   const departmentData = useMemo(() => {
     const deptCounts: Record<string, number> = {};
@@ -509,27 +627,53 @@ export function LeaveAnalytics({
           {renderChart(chartData, colors, chartType)}
         </div>
         
-        {/* Legend */}
-        <div className="space-y-2">
-          {statusData.map((item) => (
-            <div key={item.label} className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <div 
-                  className={`w-3 h-3 rounded ${
-                    item.label === 'Pending' ? 'bg-yellow-500 dark:bg-yellow-400' :
-                    item.label === 'Approved' ? 'bg-green-600 dark:bg-green-500' :
-                    item.label === 'Rejected' ? 'bg-red-500 dark:bg-red-400' :
-                    'bg-gray-500 dark:bg-gray-400'
-                  }`}
-                />
-                <span className="font-medium">{item.label}</span>
+        {/* Legend - 2 Columns */}
+        <div className="grid grid-cols-2 gap-4 pb-2">
+          {/* Left Column: Pending & Approved */}
+          <div className="space-y-2">
+            {statusData.filter(item => item.label === 'Pending' || item.label === 'Approved').map((item) => (
+              <div key={item.label} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <div 
+                    className={`w-3 h-3 rounded ${
+                      item.label === 'Pending' ? 'bg-yellow-500 dark:bg-yellow-400' :
+                      item.label === 'Approved' ? 'bg-green-600 dark:bg-green-500' :
+                      item.label === 'Rejected' ? 'bg-red-500 dark:bg-red-400' :
+                      'bg-gray-500 dark:bg-gray-400'
+                    }`}
+                  />
+                  <span className="font-medium">{item.label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">{item.count}</span>
+                  <span className="font-medium">{item.percentage}%</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">{item.count}</span>
-                <span className="font-medium">{item.percentage}%</span>
+            ))}
+          </div>
+          
+          {/* Right Column: Rejected & Cancelled */}
+          <div className="space-y-2">
+            {statusData.filter(item => item.label === 'Rejected' || item.label === 'Cancelled').map((item) => (
+              <div key={item.label} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <div 
+                    className={`w-3 h-3 rounded ${
+                      item.label === 'Pending' ? 'bg-yellow-500 dark:bg-yellow-400' :
+                      item.label === 'Approved' ? 'bg-green-600 dark:bg-green-500' :
+                      item.label === 'Rejected' ? 'bg-red-500 dark:bg-red-400' :
+                      'bg-gray-500 dark:bg-gray-400'
+                    }`}
+                  />
+                  <span className="font-medium">{item.label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">{item.count}</span>
+                  <span className="font-medium">{item.percentage}%</span>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -551,9 +695,7 @@ export function LeaveAnalytics({
       );
     }
     
-    // Calculate max value for Y-axis
-    const maxValue = Math.max(...monthlyData.map(d => d.total), 0);
-    const yAxisMax = maxValue > 10 ? Math.ceil(maxValue / 10) * 10 : 10;
+    // Dynamic Y-axis scaling - will auto-adjust based on data
     
     // Chart config for shadcn with 4 status lines
     const chartConfig = {
@@ -576,106 +718,145 @@ export function LeaveAnalytics({
     };
     
     return (
-      <ChartContainer config={chartConfig} className="h-[250px] w-full">
-        <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 50 }}>
-          <defs>
-            <linearGradient id="fillApproved" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="hsl(142.1 76.2% 36.3%)" stopOpacity={0.4} />
-              <stop offset="50%" stopColor="hsl(142.1 76.2% 36.3%)" stopOpacity={0.2} />
-              <stop offset="100%" stopColor="hsl(142.1 76.2% 36.3%)" stopOpacity={0.02} />
-            </linearGradient>
-            <linearGradient id="fillRejected" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="hsl(0 84.2% 60.2%)" stopOpacity={0.4} />
-              <stop offset="50%" stopColor="hsl(0 84.2% 60.2%)" stopOpacity={0.2} />
-              <stop offset="100%" stopColor="hsl(0 84.2% 60.2%)" stopOpacity={0.02} />
-            </linearGradient>
-            <linearGradient id="fillPending" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="hsl(45 93% 58%)" stopOpacity={0.4} />
-              <stop offset="50%" stopColor="hsl(45 93% 58%)" stopOpacity={0.2} />
-              <stop offset="100%" stopColor="hsl(45 93% 58%)" stopOpacity={0.02} />
-            </linearGradient>
-            <linearGradient id="fillCancelled" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="hsl(215 16% 47%)" stopOpacity={0.4} />
-              <stop offset="50%" stopColor="hsl(215 16% 47%)" stopOpacity={0.2} />
-              <stop offset="100%" stopColor="hsl(215 16% 47%)" stopOpacity={0.02} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid 
-            strokeDasharray="3 3" 
-            vertical={false}
-            className="stroke-muted"
-          />
-          <XAxis 
-            dataKey="month" 
-            tickLine={false}
-            axisLine={false}
-            tickMargin={8}
-            className="text-xs"
-            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-            angle={-45}
-            textAnchor="end"
-            height={60}
-          />
-          <YAxis 
-            tickLine={false}
-            axisLine={false}
-            tickMargin={8}
-            className="text-xs"
-            tick={{ fill: 'hsl(var(--muted-foreground))' }}
-            domain={[0, yAxisMax]}
-            ticks={Array.from({ length: Math.min(yAxisMax, 10) + 1 }, (_, i) => i)}
-            allowDecimals={false}
-          />
-          <ChartTooltip 
-            content={<ChartTooltipContent indicator="dot" />}
-            cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }}
-          />
-          <Area 
-            type="natural" 
-            dataKey="approved" 
-            stroke="hsl(142.1 76.2% 36.3%)" 
-            strokeWidth={2.5}
-            fill="url(#fillApproved)"
-            fillOpacity={1}
-            connectNulls={true}
-            isAnimationActive={true}
-            animationDuration={800}
-          />
-          <Area 
-            type="natural" 
-            dataKey="rejected" 
-            stroke="hsl(0 84.2% 60.2%)" 
-            strokeWidth={2.5}
-            fill="url(#fillRejected)"
-            fillOpacity={1}
-            connectNulls={true}
-            isAnimationActive={true}
-            animationDuration={1000}
-          />
-          <Area 
-            type="natural" 
-            dataKey="pending" 
-            stroke="hsl(45 93% 58%)" 
-            strokeWidth={2.5}
-            fill="url(#fillPending)"
-            fillOpacity={1}
-            connectNulls={true}
-            isAnimationActive={true}
-            animationDuration={1200}
-          />
-          <Area 
-            type="natural" 
-            dataKey="cancelled" 
-            stroke="hsl(215 16% 47%)" 
-            strokeWidth={2.5}
-            fill="url(#fillCancelled)"
-            fillOpacity={1}
-            connectNulls={true}
-            isAnimationActive={true}
-            animationDuration={1400}
-          />
-        </AreaChart>
-      </ChartContainer>
+      <div className="space-y-4">
+        {/* Chart */}
+        <ChartContainer config={chartConfig} className="h-[300px] w-full">
+          <AreaChart data={monthlyData} margin={{ top: 20, right: 20, left: 10, bottom: 60 }}>
+            <defs>
+              <linearGradient id="fillApproved" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="hsl(142.1 76.2% 36.3%)" stopOpacity={0.4} />
+                <stop offset="50%" stopColor="hsl(142.1 76.2% 36.3%)" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="hsl(142.1 76.2% 36.3%)" stopOpacity={0.02} />
+              </linearGradient>
+              <linearGradient id="fillRejected" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="hsl(0 84.2% 60.2%)" stopOpacity={0.4} />
+                <stop offset="50%" stopColor="hsl(0 84.2% 60.2%)" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="hsl(0 84.2% 60.2%)" stopOpacity={0.02} />
+              </linearGradient>
+              <linearGradient id="fillPending" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="hsl(45 93% 58%)" stopOpacity={0.4} />
+                <stop offset="50%" stopColor="hsl(45 93% 58%)" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="hsl(45 93% 58%)" stopOpacity={0.02} />
+              </linearGradient>
+              <linearGradient id="fillCancelled" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="hsl(215 16% 47%)" stopOpacity={0.4} />
+                <stop offset="50%" stopColor="hsl(215 16% 47%)" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="hsl(215 16% 47%)" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid 
+              strokeDasharray="3 3" 
+              vertical={false}
+              className="stroke-muted"
+            />
+            <XAxis 
+              dataKey="month" 
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              className="text-xs"
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+              angle={-45}
+              textAnchor="end"
+              height={60}
+            />
+            <YAxis 
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              className="text-xs"
+              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              domain={[0, 'dataMax + 1']}
+              allowDecimals={false}
+              scale="linear"
+              type="number"
+            />
+            <ChartTooltip 
+              content={<ChartTooltipContent indicator="dot" />}
+              cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }}
+            />
+            <Area 
+              type="monotone" 
+              dataKey="approved" 
+              stroke="hsl(142.1 76.2% 36.3%)" 
+              strokeWidth={2.5}
+              fill="url(#fillApproved)"
+              fillOpacity={1}
+              connectNulls={false}
+              isAnimationActive={true}
+              animationDuration={800}
+            />
+            <Area 
+              type="monotone" 
+              dataKey="rejected" 
+              stroke="hsl(0 84.2% 60.2%)" 
+              strokeWidth={2.5}
+              fill="url(#fillRejected)"
+              fillOpacity={1}
+              connectNulls={false}
+              isAnimationActive={true}
+              animationDuration={1000}
+            />
+            <Area 
+              type="monotone" 
+              dataKey="pending" 
+              stroke="hsl(45 93% 58%)" 
+              strokeWidth={2.5}
+              fill="url(#fillPending)"
+              fillOpacity={1}
+              connectNulls={false}
+              isAnimationActive={true}
+              animationDuration={1200}
+            />
+            <Area 
+              type="monotone" 
+              dataKey="cancelled" 
+              stroke="hsl(215 16% 47%)" 
+              strokeWidth={2.5}
+              fill="url(#fillCancelled)"
+              fillOpacity={1}
+              connectNulls={false}
+              isAnimationActive={true}
+              animationDuration={1400}
+            />
+          </AreaChart>
+        </ChartContainer>
+        
+        {/* Legend - 2 Columns */}
+        <div className="grid grid-cols-2 gap-4 pb-2">
+          {/* Left Column: Approved & Pending */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-green-600 dark:bg-green-500" />
+                <span className="font-medium">Approved</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-yellow-500 dark:bg-yellow-400" />
+                <span className="font-medium">Pending</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Right Column: Rejected & Cancelled */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-red-500 dark:bg-red-400" />
+                <span className="font-medium">Rejected</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-gray-500 dark:bg-gray-400" />
+                <span className="font-medium">Cancelled</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -851,6 +1032,120 @@ export function LeaveAnalytics({
               </div>
             </div>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Leave Type Trend Chart
+  if (type === 'type-trend') {
+
+    if (typeTrendData.length === 0 || Object.keys(leaveTypeInfo).length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="p-3 bg-muted rounded-full mb-3">
+            <svg className="w-8 h-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <p className="text-sm font-medium text-muted-foreground">No trend data available</p>
+          <p className="text-xs text-muted-foreground mt-1">Leave type trends will appear here once requests are approved</p>
+        </div>
+      );
+    }
+
+    // Chart config for leave types
+    const chartConfig: any = {};
+    Object.entries(leaveTypeInfo).forEach(([code, info]) => {
+      chartConfig[code] = {
+        label: info.name,
+        color: info.color
+      };
+    });
+
+    return (
+      <div className="space-y-4">
+        {/* Chart */}
+        <ChartContainer config={chartConfig} className="h-[300px] w-full">
+          <AreaChart data={typeTrendData} margin={{ top: 20, right: 20, left: 10, bottom: 60 }}>
+            <defs>
+              {Object.entries(leaveTypeInfo).map(([code, info]) => (
+                <linearGradient key={code} id={`fill${code}`} x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor={info.color} stopOpacity={0.4} />
+                  <stop offset="50%" stopColor={info.color} stopOpacity={0.2} />
+                  <stop offset="100%" stopColor={info.color} stopOpacity={0.02} />
+                </linearGradient>
+              ))}
+            </defs>
+            <CartesianGrid 
+              strokeDasharray="3 3" 
+              vertical={false}
+              className="stroke-muted"
+            />
+            <XAxis 
+              dataKey="date" 
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              className="text-xs"
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+              angle={-45}
+              textAnchor="end"
+              height={60}
+            />
+            <YAxis 
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              className="text-xs"
+              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              domain={[0, 'dataMax + 1']}
+              allowDecimals={false}
+              scale="linear"
+              type="number"
+            />
+            <ChartTooltip 
+              content={<ChartTooltipContent indicator="dot" />}
+              cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }}
+            />
+            {Object.entries(leaveTypeInfo).map(([code, info], index) => (
+              <Area 
+                key={code}
+                type="monotone" 
+                dataKey={code} 
+                stroke={info.color} 
+                strokeWidth={2.5}
+                fill={`url(#fill${code})`}
+                fillOpacity={1}
+                connectNulls={false}
+                isAnimationActive={true}
+                animationDuration={800 + index * 200}
+              />
+            ))}
+          </AreaChart>
+        </ChartContainer>
+        
+        {/* Legend */}
+        <div className="grid grid-cols-2 gap-4 pb-2">
+          {Object.entries(leaveTypeInfo).map(([code, info]) => {
+            // Calculate total count for this leave type
+            const totalCount = filteredRequests.filter(r => 
+              r.leave_type?.code === code && r.status === 'approved'
+            ).length;
+            
+            return (
+              <div key={code} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: info.color }}
+                  />
+                  <span className="font-medium">{info.name}</span>
+                </div>
+                <span className="text-muted-foreground">{totalCount} req</span>
+              </div>
+            );
+          })}
         </div>
       </div>
     );

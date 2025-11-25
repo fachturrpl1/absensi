@@ -2,7 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
-import { ArrowUpDown, TrendingUp, TrendingDown, Minus } from "lucide-react"
+import { TrendingUp, TrendingDown, Minus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
@@ -28,7 +28,6 @@ export const attendanceByGroupColumns: ColumnDef<AttendanceByGroupRow>[] = [
           className="font-medium"
         >
           Group
-          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       )
     },
@@ -57,7 +56,6 @@ export const attendanceByGroupColumns: ColumnDef<AttendanceByGroupRow>[] = [
           className="font-medium"
         >
           Present
-          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       )
     },
@@ -84,7 +82,6 @@ export const attendanceByGroupColumns: ColumnDef<AttendanceByGroupRow>[] = [
           className="font-medium"
         >
           Late
-          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       )
     },
@@ -111,7 +108,6 @@ export const attendanceByGroupColumns: ColumnDef<AttendanceByGroupRow>[] = [
           className="font-medium"
         >
           Absent
-          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       )
     },
@@ -138,7 +134,6 @@ export const attendanceByGroupColumns: ColumnDef<AttendanceByGroupRow>[] = [
           className="font-medium"
         >
           Total
-          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       )
     },
@@ -160,7 +155,6 @@ export const attendanceByGroupColumns: ColumnDef<AttendanceByGroupRow>[] = [
           className="font-medium"
         >
           Attendance Rate
-          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       )
     },

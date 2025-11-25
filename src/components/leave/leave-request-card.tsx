@@ -10,7 +10,6 @@ import {
   Calendar,
   Clock,
   FileText,
-  User,
   MapPin,
   CheckCircle,
   XCircle,

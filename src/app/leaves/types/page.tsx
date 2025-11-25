@@ -87,9 +87,6 @@ export default function LeaveTypesPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Manage Leave Types</h1>
-              <p className="text-muted-foreground mt-1">
-                Configure and manage leave types available in your organization
-              </p>
             </div>
           </div>
         </div>
@@ -111,7 +108,7 @@ export default function LeaveTypesPage() {
         </div>
       </div>
 
-      {/* Info Alert */}
+      {/* Info Alert
       <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
         <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
         <AlertTitle className="text-blue-800 dark:text-blue-200">Important Information</AlertTitle>
@@ -119,7 +116,7 @@ export default function LeaveTypesPage() {
           Leave types you create will be available to all employees in the organization. 
           Make sure to configure settings correctly before activating leave types.
         </AlertDescription>
-      </Alert>
+      </Alert> */}
 
       {/* Statistics */}
       {!loading && leaveTypes.length > 0 && (
@@ -133,9 +130,6 @@ export default function LeaveTypesPage() {
                 </div>
               </div>
               <CardTitle className="text-3xl font-bold">{leaveTypes.length}</CardTitle>
-              <Badge variant="outline" className="w-fit mt-2">
-                Total configured
-              </Badge>
             </CardHeader>
           </Card>
           <Card className="hover:shadow-md transition-shadow">
@@ -149,9 +143,6 @@ export default function LeaveTypesPage() {
               <CardTitle className="text-3xl font-bold">
                 {leaveTypes.filter(t => t.is_active).length}
               </CardTitle>
-              <Badge variant="secondary" className="w-fit mt-2 bg-green-100 text-green-800">
-                Currently available
-              </Badge>
             </CardHeader>
           </Card>
           <Card className="hover:shadow-md transition-shadow">
@@ -165,9 +156,6 @@ export default function LeaveTypesPage() {
               <CardTitle className="text-3xl font-bold">
                 {leaveTypes.filter(t => t.is_paid).length}
               </CardTitle>
-              <Badge variant="outline" className="w-fit mt-2">
-                With salary
-              </Badge>
             </CardHeader>
           </Card>
         </div>
@@ -219,9 +207,6 @@ export default function LeaveTypesPage() {
                   <Settings className="h-5 w-5" />
                   Leave Types Management
                 </CardTitle>
-                <CardDescription className="mt-1">
-                  Total {leaveTypes.length} leave types registered in your organization
-                </CardDescription>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="outline">

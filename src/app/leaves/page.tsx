@@ -34,7 +34,6 @@ import {
   ChevronRight,
   Search,
   Filter,
-  ArrowUpDown,
   ChevronDown,
   List,
   Grid3x3
@@ -420,14 +419,9 @@ export default function LeavesPage() {
           <div className="flex items-center gap-3">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">
-                {isAdmin ? 'Leave Management' : 'My Leaves'}
+                {'Leaves Dashboard'}
               </h1>
-              <p className="text-muted-foreground">
-                {isAdmin 
-                  ? 'Manage member leaves, approve requests, and view analytics'
-                  : 'Track your leave balance, requests, and history'
-                }
-              </p>
+
             </div>
           </div>
         </div>
@@ -476,200 +470,144 @@ export default function LeavesPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Card 1: Total/Balance */}
         <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {isAdmin ? 'Total Requests' : 'Leave Balance'}
-            </CardTitle>
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              {isAdmin ? (
-                <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              ) : (
-                <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-4 w-32" />
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                {loading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-3xl font-bold text-foreground mb-1">
+                      {isAdmin 
+                        ? statistics?.totalRequests || 0
+                        : isUserStats(stats) ? stats.totalBalance : 0
+                      }
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {isAdmin ? 'Total Requests' : 'Leave Balance'}
+                    </p>
+                  </>
+                )}
               </div>
-            ) : (
-              <>
-                <div className="text-2xl font-bold">
-                  {isAdmin 
-                    ? statistics?.totalRequests || 0
-                    : `${isUserStats(stats) ? stats.totalBalance : 0} days`
-                  }
-                </div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  {isAdmin ? (
-                    <>
-                      <Badge variant="secondary" className="text-xs px-1">
-                        {statistics?.pendingRequests || 0}
-                      </Badge>
-                      pending approval
-                    </>
-                  ) : (
-                    <>
-                      <Badge variant="outline" className="text-xs px-1">
-                        {isUserStats(stats) ? stats.usedDays : 0}
-                      </Badge>
-                      used this year
-                    </>
-                  )}
-                </p>
-              </>
-            )}
+              <div className="w-12 h-12 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                {isAdmin ? (
+                  <FileText className="w-6 h-6" />
+                ) : (
+                  <Briefcase className="w-6 h-6" />
+
+
+ 
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         {/* Card 2: Approved/Pending */}
         <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {isAdmin ? 'Approved Requests' : 'Pending Requests'}
-            </CardTitle>
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              {isAdmin ? (
-                <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-              ) : (
-                <Clock className="h-4 w-4 text-orange-600" />
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-4 w-32" />
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                {loading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-3xl font-bold text-foreground mb-1">
+                      {isAdmin 
+                        ? statistics?.approvedRequests || 0
+                        : requests.filter(r => r.status === 'pending').length
+                      }
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {isAdmin ? 'Approved Requests' : 'Pending Requests'}
+                    </p>
+                  </>
+                )}
               </div>
-            ) : (
-              <>
-                <div className="text-2xl font-bold">
-                  {isAdmin 
-                    ? statistics?.approvedRequests || 0
-                    : requests.filter(r => r.status === 'pending').length
-                  }
-                </div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  {isAdmin ? (
-                    <>
-                      <Badge variant="secondary" className="text-xs px-1 bg-green-100 text-green-800">
-                        {((statistics?.approvedRequests || 0) / Math.max(statistics?.totalRequests || 1, 1) * 100).toFixed(0)}%
-                      </Badge>
-                      approval rate
-                    </>
-                  ) : (
-                    <>
-                      <Badge variant="outline" className="text-xs px-1">
-                        {isUserStats(stats) ? stats.pendingDays : 0}
-                      </Badge>
-                      days pending
-                    </>
-                  )}
-                </p>
-              </>
-            )}
+              <div className="w-12 h-12 flex items-center justify-center text-green-600 dark:text-green-400">
+                {isAdmin ? (
+                  <CheckCircle className="w-6 h-6" />
+                ) : (
+                  <Clock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         {/* Card 3: On Leave/Approved */}
         <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {isAdmin ? 'Members on Leave' : 'Approved Leaves'}
-            </CardTitle>
-            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              {isAdmin ? (
-                <UserCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-              ) : (
-                <CheckCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-4 w-32" />
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                {loading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-3xl font-bold text-foreground mb-1">
+                      {isAdmin 
+                        ? statistics?.membersOnLeave || 0
+                        : isUserStats(stats) ? stats.approvedCount : 0
+                      }
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {isAdmin ? 'Members on Leave' : 'Approved Leaves'}
+                    </p>
+                  </>
+                )}
               </div>
-            ) : (
-              <>
-                <div className="text-2xl font-bold">
-                  {isAdmin 
-                    ? statistics?.membersOnLeave || 0
-                    : isUserStats(stats) ? stats.approvedCount : 0
-                  }
-                </div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  {isAdmin ? (
-                    <>
-                      Out of{' '}
-                      <Badge variant="outline" className="text-xs px-1">
-                        {statistics?.totalMembers || 0}
-                      </Badge>
-                      members
-                    </>
-                  ) : (
-                    <>
-                      <Badge variant="secondary" className="text-xs px-1">
-                        This year
-                      </Badge>
-                    </>
-                  )}
-                </p>
-              </>
-            )}
+              <div className="w-12 h-12 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                {isAdmin ? (
+                  <UserCheck className="w-6 h-6" />
+                ) : (
+                  <CheckCircle className="w-6 h-6" />
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         {/* Card 4: Upcoming/Types */}
         <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {isAdmin ? 'Upcoming Leaves' : 'Leave Types'}
-            </CardTitle>
-            <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
-              {isAdmin ? (
-                <TrendingUp className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              ) : (
-                <CalendarDays className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-4 w-32" />
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                {loading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-3xl font-bold text-foreground mb-1">
+                      {isAdmin 
+                        ? statistics?.upcomingLeaves || 0
+                        : leaveTypes.length
+                      }
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {isAdmin ? 'Upcoming Leaves' : 'Leave Types'}
+                    </p>
+                  </>
+                )}
               </div>
-            ) : (
-              <>
-                <div className="text-2xl font-bold">
-                  {isAdmin 
-                    ? statistics?.upcomingLeaves || 0
-                    : leaveTypes.length
-                  }
-                </div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  {isAdmin ? (
-                    <>
-                      <Badge variant="secondary" className="text-xs px-1">
-                        Next 30 days
-                      </Badge>
-                    </>
-                  ) : (
-                    <>
-                      <Badge variant="outline" className="text-xs px-1">
-                        {leaveTypes.filter(t => t.is_active).length}
-                      </Badge>
-                      active types
-                    </>
-                  )}
-                </p>
-              </>
-            )}
+              <div className="w-12 h-12 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                {isAdmin ? (
+                  <TrendingUp className="w-6 h-6" />
+                ) : (
+                  <CalendarDays className="w-6 h-6" />
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -736,9 +674,6 @@ export default function LeavesPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-lg">Request Status Distribution</CardTitle>
-                    <CardDescription className="mt-1">
-                      {isAdmin ? 'Organization-wide leave request status' : 'Your leave request status'}
-                    </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
                     <DropdownMenu>
@@ -782,9 +717,6 @@ export default function LeavesPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <CardTitle className="text-lg">Leave Trend</CardTitle>
-                    <CardDescription className="mt-1">
-                      {isAdmin ? 'Organization leave trends' : 'Your leave history'}
-                    </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
                     <Select value={monthlyTrendFilter} onValueChange={(value: typeof monthlyTrendFilter) => setMonthlyTrendFilter(value)}>
@@ -952,10 +884,7 @@ export default function LeavesPage() {
                   {/* Sort Order */}
                   <Select value={sortOrder} onValueChange={(value: 'newest' | 'oldest') => setSortOrder(value)}>
                     <SelectTrigger className="w-[150px]">
-                      <div className="flex items-center gap-2">
-                        <ArrowUpDown className="h-4 w-4" />
-                        <SelectValue />
-                      </div>
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="newest">Newest</SelectItem>
@@ -1140,12 +1069,22 @@ export default function LeavesPage() {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-lg">Leave Type Distribution</CardTitle>
-                      <CardDescription className="mt-1">
-                        Breakdown by leave type
-                      </CardDescription>
                     </div>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
                       <Select value={typeDistributionFilter} onValueChange={(value: typeof typeDistributionFilter) => setTypeDistributionFilter(value)}>
+                        <SelectTrigger className="w-[160px] h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="7days">Last 7 Days</SelectItem>
+                          <SelectItem value="1week">Last Week</SelectItem>
+                          <SelectItem value="thisweek">This Week</SelectItem>
+                          <SelectItem value="30days">Last 30 Days</SelectItem>
+                          <SelectItem value="1month">Last Month</SelectItem>
+                          <SelectItem value="thismonth">This Month</SelectItem>
+                          <SelectItem value="lastyear">Last Year</SelectItem>
+                          <SelectItem value="thisyear">This Year</SelectItem>
+                        </SelectContent>
                       </Select>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -1189,9 +1128,6 @@ export default function LeavesPage() {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-lg">Detailed Analytics</CardTitle>
-                      <CardDescription className="mt-1">
-                        Comprehensive leave statistics and trends
-                      </CardDescription>
                     </div>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
                       <Badge variant="secondary" className="text-xs px-2 py-1 whitespace-nowrap">
@@ -1441,6 +1377,49 @@ export default function LeavesPage() {
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Leave Types Usage Trend */}
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">Leave Types Usage Trend</CardTitle>
+                    <CardDescription className="mt-1">
+                      Usage trend by leave type over time
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Select value={typeDistributionFilter} onValueChange={(value: typeof typeDistributionFilter) => setTypeDistributionFilter(value)}>
+                      <SelectTrigger className="w-[160px] h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="7days">Last 7 Days</SelectItem>
+                        <SelectItem value="1week">Last Week</SelectItem>
+                        <SelectItem value="thisweek">This Week</SelectItem>
+                        <SelectItem value="30days">Last 30 Days</SelectItem>
+                        <SelectItem value="1month">Last Month</SelectItem>
+                        <SelectItem value="thismonth">This Month</SelectItem>
+                        <SelectItem value="lastyear">Last Year</SelectItem>
+                        <SelectItem value="thisyear">This Year</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
+                      <TrendingUp className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                  </div>
+                </div>
+                <Separator className="mt-4" />
+              </CardHeader>
+              <CardContent>
+                <LeaveAnalytics 
+                  requests={allRequests}
+                  type="type-trend"
+                  loading={loading}
+                  periodFilter={typeDistributionFilter}
+                />
               </CardContent>
             </Card>
 
