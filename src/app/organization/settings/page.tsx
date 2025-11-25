@@ -1,7 +1,5 @@
 "use client";
 
-
-
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,9 +82,6 @@ import {
 
   Clock,
 
-  Settings,
-
-  File as FileIcon,
   Image as ImageIcon,
 } from "@/components/icons/lucide-exports";
 
@@ -916,126 +911,94 @@ export default function OrganizationSettingsPage() {
 
 
   return (
-
     <div className="flex flex-1 flex-col">
-      <div className="max-w-5xl mx-auto p-6 w-full">
-        <div className="space-y-4">
-
-          {/* Organization Overview */}
-          <Card className="border shadow-sm">
-            <CardContent className="p-6 space-y-4">
-              {/* Header - Bagian Kiri Atas */}
-              <div className="flex flex-col md:flex-row gap-4 items-start">
-                {/* Logo */}
-                <div className="shrink-0">
-                  {logoPreview || orgData?.logo_url ? (
-                    <div className="w-24 h-24 rounded-md border border-border bg-muted overflow-hidden flex items-center justify-center">
-                      <img 
-                        src={logoPreview || orgData?.logo_url || ''} 
-                        alt={`${orgData?.name || 'Organization'} logo`}
-                        className="block w-full h-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-24 h-24 rounded-md border border-border bg-muted overflow-hidden flex items-center justify-center">
-                      <Building2 className="h-12 w-12 text-muted-foreground/50" />
-                    </div>
-                  )}
+      <div className="max-w-7xl mx-auto p-6 w-full">
+        {/* Header Section */}
+        <div className="mb-6">
+          <div className="flex flex-col md:flex-row gap-4 items-start">
+            {/* Logo */}
+            <div className="shrink-0">
+              {logoPreview || orgData?.logo_url ? (
+                <div className="w-20 h-20 rounded-lg border border-border bg-muted overflow-hidden flex items-center justify-center">
+                  <img 
+                    src={logoPreview || orgData?.logo_url || ''} 
+                    alt={`${orgData?.name || 'Organization'} logo`}
+                    className="block w-full h-full object-cover"
+                  />
                 </div>
-
-                {/* Organization Info */}
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h1 className="text-2xl font-bold">{orgData?.name || 'Organization'}</h1>
-                    <Badge 
-                      variant="secondary"
-                      className={
-                        orgData?.is_active
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-400/30"
-                          : "bg-amber-100 text-amber-700 dark:bg-amber-400/20 dark:text-amber-200 border border-amber-200 dark:border-amber-400/30"
-                      }
-                    >
-                      {orgData?.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-                  
-                  {orgData?.industry && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Building2 className="h-4 w-4" />
-                      <span>Category: {getIndustryLabel(orgData.industry)}</span>
-                    </div>
-                  )}
-
-                  {/* Created Date - DI BAWAH nama organisasi */}
-                  {orgData?.created_at && (
-                    <p className="text-sm opacity-70">
-                      Created: {new Date(orgData.created_at).toLocaleDateString('id-ID', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
-                  )}
+              ) : (
+                <div className="w-20 h-20 rounded-lg border border-border bg-muted overflow-hidden flex items-center justify-center">
+                  <Building2 className="h-10 w-10 text-muted-foreground/50" />
                 </div>
+              )}
+            </div>
+
+            {/* Organization Info */}
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-3xl font-bold">{orgData?.name || 'Organization Settings'}</h1>
+                <Badge 
+                  variant="secondary"
+                  className={
+                    orgData?.is_active
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-400/30"
+                      : "bg-amber-100 text-amber-700 dark:bg-amber-400/20 dark:text-amber-200 border border-amber-200 dark:border-amber-400/30"
+                  }
+                >
+                  {orgData?.is_active ? "Active" : "Inactive"}
+                </Badge>
               </div>
+              
+              <p className="text-muted-foreground">
+                Manage your organization information, settings, and preferences
+              </p>
 
-              {/* Invitation Code Card - Full Width */}
-              <div className="rounded-xl p-4 space-y-3 w-full bg-muted/50 border border-border">
-                {/* Label */}
-                <Label className="text-base font-semibold text-foreground">
-                  Invitation Code
+              {/* Invitation Code - Compact */}
+              <div className="flex items-center gap-4 mt-4">
+                <Label className="text-sm font-medium text-muted-foreground">
+                  Invitation Code:
                 </Label>
-
-                {/* Code Box */}
-                <div className="px-3 py-2 bg-background border border-border rounded-md">
-                  <code className="text-sm font-mono tracking-wider text-foreground">
+                <div className="flex items-center gap-2">
+                  <code className="px-2 py-1 bg-muted rounded text-sm font-mono">
                     {showInviteCode ? orgData?.inv_code : "••••••••"}
                   </code>
-                </div>
-
-                {/* Icon Buttons */}
-                <div className="flex gap-2">
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => setShowInviteCode(!showInviteCode)}
-                    className="h-9 w-9 p-0 hover:bg-muted"
+                    className="h-8 w-8 p-0"
                   >
                     {showInviteCode ? (
-                      <EyeOff className="h-4 w-4" />
+                      <EyeOff className="h-3 w-3" />
                     ) : (
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-3 w-3" />
                     )}
                   </Button>
-
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={copyInviteCode}
                     disabled={!showInviteCode}
-                    className="h-9 w-9 p-0 hover:bg-muted"
-                    title="Copy invitation code"
+                    className="h-8 w-8 p-0"
                   >
                     {inviteCodeCopied ? (
-                      <Check className="h-4 w-4 text-green-600" />
+                      <Check className="h-3 w-3 text-green-600" />
                     ) : (
-                      <ClipboardCheck className="h-4 w-4" />
+                      <ClipboardCheck className="h-3 w-3" />
                     )}
                   </Button>
-
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
                         size="sm"
                         variant="ghost"
                         disabled={regenerating}
-                        className="h-9 w-9 p-0 hover:bg-muted"
-                        title="Generate new invitation code"
+                        className="h-8 w-8 p-0"
                       >
                         {regenerating ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="h-3 w-3 animate-spin" />
                         ) : (
-                          <RefreshCw className="h-4 w-4" />
+                          <RefreshCw className="h-3 w-3" />
                         )}
                       </Button>
                     </AlertDialogTrigger>
@@ -1063,517 +1026,235 @@ export default function OrganizationSettingsPage() {
                   </AlertDialog>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Form Section with 2 Column Layout */}
+        <div className="grid gap-6 lg:grid-cols-2">
+
+          {/* Organization Information */}
+          {/* Left Column - Basic Information */}
+          <Card className="border shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Building2 className="h-5 w-5 text-primary" />
+                Basic Information
+              </CardTitle>
+              <CardDescription>
+                Organization name, logo, and general details
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              {/* Logo Upload Section */}
+              <div className="space-y-4">
+                <Label className="text-sm font-medium">Organization Logo</Label>
+                <div className="flex items-center gap-4">
+                  {logoPreview ? (
+                    <div className="w-16 h-16 rounded-lg border border-border bg-muted overflow-hidden flex items-center justify-center">
+                      <img 
+                        src={logoPreview} 
+                        alt={`${orgData?.name || 'Organization'} logo preview`}
+                        className="block w-full h-full object-cover"
+                      />
+                    </div>
+
+                  ) : (
+                    <div className="w-16 h-16 rounded-lg border border-border bg-muted overflow-hidden flex items-center justify-center">
+                      <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <Input
+                      id="logo"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoChange}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => document.getElementById('logo')?.click()}
+                      disabled={isCompressing}
+                      className="text-sm"
+                    >
+                      {isCompressing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          {logoPreview ? 'Change' : 'Upload'}
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      JPG, PNG, WEBP (max 5MB)
+                    </p>
+                    {compressionError && (
+                      <p className="text-xs text-destructive">
+                        {compressionError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+
+
+              <Separator />
+
+              {/* Organization Name */}
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium">
+                  Organization Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  placeholder="Enter organization name"
+                  className="h-10"
+                />
+                <p className="text-xs text-muted-foreground">
+                  This will be used as both display name and legal name
+                </p>
+              </div>
+
+
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-sm font-medium">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  placeholder="Brief description of your organization"
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+
+              {/* Industry */}
+              <div className="space-y-2">
+                <Label htmlFor="industry" className="text-sm font-medium">
+                  Industry
+                </Label>
+                <Select 
+                  value={formData.industry || ""} 
+                  onValueChange={(value) => setFormData({...formData, industry: value})}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select industry type">
+                      {formData.industry ? getIndustryLabel(formData.industry) : "Select industry type"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64 overflow-y-auto">
+                    {INDUSTRY_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Organization Information */}
-          {/* Organization Information */}
-
-        <Card className="border shadow-sm">
-
-          <CardHeader className="pb-4">
-
-            <CardTitle className="flex items-center gap-2 text-xl">
-
-              <Settings className="h-5 w-5 text-primary" />
-
-              Organization Information
-
-            </CardTitle>
-
-          <CardDescription>
-
-            Update your organization&apos;s basic information and contact details
-
-          </CardDescription>
-
-        </CardHeader>
-
-          <CardContent className="space-y-8">
-
-            {/* Logo Upload Section */}
-
-            <div className="flex flex-col items-start">
-
-              <Label htmlFor="logo" className="text-base font-semibold mb-3">
-                Organization Logo
-
-              </Label>
-
-              
-              
-              {/* Logo Preview Frame */}
-
-              {logoPreview ? (
-
-                <div className="w-[120px] h-[120px] rounded-lg border border-border bg-muted overflow-hidden flex items-center justify-center">
-                  <img 
-
-                    src={logoPreview} 
-
-                    alt={`${orgData?.name || 'Organization'} logo preview`}
-
-                    className="block w-full h-full object-cover"
-                  />
-
-                </div>
-
-              ) : (
-
-                <div className="w-[120px] h-[120px] rounded-lg border border-border bg-muted overflow-hidden flex items-center justify-center">
-                  <ImageIcon className="h-8 w-8 text-muted-foreground/50" aria-hidden="true" />
-                </div>
-
-              )}
-
-
-
-              {/* Upload Button */}
-
-              <div className="mt-3">
-                <Input
-
-                  id="logo"
-
-                  type="file"
-
-                  accept="image/*"
-
-                  onChange={handleLogoChange}
-
-                  className="hidden"
-
-                />
-
-                <Button
-
-                  type="button"
-
-                  size="sm"
-
-                  variant="secondary"
-                  onClick={() => document.getElementById('logo')?.click()}
-
-                  disabled={isCompressing}
-
-                  className="px-4 py-2 text-sm flex items-center gap-2"
-                >
-
-                  {isCompressing ? (
-
-                    <>
-
-                      <Loader2 className="h-4 w-4 animate-spin" />
-
-                      Processing...
-
-                    </>
-
-                  ) : (
-
-                    <>
-
-                      <Upload className="h-4 w-4" />
-
-                      {logoPreview ? 'Change Logo' : 'Upload Logo'}
-
-                    </>
-
-                  )}
-
-                </Button>
-
-              </div>
-
-
-
-              {/* Format Info Text */}
-
-              <p className="mt-4 text-sm text-muted-foreground">
-                Supported formats: JPG, PNG, WEBP, GIF (max 5MB)
-
-              </p>
-
-
-
-              {/* Error Message */}
-
-                {compressionError && (
-
-                <p className="mt-2 text-sm text-destructive">
-                    {compressionError}
-
-                  </p>
-
-                )}
-
-              </div>
-
-
-
-            <Separator />
-
-
-
-            {/* Basic Information */}
-
-            <div className="space-y-4">
-
-              <div className="flex items-center gap-2 mb-4">
-
-                <FileIcon className="h-4 w-4 text-muted-foreground" />
-                <Label className="text-base font-semibold">Basic Information</Label>
-
-          </div>
-
-
-
+          {/* Right Column - Contact & Location */}
+          <Card className="border shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Phone className="h-5 w-5 text-primary" />
+                Contact & Location
+              </CardTitle>
+              <CardDescription>
+                Contact details and address information
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Contact Information */}
               <div className="space-y-4">
-
-          <div className="space-y-2">
-
-                  <Label htmlFor="name" className="text-sm font-medium">
-
-                    Organization Name <span className="text-destructive">*</span>
-
-                  </Label>
-
-            <Input
-
-              id="name"
-
-              value={formData.name}
-
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-
-              placeholder="Enter organization name"
-
-                    className="h-10"
-
-            />
-
-            <p className="text-xs text-muted-foreground">
-
-              This will be used as both display name and legal name
-
-            </p>
-
-          </div>
-
-
-
-            <div className="space-y-2">
-
-                  <Label htmlFor="description" className="text-sm font-medium">
-
-                    Description
-
-                  </Label>
-
-                  <Textarea
-
-                    id="description"
-
-                    value={formData.description}
-
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-
-                    placeholder="Brief description of your organization"
-
-                    rows={3}
-
-                    className="resize-none"
-
-                  />
-
-                </div>
-
-
-
                 <div className="space-y-2">
-
-                  <Label htmlFor="industry" className="text-sm font-medium">
-
-                    Industry
-
-                  </Label>
-
-                  <Select 
-
-                    value={formData.industry || ""} 
-
-                    onValueChange={(value) => setFormData({...formData, industry: value})}
-
-                  >
-
-                    <SelectTrigger className="h-10">
-
-                      <SelectValue placeholder="Select industry type">
-
-                        {formData.industry ? getIndustryLabel(formData.industry) : "Select industry type"}
-
-                      </SelectValue>
-
-                    </SelectTrigger>
-
-                    <SelectContent className="max-h-64 overflow-y-auto">
-
-                      {INDUSTRY_OPTIONS.map((option) => (
-
-                        <SelectItem key={option.value} value={option.value}>
-
-                          {option.label}
-
-                        </SelectItem>
-
-                      ))}
-
-                    </SelectContent>
-
-                  </Select>
-
-                </div>
-
-              </div>
-
-            </div>
-
-
-
-            <Separator />
-
-
-
-            {/* Contact Information */}
-
-            <div className="space-y-4">
-
-              <div className="flex items-center gap-2 mb-4">
-
-                <Phone className="h-4 w-4 text-muted-foreground" />
-
-                <Label className="text-base font-semibold">Contact Information</Label>
-
-              </div>
-
-              
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                <div className="space-y-2">
-
                   <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
-
                     <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-
                     Email Address
-
                   </Label>
-
-              <Input
-
-                id="email"
-
-                type="email"
-
-                value={formData.email}
-
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-
-                placeholder="info@company.com"
-
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="info@company.com"
                     className="h-10"
-
-              />
-
-            </div>
+                  />
+                </div>
 
 
 
-            <div className="space-y-2">
-
+                <div className="space-y-2">
                   <Label htmlFor="phone" className="text-sm font-medium flex items-center gap-2">
-
                     <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-
                     Phone Number
-
                   </Label>
-
-              <Input
-
-                id="phone"
-
-                type="tel"
-
-                value={formData.phone}
-
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-
-                placeholder="+62 21 1234 5678"
-
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    placeholder="+62 21 1234 5678"
                     className="h-10"
+                  />
+                </div>
 
-              />
-
-          </div>
-
-
-
-                <div className="space-y-2 md:col-span-2">
-
+                <div className="space-y-2">
                   <Label htmlFor="website" className="text-sm font-medium flex items-center gap-2">
-
                     <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-
                     Website
-
                   </Label>
-
-              <Input
-
-                id="website"
-
-                type="url"
-
-                value={formData.website}
-
-                onChange={(e) => setFormData({...formData, website: e.target.value})}
-
-                placeholder="https://company.com"
-
+                  <Input
+                    id="website"
+                    type="url"
+                    value={formData.website}
+                    onChange={(e) => setFormData({...formData, website: e.target.value})}
+                    placeholder="https://company.com"
                     className="h-10"
+                  />
+                </div>
+              </div>
 
-              />
-
-            </div>
-
-            </div>
-
-          </div>
-
-
-
-            <Separator />
-
-
-
-            {/* Location Information */}
-
-            <div className="space-y-4">
-
-              <div className="flex items-center gap-2 mb-4">
-
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-
-                <Label className="text-base font-semibold">Location Information</Label>
-
-          </div>
-
-
-
+              {/* Location Information */}
               <div className="space-y-4">
-
-          <div className="space-y-2">
-
-                  <Label htmlFor="address" className="text-sm font-medium">
-
+                <div className="space-y-2">
+                  <Label htmlFor="address" className="text-sm font-medium flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
                     Address
-
                   </Label>
+                  <Textarea
+                    id="address"
+                    value={formData.address}
 
-            <Textarea
-
-              id="address"
-
-              value={formData.address}
-
-              onChange={(e) => setFormData({...formData, address: e.target.value})}
-
-              placeholder="Full organization address"
-
-              rows={2}
-
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    placeholder="Full organization address"
+                    rows={2}
                     className="resize-none"
+                  />
+                </div>
 
-            />
-
-          </div>
-
-
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-            <div className="space-y-2">
-
-                    <Label htmlFor="city" className="text-sm font-medium">
-
-                      City
-
-                    </Label>
-
-                    <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={cityPopoverOpen}
-                          className="h-10 w-full justify-between"
-                          disabled={cityOptions.length === 0 || !formData.state_province || geoLoading}
-                        >
-                          {cityLabel || "Select city..."}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Search city..." />
-                          <CommandList>
-                            <CommandEmpty>
-                              {geoLoading ? "Loading..." : cityOptions.length === 0 ? "Select a province first" : "No city found."}
-                            </CommandEmpty>
-                            <CommandGroup>
-                              {cityOptions.map((city) => (
-                                <CommandItem
-                                  key={city.value}
-                                  value={city.value}
-                                  onSelect={() => {
-                                    setFormData({
-                                      ...formData,
-                                      city: city.value,
-                                    });
-                                    setCityPopoverOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      formData.city === city.value
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                            {city.label}
-
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-            </div>
-
-
-
-            <div className="space-y-2">
-
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
                     <Label htmlFor="state_province" className="text-sm font-medium">
-
                       State/Province
-
                     </Label>
-
                     <Popover open={statePopoverOpen} onOpenChange={setStatePopoverOpen}>
                       <PopoverTrigger asChild>
                         <Button
@@ -1624,434 +1305,208 @@ export default function OrganizationSettingsPage() {
                         </Command>
                       </PopoverContent>
                     </Popover>
-            </div>
-
-
-
-            <div className="space-y-2">
-
-                    <Label htmlFor="postal_code" className="text-sm font-medium">
-
-                      Postal Code
-
-                    </Label>
-
-                    <div className="w-24">
-
-              <Input
-
-                id="postal_code"
-
-                value={formData.postal_code}
-
-                onChange={(e) => setFormData({...formData, postal_code: e.target.value})}
-
-                placeholder="Postal code"
-
-                        className="h-10"
-
-                        maxLength={10}
-
-              />
-
-                    </div>
-
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="city" className="text-sm font-medium">
+                      City
+                    </Label>
+
+                    <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={cityPopoverOpen}
+                          className="h-10 w-full justify-between"
+                          disabled={cityOptions.length === 0 || !formData.state_province || geoLoading}
+                        >
+                          {cityLabel || "Select city..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search city..." />
+                          <CommandList>
+                            <CommandEmpty>
+                              {geoLoading ? "Loading..." : cityOptions.length === 0 ? "Select a province first" : "No city found."}
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {cityOptions.map((city) => (
+                                <CommandItem
+                                  key={city.value}
+                                  value={city.value}
+                                  onSelect={() => {
+                                    setFormData({
+                                      ...formData,
+                                      city: city.value,
+                                    });
+                                    setCityPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formData.city === city.value
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {city.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
 
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="postal_code" className="text-sm font-medium">
+                    Postal Code
+                  </Label>
+                  <Input
+                    id="postal_code"
+                    value={formData.postal_code}
+                    onChange={(e) => setFormData({...formData, postal_code: e.target.value})}
+                    placeholder="Enter postal code"
+                    className="h-10"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-          </div>
-
-
-
-            <Separator />
-
-
-
-            {/* Regional Settings */}
-
-            <div className="space-y-4">
-
-              <div className="flex items-center gap-2 mb-4">
-
-                <Clock className="h-4 w-4 text-muted-foreground" />
-
-                <Label className="text-base font-semibold">Regional Settings</Label>
-
+        {/* Regional Settings - Full Width Card */}
+        <Card className="border shadow-sm mt-6">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Clock className="h-5 w-5 text-primary" />
+              Regional Settings
+            </CardTitle>
+            <CardDescription>
+              Timezone, currency, and localization preferences
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-2">
+                <Label htmlFor="country_code" className="text-sm font-medium">
+                  Country
+                </Label>
+                <Select
+                  value={formData.country_code}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      country_code: value,
+                      city: "",
+                      state_province: "",
+                    })
+                  }
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ID">Indonesia</SelectItem>
+                    <SelectItem value="MY">Malaysia</SelectItem>
+                    <SelectItem value="SG">Singapore</SelectItem>
+                    <SelectItem value="TH">Thailand</SelectItem>
+                    <SelectItem value="PH">Philippines</SelectItem>
+                    <SelectItem value="VN">Vietnam</SelectItem>
+                    <SelectItem value="US">United States</SelectItem>
+                    <SelectItem value="GB">United Kingdom</SelectItem>
+                    <SelectItem value="AU">Australia</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="timezone" className="text-sm font-medium">
+                  Timezone
+                </Label>
+                <Select value={formData.timezone} onValueChange={(value) => setFormData({...formData, timezone: value})}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select timezone" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64 overflow-y-auto">
+                    <SelectItem value="Asia/Jakarta">Asia/Jakarta (WIB, UTC+7)</SelectItem>
+                    <SelectItem value="Asia/Makassar">Asia/Makassar (WITA, UTC+8)</SelectItem>
+                    <SelectItem value="Asia/Jayapura">Asia/Jayapura (WIT, UTC+9)</SelectItem>
+                    <SelectItem value="Asia/Singapore">Asia/Singapore (UTC+8)</SelectItem>
+                    <SelectItem value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur (UTC+8)</SelectItem>
+                    <SelectItem value="Asia/Bangkok">Asia/Bangkok (UTC+7)</SelectItem>
+                    <SelectItem value="America/New_York">America/New_York (UTC-5/-4)</SelectItem>
+                    <SelectItem value="Europe/London">Europe/London (UTC+0/+1)</SelectItem>
+                    <SelectItem value="UTC">UTC (Coordinated Universal Time)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
+              <div className="space-y-2">
+                <Label htmlFor="time_format" className="text-sm font-medium">
+                  Time Format
+                </Label>
+                <Select value={formData.time_format} onValueChange={(value: '12h' | '24h') => setFormData({...formData, time_format: value})}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select time format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="12h">12-Hour Format (AM/PM)</SelectItem>
+                    <SelectItem value="24h">24-Hour Format</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  <Label htmlFor="country_code" className="text-sm font-medium">
-
-                    Country
-
-                  </Label>
-
-              <Select
-                value={formData.country_code}
-                onValueChange={(value) =>
-                  setFormData({
-                    ...formData,
-                    country_code: value,
-                    city: "",
-                    state_province: "",
-                  })
-                }
-              >
-                    <SelectTrigger className="h-10">
-
-                  <SelectValue placeholder="Select country" />
-
-                </SelectTrigger>
-
-                <SelectContent>
-
-                  <SelectItem value="ID">Indonesia</SelectItem>
-
-                  <SelectItem value="MY">Malaysia</SelectItem>
-
-                  <SelectItem value="SG">Singapore</SelectItem>
-
-                  <SelectItem value="TH">Thailand</SelectItem>
-
-                  <SelectItem value="PH">Philippines</SelectItem>
-
-                  <SelectItem value="VN">Vietnam</SelectItem>
-
-                  <SelectItem value="US">United States</SelectItem>
-
-                  <SelectItem value="GB">United Kingdom</SelectItem>
-
-                  <SelectItem value="AU">Australia</SelectItem>
-
-                </SelectContent>
-
-              </Select>
-
+              <div className="space-y-2">
+                <Label htmlFor="currency" className="text-sm font-medium">
+                  Currency
+                </Label>
+                <Select value={formData.currency_code} onValueChange={(value) => setFormData({...formData, currency_code: value})}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="IDR">IDR - Indonesian Rupiah</SelectItem>
+                    <SelectItem value="USD">USD - US Dollar</SelectItem>
+                    <SelectItem value="EUR">EUR - Euro</SelectItem>
+                    <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                    <SelectItem value="SGD">SGD - Singapore Dollar</SelectItem>
+                    <SelectItem value="MYR">MYR - Malaysian Ringgit</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-
-
-
-            <div className="space-y-2">
-
-                  <Label htmlFor="timezone" className="text-sm font-medium">
-
-                    Timezone
-
-                  </Label>
-
-              <Select value={formData.timezone} onValueChange={(value) => setFormData({...formData, timezone: value})}>
-
-                    <SelectTrigger className="h-10">
-
-                  <SelectValue placeholder="Select timezone" />
-
-                </SelectTrigger>
-
-                <SelectContent className="max-h-64 overflow-y-auto">
-
-                  {/* Indonesia */}
-
-                  <SelectItem value="Asia/Jakarta">Asia/Jakarta (WIB, UTC+7)</SelectItem>
-
-                  <SelectItem value="Asia/Makassar">Asia/Makassar (WITA, UTC+8)</SelectItem>
-
-                  <SelectItem value="Asia/Jayapura">Asia/Jayapura (WIT, UTC+9)</SelectItem>
-
-                  <SelectItem value="Asia/Pontianak">Asia/Pontianak (WIB, UTC+7)</SelectItem>
-
-                  
-                  
-                  {/* Asia */}
-
-                  <SelectItem value="Asia/Singapore">Asia/Singapore (UTC+8)</SelectItem>
-
-                  <SelectItem value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur (UTC+8)</SelectItem>
-
-                  <SelectItem value="Asia/Bangkok">Asia/Bangkok (UTC+7)</SelectItem>
-
-                  <SelectItem value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh (UTC+7)</SelectItem>
-
-                  <SelectItem value="Asia/Manila">Asia/Manila (UTC+8)</SelectItem>
-
-                  <SelectItem value="Asia/Hong_Kong">Asia/Hong_Kong (UTC+8)</SelectItem>
-
-                  <SelectItem value="Asia/Taipei">Asia/Taipei (UTC+8)</SelectItem>
-
-                  <SelectItem value="Asia/Seoul">Asia/Seoul (UTC+9)</SelectItem>
-
-                  <SelectItem value="Asia/Tokyo">Asia/Tokyo (UTC+9)</SelectItem>
-
-                  <SelectItem value="Asia/Shanghai">Asia/Shanghai (UTC+8)</SelectItem>
-
-                  <SelectItem value="Asia/Dubai">Asia/Dubai (UTC+4)</SelectItem>
-
-                  <SelectItem value="Asia/Riyadh">Asia/Riyadh (UTC+3)</SelectItem>
-
-                  <SelectItem value="Asia/Qatar">Asia/Qatar (UTC+3)</SelectItem>
-
-                  <SelectItem value="Asia/Kuwait">Asia/Kuwait (UTC+3)</SelectItem>
-
-                  <SelectItem value="Asia/Bahrain">Asia/Bahrain (UTC+3)</SelectItem>
-
-                  <SelectItem value="Asia/Muscat">Asia/Muscat (UTC+4)</SelectItem>
-
-                  <SelectItem value="Asia/Tehran">Asia/Tehran (UTC+3:30)</SelectItem>
-
-                  <SelectItem value="Asia/Karachi">Asia/Karachi (UTC+5)</SelectItem>
-
-                  <SelectItem value="Asia/Kolkata">Asia/Kolkata (UTC+5:30)</SelectItem>
-
-                  <SelectItem value="Asia/Dhaka">Asia/Dhaka (UTC+6)</SelectItem>
-
-                  <SelectItem value="Asia/Yangon">Asia/Yangon (UTC+6:30)</SelectItem>
-
-                  <SelectItem value="Asia/Colombo">Asia/Colombo (UTC+5:30)</SelectItem>
-
-                  
-                  
-                  {/* Europe */}
-
-                  <SelectItem value="Europe/London">Europe/London (UTC+0/+1)</SelectItem>
-
-                  <SelectItem value="Europe/Paris">Europe/Paris (UTC+1/+2)</SelectItem>
-
-                  <SelectItem value="Europe/Berlin">Europe/Berlin (UTC+1/+2)</SelectItem>
-
-                  <SelectItem value="Europe/Amsterdam">Europe/Amsterdam (UTC+1/+2)</SelectItem>
-
-                  <SelectItem value="Europe/Rome">Europe/Rome (UTC+1/+2)</SelectItem>
-
-                  <SelectItem value="Europe/Madrid">Europe/Madrid (UTC+1/+2)</SelectItem>
-
-                  <SelectItem value="Europe/Zurich">Europe/Zurich (UTC+1/+2)</SelectItem>
-
-                  <SelectItem value="Europe/Vienna">Europe/Vienna (UTC+1/+2)</SelectItem>
-
-                  <SelectItem value="Europe/Stockholm">Europe/Stockholm (UTC+1/+2)</SelectItem>
-
-                  <SelectItem value="Europe/Oslo">Europe/Oslo (UTC+1/+2)</SelectItem>
-
-                  <SelectItem value="Europe/Copenhagen">Europe/Copenhagen (UTC+1/+2)</SelectItem>
-
-                  <SelectItem value="Europe/Helsinki">Europe/Helsinki (UTC+2/+3)</SelectItem>
-
-                  <SelectItem value="Europe/Warsaw">Europe/Warsaw (UTC+1/+2)</SelectItem>
-
-                  <SelectItem value="Europe/Prague">Europe/Prague (UTC+1/+2)</SelectItem>
-
-                  <SelectItem value="Europe/Budapest">Europe/Budapest (UTC+1/+2)</SelectItem>
-
-                  <SelectItem value="Europe/Moscow">Europe/Moscow (UTC+3)</SelectItem>
-
-                  <SelectItem value="Europe/Istanbul">Europe/Istanbul (UTC+3)</SelectItem>
-
-                  
-                  
-                  {/* Americas */}
-
-                  <SelectItem value="America/New_York">America/New_York (UTC-5/-4)</SelectItem>
-
-                  <SelectItem value="America/Chicago">America/Chicago (UTC-6/-5)</SelectItem>
-
-                  <SelectItem value="America/Denver">America/Denver (UTC-7/-6)</SelectItem>
-
-                  <SelectItem value="America/Los_Angeles">America/Los_Angeles (UTC-8/-7)</SelectItem>
-
-                  <SelectItem value="America/Toronto">America/Toronto (UTC-5/-4)</SelectItem>
-
-                  <SelectItem value="America/Vancouver">America/Vancouver (UTC-8/-7)</SelectItem>
-
-                  <SelectItem value="America/Mexico_City">America/Mexico_City (UTC-6/-5)</SelectItem>
-
-                  <SelectItem value="America/Sao_Paulo">America/Sao_Paulo (UTC-3/-2)</SelectItem>
-
-                  <SelectItem value="America/Buenos_Aires">America/Buenos_Aires (UTC-3)</SelectItem>
-
-                  <SelectItem value="America/Lima">America/Lima (UTC-5)</SelectItem>
-
-                  <SelectItem value="America/Bogota">America/Bogota (UTC-5)</SelectItem>
-
-                  <SelectItem value="America/Caracas">America/Caracas (UTC-4)</SelectItem>
-
-                  <SelectItem value="America/Santiago">America/Santiago (UTC-4/-3)</SelectItem>
-
-                  
-                  
-                  {/* Australia & Oceania */}
-
-                  <SelectItem value="Australia/Sydney">Australia/Sydney (UTC+10/+11)</SelectItem>
-
-                  <SelectItem value="Australia/Melbourne">Australia/Melbourne (UTC+10/+11)</SelectItem>
-
-                  <SelectItem value="Australia/Brisbane">Australia/Brisbane (UTC+10)</SelectItem>
-
-                  <SelectItem value="Australia/Perth">Australia/Perth (UTC+8)</SelectItem>
-
-                  <SelectItem value="Australia/Adelaide">Australia/Adelaide (UTC+9:30/+10:30)</SelectItem>
-
-                  <SelectItem value="Australia/Darwin">Australia/Darwin (UTC+9:30)</SelectItem>
-
-                  <SelectItem value="Pacific/Auckland">Pacific/Auckland (UTC+12/+13)</SelectItem>
-
-                  <SelectItem value="Pacific/Fiji">Pacific/Fiji (UTC+12/+13)</SelectItem>
-
-                  <SelectItem value="Pacific/Honolulu">Pacific/Honolulu (UTC-10)</SelectItem>
-
-                  
-                  
-                  {/* Africa */}
-
-                  <SelectItem value="Africa/Cairo">Africa/Cairo (UTC+2)</SelectItem>
-
-                  <SelectItem value="Africa/Lagos">Africa/Lagos (UTC+1)</SelectItem>
-
-                  <SelectItem value="Africa/Casablanca">Africa/Casablanca (UTC+0/+1)</SelectItem>
-
-                  <SelectItem value="Africa/Johannesburg">Africa/Johannesburg (UTC+2)</SelectItem>
-
-                  <SelectItem value="Africa/Nairobi">Africa/Nairobi (UTC+3)</SelectItem>
-
-                  <SelectItem value="Africa/Algiers">Africa/Algiers (UTC+1)</SelectItem>
-
-                  
-                  
-                  {/* UTC */}
-
-                  <SelectItem value="UTC">UTC (Coordinated Universal Time)</SelectItem>
-
-                  <SelectItem value="GMT">GMT (Greenwich Mean Time)</SelectItem>
-
-                </SelectContent>
-
-              </Select>
-
-            </div>
-
-
-
-            <div className="space-y-2">
-
-                  <Label htmlFor="time_format" className="text-sm font-medium">
-
-                    Time Format
-
-                  </Label>
-
-              <Select value={formData.time_format} onValueChange={(value: '12h' | '24h') => setFormData({...formData, time_format: value})}>
-
-                    <SelectTrigger className="h-10">
-
-                  <SelectValue placeholder="Select time format" />
-
-                </SelectTrigger>
-
-                <SelectContent>
-
-                  <SelectItem value="12h">12-Hour Format (AM/PM)</SelectItem>
-
-                  <SelectItem value="24h">24-Hour Format</SelectItem>
-
-                </SelectContent>
-
-              </Select>
-
-            </div>
-
-
-
-            <div className="space-y-2">
-
-                  <Label htmlFor="currency" className="text-sm font-medium">
-
-                    Currency
-
-                  </Label>
-
-              <Select value={formData.currency_code} onValueChange={(value) => setFormData({...formData, currency_code: value})}>
-
-                    <SelectTrigger className="h-10">
-
-                  <SelectValue placeholder="Select currency" />
-
-                </SelectTrigger>
-
-                <SelectContent>
-
-                  <SelectItem value="IDR">IDR - Indonesian Rupiah</SelectItem>
-
-                  <SelectItem value="USD">USD - US Dollar</SelectItem>
-
-                  <SelectItem value="EUR">EUR - Euro</SelectItem>
-
-                  <SelectItem value="GBP">GBP - British Pound</SelectItem>
-
-                  <SelectItem value="SGD">SGD - Singapore Dollar</SelectItem>
-
-                  <SelectItem value="MYR">MYR - Malaysian Ringgit</SelectItem>
-
-                </SelectContent>
-
-              </Select>
-
-            </div>
-
-          </div>
-
-            </div>
-
-        </CardContent>
-
-      </Card>
-
-
-
-      {/* Save Button */}
-
-        <div className="flex justify-end gap-3 pt-4">
-
+          </CardContent>
+        </Card>
+
+        {/* Save Button */}
+        <div className="flex justify-end pt-6">
           <Button 
             onClick={handleSave} 
             disabled={saving}
             size="lg"
-            className="min-w-[160px] gap-2 px-6 py-3 text-base font-semibold rounded-xl bg-primary text-primary-foreground border border-primary shadow-lg hover:bg-primary/90 active:bg-primary/80 disabled:opacity-60"
+            className="min-w-[160px] gap-2 px-6 py-3 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
           >
-
-          {saving ? (
-
-            <>
-
+            {saving ? (
+              <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-
-              Saving...
-
-            </>
-
-          ) : (
-
-            <>
-
+                Saving...
+              </>
+            ) : (
+              <>
                 <Save className="h-4 w-4" />
-
-                Save
-
-            </>
-
-          )}
-
-        </Button>
-        </div>
+                Save Changes
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </div>
-
   );
-
 }
