@@ -412,13 +412,13 @@ export default function LeavesPage() {
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+    <div className="flex flex-1 flex-col gap-3 sm:gap-4 md:gap-6 p-3 sm:p-4 md:p-6 max-w-full overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="space-y-2">
+        <div className="space-y-1 sm:space-y-2">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
                 {'Leaves Dashboard'}
               </h1>
 
@@ -467,39 +467,36 @@ export default function LeavesPage() {
       )}
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-1.5 sm:gap-2 md:gap-3 lg:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4 w-full">
         {/* Card 1: Total/Balance */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
+        <Card className="hover:shadow-md transition-shadow w-full min-w-0 overflow-hidden">
+          <CardContent className="p-2 sm:p-2.5 md:p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
                 {loading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-8 w-20" />
-                    <Skeleton className="h-4 w-32" />
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Skeleton className="h-5 sm:h-6 md:h-7 lg:h-8 w-12 sm:w-16 md:w-20" />
+                    <Skeleton className="h-3 sm:h-4 w-20 sm:w-28 md:w-32" />
                   </div>
                 ) : (
                   <>
-                    <div className="text-3xl font-bold text-foreground mb-1">
+                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-foreground mb-0.5 sm:mb-1 leading-tight">
                       {isAdmin 
                         ? statistics?.totalRequests || 0
                         : isUserStats(stats) ? stats.totalBalance : 0
                       }
                     </div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs xl:text-sm font-medium text-muted-foreground leading-tight truncate">
                       {isAdmin ? 'Total Requests' : 'Leave Balance'}
                     </p>
                   </>
                 )}
               </div>
-              <div className="w-12 h-12 flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
                 {isAdmin ? (
-                  <FileText className="w-6 h-6" />
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                 ) : (
-                  <Briefcase className="w-6 h-6" />
-
-
- 
+                  <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                 )}
               </div>
             </div>
@@ -507,34 +504,34 @@ export default function LeavesPage() {
         </Card>
 
         {/* Card 2: Approved/Pending */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
+        <Card className="hover:shadow-md transition-shadow w-full min-w-0 overflow-hidden">
+          <CardContent className="p-2 sm:p-2.5 md:p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
                 {loading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-8 w-20" />
-                    <Skeleton className="h-4 w-32" />
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Skeleton className="h-5 sm:h-6 md:h-7 lg:h-8 w-12 sm:w-16 md:w-20" />
+                    <Skeleton className="h-3 sm:h-4 w-20 sm:w-28 md:w-32" />
                   </div>
                 ) : (
                   <>
-                    <div className="text-3xl font-bold text-foreground mb-1">
+                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-foreground mb-0.5 sm:mb-1 leading-tight">
                       {isAdmin 
                         ? statistics?.approvedRequests || 0
                         : requests.filter(r => r.status === 'pending').length
                       }
                     </div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs xl:text-sm font-medium text-muted-foreground leading-tight truncate">
                       {isAdmin ? 'Approved Requests' : 'Pending Requests'}
                     </p>
                   </>
                 )}
               </div>
-              <div className="w-12 h-12 flex items-center justify-center text-green-600 dark:text-green-400">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center text-green-600 dark:text-green-400 shrink-0">
                 {isAdmin ? (
-                  <CheckCircle className="w-6 h-6" />
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                 ) : (
-                  <Clock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-orange-600 dark:text-orange-400" />
                 )}
               </div>
             </div>
@@ -542,34 +539,34 @@ export default function LeavesPage() {
         </Card>
 
         {/* Card 3: On Leave/Approved */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
+        <Card className="hover:shadow-md transition-shadow w-full min-w-0 overflow-hidden">
+          <CardContent className="p-2 sm:p-2.5 md:p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
                 {loading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-8 w-20" />
-                    <Skeleton className="h-4 w-32" />
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Skeleton className="h-5 sm:h-6 md:h-7 lg:h-8 w-12 sm:w-16 md:w-20" />
+                    <Skeleton className="h-3 sm:h-4 w-20 sm:w-28 md:w-32" />
                   </div>
                 ) : (
                   <>
-                    <div className="text-3xl font-bold text-foreground mb-1">
+                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-foreground mb-0.5 sm:mb-1 leading-tight">
                       {isAdmin 
                         ? statistics?.membersOnLeave || 0
                         : isUserStats(stats) ? stats.approvedCount : 0
                       }
                     </div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs xl:text-sm font-medium text-muted-foreground leading-tight truncate">
                       {isAdmin ? 'Members on Leave' : 'Approved Leaves'}
                     </p>
                   </>
                 )}
               </div>
-              <div className="w-12 h-12 flex items-center justify-center text-purple-600 dark:text-purple-400">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
                 {isAdmin ? (
-                  <UserCheck className="w-6 h-6" />
+                  <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                 ) : (
-                  <CheckCircle className="w-6 h-6" />
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                 )}
               </div>
             </div>
@@ -577,34 +574,34 @@ export default function LeavesPage() {
         </Card>
 
         {/* Card 4: Upcoming/Types */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
+        <Card className="hover:shadow-md transition-shadow w-full min-w-0 overflow-hidden">
+          <CardContent className="p-2 sm:p-2.5 md:p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
                 {loading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-8 w-20" />
-                    <Skeleton className="h-4 w-32" />
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Skeleton className="h-5 sm:h-6 md:h-7 lg:h-8 w-12 sm:w-16 md:w-20" />
+                    <Skeleton className="h-3 sm:h-4 w-20 sm:w-28 md:w-32" />
                   </div>
                 ) : (
                   <>
-                    <div className="text-3xl font-bold text-foreground mb-1">
+                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-foreground mb-0.5 sm:mb-1 leading-tight">
                       {isAdmin 
                         ? statistics?.upcomingLeaves || 0
                         : leaveTypes.length
                       }
                     </div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs xl:text-sm font-medium text-muted-foreground leading-tight truncate">
                       {isAdmin ? 'Upcoming Leaves' : 'Leave Types'}
                     </p>
                   </>
                 )}
               </div>
-              <div className="w-12 h-12 flex items-center justify-center text-amber-600 dark:text-amber-400">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
                 {isAdmin ? (
-                  <TrendingUp className="w-6 h-6" />
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                 ) : (
-                  <CalendarDays className="w-6 h-6" />
+                  <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                 )}
               </div>
             </div>
@@ -666,21 +663,21 @@ export default function LeavesPage() {
         </div>
 
         {/* Dashboard Tab */}
-        <TabsContent value="dashboard" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
+        <TabsContent value="dashboard" className="space-y-3 sm:space-y-4 md:space-y-6">
+          <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2 w-full">
             {/* Status Distribution Chart */}
-            <Card className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">Request Status Distribution</CardTitle>
+            <Card className="hover:shadow-md transition-shadow w-full min-w-0 overflow-hidden">
+              <CardHeader className="pb-2 sm:pb-3 md:pb-4 px-2 sm:px-3 md:px-4 lg:px-6 pt-2 sm:pt-3 md:pt-4 lg:pt-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-sm sm:text-base md:text-lg truncate">Request Status Distribution</CardTitle>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="gap-2">
+                        <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 h-7 sm:h-8 md:h-9 w-full sm:w-auto text-[10px] sm:text-xs md:text-sm">
                           {getChartIcon(statusChartType)}
-                          <ChevronDown className="h-4 w-4" />
+                          <ChevronDown className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -701,7 +698,7 @@ export default function LeavesPage() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-2 sm:px-3 md:px-4 lg:px-6 pb-2 sm:pb-3 md:pb-4 lg:pb-6 w-full min-w-0">
                 <LeaveAnalytics 
                   requests={isAdmin ? allRequests : requests}
                   type="status"
@@ -712,15 +709,15 @@ export default function LeavesPage() {
             </Card>
 
             {/* Monthly Trend Chart */}
-            <Card className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">Leave Trend</CardTitle>
+            <Card className="hover:shadow-md transition-shadow w-full min-w-0 overflow-hidden">
+              <CardHeader className="pb-2 sm:pb-3 md:pb-4 px-2 sm:px-3 md:px-4 lg:px-6 pt-2 sm:pt-3 md:pt-4 lg:pt-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-sm sm:text-base md:text-lg truncate">Leave Trend</CardTitle>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
                     <Select value={monthlyTrendFilter} onValueChange={(value: typeof monthlyTrendFilter) => setMonthlyTrendFilter(value)}>
-                      <SelectTrigger className="w-[160px] h-9">
+                      <SelectTrigger className="w-full sm:w-[140px] md:w-[160px] h-7 sm:h-8 md:h-9 text-[10px] sm:text-xs md:text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -734,13 +731,13 @@ export default function LeavesPage() {
                         <SelectItem value="thisyear">This Year</SelectItem>
                       </SelectContent>
                     </Select>
-                    <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                      <BarChart3 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    <div className="p-1.5 sm:p-2 bg-green-100 dark:bg-green-900 rounded-lg shrink-0">
+                      <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600 dark:text-green-400" />
                     </div>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-2 sm:px-3 md:px-4 lg:px-6 pb-2 sm:pb-3 md:pb-4 lg:pb-6 w-full min-w-0">
                 <LeaveAnalytics 
                   requests={isAdmin ? allRequests : requests}
                   type="monthly"
@@ -752,37 +749,37 @@ export default function LeavesPage() {
           </div>
 
           {/* Recent Requests */}
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">Recent Leave Requests</CardTitle>
-                  <CardDescription className="mt-1">
+          <Card className="hover:shadow-md transition-shadow w-full min-w-0 overflow-hidden">
+            <CardHeader className="pb-2 sm:pb-3 md:pb-4 px-2 sm:px-3 md:px-4 lg:px-6 pt-2 sm:pt-3 md:pt-4 lg:pt-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3 md:gap-4">
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-sm sm:text-base md:text-lg truncate">Recent Leave Requests</CardTitle>
+                  <CardDescription className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm">
                     {isAdmin ? 'Latest requests from all members' : 'Your recent leave requests'}
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full sm:w-auto">
+                  <Badge variant="secondary" className="text-[9px] sm:text-[10px] md:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1">
                     {Math.min(3, (isAdmin ? allRequests : requests).length)} of {(isAdmin ? allRequests : requests).length}
                   </Badge>
                   
                   {/* View Mode Toggle for Recent */}
-                  <div className="flex items-center rounded-lg border">
+                  <div className="flex items-center rounded-lg border shrink-0">
                     <Button
                       variant={recentViewMode === 'list' ? 'secondary' : 'ghost'}
                       size="sm"
                       onClick={() => setRecentViewMode('list')}
-                      className="rounded-r-none h-8"
+                      className="rounded-r-none h-7 sm:h-8 w-8 sm:w-auto px-2 sm:px-3"
                     >
-                      <List className="h-4 w-4" />
+                      <List className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                     <Button
                       variant={recentViewMode === 'grid' ? 'secondary' : 'ghost'}
                       size="sm"
                       onClick={() => setRecentViewMode('grid')}
-                      className="rounded-l-none border-l h-8"
+                      className="rounded-l-none border-l h-7 sm:h-8 w-8 sm:w-auto px-2 sm:px-3"
                     >
-                      <Grid3x3 className="h-4 w-4" />
+                      <Grid3x3 className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
                   
@@ -790,16 +787,17 @@ export default function LeavesPage() {
                     variant="outline" 
                     size="sm"
                     onClick={() => setActiveTab("requests")}
+                    className="h-7 sm:h-8 text-[10px] sm:text-xs md:text-sm px-2 sm:px-3 shrink-0"
                   >
                     See All
                   </Button>
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                    <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-900 rounded-lg shrink-0">
+                    <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600 dark:text-purple-400" />
                   </div>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-2 sm:px-3 md:px-4 lg:px-6 pb-2 sm:pb-3 md:pb-4 lg:pb-6">
               <div>
                 <LeaveRequestList 
                   requests={(isAdmin ? allRequests : requests).slice(0, 3)}
@@ -820,34 +818,34 @@ export default function LeavesPage() {
         </TabsContent>
 
         {/* Requests Tab */}
-        <TabsContent value="requests" className="space-y-6">
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    All Leave Requests
+        <TabsContent value="requests" className="space-y-3 sm:space-y-4 md:space-y-6">
+          <Card className="hover:shadow-md transition-shadow w-full min-w-0 overflow-hidden">
+            <CardHeader className="pb-2 sm:pb-3 md:pb-4 px-2 sm:px-3 md:px-4 lg:px-6 pt-2 sm:pt-3 md:pt-4 lg:pt-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3 md:gap-4">
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-sm sm:text-base md:text-lg flex items-center gap-1.5 sm:gap-2">
+                    <FileText className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                    <span className="truncate">All Leave Requests</span>
                   </CardTitle>
-                  <CardDescription className="mt-1">
+                  <CardDescription className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm">
                     {isAdmin 
                       ? 'Manage and approve member leave requests'
                       : 'View and manage your leave requests'
                     }
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full sm:w-auto">
+                  <Badge variant="outline" className="text-[9px] sm:text-[10px] md:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1">
                     {(isAdmin ? allRequests : requests).length} total
                   </Badge>
                   {isAdmin && canApproveRequests && (
-                    <Badge variant="secondary">
+                    <Badge variant="secondary" className="text-[9px] sm:text-[10px] md:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1">
                       {(isAdmin ? allRequests : requests).filter(r => r.status === 'pending').length} pending
                     </Badge>
                   )}
                 </div>
               </div>
-              <Separator className="mt-4" />
+              <Separator className="mt-2 sm:mt-3 md:mt-4" />
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -1363,7 +1361,7 @@ export default function LeavesPage() {
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
                                     <div 
-                                      className="w-4 h-4 rounded-full flex-shrink-0"
+                                      className="w-4 h-4 rounded-full shrink-0"
                                       style={{ backgroundColor: mostUsed[1].color }}
                                     />
                                     <span className="text-lg font-bold text-foreground truncate">
@@ -1379,7 +1377,7 @@ export default function LeavesPage() {
                               return (
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
+                                    <div className="w-4 h-4 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
                                     <span className="text-lg font-bold text-foreground">
                                       No Data
                                     </span>

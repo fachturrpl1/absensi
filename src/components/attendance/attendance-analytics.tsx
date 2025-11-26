@@ -28,7 +28,7 @@ export function AttendanceAnalytics({
             <div key={index} className="flex items-center justify-between gap-3 text-sm py-1">
               <div className="flex items-center gap-2">
                 <div 
-                  className="w-3 h-3 rounded-full flex-shrink-0" 
+                  className="w-3 h-3 rounded-full shrink-0" 
                   style={{ backgroundColor: entry.color || entry.fill }}
                 />
                 <span className="text-gray-900 dark:text-gray-100 font-medium">{entry.name}</span>
@@ -44,8 +44,8 @@ export function AttendanceAnalytics({
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-64 w-full" />
+      <div className="space-y-2 sm:space-y-3 md:space-y-4 w-full min-w-0">
+        <Skeleton className="h-[100px] sm:h-[120px] md:h-[150px] lg:h-[200px] xl:h-[250px] w-full" />
       </div>
     );
   }
@@ -68,7 +68,7 @@ export function AttendanceAnalytics({
     };
 
     return (
-      <ChartContainer config={chartConfig} className="h-[250px] w-full">
+      <ChartContainer config={chartConfig} className="h-[100px] sm:h-[120px] md:h-[150px] lg:h-[200px] xl:h-[250px] w-full min-w-0">
         <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="fillAttendance" x1="0" y1="0" x2="1" y2="1">
@@ -141,54 +141,70 @@ export function AttendanceAnalytics({
       switch (chartType) {
         case 'bar':
           return (
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                  {chartData.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="w-full min-w-0 overflow-hidden">
+              <ResponsiveContainer width="100%" height={100}>
+                <BarChart data={chartData} margin={{ top: 5, right: 5, left: -5, bottom: 12 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false}
+                    tick={{ fontSize: 8 }}
+                    interval={0}
+                    height={30}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false}
+                    tick={{ fontSize: 8 }}
+                    width={20}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    {chartData.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           );
         default: // donut or pie
           return (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={chartType === 'donut' ? 60 : 0}
-                  outerRadius={90}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {chartData.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="w-full min-w-0 overflow-hidden">
+              <ResponsiveContainer width="100%" height={100}>
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={chartType === 'donut' ? 20 : 0}
+                    outerRadius={38}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {chartData.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           );
       }
     };
 
     return (
-      <div className="space-y-4">
-        <div className="animate-in fade-in-0 zoom-in-95 duration-500">
+      <div className="space-y-2 sm:space-y-3 md:space-y-4 w-full min-w-0">
+        <div className="animate-in fade-in-0 zoom-in-95 duration-500 w-full min-w-0">
           {renderCustomChart()}
         </div>
-        <div className="flex flex-wrap justify-center gap-4">
+        <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 md:gap-3 lg:gap-4">
           {chartData.map((item: any) => (
-            <div key={item.name} className="flex items-center gap-2 text-sm">
+            <div key={item.name} className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-[9px] sm:text-[10px] md:text-xs lg:text-sm">
               <div 
-                className="w-3 h-3 rounded-full" 
+                className="w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3 rounded-full shrink-0" 
                 style={{ backgroundColor: item.color }}
               />
               <span className="text-muted-foreground">{item.name}:</span>

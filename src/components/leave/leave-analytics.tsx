@@ -430,18 +430,18 @@ export function LeaveAnalytics({
             const dotColor = entry.color || entry.fill || entry.payload?.fill || getColorForName(entry.name) || '#10B981';
             
             return (
-              <div key={index} className="flex items-center justify-between gap-3 text-sm py-1">
+              <div key={index} className="flex items-center justify-between gap-3 text-xs sm:text-sm py-1">
                 <div className="flex items-center gap-2">
                   <div 
-                    className="w-3 h-3 rounded-full flex-shrink-0" 
+                    className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shrink-0" 
                     style={{ 
                       backgroundColor: dotColor,
                       border: `2px solid ${dotColor}`,
                       boxShadow: `0 0 0 1px rgba(255,255,255,0.3)`
                     }}
                   />
-                  </div>
                   <span className="text-gray-900 dark:text-gray-100 font-medium">{entry.name}</span>
+                </div>
                 <div className="flex items-center">
                   <span className="text-gray-900 dark:text-gray-100 font-semibold">{entry.value}</span>
                 </div>
@@ -466,14 +466,14 @@ export function LeaveAnalytics({
       switch (chartType) {
       case 'pie':
         return (
-          <div className="w-full h-[200px] sm:h-[250px]">
+          <div className="w-full min-w-0 overflow-hidden h-[120px] sm:h-[150px] md:h-[180px] lg:h-[200px] xl:h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={chartData}
                   cx="50%"
                   cy="50%"
-                  outerRadius="75%"
+                  outerRadius="60%"
                   paddingAngle={2}
                   dataKey="count"
                   animationBegin={0}
@@ -496,29 +496,30 @@ export function LeaveAnalytics({
 
       case 'bar':
         return (
-          <div className="w-full h-[200px] sm:h-[250px]">
+          <div className="w-full min-w-0 overflow-hidden h-[120px] sm:h-[150px] md:h-[180px] lg:h-[200px] xl:h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+              <BarChart data={chartData} margin={{ top: 5, right: 5, left: -5, bottom: 15 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis 
                   dataKey="name" 
                   tickLine={false}
                   axisLine={false}
-                  tickMargin={8}
-                  className="text-xs"
-                  tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  tickMargin={4}
+                  className="text-[9px] sm:text-[10px] md:text-xs"
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }}
                   interval={0}
                   angle={-45}
                   textAnchor="end"
-                  height={60}
+                  height={45}
                 />
                 <YAxis 
                   tickLine={false}
                   axisLine={false}
-                  tickMargin={8}
-                  className="text-xs"
-                  tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  tickMargin={4}
+                  className="text-[9px] sm:text-[10px] md:text-xs"
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }}
                   domain={[0, 'dataMax']}
+                  width={25}
                 />
                 <Tooltip 
                   content={<CustomTooltip />}
@@ -539,14 +540,14 @@ export function LeaveAnalytics({
       case 'donut':
       default:
         return (
-          <div className="w-full h-[200px] sm:h-[250px]">
+          <div className="w-full min-w-0 overflow-hidden h-[120px] sm:h-[150px] md:h-[180px] lg:h-[200px] xl:h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={chartData}
                   cx="50%"
                   cy="50%"
-                  innerRadius="40%"
+                  innerRadius="35%"
                   outerRadius="75%"
                   paddingAngle={2}
                   dataKey="count"
@@ -582,8 +583,8 @@ export function LeaveAnalytics({
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-64 w-full" />
+      <div className="space-y-2 sm:space-y-3 md:space-y-4 w-full min-w-0">
+        <Skeleton className="h-[120px] sm:h-[150px] md:h-[180px] lg:h-[200px] xl:h-[250px] w-full" />
       </div>
     );
   }
@@ -718,10 +719,10 @@ export function LeaveAnalytics({
     };
     
     return (
-      <div className="space-y-4">
+      <div className="space-y-2 sm:space-y-3 md:space-y-4 w-full min-w-0">
         {/* Chart */}
-        <ChartContainer config={chartConfig} className="h-[300px] w-full">
-          <AreaChart data={monthlyData} margin={{ top: 20, right: 20, left: 10, bottom: 60 }}>
+        <ChartContainer config={chartConfig} className="h-[150px] sm:h-[180px] md:h-[220px] lg:h-[250px] xl:h-[300px] w-full min-w-0">
+          <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 40 }}>
             <defs>
               <linearGradient id="fillApproved" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="hsl(142.1 76.2% 36.3%)" stopOpacity={0.4} />
@@ -753,23 +754,24 @@ export function LeaveAnalytics({
               dataKey="month" 
               tickLine={false}
               axisLine={false}
-              tickMargin={8}
-              className="text-xs"
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+              tickMargin={4}
+              className="text-[9px] sm:text-[10px] md:text-xs"
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }}
               angle={-45}
               textAnchor="end"
-              height={60}
+              height={50}
             />
             <YAxis 
               tickLine={false}
               axisLine={false}
-              tickMargin={8}
-              className="text-xs"
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              tickMargin={4}
+              className="text-[9px] sm:text-[10px] md:text-xs"
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }}
               domain={[0, 'dataMax + 1']}
               allowDecimals={false}
               scale="linear"
               type="number"
+              width={30}
             />
             <ChartTooltip 
               content={<ChartTooltipContent indicator="dot" />}
@@ -1064,10 +1066,10 @@ export function LeaveAnalytics({
     });
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-2 sm:space-y-3 md:space-y-4 w-full min-w-0">
         {/* Chart */}
-        <ChartContainer config={chartConfig} className="h-[300px] w-full">
-          <AreaChart data={typeTrendData} margin={{ top: 20, right: 20, left: 10, bottom: 60 }}>
+        <ChartContainer config={chartConfig} className="h-[150px] sm:h-[180px] md:h-[220px] lg:h-[250px] xl:h-[300px] w-full min-w-0">
+          <AreaChart data={typeTrendData} margin={{ top: 10, right: 10, left: 0, bottom: 40 }}>
             <defs>
               {Object.entries(leaveTypeInfo).map(([code, info]) => (
                 <linearGradient key={code} id={`fill${code}`} x1="0" y1="0" x2="1" y2="1">
@@ -1086,23 +1088,24 @@ export function LeaveAnalytics({
               dataKey="date" 
               tickLine={false}
               axisLine={false}
-              tickMargin={8}
-              className="text-xs"
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+              tickMargin={4}
+              className="text-[9px] sm:text-[10px] md:text-xs"
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }}
               angle={-45}
               textAnchor="end"
-              height={60}
+              height={50}
             />
             <YAxis 
               tickLine={false}
               axisLine={false}
-              tickMargin={8}
-              className="text-xs"
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              tickMargin={4}
+              className="text-[9px] sm:text-[10px] md:text-xs"
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }}
               domain={[0, 'dataMax + 1']}
               allowDecimals={false}
               scale="linear"
               type="number"
+              width={30}
             />
             <ChartTooltip 
               content={<ChartTooltipContent indicator="dot" />}
@@ -1126,7 +1129,7 @@ export function LeaveAnalytics({
         </ChartContainer>
         
         {/* Legend */}
-        <div className="grid grid-cols-2 gap-4 pb-2">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 pb-1 sm:pb-2">
           {Object.entries(leaveTypeInfo).map(([code, info]) => {
             // Calculate total count for this leave type
             const totalCount = filteredRequests.filter(r => 
@@ -1134,15 +1137,15 @@ export function LeaveAnalytics({
             ).length;
             
             return (
-              <div key={code} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
+              <div key={code} className="flex items-center justify-between text-[9px] sm:text-[10px] md:text-xs lg:text-sm">
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                   <div 
-                    className="w-3 h-3 rounded-full"
+                    className="w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3 rounded-full shrink-0"
                     style={{ backgroundColor: info.color }}
                   />
-                  <span className="font-medium">{info.name}</span>
+                  <span className="font-medium truncate">{info.name}</span>
                 </div>
-                <span className="text-muted-foreground">{totalCount} req</span>
+                <span className="text-muted-foreground shrink-0 ml-1">{totalCount} req</span>
               </div>
             );
           })}

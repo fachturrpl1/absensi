@@ -283,6 +283,15 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4">
             {/* Date Filter + Search + View Toggle Row */}
+<<<<<<< HEAD
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                <div className="flex flex-1 flex-wrap items-center gap-2">
+                  {/* Date Filter */}
+                  <DateFilterBar 
+                    dateRange={dateRange} 
+                    onDateRangeChange={setDateRange}
+=======
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="flex flex-1 flex-wrap items-center gap-2">
                 {/* Date Filter */}
@@ -299,29 +308,41 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     className="pl-9 pr-20"
+>>>>>>> e2ad349239a82ecd884cd3bbab559a15c3d692ea
                   />
+                  
+                  {/* Search */}
+                  <div className="relative flex-1 min-w-[200px] sm:min-w-[250px] max-w-full sm:max-w-sm">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name or department..."
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      className="pl-9 pr-20"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* View Mode Toggle */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center rounded-lg border">
-                  <Button
-                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('list')}
-                    className="rounded-r-none"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('grid')}
-                    className="rounded-l-none border-l"
-                  >
-                    <Grid3x3 className="h-4 w-4" />
-                  </Button>
+                {/* View Mode Toggle */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center rounded-lg border">
+                    <Button
+                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('list')}
+                      className="rounded-r-none"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('grid')}
+                      className="rounded-l-none border-l"
+                    >
+                      <Grid3x3 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -329,7 +350,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             {/* Additional Filters */}
             <div className="flex flex-wrap items-center gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -342,8 +363,13 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
               </Select>
 
               <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+<<<<<<< HEAD
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Department" />
+=======
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Group" />
+>>>>>>> e2ad349239a82ecd884cd3bbab559a15c3d692ea
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Groups</SelectItem>
@@ -371,9 +397,11 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     endOfToday.setHours(23, 59, 59, 999);
                     setDateRange({ from: today, to: endOfToday, preset: 'today' });
                   }}
+                  className="w-full sm:w-auto"
                 >
                   <X className="mr-2 h-3 w-3" />
-                  Clear All Filters
+                  <span className="hidden sm:inline">Clear All Filters</span>
+                  <span className="sm:hidden">Clear</span>
                 </Button>
               )}
             </div>
@@ -422,7 +450,123 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       {viewMode === 'list' && (
         <Card>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            {/* Mobile Card View */}
+            <div className="block sm:hidden divide-y">
+              {loading && attendanceData.length === 0 ? (
+                <div className="p-8 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <span className="text-muted-foreground">Loading attendance data...</span>
+                  </div>
+                </div>
+              ) : attendanceData.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  No attendance records found
+                </div>
+              ) : attendanceData.map((record: any, index: number) => (
+                <motion.div
+                  key={record.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={selectedRecords.includes(record.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedRecords([...selectedRecords, record.id]);
+                          } else {
+                            setSelectedRecords(selectedRecords.filter(id => id !== record.id));
+                          }
+                        }}
+                        className="rounded border-gray-300 mt-1"
+                      />
+                      <Avatar className="h-10 w-10 shrink-0">
+                        <AvatarImage src={record.member.avatar} />
+                        <AvatarFallback>
+                          {record.member.name.split(' ').map((n: string) => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">{record.member.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">{record.member.department}</p>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Check In</p>
+                      <p className="font-mono text-sm">
+                        {formatLocalTime(record.checkIn, userTimezone, '24h', true)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Check Out</p>
+                      <p className="font-mono text-sm">
+                        {formatLocalTime(record.checkOut, userTimezone, '24h', true)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Work Hours</p>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium text-sm">{record.workHours}</span>
+                        {record.overtime && (
+                          <Badge variant="secondary" className="w-fit text-xs">
+                            +{record.overtime} OT
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Status</p>
+                      <Badge className={cn('gap-1', getStatusColor(record.status))}>
+                        {getStatusIcon(record.status)}
+                        {record.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Location</p>
+                    <LocationDisplay 
+                      checkInLocationName={record.checkInLocationName}
+                      checkOutLocationName={record.checkOutLocationName}
+                    />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full">
                 <thead className="border-b bg-muted/50">
                   <tr>
@@ -560,8 +704,8 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
             {/* Pagination */}
             {!loading && totalItems > 0 && (
-              <div className="flex items-center justify-between border-t px-4 py-4">
-                <div className="text-sm text-muted-foreground">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t px-4 py-4">
+                <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
                   Page {currentPage} of {totalPages} ({totalItems} total)
                 </div>
                 <div className="flex items-center gap-1">
