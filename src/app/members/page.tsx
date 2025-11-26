@@ -6,7 +6,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Trash, Pencil, Eye, User, Shield, Check, X, Mail, Plus } from "lucide-react"
+import { Trash, Pencil, Eye, User, Shield, Check, X, Mail, Plus, FileDown, FileUp } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -89,6 +89,9 @@ export default function MembersPage() {
   const [loading, setLoading] = React.useState<boolean>(true)
   const [inviteDialogOpen, setInviteDialogOpen] = React.useState(false)
   const [submittingInvite, setSubmittingInvite] = React.useState(false)
+  const [importing, setImporting] = React.useState(false)
+  const [importSummary, setImportSummary] = React.useState<{ success: number; failed: number; errors: string[] } | null>(null)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   // Auto-open invite dialog if action=invite in URL
   React.useEffect(() => {
@@ -231,6 +234,157 @@ export default function MembersPage() {
     setInviteDialogOpen(open)
     if (!open) {
       inviteForm.reset()
+    }
+  }
+
+  const getMemberFullName = (member: any) => {
+    const user = member?.user
+    return user
+      ? [user.first_name, user.middle_name, user.last_name]
+          .filter((part: string) => part && part.trim() !== "")
+          .join(" ") ||
+        user.display_name ||
+        user.email ||
+        "No User"
+      : "No User"
+  }
+
+  const handleExportMembers = async () => {
+    if (!members.length) {
+      toast.info("Tidak ada data member untuk diexport")
+      return
+    }
+
+    try {
+      const XLSX = await import("xlsx")
+
+      const exportRows = members.map((member) => ({
+        Name: getMemberFullName(member),
+        Email: member.user?.email || "",
+        Phone: member.user?.phone || "",
+        Group: member.groupName || "",
+        Role: member.role?.name || "",
+        Status: member.is_active ? "Active" : "Inactive",
+      }))
+
+      const worksheet = XLSX.utils.json_to_sheet(exportRows)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Members")
+      const filename = `members-${new Date().toISOString().split("T")[0]}.xlsx`
+      XLSX.writeFile(workbook, filename)
+      toast.success("Berhasil mengekspor data members")
+    } catch (error) {
+      console.error("Export members error:", error)
+      toast.error("Gagal mengekspor data members")
+    }
+  }
+
+  const handleImportMembers = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setImportSummary(null)
+    setImporting(true)
+
+    try {
+      const XLSX = await import("xlsx")
+      const buffer = await file.arrayBuffer()
+      const workbook = XLSX.read(buffer, { type: "array" })
+      const sheet = workbook.Sheets[workbook.SheetNames[0]]
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" })
+
+      if (!rows.length) {
+        toast.error("File Excel kosong atau tidak memiliki data")
+        return
+      }
+
+      if (rows.length > 200) {
+        toast.warning("Import maksimal 200 baris per file untuk menjaga performa")
+      }
+
+      const summary = { success: 0, failed: 0, errors: [] as string[] }
+
+      const findId = (collection: any[], value: string, keys: string[]) => {
+        const normalized = value.trim().toLowerCase()
+        if (!normalized) return { id: undefined, notFound: false }
+        const match = collection.find((item: any) =>
+          keys.some((key) => item?.[key]?.toString().trim().toLowerCase() === normalized)
+        )
+        if (!match) return { id: undefined, notFound: true }
+        return { id: String(match.id), notFound: false }
+      }
+
+      for (let index = 0; index < rows.length; index++) {
+        const rawRow = rows[index]
+        const normalizedRow = Object.keys(rawRow).reduce<Record<string, any>>((acc, key) => {
+          acc[key.toLowerCase()] = rawRow[key]
+          return acc
+        }, {})
+
+        const email = String(normalizedRow["email"] || normalizedRow["email address"] || "").trim()
+        if (!email) {
+          summary.failed++
+          summary.errors.push(`Baris ${index + 2}: kolom email wajib diisi`)
+          continue
+        }
+
+        const roleValue = String(normalizedRow["role"] || "").trim()
+        const departmentValue = String(normalizedRow["department"] || "").trim()
+        const positionValue = String(normalizedRow["position"] || "").trim()
+        const messageValue = String(normalizedRow["message"] || "").trim()
+
+        const roleResult = findId(roles ?? [], roleValue, ["name", "code", "id"])
+        if (roleResult.notFound) {
+          summary.failed++
+          summary.errors.push(`Baris ${index + 2}: role "${roleValue}" tidak ditemukan`)
+          continue
+        }
+
+        const departmentResult = findId(departments ?? [], departmentValue, ["name", "code", "id"])
+        if (departmentResult.notFound) {
+          summary.failed++
+          summary.errors.push(`Baris ${index + 2}: department "${departmentValue}" tidak ditemukan`)
+          continue
+        }
+
+        const positionResult = findId(positions ?? [], positionValue, ["title", "name", "id"])
+        if (positionResult.notFound) {
+          summary.failed++
+          summary.errors.push(`Baris ${index + 2}: position "${positionValue}" tidak ditemukan`)
+          continue
+        }
+
+        const invitationPayload = {
+          email,
+          role_id: roleResult.id,
+          department_id: departmentResult.id,
+          position_id: positionResult.id,
+          message: messageValue || undefined,
+        }
+
+        try {
+          const result = await createInvitation(invitationPayload)
+          if (result.success) {
+            summary.success++
+          } else {
+            summary.failed++
+            summary.errors.push(`Baris ${index + 2}: ${result.message || "Gagal mengirim undangan"}`)
+          }
+        } catch (error) {
+          summary.failed++
+          summary.errors.push(`Baris ${index + 2}: ${(error as Error)?.message || "Gagal mengirim undangan"}`)
+        }
+      }
+
+      setImportSummary(summary)
+      toast.success(`Import selesai. Berhasil: ${summary.success}, gagal: ${summary.failed}`)
+      fetchMembers()
+    } catch (error) {
+      console.error("Import members error:", error)
+      toast.error("Gagal mengimport file Excel")
+    } finally {
+      setImporting(false)
+      event.target.value = ""
     }
   }
 
@@ -388,7 +542,34 @@ export default function MembersPage() {
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight">Members</h1>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto gap-2"
+                onClick={handleExportMembers}
+                disabled={loading || members.length === 0}
+              >
+                <FileDown className="h-4 w-4" />
+                Export Excel
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto gap-2"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importing}
+              >
+                <FileUp className="h-4 w-4" />
+                {importing ? "Importing..." : "Import Excel"}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={handleImportMembers}
+              />
+            </div>
             <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
               <DialogTrigger asChild>
                 <Button className="w-full sm:w-auto">
@@ -577,6 +758,26 @@ export default function MembersPage() {
             data={members}
             isLoading={loading}
           />
+        )}
+
+        {importSummary && (
+          <div className="rounded-lg border border-muted-foreground/20 bg-muted/30 p-4 text-sm space-y-2">
+            <div className="font-semibold">Import summary</div>
+            <div className="flex flex-wrap gap-3">
+              <span className="text-green-600 dark:text-green-400">Berhasil: {importSummary.success}</span>
+              <span className="text-red-600 dark:text-red-400">Gagal: {importSummary.failed}</span>
+            </div>
+            {importSummary.errors.length > 0 && (
+              <ul className="list-disc pl-4 text-muted-foreground space-y-1 max-h-40 overflow-auto text-xs">
+                {importSummary.errors.slice(0, 10).map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+                {importSummary.errors.length > 10 && (
+                  <li>...dan {importSummary.errors.length - 10} error lainnya</li>
+                )}
+              </ul>
+            )}
+          </div>
         )}
       </div>
     </div>
