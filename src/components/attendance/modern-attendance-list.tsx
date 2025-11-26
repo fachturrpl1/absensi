@@ -113,28 +113,47 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       ]);
 
       if (listResult.success) {
-        setAttendanceData(listResult.data);
+        const data = listResult.data || [];
+        console.log('📊 Attendance data received:', {
+          count: data.length,
+          total: listResult.meta?.total,
+          firstItem: data[0],
+          allData: data
+        });
+        
+        setAttendanceData(data);
         setTotalItems(listResult.meta?.total || 0);
         
         // Set timezone from first record if available (fallback to UTC)
-        if (listResult.data.length > 0) {
-          setUserTimezone(listResult.data[0].timezone || 'UTC');
+        if (data.length > 0) {
+          setUserTimezone(data[0].timezone || 'UTC');
         }
 
         // Extract unique departments from current page (simple solution for now)
+        if (data.length > 0) {
         const uniqueDepts = Array.from(new Set(
-          listResult.data.map((r: any) => r.member.department)
+            data.map((r: any) => r.member?.department)
         )).filter(dept => dept && dept !== 'No Department').sort();
         
         if (departments.length === 0 && uniqueDepts.length > 0) {
           setDepartments(uniqueDepts);
+          }
         }
       } else {
-        toast.error('Failed to load attendance data');
+        console.error('Failed to load attendance:', listResult);
+        setAttendanceData([]);
+        setTotalItems(0);
+        toast.error(listResult.message || 'Failed to load attendance data');
       }
     } catch (error) {
       console.error('Fetch error:', error);
+      // Don't clear existing data on error, just log it
+      // setAttendanceData([]);
+      // setTotalItems(0);
+      // Only show error if we don't have any data
+      if (attendanceData.length === 0) {
       toast.error('An error occurred while fetching data');
+      }
     } finally {
       setLoading(false);
       setIsAutoRefreshPaused(false); // Resume countdown
@@ -143,25 +162,36 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   // Trigger fetch when filters change (and initial load)
   useEffect(() => {
+    console.log('🔄 Fetch triggered:', { currentPage, dateRange, searchQuery, statusFilter, departmentFilter });
     fetchData();
   }, [fetchData]);
+  
+  // Log attendanceData changes
+  useEffect(() => {
+    console.log('📊 Attendance data state updated:', {
+      length: attendanceData.length,
+      totalItems,
+      loading,
+      firstItem: attendanceData[0]
+    });
+  }, [attendanceData, totalItems, loading]);
 
   // Reset to page 1 when filters change (except pagination itself)
   useEffect(() => {
     setCurrentPage(1);
   }, [dateRange, searchQuery, statusFilter, departmentFilter]);
 
-  // Auto-refresh Timer
-  useEffect(() => {
-    // Only run timer if not loading and not paused
-    if (loading || isAutoRefreshPaused) return;
+  // Auto-refresh Timer - Disabled for now to prevent errors
+  // useEffect(() => {
+  //   // Only run timer if not loading and not paused
+  //   if (loading || isAutoRefreshPaused) return;
 
-    const timer = setInterval(() => {
-      fetchData();
-    }, 10000); // 10 seconds
+  //   const timer = setInterval(() => {
+  //     fetchData();
+  //   }, 10000); // 10 seconds
 
-    return () => clearInterval(timer);
-  }, [loading, isAutoRefreshPaused, fetchData]);
+  //   return () => clearInterval(timer);
+  // }, [loading, isAutoRefreshPaused, fetchData]);
 
   // Helper component to display device location
   const LocationDisplay = ({ checkInLocationName, checkOutLocationName }: any) => {
@@ -283,16 +313,8 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4">
             {/* Date Filter + Search + View Toggle Row */}
-<<<<<<< HEAD
             <div className="flex flex-col gap-3">
               <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-                <div className="flex flex-1 flex-wrap items-center gap-2">
-                  {/* Date Filter */}
-                  <DateFilterBar 
-                    dateRange={dateRange} 
-                    onDateRangeChange={setDateRange}
-=======
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="flex flex-1 flex-wrap items-center gap-2">
                 {/* Date Filter */}
                 <DateFilterBar 
@@ -301,47 +323,36 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 />
                 
                 {/* Search */}
-                <div className="relative flex-1 min-w-[250px] max-w-sm">
+                  <div className="relative flex-1 min-w-[200px] sm:min-w-[250px] max-w-full sm:max-w-sm">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="Search by name or group..."
+                    placeholder="Search by name or department..."
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     className="pl-9 pr-20"
->>>>>>> e2ad349239a82ecd884cd3bbab559a15c3d692ea
                   />
-                  
-                  {/* Search */}
-                  <div className="relative flex-1 min-w-[200px] sm:min-w-[250px] max-w-full sm:max-w-sm">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by name or department..."
-                      value={searchInput}
-                      onChange={(e) => setSearchInput(e.target.value)}
-                      className="pl-9 pr-20"
-                    />
-                  </div>
                 </div>
+              </div>
 
-                {/* View Mode Toggle */}
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center rounded-lg border">
-                    <Button
-                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => setViewMode('list')}
-                      className="rounded-r-none"
-                    >
-                      <List className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => setViewMode('grid')}
-                      className="rounded-l-none border-l"
-                    >
-                      <Grid3x3 className="h-4 w-4" />
-                    </Button>
+              {/* View Mode Toggle */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center rounded-lg border">
+                  <Button
+                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    className="rounded-r-none"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('grid')}
+                    className="rounded-l-none border-l"
+                  >
+                    <Grid3x3 className="h-4 w-4" />
+                  </Button>
                   </div>
                 </div>
               </div>
@@ -363,13 +374,8 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
               </Select>
 
               <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-<<<<<<< HEAD
                 <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Department" />
-=======
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Group" />
->>>>>>> e2ad349239a82ecd884cd3bbab559a15c3d692ea
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Groups</SelectItem>
@@ -450,9 +456,9 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       {viewMode === 'list' && (
         <Card>
           <CardContent className="p-0">
-            {/* Mobile Card View */}
-            <div className="block sm:hidden divide-y">
-              {loading && attendanceData.length === 0 ? (
+            {/* Mobile Card View - Only show on small screens */}
+            <div className="block lg:hidden divide-y">
+              {loading ? (
                 <div className="p-8 text-center">
                   <div className="flex items-center justify-center gap-2">
                     <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -462,15 +468,23 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
               ) : attendanceData.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
                   No attendance records found
+                  {totalItems > 0 && (
+                    <div className="mt-2 text-xs">
+                      (Total: {totalItems} but no data in current page)
+                    </div>
+                  )}
                 </div>
-              ) : attendanceData.map((record: any, index: number) => (
-                <motion.div
-                  key={record.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="p-4 space-y-3"
-                >
+              ) : (
+                attendanceData.map((record: any, index: number) => {
+                  if (!record || !record.id) {
+                    console.warn('Invalid record at index', index, record);
+                    return null;
+                  }
+                  return (
+                  <div
+                    key={`mobile-${record.id}-${index}`}
+                    className="p-4 space-y-3 border-b last:border-b-0"
+                  >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <input
@@ -525,13 +539,13 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Check In</p>
                       <p className="font-mono text-sm">
-                        {formatLocalTime(record.checkIn, userTimezone, '24h', true)}
+                        {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, '24h', true) : '-'}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Check Out</p>
                       <p className="font-mono text-sm">
-                        {formatLocalTime(record.checkOut, userTimezone, '24h', true)}
+                        {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, '24h', true) : '-'}
                       </p>
                     </div>
                     <div>
@@ -561,13 +575,15 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       checkOutLocationName={record.checkOutLocationName}
                     />
                   </div>
-                </motion.div>
-              ))}
+                </div>
+                  );
+                }).filter(Boolean)
+              )}
             </div>
 
-            {/* Desktop Table View */}
-            <div className="hidden sm:block overflow-x-auto">
-              <table className="w-full">
+            {/* Desktop Table View - Show on larger screens */}
+            <div className="hidden lg:block overflow-x-auto w-full">
+              <table className="w-full min-w-full">
                 <thead className="border-b bg-muted/50">
                   <tr>
                     <th className="p-4 text-left">
@@ -588,7 +604,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                   </tr>
                 </thead>
                 <tbody>
-                  {loading && attendanceData.length === 0 ? (
+                  {loading ? (
                     <tr>
                       <td colSpan={8} className="text-center py-8">
                         <div className="flex items-center justify-center gap-2">
@@ -601,14 +617,23 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     <tr>
                       <td colSpan={8} className="text-center py-8 text-muted-foreground">
                         No attendance records found
+                        {totalItems > 0 && (
+                          <div className="mt-2 text-xs">
+                            (Total: {totalItems} but no data in current page)
+                          </div>
+                        )}
                       </td>
                     </tr>
-                  ) : attendanceData.map((record: any, index: number) => (
-                    <motion.tr
-                      key={record.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
+                  ) : (
+                    attendanceData.map((record: any, index: number) => {
+                      if (!record || !record.id) {
+                        console.warn('Invalid record at index', index, record);
+                        return null;
+                      }
+                      console.log(`📋 Rendering table row ${index + 1}/${attendanceData.length}:`, record.id, record.member.name);
+                      return (
+                    <tr
+                      key={`table-${record.id}-${index}`}
                       className="border-b hover:bg-muted/50 transition-colors"
                     >
                       <td className="p-4">
@@ -641,12 +666,12 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       </td>
                       <td className="p-4">
                         <span className="font-mono text-sm">
-                          {formatLocalTime(record.checkIn, userTimezone, '24h', true)}
+                          {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, '24h', true) : '-'}
                         </span>
                       </td>
                       <td className="p-4">
                         <span className="font-mono text-sm">
-                          {formatLocalTime(record.checkOut, userTimezone, '24h', true)}
+                          {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, '24h', true) : '-'}
                         </span>
                       </td>
                       <td className="p-4">
@@ -696,8 +721,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>
-                    </motion.tr>
-                  ))}
+                    </tr>
+                      );
+                    }).filter(Boolean)
+                  )}
                 </tbody>
               </table>
             </div>
@@ -783,12 +810,14 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {attendanceData.map((record: any, index: number) => (
-            <motion.div
-              key={record.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.05 }}
+              {attendanceData.map((record: any, index: number) => {
+                if (!record || !record.id) {
+                  return null;
+                }
+                console.log(`🎴 Rendering grid card ${index + 1}/${attendanceData.length}:`, record.id, record.member.name);
+                return (
+            <div
+              key={`grid-${record.id}-${index}`}
             >
               <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-3">
@@ -816,13 +845,13 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     <div>
                       <p className="text-muted-foreground">Check In</p>
                       <p className="font-mono font-medium">
-                        {formatLocalTime(record.checkIn, userTimezone, '24h', true)}
+                        {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, '24h', true) : '-'}
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Check Out</p>
                       <p className="font-mono font-medium">
-                        {formatLocalTime(record.checkOut, userTimezone, '24h', true)}
+                        {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, '24h', true) : '-'}
                       </p>
                     </div>
                   </div>
@@ -837,8 +866,9 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                   />
                 </CardContent>
               </Card>
-            </motion.div>
-              ))}
+            </div>
+              );
+              }).filter(Boolean)}
             </div>
           )}
         </>
