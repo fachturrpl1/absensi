@@ -82,9 +82,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
-  
-  // Auto-refresh state
-  const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
 
   // Debounce search input
   useEffect(() => {
@@ -96,9 +93,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   // Fetch data using Server Action with pagination
   const fetchData = useCallback(async () => {
-    setLoading(true);
-    // Pause auto-refresh while loading to avoid overlapping
-    setIsAutoRefreshPaused(true); 
+    setLoading(true); 
     try {
       const [listResult] = await Promise.all([
         getAllAttendance({
@@ -156,7 +151,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       }
     } finally {
       setLoading(false);
-      setIsAutoRefreshPaused(false); // Resume countdown
     }
   }, [currentPage, itemsPerPage, dateRange, searchQuery, statusFilter, departmentFilter]);
 

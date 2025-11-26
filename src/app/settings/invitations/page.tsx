@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function InvitationsPage() {
   return (
-    <div className="container mx-auto py-6">
+    <div className="w-full py-6 px-4 md:px-6">
       <InvitationsClient />
     </div>
   );
