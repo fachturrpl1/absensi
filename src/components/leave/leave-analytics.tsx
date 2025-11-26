@@ -466,7 +466,7 @@ export function LeaveAnalytics({
       switch (chartType) {
       case 'pie':
         return (
-          <div className="w-full min-w-0 overflow-hidden h-[120px] sm:h-[150px] md:h-[180px] lg:h-[200px] xl:h-[250px]">
+          <div className="w-full min-w-0 overflow-hidden h-[190px] sm:h-[240px] md:h-[290px] lg:h-[340px] xl:h-[390px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -496,7 +496,7 @@ export function LeaveAnalytics({
 
       case 'bar':
         return (
-          <div className="w-full min-w-0 overflow-hidden h-[120px] sm:h-[150px] md:h-[180px] lg:h-[200px] xl:h-[250px]">
+          <div className="w-full min-w-0 overflow-hidden h-[200px] sm:h-[250px] md:h-[300px] lg:h-[350px] xl:h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 5, right: 5, left: -5, bottom: 15 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -540,7 +540,7 @@ export function LeaveAnalytics({
       case 'donut':
       default:
         return (
-          <div className="w-full min-w-0 overflow-hidden h-[120px] sm:h-[150px] md:h-[180px] lg:h-[200px] xl:h-[250px]">
+          <div className="w-full min-w-0 overflow-hidden h-[200px] sm:h-[250px] md:h-[300px] lg:h-[350px] xl:h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -584,7 +584,7 @@ export function LeaveAnalytics({
   if (loading) {
     return (
       <div className="space-y-2 sm:space-y-3 md:space-y-4 w-full min-w-0">
-        <Skeleton className="h-[120px] sm:h-[150px] md:h-[180px] lg:h-[200px] xl:h-[250px] w-full" />
+        <Skeleton className="h-[190px] sm:h-[240px] md:h-[290px] lg:h-[340px] xl:h-[390px] w-full" />
       </div>
     );
   }
@@ -721,7 +721,7 @@ export function LeaveAnalytics({
     return (
       <div className="space-y-2 sm:space-y-3 md:space-y-4 w-full min-w-0">
         {/* Chart */}
-        <ChartContainer config={chartConfig} className="h-[150px] sm:h-[180px] md:h-[220px] lg:h-[250px] xl:h-[300px] w-full min-w-0">
+        <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px] xl:h-[450px] w-full min-w-0">
           <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 40 }}>
             <defs>
               <linearGradient id="fillApproved" x1="0" y1="0" x2="1" y2="1">
