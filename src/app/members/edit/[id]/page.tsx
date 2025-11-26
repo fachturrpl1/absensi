@@ -30,8 +30,8 @@ export default function EditOrganizationMembersPage() {
 
     if (loading) {
         return (
-            <div className="flex flex-1 flex-col gap-4">
-                <div className="w-full max-w-4xl mx-auto p-6 space-y-6">
+            <div className="flex flex-1 flex-col gap-4 w-full">
+                <div className="w-full p-4 md:p-6 lg:p-8 space-y-6">
                     {/* Header Skeleton */}
                     <div className="space-y-3">
                         <Skeleton className="h-8 w-64" />
@@ -73,8 +73,8 @@ export default function EditOrganizationMembersPage() {
 
     if (!member) {
         return (
-            <div className="flex flex-1 flex-col gap-4">
-                <div className="w-full max-w-4xl mx-auto p-6">
+            <div className="flex flex-1 flex-col gap-4 w-full">
+                <div className="w-full p-4 md:p-6 lg:p-8">
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Member Not Found</AlertTitle>
@@ -88,8 +88,8 @@ export default function EditOrganizationMembersPage() {
     }
 
     return (
-        <div className="flex flex-1 flex-col gap-4">
-            <div className="w-full max-w-4xl mx-auto p-6">
+        <div className="flex flex-1 flex-col gap-4 w-full">
+            <div className="w-full p-4 md:p-6 lg:p-8">
                 <MemberEditFormImproved 
                     initialValues={member}
                     rfidInitial={member.rfid_cards || undefined}

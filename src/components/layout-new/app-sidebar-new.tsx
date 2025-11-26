@@ -28,7 +28,6 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarGroupContent,
   SidebarMenuSub,
   SidebarMenuSubItem,
@@ -65,7 +64,6 @@ interface NavGroup {
 
 const getSidebarGroups = (): NavGroup[] => [
   {
-    label: 'Overview',
     items: [
       {
         title: 'Dashboard',
@@ -80,12 +78,15 @@ const getSidebarGroups = (): NavGroup[] => [
     ],
   },
   {
-    label: 'Management',
     items: [
       {
-        title: 'Members',
-        url: '/members',
+        title: 'Organization',
         icon: Users,
+        subItems: [
+          { title: 'Members', url: '/members', icon: Users },
+          { title: 'Groups', url: '/group', icon: Building2 },
+          { title: 'Positions', url: '/position', icon: Briefcase },
+        ],
       },
       {
         title: 'Attendance',
@@ -112,21 +113,6 @@ const getSidebarGroups = (): NavGroup[] => [
           { title: 'New Request', url: '/leaves/new', icon: Plus },
           { title: 'Manage Types', url: '/leaves/types', icon: ListChecks, requiresAdmin: true },
         ],
-      },
-    ],
-  },
-  {
-    label: 'Organization',
-    items: [
-      {
-        title: 'Groups',
-        url: '/group',
-        icon: Building2,
-      },
-      {
-        title: 'Positions',
-        url: '/position',
-        icon: Briefcase,
       },
       {
         title: 'Settings',
@@ -248,9 +234,8 @@ export function AppSidebarNew({ ...props }: React.ComponentProps<typeof Sidebar>
       </SidebarHeader>
       
       <SidebarContent>
-        {sidebarGroups.map((group) => (
-          <SidebarGroup key={group.label || 'default'}>
-            {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+        {sidebarGroups.map((group, index) => (
+          <SidebarGroup key={`group-${index}`}>
             <SidebarGroupContent>
               <NavMain items={group.items} />
             </SidebarGroupContent>
