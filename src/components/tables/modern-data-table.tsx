@@ -23,7 +23,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -49,16 +48,11 @@ import {
   ChevronsLeft,
   ChevronsRight,
   MoreHorizontal,
-  Search,
   Download,
   Plus,
   Trash2,
   Eye,
   Edit,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  X,
   SlidersHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -146,7 +140,6 @@ interface ModernDataTableProps<TData, TValue> {
 export default function ModernDataTable<TData extends Employee, TValue>({
   columns: propColumns,
   data = sampleData as TData[],
-  searchPlaceholder = 'Search employees...',
   showColumnToggle = true,
   showFilters = true,
   showActions = true,
@@ -195,13 +188,6 @@ export default function ModernDataTable<TData extends Employee, TValue>({
               className="-ml-4 h-auto p-2 hover:bg-transparent"
             >
               Employee
-              {column.getIsSorted() === 'asc' ? (
-                <ArrowUp className="ml-2 h-4 w-4" />
-              ) : column.getIsSorted() === 'desc' ? (
-                <ArrowDown className="ml-2 h-4 w-4" />
-              ) : (
-                <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />
-              )}
             </Button>
           );
         },
@@ -366,26 +352,6 @@ export default function ModernDataTable<TData extends Employee, TValue>({
     <div className="space-y-4">
       {/* Header Actions */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        {/* Search */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={searchPlaceholder}
-            value={globalFilter ?? ''}
-            onChange={(e) => setGlobalFilter(e.target.value)}
-            className="pl-9"
-          />
-          {globalFilter && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
-              onClick={() => setGlobalFilter('')}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
 
         {/* Filters and Actions */}
         <div className="flex flex-wrap items-center gap-2">
@@ -443,7 +409,14 @@ export default function ModernDataTable<TData extends Employee, TValue>({
                         checked={column.getIsVisible()}
                         onCheckedChange={(value) => column.toggleVisibility(!!value)}
                       >
-                        {column.id}
+{(() => {
+                          const columnLabels: Record<string, string> = {
+                            'is_active': 'Active',
+                            'user_full_name': 'Full Name',
+                            'phone_number': 'Phone Number'
+                          };
+                          return columnLabels[column.id] || column.id;
+                        })()}
                       </DropdownMenuCheckboxItem>
                     );
                   })}

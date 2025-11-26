@@ -13,11 +13,6 @@ import {
 } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
 import {
-  InputGroup,
-  InputGroupInput,
-  InputGroupButton,
-} from "@/components/ui/input-group"
-import {
   Table,
   TableBody,
   TableCell,
@@ -32,84 +27,120 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, Columns3Cog, Loader2 } from "lucide-react" // Loader icon
+import { Columns3Cog, Loader2, Search, Filter } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
-  isLoading?: boolean // ✅ Added loading prop
-  showGlobalFilter?: boolean
+  isLoading?: boolean
   showPagination?: boolean
   showColumnToggle?: boolean
+  showGlobalFilter?: boolean
+  showFilters?: boolean
   initialSorting?: SortingState
   getRowKey?: (row: TData, index: number) => string
+  searchPlaceholder?: string
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   isLoading = false,
-  showGlobalFilter = true,
   showPagination = true,
   showColumnToggle = true,
+  showGlobalFilter = true,
+  showFilters = true,
   initialSorting,
   getRowKey,
+  searchPlaceholder = "Search members...",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting ?? [])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({})
-  // Local controlled input (typing) and applied search (applies on Enter or click)
-  const [inputValue, setInputValue] = React.useState("")
-  const [appliedSearch, setAppliedSearch] = React.useState("")
+  const [globalFilter, setGlobalFilter] = React.useState("")
+  const [statusFilter, setStatusFilter] = React.useState("all")
+  const [sortOrder, setSortOrder] = React.useState("newest")
+  const [pageSize, setPageSize] = React.useState("10")
 
-  // Global filter function: checks if any cell value contains the search string
+  // Filter and sort data
   const filteredData = React.useMemo(() => {
-    if (!appliedSearch) return data
-    const lower = appliedSearch.toLowerCase()
+    let filtered = [...data]
     
-    return data.filter((row) => {
-      return columns.some((col) => {
-        let value = ""
-        
-        // Try accessorFn first
-        if ("accessorFn" in col && typeof (col as any).accessorFn === "function") {
-          try {
-            value = String((col as any).accessorFn(row as TData, 0) ?? "")
-          } catch {
-            value = ""
-          }
-        } 
-        // Try accessorKey
-        else if ("accessorKey" in col && typeof (col as any).accessorKey === "string") {
-          const key = (col as any).accessorKey as string
+    // Apply global search filter
+    if (globalFilter) {
+      const searchTerm = globalFilter.toLowerCase()
+      filtered = filtered.filter((row) => {
+        return columns.some((col) => {
+          let value = ""
           
-          // Handle nested keys like "user.phone"
-          if (key.includes('.')) {
-            const keys = key.split('.')
-            let nestedValue: any = row
-            for (const k of keys) {
-              nestedValue = nestedValue?.[k]
+          // Try accessorFn first
+          if ("accessorFn" in col && typeof (col as any).accessorFn === "function") {
+            try {
+              value = String((col as any).accessorFn(row as TData, 0) ?? "")
+            } catch {
+              value = ""
             }
-            value = String(nestedValue ?? "")
-          } else {
+          } 
+          // Try accessorKey
+          else if ("accessorKey" in col && typeof (col as any).accessorKey === "string") {
+            const key = (col as any).accessorKey as string
             value = String((row as any)[key] ?? "")
           }
-        }
-        // Fallback: try to get value from cell render
-        else if ("cell" in col) {
-          try {
-            // Get all values from row object
-            const rowValues = Object.values(row as any).join(' ')
-            value = rowValues
-          } catch {
-            value = ""
-          }
-        }
-        
-        return value.toLowerCase().includes(lower)
+          
+          return value.toLowerCase().includes(searchTerm)
+        })
       })
-    })
-  }, [appliedSearch, data, columns])
+    }
+    
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((row) => {
+        const isActive = (row as any).is_active
+        if (statusFilter === "active") return isActive
+        if (statusFilter === "inactive") return !isActive
+        return true
+      })
+    }
+    
+    // Apply sorting
+    if (sortOrder === "newest") {
+      filtered.sort((a, b) => {
+        const dateA = new Date((a as any).created_at || 0).getTime()
+        const dateB = new Date((b as any).created_at || 0).getTime()
+        return dateB - dateA
+      })
+    } else if (sortOrder === "oldest") {
+      filtered.sort((a, b) => {
+        const dateA = new Date((a as any).created_at || 0).getTime()
+        const dateB = new Date((b as any).created_at || 0).getTime()
+        return dateA - dateB
+      })
+    } else if (sortOrder === "a-z") {
+      filtered.sort((a, b) => {
+        // Sort by name (first column with string data)
+        const nameA = (a as any).user?.first_name || (a as any).user?.display_name || ""
+        const nameB = (b as any).user?.first_name || (b as any).user?.display_name || ""
+        return nameA.toLowerCase().localeCompare(nameB.toLowerCase())
+      })
+    } else if (sortOrder === "z-a") {
+      filtered.sort((a, b) => {
+        // Sort by name (first column with string data) in reverse
+        const nameA = (a as any).user?.first_name || (a as any).user?.display_name || ""
+        const nameB = (b as any).user?.first_name || (b as any).user?.display_name || ""
+        return nameB.toLowerCase().localeCompare(nameA.toLowerCase())
+      })
+    }
+    
+    return filtered
+  }, [globalFilter, statusFilter, sortOrder, data, columns])
 
   const table = useReactTable({
     data: filteredData,
@@ -124,45 +155,88 @@ export function DataTable<TData, TValue>({
       sorting,
       columnVisibility,
       rowSelection,
+      pagination: {
+        pageIndex: 0,
+        pageSize: parseInt(pageSize),
+      },
+    },
+    initialState: {
+      pagination: {
+        pageSize: parseInt(pageSize),
+      },
     },
   })
+  
+  // Update page size when changed
+  React.useEffect(() => {
+    table.setPageSize(parseInt(pageSize))
+  }, [pageSize, table])
 
 
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap justify-between items-center gap-4">
-        <div className="flex items-center gap-2">
-          {/* Global Filter */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {/* Global Search */}
           {showGlobalFilter && (
-            <div className="flex items-center gap-2">
-              <InputGroup className="max-w-sm">
-                <InputGroupInput
-                  placeholder="Search..."
-                  value={inputValue}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setInputValue(v)
-                    if (v.trim() === "") {
-                      // if input cleared, immediately show all rows
-                      setAppliedSearch("")
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      setAppliedSearch(inputValue)
-                    }
-                  }}
-                />
-                <InputGroupButton
-                  size="sm"
-                  onClick={() => setAppliedSearch(inputValue)}
-                  disabled={isLoading}
-                >
-                  Search
-                </InputGroupButton>
-              </InputGroup>
+            <div className="relative flex-1 sm:w-80 sm:min-w-[300px] sm:max-w-md min-w-[250px]">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
+              <Input
+                placeholder={searchPlaceholder}
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                className="pl-9 placeholder:text-ellipsis placeholder:overflow-hidden placeholder:whitespace-nowrap"
+                title={searchPlaceholder}
+              />
             </div>
+          )}
+          
+          {/* Filters */}
+          {showFilters && (
+            <>
+              {/* Status Filter */}
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {/* Sort Order */}
+              <Select value={sortOrder} onValueChange={setSortOrder}>
+                <SelectTrigger className="w-[110px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest</SelectItem>
+                  <SelectItem value="oldest">Oldest</SelectItem>
+                  <SelectItem value="a-z">A-Z</SelectItem>
+                  <SelectItem value="z-a">Z-A</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {/* Show Items */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">Show:</span>
+                <Select value={pageSize} onValueChange={setPageSize}>
+                  <SelectTrigger className="w-[70px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
           )}
 
           {/* Toggle Columns */}
@@ -184,7 +258,14 @@ export function DataTable<TData, TValue>({
                       checked={column.getIsVisible()}
                       onCheckedChange={(value) => column.toggleVisibility(!!value)}
                     >
-                      {column.id}
+{(() => {
+                        const columnLabels: Record<string, string> = {
+                          'is_active': 'Active',
+                          'user_full_name': 'Full Name',
+                          'phone_number': 'Phone Number'
+                        };
+                        return columnLabels[column.id] || column.id;
+                      })()}
                     </DropdownMenuCheckboxItem>
                   ))}
               </DropdownMenuContent>
@@ -201,41 +282,49 @@ export function DataTable<TData, TValue>({
           </div>
         )}
 
-        <Table className="min-w-[36rem]">
+        <Table className="w-full table-fixed">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   const canSort = header.column.getCanSort()
-                  const sortState = header.column.getIsSorted()
 
                   if (header.isPlaceholder) {
                     return <TableHead key={header.id} />
                   }
 
+                  // Get column width based on header content
+                  const getColumnWidth = () => {
+                    const headerText = typeof header.column.columnDef.header === 'string' 
+                      ? header.column.columnDef.header 
+                      : header.id;
+                    
+                    switch (headerText) {
+                      case 'Members': return 'w-1/4 min-w-[150px]';
+                      case 'Phone Number': return 'w-1/5 min-w-[120px]';
+                      case 'Group': return 'w-1/6 min-w-[100px]';
+                      case 'Role': return 'w-1/6 min-w-[100px]';
+                      case 'Status': return 'w-1/6 min-w-[80px]';
+                      case 'Actions': return 'w-1/12 min-w-[100px]';
+                      default: return 'w-auto min-w-[80px]';
+                    }
+                  };
+
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} className={cn("px-2 py-3", getColumnWidth())}>
                       <button
                         type="button"
                         className={cn(
-                          "flex w-full items-center justify-start gap-2 text-sm font-medium",
+                          "flex w-full items-center justify-center gap-2 text-sm font-medium truncate",
                           canSort ? "cursor-pointer select-none" : "cursor-default",
                         )}
                         onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
                         disabled={isLoading}
+                        title={typeof header.column.columnDef.header === 'string' ? header.column.columnDef.header : ''}
                       >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        {canSort && (
-                          <span className="text-muted-foreground">
-                            {sortState === "asc" ? (
-                              <ArrowUpAZ className="h-3.5 w-3.5" />
-                            ) : sortState === "desc" ? (
-                              <ArrowDownAZ className="h-3.5 w-3.5" />
-                            ) : (
-                              <ArrowUpDown className="h-3.5 w-3.5" />
-                            )}
-                          </span>
-                        )}
+                        <span className="truncate">
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                        </span>
                       </button>
                     </TableHead>
                   )
@@ -250,11 +339,27 @@ export function DataTable<TData, TValue>({
                   key={getRowKey ? getRowKey(row.original, index) : row.id}
                   data-state={row.getIsSelected() && "selected"}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const isMembersColumn = typeof cell.column.columnDef.header === 'string' && 
+                                          cell.column.columnDef.header === 'Members';
+                    
+                    return (
+                      <TableCell 
+                        key={cell.id} 
+                        className={cn(
+                          "px-2 py-3 max-w-0",
+                          isMembersColumn ? "text-left" : "text-center"
+                        )}
+                      >
+                        <div className={cn(
+                          "min-w-0",
+                          isMembersColumn ? "flex justify-start" : "flex justify-center"
+                        )}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </div>
+                      </TableCell>
+                    )
+                  })}
                 </TableRow>
               ))
             ) : (
@@ -270,23 +375,66 @@ export function DataTable<TData, TValue>({
 
       {/* Pagination */}
       {showPagination && (
-        <div className="flex items-center justify-end space-x-2 py-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage() || isLoading}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage() || isLoading}
-          >
-            Next
-          </Button>
+        <div className="flex items-center justify-between py-4">
+          <div className="text-sm text-muted-foreground">
+            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} ({table.getFilteredRowModel().rows.length} total)
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage() || isLoading}
+            >
+              Previous
+            </Button>
+            
+            {/* Page Numbers */}
+            <div className="flex items-center gap-1">
+              {Array.from(
+                { length: Math.min(5, table.getPageCount()) },
+                (_, i) => {
+                  const currentPage = table.getState().pagination.pageIndex + 1;
+                  const totalPages = table.getPageCount();
+                  
+                  // Calculate which pages to show
+                  let startPage = Math.max(1, currentPage - 2);
+                  const endPage = Math.min(totalPages, startPage + 4);
+                  
+                  // Adjust start if we're near the end
+                  if (endPage - startPage < 4) {
+                    startPage = Math.max(1, endPage - 4);
+                  }
+                  
+                  const pageNumber = startPage + i;
+                  
+                  if (pageNumber > totalPages) return null;
+                  
+                  return (
+                    <Button
+                      key={pageNumber}
+                      size="sm"
+                      variant={currentPage === pageNumber ? "default" : "outline"}
+                      onClick={() => table.setPageIndex(pageNumber - 1)}
+                      className="w-8 h-8 p-0"
+                      disabled={isLoading}
+                    >
+                      {pageNumber}
+                    </Button>
+                  );
+                }
+              )}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage() || isLoading}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       )}
     </div>

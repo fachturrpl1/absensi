@@ -261,8 +261,9 @@ export default function MembersPage() {
             "No User"
           : "No User"
         return (
-          <div className="flex gap-2 items-center">
-            <User className="w-4 h-4" /> {fullname}
+          <div className="flex gap-2 items-center min-w-0">
+            <User className="w-4 h-4 flex-shrink-0" /> 
+            <span className="truncate" title={fullname}>{fullname}</span>
           </div>
         )
       },
@@ -270,24 +271,38 @@ export default function MembersPage() {
     {
       accessorFn: (row: any) => row.user?.phone || "",
       header: "Phone Number",
-      cell: ({ row }) => (row.original as any).user?.phone ?? "No Phone",
+      cell: ({ row }) => {
+        const phone = (row.original as any).user?.phone ?? "No Phone"
+        return (
+          <span className="truncate block" title={phone}>
+            {phone}
+          </span>
+        )
+      },
     },
     {
       accessorFn: (row: any) => row.groupName || "",
       header: "Group",
-      cell: ({ row }) => (row.original as any).groupName || "-",
+      cell: ({ row }) => {
+        const group = (row.original as any).groupName || "-"
+        return (
+          <span className="truncate block" title={group}>
+            {group}
+          </span>
+        )
+      },
     },
     {
       header: "Role",
       cell: ({ row }) => {
         const role = (row.original as any).role
-        if (!role) return <Badge variant="outline">No Role</Badge>
+        if (!role) return <Badge variant="outline" className="truncate">No Role</Badge>
         
         const isAdmin = role.code === "A001"
         return (
-          <Badge variant={isAdmin ? "default" : "secondary"} className="flex items-center gap-1 w-fit">
-            <Shield className="w-3 h-3" />
-            {role.name}
+          <Badge variant={isAdmin ? "default" : "secondary"} className="flex items-center gap-1 w-fit max-w-full" title={role.name}>
+            <Shield className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{role.name}</span>
           </Badge>
         )
       },
@@ -298,12 +313,14 @@ export default function MembersPage() {
       cell: ({ row }) => {
         const active = row.getValue("is_active") as boolean
         return active ? (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white">
-            <Check className="w-3 h-3 mr-1" /> Active
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white whitespace-nowrap">
+            <Check className="w-3 h-3 mr-1 flex-shrink-0" /> 
+            <span className="truncate">Active</span>
           </span>
         ) : (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 text-black">
-            <X className="w-3 h-3 mr-1" /> Inactive
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 text-black whitespace-nowrap">
+            <X className="w-3 h-3 mr-1 flex-shrink-0" /> 
+            <span className="truncate">Inactive</span>
           </span>
         )
       },
@@ -315,22 +332,22 @@ export default function MembersPage() {
         const member = row.original
         
         return (
-          <div className="flex gap-2">
+          <div className="flex gap-1 justify-end">
             <Button
               variant="outline"
               size="icon"
-              className="border-0 cursor-pointer"
+              className="border-0 cursor-pointer h-8 w-8"
               onClick={() => router.push(`/members/edit/${member.id}`)}
             >
-              <Pencil />
+              <Pencil className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
               size="icon"
-              className="border-0 cursor-pointer"
+              className="border-0 cursor-pointer h-8 w-8"
               onClick={() => router.push(`/members/${member.id}`)}
             >
-              <Eye />
+              <Eye className="h-4 w-4" />
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -554,6 +571,7 @@ export default function MembersPage() {
             columns={columns} 
             data={members}
             isLoading={loading}
+            searchPlaceholder="Search by name, type, reason, or number..."
           />
         )}
       </div>

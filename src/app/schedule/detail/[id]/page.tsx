@@ -193,7 +193,14 @@ function DataTableWithBack<TData, TValue>({
                   checked={column.getIsVisible()}
                   onCheckedChange={(value) => column.toggleVisibility(!!value)}
                 >
-                  {column.id}
+{(() => {
+                    const columnLabels: Record<string, string> = {
+                      'is_active': 'Active',
+                      'user_full_name': 'Full Name',
+                      'phone_number': 'Phone Number'
+                    };
+                    return columnLabels[column.id] || column.id;
+                  })()}
                 </DropdownMenuCheckboxItem>
               ))
             }

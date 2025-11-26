@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React ,{ useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
 import {
@@ -18,6 +18,9 @@ import {
   Grid3x3,
   List,
   X,
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,15 +43,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
 import { formatLocalTime } from '@/utils/timezone';
 import { getAllAttendance } from '@/action/attendance';
@@ -209,27 +203,40 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
-    const maxPagesToShow = 5;
-
-    if (totalPages <= maxPagesToShow) {
+    
+    if (totalPages <= 7) {
+      // Show all pages if total pages <= 7
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
+      // Always show first page
       pages.push(1);
-      if (currentPage > 3) {
-        pages.push('ellipsis-start');
+      
+      if (currentPage <= 4) {
+        // Show: 1 2 3 4 5 ... n
+        for (let i = 2; i <= 5; i++) {
+          pages.push(i);
+        }
+        pages.push('ellipsis');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        // Show: 1 ... n-4 n-3 n-2 n-1 n
+        pages.push('ellipsis');
+        for (let i = totalPages - 4; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        // Show: 1 ... n-1 n n+1 ... last
+        pages.push('ellipsis');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('ellipsis');
+        pages.push(totalPages);
       }
-      const startPage = Math.max(2, currentPage - 1);
-      const endPage = Math.min(totalPages - 1, currentPage + 1);
-      for (let i = startPage; i <= endPage; i++) {
-        pages.push(i);
-      }
-      if (currentPage < totalPages - 2) {
-        pages.push('ellipsis-end');
-      }
-      pages.push(totalPages);
     }
+    
     return pages;
   };
 
@@ -555,59 +562,57 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             {!loading && totalItems > 0 && (
               <div className="flex items-center justify-between border-t px-4 py-4">
                 <div className="text-sm text-muted-foreground">
-                  Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} entries
+                  Page {currentPage} of {totalPages} ({totalItems} total)
                 </div>
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious 
-                        href="#"
-                        size="default"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (currentPage > 1) setCurrentPage(currentPage - 1);
-                        }}
-                        className={cn(
-                          currentPage === 1 && "pointer-events-none opacity-50"
-                        )}
-                      />
-                    </PaginationItem>
-                    
-                    {getPageNumbers().map((page, index) => (
-                      <PaginationItem key={index}>
-                        {typeof page === 'number' ? (
-                          <PaginationLink
-                            href="#"
-                            size="default"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setCurrentPage(page);
-                            }}
-                            isActive={currentPage === page}
-                          >
-                            {page}
-                          </PaginationLink>
-                        ) : (
-                          <PaginationEllipsis />
-                        )}
-                      </PaginationItem>
-                    ))}
+                <div className="flex items-center gap-1">
+                  {/* Previous Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (currentPage > 1) setCurrentPage(currentPage - 1);
+                    }}
+                    disabled={currentPage === 1}
+                    className="gap-1 px-3"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  
+                  {/* Page Numbers */}
+                  {getPageNumbers().map((page, index) => (
+                    <React.Fragment key={index}>
+                      {typeof page === 'number' ? (
+                        <Button
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(page)}
+                          className="w-9 h-9 p-0"
+                        >
+                          {page}
+                        </Button>
+                      ) : (
+                        <span className="flex h-9 w-9 items-center justify-center text-muted-foreground">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </span>
+                      )}
+                    </React.Fragment>
+                  ))}
 
-                    <PaginationItem>
-                      <PaginationNext 
-                        href="#"
-                        size="default"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                        }}
-                        className={cn(
-                          currentPage === totalPages && "pointer-events-none opacity-50"
-                        )}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+                  {/* Next Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                    }}
+                    disabled={currentPage === totalPages}
+                    className="gap-1 px-3"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
