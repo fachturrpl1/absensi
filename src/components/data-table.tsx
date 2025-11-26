@@ -179,26 +179,70 @@ export function DataTable<TData, TValue>({
     }
   }, [filteredData.length, pagination.pageSize, pagination.pageIndex])
 
+  // Generate pagination numbers with smart ellipsis
+  const generatePaginationNumbers = () => {
+    const currentPage = table.getState().pagination.pageIndex + 1
+    const totalPages = table.getPageCount()
+    const pages: (number | string)[] = []
+    const maxVisible = 5
+    const sidePages = 2
+
+    if (totalPages <= maxVisible) {
+      // Show all pages if total is less than or equal to max visible
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      // Always show first page
+      pages.push(1)
+
+      // Calculate range around current page
+      const rangeStart = Math.max(2, currentPage - sidePages)
+      const rangeEnd = Math.min(totalPages - 1, currentPage + sidePages)
+
+      // Add ellipsis before range if needed
+      if (rangeStart > 2) {
+        pages.push('...')
+      }
+
+      // Add pages in range
+      for (let i = rangeStart; i <= rangeEnd; i++) {
+        pages.push(i)
+      }
+
+      // Add ellipsis after range if needed
+      if (rangeEnd < totalPages - 1) {
+        pages.push('...')
+      }
+
+      // Always show last page
+      pages.push(totalPages)
+    }
+
+    return pages
+  }
+
 
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          {/* Global Search */}
-          {showGlobalFilter && (
-            <div className="relative flex-1 sm:w-80 sm:min-w-[300px] sm:max-w-md min-w-[250px]">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
-              <Input
-                placeholder={searchPlaceholder}
-                value={globalFilter}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                className="pl-9 placeholder:text-ellipsis placeholder:overflow-hidden placeholder:whitespace-nowrap"
-                title={searchPlaceholder}
-              />
-            </div>
-          )}
-          
+      {/* Search Bar - Full Width */}
+      {showGlobalFilter && (
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
+          <Input
+            placeholder={searchPlaceholder}
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            className="w-full pl-9 placeholder:text-ellipsis placeholder:overflow-hidden placeholder:whitespace-nowrap"
+            title={searchPlaceholder}
+          />
+        </div>
+      )}
+      
+      {/* Filters and Controls - Compact Grid */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:flex-1">
           {/* Filters */}
           {showFilters && (
             <>
@@ -245,151 +289,156 @@ export function DataTable<TData, TValue>({
               </div>
             </>
           )}
-
-          {/* Toggle Columns */}
-          {showColumnToggle && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Columns3Cog className="h-4 w-4" /> Columns
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {table
-                  .getAllColumns()
-                  .filter((column) => column.getCanHide())
-                  .map((column) => (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                    >
-{(() => {
-                        const columnLabels: Record<string, string> = {
-                          'is_active': 'Active',
-                          'user_full_name': 'Full Name',
-                          'phone_number': 'Phone Number'
-                        };
-                        return columnLabels[column.id] || column.id;
-                      })()}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
         </div>
+
+        {/* Toggle Columns */}
+        {showColumnToggle && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2 w-full sm:w-auto">
+                <Columns3Cog className="h-4 w-4" /> Columns
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                  >
+{(() => {
+                      const columnLabels: Record<string, string> = {
+                        'is_active': 'Active',
+                        'user_full_name': 'Full Name',
+                        'phone_number': 'Phone Number'
+                      };
+                      return columnLabels[column.id] || column.id;
+                    })()}
+                  </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Table */}
-      <div className="relative overflow-x-auto rounded-md border">
+      <div className="relative w-full rounded-md border overflow-hidden">
         {isLoading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         )}
 
-        <Table className="w-full table-fixed">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  const canSort = header.column.getCanSort()
+        <div className="overflow-x-auto">
+          <Table className="w-full">
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    const canSort = header.column.getCanSort()
 
-                  if (header.isPlaceholder) {
-                    return <TableHead key={header.id} />
-                  }
-
-                  // Get column width based on header content
-                  const getColumnWidth = () => {
-                    const headerText = typeof header.column.columnDef.header === 'string' 
-                      ? header.column.columnDef.header 
-                      : header.id;
-                    
-                    switch (headerText) {
-                      case 'Members': return 'w-1/4 min-w-[150px]';
-                      case 'Phone Number': return 'w-1/5 min-w-[120px]';
-                      case 'Group': return 'w-1/6 min-w-[100px]';
-                      case 'Role': return 'w-1/6 min-w-[100px]';
-                      case 'Status': return 'w-1/6 min-w-[80px]';
-                      case 'Actions': return 'w-1/12 min-w-[100px]';
-                      default: return 'w-auto min-w-[80px]';
+                    if (header.isPlaceholder) {
+                      return <TableHead key={header.id} />
                     }
-                  };
 
-                  return (
-                    <TableHead key={header.id} className={cn("px-2 py-3", getColumnWidth())}>
-                      <button
-                        type="button"
-                        className={cn(
-                          "flex w-full items-center justify-center gap-2 text-sm font-medium truncate",
-                          canSort ? "cursor-pointer select-none" : "cursor-default",
-                        )}
-                        onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
-                        disabled={isLoading}
-                        title={typeof header.column.columnDef.header === 'string' ? header.column.columnDef.header : ''}
-                      >
-                        <span className="truncate">
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                        </span>
-                      </button>
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row, index) => (
-                <TableRow
-                  key={getRowKey ? getRowKey(row.original, index) : row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => {
-                    const isMembersColumn = typeof cell.column.columnDef.header === 'string' && 
-                                          cell.column.columnDef.header === 'Members';
-                    
+                    // Get column width based on header content
+                    const getColumnWidth = () => {
+                      const headerText = typeof header.column.columnDef.header === 'string' 
+                        ? header.column.columnDef.header 
+                        : header.id;
+                      
+                      switch (headerText) {
+                        case 'Members': return 'min-w-[150px]';
+                        case 'Phone Number': return 'min-w-[120px]';
+                        case 'Group': return 'min-w-[100px]';
+                        case 'Role': return 'min-w-[100px]';
+                        case 'Status': return 'min-w-[100px]';
+                        case 'Actions': return 'min-w-[140px]';
+                        default: return 'min-w-[80px]';
+                      }
+                    };
+
                     return (
-                      <TableCell 
-                        key={cell.id} 
-                        className={cn(
-                          "px-2 py-3 max-w-0",
-                          isMembersColumn ? "text-left" : "text-center"
-                        )}
-                      >
-                        <div className={cn(
-                          "min-w-0",
-                          isMembersColumn ? "flex justify-start" : "flex justify-center"
-                        )}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </div>
-                      </TableCell>
+                      <TableHead key={header.id} className={cn("px-3 py-3 whitespace-nowrap", getColumnWidth())}>
+                        <button
+                          type="button"
+                          className={cn(
+                            "flex items-center justify-center gap-2 text-sm font-medium truncate",
+                            canSort ? "cursor-pointer select-none" : "cursor-default",
+                          )}
+                          onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                          disabled={isLoading}
+                          title={typeof header.column.columnDef.header === 'string' ? header.column.columnDef.header : ''}
+                        >
+                          <span className="truncate">
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                          </span>
+                        </button>
+                      </TableHead>
                     )
                   })}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  {isLoading ? "Loading..." : "No results."}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row, index) => (
+                  <TableRow
+                    key={getRowKey ? getRowKey(row.original, index) : row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      const isMembersColumn = typeof cell.column.columnDef.header === 'string' && 
+                                            cell.column.columnDef.header === 'Members';
+                      
+                      return (
+                        <TableCell 
+                          key={cell.id} 
+                          className={cn(
+                            "px-3 py-3 whitespace-nowrap",
+                            isMembersColumn ? "text-left" : "text-center"
+                          )}
+                        >
+                          <div className={cn(
+                            "flex items-center gap-1",
+                            isMembersColumn ? "justify-start" : "justify-center"
+                          )}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </div>
+                        </TableCell>
+                      )
+                    })}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    {isLoading ? "Loading..." : "No results."}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* Pagination */}
       {showPagination && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-4">
-          <div className="text-sm text-muted-foreground order-2 sm:order-1">
+        <div className="flex items-center justify-between py-4">
+          {/* Page Info - Left */}
+          <div className="text-sm text-muted-foreground">
             Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} ({filteredData.length} total)
           </div>
-          <div className="flex items-center gap-2 order-1 sm:order-2 w-full sm:w-auto">
+
+          {/* Pagination Navigation - Right */}
+          <div className="flex items-center gap-2">
             <Button
-              variant="outline"
               size="sm"
+              variant="outline"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage() || isLoading}
             >
@@ -397,49 +446,37 @@ export function DataTable<TData, TValue>({
             </Button>
             
             {/* Page Numbers */}
-            <div className="hidden sm:flex items-center gap-1 max-w-full overflow-x-auto">
-              {Array.from(
-                { length: Math.min(5, table.getPageCount()) },
-                (_, i) => {
-                  const currentPage = table.getState().pagination.pageIndex + 1;
-                  const totalPages = table.getPageCount();
-                  
-                  // Calculate which pages to show
-                  let startPage = Math.max(1, currentPage - 2);
-                  const endPage = Math.min(totalPages, startPage + 4);
-                  
-                  // Adjust start if we're near the end
-                  if (endPage - startPage < 4) {
-                    startPage = Math.max(1, endPage - 4);
-                  }
-                  
-                  const pageNumber = startPage + i;
-                  
-                  if (pageNumber > totalPages) return null;
-                  
+            <div className="flex items-center gap-1">
+              {generatePaginationNumbers().map((page, index) => {
+                if (page === '...') {
                   return (
-                    <Button
-                      key={pageNumber}
-                      size="sm"
-                      variant={currentPage === pageNumber ? "default" : "outline"}
-                      onClick={() => table.setPageIndex(pageNumber - 1)}
-                      className="w-8 h-8 p-0"
-                      disabled={isLoading}
-                    >
-                      {pageNumber}
-                    </Button>
-                  );
+                    <span key={`ellipsis-${index}`} className="px-2 py-1 text-muted-foreground">
+                      ...
+                    </span>
+                  )
                 }
-              )}
+                
+                const currentPage = table.getState().pagination.pageIndex + 1
+                const pageNum = page as number
+                
+                return (
+                  <Button
+                    key={pageNum}
+                    size="sm"
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    onClick={() => table.setPageIndex(pageNum - 1)}
+                    className="w-8 h-8 p-0"
+                    disabled={isLoading}
+                  >
+                    {pageNum}
+                  </Button>
+                )
+              })}
             </div>
-            {/* Compact current page indicator for mobile */}
-            <span className="sm:hidden text-sm text-muted-foreground">
-              {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
-            </span>
 
             <Button
-              variant="outline"
               size="sm"
+              variant="outline"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage() || isLoading}
             >
