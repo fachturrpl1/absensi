@@ -366,15 +366,20 @@ export default function MembersPage() {
   ]
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <div className="w-full max-w-6xl mx-auto">
-        <div className="items-center my-7">
-          <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
-            <DialogTrigger asChild className="float-end ml-5">
-              <Button>
-                Invite Member <Plus className="ml-2" />
-              </Button>
-            </DialogTrigger>
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      <div className="w-full max-w-6xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">Members</h1>
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
+              <DialogTrigger asChild>
+                <Button className="w-full sm:w-auto">
+                  Invite Member <Plus className="ml-2" />
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]" aria-describedby="invite-description">
               <DialogHeader>
                 <DialogTitle>Invite New Member</DialogTitle>
@@ -527,9 +532,11 @@ export default function MembersPage() {
                 </form>
               </Form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
+        {/* Table Content */}
         {loading ? (
           <TableSkeleton rows={8} columns={6} />
         ) : members.length === 0 ? (

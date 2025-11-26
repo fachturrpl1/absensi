@@ -229,20 +229,20 @@ export function DataTable<TData, TValue>({
       {/* Search Bar - Full Width */}
       {showGlobalFilter && (
         <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10 pointer-events-none" />
           <Input
             placeholder={searchPlaceholder}
             value={globalFilter}
             onChange={(e) => setGlobalFilter(e.target.value)}
-            className="w-full pl-9 placeholder:text-ellipsis placeholder:overflow-hidden placeholder:whitespace-nowrap"
+            className="w-full pl-10 pr-4 py-2 placeholder:text-ellipsis placeholder:overflow-hidden placeholder:whitespace-nowrap"
             title={searchPlaceholder}
           />
         </div>
       )}
       
       {/* Filters and Controls - Compact Grid */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2 w-full sm:flex-1">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+        <div className="flex flex-wrap items-center gap-2 w-full">
           {/* Filters */}
           {showFilters && (
             <>
