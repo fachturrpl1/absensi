@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useRecentActivity } from "@/hooks/use-recent-activity";
+import { useNotifications, type NotificationItem as ApiNotificationItem } from "@/hooks/use-notifications";
 
 type NotificationCategory = "attendance" | "leaves" | "schedule";
 type NotificationFilter = "all" | NotificationCategory;
@@ -81,31 +81,58 @@ const categoryBadgeMeta: Record<
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [activeCategory, setActiveCategory] = useState<NotificationFilter>("all");
-  const { data: activities = [], isLoading } = useRecentActivity(50);
+  const { data: apiNotifications = [], isLoading } = useNotifications(50);
 
-  // Transform activities to notifications
+  // Transform API notifications to UI notifications
   useEffect(() => {
-    const transformedNotifications: NotificationItem[] = activities.map((activity, index) => {
-      const checkInTime = formatTime(activity.checkInTime);
-      const relativeTime = formatRelativeTime(activity.checkInTime);
-      const lateText = activity.lateMinutes && activity.lateMinutes > 0
-        ? ` (${activity.lateMinutes} min late)`
-        : '';
+    const transformedNotifications: NotificationItem[] = apiNotifications.map((apiNotif, index) => {
+      const relativeTime = formatRelativeTime(apiNotif.timestamp);
+      
+      let sender = "System";
+      let subject = "";
+      let snippet = "";
+      let category: NotificationCategory = "attendance";
+
+      if (apiNotif.type === 'attendance') {
+        const checkInTime = formatTime(apiNotif.data?.checkInTime || apiNotif.timestamp);
+        const lateText = apiNotif.lateMinutes && apiNotif.lateMinutes > 0
+          ? ` (${apiNotif.lateMinutes} min late)`
+          : '';
+        subject = "New attendance record";
+        snippet = `${apiNotif.memberName} checked in at ${checkInTime}${lateText}`;
+        category = "attendance";
+      } else if (apiNotif.type === 'leaves') {
+        if (apiNotif.action === 'approved') {
+          subject = "Leave approval";
+          snippet = `${apiNotif.memberName}'s ${apiNotif.data?.leaveType || 'annual'} leave was approved`;
+        } else if (apiNotif.action === 'rejected') {
+          subject = "Leave rejection";
+          snippet = `${apiNotif.memberName}'s ${apiNotif.data?.leaveType || 'leave'} request was rejected`;
+        } else {
+          subject = "Leave request";
+          snippet = `${apiNotif.memberName} requested ${apiNotif.data?.totalDays || 1} day(s) of ${apiNotif.data?.leaveType || 'leave'}`;
+        }
+        category = "leaves";
+      } else if (apiNotif.type === 'schedule') {
+        subject = "Shift swap request";
+        snippet = `${apiNotif.memberName} requested to swap shift`;
+        category = "schedule";
+      }
 
       return {
-        id: parseInt(activity.id) || index + 1,
-        sender: "System",
-        subject: "New attendance record",
-        snippet: `${activity.memberName} checked in at ${checkInTime}${lateText}`,
+        id: index + 1,
+        sender,
+        subject,
+        snippet,
         date: relativeTime,
-        category: "attendance" as NotificationCategory,
-        unread: true, // Mark recent activities as unread
+        category,
+        unread: true, // Mark recent notifications as unread
         selected: false,
       };
     });
 
     setNotifications(transformedNotifications);
-  }, [activities]);
+  }, [apiNotifications]);
 
   const filteredNotifications = useMemo(() => {
     if (activeCategory === "all") return notifications;

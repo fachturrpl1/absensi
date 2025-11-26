@@ -126,7 +126,10 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
   }
 
   if (search) {
-    // Full text search implementation would go here.
+    // Search by member name using ilike on user_profiles
+    // Note: Supabase doesn't support nested OR queries directly, so we use textSearch or filter manually
+    // For now, we'll search in first_name and last_name
+    query = query.or(`organization_members.user_profiles.first_name.ilike.%${search}%,organization_members.user_profiles.last_name.ilike.%${search}%`);
   }
 
   // Apply pagination
