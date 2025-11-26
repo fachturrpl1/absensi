@@ -82,7 +82,7 @@ export function AppNavbar({ onMenuClick, sidebarCollapsed: _, isMobile }: AppNav
       animate={{ y: 0 }}
       transition={{ duration: 0.3 }}
       className={cn(
-        'sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+        'sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60',
         'transition-all duration-300'
       )}
     >
@@ -192,8 +192,13 @@ export function AppNavbar({ onMenuClick, sidebarCollapsed: _, isMobile }: AppNav
                 ))}
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="justify-center text-sm text-primary">
-                View all notifications
+              <DropdownMenuItem
+                asChild
+                className="justify-center text-sm text-primary cursor-pointer"
+              >
+                <Link href="/notifications" className="w-full text-center">
+                  View all notifications
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

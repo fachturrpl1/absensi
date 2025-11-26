@@ -211,7 +211,7 @@ export default function ModernDataTable<TData extends Employee, TValue>({
       },
       {
         accessorKey: 'department',
-        header: 'Department',
+        header: 'Group',
         cell: ({ row }) => (
           <Badge variant="outline" className="font-normal">
             {row.getValue('department')}
@@ -372,10 +372,10 @@ export default function ModernDataTable<TData extends Employee, TValue>({
 
               <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
                 <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Department" />
+                  <SelectValue placeholder="Group" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
+                  <SelectItem value="all">All Groups</SelectItem>
                   <SelectItem value="Engineering">Engineering</SelectItem>
                   <SelectItem value="Marketing">Marketing</SelectItem>
                   <SelectItem value="Sales">Sales</SelectItem>

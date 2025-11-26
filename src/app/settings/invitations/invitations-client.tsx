@@ -146,7 +146,7 @@ export default function InvitationsClient() {
     },
     {
       accessorKey: "department",
-      header: "Department",
+      header: "Group",
       cell: ({ row }) => {
         const dept = row.original.department as any;
         return dept ? dept.name : <span className="text-muted-foreground text-sm">-</span>;

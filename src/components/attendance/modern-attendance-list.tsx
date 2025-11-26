@@ -295,7 +295,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 <div className="relative flex-1 min-w-[250px] max-w-sm">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="Search by name or department..."
+                    placeholder="Search by name or group..."
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     className="pl-9 pr-20"
@@ -343,10 +343,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
               <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Department" />
+                  <SelectValue placeholder="Group" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
+                  <SelectItem value="all">All Groups</SelectItem>
                   {departments.map((dept) => (
                     <SelectItem key={dept} value={dept}>
                       {dept}
