@@ -270,25 +270,36 @@ export default function MembersPage() {
     {
       accessorFn: (row: any) => row.user?.phone || "",
       header: "Phone Number",
-      cell: ({ row }) => (row.original as any).user?.phone ?? "No Phone",
+      cell: ({ row }) => (
+        <div className="text-center flex items-center justify-center min-h-[32px]">
+          {(row.original as any).user?.phone ?? "No Phone"}
+        </div>
+      ),
     },
     {
       accessorFn: (row: any) => row.groupName || "",
       header: "Group",
-      cell: ({ row }) => (row.original as any).groupName || "-",
+      cell: ({ row }) => (
+        <div className="text-center flex items-center justify-center min-h-[32px]">
+          {(row.original as any).groupName || "-"}
+        </div>
+      ),
     },
     {
       header: "Role",
       cell: ({ row }) => {
         const role = (row.original as any).role
-        if (!role) return <Badge variant="outline">No Role</Badge>
-        
-        const isAdmin = role.code === "A001"
         return (
-          <Badge variant={isAdmin ? "default" : "secondary"} className="flex items-center gap-1 w-fit">
-            <Shield className="w-3 h-3" />
-            {role.name}
-          </Badge>
+          <div className="text-center flex items-center justify-center min-h-[32px]">
+            {role ? (
+              <Badge variant={role.code === "A001" ? "default" : "secondary"} className="flex items-center gap-1 w-fit">
+                <Shield className="w-3 h-3" />
+                {role.name}
+              </Badge>
+            ) : (
+              <Badge variant="outline">No Role</Badge>
+            )}
+          </div>
         )
       },
     },
@@ -297,14 +308,18 @@ export default function MembersPage() {
       header: "Status",
       cell: ({ row }) => {
         const active = row.getValue("is_active") as boolean
-        return active ? (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white">
-            <Check className="w-3 h-3 mr-1" /> Active
-          </span>
-        ) : (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 text-black">
-            <X className="w-3 h-3 mr-1" /> Inactive
-          </span>
+        return (
+          <div className="text-center flex items-center justify-center min-h-[32px]">
+            {active ? (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white">
+                <Check className="w-3 h-3 mr-1" /> Active
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 text-black">
+                <X className="w-3 h-3 mr-1" /> Inactive
+              </span>
+            )}
+          </div>
         )
       },
     },
@@ -315,7 +330,7 @@ export default function MembersPage() {
         const member = row.original
         
         return (
-          <div className="flex gap-2">
+          <div className="flex gap-2 justify-center items-center min-h-[32px]">
             <Button
               variant="outline"
               size="icon"
@@ -367,7 +382,7 @@ export default function MembersPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-      <div className="w-full max-w-6xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-2">
