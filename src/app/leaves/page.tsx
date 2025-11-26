@@ -415,10 +415,10 @@ export default function LeavesPage() {
     <div className="flex flex-1 flex-col gap-3 sm:gap-4 md:gap-6 p-3 sm:p-4 md:p-6 max-w-full overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="space-y-2">
+        <div className="space-y-1 sm:space-y-2">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
                 {'Leaves Dashboard'}
               </h1>
 
