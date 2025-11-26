@@ -71,9 +71,6 @@ export default function AttendanceDashboard() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Attendance Dashboard</h1>
-          <p className="text-muted-foreground">
-            Overview of attendance, lateness, and member activity.
-          </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <Button
@@ -119,9 +116,6 @@ export default function AttendanceDashboard() {
             ) : (
               <>
                 <div className="text-2xl font-bold">{stats?.todaySummary?.checkedIn || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.todaySummary?.attendanceRate || 0}% of active members
-                </p>
               </>
             )}
           </CardContent>
@@ -137,9 +131,6 @@ export default function AttendanceDashboard() {
             ) : (
               <>
                 <div className="text-2xl font-bold">{stats?.todaySummary?.late || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  Members late today
-                </p>
               </>
             )}
           </CardContent>
@@ -155,9 +146,6 @@ export default function AttendanceDashboard() {
             ) : (
               <>
                 <div className="text-2xl font-bold">{stats?.todaySummary?.absent || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  Members absent
-                </p>
               </>
             )}
           </CardContent>
@@ -173,9 +161,6 @@ export default function AttendanceDashboard() {
             ) : (
               <>
                 <div className="text-2xl font-bold">{stats?.totalMembers || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.activeMembers?.currentMonth || 0} active members
-                </p>
               </>
             )}
           </CardContent>

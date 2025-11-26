@@ -122,7 +122,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
   }
 
   if (department && department !== 'all') {
-    // Rely on client side filtering for now
+    query = query.eq("organization_members.departments.name", department);
   }
 
   if (search) {

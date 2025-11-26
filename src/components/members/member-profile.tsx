@@ -458,7 +458,7 @@ export default function MemberProfileEnhanced({
                   { icon: Mail, label: "Email", value: email },
                   { icon: Phone, label: "Phone", value: formatPhoneNumber(phone) },
                   { icon: BriefcaseBusiness, label: "Position", value: positionTitle || "-" },
-                  { icon: Building, label: "Department", value: groupName || "-" },
+                  { icon: Building, label: "Group", value: groupName || "-" },
                   { icon: MapPin, label: "Location", value: member.work_location || "-" },
                   {
                     icon: UserRound,

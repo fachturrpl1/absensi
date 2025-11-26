@@ -54,15 +54,18 @@ export async function GET() {
       r.status === 'present' || r.status === 'late'
     ).length || 0
 
-    const onTime = attendanceRecords?.filter(r => 
-      r.status === 'present' || (r.status === 'late' && (r.late_minutes || 0) <= 5)
+    const present = attendanceRecords?.filter(r => 
+      r.status === 'present'
     ).length || 0
 
     const late = attendanceRecords?.filter(r => 
-      r.status === 'late' && (r.late_minutes || 0) > 5
+      r.status === 'late'
     ).length || 0
 
-    const absent = totalMembers - checkedIn
+    // Count actual absent records from database, not calculated
+    const absent = attendanceRecords?.filter(r => 
+      r.status === 'absent'
+    ).length || 0
 
     const attendanceRate = totalMembers > 0 
       ? Math.round((checkedIn / totalMembers) * 100)
@@ -74,7 +77,7 @@ export async function GET() {
         data: {
           totalMembers,
           checkedIn,
-          onTime,
+          onTime: present,
           late,
           absent,
           attendanceRate

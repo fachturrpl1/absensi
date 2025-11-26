@@ -224,7 +224,7 @@ export default function InvitationAcceptPage() {
                   <div className="flex items-center gap-2 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
                     <Users className="h-4 w-4 text-blue-400" />
                     <div>
-                      <p className="text-xs text-gray-400">Department</p>
+                      <p className="text-xs text-gray-400">Group</p>
                       <p className="text-sm font-medium text-gray-200">{invitation.department.name}</p>
                     </div>
                   </div>
