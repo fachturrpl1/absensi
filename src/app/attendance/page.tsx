@@ -66,12 +66,12 @@ export default function AttendanceDashboard() {
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+    <div className="flex flex-1 flex-col gap-3 sm:gap-4 md:gap-6 p-3 sm:p-4 md:p-6 max-w-full overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Attendance Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Attendance Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Overview of attendance, lateness, and member activity.
           </p>
         </div>
@@ -107,74 +107,74 @@ export default function AttendanceDashboard() {
       )}
 
       {/* Statistics Cards - Restored */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Present Today</CardTitle>
-            <UserCheck className="h-4 w-4 text-green-600" />
+      <div className="grid gap-1.5 sm:gap-2 md:gap-3 lg:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4 w-full">
+        <Card className="overflow-hidden w-full min-w-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-1.5 md:pb-2 px-1.5 sm:px-2 md:px-3 lg:px-4 xl:px-6 pt-1.5 sm:pt-2 md:pt-3 lg:pt-4 xl:pt-6">
+            <CardTitle className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs xl:text-sm font-medium leading-tight truncate min-w-0">Present Today</CardTitle>
+            <UserCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5 lg:h-4 lg:w-4 text-green-600 shrink-0 ml-1" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-1.5 sm:px-2 md:px-3 lg:px-4 xl:px-6 pb-1.5 sm:pb-2 md:pb-3 lg:pb-4 xl:pb-6">
             {loading ? (
-              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-4 sm:h-5 md:h-6 lg:h-8 w-10 sm:w-12 md:w-16 lg:w-20" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{stats?.todaySummary?.checkedIn || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.todaySummary?.attendanceRate || 0}% of active members
+                <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{stats?.todaySummary?.checkedIn || 0}</div>
+                <p className="text-[7px] sm:text-[8px] md:text-[9px] lg:text-[10px] xl:text-xs text-muted-foreground mt-0.5 leading-tight">
+                  {stats?.todaySummary?.attendanceRate || 0}% active
                 </p>
               </>
             )}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Late Today</CardTitle>
-            <Clock className="h-4 w-4 text-amber-600" />
+        <Card className="overflow-hidden w-full min-w-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-1.5 md:pb-2 px-1.5 sm:px-2 md:px-3 lg:px-4 xl:px-6 pt-1.5 sm:pt-2 md:pt-3 lg:pt-4 xl:pt-6">
+            <CardTitle className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs xl:text-sm font-medium leading-tight truncate min-w-0">Late Today</CardTitle>
+            <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5 lg:h-4 lg:w-4 text-amber-600 shrink-0 ml-1" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-1.5 sm:px-2 md:px-3 lg:px-4 xl:px-6 pb-1.5 sm:pb-2 md:pb-3 lg:pb-4 xl:pb-6">
             {loading ? (
-              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-4 sm:h-5 md:h-6 lg:h-8 w-10 sm:w-12 md:w-16 lg:w-20" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{stats?.todaySummary?.late || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  Members late today
+                <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{stats?.todaySummary?.late || 0}</div>
+                <p className="text-[7px] sm:text-[8px] md:text-[9px] lg:text-[10px] xl:text-xs text-muted-foreground mt-0.5 leading-tight">
+                  Members late
                 </p>
               </>
             )}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Absent Today</CardTitle>
-            <XCircle className="h-4 w-4 text-red-600" />
+        <Card className="overflow-hidden w-full min-w-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-1.5 md:pb-2 px-1.5 sm:px-2 md:px-3 lg:px-4 xl:px-6 pt-1.5 sm:pt-2 md:pt-3 lg:pt-4 xl:pt-6">
+            <CardTitle className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs xl:text-sm font-medium leading-tight truncate min-w-0">Absent Today</CardTitle>
+            <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5 lg:h-4 lg:w-4 text-red-600 shrink-0 ml-1" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-1.5 sm:px-2 md:px-3 lg:px-4 xl:px-6 pb-1.5 sm:pb-2 md:pb-3 lg:pb-4 xl:pb-6">
             {loading ? (
-              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-4 sm:h-5 md:h-6 lg:h-8 w-10 sm:w-12 md:w-16 lg:w-20" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{stats?.todaySummary?.absent || 0}</div>
-                <p className="text-xs text-muted-foreground">
+                <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{stats?.todaySummary?.absent || 0}</div>
+                <p className="text-[7px] sm:text-[8px] md:text-[9px] lg:text-[10px] xl:text-xs text-muted-foreground mt-0.5 leading-tight">
                   Members absent
                 </p>
               </>
             )}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Members</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+        <Card className="overflow-hidden w-full min-w-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-1.5 md:pb-2 px-1.5 sm:px-2 md:px-3 lg:px-4 xl:px-6 pt-1.5 sm:pt-2 md:pt-3 lg:pt-4 xl:pt-6">
+            <CardTitle className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs xl:text-sm font-medium leading-tight truncate min-w-0">Total Members</CardTitle>
+            <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5 lg:h-4 lg:w-4 text-muted-foreground shrink-0 ml-1" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-1.5 sm:px-2 md:px-3 lg:px-4 xl:px-6 pb-1.5 sm:pb-2 md:pb-3 lg:pb-4 xl:pb-6">
             {loading ? (
-              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-4 sm:h-5 md:h-6 lg:h-8 w-10 sm:w-12 md:w-16 lg:w-20" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{stats?.totalMembers || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.activeMembers?.currentMonth || 0} active members
+                <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{stats?.totalMembers || 0}</div>
+                <p className="text-[7px] sm:text-[8px] md:text-[9px] lg:text-[10px] xl:text-xs text-muted-foreground mt-0.5 leading-tight">
+                  {stats?.activeMembers?.currentMonth || 0} active
                 </p>
               </>
             )}
@@ -182,31 +182,34 @@ export default function AttendanceDashboard() {
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+        <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:grid-cols-none">
           <TabsTrigger value="overview" className="gap-2">
-            <LayoutDashboard className="h-4 w-4" /> Overview
+            <LayoutDashboard className="h-4 w-4 shrink-0" /> 
+            <span>Overview</span>
           </TabsTrigger>
           <TabsTrigger value="analytics" className="gap-2">
-            <BarChart3 className="h-4 w-4" /> Analytics
+            <BarChart3 className="h-4 w-4 shrink-0" /> 
+            <span>Analytics</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
+        <TabsContent value="overview" className="space-y-3 sm:space-y-4 md:space-y-6">
+          <div className="grid gap-2 sm:gap-3 md:gap-4 lg:gap-6 grid-cols-1 md:grid-cols-2 w-full">
             {/* Today's Status Distribution */}
-            <Card>
-              <CardHeader className="pb-4">
-                 <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Today's Attendance</CardTitle>
-                    <CardDescription>Real-time status distribution</CardDescription>
+            <Card className="w-full min-w-0 overflow-hidden">
+              <CardHeader className="pb-2 sm:pb-3 md:pb-4 px-2 sm:px-3 md:px-4 lg:px-6 pt-2 sm:pt-3 md:pt-4 lg:pt-6">
+                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl truncate">Today's Attendance</CardTitle>
+                    <CardDescription className="text-[9px] sm:text-[10px] md:text-xs lg:text-sm truncate">Real-time status distribution</CardDescription>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="gap-2">
+                      <Button variant="outline" size="sm" className="gap-1 sm:gap-1.5 md:gap-2 h-7 sm:h-8 md:h-9 w-full sm:w-auto shrink-0 text-[10px] sm:text-xs md:text-sm">
                         {getChartIcon(distChartType)}
-                        <ChevronDown className="h-4 w-4" />
+                        <span className="hidden sm:inline">Chart</span>
+                        <ChevronDown className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -217,7 +220,7 @@ export default function AttendanceDashboard() {
                   </DropdownMenu>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-2 sm:px-3 md:px-4 lg:px-6 pb-2 sm:pb-3 md:pb-4 lg:pb-6 w-full min-w-0">
                 <AttendanceAnalytics 
                   data={stats?.todaySummary} 
                   type="distribution" 
@@ -228,16 +231,16 @@ export default function AttendanceDashboard() {
             </Card>
 
             {/* Attendance Trend - Restored */}
-            <Card>
-              <CardHeader className="pb-4">
+            <Card className="w-full min-w-0 overflow-hidden">
+              <CardHeader className="pb-2 sm:pb-3 md:pb-4 px-2 sm:px-3 md:px-4 lg:px-6 pt-2 sm:pt-3 md:pt-4 lg:pt-6">
                  <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Attendance Trend</CardTitle>
-                    <CardDescription>Last 6 months performance</CardDescription>
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl truncate">Attendance Trend</CardTitle>
+                    <CardDescription className="text-[9px] sm:text-[10px] md:text-xs lg:text-sm truncate">Last 6 months performance</CardDescription>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-2 sm:px-3 md:px-4 lg:px-6 pb-2 sm:pb-3 md:pb-4 lg:pb-6 w-full min-w-0">
                 <AttendanceAnalytics 
                   data={stats?.monthlyTrend} 
                   type="trend" 

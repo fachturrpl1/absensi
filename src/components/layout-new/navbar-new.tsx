@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Bell,
   Sun,
   Moon,
   Monitor,
@@ -25,16 +24,15 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { SearchDialog } from './search-dialog';
 import { DynamicBreadcrumb } from './dynamic-breadcrumb';
+import { NotificationDropdown } from '@/components/notifications/notification-dropdown';
 
 export function NavbarNew() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const [notificationCount] = useState(3);
 
   // Keyboard shortcuts - Only for Quick Actions
   useEffect(() => {
@@ -109,43 +107,7 @@ export function NavbarNew() {
         </DropdownMenu>
 
         {/* Notifications */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative h-9 w-9">
-              <Bell className="h-5 w-5" />
-              {notificationCount > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-[10px] flex items-center justify-center"
-                >
-                  {notificationCount}
-                </Badge>
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <div className="max-h-[300px] overflow-y-auto">
-              {[1, 2, 3].map((i) => (
-                <DropdownMenuItem key={i} className="flex flex-col items-start gap-1 p-3 cursor-pointer">
-                  <p className="text-sm font-medium">New attendance record</p>
-                  <p className="text-xs text-muted-foreground">
-                    John Doe checked in at 09:00 AM
-                  </p>
-                  <p className="text-xs text-muted-foreground">2 minutes ago</p>
-                </DropdownMenuItem>
-              ))}
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="justify-center text-sm text-primary cursor-pointer"
-              onClick={() => router.push('/notifications')}
-            >
-              View all notifications
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <NotificationDropdown />
 
         {/* Theme Toggle */}
         <DropdownMenu>

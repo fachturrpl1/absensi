@@ -28,6 +28,7 @@ import { calculateTotalLeaveDays, meetsNoticeRequirement } from "@/lib/leave/uti
 import Link from "next/link";
 
 import { logger } from '@/lib/logger';
+import NewLeaveLoading from './loading';
 // Form Schema
 const leaveRequestSchema = z.object({
   leave_type_id: z.string().min(1, "Please select a leave type"),
@@ -172,13 +173,7 @@ export default function NewLeaveRequestPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex flex-1 flex-col gap-4">
-        <div className="flex items-center justify-center h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </div>
-    );
+    return <NewLeaveLoading />;
   }
 
   return (

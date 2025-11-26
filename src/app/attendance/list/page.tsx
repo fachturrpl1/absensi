@@ -6,21 +6,22 @@ import Link from "next/link"
 // Server Component
 export default async function AttendancePage() {
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+    <div className="flex flex-1 flex-col gap-4 sm:gap-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Attendance</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Manage and view all attendance records.
           </p>
         </div>
         
         <div className="flex items-center gap-2">
           <Link href="/attendance/add">
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
-              Manual Entry
+              <span className="hidden sm:inline">Manual Entry</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </Link>
         </div>
