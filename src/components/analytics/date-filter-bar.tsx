@@ -143,6 +143,7 @@ export function DateFilterBar({ dateRange, onDateRangeChange, className }: DateF
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn('flex items-center gap-3', className)}
+      suppressHydrationWarning
     >
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
