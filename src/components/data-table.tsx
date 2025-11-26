@@ -69,6 +69,7 @@ export function DataTable<TData, TValue>({
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [sortOrder, setSortOrder] = React.useState("newest")
   const [pageSize, setPageSize] = React.useState("10")
+  const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: parseInt(pageSize) })
 
   // Filter and sort data
   const filteredData = React.useMemo(() => {
@@ -151,14 +152,12 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
     state: {
       sorting,
       columnVisibility,
       rowSelection,
-      pagination: {
-        pageIndex: 0,
-        pageSize: parseInt(pageSize),
-      },
+      pagination,
     },
     initialState: {
       pagination: {
@@ -167,10 +166,18 @@ export function DataTable<TData, TValue>({
     },
   })
   
-  // Update page size when changed
+  // Sink select pageSize -> pagination state and reset to first page
   React.useEffect(() => {
-    table.setPageSize(parseInt(pageSize))
-  }, [pageSize, table])
+    setPagination((prev) => ({ ...prev, pageSize: parseInt(pageSize), pageIndex: 0 }))
+  }, [pageSize])
+
+  // Clamp pageIndex when filtered data or pageSize changes
+  React.useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredData.length / pagination.pageSize))
+    if (pagination.pageIndex > totalPages - 1) {
+      setPagination((prev) => ({ ...prev, pageIndex: totalPages - 1 }))
+    }
+  }, [filteredData.length, pagination.pageSize, pagination.pageIndex])
 
 
 
@@ -375,11 +382,11 @@ export function DataTable<TData, TValue>({
 
       {/* Pagination */}
       {showPagination && (
-        <div className="flex items-center justify-between py-4">
-          <div className="text-sm text-muted-foreground">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} ({table.getFilteredRowModel().rows.length} total)
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-4">
+          <div className="text-sm text-muted-foreground order-2 sm:order-1">
+            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} ({filteredData.length} total)
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 order-1 sm:order-2 w-full sm:w-auto">
             <Button
               variant="outline"
               size="sm"
@@ -390,7 +397,7 @@ export function DataTable<TData, TValue>({
             </Button>
             
             {/* Page Numbers */}
-            <div className="flex items-center gap-1">
+            <div className="hidden sm:flex items-center gap-1 max-w-full overflow-x-auto">
               {Array.from(
                 { length: Math.min(5, table.getPageCount()) },
                 (_, i) => {
@@ -425,6 +432,10 @@ export function DataTable<TData, TValue>({
                 }
               )}
             </div>
+            {/* Compact current page indicator for mobile */}
+            <span className="sm:hidden text-sm text-muted-foreground">
+              {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+            </span>
 
             <Button
               variant="outline"
