@@ -4,41 +4,30 @@ import Link from "next/link";
 import { Command } from "lucide-react";
 
 import { SignUp } from "@/components/form/signup-form";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function SignUpPage() {
   return (
-    <div className="flex h-dvh">
-      <div className="bg-background flex w-full items-center justify-center p-8 lg:w-2/3">
-        <div className="w-full max-w-md space-y-10 py-24 lg:py-32">
-          <div className="space-y-4 text-center">
-            <div className="text-2xl font-semibold tracking-tight">Create Account</div>
-            <div className="text-muted-foreground mx-auto max-w-xl text-sm">
-              Enter your information to create your account
+    <div className="flex h-dvh w-full items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Command className="h-6 w-6" />
             </div>
           </div>
-          <div className="space-y-4">
-            <SignUp />
-            <p className="text-muted-foreground text-center text-xs">
-              Already have an account?{" "}
-              <Link href="/auth/login" className="text-primary">
-                Login
-              </Link>
-            </p>
+          <CardTitle className="text-2xl font-bold">Create Your Account</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <SignUp />
+          <div className="text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link href="/auth/login" className="font-medium text-primary hover:underline">
+              Login
+            </Link>
           </div>
-        </div>
-      </div>
-
-      <div className="bg-primary hidden lg:block lg:w-1/3">
-        <div className="flex h-full flex-col items-center justify-center p-12 text-center">
-          <div className="space-y-6">
-            <Command className="text-primary-foreground mx-auto size-12" />
-            <div className="space-y-2">
-              <h1 className="text-primary-foreground text-5xl font-light">Welcome</h1>
-              <p className="text-primary-foreground/80 text-xl">Join us today</p>
-            </div>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

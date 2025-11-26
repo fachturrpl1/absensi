@@ -276,10 +276,10 @@ export function MemberGridCards({ members, onView, onEdit, onDelete }: MemberGri
         <Select value={filterDepartment} onValueChange={setFilterDepartment}>
           <SelectTrigger className="w-full md:w-[200px]">
             <Users className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Department" />
+            <SelectValue placeholder="Group" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Departments</SelectItem>
+            <SelectItem value="all">All Groups</SelectItem>
             {departments.map((dept) => (
               <SelectItem key={dept} value={dept}>
                 {dept}

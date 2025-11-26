@@ -283,6 +283,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4">
             {/* Date Filter + Search + View Toggle Row */}
+<<<<<<< HEAD
             <div className="flex flex-col gap-3">
               <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
                 <div className="flex flex-1 flex-wrap items-center gap-2">
@@ -290,6 +291,24 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                   <DateFilterBar 
                     dateRange={dateRange} 
                     onDateRangeChange={setDateRange}
+=======
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-1 flex-wrap items-center gap-2">
+                {/* Date Filter */}
+                <DateFilterBar 
+                  dateRange={dateRange} 
+                  onDateRangeChange={setDateRange}
+                />
+                
+                {/* Search */}
+                <div className="relative flex-1 min-w-[250px] max-w-sm">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name or group..."
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    className="pl-9 pr-20"
+>>>>>>> e2ad349239a82ecd884cd3bbab559a15c3d692ea
                   />
                   
                   {/* Search */}
@@ -344,11 +363,16 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
               </Select>
 
               <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+<<<<<<< HEAD
                 <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Department" />
+=======
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Group" />
+>>>>>>> e2ad349239a82ecd884cd3bbab559a15c3d692ea
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
+                  <SelectItem value="all">All Groups</SelectItem>
                   {departments.map((dept) => (
                     <SelectItem key={dept} value={dept}>
                       {dept}

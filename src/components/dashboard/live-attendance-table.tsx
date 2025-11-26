@@ -315,7 +315,7 @@ export function LiveAttendanceTable({
                   <TableRow className="bg-muted/50">
                     <TableHead className="w-10"></TableHead>
                     <TableHead>Member</TableHead>
-                    <TableHead>Department</TableHead>
+                    <TableHead>Group</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Check In</TableHead>
                     <TableHead>Work Hours</TableHead>

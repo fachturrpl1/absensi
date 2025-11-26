@@ -261,9 +261,8 @@ export default function MembersPage() {
             "No User"
           : "No User"
         return (
-          <div className="flex gap-2 items-center min-w-0">
-            <User className="w-4 h-4 flex-shrink-0" /> 
-            <span className="truncate" title={fullname}>{fullname}</span>
+          <div className="flex gap-2 items-center">
+            <User className="w-4 h-4" /> {fullname}
           </div>
         )
       },
@@ -271,38 +270,24 @@ export default function MembersPage() {
     {
       accessorFn: (row: any) => row.user?.phone || "",
       header: "Phone Number",
-      cell: ({ row }) => {
-        const phone = (row.original as any).user?.phone ?? "No Phone"
-        return (
-          <span className="truncate block" title={phone}>
-            {phone}
-          </span>
-        )
-      },
+      cell: ({ row }) => (row.original as any).user?.phone ?? "No Phone",
     },
     {
       accessorFn: (row: any) => row.groupName || "",
       header: "Group",
-      cell: ({ row }) => {
-        const group = (row.original as any).groupName || "-"
-        return (
-          <span className="truncate block" title={group}>
-            {group}
-          </span>
-        )
-      },
+      cell: ({ row }) => (row.original as any).groupName || "-",
     },
     {
       header: "Role",
       cell: ({ row }) => {
         const role = (row.original as any).role
-        if (!role) return <Badge variant="outline" className="truncate">No Role</Badge>
+        if (!role) return <Badge variant="outline">No Role</Badge>
         
         const isAdmin = role.code === "A001"
         return (
-          <Badge variant={isAdmin ? "default" : "secondary"} className="flex items-center gap-1 w-fit max-w-full" title={role.name}>
-            <Shield className="w-3 h-3 flex-shrink-0" />
-            <span className="truncate">{role.name}</span>
+          <Badge variant={isAdmin ? "default" : "secondary"} className="flex items-center gap-1 w-fit">
+            <Shield className="w-3 h-3" />
+            {role.name}
           </Badge>
         )
       },
@@ -313,14 +298,12 @@ export default function MembersPage() {
       cell: ({ row }) => {
         const active = row.getValue("is_active") as boolean
         return active ? (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white whitespace-nowrap">
-            <Check className="w-3 h-3 mr-1 flex-shrink-0" /> 
-            <span className="truncate">Active</span>
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white">
+            <Check className="w-3 h-3 mr-1" /> Active
           </span>
         ) : (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 text-black whitespace-nowrap">
-            <X className="w-3 h-3 mr-1 flex-shrink-0" /> 
-            <span className="truncate">Inactive</span>
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 text-black">
+            <X className="w-3 h-3 mr-1" /> Inactive
           </span>
         )
       },
@@ -332,22 +315,22 @@ export default function MembersPage() {
         const member = row.original
         
         return (
-          <div className="flex gap-1 justify-end">
+          <div className="flex gap-2">
             <Button
               variant="outline"
               size="icon"
-              className="border-0 cursor-pointer h-8 w-8"
+              className="border-0 cursor-pointer"
               onClick={() => router.push(`/members/edit/${member.id}`)}
             >
-              <Pencil className="h-4 w-4" />
+              <Pencil />
             </Button>
             <Button
               variant="outline"
               size="icon"
-              className="border-0 cursor-pointer h-8 w-8"
+              className="border-0 cursor-pointer"
               onClick={() => router.push(`/members/${member.id}`)}
             >
-              <Eye className="h-4 w-4" />
+              <Eye />
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -383,15 +366,20 @@ export default function MembersPage() {
   ]
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <div className="w-full max-w-6xl mx-auto">
-        <div className="items-center my-7">
-          <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
-            <DialogTrigger asChild className="float-end ml-5">
-              <Button>
-                Invite Member <Plus className="ml-2" />
-              </Button>
-            </DialogTrigger>
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      <div className="w-full max-w-6xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">Members</h1>
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
+              <DialogTrigger asChild>
+                <Button className="w-full sm:w-auto">
+                  Invite Member <Plus className="ml-2" />
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]" aria-describedby="invite-description">
               <DialogHeader>
                 <DialogTitle>Invite New Member</DialogTitle>
@@ -544,9 +532,11 @@ export default function MembersPage() {
                 </form>
               </Form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
+        {/* Table Content */}
         {loading ? (
           <TableSkeleton rows={8} columns={6} />
         ) : members.length === 0 ? (
@@ -571,7 +561,6 @@ export default function MembersPage() {
             columns={columns} 
             data={members}
             isLoading={loading}
-            searchPlaceholder="Search by name, type, reason, or number..."
           />
         )}
       </div>

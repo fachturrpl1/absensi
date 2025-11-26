@@ -9,10 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   BarChart3,
   LayoutDashboard,
-  Settings,
   AlertTriangle,
-  Loader2,
-  RefreshCw,
   PieChart,
   ChevronDown,
   UserCheck,
@@ -20,21 +17,26 @@ import {
   XCircle,
   Users
 } from "lucide-react";
-import Link from "next/link";
 import { toast } from "sonner";
 import { getDashboardStats } from "@/action/dashboard";
-import { useUserStore } from "@/store/user-store";
 import { AttendanceAnalytics } from "@/components/attendance/attendance-analytics";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DateFilterBar, DateFilterState } from "@/components/analytics/date-filter-bar";
 
 export default function AttendanceDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [distChartType, setDistChartType] = useState<'donut' | 'pie' | 'bar'>('donut');
-
-  const { role } = useUserStore();
-  const isAdmin = role === 'A001' || role === 'SA001';
+  
+  // Date filter state
+  const [dateRange, setDateRange] = useState<DateFilterState>(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
+    return { from: today, to: endOfToday, preset: 'today' };
+  });
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -70,30 +72,12 @@ export default function AttendanceDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Attendance Dashboard</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Overview of attendance, lateness, and member activity.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Attendance Dashboard</h1>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Button
-            variant="outline"
-            onClick={loadData}
-            disabled={loading}
-            className="gap-2 w-full sm:w-auto"
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            Refresh
-          </Button>
-          {isAdmin && (
-            <Link href="/attendance/settings">
-              <Button variant="outline" className="gap-2 w-full sm:w-auto">
-                <Settings className="h-4 w-4" />
-                Settings
-              </Button>
-            </Link>
-          )}
-        </div>
+        <DateFilterBar 
+          dateRange={dateRange} 
+          onDateRangeChange={setDateRange}
+        />
       </div>
 
       {/* Error State */}
@@ -118,10 +102,7 @@ export default function AttendanceDashboard() {
               <Skeleton className="h-4 sm:h-5 md:h-6 lg:h-8 w-10 sm:w-12 md:w-16 lg:w-20" />
             ) : (
               <>
-                <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{stats?.todaySummary?.checkedIn || 0}</div>
-                <p className="text-[7px] sm:text-[8px] md:text-[9px] lg:text-[10px] xl:text-xs text-muted-foreground mt-0.5 leading-tight">
-                  {stats?.todaySummary?.attendanceRate || 0}% active
-                </p>
+                <div className="text-2xl font-bold">{stats?.todaySummary?.checkedIn || 0}</div>
               </>
             )}
           </CardContent>
@@ -136,10 +117,7 @@ export default function AttendanceDashboard() {
               <Skeleton className="h-4 sm:h-5 md:h-6 lg:h-8 w-10 sm:w-12 md:w-16 lg:w-20" />
             ) : (
               <>
-                <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{stats?.todaySummary?.late || 0}</div>
-                <p className="text-[7px] sm:text-[8px] md:text-[9px] lg:text-[10px] xl:text-xs text-muted-foreground mt-0.5 leading-tight">
-                  Members late
-                </p>
+                <div className="text-2xl font-bold">{stats?.todaySummary?.late || 0}</div>
               </>
             )}
           </CardContent>
@@ -154,10 +132,7 @@ export default function AttendanceDashboard() {
               <Skeleton className="h-4 sm:h-5 md:h-6 lg:h-8 w-10 sm:w-12 md:w-16 lg:w-20" />
             ) : (
               <>
-                <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{stats?.todaySummary?.absent || 0}</div>
-                <p className="text-[7px] sm:text-[8px] md:text-[9px] lg:text-[10px] xl:text-xs text-muted-foreground mt-0.5 leading-tight">
-                  Members absent
-                </p>
+                <div className="text-2xl font-bold">{stats?.todaySummary?.absent || 0}</div>
               </>
             )}
           </CardContent>
@@ -172,10 +147,7 @@ export default function AttendanceDashboard() {
               <Skeleton className="h-4 sm:h-5 md:h-6 lg:h-8 w-10 sm:w-12 md:w-16 lg:w-20" />
             ) : (
               <>
-                <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{stats?.totalMembers || 0}</div>
-                <p className="text-[7px] sm:text-[8px] md:text-[9px] lg:text-[10px] xl:text-xs text-muted-foreground mt-0.5 leading-tight">
-                  {stats?.activeMembers?.currentMonth || 0} active
-                </p>
+                <div className="text-2xl font-bold">{stats?.totalMembers || 0}</div>
               </>
             )}
           </CardContent>

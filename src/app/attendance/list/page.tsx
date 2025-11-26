@@ -10,10 +10,7 @@ export default async function AttendancePage() {
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Attendance</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Manage and view all attendance records.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
         </div>
         
         <div className="flex items-center gap-2">
