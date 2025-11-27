@@ -18,6 +18,7 @@ import {
   CalendarDays,
   Plus,
   ListChecks,
+  Cpu,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -94,6 +95,7 @@ const getSidebarGroups = (): NavGroup[] => [
           { title: 'Dashboard', url: '/attendance', icon: BarChart3 },
           { title: 'Attendance List', url: '/attendance/list', icon: ListChecks },
           { title: 'Locations', url: '/attendance/locations', icon: MapPin },
+          { title: 'Devices', url: '/attendance-devices', icon: Cpu },
         ],
       },
       {
