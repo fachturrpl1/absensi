@@ -93,7 +93,11 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   // Fetch data using Server Action with pagination
   const fetchData = useCallback(async () => {
+<<<<<<< HEAD
     setLoading(true);
+=======
+    setLoading(true); 
+>>>>>>> 8b1a5636a0d7dfb476a9f201f2268f11b8fc4e3d
     try {
       const [listResult] = await Promise.all([
         getAllAttendance({

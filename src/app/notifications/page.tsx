@@ -87,7 +87,7 @@ export default function NotificationsPage() {
     const transformedNotifications: NotificationItem[] = apiNotifications.map((apiNotif, index) => {
       const relativeTime = formatRelativeTime(apiNotif.timestamp);
       
-      let sender = "System";
+      const sender = "System";
       let subject = "";
       let snippet = "";
       let category: NotificationCategory = "attendance";
