@@ -1,10 +1,9 @@
 "use client"
 
 import React from "react"
-import { ColumnDef } from "@tanstack/react-table"
-import { DataTable } from "@/components/data-table"
+import { GroupsTable } from "@/components/groups-table"
 import { Button } from "@/components/ui/button"
-import { Trash, Pencil, Plus, Group as GroupIcon } from "lucide-react"
+import { Plus, Group as GroupIcon } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -38,19 +37,7 @@ import z from "zod"
 
 import { IGroup } from "@/interface"
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import {
   createGroup,
-  deleteGroup,
   getAllGroups,
   updateGroup,
 } from "@/action/group"
@@ -186,19 +173,6 @@ export default function GroupsPage() {
     }
   }
 
-  const handleDelete = async (scheduleId: string | number) => {
-    try {
-      setLoading(true)
-      const response = await deleteGroup(scheduleId)
-      if (!response.success) throw new Error(response.message)
-      toast.success('Group deleted successfully')
-      fetchGroups()
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : 'Unknown error')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleDialogOpenChange = (open: boolean) => {
     setIsModalOpen(open)
@@ -214,87 +188,22 @@ export default function GroupsPage() {
     }
   }
 
-  // --- definisi kolom ---
-  const columns: ColumnDef<IGroup>[] = [
-    { accessorKey: "code", header: "Code" },
-    { accessorKey: "name", header: "Name" },
-    { accessorKey: "description", header: "Description" },
-    {
-      id: "actions",
-      header: 'Actions',
-      cell: ({ row }) => {
-        const ws = row.original
-        return (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="border-0 cursor-pointer"
-              onClick={() => {
-                setEditingDetail(ws)
-                form.reset(ws)
-                setIsModalOpen(true)
-              }}
-            >
-              <Pencil />
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="text-red-500 border-0 cursor-pointer"
-                >
-                  <Trash />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Group</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete this group? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={async () => {
-                      await handleDelete(ws.id)
-                    }}
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        )
-      },
-    },
-  ]
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <div className="w-full max-w-6xl mx-auto">
-        <div className="items-center my-7">
-          <Dialog open={isModalOpen} onOpenChange={handleDialogOpenChange}>
-            <DialogTrigger asChild className="float-end ml-5">
-              <Button
-                onClick={() => {
-                  setEditingDetail(null)
-                  form.reset({
-                    organization_id: organizationId || "",
-                    code: "",
-                    name: "",
-                    description: "",
-                    is_active: true,
-                  })
-                  setIsModalOpen(true)
-                }}
-              >
-                Add Group <Plus className="ml-2" />
-              </Button>
-            </DialogTrigger>
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
+      <div className="w-full space-y-6 min-w-0">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">Groups</h1>
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Dialog open={isModalOpen} onOpenChange={handleDialogOpenChange}>
+              <DialogTrigger asChild>
+                <Button className="w-full sm:w-auto">
+                  Add Group <Plus className="ml-2" />
+                </Button>
+              </DialogTrigger>
             <DialogContent aria-describedby={undefined}>
               <DialogHeader>
                 <DialogTitle>
@@ -410,8 +319,11 @@ export default function GroupsPage() {
                 </form>
               </Form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
+
+        {/* Table Content */}
         {loading ? (
           <TableSkeleton rows={6} columns={4} />
         ) : groups.length === 0 ? (
@@ -432,7 +344,16 @@ export default function GroupsPage() {
             </Empty>
           </div>
         ) : (
-          <DataTable columns={columns} data={groups} />
+          <GroupsTable 
+            groups={groups}
+            isLoading={loading}
+            onDelete={fetchGroups}
+            onEdit={(group) => {
+              setEditingDetail(group)
+              form.reset(group)
+              setIsModalOpen(true)
+            }}
+          />
         )}
       </div>
     </div>

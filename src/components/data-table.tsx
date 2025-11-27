@@ -392,23 +392,12 @@ export function DataTable<TData, TValue>({
                     data-state={row.getIsSelected() && "selected"}
                   >
                     {row.getVisibleCells().map((cell) => {
-                      const isMembersColumn = typeof cell.column.columnDef.header === 'string' && 
-                                            cell.column.columnDef.header === 'Members';
-                      
                       return (
                         <TableCell 
                           key={cell.id} 
-                          className={cn(
-                            "px-3 py-3 whitespace-nowrap",
-                            isMembersColumn ? "text-left" : "text-center"
-                          )}
+                          className="px-3 py-3 whitespace-nowrap"
                         >
-                          <div className={cn(
-                            "flex items-center gap-1",
-                            isMembersColumn ? "justify-start" : "justify-center"
-                          )}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </div>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       )
                     })}

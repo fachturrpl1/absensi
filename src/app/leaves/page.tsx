@@ -487,7 +487,7 @@ export default function LeavesPage() {
                       }
                     </div>
                     <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs xl:text-sm font-medium text-muted-foreground leading-tight truncate">
-                      {isAdmin ? 'Total Requests' : 'Leave Balance'}
+                      {isAdmin ? 'Request' : 'Balance'}
                     </p>
                   </>
                 )}
@@ -667,7 +667,7 @@ export default function LeavesPage() {
           <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2 w-full">
             {/* Status Distribution Chart */}
             <Card className="hover:shadow-md transition-shadow w-full min-w-0 overflow-hidden">
-              <CardHeader className="pb-2 sm:pb-3 md:pb-4 px-2 sm:px-3 md:px-4 lg:px-6 pt-2 sm:pt-3 md:pt-4 lg:pt-6">
+              <CardHeader className="pb-3 sm:pb-4 md:pb-5 px-3 sm:px-4 md:px-5 lg:px-6 pt-3 sm:pt-4 md:pt-5 lg:pt-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
                   <div className="min-w-0 flex-1">
                     <CardTitle className="text-sm sm:text-base md:text-lg truncate">Request Status Distribution</CardTitle>
@@ -698,7 +698,7 @@ export default function LeavesPage() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="px-2 sm:px-3 md:px-4 lg:px-6 pb-2 sm:pb-3 md:pb-4 lg:pb-6 w-full min-w-0">
+              <CardContent className="px-3 sm:px-4 md:px-5 lg:px-6 pb-4 sm:pb-5 md:pb-6 lg:pb-8 w-full min-w-0 h-80 sm:h-96 md:h-[420px]">
                 <LeaveAnalytics 
                   requests={isAdmin ? allRequests : requests}
                   type="status"
@@ -710,7 +710,7 @@ export default function LeavesPage() {
 
             {/* Monthly Trend Chart */}
             <Card className="hover:shadow-md transition-shadow w-full min-w-0 overflow-hidden">
-              <CardHeader className="pb-2 sm:pb-3 md:pb-4 px-2 sm:px-3 md:px-4 lg:px-6 pt-2 sm:pt-3 md:pt-4 lg:pt-6">
+              <CardHeader className="pb-3 sm:pb-4 md:pb-5 px-3 sm:px-4 md:px-5 lg:px-6 pt-3 sm:pt-4 md:pt-5 lg:pt-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
                   <div className="min-w-0 flex-1">
                     <CardTitle className="text-sm sm:text-base md:text-lg truncate">Leave Trend</CardTitle>
@@ -737,7 +737,7 @@ export default function LeavesPage() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="px-2 sm:px-3 md:px-4 lg:px-6 pb-2 sm:pb-3 md:pb-4 lg:pb-6 w-full min-w-0">
+              <CardContent className="px-3 sm:px-4 md:px-5 lg:px-6 pb-4 sm:pb-5 md:pb-6 lg:pb-8 w-full min-w-0 h-80 sm:h-96 md:h-[420px]">
                 <LeaveAnalytics 
                   requests={isAdmin ? allRequests : requests}
                   type="monthly"

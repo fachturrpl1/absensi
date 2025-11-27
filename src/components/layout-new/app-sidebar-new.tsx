@@ -71,30 +71,13 @@ const getSidebarGroups = (): NavGroup[] => [
         icon: LayoutDashboard,
       },
       {
-        title: 'Analytics',
-        url: '/analytics',
-        icon: BarChart3,
-      },
-    ],
-  },
-  {
-    items: [
-      {
-        title: 'Organization',
-        icon: Users,
-        subItems: [
-          { title: 'Members', url: '/members', icon: Users },
-          { title: 'Groups', url: '/group', icon: Building2 },
-          { title: 'Positions', url: '/position', icon: Briefcase },
-        ],
-      },
-      {
         title: 'Attendance',
         icon: ClipboardList,
         subItems: [
           { title: 'Dashboard', url: '/attendance', icon: BarChart3 },
           { title: 'Attendance List', url: '/attendance/list', icon: ListChecks },
           { title: 'Locations', url: '/attendance/locations', icon: MapPin },
+          { title: 'Analytics', url: '/analytics', icon: BarChart3 },
         ],
       },
       {
@@ -112,6 +95,15 @@ const getSidebarGroups = (): NavGroup[] => [
           { title: 'Dashboard', url: '/leaves', icon: BarChart3 },
           { title: 'New Request', url: '/leaves/new', icon: Plus },
           { title: 'Manage Types', url: '/leaves/types', icon: ListChecks, requiresAdmin: true },
+        ],
+      },
+      {
+        title: 'Organization',
+        icon: Users,
+        subItems: [
+          { title: 'Members', url: '/members', icon: Users },
+          { title: 'Groups', url: '/group', icon: Building2 },
+          { title: 'Positions', url: '/position', icon: Briefcase },
         ],
       },
       {

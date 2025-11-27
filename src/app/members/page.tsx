@@ -2,8 +2,7 @@
 
 import React from "react"
 import { useSearchParams } from "next/navigation"
-import { ColumnDef } from "@tanstack/react-table"
-import { DataTable } from "@/components/data-table"
+import { MembersTable } from "@/components/members-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Trash, Pencil, Eye, User, Shield, Check, X, Mail, Plus } from "lucide-react"
@@ -234,152 +233,6 @@ export default function MembersPage() {
     }
   }
 
-  const columns: ColumnDef<IOrganization_member>[] = [
-    {
-      id: "userFullName",
-      accessorFn: (row: any) => {
-        const user = row.user
-        const fullname = user
-          ? [user.first_name, user.middle_name, user.last_name]
-              .filter((part: any) => part && part.trim() !== "")
-              .join(" ") ||
-            user.display_name ||
-            user.email ||
-            "No User"
-          : "No User"
-        return fullname
-      },
-      header: "Members",
-      cell: ({ row }) => {
-        const user = (row.original as any).user
-        const fullname = user
-          ? [user.first_name, user.middle_name, user.last_name]
-              .filter((part: any) => part && part.trim() !== "")
-              .join(" ") ||
-            user.display_name ||
-            user.email ||
-            "No User"
-          : "No User"
-        return (
-          <div className="flex gap-2 items-center">
-            <User className="w-4 h-4" /> {fullname}
-          </div>
-        )
-      },
-    },
-    {
-      accessorFn: (row: any) => row.user?.phone || "",
-      header: "Phone Number",
-      cell: ({ row }) => (
-        <div className="text-center flex items-center justify-center min-h-[32px]">
-          {(row.original as any).user?.phone ?? "No Phone"}
-        </div>
-      ),
-    },
-    {
-      accessorFn: (row: any) => row.groupName || "",
-      header: "Group",
-      cell: ({ row }) => (
-        <div className="text-center flex items-center justify-center min-h-[32px]">
-          {(row.original as any).groupName || "-"}
-        </div>
-      ),
-    },
-    {
-      header: "Role",
-      cell: ({ row }) => {
-        const role = (row.original as any).role
-        return (
-          <div className="text-center flex items-center justify-center min-h-[32px]">
-            {role ? (
-              <Badge variant={role.code === "A001" ? "default" : "secondary"} className="flex items-center gap-1 w-fit">
-                <Shield className="w-3 h-3" />
-                {role.name}
-              </Badge>
-            ) : (
-              <Badge variant="outline">No Role</Badge>
-            )}
-          </div>
-        )
-      },
-    },
-    {
-      accessorKey: "is_active",
-      header: "Status",
-      cell: ({ row }) => {
-        const active = row.getValue("is_active") as boolean
-        return (
-          <div className="text-center flex items-center justify-center min-h-[32px]">
-            {active ? (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white">
-                <Check className="w-3 h-3 mr-1" /> Active
-              </span>
-            ) : (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 text-black">
-                <X className="w-3 h-3 mr-1" /> Inactive
-              </span>
-            )}
-          </div>
-        )
-      },
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const member = row.original
-        
-        return (
-          <div className="flex gap-2 justify-center items-center min-h-[32px]">
-            <Button
-              variant="outline"
-              size="icon"
-              className="border-0 cursor-pointer"
-              onClick={() => router.push(`/members/edit/${member.id}`)}
-            >
-              <Pencil />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="border-0 cursor-pointer"
-              onClick={() => router.push(`/members/${member.id}`)}
-            >
-              <Eye />
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="text-red-500 border-0 cursor-pointer"
-                >
-                  <Trash />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Member</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete this member? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => handleDelete(member.id)}
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        )
-      },
-    },
-  ]
-
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
       <div className="w-full space-y-6 min-w-0">
@@ -572,10 +425,10 @@ export default function MembersPage() {
             </Empty>
           </div>
         ) : (
-          <DataTable 
-            columns={columns} 
-            data={members}
+          <MembersTable 
+            members={members}
             isLoading={loading}
+            onDelete={fetchMembers}
           />
         )}
       </div>

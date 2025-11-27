@@ -1,10 +1,9 @@
 "use client"
 
 import React from "react"
-import { ColumnDef } from "@tanstack/react-table"
-import { DataTable } from "@/components/data-table"
+import { PositionsTable } from "@/components/positions-table"
 import { Button } from "@/components/ui/button"
-import { Trash, Pencil, Plus, Briefcase } from "lucide-react"
+import { Plus, Briefcase } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -54,17 +53,6 @@ import {
 import { getAllOrganization } from "@/action/organization"
 import { createClient } from "@/utils/supabase/client"
 import { Can } from "@/components/can"
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 
 import { logger } from '@/lib/logger';
 const positionSchema = z.object({
@@ -225,91 +213,22 @@ export default function PositionsPage() {
         }
     }
 
-    // --- definisi kolom ---
-    const columns: ColumnDef<IPositions>[] = [
-        { accessorKey: "code", header: "Code" },
-        { accessorKey: "title", header: "Position Name" },
-        { accessorKey: "description", header: "Description" },
-        { accessorKey: "level", header: "Level" },
-        {
-            id: "actions",
-            header: "Actions",
-            cell: ({ row }) => {
-                const ws = row.original
-                return (
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="border-0 cursor-pointer"
-                            onClick={() => {
-                                setEditingDetail(ws)
-                                form.reset(ws)
-                                setOpen(true)
-                            }}
-                        >
-                            <Pencil />
-                        </Button>
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="text-red-500 border-0 cursor-pointer"
-                                >
-                                    <Trash />
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Position</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Are you sure you want to delete this position?
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                        onClick={async () => {
-                                            if (ws.id) {
-                                                await handleDelete(ws.id)
-                                            }
-                                        }}
-                                    >
-                                        Delete
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </div>
-                )
-            },
-        },
-    ]
 
     return (
-        <div className="flex flex-1 flex-col gap-4">
-            <div className="w-full max-w-6xl mx-auto">
-                <div className="items-center my-7">
-                    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-                            <DialogTrigger asChild className="float-end  ml-5">
-                            <Button
-                                onClick={() => {
-                                    setEditingDetail(null)
-                                    form.reset({
-                                        organization_id: organizationId || "",
-                                        code: "",
-                                        title: "",
-                                        description: "",
-                                        level: "",
-                                        is_active: true,
-                                    })
-                                    setOpen(true)
-                                }}
-                            >
-                                Add Position <Plus className="ml-2" />
-                            </Button>
-                        </DialogTrigger>
+        <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
+            <div className="w-full space-y-6 min-w-0">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="space-y-2">
+                        <h1 className="text-3xl font-bold tracking-tight">Positions</h1>
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+                            <DialogTrigger asChild>
+                                <Button className="w-full sm:w-auto">
+                                    Add Position <Plus className="ml-2" />
+                                </Button>
+                            </DialogTrigger>
                         <DialogContent aria-describedby={undefined}>
                             <DialogHeader>
                                 <DialogTitle>
@@ -437,8 +356,11 @@ export default function PositionsPage() {
                                 </form>
                             </Form>
                         </DialogContent>
-                    </Dialog>
+                        </Dialog>
+                    </div>
                 </div>
+
+                {/* Table Content */}
                 {loading ? (
                     <TableSkeleton rows={6} columns={5} />
                 ) : positions.length === 0 ? (
@@ -459,7 +381,16 @@ export default function PositionsPage() {
                         </Empty>
                     </div>
                 ) : (
-                    <DataTable columns={columns} data={positions} />
+                    <PositionsTable 
+                        positions={positions}
+                        isLoading={loading}
+                        onDelete={fetchPositions}
+                        onEdit={(position) => {
+                            setEditingDetail(position)
+                            form.reset(position)
+                            setOpen(true)
+                        }}
+                    />
                 )}
             </div>
         </div>
