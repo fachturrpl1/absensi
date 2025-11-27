@@ -33,7 +33,6 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') || '50')
 
     const supabase = await createClient()
-    const today = new Date().toISOString().split('T')[0]
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
     // Fetch all notification types in parallel

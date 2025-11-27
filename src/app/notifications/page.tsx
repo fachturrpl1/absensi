@@ -10,9 +10,8 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useNotifications, type NotificationItem as ApiNotificationItem } from "@/hooks/use-notifications";
+import { useNotifications } from "@/hooks/use-notifications";
 
 type NotificationCategory = "attendance" | "leaves" | "schedule";
 type NotificationFilter = "all" | NotificationCategory;

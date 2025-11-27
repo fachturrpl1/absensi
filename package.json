@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "test": "vitest",
-    "dev": "next dev --turbopack --port 3000",
+    "dev": "next dev --turbopack --port 3001",
     "dev:network": "next dev --turbopack --hostname 0.0.0.0",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3001",
     "start:network": "next start --hostname 0.0.0.0",
     "lint": "eslint",
     "analyze": "ANALYZE=true next build",
