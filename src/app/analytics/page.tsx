@@ -392,7 +392,9 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-green-600">{metrics?.attendanceRate.toFixed(1) || '0.0'}%</div>
-              <Progress value={metrics?.attendanceRate || 0} className="mt-2 h-2" />
+              <div className="mt-2 h-2 bg-green-200 rounded-full overflow-hidden">
+                <div className="h-full bg-green-600" style={{width: `${Math.min(100, metrics?.attendanceRate || 0)}%`}} />
+              </div>
               <p className="text-xs text-muted-foreground mt-2">
                 {metrics ? `${metrics.presentCount + metrics.lateCount} of ${metrics.total} attended` : 'No data available'}
               </p>
@@ -408,7 +410,9 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-blue-600">{metrics?.punctualityRate.toFixed(1) || '0.0'}%</div>
-              <Progress value={metrics?.punctualityRate || 0} className="mt-2 h-2" />
+              <div className="mt-2 h-2 bg-blue-200 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-600" style={{width: `${Math.min(100, metrics?.punctualityRate || 0)}%`}} />
+              </div>
               <p className="text-xs text-muted-foreground mt-2">
                 {metrics ? `${metrics.presentCount} on-time arrivals` : 'No data available'}
               </p>
@@ -439,7 +443,9 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-red-600">{metrics?.absenteeismRate.toFixed(1) || '0.0'}%</div>
-              <Progress value={metrics?.absenteeismRate || 0} className="mt-2 h-2" />
+              <div className="mt-2 h-2 bg-red-200 rounded-full overflow-hidden">
+                <div className="h-full bg-red-600" style={{width: `${Math.min(100, metrics?.absenteeismRate || 0)}%`}} />
+              </div>
               <p className="text-xs text-muted-foreground mt-2">
                 {metrics ? `${metrics.absentCount} absences recorded` : 'No data available'}
               </p>

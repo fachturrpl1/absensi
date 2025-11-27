@@ -204,121 +204,121 @@ export default function GroupsPage() {
                   Add Group <Plus className="ml-2" />
                 </Button>
               </DialogTrigger>
-            <DialogContent aria-describedby={undefined}>
-              <DialogHeader>
-                <DialogTitle>
-                  {editingDetail ? 'Edit Group' : 'Add Group'}
-                </DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(handleSubmit)}
-                  className="space-y-4"
-                >
-                  {/* Organization field */}
-                  {organizationId ? (
-                    <FormField
-                      control={form.control}
-                      name="organization_id"
-                      render={({ field }) => (
-                        <input
-                          type="hidden"
-                          value={organizationId}
-                          onChange={field.onChange}
-                        />
-                      )}
-                    />
-                  ) : (
-                    <Can permission="view_departments">
+              <DialogContent aria-describedby={undefined}>
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingDetail ? 'Edit Group' : 'Add Group'}
+                  </DialogTitle>
+                </DialogHeader>
+                <Form {...form}>
+                  <form
+                    onSubmit={form.handleSubmit(handleSubmit)}
+                    className="space-y-4"
+                  >
+                    {/* Organization field */}
+                    {organizationId ? (
                       <FormField
                         control={form.control}
                         name="organization_id"
                         render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Organization</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select Organization" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {organizations.map((org) => (
-                                  <SelectItem key={org.id} value={String(org.id)}>
-                                    {org.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
+                          <input
+                            type="hidden"
+                            value={organizationId}
+                            onChange={field.onChange}
+                          />
                         )}
                       />
-                    </Can>
-                  )}
+                    ) : (
+                      <Can permission="view_departments">
+                        <FormField
+                          control={form.control}
+                          name="organization_id"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Organization</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select Organization" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {organizations.map((org) => (
+                                    <SelectItem key={org.id} value={String(org.id)}>
+                                      {org.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </Can>
+                    )}
 
-                  <FormField
-                    control={form.control}
-                    name="code"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Code</FormLabel>
-                        <FormControl>
-                          <Input type="text" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Group Name</FormLabel>
-                        <FormControl>
-                          <Input type="text" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Input type="text" {...field ?? ""} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="is_active"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Active</FormLabel>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full">
-                    {editingDetail ? 'Update' : 'Create'}
-                  </Button>
-                </form>
-              </Form>
-            </DialogContent>
+                    <FormField
+                      control={form.control}
+                      name="code"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Code</FormLabel>
+                          <FormControl>
+                            <Input type="text" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Group Name</FormLabel>
+                          <FormControl>
+                            <Input type="text" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Input type="text" {...field ?? ""} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="is_active"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Active</FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full">
+                      {editingDetail ? 'Update' : 'Create'}
+                    </Button>
+                  </form>
+                </Form>
+              </DialogContent>
             </Dialog>
           </div>
         </div>
