@@ -49,7 +49,7 @@ const editDeviceSchema = z.object({
     deviceName: z.string().min(1, "Device name is required"),
     location: z.string().optional(),
 })
-
+//tes
 type EditDeviceForm = z.infer<typeof editDeviceSchema>
 
 export default function AttendanceDevicesPage() {
