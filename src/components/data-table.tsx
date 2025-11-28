@@ -48,6 +48,10 @@ type DataTableProps<TData, TValue> = {
   initialSorting?: SortingState
   getRowKey?: (row: TData, index: number) => string
   searchPlaceholder?: string
+  pageIndex?: number
+  onPageIndexChange?: (pageIndex: number) => void
+  pageSize?: number
+  onPageSizeChange?: (pageSize: number) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -61,6 +65,10 @@ export function DataTable<TData, TValue>({
   initialSorting,
   getRowKey,
   searchPlaceholder = "Search members...",
+  pageIndex: externalPageIndex,
+  onPageIndexChange,
+  pageSize: externalPageSize,
+  onPageSizeChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting ?? [])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -68,8 +76,34 @@ export function DataTable<TData, TValue>({
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [sortOrder, setSortOrder] = React.useState("newest")
-  const [pageSize, setPageSize] = React.useState("8")
-  const [pageIndex, setPageIndex] = React.useState(0)
+  const [pageSize, setPageSize] = React.useState(String(externalPageSize ?? 8))
+  const [pageIndex, setPageIndex] = React.useState(externalPageIndex ?? 0)
+
+  // Sync with external pageIndex
+  React.useEffect(() => {
+    if (externalPageIndex !== undefined) {
+      setPageIndex(externalPageIndex)
+    }
+  }, [externalPageIndex])
+
+  // Sync with external pageSize
+  React.useEffect(() => {
+    if (externalPageSize !== undefined) {
+      setPageSize(String(externalPageSize))
+    }
+  }, [externalPageSize])
+
+  // Notify parent when pageIndex changes
+  const handlePageIndexChange = (newPageIndex: number) => {
+    setPageIndex(newPageIndex)
+    onPageIndexChange?.(newPageIndex)
+  }
+
+  // Notify parent when pageSize changes
+  const handlePageSizeChange = (newPageSize: string) => {
+    setPageSize(newPageSize)
+    onPageSizeChange?.(parseInt(newPageSize))
+  }
 
   // Filter and sort data
   const filteredData = React.useMemo(() => {
@@ -171,13 +205,8 @@ export function DataTable<TData, TValue>({
   // Update page size when changed
   React.useEffect(() => {
     table.setPageSize(parseInt(pageSize))
-    setPageIndex(0)
   }, [pageSize, table])
 
-  // Handle page index changes
-  const handlePageChange = (newPageIndex: number) => {
-    setPageIndex(Math.max(0, Math.min(newPageIndex, table.getPageCount() - 1)))
-  }
 
   return (
     <div className="space-y-4">
@@ -229,7 +258,7 @@ export function DataTable<TData, TValue>({
               {/* Show Items */}
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground whitespace-nowrap">Show:</span>
-                <Select value={pageSize} onValueChange={setPageSize}>
+                <Select value={pageSize} onValueChange={handlePageSizeChange}>
                   <SelectTrigger className="w-[70px]">
                     <SelectValue />
                   </SelectTrigger>
@@ -377,7 +406,7 @@ export function DataTable<TData, TValue>({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handlePageChange(0)}
+              onClick={() => handlePageIndexChange(0)}
               disabled={pageIndex === 0 || isLoading}
               className="h-8 w-8 p-0"
               title="First page"
@@ -387,7 +416,7 @@ export function DataTable<TData, TValue>({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handlePageChange(pageIndex - 1)}
+              onClick={() => handlePageIndexChange(pageIndex - 1)}
               disabled={pageIndex === 0 || isLoading}
               className="h-8 w-8 p-0"
               title="Previous page"
@@ -404,7 +433,7 @@ export function DataTable<TData, TValue>({
               value={pageIndex + 1}
               onChange={(e) => {
                 const page = e.target.value ? Number(e.target.value) - 1 : 0;
-                handlePageChange(page);
+                handlePageIndexChange(page);
               }}
               className="w-10 sm:w-12 h-8 px-2 border border-gray-300 rounded text-xs sm:text-sm text-center mx-1 sm:mx-2"
               disabled={isLoading || table.getPageCount() === 0}
@@ -415,7 +444,7 @@ export function DataTable<TData, TValue>({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handlePageChange(pageIndex + 1)}
+              onClick={() => handlePageIndexChange(pageIndex + 1)}
               disabled={pageIndex >= table.getPageCount() - 1 || isLoading}
               className="h-8 w-8 p-0"
               title="Next page"
@@ -425,7 +454,7 @@ export function DataTable<TData, TValue>({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handlePageChange(table.getPageCount() - 1)}
+              onClick={() => handlePageIndexChange(table.getPageCount() - 1)}
               disabled={pageIndex >= table.getPageCount() - 1 || isLoading}
               className="h-8 w-8 p-0"
               title="Last page"
@@ -442,7 +471,7 @@ export function DataTable<TData, TValue>({
               <select
                 value={pageSize}
                 onChange={(e) => {
-                  setPageSize(e.target.value);
+                  handlePageSizeChange(e.target.value);
                   table.setPageIndex(0);
                 }}
                 className="px-2 py-1 border rounded text-xs sm:text-sm bg-white"

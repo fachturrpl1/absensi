@@ -61,8 +61,8 @@ export default function AttendanceDevicesPage() {
     const [filterStatus, setFilterStatus] = React.useState<string>("active")
     const [filterDeviceType, setFilterDeviceType] = React.useState<string>("")
     const [viewMode, setViewMode] = React.useState<'list' | 'grid'>('list')
-    const [gridPageSize, setGridPageSize] = React.useState<number>(8)
-    const [gridPageIndex, setGridPageIndex] = React.useState<number>(0)
+    const [currentPageIndex, setCurrentPageIndex] = React.useState<number>(0)
+    const [currentPageSize, setCurrentPageSize] = React.useState<number>(8)
     const [editDialogOpen, setEditDialogOpen] = React.useState(false)
     const [selectedDevice, setSelectedDevice] = React.useState<IAttendanceDevice | null>(null)
     const [activateDialogOpen, setActivateDialogOpen] = React.useState(false)
@@ -295,7 +295,10 @@ export default function AttendanceDevicesPage() {
                                 <Button 
                                     variant={viewMode === 'grid' ? 'default' : 'outline'}
                                     size="icon"
-                                    onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+                                    onClick={() => {
+                                        const newMode = viewMode === 'list' ? 'grid' : 'list'
+                                        setViewMode(newMode)
+                                    }}
                                     title={viewMode === 'list' ? 'Switch to grid view' : 'Switch to list view'}
                                 >
                                     <Grid3x3 className="w-4 h-4" />
@@ -366,7 +369,7 @@ export default function AttendanceDevicesPage() {
                             ) : viewMode === 'grid' ? (
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                                        {filteredDevices.slice(gridPageIndex * gridPageSize, (gridPageIndex + 1) * gridPageSize).map((device) => (
+                                        {filteredDevices.slice(currentPageIndex * currentPageSize, (currentPageIndex + 1) * currentPageSize).map((device) => (
                                             <div key={device.id} className="border rounded-lg p-3 hover:shadow-md transition-shadow bg-white">
                                                 <div className="space-y-2">
                                                     <div>
@@ -401,8 +404,8 @@ export default function AttendanceDevicesPage() {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() => setGridPageIndex(0)}
-                                                disabled={gridPageIndex === 0 || loading}
+                                                onClick={() => setCurrentPageIndex(0)}
+                                                disabled={currentPageIndex === 0 || loading}
                                                 className="h-8 w-8 p-0"
                                                 title="First page"
                                             >
@@ -411,8 +414,8 @@ export default function AttendanceDevicesPage() {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() => setGridPageIndex(Math.max(0, gridPageIndex - 1))}
-                                                disabled={gridPageIndex === 0 || loading}
+                                                onClick={() => setCurrentPageIndex(Math.max(0, currentPageIndex - 1))}
+                                                disabled={currentPageIndex === 0 || loading}
                                                 className="h-8 w-8 p-0"
                                                 title="Previous page"
                                             >
@@ -422,21 +425,21 @@ export default function AttendanceDevicesPage() {
                                             <input
                                                 type="number"
                                                 min="1"
-                                                max={Math.ceil(filteredDevices.length / gridPageSize)}
-                                                value={gridPageIndex + 1}
+                                                max={Math.ceil(filteredDevices.length / currentPageSize)}
+                                                value={currentPageIndex + 1}
                                                 onChange={(e) => {
                                                     const page = e.target.value ? Number(e.target.value) - 1 : 0
-                                                    setGridPageIndex(Math.max(0, Math.min(page, Math.ceil(filteredDevices.length / gridPageSize) - 1)))
+                                                    setCurrentPageIndex(Math.max(0, Math.min(page, Math.ceil(filteredDevices.length / currentPageSize) - 1)))
                                                 }}
                                                 className="w-12 h-8 px-2 border rounded text-sm text-center"
                                                 disabled={loading}
                                             />
-                                            <span className="text-sm text-muted-foreground">/ {Math.ceil(filteredDevices.length / gridPageSize)}</span>
+                                            <span className="text-sm text-muted-foreground">/ {Math.ceil(filteredDevices.length / currentPageSize)}</span>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() => setGridPageIndex(Math.min(Math.ceil(filteredDevices.length / gridPageSize) - 1, gridPageIndex + 1))}
-                                                disabled={gridPageIndex >= Math.ceil(filteredDevices.length / gridPageSize) - 1 || loading}
+                                                onClick={() => setCurrentPageIndex(Math.min(Math.ceil(filteredDevices.length / currentPageSize) - 1, currentPageIndex + 1))}
+                                                disabled={currentPageIndex >= Math.ceil(filteredDevices.length / currentPageSize) - 1 || loading}
                                                 className="h-8 w-8 p-0"
                                                 title="Next page"
                                             >
@@ -445,8 +448,8 @@ export default function AttendanceDevicesPage() {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() => setGridPageIndex(Math.ceil(filteredDevices.length / gridPageSize) - 1)}
-                                                disabled={gridPageIndex >= Math.ceil(filteredDevices.length / gridPageSize) - 1 || loading}
+                                                onClick={() => setCurrentPageIndex(Math.ceil(filteredDevices.length / currentPageSize) - 1)}
+                                                disabled={currentPageIndex >= Math.ceil(filteredDevices.length / currentPageSize) - 1 || loading}
                                                 className="h-8 w-8 p-0"
                                                 title="Last page"
                                             >
@@ -455,14 +458,14 @@ export default function AttendanceDevicesPage() {
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <div className="text-sm text-muted-foreground">
-                                                Showing {filteredDevices.length > 0 ? gridPageIndex * gridPageSize + 1 : 0} to {Math.min((gridPageIndex + 1) * gridPageSize, filteredDevices.length)} of {filteredDevices.length} total records
+                                                Showing {filteredDevices.length > 0 ? currentPageIndex * currentPageSize + 1 : 0} to {Math.min((currentPageIndex + 1) * currentPageSize, filteredDevices.length)} of {filteredDevices.length} total records
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <select
-                                                    value={gridPageSize}
+                                                    value={currentPageSize}
                                                     onChange={(e) => {
-                                                        setGridPageSize(Number(e.target.value))
-                                                        setGridPageIndex(0)
+                                                        setCurrentPageSize(Number(e.target.value))
+                                                        setCurrentPageIndex(0)
                                                     }}
                                                     className="px-2 py-1 border rounded text-sm bg-white"
                                                 >
@@ -483,6 +486,10 @@ export default function AttendanceDevicesPage() {
                                     showGlobalFilter={false}
                                     showFilters={false}
                                     showColumnToggle={false}
+                                    pageIndex={currentPageIndex}
+                                    onPageIndexChange={setCurrentPageIndex}
+                                    pageSize={currentPageSize}
+                                    onPageSizeChange={setCurrentPageSize}
                                 />
                             )}
                         </div>
