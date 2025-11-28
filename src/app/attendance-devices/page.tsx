@@ -32,7 +32,6 @@ import { toast } from "sonner"
 import { IAttendanceDevice, IDeviceType } from "@/interface"
 import {
     getOrganizationDevices,
-    deactivateDevice,
     getDeviceTypes,
 } from "@/action/attendance_device"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
@@ -183,19 +182,6 @@ export default function AttendanceDevicesPage() {
         }
     }
 
-    const handleDeactivation = async (deviceId: string) => {
-        try {
-            setLoading(true)
-            const response = await deactivateDevice(deviceId)
-            if (!response.success) throw new Error(response.message)
-            toast.success(response.message || 'Device deactivated successfully')
-            fetchDevices()
-        } catch (error: unknown) {
-            toast.error(error instanceof Error ? error.message : 'Unknown error')
-        } finally {
-            setLoading(false)
-        }
-    }
 
     const deviceColumns: ColumnDef<IAttendanceDevice>[] = [
         { 

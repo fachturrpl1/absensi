@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { Columns3Cog, Loader2, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RotateCcw } from "lucide-react"
+import { Columns3Cog, Loader2, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -349,19 +349,14 @@ export function DataTable<TData, TValue>({
                   key={getRowKey ? getRowKey(row.original, index) : row.id}
                   data-state={row.getIsSelected() && "selected"}
                 >
-                  {row.getVisibleCells().map((cell) => {
-                    const isMembersColumn = typeof cell.column.columnDef.header === 'string' && 
-                                          cell.column.columnDef.header === 'Members';
-                    
-                    return (
-                      <TableCell 
-                        key={cell.id} 
-                        className="px-2 py-3 text-left whitespace-nowrap"
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    )
-                  })}
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell 
+                      key={cell.id} 
+                      className="px-2 py-3 text-left whitespace-nowrap"
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
                 </TableRow>
               ))
             ) : (
