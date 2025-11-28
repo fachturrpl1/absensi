@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { Columns3Cog, Loader2, Search, Filter } from "lucide-react"
+import { Columns3Cog, Loader2, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RotateCcw } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -68,7 +68,8 @@ export function DataTable<TData, TValue>({
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [sortOrder, setSortOrder] = React.useState("newest")
-  const [pageSize, setPageSize] = React.useState("10")
+  const [pageSize, setPageSize] = React.useState("8")
+  const [pageIndex, setPageIndex] = React.useState(0)
 
   // Filter and sort data
   const filteredData = React.useMemo(() => {
@@ -156,7 +157,7 @@ export function DataTable<TData, TValue>({
       columnVisibility,
       rowSelection,
       pagination: {
-        pageIndex: 0,
+        pageIndex: pageIndex,
         pageSize: parseInt(pageSize),
       },
     },
@@ -170,9 +171,13 @@ export function DataTable<TData, TValue>({
   // Update page size when changed
   React.useEffect(() => {
     table.setPageSize(parseInt(pageSize))
+    setPageIndex(0)
   }, [pageSize, table])
 
-
+  // Handle page index changes
+  const handlePageChange = (newPageIndex: number) => {
+    setPageIndex(Math.max(0, Math.min(newPageIndex, table.getPageCount() - 1)))
+  }
 
   return (
     <div className="space-y-4">
@@ -282,7 +287,7 @@ export function DataTable<TData, TValue>({
           </div>
         )}
 
-        <Table className="w-full table-fixed">
+        <Table className="w-full">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -300,13 +305,18 @@ export function DataTable<TData, TValue>({
                       : header.id;
                     
                     switch (headerText) {
-                      case 'Members': return 'w-1/4 min-w-[150px]';
-                      case 'Phone Number': return 'w-1/5 min-w-[120px]';
-                      case 'Group': return 'w-1/6 min-w-[100px]';
-                      case 'Role': return 'w-1/6 min-w-[100px]';
-                      case 'Status': return 'w-1/6 min-w-[80px]';
-                      case 'Actions': return 'w-1/12 min-w-[100px]';
-                      default: return 'w-auto min-w-[80px]';
+                      case 'Device Name': return 'min-w-[150px]';
+                      case 'Serial Number': return 'min-w-[140px]';
+                      case 'Device Type': return 'min-w-[160px]';
+                      case 'Status': return 'min-w-[120px]';
+                      case 'Location': return 'min-w-[140px]';
+                      case 'Created At': return 'min-w-[160px]';
+                      case 'Members': return 'min-w-[150px]';
+                      case 'Phone Number': return 'min-w-[120px]';
+                      case 'Group': return 'min-w-[100px]';
+                      case 'Role': return 'min-w-[100px]';
+                      case 'Actions': return 'min-w-[100px]';
+                      default: return 'min-w-[100px]';
                     }
                   };
 
@@ -315,7 +325,7 @@ export function DataTable<TData, TValue>({
                       <button
                         type="button"
                         className={cn(
-                          "flex w-full items-center justify-center gap-2 text-sm font-medium truncate",
+                          "flex w-full items-center justify-start gap-2 text-sm font-medium truncate",
                           canSort ? "cursor-pointer select-none" : "cursor-default",
                         )}
                         onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
@@ -346,17 +356,9 @@ export function DataTable<TData, TValue>({
                     return (
                       <TableCell 
                         key={cell.id} 
-                        className={cn(
-                          "px-2 py-3 max-w-0",
-                          isMembersColumn ? "text-left" : "text-center"
-                        )}
+                        className="px-2 py-3 text-left whitespace-nowrap"
                       >
-                        <div className={cn(
-                          "min-w-0",
-                          isMembersColumn ? "flex justify-start" : "flex justify-center"
-                        )}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </div>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     )
                   })}
@@ -373,67 +375,90 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination Footer */}
       {showPagination && (
-        <div className="flex items-center justify-between py-4">
-          <div className="text-sm text-muted-foreground">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} ({table.getFilteredRowModel().rows.length} total)
-          </div>
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-gray-50 rounded-md border">
+          <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-nowrap justify-center w-full md:w-auto">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage() || isLoading}
+              onClick={() => handlePageChange(0)}
+              disabled={pageIndex === 0 || isLoading}
+              className="h-8 w-8 p-0"
+              title="First page"
             >
-              Previous
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handlePageChange(pageIndex - 1)}
+              disabled={pageIndex === 0 || isLoading}
+              className="h-8 w-8 p-0"
+              title="Previous page"
+            >
+              <ChevronLeft className="h-4 w-4" />
             </Button>
             
-            {/* Page Numbers */}
-            <div className="flex items-center gap-1">
-              {Array.from(
-                { length: Math.min(5, table.getPageCount()) },
-                (_, i) => {
-                  const currentPage = table.getState().pagination.pageIndex + 1;
-                  const totalPages = table.getPageCount();
-                  
-                  // Calculate which pages to show
-                  let startPage = Math.max(1, currentPage - 2);
-                  const endPage = Math.min(totalPages, startPage + 4);
-                  
-                  // Adjust start if we're near the end
-                  if (endPage - startPage < 4) {
-                    startPage = Math.max(1, endPage - 4);
-                  }
-                  
-                  const pageNumber = startPage + i;
-                  
-                  if (pageNumber > totalPages) return null;
-                  
-                  return (
-                    <Button
-                      key={pageNumber}
-                      size="sm"
-                      variant={currentPage === pageNumber ? "default" : "outline"}
-                      onClick={() => table.setPageIndex(pageNumber - 1)}
-                      className="w-8 h-8 p-0"
-                      disabled={isLoading}
-                    >
-                      {pageNumber}
-                    </Button>
-                  );
-                }
-              )}
-            </div>
-
+            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap ml-1 sm:ml-2">Page</span>
+            
+            <input
+              type="number"
+              min="1"
+              max={table.getPageCount()}
+              value={pageIndex + 1}
+              onChange={(e) => {
+                const page = e.target.value ? Number(e.target.value) - 1 : 0;
+                handlePageChange(page);
+              }}
+              className="w-10 sm:w-12 h-8 px-2 border border-gray-300 rounded text-xs sm:text-sm text-center mx-1 sm:mx-2"
+              disabled={isLoading || table.getPageCount() === 0}
+            />
+            
+            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/ {table.getPageCount()}</span>
+            
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage() || isLoading}
+              onClick={() => handlePageChange(pageIndex + 1)}
+              disabled={pageIndex >= table.getPageCount() - 1 || isLoading}
+              className="h-8 w-8 p-0"
+              title="Next page"
             >
-              Next
+              <ChevronRight className="h-4 w-4" />
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handlePageChange(table.getPageCount() - 1)}
+              disabled={pageIndex >= table.getPageCount() - 1 || isLoading}
+              className="h-8 w-8 p-0"
+              title="Last page"
+            >
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          <div className="flex flex-row items-center justify-center md:justify-end gap-2 md:gap-4 w-full md:w-auto">
+            <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+              Showing {table.getRowModel().rows.length > 0 ? table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1 : 0} to {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)} of {table.getFilteredRowModel().rows.length} total records     
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(e.target.value);
+                  table.setPageIndex(0);
+                }}
+                className="px-2 py-1 border rounded text-xs sm:text-sm bg-white"
+              >
+                <option value="4">4</option>
+                <option value="8">8</option>
+                <option value="10">10</option>
+                <option value="24">24</option>
+                <option value={filteredData.length}>All</option>
+              </select>
+            </div>  
           </div>
         </div>
       )}
