@@ -105,8 +105,8 @@ export default function ActivateDevicePage() {
     return (
         <div className="flex flex-1 flex-col gap-4">
             <div className="w-full">
-                <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div className="bg-white text-black px-6 py-4 rounded-t-lg border-b-2 border-black flex items-center gap-4">
+                <div className="w-full bg-white rounded-lg shadow-sm border border-gray-300">
+                    <div className="bg-white text-black px-6 py-4 rounded-t-lg border-b-2 border-black-300 flex items-center gap-4">
                         <Button
                             variant="ghost"
                             size="sm"

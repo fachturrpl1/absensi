@@ -1,7 +1,6 @@
 "use client"
 
 import React from "react"
-import { useRouter } from "next/navigation"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
@@ -44,6 +43,7 @@ import {
     EmptyMedia,
 } from "@/components/ui/empty"
 import { createClient } from "@/utils/supabase/client"
+import { ActivateDeviceDialog } from "@/components/dialogs/activate-device-dialog"
 
 const editDeviceSchema = z.object({
     deviceName: z.string().min(1, "Device name is required"),
@@ -53,7 +53,6 @@ const editDeviceSchema = z.object({
 type EditDeviceForm = z.infer<typeof editDeviceSchema>
 
 export default function AttendanceDevicesPage() {
-    const router = useRouter()
     const [devices, setDevices] = React.useState<IAttendanceDevice[]>([])
     const [deviceTypes, setDeviceTypes] = React.useState<IDeviceType[]>([])
     const [loading, setLoading] = React.useState<boolean>(true)
@@ -66,6 +65,7 @@ export default function AttendanceDevicesPage() {
     const [gridPageIndex, setGridPageIndex] = React.useState<number>(0)
     const [editDialogOpen, setEditDialogOpen] = React.useState(false)
     const [selectedDevice, setSelectedDevice] = React.useState<IAttendanceDevice | null>(null)
+    const [activateDialogOpen, setActivateDialogOpen] = React.useState(false)
 
     const editForm = useForm<EditDeviceForm>({
         resolver: zodResolver(editDeviceSchema),
@@ -334,7 +334,7 @@ export default function AttendanceDevicesPage() {
                                 </div>
                             </div>
 
-                            <Button onClick={() => router.push('/attendance-devices/activate')} className="w-full sm:w-auto">
+                            <Button onClick={() => setActivateDialogOpen(true)} className="w-full sm:w-auto">
                                 Activate Device <Plus className="ml-2" />
                             </Button>
                         </div>
@@ -355,7 +355,7 @@ export default function AttendanceDevicesPage() {
                                             </EmptyDescription>
                                         </EmptyHeader>
                                         <EmptyContent>
-                                            <Button onClick={() => router.push('/attendance-devices/activate')}>Activate Device</Button>
+                                            <Button onClick={() => setActivateDialogOpen(true)}>Activate Device</Button>
                                         </EmptyContent>
                                     </Empty>
                                 </div>
@@ -557,6 +557,12 @@ export default function AttendanceDevicesPage() {
                     )}
                 </DialogContent>
             </Dialog>
+
+            <ActivateDeviceDialog
+                open={activateDialogOpen}
+                onOpenChange={setActivateDialogOpen}
+                onSuccess={fetchDevices}
+            />
         </div>
     )
 }
