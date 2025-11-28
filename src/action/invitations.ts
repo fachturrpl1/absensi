@@ -6,8 +6,8 @@ import { sendInvitationEmailViaSupabase, sendInvitationEmail } from "@/lib/email
 
 import { logger } from '@/lib/logger';
 // Toggle email service:
-// true = Supabase built-in email (only works for NEW emails)
-// false = Resend (works for all emails, but requires third-party)
+// true  = Supabase built-in email (creates auth user immediately, only NEW emails)
+// false = Custom email + custom accept page (requires RESEND_API_KEY)
 const USE_SUPABASE_EMAIL = true;
 
 /**
@@ -25,6 +25,7 @@ interface CreateInvitationData {
   department_id?: string;
   position_id?: string;
   message?: string;
+  phone?: string;
 }
 
 export async function createInvitation(data: CreateInvitationData) {
@@ -131,6 +132,7 @@ export async function createInvitation(data: CreateInvitationData) {
         department_id: data.department_id || null,
         position_id: data.position_id || null,
         message: data.message || null,
+        phone: data.phone || null,
       })
       .select(
         `
@@ -177,17 +179,32 @@ export async function createInvitation(data: CreateInvitationData) {
           ? `${inviterProfile.first_name || ""} ${inviterProfile.last_name || ""}`.trim()
           : "Someone";
 
-        await sendInvitationEmail({
+        const emailResult = await sendInvitationEmail({
           to: invitation.email,
           organizationName: orgData?.name || "the organization",
           inviterName: inviterName || "Team",
           invitationToken: invitation.invitation_token,
           message: invitation.message || undefined,
         });
+
+        if (!emailResult.success) {
+          logger.warn("Email tidak terkirim:", emailResult.message);
+          // Invitation tetap dibuat, tapi user perlu tahu bahwa email gagal
+          return {
+            success: true,
+            message: `⚠️ Invitation berhasil dibuat, tapi email tidak terkirim: ${emailResult.message}. Pastikan RESEND_API_KEY sudah di-set di .env file. Link invite: ${process.env.NEXT_PUBLIC_APP_URL}/invite/accept/${invitation.invitation_token}`,
+            data: invitation as IMemberInvitation,
+          };
+        }
       }
     } catch (emailError) {
       logger.error("Failed to send invitation email:", emailError);
-      // Don't fail the invitation creation if email fails
+      // Don't fail the invitation creation if email fails, but inform user
+      return {
+        success: true,
+        message: `⚠️ Invitation berhasil dibuat, tapi email gagal terkirim. Pastikan RESEND_API_KEY sudah di-set di .env file. Link invite: ${process.env.NEXT_PUBLIC_APP_URL}/invite/accept/${invitation.invitation_token}`,
+        data: invitation as IMemberInvitation,
+      };
     }
 
     return {
@@ -293,6 +310,8 @@ interface AcceptInvitationData {
 export async function acceptInvitation(data: AcceptInvitationData) {
   try {
     const supabase = await createClient();
+    const { createAdminClient } = await import("@/utils/supabase/admin");
+    const adminSupabase = createAdminClient();
 
     // Get invitation
     const invitationResult = await getInvitationByToken(data.token);
@@ -306,40 +325,102 @@ export async function acceptInvitation(data: AcceptInvitationData) {
 
     const invitation = invitationResult.data;
 
-    // Create user account via Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: invitation.email,
-      password: data.password,
-      options: {
-        data: {
-          first_name: data.first_name,
-          last_name: data.last_name,
-        },
-      },
-    });
+    // Check if user already exists (created by Supabase inviteUserByEmail)
+    const { data: existingUsers } = await adminSupabase.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(
+      (u) => u.email?.toLowerCase() === invitation.email.toLowerCase()
+    );
 
-    if (authError) {
-      return { success: false, message: authError.message, data: null };
-    }
+    let userId: string;
 
-    if (!authData.user) {
-      return { success: false, message: "Failed to create user", data: null };
-    }
+    if (existingUser) {
+      // User already exists (created by Supabase invite) - update password and confirm email
+      const { data: updatedUser, error: updateError } = await adminSupabase.auth.admin.updateUserById(
+        existingUser.id,
+        {
+          password: data.password,
+          email_confirm: true, // Confirm email
+          user_metadata: {
+            first_name: data.first_name,
+            last_name: data.last_name,
+          },
+        }
+      );
 
-    // Create user profile
-    const { error: profileError } = await supabase
-      .from("user_profiles")
-      .insert({
-        id: authData.user.id,
+      if (updateError) {
+        return { success: false, message: updateError.message, data: null };
+      }
+
+      if (!updatedUser.user) {
+        return { success: false, message: "Failed to update user", data: null };
+      }
+
+      userId = updatedUser.user.id;
+    } else {
+      // User doesn't exist - create new account
+      const { data: signUpData, error: authError } = await supabase.auth.signUp({
         email: invitation.email,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        is_active: true,
+        password: data.password,
+        options: {
+          data: {
+            first_name: data.first_name,
+            last_name: data.last_name,
+          },
+        },
       });
 
-    if (profileError) {
-      logger.error("Error creating user profile:", profileError);
-      // Continue anyway, profile might already exist
+      if (authError) {
+        return { success: false, message: authError.message, data: null };
+      }
+
+      if (!signUpData.user) {
+        return { success: false, message: "Failed to create user", data: null };
+      }
+
+      userId = signUpData.user.id;
+    }
+
+    // Get phone from invitation (now stored directly in phone column)
+    const phoneNumber = invitation.phone || null
+
+    // Check if profile already exists
+    const { data: existingProfile } = await supabase
+      .from("user_profiles")
+      .select("id")
+      .eq("id", userId)
+      .maybeSingle()
+
+    if (existingProfile) {
+      // Update existing profile with phone
+      const { error: updateError } = await supabase
+        .from("user_profiles")
+        .update({
+          first_name: data.first_name,
+          last_name: data.last_name,
+          phone: phoneNumber || null,
+        })
+        .eq("id", userId)
+
+      if (updateError) {
+        logger.error("Error updating user profile:", updateError)
+      }
+    } else {
+      // Create new user profile
+      const { error: profileError } = await supabase
+        .from("user_profiles")
+        .insert({
+          id: userId,
+          email: invitation.email,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          phone: phoneNumber || null,
+          is_active: true,
+        })
+
+      if (profileError) {
+        logger.error("Error creating user profile:", profileError)
+        // Continue anyway, profile might already exist
+      }
     }
 
     // Create organization member
@@ -347,7 +428,7 @@ export async function acceptInvitation(data: AcceptInvitationData) {
       .from("organization_members")
       .insert({
         organization_id: invitation.organization_id,
-        user_id: authData.user.id,
+        user_id: userId,
         role_id: invitation.role_id || null,
         department_id: invitation.department_id || null,
         position_id: invitation.position_id || null,

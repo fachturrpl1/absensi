@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useOrganizationId } from './use-organization-id'
 
-export type NotificationType = 'attendance' | 'leaves' | 'schedule'
+export type NotificationType = 'attendance' | 'leaves' | 'schedule' | 'invites'
 
 export type NotificationItem = {
   id: string
@@ -18,6 +18,8 @@ export type NotificationItem = {
     startDate?: string
     endDate?: string
     totalDays?: number
+    inviterName?: string
+    recipients?: string[]
   }
 }
 

@@ -82,7 +82,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
-
+  
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -93,7 +93,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   // Fetch data using Server Action with pagination
   const fetchData = useCallback(async () => {
-    setLoading(true); 
+    setLoading(true);
     try {
       const [listResult] = await Promise.all([
         getAllAttendance({

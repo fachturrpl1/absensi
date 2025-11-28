@@ -25,7 +25,7 @@ export const getAllGroups = async () => {
     return { success: true, message: "User not registered in any organization", data: [] };
   }
 
-  // 3. Fetch all groups for the organization
+  // 3. Fetch all groups for the organization (include both active and inactive for import flexibility)
   const { data, error } = await supabase
     .from("departments")
     .select("*")

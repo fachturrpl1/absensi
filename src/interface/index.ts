@@ -331,6 +331,7 @@ export interface IMemberInvitation {
     invitation_token: string;
     status: 'pending' | 'accepted' | 'expired' | 'cancelled';
     message?: string;
+    phone?: string;
     expires_at: string;
     accepted_at?: string;
     created_at: string;

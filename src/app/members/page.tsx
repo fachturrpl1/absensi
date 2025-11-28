@@ -85,13 +85,17 @@ export default function MembersPage() {
   const searchParams = useSearchParams()
   const supabase = createClient()
 
-  const [members, setMembers] = React.useState<IOrganization_member[]>([])
+  const [members, setMembers] = React.useState<
+    (IOrganization_member & { groupName?: string })[]
+  >([])
   const [loading, setLoading] = React.useState<boolean>(true)
   const [inviteDialogOpen, setInviteDialogOpen] = React.useState(false)
   const [submittingInvite, setSubmittingInvite] = React.useState(false)
   const [importing, setImporting] = React.useState(false)
   const [importSummary, setImportSummary] = React.useState<{ success: number; failed: number; errors: string[] } | null>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const [isDragActive, setIsDragActive] = React.useState(false)
+  const [importDialogOpen, setImportDialogOpen] = React.useState(false)
 
   // Auto-open invite dialog if action=invite in URL
   React.useEffect(() => {
@@ -183,6 +187,47 @@ export default function MembersPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleImportDialogOpenChange = (open: boolean) => {
+    setImportDialogOpen(open)
+    if (!open) {
+      setIsDragActive(false)
+    }
+  }
+
+  const handleFileSelection = async (file: File) => {
+    await processImportFile(file)
+    handleImportDialogOpenChange(false)
+  }
+
+  const handleImportMembers = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    handleFileSelection(file)
+  }
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+  }
+
+  const handleDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    setIsDragActive(true)
+  }
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    setIsDragActive(false)
+  }
+
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    setIsDragActive(false)
+    const file = event.dataTransfer?.files?.[0]
+    if (!file) return
+    await handleFileSelection(file)
   }
 
   React.useEffect(() => {
@@ -279,19 +324,45 @@ export default function MembersPage() {
     }
   }
 
-  const handleImportMembers = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
+  const processImportFile = async (file: File) => {
     setImportSummary(null)
     setImporting(true)
 
     try {
+      // Ensure departments are loaded before import
+      if (deptLoading) {
+        toast.error("Sedang memuat data department, silakan tunggu sebentar...")
+        return
+      }
+
+      // Fetch fresh departments data to ensure we have the latest
+      const departmentsResponse = await getAllGroups()
+      const availableDepartments = departmentsResponse.success ? departmentsResponse.data : []
+      
+      if (!availableDepartments || availableDepartments.length === 0) {
+        toast.error("Tidak ada department yang tersedia. Silakan buat department terlebih dahulu.")
+        return
+      }
+
+      // Debug: Log available departments
+      console.log("Available departments:", availableDepartments.map((d: any) => ({ id: d.id, name: d.name, code: d.code })))
+
       const XLSX = await import("xlsx")
       const buffer = await file.arrayBuffer()
       const workbook = XLSX.read(buffer, { type: "array" })
-      const sheet = workbook.Sheets[workbook.SheetNames[0]]
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" })
+      const sheetName = workbook.SheetNames?.[0]
+      if (!sheetName) {
+        throw new Error("Tidak ada sheet di dalam file Excel")
+      }
+
+      const sheet = workbook.Sheets[sheetName]
+      if (!sheet) {
+        throw new Error("Tidak dapat menemukan sheet yang valid di file Excel")
+      }
+      const rows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { defval: "" }) as Record<
+        string,
+        string
+      >[]
 
       if (!rows.length) {
         toast.error("File Excel kosong atau tidak memiliki data")
@@ -304,11 +375,26 @@ export default function MembersPage() {
 
       const summary = { success: 0, failed: 0, errors: [] as string[] }
 
-      const findId = (collection: any[], value: string, keys: string[]) => {
-        const normalized = value.trim().toLowerCase()
+      const findId = (
+        collection: any[],
+        value: string,
+        keys: string[]
+      ): { id?: string; notFound: boolean } => {
+        // Normalize input: trim, lowercase, and remove extra spaces
+        const normalized = value.trim().toLowerCase().replace(/\s+/g, " ")
         if (!normalized) return { id: undefined, notFound: false }
+        
         const match = collection.find((item: any) =>
-          keys.some((key) => item?.[key]?.toString().trim().toLowerCase() === normalized)
+          keys.some((key) => {
+            const itemValue = String(item?.[key] ?? "").trim().toLowerCase().replace(/\s+/g, " ")
+            // Exact match
+            if (itemValue === normalized) return true
+            // Also try matching without special characters (for codes like "x_tkj" vs "X TKJ")
+            const normalizedNoSpecial = normalized.replace(/[^a-z0-9]/g, "")
+            const itemValueNoSpecial = itemValue.replace(/[^a-z0-9]/g, "")
+            if (normalizedNoSpecial && itemValueNoSpecial === normalizedNoSpecial) return true
+            return false
+          })
         )
         if (!match) return { id: undefined, notFound: true }
         return { id: String(match.id), notFound: false }
@@ -316,10 +402,17 @@ export default function MembersPage() {
 
       for (let index = 0; index < rows.length; index++) {
         const rawRow = rows[index]
-        const normalizedRow = Object.keys(rawRow).reduce<Record<string, any>>((acc, key) => {
-          acc[key.toLowerCase()] = rawRow[key]
-          return acc
-        }, {})
+        if (!rawRow) {
+          continue
+        }
+
+        const normalizedRow = Object.entries(rawRow).reduce<Record<string, string>>(
+          (acc, [key, value]) => {
+            acc[key.toLowerCase()] = String(value ?? "")
+            return acc
+          },
+          {}
+        )
 
         const email = String(normalizedRow["email"] || normalizedRow["email address"] || "").trim()
         if (!email) {
@@ -328,39 +421,73 @@ export default function MembersPage() {
           continue
         }
 
+        const phoneValue = String(
+          normalizedRow["phone"] ||
+            normalizedRow["phone number"] ||
+            normalizedRow["telepon"] ||
+            normalizedRow["no hp"] ||
+            normalizedRow["nomor hp"] ||
+            ""
+        ).trim()
+
         const roleValue = String(normalizedRow["role"] || "").trim()
         const departmentValue = String(normalizedRow["department"] || "").trim()
-        const positionValue = String(normalizedRow["position"] || "").trim()
-        const messageValue = String(normalizedRow["message"] || "").trim()
+        const positionValue = String(
+          normalizedRow["position"] ||
+            normalizedRow["job title"] ||
+            normalizedRow["jabatan"] ||
+            ""
+        ).trim()
+        const messageValue = String(
+          normalizedRow["message"] ||
+            normalizedRow["notes"] ||
+            normalizedRow["catatan"] ||
+            ""
+        ).trim()
 
-        const roleResult = findId(roles ?? [], roleValue, ["name", "code", "id"])
-        if (roleResult.notFound) {
+        const skipRole =
+          !roleValue || roleValue.toLowerCase().replace(/[^a-z0-9]/g, "") === "norole"
+
+        let roleResult: ReturnType<typeof findId> = { id: undefined, notFound: false }
+        if (!skipRole) {
+          roleResult = findId(roles ?? [], roleValue, ["name", "code", "id"])
+          if (roleResult.notFound) {
+            summary.failed++
+            summary.errors.push(`Baris ${index + 2}: role "${roleValue}" tidak ditemukan`)
+            continue
+          }
+        }
+
+        let departmentResult: ReturnType<typeof findId> = { id: undefined, notFound: false }
+        if (!departmentValue) {
           summary.failed++
-          summary.errors.push(`Baris ${index + 2}: role "${roleValue}" tidak ditemukan`)
+          summary.errors.push(`Baris ${index + 2}: kolom department wajib diisi`)
           continue
         }
 
-        const departmentResult = findId(departments ?? [], departmentValue, ["name", "code", "id"])
+        departmentResult = findId(availableDepartments ?? [], departmentValue, ["name", "code", "id"])
         if (departmentResult.notFound) {
           summary.failed++
           summary.errors.push(`Baris ${index + 2}: department "${departmentValue}" tidak ditemukan`)
           continue
         }
 
-        const positionResult = findId(positions ?? [], positionValue, ["title", "name", "id"])
-        if (positionResult.notFound) {
-          summary.failed++
-          summary.errors.push(`Baris ${index + 2}: position "${positionValue}" tidak ditemukan`)
-          continue
+        let positionResult: ReturnType<typeof findId> = { id: undefined, notFound: false }
+        if (positionValue) {
+          positionResult = findId(positions ?? [], positionValue, ["title", "name", "id"])
+          if (positionResult.notFound) {
+            summary.failed++
+            summary.errors.push(`Baris ${index + 2}: position "${positionValue}" tidak ditemukan`)
+            continue
+          }
         }
 
-        const invitationPayload = {
-          email,
-          role_id: roleResult.id,
-          department_id: departmentResult.id,
-          position_id: positionResult.id,
-          message: messageValue || undefined,
-        }
+        const invitationPayload: Parameters<typeof createInvitation>[0] = { email }
+        if (roleResult.id) invitationPayload.role_id = roleResult.id
+        if (departmentResult.id) invitationPayload.department_id = departmentResult.id
+        if (positionResult.id) invitationPayload.position_id = positionResult.id
+        if (messageValue) invitationPayload.message = messageValue
+        if (phoneValue) invitationPayload.phone = phoneValue
 
         try {
           const result = await createInvitation(invitationPayload)
@@ -384,7 +511,9 @@ export default function MembersPage() {
       toast.error("Gagal mengimport file Excel")
     } finally {
       setImporting(false)
-      event.target.value = ""
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
     }
   }
 
@@ -556,20 +685,69 @@ export default function MembersPage() {
               <Button
                 variant="outline"
                 className="w-full sm:w-auto gap-2"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => handleImportDialogOpenChange(true)}
                 disabled={importing}
               >
                 <FileUp className="h-4 w-4" />
                 {importing ? "Importing..." : "Import Excel"}
               </Button>
               <input
+                id="members-import-input"
                 ref={fileInputRef}
                 type="file"
                 accept=".xlsx,.xls"
                 className="hidden"
                 onChange={handleImportMembers}
+                disabled={importing}
               />
             </div>
+            <Dialog open={importDialogOpen} onOpenChange={handleImportDialogOpenChange}>
+              <DialogContent className="w-full max-w-[560px]" aria-describedby="import-description">
+                <DialogHeader>
+                  <DialogTitle>Import Members</DialogTitle>
+                  <DialogDescription id="import-description">
+                    Unggah file Excel untuk mengimport data members
+                  </DialogDescription>
+                </DialogHeader>
+                <div
+                  className={`
+                    mt-4 flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 text-center transition
+                    ${isDragActive ? "border-blue-500 bg-blue-50/60 text-blue-800 dark:text-blue-200" : "border-muted-foreground/40 bg-muted/10 text-muted-foreground"}
+                    ${importing ? "opacity-60 pointer-events-none" : "cursor-pointer hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-400/10"}
+                  `}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => !importing && fileInputRef.current?.click()}
+                  onKeyDown={(event) => {
+                    if ((event.key === "Enter" || event.key === " ") && !importing) {
+                      event.preventDefault()
+                      fileInputRef.current?.click()
+                    }
+                  }}
+                >
+                  <div className="rounded-full bg-background p-3 shadow-sm">
+                    <FileUp className="h-6 w-6 text-foreground" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">Tarik & letakkan file kamu di sini</p>
+                    <p className="text-xs">atau klik untuk memilih file dari komputer</p>
+                  </div>
+                </div>
+                <div className="mt-1 w-full text-left">
+                  <a
+                    href="/templates/members-import-template.xlsx"
+                    download
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-500"
+                  >
+                    Download template di sini
+                  </a>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
               <DialogTrigger asChild>
                 <Button className="w-full sm:w-auto">

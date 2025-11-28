@@ -750,6 +750,10 @@ export default function OrganizationSettingsPage() {
 
       
       
+      // Convert geo values to labels before saving to database
+      const cityLabel = getCityLabelFromGeo(geoData, formData.city) || formData.city;
+      const stateLabel = getStateLabelFromGeo(geoData, formData.state_province) || formData.state_province;
+
       const updateData: OrganizationUpdateData = {
 
         name: formData.name,
@@ -760,9 +764,9 @@ export default function OrganizationSettingsPage() {
 
         address: formData.address,
 
-        city: formData.city,
+        city: cityLabel, // Save label (e.g., "Malang") instead of value (e.g., "id-ji-malang")
 
-        state_province: formData.state_province,
+        state_province: stateLabel, // Save label (e.g., "Jawa Timur") instead of value (e.g., "id-ji")
 
         postal_code: formData.postal_code,
 
