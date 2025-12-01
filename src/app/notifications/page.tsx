@@ -83,8 +83,8 @@ export default function NotificationsPage() {
   const { data: apiNotifications = [], isLoading } = useNotifications(50);
 
   // Transform API notifications to UI notifications
-  useEffect(() => {
-    const transformedNotifications: NotificationItem[] = apiNotifications.map((apiNotif, index) => {
+  const transformedNotifications = useMemo(() => {
+    return apiNotifications.map((apiNotif, index) => {
       const relativeTime = formatRelativeTime(apiNotif.timestamp);
       
       const sender = "System";
@@ -125,13 +125,15 @@ export default function NotificationsPage() {
         snippet,
         date: relativeTime,
         category,
-        unread: true, // Mark recent notifications as unread
+        unread: true,
         selected: false,
       };
     });
-
-    setNotifications(transformedNotifications);
   }, [apiNotifications]);
+
+  useEffect(() => {
+    setNotifications(transformedNotifications);
+  }, [transformedNotifications]);
 
   const filteredNotifications = useMemo(() => {
     if (activeCategory === "all") return notifications;
@@ -293,5 +295,3 @@ export default function NotificationsPage() {
     </div>
   );
 }
-
-

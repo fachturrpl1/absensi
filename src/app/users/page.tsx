@@ -9,7 +9,7 @@ export default async function UsersPage() {
   const users = (response.success ? response.data : []) as IUser[]
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-4 w-full">
       <UsersClient initialUsers={users} />
     </div>
   )

@@ -177,7 +177,7 @@ export default function NewLeaveRequestPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6 w-full">
+    <div className="flex flex-col gap-6 p-4 md:p-6 w-full overflow-x-auto">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/leaves">

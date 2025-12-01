@@ -15,14 +15,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { 
-  Plus, 
   Calendar,   
   FileText, 
   Clock, 
   CheckCircle, 
   TrendingUp,
   CalendarDays,
-  Settings,
   PieChart,
   BarChart3,
   UserCheck,
@@ -50,7 +48,6 @@ function parseNumber(value: string | number | undefined): number {
   return 0;
 }
 import { useOrgStore } from "@/store/org-store";
-import Link from "next/link";
 import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
 import { LeaveRequestList } from "@/components/leave/leave-request-list";
@@ -113,7 +110,6 @@ export default function LeavesPage() {
   const { organizationId } = useOrgStore();
   // Role codes: A001 = Admin Org, SA001 = Super Admin
   const isAdmin = role === 'A001' || role === 'SA001';
-  const canManageLeaveTypes = permissions?.includes('leaves:type:manage') || isAdmin;
   const canApproveRequests = permissions?.includes('leaves:approval:create') || isAdmin;
 
   // Helper function to get chart icon
@@ -439,20 +435,6 @@ export default function LeavesPage() {
             )}
             Refresh
           </Button>
-          {canManageLeaveTypes && (
-            <Link href="/leaves/types">
-              <Button variant="outline" className="gap-2 w-full sm:w-auto">
-                <Settings className="h-4 w-4" />
-                Manage Types
-              </Button>
-            </Link>
-          )}
-          <Link href="/leaves/new">
-            <Button className="gap-2 w-full sm:w-auto">
-              <Plus className="h-4 w-4" />
-              Request Leave
-            </Button>
-          </Link>
         </div>
       </div>
 
@@ -487,7 +469,7 @@ export default function LeavesPage() {
                       }
                     </div>
                     <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs xl:text-sm font-medium text-muted-foreground leading-tight truncate">
-                      {isAdmin ? 'Request' : 'Balance'}
+                      {isAdmin ? 'Requests' : 'Balance'}
                     </p>
                   </>
                 )}
@@ -1030,9 +1012,6 @@ export default function LeavesPage() {
                       <Calendar className="h-5 w-5" />
                       Leave Calendar
                     </CardTitle>
-                    <CardDescription className="mt-1">
-                      View all member leaves in calendar format
-                    </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">
@@ -1213,9 +1192,6 @@ export default function LeavesPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-lg">Department Distribution</CardTitle>
-                      <CardDescription className="mt-1">
-                        Leave requests by department
-                      </CardDescription>
                     </div>
                     <div className="p-2 bg-rose-100 dark:bg-rose-900 rounded-lg">
                       <BarChart3 className="h-5 w-5 text-rose-600 dark:text-rose-400" />

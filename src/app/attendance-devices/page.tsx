@@ -265,14 +265,14 @@ export default function AttendanceDevicesPage() {
     console.log('📊 Filtered devices count:', filteredDevices.length, 'from total:', devices.length)
 
     return (
-        <div className="flex flex-1 flex-col gap-4">
+        <div className="flex flex-1 flex-col gap-4 w-full">
             <div className="w-full">
                 <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
                     <div className="bg-white text-black px-4 md:px-6 py-4 rounded-t-lg border-b-2 border-black-200">
                         <h1 className='text-2xl md:text-3xl font-bold tracking-tight'>My Devices</h1>
                     </div>
                     
-                    <div className="p-4 md:p-6 space-y-4">
+                    <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
                         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                             <div className="flex-1 relative">
                                 <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
@@ -367,8 +367,8 @@ export default function AttendanceDevicesPage() {
                                     <p className="text-gray-500">No devices match your filters</p>
                                 </div>
                             ) : viewMode === 'grid' ? (
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                <div className="space-y-4 min-w-full">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 min-w-full">
                                         {filteredDevices.slice(currentPageIndex * currentPageSize, (currentPageIndex + 1) * currentPageSize).map((device) => (
                                             <div key={device.id} className="border rounded-lg p-3 hover:shadow-md transition-shadow bg-white">
                                                 <div className="space-y-2">
@@ -480,17 +480,15 @@ export default function AttendanceDevicesPage() {
                                     </div>
                                 </div>  
                             ) : (
-                                <DataTable 
-                                    columns={deviceColumns} 
-                                    data={filteredDevices}
-                                    showGlobalFilter={false}
-                                    showFilters={false}
-                                    showColumnToggle={false}
-                                    pageIndex={currentPageIndex}
-                                    onPageIndexChange={setCurrentPageIndex}
-                                    pageSize={currentPageSize}
-                                    onPageSizeChange={setCurrentPageSize}
-                                />
+                                <div className="min-w-full overflow-x-auto">
+                                    <DataTable 
+                                        columns={deviceColumns} 
+                                        data={filteredDevices}
+                                        showGlobalFilter={false}
+                                        showFilters={false}
+                                        showColumnToggle={false}
+                                    />
+                                </div>
                             )}
                         </div>
                     </div>

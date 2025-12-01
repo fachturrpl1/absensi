@@ -3,7 +3,7 @@
 import React from "react"
 import { PositionsTable } from "@/components/positions-table"
 import { Button } from "@/components/ui/button"
-import { Plus, Briefcase } from "lucide-react"
+import { Plus, Briefcase, Search } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -72,6 +72,7 @@ export default function PositionsPage() {
     const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
     const [loading, setLoading] = React.useState<boolean>(true)
     const [organizationId, setOrganizationId] = React.useState<string>("")
+    const [searchQuery, setSearchQuery] = React.useState<string>("")
 
     const supabase = createClient()
 
@@ -200,21 +201,47 @@ export default function PositionsPage() {
 
 
     return (
-        <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
-            <div className="w-full space-y-6 min-w-0">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="space-y-2">
-                        <h1 className="text-3xl font-bold tracking-tight">Positions</h1>
+        <div className="flex flex-1 flex-col gap-4 w-full">
+            <div className="w-full">
+                <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div className="bg-white text-black px-4 md:px-6 py-4 rounded-t-lg border-b-2 border-black-200">
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Positions</h1>
                     </div>
-                    <div className="flex gap-2 w-full sm:w-auto">
-                        <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-                            <DialogTrigger asChild>
-                                <Button className="w-full sm:w-auto">
-                                    Add Position <Plus className="ml-2" />
-                                </Button>
-                            </DialogTrigger>
-                        <DialogContent aria-describedby={undefined}>
+                    
+                    <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
+                        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                            <div className="flex-1 relative">
+                                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                                <Input
+                                    placeholder="Search positions..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-10"
+                                />
+                            </div>
+                            <div className="flex gap-3 sm:gap-2 flex-wrap">
+                                <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+                                    <DialogTrigger asChild>
+                                        <Button
+                                            size="sm"
+                                            onClick={() => {
+                                                setEditingDetail(null)
+                                                form.reset({
+                                                    organization_id: organizationId || "",
+                                                    code: "",
+                                                    title: "",
+                                                    description: "",
+                                                    level: "",
+                                                    is_active: true,
+                                                })
+                                                setOpen(true)
+                                            }}
+                                            className="whitespace-nowrap"
+                                        >
+                                            Add Position <Plus className="ml-2 h-4 w-4" />
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent aria-describedby={undefined}>
                             <DialogHeader>
                                 <DialogTitle>
                                     {editingDetail ? 'Edit' : 'Add'} Position
@@ -341,42 +368,45 @@ export default function PositionsPage() {
                                 </form>
                             </Form>
                         </DialogContent>
-                        </Dialog>
+                    </Dialog>
+                            </div>
+                        </div>
+
+                        <div className="mt-6">
+                            {loading ? (
+                                <TableSkeleton rows={6} columns={5} />
+                            ) : positions.length === 0 ? (
+                                <div className="mt-20">
+                                    <Empty>
+                                        <EmptyHeader>
+                                            <EmptyMedia variant="icon">
+                                                <Briefcase className="h-14 w-14 text-muted-foreground mx-auto" />
+                                            </EmptyMedia>
+                                            <EmptyTitle>No positions yet</EmptyTitle>
+                                            <EmptyDescription>
+                                                There are no positions for this organization. Use the &quot;Add&quot; button to create a new position.
+                                            </EmptyDescription>
+                                        </EmptyHeader>
+                                        <EmptyContent>
+                                            <Button onClick={() => setOpen(true)}>Add Position</Button>
+                                        </EmptyContent>
+                                    </Empty>
+                                </div>
+                            ) : (
+                                <PositionsTable 
+                                    positions={positions}
+                                    isLoading={loading}
+                                    onDelete={fetchPositions}
+                                    onEdit={(position) => {
+                                        setEditingDetail(position)
+                                        form.reset(position)
+                                        setOpen(true)
+                                    }}
+                                />
+                            )}
+                        </div>
                     </div>
                 </div>
-
-                {/* Table Content */}
-                {loading ? (
-                    <TableSkeleton rows={6} columns={5} />
-                ) : positions.length === 0 ? (
-                    <div className="mt-20">
-                        <Empty>
-                            <EmptyHeader>
-                                <EmptyMedia variant="icon">
-                                    <Briefcase className="h-14 w-14 text-muted-foreground mx-auto" />
-                                </EmptyMedia>
-                                <EmptyTitle>No positions yet</EmptyTitle>
-                                <EmptyDescription>
-                                    There are no positions for this organization. Use the &quot;Add&quot; button to create a new position.
-                                </EmptyDescription>
-                            </EmptyHeader>
-                            <EmptyContent>
-                                <Button onClick={() => setOpen(true)}>Add Position</Button>
-                            </EmptyContent>
-                        </Empty>
-                    </div>
-                ) : (
-                    <PositionsTable 
-                        positions={positions}
-                        isLoading={loading}
-                        onDelete={fetchPositions}
-                        onEdit={(position) => {
-                            setEditingDetail(position)
-                            form.reset(position)
-                            setOpen(true)
-                        }}
-                    />
-                )}
             </div>
         </div>
     )

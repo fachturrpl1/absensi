@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { Columns3Cog, Loader2, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
+import { Columns3Cog, Loader2, Search, Filter, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -48,10 +48,6 @@ type DataTableProps<TData, TValue> = {
   initialSorting?: SortingState
   getRowKey?: (row: TData, index: number) => string
   searchPlaceholder?: string
-  pageIndex?: number
-  onPageIndexChange?: (pageIndex: number) => void
-  pageSize?: number
-  onPageSizeChange?: (pageSize: number) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -65,10 +61,6 @@ export function DataTable<TData, TValue>({
   initialSorting,
   getRowKey,
   searchPlaceholder = "Search members...",
-  pageIndex: externalPageIndex,
-  onPageIndexChange,
-  pageSize: externalPageSize,
-  onPageSizeChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting ?? [])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -76,34 +68,19 @@ export function DataTable<TData, TValue>({
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [sortOrder, setSortOrder] = React.useState("newest")
-  const [pageSize, setPageSize] = React.useState(String(externalPageSize ?? 8))
-  const [pageIndex, setPageIndex] = React.useState(externalPageIndex ?? 0)
+  const [pageSize, setPageSize] = React.useState("10")
+  const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: parseInt(pageSize) })
 
-  // Sync with external pageIndex
-  React.useEffect(() => {
-    if (externalPageIndex !== undefined) {
-      setPageIndex(externalPageIndex)
-    }
-  }, [externalPageIndex])
-
-  // Sync with external pageSize
-  React.useEffect(() => {
-    if (externalPageSize !== undefined) {
-      setPageSize(String(externalPageSize))
-    }
-  }, [externalPageSize])
-
-  // Notify parent when pageIndex changes
-  const handlePageIndexChange = (newPageIndex: number) => {
-    setPageIndex(newPageIndex)
-    onPageIndexChange?.(newPageIndex)
+  // Handler functions
+  const handlePageSizeChange = (value: string) => {
+    setPageSize(value)
   }
 
-  // Notify parent when pageSize changes
-  const handlePageSizeChange = (newPageSize: string) => {
-    setPageSize(newPageSize)
-    onPageSizeChange?.(parseInt(newPageSize))
+  const handlePageIndexChange = (pageIndex: number) => {
+    setPagination((prev) => ({ ...prev, pageIndex }))
   }
+
+  const pageIndex = pagination.pageIndex
 
   // Filter and sort data
   const filteredData = React.useMemo(() => {
@@ -200,10 +177,7 @@ export function DataTable<TData, TValue>({
       sorting,
       columnVisibility,
       rowSelection,
-      pagination: {
-        pageIndex: pageIndex,
-        pageSize: parseInt(pageSize),
-      },
+      pagination,
     },
     initialState: {
       pagination: {
@@ -212,6 +186,11 @@ export function DataTable<TData, TValue>({
     },
   })
   
+  // Sink select pageSize -> pagination state and reset to first page
+  React.useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageSize: parseInt(pageSize), pageIndex: 0 }))
+  }, [pageSize])
+
   // Clamp pageIndex when filtered data or pageSize changes
   React.useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(filteredData.length / parseInt(pageSize)))
@@ -271,7 +250,7 @@ export function DataTable<TData, TValue>({
               {/* Show Items */}
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground whitespace-nowrap">Show:</span>
-                <Select value={pageSize} onValueChange={handlePageSizeChange}>
+                <Select value={pageSize} onValueChange={setPageSize}>
                   <SelectTrigger className="w-[70px]">
                     <SelectValue />
                   </SelectTrigger>

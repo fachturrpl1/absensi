@@ -3,7 +3,7 @@
 import React from "react"
 import { GroupsTable } from "@/components/groups-table"
 import { Button } from "@/components/ui/button"
-import { Plus, Group as GroupIcon } from "lucide-react"
+import { Plus, Group as GroupIcon, Search } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -70,6 +70,7 @@ export default function GroupsPage() {
   const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = React.useState<boolean>(true)
   const [organizationId, setOrganizationId] = React.useState<string>("")
+  const [searchQuery, setSearchQuery] = React.useState<string>("")
   const supabase = createClient()
 
   const fetchGroups = async () => {
@@ -190,171 +191,199 @@ export default function GroupsPage() {
 
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
-      <div className="w-full space-y-6 min-w-0">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Groups</h1>
+    <div className="flex flex-1 flex-col gap-4 w-full">
+      <div className="w-full">
+        <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white text-black px-4 md:px-6 py-4 rounded-t-lg border-b-2 border-black-200">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Groups</h1>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Dialog open={isModalOpen} onOpenChange={handleDialogOpenChange}>
-              <DialogTrigger asChild>
-                <Button className="w-full sm:w-auto">
-                  Add Group <Plus className="ml-2" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent aria-describedby={undefined}>
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingDetail ? 'Edit Group' : 'Add Group'}
-                  </DialogTitle>
-                </DialogHeader>
-                <Form {...form}>
-                  <form
-                    onSubmit={form.handleSubmit(handleSubmit)}
-                    className="space-y-4"
-                  >
-                    {/* Organization field */}
-                    {organizationId ? (
-                      <FormField
-                        control={form.control}
-                        name="organization_id"
-                        render={({ field }) => (
-                          <input
-                            type="hidden"
-                            value={organizationId}
-                            onChange={field.onChange}
+          
+          <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search groups..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex gap-3 sm:gap-2 flex-wrap">
+                <Dialog open={isModalOpen} onOpenChange={handleDialogOpenChange}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setEditingDetail(null)
+                        form.reset({
+                          organization_id: organizationId || "",
+                          code: "",
+                          name: "",
+                          description: "",
+                          is_active: true,
+                        })
+                        setIsModalOpen(true)
+                      }}
+                      className="whitespace-nowrap"
+                    >
+                      Add Group <Plus className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent aria-describedby={undefined}>
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingDetail ? 'Edit Group' : 'Add Group'}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <Form {...form}>
+                      <form
+                        onSubmit={form.handleSubmit(handleSubmit)}
+                        className="space-y-4"
+                      >
+                        {/* Organization field */}
+                        {organizationId ? (
+                          <FormField
+                            control={form.control}
+                            name="organization_id"
+                            render={({ field }) => (
+                              <input
+                                type="hidden"
+                                value={organizationId}
+                                onChange={field.onChange}
+                              />
+                            )}
                           />
+                        ) : (
+                          <Can permission="view_departments">
+                            <FormField
+                              control={form.control}
+                              name="organization_id"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Organization</FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    value={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select Organization" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {organizations.map((org) => (
+                                        <SelectItem key={org.id} value={String(org.id)}>
+                                          {org.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </Can>
                         )}
-                      />
-                    ) : (
-                      <Can permission="view_departments">
+
                         <FormField
                           control={form.control}
-                          name="organization_id"
+                          name="code"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Organization</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select Organization" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {organizations.map((org) => (
-                                    <SelectItem key={org.id} value={String(org.id)}>
-                                      {org.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <FormLabel>Code</FormLabel>
+                              <FormControl>
+                                <Input type="text" {...field} />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                      </Can>
-                    )}
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Group Name</FormLabel>
+                              <FormControl>
+                                <Input type="text" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description</FormLabel>
+                              <FormControl>
+                                <Input type="text" {...field ?? ""} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="is_active"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Active</FormLabel>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="submit" className="w-full">
+                          {editingDetail ? 'Update' : 'Create'}
+                        </Button>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
 
-                    <FormField
-                      control={form.control}
-                      name="code"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Code</FormLabel>
-                          <FormControl>
-                            <Input type="text" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Group Name</FormLabel>
-                          <FormControl>
-                            <Input type="text" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Input type="text" {...field ?? ""} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="is_active"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Active</FormLabel>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit" className="w-full">
-                      {editingDetail ? 'Update' : 'Create'}
-                    </Button>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
+            <div className="mt-6">
+              {loading ? (
+                <TableSkeleton rows={6} columns={4} />
+              ) : groups.length === 0 ? (
+                <div className="mt-20">
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <GroupIcon className="h-14 w-14 text-muted-foreground mx-auto" />
+                      </EmptyMedia>
+                      <EmptyTitle>No groups yet</EmptyTitle>
+                      <EmptyDescription>
+                        There are no groups for this organization. Use the "Add Group" button to create one.
+                      </EmptyDescription>
+                    </EmptyHeader>
+                    <EmptyContent>
+                      <Button onClick={() => setIsModalOpen(true)}>Add Group</Button>
+                    </EmptyContent>
+                  </Empty>
+                </div>
+              ) : (
+                <GroupsTable 
+                  groups={groups}
+                  isLoading={loading}
+                  onDelete={fetchGroups}
+                  onEdit={(group) => {
+                    setEditingDetail(group)
+                    form.reset(group)
+                    setIsModalOpen(true)
+                  }}
+                />
+              )}
+            </div>
           </div>
         </div>
-
-        {/* Table Content */}
-        {loading ? (
-          <TableSkeleton rows={6} columns={4} />
-        ) : groups.length === 0 ? (
-          <div className="mt-20">
-            <Empty>
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <GroupIcon className="h-14 w-14 text-muted-foreground mx-auto" />
-                </EmptyMedia>
-                <EmptyTitle>No groups yet</EmptyTitle>
-                <EmptyDescription>
-                  There are no groups for this organization. Use the "Add Group" button to create one.
-                </EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <Button onClick={() => setIsModalOpen(true)}>Add Group</Button>
-              </EmptyContent>
-            </Empty>
-          </div>
-        ) : (
-          <GroupsTable 
-            groups={groups}
-            isLoading={loading}
-            onDelete={fetchGroups}
-            onEdit={(group) => {
-              setEditingDetail(group)
-              form.reset(group)
-              setIsModalOpen(true)
-            }}
-          />
-        )}
       </div>
     </div>
   )
