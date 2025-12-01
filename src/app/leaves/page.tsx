@@ -439,20 +439,6 @@ export default function LeavesPage() {
             )}
             Refresh
           </Button>
-          {canManageLeaveTypes && (
-            <Link href="/leaves/types">
-              <Button variant="outline" className="gap-2 w-full sm:w-auto">
-                <Settings className="h-4 w-4" />
-                Manage Types
-              </Button>
-            </Link>
-          )}
-          <Link href="/leaves/new">
-            <Button className="gap-2 w-full sm:w-auto">
-              <Plus className="h-4 w-4" />
-              Request Leave
-            </Button>
-          </Link>
         </div>
       </div>
 
@@ -487,7 +473,7 @@ export default function LeavesPage() {
                       }
                     </div>
                     <p className="text-sm font-medium text-muted-foreground">
-                      {isAdmin ? 'Total Requests' : 'Leave Balance'}
+                      {isAdmin ? 'Requests': 'Request'}
                     </p>
                   </>
                 )}
@@ -525,7 +511,7 @@ export default function LeavesPage() {
                       }
                     </div>
                     <p className="text-sm font-medium text-muted-foreground">
-                      {isAdmin ? 'Approved Requests' : 'Pending Requests'}
+                      {isAdmin ? 'Approved Requests' : 'Approved Requests'}
                     </p>
                   </>
                 )}
@@ -829,12 +815,6 @@ export default function LeavesPage() {
                     <FileText className="h-5 w-5" />
                     All Leave Requests
                   </CardTitle>
-                  <CardDescription className="mt-1">
-                    {isAdmin 
-                      ? 'Manage and approve member leave requests'
-                      : 'View and manage your leave requests'
-                    }
-                  </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">
@@ -1032,9 +1012,6 @@ export default function LeavesPage() {
                       <Calendar className="h-5 w-5" />
                       Leave Calendar
                     </CardTitle>
-                    <CardDescription className="mt-1">
-                      View all member leaves in calendar format
-                    </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">
@@ -1215,9 +1192,6 @@ export default function LeavesPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-lg">Department Distribution</CardTitle>
-                      <CardDescription className="mt-1">
-                        Leave requests by department
-                      </CardDescription>
                     </div>
                     <div className="p-2 bg-rose-100 dark:bg-rose-900 rounded-lg">
                       <BarChart3 className="h-5 w-5 text-rose-600 dark:text-rose-400" />
