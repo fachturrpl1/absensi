@@ -11,7 +11,8 @@
     "start:network": "next start --hostname 0.0.0.0",
     "lint": "eslint",
     "analyze": "ANALYZE=true next build",
-    "geo:generate": "node scripts/fetch-geo-data.mjs"
+    "geo:generate": "node scripts/fetch-geo-data.mjs",
+    "members:template": "node scripts/generate-members-template.mjs"
   },
   "dependencies": {
     "@countrystatecity/countries": "^1.0.4",

@@ -30,7 +30,6 @@ import z from "zod"
 import { IPositions } from "@/interface"
 import {
     createPositions,
-    deletePositions,
     getAllPositions,
     updatePositions,
 } from "@/action/position"
@@ -181,20 +180,6 @@ export default function PositionsPage() {
             fetchPositions()
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : 'Unknown error')
-        }
-    }
-
-    const handleDelete = async (positionId: string | number) => {
-        try {
-            setLoading(true)
-            const response = await deletePositions(positionId)
-            if (!response.success) throw new Error(response.message)
-            toast.success('Position deleted successfully')
-            fetchPositions()
-        } catch (error: unknown) {
-            toast.error(error instanceof Error ? error.message : 'Unknown error')
-        } finally {
-            setLoading(false)
         }
     }
 

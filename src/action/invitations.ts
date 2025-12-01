@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { IMemberInvitation } from "@/interface";
 import { sendInvitationEmailViaSupabase, sendInvitationEmail } from "@/lib/email";
 
@@ -25,6 +26,7 @@ interface CreateInvitationData {
   department_id?: string;
   position_id?: string;
   message?: string;
+  phone?: string;
 }
 
 export async function createInvitation(data: CreateInvitationData) {
@@ -130,6 +132,7 @@ export async function createInvitation(data: CreateInvitationData) {
         role_id: data.role_id || null,
         department_id: data.department_id || null,
         position_id: data.position_id || null,
+        phone: data.phone || null,
         message: data.message || null,
       })
       .select(
@@ -293,6 +296,7 @@ interface AcceptInvitationData {
 export async function acceptInvitation(data: AcceptInvitationData) {
   try {
     const supabase = await createClient();
+    const adminSupabase = createAdminClient();
 
     // Get invitation
     const invitationResult = await getInvitationByToken(data.token);
@@ -306,40 +310,90 @@ export async function acceptInvitation(data: AcceptInvitationData) {
 
     const invitation = invitationResult.data;
 
-    // Create user account via Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: invitation.email,
-      password: data.password,
-      options: {
-        data: {
-          first_name: data.first_name,
-          last_name: data.last_name,
+    // Check if user already exists (e.g. via Supabase invite)
+    const { data: existingUsers } = await adminSupabase.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(
+      (user) => user.email?.toLowerCase() === invitation.email.toLowerCase(),
+    );
+
+    let userId: string;
+
+    if (existingUser) {
+      const { data: updatedUser, error: updateError } = await adminSupabase.auth.admin.updateUserById(
+        existingUser.id,
+        {
+          password: data.password,
+          email_confirm: true,
+          user_metadata: {
+            first_name: data.first_name,
+            last_name: data.last_name,
+          },
         },
-      },
-    });
+      );
 
-    if (authError) {
-      return { success: false, message: authError.message, data: null };
-    }
+      if (updateError) {
+        return { success: false, message: updateError.message, data: null };
+      }
 
-    if (!authData.user) {
-      return { success: false, message: "Failed to create user", data: null };
-    }
-
-    // Create user profile
-    const { error: profileError } = await supabase
-      .from("user_profiles")
-      .insert({
-        id: authData.user.id,
+      userId = updatedUser.user?.id || existingUser.id;
+    } else {
+      // Create user via Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: invitation.email,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        is_active: true,
+        password: data.password,
+        options: {
+          data: {
+            first_name: data.first_name,
+            last_name: data.last_name,
+          },
+        },
       });
 
-    if (profileError) {
-      logger.error("Error creating user profile:", profileError);
-      // Continue anyway, profile might already exist
+      if (authError) {
+        return { success: false, message: authError.message, data: null };
+      }
+
+      if (!authData.user) {
+        return { success: false, message: "Failed to create user", data: null };
+      }
+
+      userId = authData.user.id;
+    }
+
+    // Create or update user profile
+    const { data: existingProfile, error: profileFetchError } = await supabase
+      .from("user_profiles")
+      .select("id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (profileFetchError) {
+      logger.error("Error fetching user profile:", profileFetchError);
+    }
+
+    const profilePayload = {
+      id: userId,
+      email: invitation.email,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      phone: invitation.phone || null,
+      is_active: true,
+    };
+
+    if (existingProfile) {
+      const { error: updateProfileError } = await supabase
+        .from("user_profiles")
+        .update(profilePayload)
+        .eq("id", userId);
+
+      if (updateProfileError) {
+        logger.error("Error updating user profile:", updateProfileError);
+      }
+    } else {
+      const { error: createProfileError } = await supabase.from("user_profiles").insert(profilePayload);
+      if (createProfileError) {
+        logger.error("Error creating user profile:", createProfileError);
+      }
     }
 
     // Create organization member
@@ -347,7 +401,7 @@ export async function acceptInvitation(data: AcceptInvitationData) {
       .from("organization_members")
       .insert({
         organization_id: invitation.organization_id,
-        user_id: authData.user.id,
+        user_id: userId,
         role_id: invitation.role_id || null,
         department_id: invitation.department_id || null,
         position_id: invitation.position_id || null,

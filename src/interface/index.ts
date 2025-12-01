@@ -328,6 +328,7 @@ export interface IMemberInvitation {
     role_id?: string;
     department_id?: string;
     position_id?: string;
+    phone?: string;
     invitation_token: string;
     status: 'pending' | 'accepted' | 'expired' | 'cancelled';
     message?: string;

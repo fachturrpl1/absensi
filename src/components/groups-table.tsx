@@ -4,7 +4,6 @@ import React from "react"
 import { IGroup } from "@/interface"
 import { Button } from "@/components/ui/button"
 import { Trash, Pencil, Search, Filter, Columns3Cog } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -41,7 +40,6 @@ interface GroupsTableProps {
 }
 
 export function GroupsTable({ groups, isLoading = false, onDelete, onEdit }: GroupsTableProps) {
-  const router = useRouter()
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [sortOrder, setSortOrder] = React.useState("newest")

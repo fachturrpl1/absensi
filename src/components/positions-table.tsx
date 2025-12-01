@@ -4,7 +4,6 @@ import React from "react"
 import { IPositions } from "@/interface"
 import { Button } from "@/components/ui/button"
 import { Trash, Pencil, Search, Filter, Columns3Cog } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -41,7 +40,6 @@ interface PositionsTableProps {
 }
 
 export function PositionsTable({ positions, isLoading = false, onDelete, onEdit }: PositionsTableProps) {
-  const router = useRouter()
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [sortOrder, setSortOrder] = React.useState("newest")
