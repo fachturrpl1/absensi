@@ -4,7 +4,7 @@ import React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
-import { Trash, Pencil, Plus, Group as GroupIcon } from "lucide-react"
+import { Trash, Pencil, Plus, Group as GroupIcon, Search } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -83,6 +83,7 @@ export default function GroupsPage() {
   const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = React.useState<boolean>(true)
   const [organizationId, setOrganizationId] = React.useState<string>("")
+  const [searchQuery, setSearchQuery] = React.useState<string>("")
   const supabase = createClient()
 
   const fetchGroups = async () => {
@@ -274,27 +275,45 @@ export default function GroupsPage() {
   ]
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <div className="w-full max-w-6xl mx-auto">
-        <div className="items-center my-7">
-          <Dialog open={isModalOpen} onOpenChange={handleDialogOpenChange}>
-            <DialogTrigger asChild className="float-end ml-5">
-              <Button
-                onClick={() => {
-                  setEditingDetail(null)
-                  form.reset({
-                    organization_id: organizationId || "",
-                    code: "",
-                    name: "",
-                    description: "",
-                    is_active: true,
-                  })
-                  setIsModalOpen(true)
-                }}
-              >
-                Add Group <Plus className="ml-2" />
-              </Button>
-            </DialogTrigger>
+    <div className="flex flex-1 flex-col gap-4 w-full">
+      <div className="w-full">
+        <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white text-black px-4 md:px-6 py-4 rounded-t-lg border-b-2 border-black-200">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Groups</h1>
+          </div>
+          
+          <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search groups..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex gap-3 sm:gap-2 flex-wrap">
+                <Dialog open={isModalOpen} onOpenChange={handleDialogOpenChange}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setEditingDetail(null)
+                        form.reset({
+                          organization_id: organizationId || "",
+                          code: "",
+                          name: "",
+                          description: "",
+                          is_active: true,
+                        })
+                        setIsModalOpen(true)
+                      }}
+                      className="whitespace-nowrap"
+                    >
+                      Add Group <Plus className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
             <DialogContent aria-describedby={undefined}>
               <DialogHeader>
                 <DialogTitle>
@@ -409,12 +428,15 @@ export default function GroupsPage() {
                   </Button>
                 </form>
               </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
-        {loading ? (
-          <TableSkeleton rows={6} columns={4} />
-        ) : groups.length === 0 ? (
+              </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              {loading ? (
+                <TableSkeleton rows={6} columns={4} />
+              ) : groups.length === 0 ? (
           <div className="mt-20">
             <Empty>
               <EmptyHeader>
@@ -431,9 +453,14 @@ export default function GroupsPage() {
               </EmptyContent>
             </Empty>
           </div>
-        ) : (
-          <DataTable columns={columns} data={groups} />
-        )}
+              ) : (
+                <div className="min-w-full overflow-x-auto">
+                  <DataTable columns={columns} data={groups} />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

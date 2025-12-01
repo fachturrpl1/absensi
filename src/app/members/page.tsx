@@ -6,7 +6,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Trash, Pencil, Eye, User, Shield, Check, X, Mail, Plus, FileDown, FileUp, UploadCloud, Loader2 } from "lucide-react"
+import { Trash, Pencil, Eye, User, Shield, Check, X, Mail, Plus, FileDown, FileUp, UploadCloud, Loader2, Search } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -93,6 +93,7 @@ export default function MembersPage() {
   const [importDialogOpen, setImportDialogOpen] = React.useState(false)
   const [importing, setImporting] = React.useState(false)
   const [isDragActive, setIsDragActive] = React.useState(false)
+  const [searchQuery, setSearchQuery] = React.useState<string>("")
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const templateDownloadUrl = "/templates/members-import-template.xlsx"
 
@@ -640,263 +641,276 @@ export default function MembersPage() {
   ]
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <div className="w-full max-w-6xl mx-auto">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 my-7" suppressHydrationWarning>
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Members</h1>
+    <div className="flex flex-1 flex-col gap-4 w-full">
+      <div className="w-full">
+        <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white text-black px-4 md:px-6 py-4 rounded-t-lg border-b-2 border-black-200">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Members</h1>
           </div>
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full sm:w-auto"
-              onClick={handleExportMembers}
-              disabled={loading || exporting}
-            >
-              {exporting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <FileDown className="mr-2 h-4 w-4" />
-              )}
-              Export Excel
-            </Button>
-
-            <Dialog open={importDialogOpen} onOpenChange={handleImportDialogChange}>
-              <DialogTrigger asChild>
+          
+          <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center sm:justify-between" suppressHydrationWarning>
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search members..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex gap-3 sm:gap-2 flex-wrap items-center" suppressHydrationWarning>
                 <Button
                   type="button"
-                  variant="secondary"
-                  className="w-full sm:w-auto"
-                  disabled={importing || isLoadingInviteData}
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportMembers}
+                  disabled={loading || exporting}
+                  className="whitespace-nowrap"
                 >
-                  {importing ? (
+                  {exporting ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <FileUp className="mr-2 h-4 w-4" />
+                    <FileDown className="mr-2 h-4 w-4" />
                   )}
-                  Import Excel
+                  Export
                 </Button>
-              </DialogTrigger>
-            <DialogContent className="max-w-[560px] w-full">
-                <DialogHeader>
-                  <DialogTitle>Import Members</DialogTitle>
-                  <DialogDescription>
-                    Unggah file Excel .
-                  </DialogDescription>
-                </DialogHeader>
 
-                <div
-                  className={`mx-auto w-full max-w-md flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 text-center ${
-                    isDragActive ? "border-blue-500 bg-blue-50/60 dark:bg-blue-400/10" : "border-muted"
-                  }`}
-                  onDragEnter={handleDragEnter}
-                  onDragLeave={handleDragLeave}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  onClick={() => {
-                    if (!importing) {
-                      fileInputRef.current?.click()
-                    }
-                  }}
-                >
-                  <UploadCloud className="h-12 w-12 text-muted-foreground" />
-                  <div className="space-y-1">
-                    <p className="text-base font-semibold">Tarik & letakkan file kamu di sini</p>
-                    <p className="text-sm text-muted-foreground">
-                      atau klik untuk memilih file dari komputer
-                    </p>
-                  </div>
-                </div>
-                <div className="w-full text-left">
-                  <a
-                    href={templateDownloadUrl}
-                    download
-                    className="mt-2 inline-block text-sm font-semibold text-blue-600 hover:underline"
-                  >
-                    Download template di sini
-                  </a>
-                </div>
-                <p className="text-xs text-muted-foreground text-left">
-                </p>
-              </DialogContent>
-            </Dialog>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
-              <DialogTrigger asChild>
-                <Button className="w-full sm:w-auto">
-                  Invite Member <Plus className="ml-2 h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]" aria-describedby="invite-description">
-              <DialogHeader>
-                <DialogTitle>Invite New Member</DialogTitle>
-                <DialogDescription id="invite-description">
-                  Send an email invitation to add a new member to your organization
-                </DialogDescription>
-              </DialogHeader>
+                <Dialog open={importDialogOpen} onOpenChange={handleImportDialogChange}>
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={importing || isLoadingInviteData}
+                      className="whitespace-nowrap"
+                    >
+                      {importing ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileUp className="mr-2 h-4 w-4" />
+                      )}
+                      Import
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-[560px] w-full">
+                    <DialogHeader>
+                      <DialogTitle>Import Members</DialogTitle>
+                      <DialogDescription>
+                        Unggah file Excel .
+                      </DialogDescription>
+                    </DialogHeader>
 
-              <Form {...inviteForm}>
-                <form onSubmit={inviteForm.handleSubmit(onSubmitInvite)} className="space-y-4">
-                  <FormField
-                    control={inviteForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email Address *</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              placeholder="john.doe@example.com"
-                              className="pl-10"
-                              {...field}
-                              disabled={submittingInvite}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={inviteForm.control}
-                    name="role_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Role (Optional)</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={submittingInvite || isLoadingInviteData}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select role..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {roles.map((role: any) => (
-                              <SelectItem key={role.id} value={String(role.id)}>
-                                <div className="flex items-center gap-2">
-                                    {role.code === "A001" ? (
-                                      <Shield className="w-3 h-3" />
-                                    ) : (
-                                      <User className="w-3 h-3" />
-                                    )}
-                                  {role.name}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={inviteForm.control}
-                    name="department_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Department (Optional)</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={submittingInvite || isLoadingInviteData}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select department..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {departments.map((dept: any) => (
-                              <SelectItem key={dept.id} value={String(dept.id)}>
-                                {dept.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={inviteForm.control}
-                    name="position_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Position (Optional)</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={submittingInvite || isLoadingInviteData}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select position..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {positions.map((pos: any) => (
-                              <SelectItem key={pos.id} value={String(pos.id)}>
-                                {pos.title}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={inviteForm.control}
-                    name="message"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Welcome Message (Optional)</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Welcome to the team!"
-                            className="resize-none"
-                            rows={3}
-                            {...field}
-                            disabled={submittingInvite}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <Button
-                    type="submit"
-                    disabled={submittingInvite || isLoadingInviteData}
-                    className="w-full"
-                  >
-                    {submittingInvite ? "Sending..." : "Send Invitation"}
+                    <div
+                      className={`mx-auto w-full max-w-md flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 text-center ${
+                        isDragActive ? "border-blue-500 bg-blue-50/60 dark:bg-blue-400/10" : "border-muted"
+                      }`}
+                      onDragEnter={handleDragEnter}
+                      onDragLeave={handleDragLeave}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      onClick={() => {
+                        if (!importing) {
+                          fileInputRef.current?.click()
+                        }
+                      }}
+                    >
+                      <UploadCloud className="h-12 w-12 text-muted-foreground" />
+                      <div className="space-y-1">
+                        <p className="text-base font-semibold">Tarik & letakkan file kamu di sini</p>
+                        <p className="text-sm text-muted-foreground">
+                          atau klik untuk memilih file dari komputer
+                        </p>
+                      </div>
+                    </div>
+                    <div className="w-full text-left">
+                      <a
+                        href={templateDownloadUrl}
+                        download
+                        className="mt-2 inline-block text-sm font-semibold text-blue-600 hover:underline"
+                      >
+                        Download template di sini
+                      </a>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+              </div>
+              <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="whitespace-nowrap">
+                    Invite Member <Plus className="ml-2 h-4 w-4" />
                   </Button>
-                </form>
-              </Form>
-            </DialogContent>
-            </Dialog>
-          </div>
-        </div>
+                </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]" aria-describedby="invite-description">
+                    <DialogHeader>
+                      <DialogTitle>Invite New Member</DialogTitle>
+                      <DialogDescription id="invite-description">
+                        Send an email invitation to add a new member to your organization
+                      </DialogDescription>
+                    </DialogHeader>
 
-        {loading ? (
-          <TableSkeleton rows={8} columns={6} />
-        ) : members.length === 0 ? (
+                    <Form {...inviteForm}>
+                      <form onSubmit={inviteForm.handleSubmit(onSubmitInvite)} className="space-y-4">
+                        <FormField
+                          control={inviteForm.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email Address *</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    placeholder="john.doe@example.com"
+                                    className="pl-10"
+                                    {...field}
+                                    disabled={submittingInvite}
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={inviteForm.control}
+                          name="role_id"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Role (Optional)</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                disabled={submittingInvite || isLoadingInviteData}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select role..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {roles.map((role: any) => (
+                                    <SelectItem key={role.id} value={String(role.id)}>
+                                      <div className="flex items-center gap-2">
+                                        {role.code === "A001" ? (
+                                          <Shield className="w-3 h-3" />
+                                        ) : (
+                                          <User className="w-3 h-3" />
+                                        )}
+                                        {role.name}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={inviteForm.control}
+                          name="department_id"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Department (Optional)</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                disabled={submittingInvite || isLoadingInviteData}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select department..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {departments.map((dept: any) => (
+                                    <SelectItem key={dept.id} value={String(dept.id)}>
+                                      {dept.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={inviteForm.control}
+                          name="position_id"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Position (Optional)</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                disabled={submittingInvite || isLoadingInviteData}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select position..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {positions.map((pos: any) => (
+                                    <SelectItem key={pos.id} value={String(pos.id)}>
+                                      {pos.title}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={inviteForm.control}
+                          name="message"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Welcome Message (Optional)</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="Welcome to the team!"
+                                  className="resize-none"
+                                  rows={3}
+                                  {...field}
+                                  disabled={submittingInvite}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <Button
+                          type="submit"
+                          disabled={submittingInvite || isLoadingInviteData}
+                          className="w-full"
+                        >
+                          {submittingInvite ? "Sending..." : "Send Invitation"}
+                        </Button>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+            </div>
+
+            <div className="mt-6">
+              {loading ? (
+                <TableSkeleton rows={8} columns={6} />
+              ) : members.length === 0 ? (
           <div className="mt-20">
             <Empty>
               <EmptyHeader>
@@ -913,14 +927,19 @@ export default function MembersPage() {
               </EmptyContent>
             </Empty>
           </div>
-        ) : (
-          <DataTable 
-            columns={columns} 
-            data={members}
-            isLoading={loading}
-            searchPlaceholder="Search by name, phone, group, role, or status..."
-          />
-        )}
+              ) : (
+                <div className="min-w-full overflow-x-auto">
+                  <DataTable 
+                    columns={columns} 
+                    data={members}
+                    isLoading={loading}
+                    searchPlaceholder="Search by name, phone, group, role, or status..."
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

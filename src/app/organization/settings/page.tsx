@@ -911,8 +911,8 @@ export default function OrganizationSettingsPage() {
 
 
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="max-w-7xl mx-auto p-6 w-full">
+    <div className="flex flex-1 flex-col w-full">
+      <div className="p-6 w-full overflow-x-auto">
         {/* Header Section */}
         <div className="mb-6">
           <div className="flex flex-col md:flex-row gap-4 items-start">

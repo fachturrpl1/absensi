@@ -197,9 +197,9 @@ export default function RolesPage() {
     ]
 
     return (
-        <div className="flex flex-1 flex-col gap-4">
+        <div className="flex flex-1 flex-col gap-4 w-full">
             
-            <div className="w-full max-w-6xl mx-auto">
+            <div className="w-full">
                 <div className=" items-center my-7">
                     
                     <Dialog open={open} onOpenChange={setOpen}>
@@ -289,7 +289,9 @@ export default function RolesPage() {
                 {loading ? (
                     <TableSkeleton rows={6} columns={5} />
                 ) : (
-                    <DataTable columns={columns} data={permissions} />
+                    <div className="min-w-full overflow-x-auto">
+                        <DataTable columns={columns} data={permissions} />
+                    </div>
                 )}
             </div>
         </div>

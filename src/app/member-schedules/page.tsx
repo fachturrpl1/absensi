@@ -45,7 +45,7 @@ export default async function MemberSchedulesPage() {
   // Show message if user has no organization
   if (!organizationId || organizationId === '') {
     return (
-      <div className="flex flex-1 flex-col gap-4">
+      <div className="flex flex-1 flex-col gap-4 w-full">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center space-y-4">
             <div className="text-6xl">🏢</div>
@@ -61,7 +61,7 @@ export default async function MemberSchedulesPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-4 w-full">
       <MemberSchedulesClient
         initialSchedules={schedules}
         initialMembers={filteredMembers}

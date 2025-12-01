@@ -4,7 +4,7 @@ import React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
-import { Trash, Pencil, Plus, Briefcase } from "lucide-react"
+import { Trash, Pencil, Plus, Briefcase, Search } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -85,6 +85,7 @@ export default function PositionsPage() {
     const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
     const [loading, setLoading] = React.useState<boolean>(true)
     const [organizationId, setOrganizationId] = React.useState<string>("")
+    const [searchQuery, setSearchQuery] = React.useState<string>("")
 
     const supabase = createClient()
 
@@ -288,28 +289,46 @@ export default function PositionsPage() {
     ]
 
     return (
-        <div className="flex flex-1 flex-col gap-4">
-            <div className="w-full max-w-6xl mx-auto">
-                <div className="items-center my-7">
-                    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-                            <DialogTrigger asChild className="float-end  ml-5">
-                            <Button
-                                onClick={() => {
-                                    setEditingDetail(null)
-                                    form.reset({
-                                        organization_id: organizationId || "",
-                                        code: "",
-                                        title: "",
-                                        description: "",
-                                        level: "",
-                                        is_active: true,
-                                    })
-                                    setOpen(true)
-                                }}
-                            >
-                                Add Position <Plus className="ml-2" />
-                            </Button>
-                        </DialogTrigger>
+        <div className="flex flex-1 flex-col gap-4 w-full">
+            <div className="w-full">
+                <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div className="bg-white text-black px-4 md:px-6 py-4 rounded-t-lg border-b-2 border-black-200">
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Positions</h1>
+                    </div>
+                    
+                    <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
+                        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                            <div className="flex-1 relative">
+                                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                                <Input
+                                    placeholder="Search positions..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-10"
+                                />
+                            </div>
+                            <div className="flex gap-3 sm:gap-2 flex-wrap">
+                                <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+                                    <DialogTrigger asChild>
+                                        <Button
+                                            size="sm"
+                                            onClick={() => {
+                                                setEditingDetail(null)
+                                                form.reset({
+                                                    organization_id: organizationId || "",
+                                                    code: "",
+                                                    title: "",
+                                                    description: "",
+                                                    level: "",
+                                                    is_active: true,
+                                                })
+                                                setOpen(true)
+                                            }}
+                                            className="whitespace-nowrap"
+                                        >
+                                            Add Position <Plus className="ml-2 h-4 w-4" />
+                                        </Button>
+                                    </DialogTrigger>
                         <DialogContent aria-describedby={undefined}>
                             <DialogHeader>
                                 <DialogTitle>
@@ -438,10 +457,13 @@ export default function PositionsPage() {
                             </Form>
                         </DialogContent>
                     </Dialog>
-                </div>
-                {loading ? (
-                    <TableSkeleton rows={6} columns={5} />
-                ) : positions.length === 0 ? (
+                            </div>
+                        </div>
+
+                        <div className="mt-6">
+                            {loading ? (
+                                <TableSkeleton rows={6} columns={5} />
+                            ) : positions.length === 0 ? (
                     <div className="mt-20">
                         <Empty>
                             <EmptyHeader>
@@ -458,9 +480,14 @@ export default function PositionsPage() {
                             </EmptyContent>
                         </Empty>
                     </div>
-                ) : (
-                    <DataTable columns={columns} data={positions} />
-                )}
+                            ) : (
+                                <div className="min-w-full overflow-x-auto">
+                                    <DataTable columns={columns} data={positions} />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     )

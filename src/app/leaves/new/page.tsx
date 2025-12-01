@@ -173,7 +173,7 @@ export default function NewLeaveRequestPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-1 flex-col gap-4">
+      <div className="flex flex-1 flex-col gap-4 w-full">
         <div className="flex items-center justify-center h-[400px]">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -182,7 +182,7 @@ export default function NewLeaveRequestPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6 max-w-4xl mx-auto w-full">
+    <div className="flex flex-col gap-6 p-4 md:p-6 w-full overflow-x-auto">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/leaves">
