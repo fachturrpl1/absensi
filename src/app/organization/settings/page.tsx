@@ -750,8 +750,27 @@ export default function OrganizationSettingsPage() {
 
       
       // Convert geo values to labels before saving to database
-      const cityLabel = getCityLabelFromGeo(geoData, formData.city) || formData.city;
-      const stateLabel = getStateLabelFromGeo(geoData, formData.state_province) || formData.state_province;
+      // Only use label, never send raw value (e.g., "id-ji-malang")
+      let cityLabel = getCityLabelFromGeo(geoData, formData.city);
+      let stateLabel = getStateLabelFromGeo(geoData, formData.state_province);
+      
+      // If conversion failed, check if formData already contains a label (not a value)
+      // Values typically contain hyphens and country codes (e.g., "id-ji-malang")
+      // Labels are plain text (e.g., "Malang")
+      if (!cityLabel && formData.city) {
+        // If it doesn't look like a value (no pattern like "id-xx-xxx"), assume it's already a label
+        const looksLikeValue = /^[a-z]{2}-[a-z]{2}(-[a-z0-9-]+)?$/i.test(formData.city);
+        if (!looksLikeValue) {
+          cityLabel = formData.city; // Already a label
+        }
+      }
+      
+      if (!stateLabel && formData.state_province) {
+        const looksLikeValue = /^[a-z]{2}-[a-z]{2}$/i.test(formData.state_province);
+        if (!looksLikeValue) {
+          stateLabel = formData.state_province; // Already a label
+        }
+      }
 
       const updateData: OrganizationUpdateData = {
 

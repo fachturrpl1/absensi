@@ -525,15 +525,15 @@ export default function MembersPage() {
               </DialogTrigger>
             <DialogContent className="max-w-[560px] w-full">
                 <DialogHeader>
-                  <DialogTitle>Import Members</DialogTitle>
+                  <DialogTitle>Import Members via Excel</DialogTitle>
                   <DialogDescription>
-                    Unggah file Excel .
+                    Unggah file Excel dengan format yang sesuai. Maksimal 200 baris per file.
                   </DialogDescription>
                 </DialogHeader>
 
                 <div
-                  className={`mx-auto w-full max-w-md flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 text-center ${
-                    isDragActive ? "border-blue-500 bg-blue-50/60 dark:bg-blue-400/10" : "border-muted"
+                  className={`mx-auto w-full max-w-md flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-colors ${
+                    isDragActive ? "border-blue-500 bg-blue-50/60 dark:bg-blue-400/10" : "border-muted hover:border-muted-foreground/50"
                   }`}
                   onDragEnter={handleDragEnter}
                   onDragLeave={handleDragLeave}
@@ -545,7 +545,7 @@ export default function MembersPage() {
                     }
                   }}
                 >
-                  <UploadCloud className="h-12 w-12 text-muted-foreground" />
+                  <UploadCloud className={`h-12 w-12 ${isDragActive ? "text-blue-500" : "text-muted-foreground"}`} />
                   <div className="space-y-1">
                     <p className="text-base font-semibold">Tarik & letakkan file kamu di sini</p>
                     <p className="text-sm text-muted-foreground">
@@ -562,7 +562,8 @@ export default function MembersPage() {
                     Download template di sini
                   </a>
                 </div>
-                <p className="text-xs text-muted-foreground text-left">
+                <p className="text-xs text-muted-foreground text-left mt-2">
+                  Format yang didukung: .xlsx atau .xls. Maksimal 200 baris per file.
                 </p>
               </DialogContent>
             </Dialog>
