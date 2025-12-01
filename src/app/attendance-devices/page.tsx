@@ -486,10 +486,6 @@ export default function AttendanceDevicesPage() {
                                     showGlobalFilter={false}
                                     showFilters={false}
                                     showColumnToggle={false}
-                                    pageIndex={currentPageIndex}
-                                    onPageIndexChange={setCurrentPageIndex}
-                                    pageSize={currentPageSize}
-                                    onPageSizeChange={setCurrentPageSize}
                                 />
                             )}
                         </div>

@@ -6,7 +6,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Trash, Pencil, Eye, User, Shield, Check, X, Mail, Plus } from "lucide-react"
+import { Trash, Pencil, Eye, User, Shield, Check, X, Mail, Plus, FileDown, FileUp, UploadCloud, Loader2 } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -89,6 +89,12 @@ export default function MembersPage() {
   const [loading, setLoading] = React.useState<boolean>(true)
   const [inviteDialogOpen, setInviteDialogOpen] = React.useState(false)
   const [submittingInvite, setSubmittingInvite] = React.useState(false)
+  const [exporting, setExporting] = React.useState(false)
+  const [importDialogOpen, setImportDialogOpen] = React.useState(false)
+  const [importing, setImporting] = React.useState(false)
+  const [isDragActive, setIsDragActive] = React.useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const templateDownloadUrl = "/templates/members-import-template.xlsx"
 
   // Auto-open invite dialog if action=invite in URL
   React.useEffect(() => {
@@ -197,6 +203,257 @@ export default function MembersPage() {
       toast.error(error instanceof Error ? error.message : "An error occurred")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleExportMembers = async () => {
+    try {
+      if (!members.length) {
+        toast.warning("Tidak ada data member untuk diekspor")
+        return
+      }
+
+      setExporting(true)
+      const XLSX = await import("xlsx")
+
+      const rows = members.map((member: any) => {
+        const user = member.user
+        const fullname = user
+          ? [user.first_name, user.middle_name, user.last_name]
+              .filter((part: string | undefined) => part && part.trim() !== "")
+              .join(" ") ||
+            user.display_name ||
+            user.email ||
+            "No User"
+          : "No User"
+
+        return {
+          "Full Name": fullname,
+          Email: user?.email || "-",
+          "Phone Number": user?.phone || "-",
+          Department: member.groupName || member.departments?.name || "-",
+          Role: member.role?.name || "No Role",
+          Status: member.is_active ? "Active" : "Inactive",
+        }
+      })
+
+      const worksheet = XLSX.utils.json_to_sheet(rows)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Members")
+
+      const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `members-${new Date().toISOString().split("T")[0]}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      toast.success("Export members berhasil")
+    } catch (error) {
+      console.error("Export members error:", error)
+      toast.error("Gagal mengekspor data members")
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const processImportFile = async (file: File) => {
+    setImporting(true)
+
+    try {
+      const XLSX = await import("xlsx")
+      const buffer = await file.arrayBuffer()
+      const workbook = XLSX.read(buffer, { type: "array" })
+      const sheetName = workbook.SheetNames?.[0]
+      if (!sheetName) {
+        throw new Error("Tidak ada sheet di dalam file Excel")
+      }
+
+      const sheet = workbook.Sheets[sheetName]
+      if (!sheet) {
+        throw new Error("Tidak dapat menemukan sheet yang valid di file Excel")
+      }
+      const rows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { defval: "" }) as Record<
+        string,
+        string
+      >[]
+
+      if (!rows.length) {
+        toast.error("File Excel kosong atau tidak memiliki data")
+        return
+      }
+
+      if (rows.length > 200) {
+        toast.warning("Import maksimal 200 baris per file untuk menjaga performa")
+      }
+
+      let successCount = 0
+      let failedCount = 0
+      const errors: string[] = []
+
+      const findId = (
+        collection: any[],
+        value: string,
+        keys: string[]
+      ): { id?: string; notFound: boolean } => {
+        const normalized = value.trim().toLowerCase()
+        if (!normalized) return { id: undefined, notFound: false }
+        const match = collection.find((item: any) =>
+          keys.some((key) => String(item?.[key] ?? "").trim().toLowerCase() === normalized)
+        )
+        if (!match) return { id: undefined, notFound: true }
+        return { id: String(match.id), notFound: false }
+      }
+
+      for (let index = 0; index < rows.length; index++) {
+        const rawRow = rows[index]
+        if (!rawRow) {
+          continue
+        }
+
+        const normalizedRow = Object.entries(rawRow).reduce<Record<string, string>>(
+          (acc, [key, value]) => {
+            acc[key.toLowerCase()] = String(value ?? "")
+            return acc
+          },
+          {}
+        )
+
+        const email = String(normalizedRow["email"] || normalizedRow["email address"] || "").trim()
+        if (!email) {
+          failedCount++
+          errors.push(`Baris ${index + 2}: kolom email wajib diisi`)
+          continue
+        }
+
+        const roleValue = String(normalizedRow["role"] || "").trim()
+        const departmentValue = String(normalizedRow["department"] || "").trim()
+        const positionValue = String(
+          normalizedRow["position"] ||
+            normalizedRow["job title"] ||
+            normalizedRow["jabatan"] ||
+            ""
+        ).trim()
+        const messageValue = String(
+          normalizedRow["message"] ||
+            normalizedRow["notes"] ||
+            normalizedRow["catatan"] ||
+            ""
+        ).trim()
+
+        const skipRole =
+          !roleValue || roleValue.toLowerCase().replace(/[^a-z0-9]/g, "") === "norole"
+
+        let roleResult: ReturnType<typeof findId> = { id: undefined, notFound: false }
+        if (!skipRole) {
+          roleResult = findId(roles ?? [], roleValue, ["name", "code", "id"])
+          if (roleResult.notFound) {
+            failedCount++
+            errors.push(`Baris ${index + 2}: role "${roleValue}" tidak ditemukan`)
+            continue
+          }
+        }
+
+        let departmentResult: ReturnType<typeof findId> = { id: undefined, notFound: false }
+        if (!departmentValue) {
+          failedCount++
+          errors.push(`Baris ${index + 2}: kolom department wajib diisi`)
+          continue
+        }
+
+        departmentResult = findId(departments ?? [], departmentValue, ["name", "code", "id"])
+        if (departmentResult.notFound) {
+          failedCount++
+          errors.push(`Baris ${index + 2}: department "${departmentValue}" tidak ditemukan`)
+          continue
+        }
+
+        let positionResult: ReturnType<typeof findId> = { id: undefined, notFound: false }
+        if (positionValue) {
+          positionResult = findId(positions ?? [], positionValue, ["title", "name", "id"])
+          if (positionResult.notFound) {
+            failedCount++
+            errors.push(`Baris ${index + 2}: position "${positionValue}" tidak ditemukan`)
+            continue
+          }
+        }
+
+        const invitationPayload: Parameters<typeof createInvitation>[0] = { email }
+        if (roleResult.id) invitationPayload.role_id = roleResult.id
+        if (departmentResult.id) invitationPayload.department_id = departmentResult.id
+        if (positionResult.id) invitationPayload.position_id = positionResult.id
+        if (messageValue) invitationPayload.message = messageValue
+
+        try {
+          const result = await createInvitation(invitationPayload)
+          if (result.success) {
+            successCount++
+          } else {
+            failedCount++
+            errors.push(`Baris ${index + 2}: ${result.message || "Gagal mengirim undangan"}`)
+          }
+        } catch (error) {
+          failedCount++
+          errors.push(`Baris ${index + 2}: ${(error as Error)?.message || "Gagal mengirim undangan"}`)
+        }
+      }
+
+      toast.success(`Import selesai. Berhasil: ${successCount}, gagal: ${failedCount}`)
+      fetchMembers()
+    } catch (error) {
+      console.error("Import members error:", error)
+      toast.error("Gagal mengimport file Excel")
+    } finally {
+      setImporting(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    }
+  }
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      await processImportFile(file)
+    }
+  }
+
+  const handleImportDialogChange = (open: boolean) => {
+    setImportDialogOpen(open)
+    if (!open) {
+      setIsDragActive(false)
+    }
+  }
+
+  const handleDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setIsDragActive(true)
+  }
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setIsDragActive(false)
+  }
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setIsDragActive(false)
+    const file = event.dataTransfer.files?.[0]
+    if (file) {
+      await processImportFile(file)
     }
   }
 
@@ -385,13 +642,98 @@ export default function MembersPage() {
   return (
     <div className="flex flex-1 flex-col gap-4">
       <div className="w-full max-w-6xl mx-auto">
-        <div className="items-center my-7">
-          <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
-            <DialogTrigger asChild className="float-end ml-5">
-              <Button>
-                Invite Member <Plus className="ml-2" />
-              </Button>
-            </DialogTrigger>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 my-7" suppressHydrationWarning>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">Members</h1>
+          </div>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={handleExportMembers}
+              disabled={loading || exporting}
+            >
+              {exporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileDown className="mr-2 h-4 w-4" />
+              )}
+              Export Excel
+            </Button>
+
+            <Dialog open={importDialogOpen} onOpenChange={handleImportDialogChange}>
+              <DialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full sm:w-auto"
+                  disabled={importing || isLoadingInviteData}
+                >
+                  {importing ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileUp className="mr-2 h-4 w-4" />
+                  )}
+                  Import Excel
+                </Button>
+              </DialogTrigger>
+            <DialogContent className="max-w-[560px] w-full">
+                <DialogHeader>
+                  <DialogTitle>Import Members</DialogTitle>
+                  <DialogDescription>
+                    Unggah file Excel .
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div
+                  className={`mx-auto w-full max-w-md flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 text-center ${
+                    isDragActive ? "border-blue-500 bg-blue-50/60 dark:bg-blue-400/10" : "border-muted"
+                  }`}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onClick={() => {
+                    if (!importing) {
+                      fileInputRef.current?.click()
+                    }
+                  }}
+                >
+                  <UploadCloud className="h-12 w-12 text-muted-foreground" />
+                  <div className="space-y-1">
+                    <p className="text-base font-semibold">Tarik & letakkan file kamu di sini</p>
+                    <p className="text-sm text-muted-foreground">
+                      atau klik untuk memilih file dari komputer
+                    </p>
+                  </div>
+                </div>
+                <div className="w-full text-left">
+                  <a
+                    href={templateDownloadUrl}
+                    download
+                    className="mt-2 inline-block text-sm font-semibold text-blue-600 hover:underline"
+                  >
+                    Download template di sini
+                  </a>
+                </div>
+                <p className="text-xs text-muted-foreground text-left">
+                </p>
+              </DialogContent>
+            </Dialog>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
+              <DialogTrigger asChild>
+                <Button className="w-full sm:w-auto">
+                  Invite Member <Plus className="ml-2 h-4 w-4" />
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]" aria-describedby="invite-description">
               <DialogHeader>
                 <DialogTitle>Invite New Member</DialogTitle>
@@ -444,7 +786,11 @@ export default function MembersPage() {
                             {roles.map((role: any) => (
                               <SelectItem key={role.id} value={String(role.id)}>
                                 <div className="flex items-center gap-2">
-                                  {role.code === "A001" ? <Shield className="w-3 h-3" /> : <User className="w-3 h-3" />}
+                                    {role.code === "A001" ? (
+                                      <Shield className="w-3 h-3" />
+                                    ) : (
+                                      <User className="w-3 h-3" />
+                                    )}
                                   {role.name}
                                 </div>
                               </SelectItem>
@@ -544,7 +890,8 @@ export default function MembersPage() {
                 </form>
               </Form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         {loading ? (
@@ -571,7 +918,7 @@ export default function MembersPage() {
             columns={columns} 
             data={members}
             isLoading={loading}
-            searchPlaceholder="Search by name, type, reason, or number..."
+            searchPlaceholder="Search by name, phone, group, role, or status..."
           />
         )}
       </div>

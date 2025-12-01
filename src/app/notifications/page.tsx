@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-
+import { useMemo, useState, useEffect } from "react";
+import { formatDistanceToNow } from "date-fns";
 import type { CheckedState } from "@radix-ui/react-checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useNotifications } from "@/hooks/use-notifications";
 
 type NotificationCategory = "attendance" | "leaves" | "schedule";
 type NotificationFilter = "all" | NotificationCategory;
@@ -25,35 +27,27 @@ type NotificationItem = {
   selected?: boolean;
 };
 
-const initialNotifications: NotificationItem[] = [
-  {
-    id: 1,
-    sender: "System",
-    subject: "New attendance record",
-    snippet: "John Doe checked in at 09:00 AM",
-    date: "2 minutes ago",
-    category: "attendance",
-    unread: true,
-  },
-  {
-    id: 2,
-    sender: "Scheduling",
-    subject: "Shift swap request",
-    snippet: "Sarah Connor requested to swap Friday evening shift",
-    date: "10 minutes ago",
-    category: "schedule",
-    unread: true,
-  },
-  {
-    id: 3,
-    sender: "Leaves",
-    subject: "Leave approval",
-    snippet: "Mark Lee's annual leave was approved",
-    date: "1 hour ago",
-    category: "leaves",
-    unread: false,
-  },
-];
+function formatTime(timeString: string): string {
+  try {
+    const date = new Date(timeString);
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch {
+    return timeString;
+  }
+}
+
+function formatRelativeTime(timeString: string): string {
+  try {
+    const date = new Date(timeString);
+    return formatDistanceToNow(date, { addSuffix: true });
+  } catch {
+    return 'just now';
+  }
+}
 
 const categoryTabs: { value: NotificationFilter; label: string }[] = [
   { value: "all", label: "All notif" },
@@ -84,8 +78,62 @@ const categoryBadgeMeta: Record<
 };
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [activeCategory, setActiveCategory] = useState<NotificationFilter>("all");
+  const { data: apiNotifications = [], isLoading } = useNotifications(50);
+
+  // Transform API notifications to UI notifications
+  const transformedNotifications = useMemo(() => {
+    return apiNotifications.map((apiNotif, index) => {
+      const relativeTime = formatRelativeTime(apiNotif.timestamp);
+      
+      const sender = "System";
+      let subject = "";
+      let snippet = "";
+      let category: NotificationCategory = "attendance";
+
+      if (apiNotif.type === 'attendance') {
+        const checkInTime = formatTime(apiNotif.data?.checkInTime || apiNotif.timestamp);
+        const lateText = apiNotif.lateMinutes && apiNotif.lateMinutes > 0
+          ? ` (${apiNotif.lateMinutes} min late)`
+          : '';
+        subject = "New attendance record";
+        snippet = `${apiNotif.memberName} checked in at ${checkInTime}${lateText}`;
+        category = "attendance";
+      } else if (apiNotif.type === 'leaves') {
+        if (apiNotif.action === 'approved') {
+          subject = "Leave approval";
+          snippet = `${apiNotif.memberName}'s ${apiNotif.data?.leaveType || 'annual'} leave was approved`;
+        } else if (apiNotif.action === 'rejected') {
+          subject = "Leave rejection";
+          snippet = `${apiNotif.memberName}'s ${apiNotif.data?.leaveType || 'leave'} request was rejected`;
+        } else {
+          subject = "Leave request";
+          snippet = `${apiNotif.memberName} requested ${apiNotif.data?.totalDays || 1} day(s) of ${apiNotif.data?.leaveType || 'leave'}`;
+        }
+        category = "leaves";
+      } else if (apiNotif.type === 'schedule') {
+        subject = "Shift swap request";
+        snippet = `${apiNotif.memberName} requested to swap shift`;
+        category = "schedule";
+      }
+
+      return {
+        id: index + 1,
+        sender,
+        subject,
+        snippet,
+        date: relativeTime,
+        category,
+        unread: true,
+        selected: false,
+      };
+    });
+  }, [apiNotifications]);
+
+  useEffect(() => {
+    setNotifications(transformedNotifications);
+  }, [transformedNotifications]);
 
   const filteredNotifications = useMemo(() => {
     if (activeCategory === "all") return notifications;
@@ -178,65 +226,72 @@ export default function NotificationsPage() {
         </div>
 
         <div className="divide-y">
-          {filteredNotifications.map((notification) => (
-            <div
-              key={notification.id}
-              className={cn(
-                "flex items-center gap-4 px-4 py-4 text-sm transition-colors hover:bg-muted/40",
-                notification.unread && "bg-muted/40 font-medium shadow-[inset_0_1px_0_var(--border)]",
-              )}
-            >
-              <Checkbox
-                checked={notification.selected}
-                onCheckedChange={(value) => toggleSelection(notification.id, value)}
-                className="size-4 shrink-0"
-              />
-              <Avatar>
-                <AvatarFallback className="text-xs font-semibold uppercase">
-                  {notification.sender.slice(0, 2)}
-                </AvatarFallback>
-              </Avatar>
-
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="truncate text-sm font-semibold">{notification.sender}</span>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "text-[10px] font-medium uppercase tracking-wide",
-                      categoryBadgeMeta[notification.category]?.className,
-                    )}
-                  >
-                    {categoryBadgeMeta[notification.category]?.label}
-                  </Badge>
+          {isLoading ? (
+            <div className="space-y-4 p-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-4 shrink-0" />
+                  <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-full" />
+                  </div>
+                  <Skeleton className="h-3 w-20 shrink-0" />
                 </div>
-                <p className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <span className="truncate text-foreground">{notification.subject}</span>
-                  <span className="text-muted-foreground">— {notification.snippet}</span>
-                </p>
-              </div>
-
-              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {notification.date}
-              </span>
+              ))}
             </div>
-          ))}
-
-          {filteredNotifications.length === 0 ? (
+          ) : filteredNotifications.length === 0 ? (
             <div className="px-4 py-12 text-center text-sm text-muted-foreground">
               No notifications in this category yet.
             </div>
-          ) : null}
+          ) : (
+            filteredNotifications.map((notification) => (
+              <div
+                key={notification.id}
+                className={cn(
+                  "flex items-center gap-4 px-4 py-4 text-sm transition-colors hover:bg-muted/40",
+                  notification.unread && "bg-muted/40 font-medium shadow-[inset_0_1px_0_var(--border)]",
+                )}
+              >
+                <Checkbox
+                  checked={notification.selected}
+                  onCheckedChange={(value) => toggleSelection(notification.id, value)}
+                  className="size-4 shrink-0"
+                />
+                <Avatar>
+                  <AvatarFallback className="text-xs font-semibold uppercase">
+                    {notification.sender.slice(0, 2)}
+                  </AvatarFallback>
+                </Avatar>
+
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="truncate text-sm font-semibold">{notification.sender}</span>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] font-medium uppercase tracking-wide",
+                        categoryBadgeMeta[notification.category]?.className,
+                      )}
+                    >
+                      {categoryBadgeMeta[notification.category]?.label}
+                    </Badge>
+                  </div>
+                  <p className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <span className="truncate text-foreground">{notification.subject}</span>
+                    <span className="text-muted-foreground">— {notification.snippet}</span>
+                  </p>
+                </div>
+
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {notification.date}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </Card>
 
-      <Separator className="mx-4 lg:mx-10" />
-      <p className="px-4 pb-6 text-xs text-muted-foreground sm:px-6 lg:px-10">
-        Simulated data for design preview. Connect to live notification sources to populate this
-        view automatically.
-      </p>
     </div>
   );
 }
-
-

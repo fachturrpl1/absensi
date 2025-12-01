@@ -15,14 +15,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { 
-  Plus, 
   Calendar,   
   FileText, 
   Clock, 
   CheckCircle, 
   TrendingUp,
   CalendarDays,
-  Settings,
   PieChart,
   BarChart3,
   UserCheck,
@@ -50,7 +48,6 @@ function parseNumber(value: string | number | undefined): number {
   return 0;
 }
 import { useOrgStore } from "@/store/org-store";
-import Link from "next/link";
 import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
 import { LeaveRequestList } from "@/components/leave/leave-request-list";
@@ -113,7 +110,6 @@ export default function LeavesPage() {
   const { organizationId } = useOrgStore();
   // Role codes: A001 = Admin Org, SA001 = Super Admin
   const isAdmin = role === 'A001' || role === 'SA001';
-  const canManageLeaveTypes = permissions?.includes('leaves:type:manage') || isAdmin;
   const canApproveRequests = permissions?.includes('leaves:approval:create') || isAdmin;
 
   // Helper function to get chart icon

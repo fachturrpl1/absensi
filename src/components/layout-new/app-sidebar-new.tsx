@@ -99,7 +99,7 @@ const getSidebarGroups = (): NavGroup[] => [
           { title: 'Manage Types', url: '/leaves/types', icon: ListChecks, requiresAdmin: true },
         ],
       },
-      {
+      { 
         title: 'Organization',
         icon: Users,
         subItems: [
