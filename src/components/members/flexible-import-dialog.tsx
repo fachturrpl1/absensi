@@ -274,50 +274,64 @@ export function FlexibleImportDialog({
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col gap-4">
-          {/* Step 1: Upload */}
+          {/* Step 1: Upload + Download Template */}
           {step === "upload" && (
-            <div
-              className={`flex-1 flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-8 ${
-                isDragActive
-                  ? "border-blue-500 bg-blue-50/60 dark:bg-blue-400/10"
-                  : "border-muted"
-              }`}
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              onClick={() => !loading && fileInputRef.current?.click()}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx,.xls"
-                className="hidden"
-                onChange={(e) => {
-                  const selectedFile = e.target.files?.[0]
-                  if (selectedFile) {
-                    handleFileSelect(selectedFile)
-                  }
-                }}
-                disabled={loading}
-              />
+            <div className="flex-1 flex flex-col gap-4">
+              <div
+                className={`flex-1 flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-8 ${
+                  isDragActive
+                    ? "border-blue-500 bg-blue-50/60 dark:bg-blue-400/10"
+                    : "border-muted"
+                }`}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onClick={() => !loading && fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  onChange={(e) => {
+                    const selectedFile = e.target.files?.[0]
+                    if (selectedFile) {
+                      handleFileSelect(selectedFile)
+                    }
+                  }}
+                  disabled={loading}
+                />
 
-              {loading ? (
-                <>
-                  <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Reading Excel file...</p>
-                </>
-              ) : (
-                <>
-                  <UploadCloud className="h-12 w-12 text-muted-foreground" />
-                  <div className="text-center space-y-1">
-                    <p className="text-base font-semibold">Drag & drop your Excel file here</p>
-                    <p className="text-sm text-muted-foreground">
-                      or click to choose a file from your computer
-                    </p>
-                  </div>
-                </>
-              )}
+                {loading ? (
+                  <>
+                    <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Reading Excel file...</p>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud className="h-12 w-12 text-muted-foreground" />
+                    <div className="text-center space-y-1">
+                      <p className="text-base font-semibold">Drag & drop your Excel file here</p>
+                      <p className="text-sm text-muted-foreground">
+                        or click to choose a file from your computer
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Template download so users can start from the correct format */}
+              <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
+                <p>Need a starter format? Download the official members import template.</p>
+                <a
+                  href="/templates/members-import-template.xlsx"
+                  download
+                  className="text-blue-600 hover:underline font-semibold"
+                >
+                  Download Template
+                </a>
+              </div>
             </div>
           )}
 
