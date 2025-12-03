@@ -11,6 +11,7 @@ import { format } from "date-fns"
 
 import { createManualAttendance, checkExistingAttendance } from "@/action/attendance"
 import { getAllOrganization_member } from "@/action/members"
+import { getAllGroups } from "@/action/group"
 import { toTimestampWithTimezone } from "@/lib/timezone"
 import { Button } from "@/components/ui/button"
 import {
@@ -93,49 +94,77 @@ export function AttendanceFormBatch() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedGroup, setSelectedGroup] = useState<string>("all")
   const [availableGroups, setAvailableGroups] = useState<Array<{id: string, name: string}>>([])
-
-  // Auto-fill dengan waktu sekarang
-  const now = new Date();
-  const currentDate = format(now, 'yyyy-MM-dd');
-  const currentTime = format(now, 'HH:mm');
+  const [currentDate, setCurrentDate] = useState<string>("")
+  const [currentTime, setCurrentTime] = useState<string>("")
 
   const form = useForm<SingleFormValues>({
     resolver: zodResolver(singleFormSchema),
     defaultValues: {
-      checkInDate: currentDate,
-      checkInTime: currentTime,
-      checkOutDate: currentDate,
-      checkOutTime: currentTime,
+      checkInDate: "",
+      checkInTime: "",
+      checkOutDate: "",
+      checkOutTime: "",
       status: "present",
       remarks: "",
     },
   })
+
+  // Initialize current date and time on client side only
+  useEffect(() => {
+    const now = new Date();
+    const date = format(now, 'yyyy-MM-dd');
+    const time = format(now, 'HH:mm');
+    setCurrentDate(date);
+    setCurrentTime(time);
+    
+    // Update form default values
+    form.reset({
+      checkInDate: date,
+      checkInTime: time,
+      checkOutDate: date,
+      checkOutTime: time,
+      status: "present",
+      remarks: "",
+    });
+  }, [])
 
   // Load members once on mount
   useEffect(() => {
     const loadMembers = async () => {
       try {
         setLoading(true)
-        const res = await getAllOrganization_member()
+        const [membersRes, groupsRes] = await Promise.all([
+          getAllOrganization_member(),
+          getAllGroups()
+        ])
 
-        if (!res.success) {
-          throw new Error(res.message || "Failed to load members")
+        if (!membersRes.success) {
+          throw new Error(membersRes.message || "Failed to load members")
         }
 
-        const membersData = (res.data || []) as IOrganization_member[]
+        const membersData = (membersRes.data || []) as IOrganization_member[]
         
         // Store original data for filtering
         setOriginalMembersData(membersData)
         
-        // Extract unique groups/departments
-        const groupsMap = new Map<string, string>()
-        membersData.forEach((member) => {
-          if (member.department_id && member.departments?.name) {
-            groupsMap.set(String(member.department_id), member.departments.name)
-          }
-        })
-        const groups = Array.from(groupsMap.entries()).map(([id, name]) => ({ id, name }))
-        setAvailableGroups(groups)
+        // Get all groups from database
+        if (groupsRes.success && groupsRes.data) {
+          const groups = groupsRes.data.map((group: any) => ({ 
+            id: String(group.id), 
+            name: group.name 
+          }))
+          setAvailableGroups(groups)
+        } else {
+          // Fallback: Extract unique groups from members if groups API fails
+          const groupsMap = new Map<string, string>()
+          membersData.forEach((member) => {
+            if (member.department_id && member.departments?.name) {
+              groupsMap.set(String(member.department_id), member.departments.name)
+            }
+          })
+          const groups = Array.from(groupsMap.entries()).map(([id, name]) => ({ id, name }))
+          setAvailableGroups(groups)
+        }
 
         const options: MemberOption[] = membersData
           .filter((member) => member.id && member.user?.id)

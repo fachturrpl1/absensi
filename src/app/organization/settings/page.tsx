@@ -1274,6 +1274,38 @@ export default function OrganizationSettingsPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
+                    <Label htmlFor="country_code" className="text-sm font-medium">
+                      Country
+                    </Label>
+                    <Select
+                      value={formData.country_code}
+                      onValueChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          country_code: value,
+                          city: "",
+                          state_province: "",
+                        })
+                      }
+                    >
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Select country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ID">Indonesia</SelectItem>
+                        <SelectItem value="MY">Malaysia</SelectItem>
+                        <SelectItem value="SG">Singapore</SelectItem>
+                        <SelectItem value="TH">Thailand</SelectItem>
+                        <SelectItem value="PH">Philippines</SelectItem>
+                        <SelectItem value="VN">Vietnam</SelectItem>
+                        <SelectItem value="US">United States</SelectItem>
+                        <SelectItem value="GB">United Kingdom</SelectItem>
+                        <SelectItem value="AU">Australia</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="state_province" className="text-sm font-medium">
                       State/Province
                     </Label>
@@ -1328,12 +1360,13 @@ export default function OrganizationSettingsPage() {
                       </PopoverContent>
                     </Popover>
                   </div>
+                </div>
 
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="city" className="text-sm font-medium">
                       City
                     </Label>
-
                     <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
                       <PopoverTrigger asChild>
                         <Button
@@ -1384,19 +1417,19 @@ export default function OrganizationSettingsPage() {
                       </PopoverContent>
                     </Popover>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="postal_code" className="text-sm font-medium">
-                    Postal Code
-                  </Label>
-                  <Input
-                    id="postal_code"
-                    value={formData.postal_code}
-                    onChange={(e) => setFormData({...formData, postal_code: e.target.value})}
-                    placeholder="Enter postal code"
-                    className="h-10"
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="postal_code" className="text-sm font-medium">
+                      Postal Code
+                    </Label>
+                    <Input
+                      id="postal_code"
+                      value={formData.postal_code}
+                      onChange={(e) => setFormData({...formData, postal_code: e.target.value})}
+                      placeholder="Enter postal code"
+                      className="h-10"
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -1415,39 +1448,7 @@ export default function OrganizationSettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              <div className="space-y-2">
-                <Label htmlFor="country_code" className="text-sm font-medium">
-                  Country
-                </Label>
-                <Select
-                  value={formData.country_code}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      country_code: value,
-                      city: "",
-                      state_province: "",
-                    })
-                  }
-                >
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Select country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ID">Indonesia</SelectItem>
-                    <SelectItem value="MY">Malaysia</SelectItem>
-                    <SelectItem value="SG">Singapore</SelectItem>
-                    <SelectItem value="TH">Thailand</SelectItem>
-                    <SelectItem value="PH">Philippines</SelectItem>
-                    <SelectItem value="VN">Vietnam</SelectItem>
-                    <SelectItem value="US">United States</SelectItem>
-                    <SelectItem value="GB">United Kingdom</SelectItem>
-                    <SelectItem value="AU">Australia</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="timezone" className="text-sm font-medium">
                   Timezone
@@ -1523,7 +1524,7 @@ export default function OrganizationSettingsPage() {
             ) : (
               <>
                 <Save className="h-4 w-4" />
-                Save Changes
+                Save
               </>
             )}
           </Button>

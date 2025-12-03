@@ -69,7 +69,7 @@ export function DataTable<TData, TValue>({
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [sortOrder, setSortOrder] = React.useState("newest")
   const [pageSize, setPageSize] = React.useState("10")
-  const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: parseInt(pageSize) })
+  const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 10 })
 
   // Handler functions
   const handlePageSizeChange = (value: string) => {
@@ -181,19 +181,21 @@ export function DataTable<TData, TValue>({
     },
     initialState: {
       pagination: {
-        pageSize: parseInt(pageSize),
+        pageSize: 10,
       },
     },
   })
   
-  // Sink select pageSize -> pagination state and reset to first page
+  // Sync pageSize -> pagination state and reset to first page
   React.useEffect(() => {
-    setPagination((prev) => ({ ...prev, pageSize: parseInt(pageSize), pageIndex: 0 }))
+    const newPageSize = parseInt(pageSize, 10) || 10
+    setPagination((prev) => ({ ...prev, pageSize: newPageSize, pageIndex: 0 }))
   }, [pageSize])
 
   // Clamp pageIndex when filtered data or pageSize changes
   React.useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(filteredData.length / parseInt(pageSize)))
+    const newPageSize = parseInt(pageSize, 10) || 10
+    const totalPages = Math.max(1, Math.ceil(filteredData.length / newPageSize))
     if (pageIndex > totalPages - 1) {
       handlePageIndexChange(Math.max(0, totalPages - 1))
     }
@@ -201,19 +203,6 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      {/* Search Bar - Full Width */}
-      {showGlobalFilter && (
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10 pointer-events-none" />
-          <Input
-            placeholder={searchPlaceholder}
-            value={globalFilter}
-            onChange={(e) => setGlobalFilter(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 placeholder:text-ellipsis placeholder:overflow-hidden placeholder:whitespace-nowrap"
-            title={searchPlaceholder}
-          />
-        </div>
-      )}
       
       {/* Filters and Controls - Compact Grid */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
@@ -459,7 +448,10 @@ export function DataTable<TData, TValue>({
           
           <div className="flex flex-row items-center justify-center md:justify-end gap-2 md:gap-4 w-full md:w-auto">
             <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-              Showing {table.getRowModel().rows.length > 0 ? pageIndex * parseInt(pageSize) + 1 : 0} to {Math.min((pageIndex + 1) * parseInt(pageSize), table.getFilteredRowModel().rows.length)} of {table.getFilteredRowModel().rows.length} total records
+              {(() => {
+                const ps = parseInt(pageSize, 10) || 10;
+                return `Showing ${table.getRowModel().rows.length > 0 ? pageIndex * ps + 1 : 0} to ${Math.min((pageIndex + 1) * ps, table.getFilteredRowModel().rows.length)} of ${table.getFilteredRowModel().rows.length} total records`;
+              })()}
             </div>
             <div className="flex items-center gap-2">
               <select

@@ -39,7 +39,6 @@ import {
 import { getMyLeaveBalance, getMyLeaveRequests, getLeaveTypes, cancelLeaveRequest } from "@/action/leaves";
 import { getLeaveStatistics, getAllLeaveRequests, getOrganizationLeaveTypes } from "@/action/admin-leaves";
 import { LeaveBalanceWithType, ILeaveRequest, ILeaveType } from "@/lib/leave/types";
-import { useUserStore } from "@/store/user-store";
 
 // Helper to parse number from string or number
 function parseNumber(value: string | number | undefined): number {
@@ -106,11 +105,7 @@ export default function LeavesPage() {
   const [typeChartType, setTypeChartType] = useState<'donut' | 'pie' | 'bar'>('donut');
   const [detailedChartType, setDetailedChartType] = useState<'donut' | 'pie' | 'bar'>('donut');
   
-  const { role, permissions } = useUserStore();
   const { organizationId } = useOrgStore();
-  // Role codes: A001 = Admin Org, SA001 = Super Admin
-  const isAdmin = role === 'A001' || role === 'SA001';
-  const canApproveRequests = permissions?.includes('leaves:approval:create') || isAdmin;
 
   // Helper function to get chart icon
   const getChartIcon = (chartType: 'donut' | 'pie' | 'bar') => {
@@ -125,128 +120,80 @@ export default function LeavesPage() {
     }
   };
 
-  // Load data based on user role
+  // Load data
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      logger.debug("🔄 Loading data - isAdmin:", isAdmin, "organizationId:", organizationId);
+      logger.debug("🔄 Loading data - organizationId:", organizationId);
       
-      if (isAdmin && organizationId) {
-        // Admin: Load all organization data
-        logger.debug("👑 Loading admin data for organization:", organizationId);
-        
-        try {
-          const [statsResult, allRequestsResult, typesResult, balanceResult, myRequestsResult] = await Promise.allSettled([
-            getLeaveStatistics(organizationId),
-            getAllLeaveRequests(organizationId),
-            getOrganizationLeaveTypes(organizationId),
-            getMyLeaveBalance(),
-            getMyLeaveRequests()
-          ]);
+      try {
+        const [statsResult, allRequestsResult, typesResult, balanceResult, myRequestsResult] = await Promise.allSettled([
+          organizationId ? getLeaveStatistics(organizationId) : Promise.resolve({ success: false }),
+          organizationId ? getAllLeaveRequests(organizationId) : Promise.resolve({ success: false }),
+          getOrganizationLeaveTypes(organizationId || ''),
+          getMyLeaveBalance(),
+          getMyLeaveRequests()
+        ]);
 
-          // Handle statistics result
-          if (statsResult.status === 'fulfilled' && statsResult.value?.success && statsResult.value?.data) {
-            const statsData = statsResult.value.data;
-            setStatistics({
-              ...statsData,
-              averageLeaveDays: parseNumber(statsData.averageLeaveDays)
-            });
-            logger.debug("📊 Statistics loaded:", statsData);
-          } else {
-            const error = statsResult.status === 'rejected' ? statsResult.reason : statsResult.value?.message;
-            logger.warn("⚠️ Statistics not available:", error);
-            setStatistics(null);
-          }
-
-          // Handle all requests result
-          if (allRequestsResult.status === 'fulfilled' && allRequestsResult.value?.success && allRequestsResult.value?.data) {
-            setAllRequests(allRequestsResult.value.data);
-            logger.debug("📋 All requests loaded:", allRequestsResult.value.data.length, "items");
-          } else {
-            const error = allRequestsResult.status === 'rejected' ? allRequestsResult.reason : allRequestsResult.value?.message;
-            logger.warn("⚠️ All requests not available:", error);
-            setAllRequests([]);
-          }
-
-          // Handle leave types result
-          if (typesResult.status === 'fulfilled' && typesResult.value?.success && typesResult.value?.data) {
-            setLeaveTypes(typesResult.value.data);
-          } else {
-            const error = typesResult.status === 'rejected' ? typesResult.reason : typesResult.value?.message;
-            logger.warn("⚠️ Leave types not available:", error);
-            setLeaveTypes([]);
-          }
-
-          // Handle balance result
-          if (balanceResult.status === 'fulfilled' && balanceResult.value?.success && balanceResult.value?.data) {
-            setBalances(balanceResult.value.data as any);
-          } else {
-            const error = balanceResult.status === 'rejected' ? balanceResult.reason : balanceResult.value?.message;
-            logger.warn("⚠️ Balance not available:", error);
-            setBalances([]);
-          }
-
-          // Handle my requests result
-          if (myRequestsResult.status === 'fulfilled' && myRequestsResult.value?.success && myRequestsResult.value?.data) {
-            setRequests(myRequestsResult.value.data);
-          } else {
-            const error = myRequestsResult.status === 'rejected' ? myRequestsResult.reason : myRequestsResult.value?.message;
-            logger.warn("⚠️ My requests not available:", error);
-            setRequests([]);
-          }
-        } catch (adminError) {
-          logger.error("❌ Error loading admin data:", adminError);
-          // Set default empty states
+        // Handle statistics result
+        if (statsResult.status === 'fulfilled' && statsResult.value?.success && statsResult.value?.data) {
+          const statsData = statsResult.value.data;
+          setStatistics({
+            ...statsData,
+            averageLeaveDays: parseNumber(statsData.averageLeaveDays)
+          });
+          logger.debug("📊 Statistics loaded:", statsData);
+        } else {
+          const error = statsResult.status === 'rejected' ? statsResult.reason : statsResult.value?.message;
+          logger.warn("⚠️ Statistics not available:", error);
           setStatistics(null);
+        }
+
+        // Handle all requests result
+        if (allRequestsResult.status === 'fulfilled' && allRequestsResult.value?.success && allRequestsResult.value?.data) {
+          setAllRequests(allRequestsResult.value.data);
+          logger.debug("📋 All requests loaded:", allRequestsResult.value.data.length, "items");
+        } else {
+          const error = allRequestsResult.status === 'rejected' ? allRequestsResult.reason : allRequestsResult.value?.message;
+          logger.warn("⚠️ All requests not available:", error);
           setAllRequests([]);
-          setLeaveTypes([]);
-          setBalances([]);
-          setRequests([]);
-          toast.error("Some admin data could not be loaded");
         }
-      } else {
-        // User: Load personal data only
-        try {
-          const [balanceResult, requestsResult, typesResult] = await Promise.allSettled([
-            getMyLeaveBalance(),
-            getMyLeaveRequests(),
-            getLeaveTypes()
-          ]);
 
-          // Handle balance result
-          if (balanceResult.status === 'fulfilled' && balanceResult.value?.success && balanceResult.value?.data) {
-            setBalances(balanceResult.value.data as any);
-          } else {
-            const error = balanceResult.status === 'rejected' ? balanceResult.reason : balanceResult.value?.message;
-            logger.warn("⚠️ Balance not available:", error);
-            setBalances([]);
-          }
-
-          // Handle requests result
-          if (requestsResult.status === 'fulfilled' && requestsResult.value?.success && requestsResult.value?.data) {
-            setRequests(requestsResult.value.data);
-          } else {
-            const error = requestsResult.status === 'rejected' ? requestsResult.reason : requestsResult.value?.message;
-            logger.warn("⚠️ Requests not available:", error);
-            setRequests([]);
-          }
-
-          // Handle leave types result
-          if (typesResult.status === 'fulfilled' && typesResult.value?.success && typesResult.value?.data) {
-            setLeaveTypes(typesResult.value.data);
-          } else {
-            const error = typesResult.status === 'rejected' ? typesResult.reason : typesResult.value?.message;
-            logger.warn("⚠️ Leave types not available:", error);
-            setLeaveTypes([]);
-          }
-        } catch (userError) {
-          logger.error("❌ Error loading user data:", userError);
-          // Set default empty states
-          setBalances([]);
-          setRequests([]);
+        // Handle leave types result
+        if (typesResult.status === 'fulfilled' && typesResult.value?.success && typesResult.value?.data) {
+          setLeaveTypes(typesResult.value.data);
+        } else {
+          const error = typesResult.status === 'rejected' ? typesResult.reason : typesResult.value?.message;
+          logger.warn("⚠️ Leave types not available:", error);
           setLeaveTypes([]);
-          toast.error("Some personal data could not be loaded");
         }
+
+        // Handle balance result
+        if (balanceResult.status === 'fulfilled' && balanceResult.value?.success && balanceResult.value?.data) {
+          setBalances(balanceResult.value.data as any);
+        } else {
+          const error = balanceResult.status === 'rejected' ? balanceResult.reason : balanceResult.value?.message;
+          logger.warn("⚠️ Balance not available:", error);
+          setBalances([]);
+        }
+
+        // Handle my requests result
+        if (myRequestsResult.status === 'fulfilled' && myRequestsResult.value?.success && myRequestsResult.value?.data) {
+          setRequests(myRequestsResult.value.data);
+        } else {
+          const error = myRequestsResult.status === 'rejected' ? myRequestsResult.reason : myRequestsResult.value?.message;
+          logger.warn("⚠️ My requests not available:", error);
+          setRequests([]);
+        }
+      } catch (error) {
+        logger.error("❌ Error loading data:", error);
+        // Set default empty states
+        setStatistics(null);
+        setAllRequests([]);
+        setLeaveTypes([]);
+        setBalances([]);
+        setRequests([]);
+        toast.error("Some data could not be loaded");
       }
     } catch (error) {
       logger.error("❌ Unexpected error loading data:", error);
@@ -254,19 +201,17 @@ export default function LeavesPage() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, organizationId]);
+  }, [organizationId]);
 
   // Filter, search, and sort logic
   const getFilteredAndSortedRequests = useCallback(() => {
-    let filtered = isAdmin ? allRequests : requests;
+    let filtered = allRequests.length > 0 ? allRequests : requests;
     
     // Apply search filter
     if (searchQuery.trim()) {
       filtered = filtered.filter(req => {
         const searchLower = searchQuery.toLowerCase();
-        const memberName = isAdmin 
-          ? `${req.organization_member?.user?.first_name} ${req.organization_member?.user?.last_name}`.toLowerCase()
-          : '';
+        const memberName = `${req.organization_member?.user?.first_name} ${req.organization_member?.user?.last_name}`.toLowerCase();
         const leaveType = req.leave_type?.name.toLowerCase() || '';
         const reason = req.reason.toLowerCase();
         const requestNumber = req.request_number.toLowerCase();
@@ -291,7 +236,7 @@ export default function LeavesPage() {
     });
     
     return filtered;
-  }, [isAdmin, allRequests, requests, searchQuery, statusFilter, sortOrder]);
+  }, [allRequests, requests, searchQuery, statusFilter, sortOrder]);
 
   // Handle cancel leave request
   const handleCancelRequest = useCallback((request: ILeaveRequest) => {
@@ -380,32 +325,11 @@ export default function LeavesPage() {
   }, [loadData]);
 
   // Calculate dynamic statistics
-  const calculateStats = (): { totalBalance: number; usedDays: number; pendingDays: number; approvedCount: number } | LeaveStatistics | null => {
-    if (!isAdmin) {
-      // User statistics
-      const totalBalance = balances.reduce((sum, b) => sum + (b.remaining_days || 0), 0);
-      const usedDays = balances.reduce((sum, b) => sum + (b.used_days || 0), 0);
-      const pendingDays = balances.reduce((sum, b) => sum + (b.pending_days || 0), 0);
-      const approvedCount = requests.filter(r => r.status === 'approved').length;
-      
-      return {
-        totalBalance,
-        usedDays,
-        pendingDays,
-        approvedCount
-      };
-    }
-    
-    // Admin statistics from server
+  const calculateStats = (): LeaveStatistics | null => {
     return statistics;
   };
 
   const stats = calculateStats();
-  
-  // Type guard untuk user stats
-  const isUserStats = (s: typeof stats): s is { totalBalance: number; usedDays: number; pendingDays: number; approvedCount: number } => {
-    return s !== null && !isAdmin && 'totalBalance' in s;
-  };
 
   return (
     <div className="flex flex-1 flex-col gap-3 sm:gap-4 md:gap-6 p-3 sm:p-4 md:p-6 max-w-full overflow-x-hidden">
@@ -439,7 +363,7 @@ export default function LeavesPage() {
       </div>
 
       {/* Error State */}
-      {!loading && (!stats || (isAdmin && !statistics)) && (
+      {!loading && !stats && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
