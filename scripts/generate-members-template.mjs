@@ -10,17 +10,29 @@ async function ensureOutputDir() {
 }
 
 function createTemplateWorkbook() {
-  const headers = ["Full Name", "Email", "Phone Number", "Department", "Role", "Status"]
+  const headers = ["Nama Lengkap", "Email", "Nomor Telepon", "Group", "Peran", "Status"]
   const instructions = [
-    "FirstName LastName",
-    "name@example.com",
+    "Contoh: Budi Santoso",
+    "nama@perusahaan.com",
     "08123456789",
-    '"X RPL / X DKV / X TKJ"',
-    "User / Petugas / No Role",
-    "Active / Inactive",
+    "Masukkan nama grup",
+    "Pengguna / Petugas",
+    "Aktif",
   ]
 
   const worksheet = XLSX.utils.aoa_to_sheet([headers, instructions])
+  
+  // Set column widths to prevent truncation
+  const columnWidths = [
+    { wch: 25 }, // Nama Lengkap
+    { wch: 30 }, // Email
+    { wch: 18 }, // Nomor Telepon
+    { wch: 25 }, // Group
+    { wch: 20 }, // Peran
+    { wch: 15 }, // Status
+  ]
+  worksheet['!cols'] = columnWidths
+  
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, worksheet, "Template")
   return workbook

@@ -278,7 +278,7 @@ export default function ScheduleClient({
         >
           <DialogTrigger asChild className="float-end ml-5">
             <Button onClick={() => handleOpenDialog()}>
-              Add Schedule <Plus className="ml-2" />
+              Add  <Plus className="ml-2" />
             </Button>
           </DialogTrigger>
           <DialogContent>

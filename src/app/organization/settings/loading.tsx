@@ -165,7 +165,7 @@ export default function OrganizationSettingsLoading() {
               Regional Settings
             </CardTitle>
             <CardDescription>
-              Timezone, currency, and localization preferences
+              Timezone, and currency
             </CardDescription>
           </CardHeader>
           <CardContent>

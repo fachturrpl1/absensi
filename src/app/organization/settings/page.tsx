@@ -1444,7 +1444,7 @@ export default function OrganizationSettingsPage() {
               Regional Settings
             </CardTitle>
             <CardDescription>
-              Timezone, currency, and localization preferences
+              Timezone, and currency
             </CardDescription>
           </CardHeader>
           <CardContent>

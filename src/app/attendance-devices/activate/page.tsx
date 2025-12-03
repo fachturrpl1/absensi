@@ -115,7 +115,7 @@ export default function ActivateDevicePage() {
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </Button>
-                        <h1 className="text-3xl font-bold tracking-tight">Activate Device</h1>
+                        <h1 className="text-3xl font-bold tracking-tight">Activate </h1>
                     </div>
 
                     <div className="p-6">
@@ -199,7 +199,7 @@ export default function ActivateDevicePage() {
                                                 Cancel
                                             </Button>
                                             <Button type="submit" disabled={loading || !selectedDeviceCode}>
-                                                {loading ? "Activating..." : "Activate Device"}
+                                                {loading ? "Activating..." : "Activate "}
                                             </Button>
                                         </div>
                                     </form>

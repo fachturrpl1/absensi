@@ -207,7 +207,7 @@ export function ActivateDeviceDialog({
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={loading || !selectedDeviceCode}>
-                                {loading ? "Activating..." : "Activate Device"}
+                                {loading ? "Activating..." : "Activate "}
                             </Button>
                         </div>
                     </form>

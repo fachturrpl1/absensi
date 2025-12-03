@@ -4,7 +4,7 @@ import React from "react"
 import { useSearchParams } from "next/navigation"
 import { MembersTable } from "@/components/members-table"
 import { Button } from "@/components/ui/button"
-import { User, Shield, Mail, Plus, FileDown, FileUp, UploadCloud, Loader2, Search } from "lucide-react"
+import { User, Shield, Mail, Plus, FileDown, FileUp, Loader2, Search } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -55,6 +55,7 @@ import { createInvitation } from "@/action/invitations"
 import { getOrgRoles } from "@/lib/rbac"
 import { useGroups } from "@/hooks/use-groups"
 import { usePositions } from "@/hooks/use-positions"
+import { FlexibleImportDialog } from "@/components/members/flexible-import-dialog"
 //tes
 const inviteSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -77,12 +78,8 @@ export default function MembersPage() {
   const [submittingInvite, setSubmittingInvite] = React.useState(false)
   const [exporting, setExporting] = React.useState(false)
   const [importDialogOpen, setImportDialogOpen] = React.useState(false)
-  const [importing, setImporting] = React.useState(false)
   const [importSummary, setImportSummary] = React.useState<ImportSummary | null>(null)
-  const [isDragActive, setIsDragActive] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState<string>("")
-  const fileInputRef = React.useRef<HTMLInputElement>(null)
-  const templateDownloadUrl = "/templates/members-import-template.xlsx"
 
   // Auto-open invite dialog if action=invite in URL
   React.useEffect(() => {
@@ -262,209 +259,9 @@ export default function MembersPage() {
     }
   }
 
-  const processImportFile = async (file: File) => {
-    setImportSummary(null)
-    setImporting(true)
-
-    try {
-      const XLSX = await import("xlsx")
-      const buffer = await file.arrayBuffer()
-      const workbook = XLSX.read(buffer, { type: "array" })
-      const sheetName = workbook.SheetNames?.[0]
-      if (!sheetName) {
-        throw new Error("Tidak ada sheet di dalam file Excel")
-      }
-
-      const sheet = workbook.Sheets[sheetName]
-      if (!sheet) {
-        throw new Error("Tidak dapat menemukan sheet yang valid di file Excel")
-      }
-      const rows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { defval: "" }) as Record<
-        string,
-        string
-      >[]
-
-      if (!rows.length) {
-        toast.error("File Excel kosong atau tidak memiliki data")
-        return
-      }
-
-      if (rows.length > 200) {
-        toast.warning("Import maksimal 200 baris per file untuk menjaga performa")
-      }
-
-      const summary: ImportSummary = { success: 0, failed: 0, errors: [] }
-
-      const findId = (
-        collection: any[],
-        value: string,
-        keys: string[]
-      ): { id?: string; notFound: boolean } => {
-        const normalized = value.trim().toLowerCase()
-        if (!normalized) return { id: undefined, notFound: false }
-        const match = collection.find((item: any) =>
-          keys.some((key) => String(item?.[key] ?? "").trim().toLowerCase() === normalized)
-        )
-        if (!match) return { id: undefined, notFound: true }
-        return { id: String(match.id), notFound: false }
-      }
-
-      for (let index = 0; index < rows.length; index++) {
-        const rawRow = rows[index]
-        if (!rawRow) {
-          continue
-        }
-
-        const normalizedRow = Object.entries(rawRow).reduce<Record<string, string>>(
-          (acc, [key, value]) => {
-            acc[key.toLowerCase()] = String(value ?? "")
-            return acc
-          },
-          {}
-        )
-
-        const email = String(normalizedRow["email"] || normalizedRow["email address"] || "").trim()
-        if (!email) {
-          summary.failed++
-          summary.errors.push(`Baris ${index + 2}: kolom email wajib diisi`)
-          continue
-        }
-
-        const phoneValue = String(
-          normalizedRow["phone"] ||
-            normalizedRow["phone number"] ||
-            normalizedRow["telepon"] ||
-            normalizedRow["no hp"] ||
-            normalizedRow["nomor hp"] ||
-            ""
-        ).trim()
-
-        const roleValue = String(normalizedRow["role"] || "").trim()
-        const departmentValue = String(normalizedRow["department"] || "").trim()
-        const positionValue = String(
-          normalizedRow["position"] ||
-            normalizedRow["job title"] ||
-            normalizedRow["jabatan"] ||
-            ""
-        ).trim()
-        const messageValue = String(
-          normalizedRow["message"] ||
-            normalizedRow["notes"] ||
-            normalizedRow["catatan"] ||
-            ""
-        ).trim()
-
-        const skipRole =
-          !roleValue || roleValue.toLowerCase().replace(/[^a-z0-9]/g, "") === "norole"
-
-        let roleResult: ReturnType<typeof findId> = { id: undefined, notFound: false }
-        if (!skipRole) {
-          roleResult = findId(roles ?? [], roleValue, ["name", "code", "id"])
-          if (roleResult.notFound) {
-            summary.failed++
-            summary.errors.push(`Baris ${index + 2}: role "${roleValue}" tidak ditemukan`)
-            continue
-          }
-        }
-
-        let departmentResult: ReturnType<typeof findId> = { id: undefined, notFound: false }
-        if (!departmentValue) {
-          summary.failed++
-          summary.errors.push(`Baris ${index + 2}: kolom department wajib diisi`)
-          continue
-        }
-
-        departmentResult = findId(departments ?? [], departmentValue, ["name", "code", "id"])
-        if (departmentResult.notFound) {
-          summary.failed++
-          summary.errors.push(`Baris ${index + 2}: department "${departmentValue}" tidak ditemukan`)
-          continue
-        }
-
-        let positionResult: ReturnType<typeof findId> = { id: undefined, notFound: false }
-        if (positionValue) {
-          positionResult = findId(positions ?? [], positionValue, ["title", "name", "id"])
-          if (positionResult.notFound) {
-            summary.failed++
-            summary.errors.push(`Baris ${index + 2}: position "${positionValue}" tidak ditemukan`)
-            continue
-          }
-        }
-
-        const invitationPayload: Parameters<typeof createInvitation>[0] = { email }
-        if (roleResult.id) invitationPayload.role_id = roleResult.id
-        if (departmentResult.id) invitationPayload.department_id = departmentResult.id
-        if (positionResult.id) invitationPayload.position_id = positionResult.id
-        if (messageValue) invitationPayload.message = messageValue
-        if (phoneValue) invitationPayload.phone = phoneValue
-
-        try {
-          const result = await createInvitation(invitationPayload)
-          if (result.success) {
-            summary.success++
-          } else {
-            summary.failed++
-            summary.errors.push(`Baris ${index + 2}: ${result.message || "Gagal mengirim undangan"}`)
-          }
-        } catch (error) {
-          summary.failed++
-          summary.errors.push(`Baris ${index + 2}: ${(error as Error)?.message || "Gagal mengirim undangan"}`)
-        }
-      }
-
-      setImportSummary(summary)
-      toast.success(`Import selesai. Berhasil: ${summary.success}, gagal: ${summary.failed}`)
-      fetchMembers()
-    } catch (error) {
-      console.error("Import members error:", error)
-      toast.error("Gagal mengimport file Excel")
-    } finally {
-      setImporting(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
-      }
-    }
-  }
-
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      await processImportFile(file)
-    }
-  }
 
   const handleImportDialogChange = (open: boolean) => {
     setImportDialogOpen(open)
-    if (!open) {
-      setIsDragActive(false)
-    }
-  }
-
-  const handleDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    event.stopPropagation()
-    setIsDragActive(true)
-  }
-
-  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    event.stopPropagation()
-    setIsDragActive(false)
-  }
-
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    event.stopPropagation()
-  }
-
-  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    event.stopPropagation()
-    setIsDragActive(false)
-    const file = event.dataTransfer.files?.[0]
-    if (file) {
-      await processImportFile(file)
-    }
   }
 
   const handleDialogOpenChange = (open: boolean) => {
@@ -509,74 +306,29 @@ export default function MembersPage() {
                   )}
                   Export
                 </Button>
-                <Dialog open={importDialogOpen} onOpenChange={handleImportDialogChange}>
-                  <DialogTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={importing || isLoadingInviteData}
-                      className="whitespace-nowrap"
-                    >
-                      {importing ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <FileUp className="mr-2 h-4 w-4" />
-                      )}
-                      Import
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-[560px] w-full">
-                    <DialogHeader>
-                      <DialogTitle>Import Members</DialogTitle>
-                      <DialogDescription>
-                        Unggah file Excel .
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div
-                      className={`mx-auto w-full max-w-md flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 text-center ${
-                        isDragActive ? "border-blue-500 bg-blue-50/60 dark:bg-blue-400/10" : "border-muted"
-                      }`}
-                      onDragEnter={handleDragEnter}
-                      onDragLeave={handleDragLeave}
-                      onDragOver={handleDragOver}
-                      onDrop={handleDrop}
-                      onClick={() => {
-                        if (!importing) {
-                          fileInputRef.current?.click()
-                        }
-                      }}
-                    >
-                      <UploadCloud className="h-12 w-12 text-muted-foreground" />
-                      <div className="space-y-1">
-                        <p className="text-base font-semibold">Tarik & letakkan file kamu di sini</p>
-                        <p className="text-sm text-muted-foreground">
-                          atau klik untuk memilih file dari komputer
-                        </p>
-                      </div>
-                    </div>
-                    <div className="w-full text-left">
-                      <a
-                        href={templateDownloadUrl}
-                        download
-                        className="mt-2 inline-block text-sm font-semibold text-blue-600 hover:underline"
-                      >
-                        Download template di sini
-                      </a>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  className="hidden"
-                  onChange={handleFileChange}
+                <FlexibleImportDialog
+                  open={importDialogOpen}
+                  onOpenChange={handleImportDialogChange}
+                  onImportComplete={(summary) => {
+                    setImportSummary(summary)
+                    fetchMembers()
+                  }}
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setImportDialogOpen(true)}
+                  disabled={isLoadingInviteData}
+                  className="whitespace-nowrap"
+                >
+                  <FileUp className="mr-2 h-4 w-4" />
+                  Import
+                </Button>
                 <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
                   <DialogTrigger asChild>
                     <Button size="sm" className="whitespace-nowrap">
-                      Invite Member <Plus className="ml-2 h-4 w-4" />
+                      Invite <Plus className="ml-2 h-4 w-4" />
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[500px]" aria-describedby="invite-description">
