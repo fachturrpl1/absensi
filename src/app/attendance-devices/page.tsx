@@ -338,7 +338,7 @@ export default function AttendanceDevicesPage() {
                             </div>
 
                             <Button onClick={() => setActivateDialogOpen(true)} className="w-full sm:w-auto">
-                                Activate Device <Plus className="ml-2" />
+                                Activate  <Plus className="ml-2" />
                             </Button>
                         </div>
 
@@ -354,11 +354,11 @@ export default function AttendanceDevicesPage() {
                                             </EmptyMedia>
                                             <EmptyTitle>No devices activated</EmptyTitle>
                                             <EmptyDescription>
-                                                You haven&apos;t activated any attendance devices yet. Click &quot;Activate Device&quot; to get started.
+                                                You haven&apos;t activated any attendance devices yet. Click &quot;Activate &quot; to get started.
                                             </EmptyDescription>
                                         </EmptyHeader>
                                         <EmptyContent>
-                                            <Button onClick={() => setActivateDialogOpen(true)}>Activate Device</Button>
+                                            <Button onClick={() => setActivateDialogOpen(true)}>Activate </Button>
                                         </EmptyContent>
                                     </Empty>
                                 </div>
@@ -554,7 +554,7 @@ export default function AttendanceDevicesPage() {
                                         Cancel
                                     </Button>
                                     <Button type="submit" disabled={loading}>
-                                        {loading ? "Saving..." : "Save Changes"}
+                                        {loading ? "Saving..." : "Save"}
                                     </Button>
                                 </div>
                             </form>

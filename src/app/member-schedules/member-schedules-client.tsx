@@ -300,7 +300,7 @@ export default function MemberSchedulesClient({
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild className="float-end ml-5">
             <Button onClick={() => setEditingSchedule(null)}>
-              Assign Schedule <Plus className="ml-2 h-4 w-4" />
+              Assign  <Plus className="ml-2 h-4 w-4" />
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
@@ -483,7 +483,7 @@ export default function MemberSchedulesClient({
           <EmptyContent>
             <Button onClick={() => setOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Assign Schedule
+              Assign 
             </Button>
           </EmptyContent>
         </Empty>

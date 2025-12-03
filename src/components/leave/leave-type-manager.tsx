@@ -586,7 +586,7 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
                         ) : (
                           <Save className="h-4 w-4 mr-2" />
                         )}
-                        {isCreating ? "Create" : "Save Changes"}
+                        {isCreating ? "Create" : "Save "}
                       </Button>
                     </div>
                   </form>
