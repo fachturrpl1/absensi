@@ -4,7 +4,7 @@ import React from "react"
 import { IOrganization_member } from "@/interface"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Trash, Pencil, Eye, User, Shield, Check, X, Search, Filter, Columns3Cog } from "lucide-react"
+import { Trash, Pencil, Eye, User, Shield, Check, X, Search, Filter, Columns3Cog, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import {
@@ -165,17 +165,6 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
 
   return (
     <div className="w-full space-y-4">
-      {/* Search Bar */}
-      <div className="relative w-full">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10 pointer-events-none" />
-        <Input
-          placeholder="Search members..."
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-          className="w-full pl-10 pr-4 py-2"
-        />
-      </div>
-
       {/* Filters and Controls */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
         <div className="flex flex-wrap items-center gap-2 w-full">
@@ -442,48 +431,88 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
       </table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between py-4">
-        {/* Page Info - Left */}
-        <div className="text-sm text-muted-foreground">
-          Page {pageIndex + 1} of {totalPages || 1} ({filteredData.length} total)
-        </div>
-
-        {/* Pagination Navigation - Right */}
+      {/* Pagination Footer */}
+      <div className="flex items-center justify-between py-4 px-4 bg-gray-50 rounded-md border">
         <div className="flex items-center gap-2">
           <Button
+            variant="ghost"
             size="sm"
-            variant="outline"
+            onClick={() => setPageIndex(0)}
+            disabled={pageIndex === 0 || isLoading}
+            className="h-8 w-8 p-0"
+            title="First page"
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setPageIndex(Math.max(0, pageIndex - 1))}
             disabled={pageIndex === 0 || isLoading}
+            className="h-8 w-8 p-0"
+            title="Previous page"
           >
-            Previous
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-
-          {/* Page Numbers */}
-          <div className="flex items-center gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <Button
-                key={page}
-                size="sm"
-                variant={pageIndex + 1 === page ? "default" : "outline"}
-                onClick={() => setPageIndex(page - 1)}
-                className="w-8 h-8 p-0"
-                disabled={isLoading}
-              >
-                {page}
-              </Button>
-            ))}
-          </div>
-
+          
+          <span className="text-sm text-muted-foreground">Page</span>
+          
+          <input
+            type="number"
+            min="1"
+            max={totalPages}
+            value={pageIndex + 1}
+            onChange={(e) => {
+              const page = e.target.value ? Number(e.target.value) - 1 : 0
+              setPageIndex(Math.max(0, Math.min(page, totalPages - 1)))
+            }}
+            className="w-12 h-8 px-2 border rounded text-sm text-center"
+            disabled={isLoading}
+          />
+          
+          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
+          
           <Button
+            variant="ghost"
             size="sm"
-            variant="outline"
             onClick={() => setPageIndex(Math.min(totalPages - 1, pageIndex + 1))}
             disabled={pageIndex >= totalPages - 1 || isLoading}
+            className="h-8 w-8 p-0"
+            title="Next page"
           >
-            Next
+            <ChevronRight className="h-4 w-4" />
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setPageIndex(totalPages - 1)}
+            disabled={pageIndex >= totalPages - 1 || isLoading}
+            className="h-8 w-8 p-0"
+            title="Last page"
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            Showing {filteredData.length > 0 ? pageIndex * parseInt(pageSize) + 1 : 0} to {Math.min((pageIndex + 1) * parseInt(pageSize), filteredData.length)} of {filteredData.length} total records
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(e.target.value)
+                setPageIndex(0)
+              }}
+              className="px-2 py-1 border rounded text-sm bg-white"
+            >
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>

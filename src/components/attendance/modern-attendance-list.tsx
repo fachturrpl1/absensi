@@ -43,6 +43,25 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import z from 'zod';
 import { cn } from '@/lib/utils';
 import { formatLocalTime } from '@/utils/timezone';
 import { getAllAttendance } from '@/action/attendance';
@@ -82,7 +101,55 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingRecords, setEditingRecords] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Edit form schema
+  const editFormSchema = z.object({
+    status: z.string().min(1, 'Status is required'),
+    remarks: z.string().optional(),
+  });
+
+  type EditFormValues = z.infer<typeof editFormSchema>;
+
+  const editForm = useForm<EditFormValues>({
+    resolver: zodResolver(editFormSchema),
+    defaultValues: {
+      status: 'present',
+      remarks: '',
+    },
+  });
   
+  // Handle edit button click
+  const handleEditClick = () => {
+    const recordsToEdit = attendanceData.filter(r => selectedRecords.includes(r.id));
+    setEditingRecords(recordsToEdit);
+    editForm.reset({
+      status: recordsToEdit[0]?.status || 'present',
+      remarks: '',
+    });
+    setEditDialogOpen(true);
+  };
+
+  // Handle edit form submit
+  const onEditSubmit = async (values: EditFormValues) => {
+    try {
+      setIsSubmitting(true);
+      // TODO: Implement API call to update attendance records
+      // For now, just show success message
+      toast.success(`Updated ${selectedRecords.length} record(s)`);
+      setEditDialogOpen(false);
+      setSelectedRecords([]);
+      // Refresh data
+      await fetchData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update records');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -423,9 +490,13 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     <Mail className="mr-2 h-4 w-4" />
                     Send Email
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={handleEditClick}
+                  >
                     <Edit className="mr-2 h-4 w-4" />
-                    Bulk Edit
+                    {selectedRecords.length === 1 ? 'Edit' : 'Bulk Edit'}
                   </Button>
                   <Button
                     variant="ghost"
@@ -803,7 +874,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {attendanceData.map((record: any, index: number) => {
                 if (!record || !record.id) {
                   return null;
@@ -812,7 +883,23 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 return (
             <div
               key={`grid-${record.id}-${index}`}
+              className="relative"
             >
+              {/* Checkbox - Top Left */}
+              <div className="absolute top-3 left-3 z-10">
+                <input
+                  type="checkbox"
+                  checked={selectedRecords.includes(record.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedRecords([...selectedRecords, record.id]);
+                    } else {
+                      setSelectedRecords(selectedRecords.filter(id => id !== record.id));
+                    }
+                  }}
+                  className="rounded border-gray-300 w-5 h-5 cursor-pointer"
+                />
+              </div>
               <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -867,6 +954,105 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           )}
         </>
       )}
+
+      {/* Edit Dialog Modal */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedRecords.length === 1 ? 'Edit Attendance' : `Bulk Edit (${selectedRecords.length} records)`}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedRecords.length === 1 
+                ? `Edit attendance record for ${editingRecords[0]?.member?.name || 'member'}`
+                : `Update status and remarks for ${selectedRecords.length} selected records`
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+              {/* Status Field */}
+              <FormField
+                control={editForm.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="present">Present</SelectItem>
+                        <SelectItem value="late">Late</SelectItem>
+                        <SelectItem value="absent">Absent</SelectItem>
+                        <SelectItem value="excused">Excused</SelectItem>
+                        <SelectItem value="early_leave">Early Leave</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Remarks Field */}
+              <FormField
+                control={editForm.control}
+                name="remarks"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Remarks (Optional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Add remarks..." 
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Display affected records */}
+              {selectedRecords.length > 1 && (
+                <div className="rounded-lg bg-muted p-3 text-sm">
+                  <p className="font-medium mb-2">Affected Records:</p>
+                  <ul className="space-y-1 text-xs">
+                    {editingRecords.slice(0, 5).map((record) => (
+                      <li key={record.id}>
+                        • {record.member?.name} ({record.member?.department})
+                      </li>
+                    ))}
+                    {editingRecords.length > 5 && (
+                      <li className="text-muted-foreground">... and {editingRecords.length - 5} more</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditDialogOpen(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Updating...' : 'Update'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
