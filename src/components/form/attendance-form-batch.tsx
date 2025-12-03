@@ -94,8 +94,8 @@ export function AttendanceFormBatch() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedGroup, setSelectedGroup] = useState<string>("all")
   const [availableGroups, setAvailableGroups] = useState<Array<{id: string, name: string}>>([])
-  const [currentDate, setCurrentDate] = useState<string>("")
-  const [currentTime, setCurrentTime] = useState<string>("")
+  // const [currentDate, setCurrentDate] = useState<string>("")
+  // const [currentTime, setCurrentTime] = useState<string>("")
 
   const form = useForm<SingleFormValues>({
     resolver: zodResolver(singleFormSchema),
@@ -114,8 +114,8 @@ export function AttendanceFormBatch() {
     const now = new Date();
     const date = format(now, 'yyyy-MM-dd');
     const time = format(now, 'HH:mm');
-    setCurrentDate(date);
-    setCurrentTime(time);
+    // setCurrentDate(date);
+    // setCurrentTime(time);
     
     // Update form default values
     form.reset({

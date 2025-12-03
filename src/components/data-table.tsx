@@ -27,8 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { Columns3Cog, Loader2, Search, Filter, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { Columns3Cog, Loader2, Filter, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -47,7 +46,6 @@ type DataTableProps<TData, TValue> = {
   showFilters?: boolean
   initialSorting?: SortingState
   getRowKey?: (row: TData, index: number) => string
-  searchPlaceholder?: string
 }
 
 export function DataTable<TData, TValue>({
@@ -56,20 +54,17 @@ export function DataTable<TData, TValue>({
   isLoading = false,
   showPagination = true,
   showColumnToggle = true,
-  showGlobalFilter = true,
-  showFilters = true,
-  initialSorting,
+  showFilters = false,
   getRowKey,
-  searchPlaceholder = "Search members...",
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>(initialSorting ?? [])
+  const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({})
-  const [globalFilter, setGlobalFilter] = React.useState("")
-  const [statusFilter, setStatusFilter] = React.useState("all")
   const [sortOrder, setSortOrder] = React.useState("newest")
   const [pageSize, setPageSize] = React.useState("10")
   const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 10 })
+  const [globalFilter] = React.useState("")
+  const [statusFilter, setStatusFilter] = React.useState("all")
 
   // Handler functions
   const handlePageSizeChange = (value: string) => {

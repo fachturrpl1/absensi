@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 // Secure API route - hides database structure
 export const dynamic = 'force-dynamic'
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
 
@@ -15,6 +15,21 @@ export async function GET(_request: NextRequest) {
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Get organization ID from query parameter or cookie
+    let organizationId = request.nextUrl.searchParams.get('organizationId')
+    
+    // Fallback to cookie if query param not provided
+    if (!organizationId) {
+      const orgIdCookie = request.cookies.get('org_id')?.value
+      if (orgIdCookie) {
+        organizationId = orgIdCookie
+      }
+    }
+    
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 })
     }
 
     // Get organization data through RLS-protected query
@@ -33,7 +48,8 @@ export async function GET(_request: NextRequest) {
       `
       )
       .eq('user_id', user.id)
-      .single()
+      .eq('organization_id', parseInt(organizationId))
+      .maybeSingle()
 
     if (!member || !member.organizations) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })

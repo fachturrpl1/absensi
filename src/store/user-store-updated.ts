@@ -1,29 +1,29 @@
-import { create } from "zustand"
-import { persist } from "zustand/middleware"
-import { IUser } from "@/interface"
-import { Role } from "@/lib/types/organization"
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { IUser } from "@/interface";
+import { Role } from "@/lib/types/organization";
 
-type UserUpdater = IUser | null | ((currentUser: IUser | null) => IUser | null)
+type UserUpdater = IUser | null | ((currentUser: IUser | null) => IUser | null);
 
 export interface UserOrganization {
-  id: number
-  organization_id: number
-  organization_name: string
-  roles: Role[]
+  id: number;
+  organization_id: number;
+  organization_name: string;
+  roles: Role[];
 }
 
 interface AuthState {
-  user: IUser | null
-  role: string | null
-  roleId: number | null
-  permissions: string[]
-  userOrganizations: UserOrganization[]
+  user: IUser | null;
+  role: string | null;
+  roleId: number | null;
+  permissions: string[];
+  userOrganizations: UserOrganization[];
   
-  setUser: (updater: UserUpdater) => void
-  setRole: (role: string | null, roleId?: number | null) => void
-  setPermissions: (permissions: string[]) => void
-  setUserOrganizations: (orgs: UserOrganization[]) => void
-  reset: () => void
+  setUser: (updater: UserUpdater) => void;
+  setRole: (role: string | null, roleId?: number | null) => void;
+  setPermissions: (permissions: string[]) => void;
+  setUserOrganizations: (orgs: UserOrganization[]) => void;
+  reset: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -69,7 +69,8 @@ export const useAuthStore = create<AuthState>()(
       }),
     }
   )
-)
+);
 
 // Alias for backward compatibility
-export const useUserStore = useAuthStore
+export const useUserStore = useAuthStore;
+

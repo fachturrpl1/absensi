@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -28,6 +28,7 @@ export default function AttendanceDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [distChartType, setDistChartType] = useState<'donut' | 'pie' | 'bar'>('donut');
+  const [isHydrated, setIsHydrated] = useState(false);
   
   // Date filter state
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
@@ -37,6 +38,11 @@ export default function AttendanceDashboard() {
     endOfToday.setHours(23, 59, 59, 999);
     return { from: today, to: endOfToday, preset: 'today' };
   });
+
+  // Track hydration
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -54,6 +60,38 @@ export default function AttendanceDashboard() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Don't render Tabs until hydration is complete
+  if (!isHydrated) {
+    return (
+      <div className="flex flex-1 flex-col gap-3 sm:gap-4 md:gap-6 p-3 sm:p-4 md:p-6 max-w-full overflow-x-hidden">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">Attendance Dashboard</h1>
+          </div>
+          <DateFilterBar 
+            dateRange={dateRange} 
+            onDateRangeChange={setDateRange}
+          />
+        </div>
+
+        {/* Statistics Cards Skeleton */}
+        <div className="grid gap-1.5 sm:gap-2 md:gap-3 lg:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4 w-full">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="overflow-hidden w-full min-w-0">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-1.5 md:pb-2 px-1.5 sm:px-2 md:px-3 lg:px-4 xl:px-6 pt-1.5 sm:pt-2 md:pt-3 lg:pt-4 xl:pt-6">
+                <Skeleton className="h-4 w-20" />
+              </CardHeader>
+              <CardContent className="px-1.5 sm:px-2 md:px-3 lg:px-4 xl:px-6 pb-1.5 sm:pb-2 md:pb-3 lg:pb-4 xl:pb-6">
+                <Skeleton className="h-8 w-16" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const getChartIcon = (chartType: 'donut' | 'pie' | 'bar') => {
     switch (chartType) {
@@ -155,16 +193,24 @@ export default function AttendanceDashboard() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-        <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:grid-cols-none">
-          <TabsTrigger value="overview" className="gap-2">
-            <LayoutDashboard className="h-4 w-4 shrink-0" /> 
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button
+            variant={activeTab === "overview" ? "default" : "outline"}
+            onClick={() => setActiveTab("overview")}
+            className="flex-1 sm:flex-none gap-2 h-9 px-4"
+          >
+            <LayoutDashboard className="h-4 w-4" />
             <span>Overview</span>
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-2">
-            <BarChart3 className="h-4 w-4 shrink-0" /> 
+          </Button>
+          <Button
+            variant={activeTab === "analytics" ? "default" : "outline"}
+            onClick={() => setActiveTab("analytics")}
+            className="flex-1 sm:flex-none gap-2 h-9 px-4"
+          >
+            <BarChart3 className="h-4 w-4" />
             <span>Analytics</span>
-          </TabsTrigger>
-        </TabsList>
+          </Button>
+        </div>
 
         <TabsContent value="overview" className="space-y-3 sm:space-y-4 md:space-y-6">
           <div className="grid gap-2 sm:gap-3 md:gap-4 lg:gap-6 grid-cols-1 md:grid-cols-2 w-full">

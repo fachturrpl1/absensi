@@ -36,9 +36,9 @@ import {
   List,
   Grid3x3
 } from "lucide-react";
-import { getMyLeaveBalance, getMyLeaveRequests, getLeaveTypes, cancelLeaveRequest } from "@/action/leaves";
+import { getMyLeaveBalance, getMyLeaveRequests, cancelLeaveRequest } from "@/action/leaves";
 import { getLeaveStatistics, getAllLeaveRequests, getOrganizationLeaveTypes } from "@/action/admin-leaves";
-import { LeaveBalanceWithType, ILeaveRequest, ILeaveType } from "@/lib/leave/types";
+import { ILeaveRequest, ILeaveType } from "@/lib/leave/types";
 
 // Helper to parse number from string or number
 function parseNumber(value: string | number | undefined): number {
@@ -47,6 +47,7 @@ function parseNumber(value: string | number | undefined): number {
   return 0;
 }
 import { useOrgStore } from "@/store/org-store";
+import { useUserStore } from "@/store/user-store";
 import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
 import { LeaveRequestList } from "@/components/leave/leave-request-list";
@@ -67,7 +68,7 @@ interface LeaveStatistics {
 }
 
 export default function LeavesPage() {
-  const [balances, setBalances] = useState<LeaveBalanceWithType[]>([]);
+  // const [balances, setBalances] = useState<LeaveBalanceWithType[]>([]);
   const [requests, setRequests] = useState<ILeaveRequest[]>([]);
   const [allRequests, setAllRequests] = useState<ILeaveRequest[]>([]);
   const [leaveTypes, setLeaveTypes] = useState<ILeaveType[]>([]);
@@ -106,6 +107,12 @@ export default function LeavesPage() {
   const [detailedChartType, setDetailedChartType] = useState<'donut' | 'pie' | 'bar'>('donut');
   
   const { organizationId } = useOrgStore();
+  const { role, permissions } = useUserStore();
+
+  // Allow all roles to access, but show different data based on role
+  // Role codes: A001 = Admin Org, SA001 = Super Admin, others = Regular users
+  const isAdmin = role === 'A001' || role === 'SA001';
+  const canApproveRequests = permissions?.includes('leaves:request:approve') || isAdmin;
 
   // Helper function to get chart icon
   const getChartIcon = (chartType: 'donut' | 'pie' | 'bar') => {
@@ -130,31 +137,32 @@ export default function LeavesPage() {
         const [statsResult, allRequestsResult, typesResult, balanceResult, myRequestsResult] = await Promise.allSettled([
           organizationId ? getLeaveStatistics(organizationId) : Promise.resolve({ success: false }),
           organizationId ? getAllLeaveRequests(organizationId) : Promise.resolve({ success: false }),
-          getOrganizationLeaveTypes(organizationId || ''),
+          getOrganizationLeaveTypes(organizationId || 0),
           getMyLeaveBalance(),
           getMyLeaveRequests()
         ]);
 
         // Handle statistics result
-        if (statsResult.status === 'fulfilled' && statsResult.value?.success && statsResult.value?.data) {
-          const statsData = statsResult.value.data;
+        if (statsResult.status === 'fulfilled' && statsResult.value?.success) {
+          const statsData = statsResult.value as any;
           setStatistics({
             ...statsData,
             averageLeaveDays: parseNumber(statsData.averageLeaveDays)
           });
           logger.debug("📊 Statistics loaded:", statsData);
         } else {
-          const error = statsResult.status === 'rejected' ? statsResult.reason : statsResult.value?.message;
+          const error = statsResult.status === 'rejected' ? statsResult.reason : 'Failed to load statistics';
           logger.warn("⚠️ Statistics not available:", error);
           setStatistics(null);
         }
 
         // Handle all requests result
-        if (allRequestsResult.status === 'fulfilled' && allRequestsResult.value?.success && allRequestsResult.value?.data) {
-          setAllRequests(allRequestsResult.value.data);
-          logger.debug("📋 All requests loaded:", allRequestsResult.value.data.length, "items");
+        if (allRequestsResult.status === 'fulfilled' && allRequestsResult.value?.success) {
+          const data = (allRequestsResult.value as any).data || [];
+          setAllRequests(data);
+          logger.debug("📋 All requests loaded:", data.length, "items");
         } else {
-          const error = allRequestsResult.status === 'rejected' ? allRequestsResult.reason : allRequestsResult.value?.message;
+          const error = allRequestsResult.status === 'rejected' ? allRequestsResult.reason : 'Failed to load requests';
           logger.warn("⚠️ All requests not available:", error);
           setAllRequests([]);
         }
@@ -170,11 +178,11 @@ export default function LeavesPage() {
 
         // Handle balance result
         if (balanceResult.status === 'fulfilled' && balanceResult.value?.success && balanceResult.value?.data) {
-          setBalances(balanceResult.value.data as any);
+          // setBalances(balanceResult.value.data as any);
         } else {
           const error = balanceResult.status === 'rejected' ? balanceResult.reason : balanceResult.value?.message;
           logger.warn("⚠️ Balance not available:", error);
-          setBalances([]);
+          // setBalances([]);
         }
 
         // Handle my requests result
@@ -191,7 +199,7 @@ export default function LeavesPage() {
         setStatistics(null);
         setAllRequests([]);
         setLeaveTypes([]);
-        setBalances([]);
+        // setBalances([]);
         setRequests([]);
         toast.error("Some data could not be loaded");
       }
@@ -331,6 +339,11 @@ export default function LeavesPage() {
 
   const stats = calculateStats();
 
+  // Helper function to check if stats is user stats
+  const isUserStats = (stats: any): stats is LeaveStatistics => {
+    return stats && 'totalBalance' in stats;
+  };
+
   return (
     <div className="flex flex-1 flex-col gap-3 sm:gap-4 md:gap-6 p-3 sm:p-4 md:p-6 max-w-full overflow-x-hidden">
       {/* Header */}
@@ -389,7 +402,7 @@ export default function LeavesPage() {
                     <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-foreground mb-0.5 sm:mb-1 leading-tight">
                       {isAdmin 
                         ? statistics?.totalRequests || 0
-                        : isUserStats(stats) ? stats.totalBalance : 0
+                        : isUserStats(stats) ? (stats as any).totalBalance : 0
                       }
                     </div>
                     <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs xl:text-sm font-medium text-muted-foreground leading-tight truncate">
@@ -459,7 +472,7 @@ export default function LeavesPage() {
                     <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-foreground mb-0.5 sm:mb-1 leading-tight">
                       {isAdmin 
                         ? statistics?.membersOnLeave || 0
-                        : isUserStats(stats) ? stats.approvedCount : 0
+                        : isUserStats(stats) ? (stats as any).approvedCount : 0
                       }
                     </div>
                     <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs xl:text-sm font-medium text-muted-foreground leading-tight truncate">

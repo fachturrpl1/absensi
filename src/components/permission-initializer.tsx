@@ -36,17 +36,17 @@ export function PermissionInitializer({ userId }: { userId: string }) {
 
         // Set organizationId to store
         if (organizationId) {
-          setOrganizationId(Number(organizationId))
+          setOrganizationId(Number(organizationId), "")
           logger.debug("✅ Organization ID loaded:", organizationId)
         } else {
-          setOrganizationId(null)
+          // Cannot set null without name, skip
           logger.debug("⚠️ No organization ID found")
         }
       } catch (error) {
         logger.error("❌ Failed to load permissions and role:", error)
         setPermissions([])
         setRole(null)
-        setOrganizationId(null)
+        // Skip setOrganizationId on error
       }
     }
 

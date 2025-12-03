@@ -1,5 +1,6 @@
 'use client';
 
+import { useOrgStore } from '@/store/org-store'
 import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -160,10 +161,12 @@ const EnhancedStatCard = ({
 };
 
 export default function ImprovedDashboard() {
-  const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [isLoading, setIsLoading] = useState(true);
+  const orgStore = useOrgStore();
   const { organizationName, loading: orgLoading } = useOrganizationName();
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+  const [isLoading, setIsLoading] = useState(true);
   
   // Date filter state
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
@@ -184,19 +187,34 @@ export default function ImprovedDashboard() {
     activeMembers: 0,
   });
 
-  // Clock
+  // Clock - update time every second
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
+  // Hydration check
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
   // Fetch data
   useEffect(() => {
+    if (!isHydrated) return;
+    
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        // Use secure API route that auto-filters by organization
-        const response = await fetch('/api/attendance-records?limit=1000');
+        const orgId = orgStore.organizationId;
+        
+        if (!orgId) {
+          console.error('Organization ID not found in store');
+          setIsLoading(false);
+          return;
+        }
+        
+        // API will read organizationId from cookie as fallback
+        const response = await fetch(`/api/attendance-records?limit=1000`);
         const result = await response.json();
 
         if (result.success && result.data) {
@@ -212,7 +230,7 @@ export default function ImprovedDashboard() {
     };
 
     fetchData();
-  }, []);
+  }, [isHydrated, orgStore.organizationId]);
 
   // Filter records
   const fromDateStr = dateRange.from.toISOString().split('T')[0];
@@ -377,7 +395,7 @@ export default function ImprovedDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center   md:justify-between gap-4">
         <div>
           {orgLoading ? (
             <Skeleton className="h-9 w-80 mb-2" />
