@@ -55,13 +55,13 @@ export function LoginForm() {
       setError(result.message || "Login failed. Please try again.");
       setLoading(false);
     } else {
+      // Set user in auth store
       useAuthStore.getState().setUser(result.user);
       useAuthStore.getState().setPermissions(result.permissions!.map((p) => p.code));
-      // Set role from organization_members if available
-      if ('orgRole' in result && result.orgRole) {
-        useAuthStore.getState().setRole(result.orgRole);
-      }
-      router.push("/");
+      
+      // Redirect to organization selector
+      // Organization selector will fetch organizations from store or from API
+      router.push("/organization-selector");
     }
   };
 

@@ -195,7 +195,8 @@ export async function middleware(req: NextRequest) {
 
   // Redirect logic based on user authentication
   if (user && pathname.startsWith("/auth/login")) {
-    return NextResponse.redirect(new URL("/", req.url))
+    // Redirect to organization-selector instead of dashboard
+    return NextResponse.redirect(new URL("/organization-selector", req.url))
   }
 
   // Allow newly signed up users to see signup page briefly before redirect
@@ -217,8 +218,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/auth/login", req.url))
   }
 
-  // Check if authenticated user has organization (except for special pages)
+  // Check if authenticated user has selected organization
+  // Allow access to organization-selector and special pages without organization check
   const excludedPaths = [
+    "/organization-selector",
     "/onboarding",
     "/account-inactive",
     "/organization-inactive",
@@ -226,60 +229,14 @@ export async function middleware(req: NextRequest) {
   ]
   const isExcludedPath = excludedPaths.some((path) => pathname.startsWith(path))
 
+  // For authenticated users accessing protected pages, check if organization is selected
   if (user && !isExcludedPath && !isPublicPath) {
-    try {
-      // Check if user has organization membership
-      const { data: member, error: membershipError } = await supabase
-        .from("organization_members")
-        .select(`
-          is_active,
-          organization:organizations(
-            id,
-            is_active
-          )
-        `)
-        .eq("user_id", user.id)
-        .maybeSingle()
-
-      if (membershipError) {
-        logger.warn('Membership check failed:', membershipError)
-        // On failure, allow request so downstream components can handle it
-        return response
-      }
-
-      // Normalize typing from Supabase response for safer runtime checks
-      const memberData: any = member
-
-      // Priority order:
-      // 1. No organization → onboarding
-      // 2. Has organization but organization inactive → organization-inactive
-      // 3. Has active organization but member inactive → account-inactive
-
-      if (!memberData) {
-        // User has no organization membership → onboarding
-        return NextResponse.redirect(new URL("/onboarding", req.url))
-      }
-
-      const organization = memberData.organization as { id?: string; is_active?: boolean } | null
-
-      if (!organization?.id) {
-        // Membership exists but organization data is not accessible (likely RLS)
-        // Allow access and let client-side checks handle it
-        return response
-      }
-
-      if (!organization.is_active) {
-        // Organization exists but is inactive → organization-inactive
-        return NextResponse.redirect(new URL("/organization-inactive", req.url))
-      }
-
-      if (!memberData.is_active) {
-        // Organization is active but member is inactive → account-inactive
-        return NextResponse.redirect(new URL("/account-inactive", req.url))
-      }
-    } catch (error) {
-      logger.warn('Error checking organization membership:', error)
-      // On error, allow access but user will see appropriate message in UI
+    // Check if organization ID is in cookies or session
+    // If not, redirect to organization-selector
+    const orgIdCookie = req.cookies.get('org_id')?.value  
+    
+    if (!orgIdCookie) {
+      return NextResponse.redirect(new URL("/organization-selector", req.url))
     }
   }
 

@@ -4,9 +4,8 @@ import React from "react"
 import { IOrganization_member } from "@/interface"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Trash, Pencil, Eye, User, Shield, Check, X, Search, Filter, Columns3Cog, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
+import { Trash, Pencil, Eye, User, Shield, Check, X, Filter, Columns3Cog, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -45,11 +44,11 @@ interface MembersTableProps {
 
 export function MembersTable({ members, isLoading = false, onDelete, selectedIds = [], onSelectionChange }: MembersTableProps) {
   const router = useRouter()
-  const [globalFilter, setGlobalFilter] = React.useState("")
-  const [statusFilter, setStatusFilter] = React.useState("all")
   const [sortOrder, setSortOrder] = React.useState("newest")
   const [pageSize, setPageSize] = React.useState("10")
   const [pageIndex, setPageIndex] = React.useState(0)
+  const [globalFilter] = React.useState("")
+  const [statusFilter, setStatusFilter] = React.useState("all")
   const [visibleColumns, setVisibleColumns] = React.useState({
     members: true,
     phone: true,

@@ -133,7 +133,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   };
 
   // Handle edit form submit
-  const onEditSubmit = async (values: EditFormValues) => {
+  const onEditSubmit = async (_values: EditFormValues) => {
     try {
       setIsSubmitting(true);
       // TODO: Implement API call to update attendance records

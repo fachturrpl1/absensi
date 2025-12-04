@@ -1,31 +1,25 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 
 import { dashboardLogger } from '@/lib/logger';
-async function getUserOrganizationId() {
-  const supabase = await createClient()
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-  if (userError || !user) {
-    return null
-  }
-
-  const { data: member } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .maybeSingle()
-
-  return member?.organization_id || null
-}
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const organizationId = await getUserOrganizationId()
+    const { searchParams } = new URL(request.url)
+    let organizationId = parseInt(searchParams.get('organizationId') || '')
+    
+    // Fallback to cookie if query param not provided
+    if (!organizationId) {
+      const orgIdCookie = request.cookies.get('org_id')?.value
+      if (orgIdCookie) {
+        organizationId = parseInt(orgIdCookie)
+      }
+    }
+    
     if (!organizationId) {
       return NextResponse.json(
-        { success: false, message: 'Organization not found' },
-        { status: 404 }
+        { success: false, message: 'Organization ID required' },
+        { status: 400 }
       )
     }
 

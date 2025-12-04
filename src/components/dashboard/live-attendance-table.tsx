@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -94,20 +94,37 @@ const attendanceCache: {
 
 const ATTENDANCE_CACHE_DURATION = 120000; // 2 minutes cache (increased from 10s)
 
-export function LiveAttendanceTable({
-  autoRefresh = true,
-  refreshInterval = 180000, // 3 minutes (increased from 60s)
-  pageSize = 10,
-}: LiveAttendanceTableProps) {
+export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 180000, pageSize = 10 }: LiveAttendanceTableProps) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [currentPage, setCurrentPage] = useState(1);
+  // Bisa menerima ID organisasi dari store (number) maupun dari cookie (string)
+  const [activeOrgId, setActiveOrgId] = useState<string | number | null>(null);
+  
+  const toggleRow = (id: number) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedRows(newExpanded);
+  };
 
-  const organizationId = useOrgStore((state) => state.organizationId);
+  useEffect(() => {
+    const orgId = useOrgStore.getState().organizationId ||
+      document.cookie.split('; ').find(row => row.startsWith('org_id='))?.split('=')[1] || null;
+    setActiveOrgId(orgId);
+  }, []);
 
-  const fetchAttendanceRecords = async (force = false) => {
+  const fetchAttendanceRecords = useCallback(async (force = false) => {
     const now = Date.now();
+    
+    if (!activeOrgId) {
+    console.log('[LiveAttendance] No active organization, skipping fetch');
+    return;
+  }
     
     // Check cache first
     if (!force && attendanceCache.data && (now - attendanceCache.timestamp) < ATTENDANCE_CACHE_DURATION) {
@@ -116,7 +133,7 @@ export function LiveAttendanceTable({
       return;
     }
 
-    // Prevent concurrent requests (CRITICAL: blocks duplicates)
+    // Prevent concurrent requests
     if (attendanceCache.isLoading) {
       console.log('[LiveAttendance] Request already in progress, skipping duplicate');
       return;
@@ -125,12 +142,11 @@ export function LiveAttendanceTable({
     attendanceCache.isLoading = true;
 
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const params = new URLSearchParams({
-        startDate: today,
-        endDate: today,
-        limit: '50',
-      });
+      const today = new Date().toISOString().split('T')[0] as string;
+      const params = new URLSearchParams();
+      params.set('startDate', today);
+      params.set('endDate', today);
+      params.set('limit', '50');
 
       const response = await fetch(`/api/attendance-records?${params.toString()}`, {
         cache: 'no-store',
@@ -153,27 +169,39 @@ export function LiveAttendanceTable({
     } finally {
       attendanceCache.isLoading = false;
     }
-  };
+  }, [activeOrgId]);
 
   useEffect(() => {
-    fetchAttendanceRecords();
+    const unsubscribe = useOrgStore.subscribe((state) => {
+      setActiveOrgId(state.organizationId);
+    });
+    return unsubscribe;
+  }, []);
 
-    if (autoRefresh) {
-      const interval = setInterval(() => fetchAttendanceRecords(true), refreshInterval);
-      return () => clearInterval(interval);
-    }
-    return undefined;
-  }, [autoRefresh, refreshInterval, organizationId]);
+// useEffect untuk initialize dari store saat mount
+useEffect(() => {
+  const orgId = useOrgStore.getState().organizationId ||
+    document.cookie.split('; ').find(row => row.startsWith('org_id='))?.split('=')[1] || null;
+  console.log('[LiveAttendance] Initial orgId:', orgId);
+  if (orgId && orgId !== activeOrgId) {
+    setActiveOrgId(orgId);
+  }
+}, []);
 
-  const toggleRow = (id: number) => {
-    const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedRows(newExpanded);
-  };
+// useEffect untuk auto refresh
+useEffect(() => {
+  if (autoRefresh && activeOrgId) {
+    console.log('[LiveAttendance] Setting up auto refresh');
+    const interval = setInterval(() => {
+      fetchAttendanceRecords(true);
+    }, refreshInterval);
+    return () => {
+      console.log('[LiveAttendance] Clearing auto refresh');
+      clearInterval(interval);
+    };
+  }
+  return undefined;
+}, [activeOrgId, autoRefresh, refreshInterval, fetchAttendanceRecords]);
 
   const totalPages = Math.ceil(records.length / pageSize);
   const paginatedRecords = records.slice(
@@ -187,11 +215,6 @@ export function LiveAttendanceTable({
     late: records.filter(r => r.status === 'late').length,
     absent: records.filter(r => r.status === 'absent').length,
   };
-
-  // Don't show loading state here - parent handles initial load
-  // if (loading && records.length === 0) {
-  //   return null; // Parent dashboard skeleton handles this
-  // }
 
   return (
     <Card className="border-border bg-card">

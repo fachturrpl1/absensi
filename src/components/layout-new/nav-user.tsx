@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo} from 'react';
 import { EllipsisVertical, CircleUser, Settings, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -36,7 +36,8 @@ interface UserProfile {
   avatar: string | null;
 }
 
-export function NavUser() {
+export const NavUser = memo(function NavUser() {
+  // const MemoizedNavUser = useMemo (() => <NavUser />, []);
   const { isMobile } = useSidebar();
   const [user, setUser] = useState<UserProfile>({
     name: 'Loading...',
@@ -187,4 +188,4 @@ export function NavUser() {
       </SidebarMenuItem>
     </SidebarMenu>
   );
-}
+});

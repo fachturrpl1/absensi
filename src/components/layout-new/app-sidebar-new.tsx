@@ -67,7 +67,7 @@ const getSidebarGroups = (): NavGroup[] => [
   {
     items: [
       {
-        title: 'Dashboard',
+        title: 'Home',
         url: '/',
         icon: LayoutDashboard,
       },

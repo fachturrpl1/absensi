@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { UploadCloud, Loader2, FileText, CheckCircle2, XCircle, AlertCircle } from "lucide-react"
+import { UploadCloud, Loader2, FileText, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
