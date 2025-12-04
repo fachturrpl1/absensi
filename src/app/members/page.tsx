@@ -3,8 +3,9 @@
 import React from "react"
 import { useSearchParams } from "next/navigation"
 import { MembersTable } from "@/components/members-table"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { User, Shield, Mail, Plus, FileDown, FileUp, Loader2, Search } from "lucide-react"
+import { User, Shield, Mail, Plus, FileDown, FileUp, Loader2, Search, FileSpreadsheet, Minus } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -55,7 +56,6 @@ import { createInvitation } from "@/action/invitations"
 import { getOrgRoles } from "@/lib/rbac"
 import { useGroups } from "@/hooks/use-groups"
 import { usePositions } from "@/hooks/use-positions"
-import { FlexibleImportDialog } from "@/components/members/flexible-import-dialog"
 //tes
 const inviteSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -66,8 +66,56 @@ const inviteSchema = z.object({
 })
 
 type InviteFormValues = z.infer<typeof inviteSchema>
-type ImportSummary = { success: number; failed: number; errors: string[] }
 
+type ExportFieldConfig = {
+  key: string
+  label: string
+  getValue: (member: any) => string | number | boolean | null
+}
+
+const EXPORT_FIELDS: ExportFieldConfig[] = [
+  {
+    key: "full_name",
+    label: "Full Name",
+    getValue: (member: any) => {
+      const user = member.user
+      if (!user) return "No User"
+      const fullname =
+        [user.first_name, user.middle_name, user.last_name]
+          .filter((part: string | undefined) => part && part.trim() !== "")
+          .join(" ") ||
+        user.display_name ||
+        user.email ||
+        "No User"
+      return fullname
+    },
+  },
+  {
+    key: "email",
+    label: "Email",
+    getValue: (member: any) => member.user?.email || "-",
+  },
+  {
+    key: "phone",
+    label: "Phone Number",
+    getValue: (member: any) => member.user?.phone || "-",
+  },
+  {
+    key: "group",
+    label: "Department / Group",
+    getValue: (member: any) => member.groupName || member.departments?.name || "-",
+  },
+  {
+    key: "role",
+    label: "Role",
+    getValue: (member: any) => member.role?.name || "No Role",
+  },
+  {
+    key: "status",
+    label: "Status",
+    getValue: (member: any) => (member.is_active ? "Active" : "Inactive"),
+  },
+]
 export default function MembersPage() {
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -77,9 +125,12 @@ export default function MembersPage() {
   const [inviteDialogOpen, setInviteDialogOpen] = React.useState(false)
   const [submittingInvite, setSubmittingInvite] = React.useState(false)
   const [exporting, setExporting] = React.useState(false)
-  const [importDialogOpen, setImportDialogOpen] = React.useState(false)
-  const [importSummary, setImportSummary] = React.useState<ImportSummary | null>(null)
   const [searchQuery, setSearchQuery] = React.useState<string>("")
+  const [selectedMemberIds, setSelectedMemberIds] = React.useState<string[]>([])
+  const [exportDialogOpen, setExportDialogOpen] = React.useState(false)
+  const [selectedExportFields, setSelectedExportFields] = React.useState<string[]>(
+    EXPORT_FIELDS.map((f) => f.key),
+  )
 
   // Auto-open invite dialog if action=invite in URL
   React.useEffect(() => {
@@ -205,33 +256,35 @@ export default function MembersPage() {
 
   const handleExportMembers = async () => {
     try {
-      if (!members.length) {
+      const hasSelection = selectedMemberIds.length > 0
+      const exportSource = hasSelection
+        ? members.filter((m) => selectedMemberIds.includes(String(m.id)))
+        : members
+
+      if (!exportSource.length) {
         toast.warning("Tidak ada data member untuk diekspor")
+        return
+      }
+
+      if (!selectedExportFields.length) {
+        toast.error("Pilih minimal satu kolom untuk diekspor")
         return
       }
 
       setExporting(true)
       const XLSX = await import("xlsx")
 
-      const rows = members.map((member: any) => {
-        const user = member.user
-        const fullname = user
-          ? [user.first_name, user.middle_name, user.last_name]
-              .filter((part: string | undefined) => part && part.trim() !== "")
-              .join(" ") ||
-            user.display_name ||
-            user.email ||
-            "No User"
-          : "No User"
-
-        return {
-          "Full Name": fullname,
-          Email: user?.email || "-",
-          "Phone Number": user?.phone || "-",
-          Department: member.groupName || member.departments?.name || "-",
-          Role: member.role?.name || "No Role",
-          Status: member.is_active ? "Active" : "Inactive",
-        }
+      const rows = exportSource.map((member: any) => {
+        const row: Record<string, any> = {}
+        // Selalu buat semua kolom, tapi isi hanya yang dipilih.
+        EXPORT_FIELDS.forEach((field) => {
+          if (selectedExportFields.includes(field.key)) {
+            row[field.label] = field.getValue(member)
+          } else {
+            row[field.label] = "" // kolom tetap ada tapi datanya kosong
+          }
+        })
+        return row
       })
 
       const worksheet = XLSX.utils.json_to_sheet(rows)
@@ -260,10 +313,6 @@ export default function MembersPage() {
   }
 
 
-  const handleImportDialogChange = (open: boolean) => {
-    setImportDialogOpen(open)
-  }
-
   const handleDialogOpenChange = (open: boolean) => {
     setInviteDialogOpen(open)
     if (!open) {
@@ -291,39 +340,147 @@ export default function MembersPage() {
                 />
               </div>
               <div className="flex gap-3 sm:gap-2 flex-wrap items-center" suppressHydrationWarning>
+                {/* Export dialog untuk memilih kolom yang akan diekspor */}
+                <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+                  <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                      <DialogTitle>Export Members</DialogTitle>
+                      <DialogDescription>
+                        Pilih kolom apa saja yang akan disertakan dalam file Excel. Jika tidak ada member yang
+                        dipilih di tabel, maka semua member akan diekspor.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                      <div className="border rounded-lg">
+                        <div className="px-3 py-2 border-b bg-muted/40 text-sm font-semibold">
+                          Field-field tersedia
+                        </div>
+                        <div className="max-h-64 overflow-y-auto">
+                          <ul className="divide-y">
+                            {EXPORT_FIELDS.filter((f) => !selectedExportFields.includes(f.key)).map(
+                              (field) => (
+                                <li
+                                  key={field.key}
+                                  className="flex items-center justify-between px-3 py-2 text-sm"
+                                >
+                                  <span>{field.label}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() =>
+                                      setSelectedExportFields((prev) => [...prev, field.key])
+                                    }
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </li>
+                              ),
+                            )}
+                          </ul>
+                        </div>
+                      </div>
+                      <div className="border rounded-lg">
+                        <div className="px-3 py-2 border-b bg-muted/40 text-sm font-semibold">
+                          Kolom untuk diekspor
+                        </div>
+                        <div className="max-h-64 overflow-y-auto">
+                          {selectedExportFields.length === 0 ? (
+                            <p className="px-3 py-4 text-sm text-muted-foreground">
+                              Belum ada kolom yang dipilih. Tambahkan dari daftar di sebelah kiri.
+                            </p>
+                          ) : (
+                            <ul className="divide-y">
+                              {selectedExportFields.map((key) => {
+                                const field = EXPORT_FIELDS.find((f) => f.key === key)
+                                if (!field) return null
+                                return (
+                                  <li
+                                    key={field.key}
+                                    className="flex items-center justify-between px-3 py-2 text-sm"
+                                  >
+                                    <span>{field.label}</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() =>
+                                        setSelectedExportFields((prev) =>
+                                          prev.filter((k) => k !== field.key),
+                                        )
+                                      }
+                                    >
+                                      <Minus className="h-4 w-4" />
+                                    </Button>
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-4">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        {selectedMemberIds.length > 0
+                          ? `${selectedMemberIds.length} member terpilih akan diekspor.`
+                          : `Tidak ada member yang dipilih di tabel, semua ${members.length} member akan diekspor.`}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setExportDialogOpen(false)}
+                          disabled={exporting}
+                        >
+                          Batal
+                        </Button>
+                        <Button
+                          onClick={async () => {
+                            await handleExportMembers()
+                            setExportDialogOpen(false)
+                          }}
+                          disabled={exporting}
+                        >
+                          {exporting ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Mengekspor...
+                            </>
+                          ) : (
+                            <>
+                              <FileSpreadsheet className="mr-2 h-4 w-4" />
+                              Ekspor
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={handleExportMembers}
+                  onClick={() => setExportDialogOpen(true)}
                   disabled={loading || exporting}
                   className="whitespace-nowrap"
                 >
-                  {exporting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileDown className="mr-2 h-4 w-4" />
-                  )}
+                  <FileDown className="mr-2 h-4 w-4" />
                   Export
                 </Button>
-                <FlexibleImportDialog
-                  open={importDialogOpen}
-                  onOpenChange={handleImportDialogChange}
-                  onImportComplete={(summary) => {
-                    setImportSummary(summary)
-                    fetchMembers()
-                  }}
-                />
                 <Button
+                  asChild
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setImportDialogOpen(true)}
                   disabled={isLoadingInviteData}
                   className="whitespace-nowrap"
                 >
-                  <FileUp className="mr-2 h-4 w-4" />
-                  Import
+                  <Link href="/members/import">
+                    <FileUp className="mr-2 h-4 w-4" />
+                    Import
+                  </Link>
                 </Button>
                 <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
                   <DialogTrigger asChild>
@@ -485,31 +642,6 @@ export default function MembersPage() {
               </div>
             </div>
 
-            {importSummary && (
-              <div className="rounded-lg border border-muted-foreground/20 bg-muted/40 p-4">
-                <p className="text-sm font-semibold">Import summary</p>
-                <div className="mt-2 flex flex-wrap gap-4 text-sm">
-                  <span className="text-green-600">Berhasil: {importSummary.success}</span>
-                  <span className="text-red-500">Gagal: {importSummary.failed}</span>
-                </div>
-                {importSummary.errors.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-sm font-medium text-red-500">Detail error:</p>
-                    <ul className="mt-1 list-disc space-y-1 pl-4 text-sm text-red-500">
-                      {importSummary.errors.slice(0, 5).map((error, index) => (
-                        <li key={`${error}-${index}`}>{error}</li>
-                      ))}
-                    </ul>
-                    {importSummary.errors.length > 5 && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        +{importSummary.errors.length - 5} error lainnya
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
             <div className="mt-6">
               {loading ? (
                 <TableSkeleton rows={8} columns={6} />
@@ -536,6 +668,8 @@ export default function MembersPage() {
                     members={members}
                     isLoading={loading}
                     onDelete={fetchMembers}
+                    selectedIds={selectedMemberIds}
+                    onSelectionChange={setSelectedMemberIds}
                   />
                 </div>
               )}

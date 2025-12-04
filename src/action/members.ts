@@ -1,5 +1,6 @@
 "use server";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { IOrganization_member } from "@/interface";
 
 import { memberLogger } from '@/lib/logger';
@@ -20,6 +21,7 @@ export const createOrganizationMember = async (Organization_member: Partial<IOrg
 };
 export const getAllOrganization_member = async () => {
   const supabase = await getSupabase();
+  const adminClient = createAdminClient();
 
   // 1. Retrieve user from cookies
   const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -29,10 +31,12 @@ export const getAllOrganization_member = async () => {
   }
 
   // 2. Find the user's organization_id
-  const { data: member } = await supabase
+  const { data: member } = await adminClient
     .from("organization_members")
     .select("organization_id")
     .eq("user_id", user.id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (!member) {
@@ -40,7 +44,7 @@ export const getAllOrganization_member = async () => {
   }
 
   // 3. Fetch all members belonging to the organization
-  const { data, error } = await supabase
+  const { data, error } = await adminClient
     .from("organization_members")
     .select(`
       *,

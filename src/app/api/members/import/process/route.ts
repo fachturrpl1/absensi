@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { createInvitation } from '@/action/invitations'
 
 /**
@@ -19,6 +20,10 @@ interface ColumnMapping {
   [databaseField: string]: string | null
 }
 
+interface EnabledFields {
+  [databaseField: string]: boolean
+}
+
 /**
  * API Route: POST /api/members/import/process
  * 
@@ -35,6 +40,8 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const file = formData.get('file') as File
     const mappingJson = formData.get('mapping') as string
+    const mode = (formData.get('mode') as string) || 'import' // 'test' or 'import'
+    const enabledJson = formData.get('enabledFields') as string | null
 
     if (!file) {
       return NextResponse.json(
@@ -52,8 +59,12 @@ export async function POST(request: NextRequest) {
 
     // Parse mapping
     let mapping: ColumnMapping
+    let enabledFields: EnabledFields = {}
     try {
       mapping = JSON.parse(mappingJson)
+      if (enabledJson) {
+        enabledFields = JSON.parse(enabledJson)
+      }
     } catch (error) {
       return NextResponse.json(
         { success: false, message: 'Invalid mapping JSON' },
@@ -94,8 +105,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get current user and organization
+    // Get current user
     const supabase = await createClient()
+    const adminClient = createAdminClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
     if (userError || !user) {
@@ -105,10 +117,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data: member } = await supabase
+    // Use admin client to avoid RLS hiding membership rows
+    const { data: member } = await adminClient
       .from('organization_members')
       .select('organization_id')
       .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .maybeSingle()
 
     if (!member) {
@@ -161,6 +176,10 @@ export async function POST(request: NextRequest) {
 
     // Helper function to get value from Excel row based on mapping
     const getMappedValue = (row: Record<string, any>, dbField: string): string => {
+      // Jika field dimatikan dari UI, selalu kembalikan string kosong
+      if (enabledFields && enabledFields[dbField] === false) {
+        return ''
+      }
       const excelColumn = mapping[dbField]
       if (!excelColumn) return ''
       return String(row[excelColumn] || '').trim()
@@ -249,14 +268,19 @@ export async function POST(request: NextRequest) {
         const message = getMappedValue(row, 'message')
         if (message) invitationPayload.message = message
 
-        // Create invitation
-        const result = await createInvitation(invitationPayload)
-        
-        if (result.success) {
+        if (mode === 'test') {
+          // Dry-run: only validate, don't create invitations
           summary.success++
         } else {
-          summary.failed++
-          summary.errors.push(`Row ${index + 2}: ${result.message || 'Failed to send invitation'}`)
+          // Create invitation (real import)
+          const result = await createInvitation(invitationPayload)
+          
+          if (result.success) {
+            summary.success++
+          } else {
+            summary.failed++
+            summary.errors.push(`Row ${index + 2}: ${result.message || 'Failed to send invitation'}`)
+          }
         }
       } catch (error) {
         summary.failed++

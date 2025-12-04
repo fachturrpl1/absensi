@@ -50,7 +50,7 @@ import {
   MoreHorizontal,
   Download,
   Plus,
-  Trash2,
+  Trash,
   Eye,
   Edit,
   SlidersHorizontal,
@@ -296,7 +296,7 @@ export default function ModernDataTable<TData extends Employee, TValue>({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive">
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash className="mr-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>

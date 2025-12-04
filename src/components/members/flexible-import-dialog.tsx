@@ -265,7 +265,8 @@ export function FlexibleImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      {/* Dialog lebar, tinggi dibatasi; isi utama yang discroll */}
+      <DialogContent className="max-w-4xl flex flex-col">
         <DialogHeader>
           <DialogTitle>Flexible Import Members</DialogTitle>
           <DialogDescription>
@@ -273,7 +274,8 @@ export function FlexibleImportDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col gap-4">
+        {/* Wrapper utama isi dialog; bagian inilah yang bisa discroll */}
+        <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-1">
           {/* Step 1: Upload + Download Template */}
           {step === "upload" && (
             <div className="flex-1 flex flex-col gap-4">
@@ -337,92 +339,100 @@ export function FlexibleImportDialog({
 
           {/* Step 2: Mapping */}
           {step === "mapping" && (
-            <div className="flex-1 overflow-hidden flex flex-col gap-4">
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Map Excel columns to database fields. Unmapped fields will be skipped.
-                  <strong className="ml-1">Email is required.</strong>
-                </AlertDescription>
-              </Alert>
+            <div className="flex flex-col gap-4">
+              {/* Card mapping + preview yang bisa discroll vertikal */}
+              <div className="max-h-[60vh] overflow-y-auto pr-2">
+                <div className="space-y-4">
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Map Excel columns to database fields. Unmapped fields will be skipped.
+                      <strong className="ml-1">Email is required.</strong>
+                    </AlertDescription>
+                  </Alert>
 
-              {/* Preview Table */}
-              {preview.length > 0 && (
-                <div className="border rounded-lg">
-                  <div className="p-3 bg-muted/50 border-b">
-                    <p className="text-sm font-medium">
-                      Preview (showing first {preview.length} of {totalRows} rows)
-                    </p>
-                  </div>
-                  <ScrollArea className="h-48">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          {excelHeaders.map((header) => (
-                            <TableHead key={header} className="text-xs">
-                              {header}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {preview.map((row, idx) => (
-                          <TableRow key={idx}>
-                            {excelHeaders.map((header) => (
-                              <TableCell key={header} className="text-xs">
-                                {String(row[header] || "")}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                </div>
-              )}
-
-              {/* Mapping Form */}
-              <ScrollArea className="flex-1">
-                <div className="space-y-4 pr-4">
-                  {DATABASE_FIELDS.map((field) => (
-                    <div key={field.key} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor={field.key} className="text-sm font-medium">
-                          {field.label}
-                          {field.required && (
-                            <span className="text-red-500 ml-1">*</span>
-                          )}
-                        </Label>
-                        {field.description && (
-                          <span className="text-xs text-muted-foreground">
-                            ({field.description})
-                          </span>
-                        )}
+                  {/* Preview Table */}
+                  {preview.length > 0 && (
+                    <div className="border rounded-lg">
+                      <div className="p-3 bg-muted/50 border-b">
+                        <p className="text-sm font-medium">
+                          Preview (showing first {preview.length} of {totalRows} rows)
+                        </p>
                       </div>
-                      <Select
-                        value={mapping[field.key] || ""}
-                        onValueChange={(value) =>
-                          handleMappingChange(field.key, value || null)
-                        }
-                      >
-                        <SelectTrigger id={field.key}>
-                          <SelectValue placeholder="Select Excel column (optional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">-- Not mapped --</SelectItem>
-                          {excelHeaders.map((header) => (
-                            <SelectItem key={header} value={header}>
-                              {header}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <ScrollArea className="h-48">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              {excelHeaders.map((header) => (
+                                <TableHead key={header} className="text-xs">
+                                  {header}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {preview.map((row, idx) => (
+                              <TableRow key={idx}>
+                                {excelHeaders.map((header) => (
+                                  <TableCell key={header} className="text-xs">
+                                    {String(row[header] || "")}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
                     </div>
-                  ))}
-                </div>
-              </ScrollArea>
+                  )}
 
-              <div className="flex justify-end gap-2 pt-4 border-t">
+                  {/* Mapping Form */}
+                  <div className="space-y-4 pr-2">
+                    {DATABASE_FIELDS.map((field) => (
+                      <div key={field.key} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={field.key} className="text-sm font-medium">
+                            {field.label}
+                            {field.required && (
+                              <span className="text-red-500 ml-1">*</span>
+                            )}
+                          </Label>
+                          {field.description && (
+                            <span className="text-xs text-muted-foreground">
+                              ({field.description})
+                            </span>
+                          )}
+                        </div>
+                        <Select
+                          value={mapping[field.key] ?? "__UNMAPPED__"}
+                          onValueChange={(value) =>
+                            handleMappingChange(
+                              field.key,
+                              value === "__UNMAPPED__" ? null : value,
+                            )
+                          }
+                        >
+                          <SelectTrigger id={field.key}>
+                            <SelectValue placeholder="Select Excel column (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {/* NOTE: value for SelectItem must NOT be empty string */}
+                            <SelectItem value="__UNMAPPED__">-- Not mapped --</SelectItem>
+                            {excelHeaders.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Tombol aksi tetap di bawah, tidak ikut scroll */}
+              <div className="flex justify-end gap-2 pt-2 border-t">
                 <Button
                   variant="outline"
                   onClick={() => setStep("upload")}

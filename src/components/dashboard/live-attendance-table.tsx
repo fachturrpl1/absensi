@@ -30,7 +30,7 @@ import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { createClient } from '@/utils/supabase/client';
+import { useOrgStore } from '@/store/org-store';
 
 interface AttendanceRecord {
   id: number;
@@ -104,6 +104,8 @@ export function LiveAttendanceTable({
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [currentPage, setCurrentPage] = useState(1);
 
+  const organizationId = useOrgStore((state) => state.organizationId);
+
   const fetchAttendanceRecords = async (force = false) => {
     const now = Date.now();
     
@@ -123,77 +125,24 @@ export function LiveAttendanceTable({
     attendanceCache.isLoading = true;
 
     try {
-      const supabase = createClient();
       const today = new Date().toISOString().split('T')[0];
+      const params = new URLSearchParams({
+        startDate: today,
+        endDate: today,
+        limit: '50',
+      });
 
-      // Get current user's organization
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('User not authenticated');
+      const response = await fetch(`/api/attendance-records?${params.toString()}`, {
+        cache: 'no-store',
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to fetch attendance records');
       }
 
-      const { data: orgMember } = await supabase
-        .from('organization_members')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!orgMember?.organization_id) {
-        throw new Error('Organization not found');
-      }
-
-      const { data, error } = await supabase
-        .from('attendance_records')
-        .select(`
-          id,
-          status,
-          actual_check_in,
-          actual_check_out,
-          work_duration_minutes,
-          late_minutes,
-          notes,
-          organization_member_id,
-          organization_members!inner (
-            id,
-            organization_id,
-            user_profiles!inner (
-              first_name,
-              last_name,
-              profile_photo_url
-            ),
-            departments!organization_members_department_id_fkey (
-              name
-            )
-          )
-        `)
-        .eq('organization_members.organization_id', orgMember.organization_id)
-        .eq('attendance_date', today)
-        .order('actual_check_in', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-
-      const transformedData = data?.map((record: any) => {
-        const member = record.organization_members;
-        const profile = member?.user_profiles;
-        const department = member?.departments;
-
-        return {
-          id: record.id,
-          member_id: member?.id,
-          member_name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Unknown',
-          department_name: department?.name || 'N/A',
-          status: record.status,
-          actual_check_in: record.actual_check_in,
-          actual_check_out: record.actual_check_out,
-          work_duration_minutes: record.work_duration_minutes,
-          scheduled_duration_minutes: 480, // Default 8 jam untuk estimasi
-          late_minutes: record.late_minutes,
-          notes: record.notes,
-          location: null, // Can be populated if location tracking exists
-          profile_photo_url: profile?.profile_photo_url,
-        };
-      }) || [];
+      const transformedData = result.data || [];
 
       attendanceCache.data = transformedData;
       attendanceCache.timestamp = Date.now();
@@ -214,7 +163,7 @@ export function LiveAttendanceTable({
       return () => clearInterval(interval);
     }
     return undefined;
-  }, [autoRefresh, refreshInterval]);
+  }, [autoRefresh, refreshInterval, organizationId]);
 
   const toggleRow = (id: number) => {
     const newExpanded = new Set(expandedRows);

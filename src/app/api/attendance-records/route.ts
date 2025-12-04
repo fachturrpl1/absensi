@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 
 async function getUserOrganizationId() {
   const supabase = await createClient()
+  const adminClient = createAdminClient()
   const { data: { user }, error: userError } = await supabase.auth.getUser()
 
   if (userError || !user) {
     return null
   }
 
-  const { data: member } = await supabase
+  const { data: member } = await adminClient
     .from("organization_members")
     .select("organization_id")
     .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   return member?.organization_id || null

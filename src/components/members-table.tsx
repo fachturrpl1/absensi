@@ -33,14 +33,17 @@ import {
 } from "@/components/ui/alert-dialog"
 import { deleteOrganization_member } from "@/action/members"
 import { toast } from "sonner"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface MembersTableProps {
   members: IOrganization_member[]
   isLoading?: boolean
   onDelete?: () => void
+  selectedIds?: string[]
+  onSelectionChange?: (ids: string[]) => void
 }
 
-export function MembersTable({ members, isLoading = false, onDelete }: MembersTableProps) {
+export function MembersTable({ members, isLoading = false, onDelete, selectedIds = [], onSelectionChange }: MembersTableProps) {
   const router = useRouter()
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState("all")
@@ -277,6 +280,26 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
         {/* Header */}
         <thead className="bg-muted/50 border-b">
           <tr>
+            {/* Checkbox kolom pertama */}
+            <th className="px-4 py-3 text-left text-sm font-semibold text-foreground w-10">
+              <Checkbox
+                className="h-4 w-4"
+                checked={
+                  paginatedData.length > 0 &&
+                  paginatedData.every((m) => selectedIds.includes(String(m.id)))
+                }
+                onCheckedChange={(checked) => {
+                  if (!onSelectionChange) return
+                  const pageIds = paginatedData.map((m) => String(m.id))
+                  if (checked) {
+                    const merged = Array.from(new Set([...selectedIds, ...pageIds]))
+                    onSelectionChange(merged)
+                  } else {
+                    onSelectionChange(selectedIds.filter((id) => !pageIds.includes(id)))
+                  }
+                }}
+              />
+            </th>
             {visibleColumns.members && (
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Members</th>
             )}
@@ -319,10 +342,28 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
 
               return (
                 <tr key={member.id} className="border-b hover:bg-muted/30 transition-colors">
+                  {/* Checkbox per baris */}
+                  <td className="px-4 py-3 text-sm w-10">
+                    <Checkbox
+                      className="h-4 w-4"
+                      checked={selectedIds.includes(String(member.id))}
+                      onCheckedChange={(checked) => {
+                        if (!onSelectionChange) return
+                        const id = String(member.id)
+                        if (checked) {
+                          if (!selectedIds.includes(id)) {
+                            onSelectionChange([...selectedIds, id])
+                          }
+                        } else {
+                          onSelectionChange(selectedIds.filter((item) => item !== id))
+                        }
+                      }}
+                    />
+                  </td>
                   {visibleColumns.members && (
                     <td className="px-4 py-3 text-sm">
                       <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        <User className="w-4 h-4 text-muted-foreground shrink-0" />
                         <span className="truncate">{getFullName(member)}</span>
                       </div>
                     </td>

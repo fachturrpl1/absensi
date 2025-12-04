@@ -229,7 +229,7 @@ export async function middleware(req: NextRequest) {
   if (user && !isExcludedPath && !isPublicPath) {
     try {
       // Check if user has organization membership
-      const { data: member } = await supabase
+      const { data: member, error: membershipError } = await supabase
         .from("organization_members")
         .select(`
           is_active,
@@ -241,6 +241,12 @@ export async function middleware(req: NextRequest) {
         .eq("user_id", user.id)
         .maybeSingle()
 
+      if (membershipError) {
+        logger.warn('Membership check failed:', membershipError)
+        // On failure, allow request so downstream components can handle it
+        return response
+      }
+
       // Normalize typing from Supabase response for safer runtime checks
       const memberData: any = member
 
@@ -249,12 +255,20 @@ export async function middleware(req: NextRequest) {
       // 2. Has organization but organization inactive → organization-inactive
       // 3. Has active organization but member inactive → account-inactive
 
-      if (!memberData || !memberData.organization) {
+      if (!memberData) {
         // User has no organization membership → onboarding
         return NextResponse.redirect(new URL("/onboarding", req.url))
       }
 
-      if (!memberData.organization.is_active) {
+      const organization = memberData.organization as { id?: string; is_active?: boolean } | null
+
+      if (!organization?.id) {
+        // Membership exists but organization data is not accessible (likely RLS)
+        // Allow access and let client-side checks handle it
+        return response
+      }
+
+      if (!organization.is_active) {
         // Organization exists but is inactive → organization-inactive
         return NextResponse.redirect(new URL("/organization-inactive", req.url))
       }

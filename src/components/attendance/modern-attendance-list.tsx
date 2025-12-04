@@ -12,7 +12,7 @@ import {
   Timer,
   Eye,
   Edit,
-  Trash2,
+  Trash,
   MoreVertical,
   Mail,
   Grid3x3,
@@ -593,7 +593,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />
+                          <Trash className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -780,7 +780,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" />
+                              <Trash className="mr-2 h-4 w-4" />
                               Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>

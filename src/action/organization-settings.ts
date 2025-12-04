@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 import { organizationLogger } from '@/lib/logger';
@@ -62,8 +63,10 @@ export async function getCurrentUserOrganization(): Promise<{
       return { success: false, message: "User not authenticated" };
     }
 
-    // Get user's organization through organization_members
-    const { data: member, error: memberError } = await supabase
+    const adminClient = createAdminClient();
+
+    // Get user's organization through organization_members (latest membership regardless of active status)
+    const { data: member, error: memberError } = await adminClient
       .from("organization_members")
       .select(`
         id,
@@ -95,7 +98,8 @@ export async function getCurrentUserOrganization(): Promise<{
         )
       `)
       .eq("user_id", user.id)
-      .eq("is_active", true)
+      .order("updated_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (memberError) {

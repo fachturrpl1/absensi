@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Camera, User, Briefcase, Lock, Trash2 } from "lucide-react";
+import { Camera, User, Briefcase, Lock, Trash } from "lucide-react";
 import {
   updateUserProfile,
   changePassword,
@@ -433,7 +433,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                   disabled={photoUploading}
                   title="Delete current photo"
                 >
-                  <Trash2 className="h-5 w-5 text-red-600" />
+                  <Trash className="h-5 w-5 text-red-600" />
                 </Button>
               )}
 
