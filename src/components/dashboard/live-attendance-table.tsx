@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -31,6 +31,7 @@ import { id as idLocale } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/utils/supabase/client';
+import { useOrgStore } from '@/store/org-store';
 
 interface AttendanceRecord {
   id: number;
@@ -94,18 +95,36 @@ const attendanceCache: {
 
 const ATTENDANCE_CACHE_DURATION = 120000; // 2 minutes cache (increased from 10s)
 
-export function LiveAttendanceTable({
-  autoRefresh = true,
-  refreshInterval = 180000, // 3 minutes (increased from 60s)
-  pageSize = 10,
-}: LiveAttendanceTableProps) {
+export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 180000, pageSize = 10 }: LiveAttendanceTableProps) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
+  
+  const toggleRow = (id: number) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedRows(newExpanded);
+  };
 
-  const fetchAttendanceRecords = async (force = false) => {
+   useEffect(() => {
+    const orgId = useOrgStore.getState().organizationId ||
+      document.cookie.split('; ').find(row => row.startsWith('org_id='))?.split('=')[1] || null;
+    setActiveOrgId(orgId);
+  }, []);
+
+  const fetchAttendanceRecords = useCallback(async (force = false) => {
     const now = Date.now();
+    
+    if (!activeOrgId) {
+    console.log('[LiveAttendance] No active organization, skipping fetch');
+    return;
+  }
     
     // Check cache first
     if (!force && attendanceCache.data && (now - attendanceCache.timestamp) < ATTENDANCE_CACHE_DURATION) {
@@ -114,7 +133,7 @@ export function LiveAttendanceTable({
       return;
     }
 
-    // Prevent concurrent requests (CRITICAL: blocks duplicates)
+    // Prevent concurrent requests
     if (attendanceCache.isLoading) {
       console.log('[LiveAttendance] Request already in progress, skipping duplicate');
       return;
@@ -136,6 +155,7 @@ export function LiveAttendanceTable({
         .from('organization_members')
         .select('organization_id')
         .eq('user_id', user.id)
+        .eq('organization_id', activeOrgId)
         .maybeSingle();
 
       if (!orgMember?.organization_id) {
@@ -171,8 +191,6 @@ export function LiveAttendanceTable({
         .order('actual_check_in', { ascending: false })
         .limit(50);
 
-      if (error) throw error;
-
       const transformedData = data?.map((record: any) => {
         const member = record.organization_members;
         const profile = member?.user_profiles;
@@ -187,10 +205,10 @@ export function LiveAttendanceTable({
           actual_check_in: record.actual_check_in,
           actual_check_out: record.actual_check_out,
           work_duration_minutes: record.work_duration_minutes,
-          scheduled_duration_minutes: 480, // Default 8 jam untuk estimasi
+          scheduled_duration_minutes: 480,
           late_minutes: record.late_minutes,
           notes: record.notes,
-          location: null, // Can be populated if location tracking exists
+          location: null,
           profile_photo_url: profile?.profile_photo_url,
         };
       }) || [];
@@ -204,27 +222,47 @@ export function LiveAttendanceTable({
     } finally {
       attendanceCache.isLoading = false;
     }
-  };
+  }, [activeOrgId]);
+
+  const handleOrgChange = useCallback((orgId: string | null) => {
+    setActiveOrgId(orgId);
+    if (orgId) fetchAttendanceRecords(true);
+  }, [fetchAttendanceRecords]);
 
   useEffect(() => {
-    fetchAttendanceRecords();
+      const unsubscribe = useOrgStore.subscribe(
+        (state) => state.organizationId,
+        (orgId) => {
+          setActiveOrgId(orgId);
+        }
+      );
+      return unsubscribe;
+    }, []);
 
-    if (autoRefresh) {
-      const interval = setInterval(() => fetchAttendanceRecords(true), refreshInterval);
-      return () => clearInterval(interval);
-    }
-    return undefined;
-  }, [autoRefresh, refreshInterval]);
+// useEffect untuk initialize dari store saat mount
+useEffect(() => {
+  const orgId = useOrgStore.getState().organizationId ||
+    document.cookie.split('; ').find(row => row.startsWith('org_id='))?.split('=')[1] || null;
+  console.log('[LiveAttendance] Initial orgId:', orgId);
+  if (orgId && orgId !== activeOrgId) {
+    setActiveOrgId(orgId);
+  }
+}, []);
 
-  const toggleRow = (id: number) => {
-    const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedRows(newExpanded);
-  };
+// useEffect untuk auto refresh
+useEffect(() => {
+  if (autoRefresh && activeOrgId) {
+    console.log('[LiveAttendance] Setting up auto refresh');
+    const interval = setInterval(() => {
+      fetchAttendanceRecords(true);
+    }, refreshInterval);
+    return () => {
+      console.log('[LiveAttendance] Clearing auto refresh');
+      clearInterval(interval);
+    };
+  }
+  return undefined;
+}, [activeOrgId, autoRefresh, refreshInterval, fetchAttendanceRecords]);
 
   const totalPages = Math.ceil(records.length / pageSize);
   const paginatedRecords = records.slice(
@@ -238,11 +276,6 @@ export function LiveAttendanceTable({
     late: records.filter(r => r.status === 'late').length,
     absent: records.filter(r => r.status === 'absent').length,
   };
-
-  // Don't show loading state here - parent handles initial load
-  // if (loading && records.length === 0) {
-  //   return null; // Parent dashboard skeleton handles this
-  // }
 
   return (
     <Card className="border-border bg-card">

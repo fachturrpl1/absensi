@@ -67,7 +67,7 @@ export default function NotFound() {
           <Link href="/">
             <Button className="flex items-center gap-2 w-full sm:w-auto hover:scale-105 transition-transform duration-200 bg-primary hover:bg-primary/90">
               <Home className="w-4 h-4" />
-              Dashboard
+              Home
             </Button>
           </Link>
         </div>

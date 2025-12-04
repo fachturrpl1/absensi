@@ -269,7 +269,7 @@ export default function AttendanceDevicesPage() {
             <div className="w-full">
                 <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
                     <div className="bg-white text-black px-4 md:px-6 py-4 rounded-t-lg border-b-2 border-black-200">
-                        <h1 className='text-2xl md:text-3xl font-bold tracking-tight'>My Devices</h1>
+                        <h1 className='text-2xl md:text-3xl font-bold tracking-tight'>Devices</h1>
                     </div>
                     
                     <div className="p-4 md:p-6 space-y-4 overflow-x-auto">

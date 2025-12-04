@@ -14,8 +14,21 @@ import {
 
 // Combined paths - paths yang tidak perlu dipisah
 const combinedPaths: Record<string, string> = {
-  '/organization/settings': 'Organization Settings',
-  '/settings/invitations': 'Settings Invitations',
+  '/organization/settings': 'Settings',
+  '/settings/invitations': 'Invitations',
+};
+
+// Parent mapping untuk breadcrumb hierarchy
+const parentMapping: Record<string, string> = {
+  '/attendance/list': '/attendance',
+  '/attendance/locations': '/attendance',
+  '/attendance-devices': '/attendance',
+  '/analytics': '/attendance',
+  '/member-schedules': '/schedule',
+  '/leaves/new': '/leaves',
+  '/leaves/types': '/leaves',
+  '/group': '/members',
+  '/position': '/members',
 };
 
 // Path mapping untuk breadcrumb labels
@@ -37,13 +50,17 @@ const pathMapping: Record<string, string> = {
   'users': 'Users',
   'locations': 'Locations',
   'add': 'Add',
-  'new': 'New',
+  'new': 'New Request',
   'edit': 'Edit',
-  'types': 'Types',
+  'types': 'Manage Types',
   'invitations': 'Invitations',
   'check-in': 'Check In',
   'accept-invite': 'Accept Invitation',
   'detail': 'Detail',
+  'list': 'Attendance List',
+  'dashboard': 'Dashboard',
+  'devices': 'Devices',
+  'attendance-devices': 'Devices',
 };
 
 // Function to check if segment is an ID (UUID or numeric)
@@ -59,10 +76,10 @@ interface BreadcrumbItem {
 
 export function DynamicBreadcrumb() {
   const pathname = usePathname();
-
   // Generate breadcrumb items from pathname
   const breadcrumbs = React.useMemo((): BreadcrumbItem[] => {
     const paths = pathname.split('/').filter(Boolean);
+    console.log('[BREADCRUMB] pathname:', pathname, 'paths:', paths);
     
     if (paths.length === 0) {
       return [{ label: 'Home', href: '/', isCurrentPage: true }];
@@ -77,11 +94,37 @@ export function DynamicBreadcrumb() {
     }
 
     const items: BreadcrumbItem[] = [{ label: 'Home', href: '/', isCurrentPage: false }];
+    
+    // Check if current path has a parent in parentMapping
+    const parent = parentMapping[pathname];
+    let parentSegmentCount = 0;
+    if (parent) {
+      const parentSegments = parent.split('/').filter(Boolean);
+      parentSegmentCount = parentSegments.length;
+      const parentLabel = pathMapping[parentSegments[parentSegments.length - 1]] || 
+                          parentSegments[parentSegments.length - 1];
+      console.log('[BREADCRUMB] parent:', parent, 'parentSegments:', parentSegments, 'parentLabel:', parentLabel);
+      
+      items.push({
+        label: parentLabel,
+        href: parent,
+        isCurrentPage: false,
+      });
+    }
+    console.log('[BREADCRUMB] items after parent:', items);
+    
     let currentPath = '';
     const pathsToSkip = new Set<number>();
 
     // Check for combined paths in the middle
     paths.forEach((segment, index) => {
+      console.log('[BREADCRUMB] processing segment:', segment, 'index:', index, 'parentSegmentCount:', parentSegmentCount);
+      // Skip parent segments if they were already added from parentMapping
+      if (parent && parentSegmentCount > 1 && index < parentSegmentCount) {
+        console.log('[BREADCRUMB] skipping parent segment:', segment);
+        return;
+      }
+      
       if (pathsToSkip.has(index)) return;
 
       // Check if this and next segment form a combined path
@@ -121,26 +164,27 @@ export function DynamicBreadcrumb() {
     return items;
   }, [pathname]);
 
-  return (
-    <Breadcrumb>
-      <BreadcrumbList>
-        {breadcrumbs.map((crumb, index) => (
-          <React.Fragment key={crumb.href}>
-            <BreadcrumbItem className={index === 0 ? "hidden md:block" : undefined}>
-              {crumb.isCurrentPage ? (
-                <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-              ) : (
-                <BreadcrumbLink asChild>
-                  <Link href={crumb.href}>{crumb.label}</Link>
-                </BreadcrumbLink>
-              )}
-            </BreadcrumbItem>
-            {index < breadcrumbs.length - 1 && (
-              <BreadcrumbSeparator className={index === 0 ? "hidden md:block" : undefined} />
-            )}
-          </React.Fragment>
-        ))}
-      </BreadcrumbList>
-    </Breadcrumb>
-  );
+//   return (
+//     <Breadcrumb>
+//       <BreadcrumbList>
+//         {breadcrumbs.map((crumb, index) => (
+//           <React.Fragment key={crumb.href}>
+//             <BreadcrumbItem className={index === 0 ? "hidden md:block" : undefined}>
+//               {crumb.isCurrentPage ? (
+//                 <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+//               ) : (
+//                 <BreadcrumbLink asChild>
+//                   <Link href={crumb.href}>{crumb.label}</Link>
+//                 </BreadcrumbLink>
+//               )}
+//             </BreadcrumbItem>
+//             {/* {index < breadcrumbs.length - 1 && (
+//               <BreadcrumbSeparator className={index === 0 ? "hidden md:block" : undefined} />
+//             )} */}
+//           </React.Fragment>
+//         ))}
+//       </BreadcrumbList>
+//     </Breadcrumb>
+//   );
+// }
 }
