@@ -2,15 +2,7 @@
 
 import * as React from 'react';
 import { usePathname } from 'next/navigation';
-import Link from 'next/link';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+import { BreadcrumbItem } from '@/components/ui/breadcrumb';
 
 // Combined paths - paths yang tidak perlu dipisah
 const combinedPaths: Record<string, string> = {
@@ -77,7 +69,7 @@ interface BreadcrumbItem {
 export function DynamicBreadcrumb() {
   const pathname = usePathname();
   // Generate breadcrumb items from pathname
-  const breadcrumbs = React.useMemo((): BreadcrumbItem[] => {
+  React.useMemo((): BreadcrumbItem[] => {
     const paths = pathname.split('/').filter(Boolean);
     console.log('[BREADCRUMB] pathname:', pathname, 'paths:', paths);
     
@@ -101,8 +93,8 @@ export function DynamicBreadcrumb() {
     if (parent) {
       const parentSegments = parent.split('/').filter(Boolean);
       parentSegmentCount = parentSegments.length;
-      const parentLabel = pathMapping[parentSegments[parentSegments.length - 1]] || 
-                          parentSegments[parentSegments.length - 1];
+      const lastSegment = parentSegments[parentSegments.length - 1];
+      const parentLabel = lastSegment ? pathMapping[lastSegment] || lastSegment : parent;
       console.log('[BREADCRUMB] parent:', parent, 'parentSegments:', parentSegments, 'parentLabel:', parentLabel);
       
       items.push({

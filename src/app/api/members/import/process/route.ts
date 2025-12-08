@@ -74,6 +74,12 @@ export async function POST(request: NextRequest) {
     }
 
     const sheet = workbook.Sheets[sheetName]
+    if (!sheet) {
+      return NextResponse.json(
+        { success: false, message: 'Sheet not found' },
+        { status: 400 }
+      )
+    }
     const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { 
       defval: '',
       raw: false
@@ -196,18 +202,6 @@ export async function POST(request: NextRequest) {
         const phone = getMappedValue(row, 'phone')
         if (phone) invitationPayload.phone = phone
 
-        const firstName = getMappedValue(row, 'first_name')
-        const lastName = getMappedValue(row, 'last_name')
-        const fullName = getMappedValue(row, 'full_name')
-        
-        // Handle name - prefer full_name, otherwise combine first_name + last_name
-        let displayName = ''
-        if (fullName) {
-          displayName = fullName
-        } else if (firstName || lastName) {
-          displayName = `${firstName} ${lastName}`.trim()
-        }
-
         // Map department/group
         const departmentValue = getMappedValue(row, 'department')
         if (departmentValue && departments) {
@@ -250,6 +244,7 @@ export async function POST(request: NextRequest) {
         if (message) invitationPayload.message = message
 
         // Create invitation
+        // Note: displayName is available but not used in createInvitation API
         const result = await createInvitation(invitationPayload)
         
         if (result.success) {

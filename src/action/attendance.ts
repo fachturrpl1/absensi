@@ -17,6 +17,7 @@ export type GetAttendanceParams = {
   search?: string;
   status?: string;
   department?: string;
+  organizationId?: number;  // Add organization ID parameter
 };
 
 export type GetAttendanceResult = {
@@ -41,7 +42,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     dateTo,
     search,
     status,
-    department
+    organizationId  // Get organization ID from params
   } = params;
 
   // Get current user's organization
@@ -52,16 +53,33 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
   }
 
   // Get user's organization membership
-  const { data: userMember, error: memberError } = await supabase
+  // Note: User might be registered in multiple organizations
+  let query_org = supabase
     .from("organization_members")
     .select("organization_id, id")
     .eq("user_id", user.id)
-    .maybeSingle();
+    .eq("is_active", true);
 
-  if (memberError || !userMember) {
-    attendanceLogger.error("❌ User not in any organization");
-    return { success: false, data: [] };
+  // If organizationId is provided, filter by it
+  if (organizationId) {
+    query_org = query_org.eq("organization_id", organizationId);
   }
+
+  const { data: userMembers, error: memberError } = await query_org.limit(1);
+  const userMember = userMembers?.[0];
+
+  if (memberError) {
+    attendanceLogger.error("❌ Member query error:", memberError);
+    return { success: false, data: [], message: memberError.message };
+  }
+
+  if (!userMember || !userMembers || userMembers.length === 0) {
+    attendanceLogger.error("❌ User not in any active organization");
+    return { success: false, data: [], message: "User not registered in any active organization" };
+  }
+
+  attendanceLogger.info("✅ User organization found:", userMember.organization_id);
+  attendanceLogger.info("📍 Total organizations:", userMembers?.length || 0);
 
   // Start building the query
   let query = supabase
@@ -76,19 +94,15 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
       created_at,
       work_duration_minutes,
       remarks,
-      organization_members!inner (
+      organization_members (
         id,
         user_id,
         organization_id,
         department_id,
-        user_profiles!inner (
+        user_profiles (
           first_name,
           last_name,
           profile_photo_url
-        ),
-        departments:departments!organization_members_department_id_fkey (
-          id,
-          name
         ),
         organizations (
           id,
@@ -97,11 +111,11 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
           time_format
         )
       ),
-      check_in_device:attendance_devices!check_in_device_id (
+      check_in_device:attendance_devices (
         device_name,
         location
       ),
-      check_out_device:attendance_devices!check_out_device_id (
+      check_out_device:attendance_devices (
         device_name,
         location
       )
@@ -121,15 +135,16 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     query = query.eq("status", status);
   }
 
-  if (department && department !== 'all') {
-    query = query.eq("organization_members.departments.name", department);
-  }
+  // Note: Department filtering removed due to ambiguous relationship
+  // Can be added back after fixing the FK relationship in database
+  // if (department && department !== 'all') {
+  //   query = query.eq("organization_members.department_id", department);
+  // }
 
   if (search) {
-    // Search by member name using ilike on user_profiles
-    // Note: Supabase doesn't support nested OR queries directly, so we use textSearch or filter manually
-    // For now, we'll search in first_name and last_name
-    query = query.or(`organization_members.user_profiles.first_name.ilike.%${search}%,organization_members.user_profiles.last_name.ilike.%${search}%`);
+    // Search by member name - filter manually after fetch
+    // Supabase doesn't support nested OR queries with ilike directly
+    attendanceLogger.info(`🔍 Search query: ${search}`);
   }
 
   // Apply pagination
@@ -142,8 +157,14 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
 
   if (error) {
     attendanceLogger.error("❌ Error fetching attendance:", error);
-    return { success: false, data: [] };
+    attendanceLogger.error("Organization ID:", userMember.organization_id);
+    attendanceLogger.error("Error code:", error.code);
+    attendanceLogger.error("Error message:", error.message);
+    attendanceLogger.error("Error details:", JSON.stringify(error));
+    return { success: false, data: [], message: `Query error: ${error.message}` };
   }
+
+  attendanceLogger.info("✅ Attendance records fetched:", data?.length || 0);
 
   // Transform format
   const mapped = (data || []).map((item: any) => ({
@@ -167,6 +188,8 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     timezone: item.organization_members?.organizations?.timezone || "Asia/Jakarta",
     time_format: item.organization_members?.organizations?.time_format || "24h",
   }));
+
+  attendanceLogger.info("✅ Attendance data transformed:", mapped.length);
 
   return { 
     success: true, 
@@ -254,12 +277,14 @@ export const getAttendanceStats = async (params: GetAttendanceParams = {}): Prom
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false };
 
-  const { data: userMember } = await supabase
+  const { data: userMembers } = await supabase
     .from("organization_members")
     .select("organization_id")
     .eq("user_id", user.id)
-    .maybeSingle();
+    .eq("is_active", true)
+    .limit(1);
 
+  const userMember = userMembers?.[0];
   if (!userMember) return { success: false };
 
   // Base query builder

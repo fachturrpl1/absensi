@@ -100,7 +100,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [currentPage, setCurrentPage] = useState(1);
-  const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
+  const [activeOrgId, setActiveOrgId] = useState<number | null>(null);
   
   const toggleRow = (id: number) => {
     const newExpanded = new Set(expandedRows);
@@ -113,9 +113,10 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
   };
 
    useEffect(() => {
-    const orgId = useOrgStore.getState().organizationId ||
-      document.cookie.split('; ').find(row => row.startsWith('org_id='))?.split('=')[1] || null;
-    setActiveOrgId(orgId);
+    const orgId = useOrgStore.getState().organizationId;
+    if (orgId) {
+      setActiveOrgId(orgId);
+    }
   }, []);
 
   const fetchAttendanceRecords = useCallback(async (force = false) => {
@@ -162,7 +163,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
         throw new Error('Organization not found');
       }
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('attendance_records')
         .select(`
           id,
@@ -199,7 +200,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
         return {
           id: record.id,
           member_id: member?.id,
-          member_name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Unknown',
+          member_name: profile?.first_name || profile?.last_name || 'Unknown',
           department_name: department?.name || 'N/A',
           status: record.status,
           actual_check_in: record.actual_check_in,
@@ -224,30 +225,22 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
     }
   }, [activeOrgId]);
 
-  const handleOrgChange = useCallback((orgId: string | null) => {
-    setActiveOrgId(orgId);
-    if (orgId) fetchAttendanceRecords(true);
-  }, [fetchAttendanceRecords]);
+  // Organization change handler - removed as it's not used
+  // const handleOrgChange = useCallback((orgId: string | null) => {
+  //   setActiveOrgId(orgId);
+  //   if (orgId) fetchAttendanceRecords(true);
+  // }, [fetchAttendanceRecords]);
 
   useEffect(() => {
       const unsubscribe = useOrgStore.subscribe(
         (state) => state.organizationId,
-        (orgId) => {
-          setActiveOrgId(orgId);
+        (newOrgId) => {
+          setActiveOrgId(newOrgId);
         }
       );
       return unsubscribe;
     }, []);
 
-// useEffect untuk initialize dari store saat mount
-useEffect(() => {
-  const orgId = useOrgStore.getState().organizationId ||
-    document.cookie.split('; ').find(row => row.startsWith('org_id='))?.split('=')[1] || null;
-  console.log('[LiveAttendance] Initial orgId:', orgId);
-  if (orgId && orgId !== activeOrgId) {
-    setActiveOrgId(orgId);
-  }
-}, []);
 
 // useEffect untuk auto refresh
 useEffect(() => {

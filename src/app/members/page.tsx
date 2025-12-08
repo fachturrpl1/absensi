@@ -10,7 +10,6 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyContent,
   EmptyMedia,
 } from "@/components/ui/empty"
 import {
@@ -525,9 +524,6 @@ export default function MembersPage() {
                         There are no members for this organization. Use the "Invite Member" button to add one.
                       </EmptyDescription>
                     </EmptyHeader>
-                    <EmptyContent>
-                      <Button onClick={() => setInviteDialogOpen(true)}>Invite Member</Button>
-                    </EmptyContent>
                   </Empty>
                 </div>
               ) : (

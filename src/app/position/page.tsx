@@ -39,7 +39,6 @@ import {
     EmptyHeader,
     EmptyTitle,
     EmptyDescription,
-    EmptyContent,
     EmptyMedia,
 } from "@/components/ui/empty"
 import {
@@ -387,9 +386,6 @@ export default function PositionsPage() {
                                                 There are no positions for this organization. Use the &quot;Add&quot; button to create a new position.
                                             </EmptyDescription>
                                         </EmptyHeader>
-                                        <EmptyContent>
-                                            <Button onClick={() => setOpen(true)}>Add Position</Button>
-                                        </EmptyContent>
                                     </Empty>
                                 </div>
                             ) : (

@@ -1,6 +1,6 @@
 'use client';
 
-import React ,{ useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
 import {
@@ -66,6 +66,7 @@ import { cn } from '@/lib/utils';
 import { formatLocalTime } from '@/utils/timezone';
 import { getAllAttendance } from '@/action/attendance';
 import { toast } from 'sonner';
+import { useOrgStore } from '@/store/org-store';
 
 interface ModernAttendanceListProps {
   initialData?: any[];
@@ -73,24 +74,38 @@ interface ModernAttendanceListProps {
 }
 
 export default function ModernAttendanceList({ initialData: _initialData, initialStats: _initialStats }: ModernAttendanceListProps) {
+  const orgStore = useOrgStore();
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [userTimezone, setUserTimezone] = useState('UTC');
+  const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
   
   // Date filter state (same as Dashboard)
-  const [dateRange, setDateRange] = useState<DateFilterState>(() => {
+  const [dateRange, setDateRange] = useState<DateFilterState>({
+    from: new Date(),
+    to: new Date(),
+    preset: 'today',
+  });
+  
+  // Initialize date range after hydration
+  useEffect(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const endOfToday = new Date(today);
     endOfToday.setHours(23, 59, 59, 999);
     
-    return {
+    setDateRange({
       from: today,
       to: endOfToday,
       preset: 'today',
-    };
-  });
+    });
+    
+    // Set selected org from store
+    if (orgStore.organizationId) {
+      setSelectedOrgId(orgStore.organizationId);
+    }
+  }, [orgStore.organizationId]);
   
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,6 +137,13 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   });
   
   // Handle edit button click
+  // Handle organization change
+  const handleOrgChange = (orgId: string) => {
+    const id = parseInt(orgId);
+    setSelectedOrgId(id);
+    setCurrentPage(1); // Reset to first page
+  };
+
   const handleEditClick = () => {
     const recordsToEdit = attendanceData.filter(r => selectedRecords.includes(r.id));
     setEditingRecords(recordsToEdit);
@@ -171,6 +193,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           search: searchQuery || undefined,
           status: statusFilter === 'all' ? undefined : statusFilter,
           department: departmentFilter === 'all' ? undefined : departmentFilter,
+          organizationId: selectedOrgId || orgStore.organizationId || undefined,
         })
       ]);
 
@@ -219,7 +242,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, dateRange, searchQuery, statusFilter, departmentFilter]);
+  }, [currentPage, itemsPerPage, dateRange, searchQuery, statusFilter, departmentFilter, selectedOrgId, orgStore.organizationId]);
 
   // Trigger fetch when filters change (and initial load)
   useEffect(() => {
@@ -421,6 +444,25 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
             {/* Additional Filters */}
             <div className="flex flex-wrap items-center gap-2">
+              <Select value={selectedOrgId?.toString() || ''} onValueChange={handleOrgChange}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Select Organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {orgStore.organizations && orgStore.organizations.length > 0 ? (
+                    orgStore.organizations.map((org) => (
+                      <SelectItem key={org.id} value={org.id.toString()}>
+                        {org.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="" disabled>
+                      No organizations available
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Status" />

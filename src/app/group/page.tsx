@@ -9,7 +9,6 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyContent,
   EmptyMedia,
 } from "@/components/ui/empty"
 import {
@@ -364,9 +363,6 @@ export default function GroupsPage() {
                         There are no groups for this organization. Use the "Add Group" button to create one.
                       </EmptyDescription>
                     </EmptyHeader>
-                    <EmptyContent>
-                      <Button onClick={() => setIsModalOpen(true)}>Add Group</Button>
-                    </EmptyContent>
                   </Empty>
                 </div>
               ) : (

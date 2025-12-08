@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebarNew } from '@/components/layout-new/app-sidebar-new';
@@ -12,11 +11,6 @@ export function DashboardLayoutWrapper({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
 
   // Pages that should NOT have sidebar/navbar
   const publicPaths = [
@@ -32,7 +26,6 @@ export function DashboardLayoutWrapper({
     '/organization-inactive',
     '/subscription-expired',
     '/offline',
-    '/organization-selector',
     '/role-selector',
   ];
 
@@ -44,18 +37,15 @@ export function DashboardLayoutWrapper({
     return <>{children}</>;
   }
 
-  // Don't render SidebarProvider until hydration is complete
-  if (!isHydrated) {
-    return <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">{children}</div>;
-  }
-
   // Dashboard pages: render with sidebar/navbar
+  // Always render NavbarNew to avoid hydration mismatch
+  // NavbarNew handles its own hydration internally
   return (
     <SidebarProvider defaultOpen={true}>
       <AppSidebarNew />
-      <SidebarInset>
+      <SidebarInset className="flex flex-col min-w-0">
         <NavbarNew />
-        <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
+        <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6 w-full min-w-0">
           {children}
         </div>
       </SidebarInset>

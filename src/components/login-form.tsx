@@ -59,9 +59,9 @@ export function LoginForm() {
       useAuthStore.getState().setUser(result.user);
       useAuthStore.getState().setPermissions(result.permissions!.map((p) => p.code));
       
-      // Redirect to organization selector
-      // Organization selector will fetch organizations from store or from API
-      router.push("/organization-selector");
+      // Redirect to organization
+      // Organization will fetch organizations from store or from API
+      router.push("/organization");
     }
   };
 
