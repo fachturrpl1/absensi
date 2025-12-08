@@ -435,8 +435,48 @@ export async function acceptInvitation(data: AcceptInvitationData) {
       }
     }
 
-    // Create organization member
-    const { data: orgMember, error: memberError } = await supabase
+    // Check if user is already a member of this organization
+    const { data: existingMember, error: checkError } = await adminSupabase
+      .from("organization_members")
+      .select("id, is_active")
+      .eq("organization_id", invitation.organization_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (checkError) {
+      logger.error("Error checking existing member:", checkError);
+      return { success: false, message: "Failed to check membership status", data: null };
+    }
+
+    if (existingMember) {
+      // User is already a member - update the invitation status but don't create duplicate
+      logger.warn(`User ${userId} is already a member of organization ${invitation.organization_id}`);
+      
+      // Update invitation status to accepted
+      await supabase
+        .from("member_invitations")
+        .update({
+          status: "accepted",
+          accepted_at: new Date().toISOString(),
+        })
+        .eq("id", invitation.id);
+
+      // Return existing member
+      const { data: memberData } = await adminSupabase
+        .from("organization_members")
+        .select("*")
+        .eq("id", existingMember.id)
+        .single();
+
+      return {
+        success: true,
+        message: "You are already a member of this organization",
+        data: memberData,
+      };
+    }
+
+    // Create organization member (user is not yet a member)
+    const { data: newOrgMember, error: memberError } = await supabase
       .from("organization_members")
       .insert({
         organization_id: invitation.organization_id,
@@ -451,6 +491,34 @@ export async function acceptInvitation(data: AcceptInvitationData) {
       .single();
 
     if (memberError) {
+      // Check if it's a duplicate key error
+      if (memberError.code === "23505" || memberError.message.includes("duplicate key")) {
+        // Race condition: member was created between check and insert
+        // Fetch the existing member
+        const { data: raceMember } = await adminSupabase
+          .from("organization_members")
+          .select("*")
+          .eq("organization_id", invitation.organization_id)
+          .eq("user_id", userId)
+          .single();
+
+        if (raceMember) {
+          // Update invitation status
+          await supabase
+            .from("member_invitations")
+            .update({
+              status: "accepted",
+              accepted_at: new Date().toISOString(),
+            })
+            .eq("id", invitation.id);
+
+          return {
+            success: true,
+            message: "You are already a member of this organization",
+            data: raceMember,
+          };
+        }
+      }
       return { success: false, message: memberError.message, data: null };
     }
 
@@ -466,7 +534,7 @@ export async function acceptInvitation(data: AcceptInvitationData) {
     return {
       success: true,
       message: "Invitation accepted successfully",
-      data: orgMember,
+      data: newOrgMember,
     };
   } catch (error) {
     logger.error("Error accepting invitation:", error);
