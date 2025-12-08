@@ -27,35 +27,74 @@ interface CreateInvitationData {
   position_id?: string;
   message?: string;
   phone?: string;
+  organization_id?: string; // Optional: if provided, skip member lookup
+  invited_by?: string; // Optional: if provided, skip user auth check
 }
 
 export async function createInvitation(data: CreateInvitationData) {
   try {
     const supabase = await createClient();
+    const adminClient = createAdminClient();
 
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    let organizationId: string;
+    let userId: string;
 
-    if (userError || !user) {
-      return { success: false, message: "User not authenticated", data: null };
-    }
+    // If organization_id is provided (e.g., from import), use it directly
+    if (data.organization_id) {
+      organizationId = data.organization_id;
+      userId = data.invited_by || '';
+      
+      // Still verify user exists if invited_by is provided
+      if (data.invited_by) {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user || user.id !== data.invited_by) {
+          return { success: false, message: "User not authenticated", data: null };
+        }
+        userId = user.id;
+      } else {
+        // Get current user if invited_by not provided
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-    // Get user's organization
-    const { data: member } = await supabase
-      .from("organization_members")
-      .select("organization_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
+        if (userError || !user) {
+          return { success: false, message: "User not authenticated", data: null };
+        }
+        userId = user.id;
+      }
+    } else {
+      // Original flow: get user and find their organization
+      // Get current user
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-    if (!member) {
-      return {
-        success: false,
-        message: "User not member of any organization",
-        data: null,
-      };
+      if (userError || !user) {
+        return { success: false, message: "User not authenticated", data: null };
+      }
+
+      userId = user.id;
+
+      // Get user's organization using admin client to bypass RLS
+      const { data: member } = await adminClient
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!member) {
+        return {
+          success: false,
+          message: "User not member of any organization",
+          data: null,
+        };
+      }
+
+      organizationId = String(member.organization_id);
     }
 
     // Validate email format
@@ -69,11 +108,11 @@ export async function createInvitation(data: CreateInvitationData) {
     const existingAuthUser = authUsers?.users?.find((u) => u.email?.toLowerCase() === data.email.toLowerCase());
 
     if (existingAuthUser) {
-      // Check if they're already a member of this organization
-      const { data: existingOrgMember } = await supabase
+      // Check if they're already a member of this organization using admin client
+      const { data: existingOrgMember } = await adminClient
         .from("organization_members")
         .select("id")
-        .eq("organization_id", member.organization_id)
+        .eq("organization_id", organizationId)
         .eq("user_id", existingAuthUser.id)
         .maybeSingle();
 
@@ -96,7 +135,7 @@ export async function createInvitation(data: CreateInvitationData) {
     const { data: existingInvitation } = await supabase
       .from("member_invitations")
       .select("id, status, expires_at")
-      .eq("organization_id", member.organization_id)
+      .eq("organization_id", organizationId)
       .eq("email", data.email)
       .eq("status", "pending")
       .maybeSingle();
@@ -117,7 +156,7 @@ export async function createInvitation(data: CreateInvitationData) {
     await supabase
       .from("member_invitations")
       .update({ status: "expired" })
-      .eq("organization_id", member.organization_id)
+      .eq("organization_id", organizationId)
       .eq("email", data.email)
       .eq("status", "pending")
       .lt("expires_at", new Date().toISOString());
@@ -126,9 +165,9 @@ export async function createInvitation(data: CreateInvitationData) {
     const { data: invitation, error } = await supabase
       .from("member_invitations")
       .insert({
-        organization_id: member.organization_id,
+        organization_id: organizationId,
         email: data.email,
-        invited_by: user.id,
+        invited_by: userId,
         role_id: data.role_id || null,
         department_id: data.department_id || null,
         position_id: data.position_id || null,
@@ -173,7 +212,7 @@ export async function createInvitation(data: CreateInvitationData) {
         const { data: inviterProfile } = await supabase
           .from("user_profiles")
           .select("first_name, last_name")
-          .eq("id", user.id)
+          .eq("id", userId)
           .single();
 
         const inviterName = inviterProfile

@@ -4,15 +4,12 @@ import React, { useRef, useState } from "react"
 import { CloudUpload, Loader2, FileText, AlertCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Wizard, WizardStep } from "@/components/ui/wizard"
 import { toast } from "sonner"
-
-type Step = "upload" | "mapping" | "processing"
 
 const DATABASE_FIELDS = [
   { key: "email", label: "Email", required: true, description: "Email address (required)" },
@@ -21,15 +18,21 @@ const DATABASE_FIELDS = [
   { key: "department", label: "Department/Group", required: false, description: "Department or group name" },
   { key: "position", label: "Position", required: false, description: "Job title or position" },
   { key: "role", label: "Role", required: false, description: "User role (e.g., User, Admin)" },
-  { key: "message", label: "Message/Notes", required: false, description: "Additional notes or message" },
+  { key: "status", label: "Status", required: false, description: "Member status (Active/Inactive)" },
 ] as const
 
 type ColumnMapping = {
   [key: string]: string | null
 }
 
+const WIZARD_STEPS: WizardStep[] = [
+  { number: 1, title: "Upload File", description: "Select your Excel file" },
+  { number: 2, title: "Mapping & Test", description: "Map columns and preview data" },
+  { number: 3, title: "Import", description: "Complete the import process" },
+]
+
 export default function MembersImportPage() {
-  const [step, setStep] = useState<Step>("upload")
+  const [currentStep, setCurrentStep] = useState(1)
   const [file, setFile] = useState<File | null>(null)
   const [excelHeaders, setExcelHeaders] = useState<string[]>([])
   const [preview, setPreview] = useState<Record<string, string>[]>([])
@@ -37,6 +40,16 @@ export default function MembersImportPage() {
   const [mapping, setMapping] = useState<ColumnMapping>({})
   const [loading, setLoading] = useState(false)
   const [isDragActive, setIsDragActive] = useState(false)
+  const [importSummary, setImportSummary] = useState<{
+    success: number
+    failed: number
+    errors: Array<{ row: number; message: string }>
+  } | null>(null)
+  const [testSummary, setTestSummary] = useState<{
+    success: number
+    failed: number
+    errors: string[]
+  } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = async (selectedFile: File) => {
@@ -93,7 +106,8 @@ export default function MembersImportPage() {
       })
 
       setMapping(autoMapping)
-      setStep("mapping")
+      setTestSummary(null) // Reset test summary when new file is loaded
+      setCurrentStep(2)
       toast.success(`Excel file loaded. Found ${data.totalRows} rows and ${data.headers.length} columns`)
     } catch (error) {
       console.error("Error reading Excel:", error)
@@ -115,7 +129,10 @@ export default function MembersImportPage() {
   const runImport = async (mode: "test" | "import") => {
     if (!file || !validateMapping()) return
 
-    setStep("processing")
+    // Only go to step 3 for actual import, not for test
+    if (mode === "import") {
+      setCurrentStep(3)
+    }
     setLoading(true)
 
     try {
@@ -133,17 +150,32 @@ export default function MembersImportPage() {
 
       if (!data.success) {
         toast.error(data.message || (mode === "test" ? "Test import failed" : "Import failed"))
-        setStep("mapping")
+        if (mode === "import") {
+          setCurrentStep(2)
+        }
         return
       }
 
       const summary = data.summary || { success: 0, failed: 0, errors: [] }
+      setImportSummary(summary)
 
       if (mode === "test") {
         // Hanya validasi, tidak ada perubahan data
-        toast.success(
-          `Test completed. Valid rows: ${summary.success}, Invalid rows: ${summary.failed}`
-        )
+        setTestSummary({
+          success: summary.success,
+          failed: summary.failed,
+          errors: summary.errors,
+        })
+        if (summary.failed > 0) {
+          toast.error(
+            `Test completed. Valid rows: ${summary.success}, Invalid rows: ${summary.failed}. Check error details below.`
+          )
+        } else {
+          toast.success(
+            `Test completed. All ${summary.success} rows are valid and ready to import.`
+          )
+        }
+        // Tetap di step 2 untuk test
       } else {
         if (summary.success > 0) {
           toast.success(`Import completed! Success: ${summary.success}, Failed: ${summary.failed}`)
@@ -154,103 +186,156 @@ export default function MembersImportPage() {
     } catch (error) {
       console.error("Error processing import:", error)
       toast.error(mode === "test" ? "Failed to run test import" : "Failed to process import")
-      setStep("mapping")
+      if (mode === "import") {
+        setCurrentStep(2)
+      }
     } finally {
       setLoading(false)
     }
   }
 
+  const handleNext = () => {
+    if (currentStep === 1) {
+      if (file) {
+        setCurrentStep(2)
+      } else {
+        toast.error("Please select a file first")
+      }
+    } else if (currentStep === 2) {
+      if (validateMapping()) {
+        // Lanjut ke step 3 untuk import
+        setCurrentStep(3)
+      }
+    }
+  }
+
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      const previousStep = currentStep - 1
+      setCurrentStep(previousStep)
+      // Reset test summary when going back from step 2
+      if (currentStep === 2) {
+        setTestSummary(null)
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Step 1 – Upload File</CardTitle>
-            <CardDescription>
-              Drag &amp; drop Excel file (.xlsx / .xls) atau klik area di bawah. Gunakan template resmi untuk
-              meminimalkan error.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div
-              className={`flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-8 cursor-pointer ${
-                isDragActive ? "border-blue-500 bg-blue-50/60" : "border-muted"
-              }`}
-              onDragEnter={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                setIsDragActive(true)
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                setIsDragActive(false)
-              }}
-              onDragOver={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-              }}
-              onDrop={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                setIsDragActive(false)
-                const droppedFile = e.dataTransfer.files?.[0]
-                if (droppedFile) handleFileSelect(droppedFile)
-              }}
-              onClick={() => !loading && fileInputRef.current?.click()}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx,.xls"
-                className="hidden"
-                onChange={(e) => {
-                  const selectedFile = e.target.files?.[0]
-                  if (selectedFile) handleFileSelect(selectedFile)
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        <Wizard
+          steps={WIZARD_STEPS}
+          currentStep={currentStep}
+          onNext={handleNext}
+          onPrevious={handlePrevious}
+          canGoNext={
+            currentStep === 1 
+              ? !!file 
+              : currentStep === 2 
+              ? validateMapping() && testSummary !== null && testSummary.failed === 0
+              : false
+          }
+          canGoPrevious={currentStep > 1 && !loading}
+          showNavigation={currentStep !== 3}
+        >
+          {/* Step 1: Upload File */}
+          {currentStep === 1 && (
+            <div className="space-y-4">
+              <div
+                className={`flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-8 cursor-pointer transition-colors ${
+                  isDragActive ? "border-primary bg-primary/5" : "border-muted"
+                }`}
+                onDragEnter={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setIsDragActive(true)
                 }}
-                disabled={loading}
-              />
-
-              {loading ? (
-                <>
-                  <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Reading Excel file...</p>
-                </>
-              ) : (
-                <>
-                  <CloudUpload className="h-12 w-12 text-muted-foreground" />
-                  <div className="text-center space-y-1">
-                    <p className="text-base font-semibold">Drag & drop your Excel file here</p>
-                    <p className="text-sm text-muted-foreground">
-                      or click to choose a file from your computer
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
-              <p>Need a starter format? Download the official members import template.</p>
-              <a
-                href="/templates/members-import-template.xlsx"
-                download
-                className="text-blue-600 hover:underline font-semibold"
+                onDragLeave={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setIsDragActive(false)
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setIsDragActive(false)
+                  const droppedFile = e.dataTransfer.files?.[0]
+                  if (droppedFile) handleFileSelect(droppedFile)
+                }}
+                onClick={() => !loading && fileInputRef.current?.click()}
               >
-                Download Template
-              </a>
-            </div>
-          </CardContent>
-        </Card>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  onChange={(e) => {
+                    const selectedFile = e.target.files?.[0]
+                    if (selectedFile) handleFileSelect(selectedFile)
+                  }}
+                  disabled={loading}
+                />
 
-        {step !== "upload" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Step 2 – Mapping & Preview</CardTitle>
-              <CardDescription>
-                Sesuaikan kolom Excel dengan field di sistem. Baris pertama digunakan sebagai header.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+                {loading ? (
+                  <>
+                    <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Reading Excel file...</p>
+                  </>
+                ) : (
+                  <>
+                    <CloudUpload className="h-12 w-12 text-muted-foreground" />
+                    <div className="text-center space-y-1">
+                      <p className="text-base font-semibold">Drag & drop your Excel file here</p>
+                      <p className="text-sm text-muted-foreground">
+                        or click to choose a file from your computer
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {file && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    File selected: <strong>{file.name}</strong>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground pt-2">
+                <p>Need a starter format? Download the official members import template.</p>
+                <a
+                  href="/templates/members-import-template.xlsx"
+                  download
+                  className="text-blue-600 hover:underline font-semibold dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  Download Template
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Mapping & Test */}
+          {currentStep === 2 && (
+            <div className="space-y-4">
+              {/* Loading state saat test import */}
+              {loading && (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4 border-2 border-dashed rounded-lg bg-muted/30">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <p className="text-lg font-medium">Processing test...</p>
+                  <p className="text-sm text-muted-foreground">
+                    Please wait while we validate your data
+                  </p>
+                </div>
+              )}
+
+              {!loading && (
+                <>
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
@@ -259,12 +344,12 @@ export default function MembersImportPage() {
                 </AlertDescription>
               </Alert>
 
-              {/* Preview */}
+              {/* Data Preview */}
               {preview.length > 0 && (
                 <div className="border rounded-lg">
                   <div className="p-3 bg-muted/50 border-b">
                     <p className="text-sm font-medium">
-                      Preview (showing first {preview.length} of {totalRows} rows)
+                      Data Preview (showing first {preview.length} of {totalRows} rows)
                     </p>
                   </div>
                   <ScrollArea className="h-48">
@@ -294,60 +379,139 @@ export default function MembersImportPage() {
                 </div>
               )}
 
-              {/* Mapping form */}
-              <div className="space-y-4">
-                {DATABASE_FIELDS.map((field) => (
-                  <div key={field.key} className="space-y-2">
-                    <div className="flex items-start gap-2">
-                      <div>
-                        <Label className="text-sm font-medium">
-                          {field.label}
-                          {field.required && <span className="text-red-500 ml-1">*</span>}
-                        </Label>
-                        {field.description && (
-                          <p className="text-xs text-muted-foreground">{field.description}</p>
-                        )}
-                      </div>
-                    </div>
-                    <Select
-                      value={mapping[field.key] ?? "__UNMAPPED__"}
-                      onValueChange={(value) =>
-                        setMapping((prev) => ({
-                          ...prev,
-                          [field.key]: value === "__UNMAPPED__" ? null : value,
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Excel column (optional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__UNMAPPED__">-- Not mapped --</SelectItem>
-                        {excelHeaders.map((header) => (
-                          <SelectItem key={header} value={header}>
-                            {header}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+              {/* Mapping Table */}
+              <div className="border rounded-lg">
+                <ScrollArea className="max-h-[400px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[300px]">File Column</TableHead>
+                        <TableHead>Database Field</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {excelHeaders.map((header) => {
+                        const mappedField = Object.keys(mapping).find(
+                          (key) => mapping[key] === header
+                        )
+                        const previewValue = preview.length > 0 ? preview[0]?.[header] : ""
+
+                        return (
+                          <TableRow key={header}>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{header}</p>
+                                {previewValue && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {String(previewValue)}
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={mappedField || "__UNMAPPED__"}
+                                onValueChange={(value) => {
+                                  if (value === "__UNMAPPED__") {
+                                    // Remove mapping
+                                    const newMapping = { ...mapping }
+                                    Object.keys(newMapping).forEach((key) => {
+                                      if (newMapping[key] === header) {
+                                        delete newMapping[key]
+                                      }
+                                    })
+                                    setMapping(newMapping)
+                                  } else {
+                                    // Remove old mapping for this header
+                                    const newMapping = { ...mapping }
+                                    Object.keys(newMapping).forEach((key) => {
+                                      if (newMapping[key] === header && key !== value) {
+                                        delete newMapping[key]
+                                      }
+                                    })
+                                    // Add new mapping
+                                    newMapping[value] = header
+                                    setMapping(newMapping)
+                                  }
+                                  // Reset test summary when mapping changes
+                                  setTestSummary(null)
+                                }}
+                              >
+                                <SelectTrigger className="w-[300px]">
+                                  <SelectValue placeholder="To import, select a field..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__UNMAPPED__">
+                                    To import, select a field...
+                                  </SelectItem>
+                                  {DATABASE_FIELDS.map((field) => (
+                                    <SelectItem key={field.key} value={field.key}>
+                                      {field.label}
+                                      {field.required && " *"}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => setStep("upload")}
-                  disabled={loading}
-                >
-                  Back
-                </Button>
+              {/* Test Results - Error Details (at bottom) */}
+              {testSummary && testSummary.errors.length > 0 && (
+                <div className="border-2 rounded-lg border-destructive bg-destructive/10">
+                  <div className="p-4 bg-destructive/20 border-b border-destructive">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertCircle className="h-5 w-5 text-destructive" />
+                      <p className="text-base font-semibold text-destructive">
+                        Validation Errors Found
+                      </p>
+                    </div>
+                    <p className="text-sm text-destructive/90">
+                      {testSummary.failed} invalid row(s) found. Please fix the errors below before
+                      importing.
+                    </p>
+                  </div>
+                  <ScrollArea className="h-64">
+                    <div className="p-4 space-y-3">
+                      {testSummary.errors.map((error, idx) => (
+                        <div
+                          key={idx}
+                          className="text-sm text-destructive bg-background p-3 rounded-md border-2 border-destructive/30 shadow-sm"
+                        >
+                          <div className="flex items-start gap-2">
+                            <span className="font-bold text-destructive mt-0.5">•</span>
+                            <span className="font-medium">{error}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+
+              {/* Test Results - Success Message */}
+              {testSummary && testSummary.failed === 0 && testSummary.success > 0 && (
+                <Alert className="border-green-500/50 bg-green-500/5">
+                  <AlertCircle className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-700 dark:text-green-400">
+                    <strong>All rows are valid!</strong> {testSummary.success} row(s) are ready to
+                    import.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button
                   variant="secondary"
                   onClick={() => runImport("test")}
                   disabled={loading}
                 >
-                  {loading && step === "processing" ? (
+                  {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Testing...
@@ -355,27 +519,194 @@ export default function MembersImportPage() {
                   ) : (
                     <>
                       <FileText className="mr-2 h-4 w-4" />
-                      Test Import
-                    </>
-                  )}
-                </Button>
-                <Button onClick={() => runImport("import")} disabled={loading}>
-                  {loading && step === "processing" ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="mr-2 h-4 w-4" />
-                      Import
+                      Test
                     </>
                   )}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        )}
+              </>
+              )}
+            </div>
+          )}
+
+          {/* Step 3: Import */}
+          {currentStep === 3 && (
+            <div className="space-y-4">
+              {!importSummary && !loading && (
+                <>
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Ready to import. Click the button below to start importing your data.
+                    </AlertDescription>
+                  </Alert>
+
+                  {/* Import Summary Card */}
+                  <div className="border rounded-lg p-6 space-y-4">
+                    <h3 className="text-lg font-semibold">Import Summary</h3>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">File Name</p>
+                        <p className="text-sm font-medium">{file?.name || "N/A"}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Total Rows</p>
+                        <p className="text-sm font-medium">{totalRows} rows</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Columns Mapped</p>
+                        <p className="text-sm font-medium">
+                          {Object.keys(mapping).filter(key => mapping[key]).length} of {excelHeaders.length}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Status</p>
+                        <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                          Ready to Import
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Mapped Fields */}
+                    <div className="space-y-2 pt-4 border-t">
+                      <p className="text-sm font-medium">Mapped Fields</p>
+                      <div className="flex flex-wrap gap-2">
+                        {DATABASE_FIELDS.map((field) => {
+                          const mappedColumn = mapping[field.key]
+                          if (!mappedColumn) return null
+                          return (
+                            <div
+                              key={field.key}
+                              className="px-3 py-1 bg-primary/10 text-primary rounded-md text-xs font-medium"
+                            >
+                              {field.label} → {mappedColumn}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Test Results Info */}
+                    {testSummary && (
+                      <div className="pt-4 border-t">
+                        <div className="flex items-center gap-2 mb-2">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <p className="text-sm font-medium">Test Results</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Valid Rows</p>
+                            <p className="text-sm font-semibold text-green-600 dark:text-green-400">
+                              {testSummary.success}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Invalid Rows</p>
+                            <p className="text-sm font-semibold text-destructive">
+                              {testSummary.failed}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <p className="text-lg font-medium">Processing import...</p>
+                  <p className="text-sm text-muted-foreground">
+                    Please wait while we import your data
+                  </p>
+                </div>
+              ) : importSummary ? (
+                <div className="space-y-4">
+                  <Alert variant={importSummary.success > 0 ? "default" : "destructive"}>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      {importSummary.success > 0
+                        ? `Import completed! ${importSummary.success} rows imported successfully.`
+                        : "Import failed. No rows were imported."}
+                      {importSummary.failed > 0 && (
+                        <span className="ml-1">
+                          {importSummary.failed} row(s) failed.
+                        </span>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+
+                  {importSummary.errors.length > 0 && (
+                    <div className="border rounded-lg">
+                      <div className="p-3 bg-muted/50 border-b">
+                        <p className="text-sm font-medium">Errors ({importSummary.errors.length})</p>
+                      </div>
+                      <ScrollArea className="h-48">
+                        <div className="p-4 space-y-2">
+                          {importSummary.errors.map((error, idx) => (
+                            <div key={idx} className="text-sm text-destructive">
+                              <strong>Row {error.row}:</strong> {error.message}
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setCurrentStep(1)
+                        setFile(null)
+                        setExcelHeaders([])
+                        setPreview([])
+                        setMapping({})
+                        setImportSummary(null)
+                      }}
+                    >
+                      Start Over
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        window.location.href = "/members"
+                      }}
+                    >
+                      Go to Members
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentStep(2)}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    onClick={() => runImport("import")}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Import
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </Wizard>
       </div>
     </div>
   )

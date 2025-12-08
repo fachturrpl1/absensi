@@ -482,6 +482,19 @@ export default function MembersPage() {
                     Import
                   </Link>
                 </Button>
+                <Button
+                  asChild
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isLoadingInviteData}
+                  className="whitespace-nowrap"
+                >
+                  <Link href="/members/import-simple">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Simple Import
+                  </Link>
+                </Button>
                 <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
                   <DialogTrigger asChild>
                     <Button size="sm" className="whitespace-nowrap">
