@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 import { organizationLogger } from '@/lib/logger';
@@ -25,7 +24,7 @@ export interface OrganizationUpdateData {
 }
 
 // Get organization by ID (with fallback to user's organization)
-export async function getCurrentUserOrganization(organizationId?: number): Promise<{
+export async function getCurrentUserOrganization(organizationId?: number | null): Promise<{
   success: boolean;
   data?: {
     id: number;
@@ -63,7 +62,6 @@ export async function getCurrentUserOrganization(organizationId?: number): Promi
       return { success: false, message: "User not authenticated" };
     }
 
-<<<<<<< HEAD
     // Determine which organization to fetch
     let targetOrgId = organizationId;
     
@@ -85,13 +83,6 @@ export async function getCurrentUserOrganization(organizationId?: number): Promi
     // Fetch organization data
     const { data: org, error: orgError } = await supabase
       .from("organizations")
-=======
-    const adminClient = createAdminClient();
-
-    // Get user's organization through organization_members (latest membership regardless of active status)
-    const { data: member, error: memberError } = await adminClient
-      .from("organization_members")
->>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
       .select(`
         id,
         code,
@@ -116,13 +107,7 @@ export async function getCurrentUserOrganization(organizationId?: number): Promi
         created_at,
         updated_at
       `)
-<<<<<<< HEAD
       .eq("id", targetOrgId)
-=======
-      .eq("user_id", user.id)
-      .order("updated_at", { ascending: false })
-      .limit(1)
->>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
       .maybeSingle();
 
     if (orgError) {
@@ -175,7 +160,7 @@ export async function getCurrentUserOrganization(organizationId?: number): Promi
 }
 
 // Update organization data
-export async function updateOrganization(updateData: OrganizationUpdateData, organizationId?: number): Promise<{
+export async function updateOrganization(updateData: OrganizationUpdateData, organizationId?: number | null): Promise<{
   success: boolean;
   message: string;
 }> {
@@ -265,7 +250,7 @@ function generateInvitationCode(): string {
 }
 
 // Regenerate organization invite code
-export async function regenerateInviteCode(organizationId?: number): Promise<{
+export async function regenerateInviteCode(organizationId?: number | null): Promise<{
   success: boolean;
   data?: string;
   message: string;

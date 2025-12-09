@@ -348,13 +348,13 @@ export default function OrganizationSettingsPage() {
 
       try {
 
-        const result = await getCurrentUserOrganization(orgStore.organizationId);
+        const refreshResult = await getCurrentUserOrganization(orgStore.organizationId || undefined);
 
         
         
-        if (result.success && result.data) {
+        if (refreshResult.success && refreshResult.data) {
 
-          const data = result.data;
+          const data = refreshResult.data;
 
           setOrgData(data as OrganizationData);
 

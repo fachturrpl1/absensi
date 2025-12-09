@@ -11,6 +11,7 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
+  EmptyContent,
   EmptyMedia,
 } from "@/components/ui/empty"
 import {
@@ -55,13 +56,7 @@ import { createInvitation } from "@/action/invitations"
 import { getOrgRoles } from "@/lib/rbac"
 import { useGroups } from "@/hooks/use-groups"
 import { usePositions } from "@/hooks/use-positions"
-<<<<<<< HEAD
-import { FlexibleImportDialog } from "@/components/members/flexible-import-dialog"
-import { useOrgStore } from "@/store/org-store"
-import { useOrgGuard } from "@/hooks/use-org-guard"
-=======
 //tes
->>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
 const inviteSchema = z.object({
   email: z.string().email("Invalid email address"),
   role_id: z.string().optional(),
@@ -124,8 +119,6 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
 export default function MembersPage() {
   const searchParams = useSearchParams()
   const supabase = createClient()
-  const orgStore = useOrgStore()
-  useOrgGuard()
 
   const [members, setMembers] = React.useState<IOrganization_member[]>([])
   const [loading, setLoading] = React.useState<boolean>(true)
@@ -172,15 +165,25 @@ export default function MembersPage() {
     try {
       setLoading(true)
       
-      if (!orgStore.organizationId) {
-        toast.error('Please select an organization')
-        setLoading(false)
-        return
+      // Get organization ID
+      const { data: { user } } = await supabase.auth.getUser()
+      let orgId = ""
+
+      if (user) {
+        const { data } = await supabase
+          .from("organization_members")
+          .select("organization_id")
+          .eq("user_id", user.id)
+          .maybeSingle()
+
+        if (data) {
+          orgId = String(data.organization_id)
+        }
       }
 
-      // Fetch all data with organizationId
+      // Fetch all data
       const [memberRes, userRes, groupsRes] = await Promise.all([
-        getAllOrganization_member(orgStore.organizationId),
+        getAllOrganization_member(),
         getAllUsers(),
         getAllGroups(),
       ])
@@ -208,8 +211,12 @@ export default function MembersPage() {
         return { ...m, user: u, groupName }
       })
 
-      // Members sudah di-filter di server, tidak perlu filter lagi
-      setMembers(mergedMembers)
+      // Filter by organization
+      const filteredMembers = orgId
+        ? mergedMembers.filter((m: any) => String(m.organization_id) === orgId)
+        : mergedMembers
+      
+      setMembers(filteredMembers)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
@@ -219,7 +226,7 @@ export default function MembersPage() {
 
   React.useEffect(() => {
     fetchMembers()
-  }, [orgStore.organizationId])
+  }, [])
   async function onSubmitInvite(values: InviteFormValues) {
     try {
       setSubmittingInvite(true)
@@ -650,6 +657,9 @@ export default function MembersPage() {
                         There are no members for this organization. Use the "Invite Member" button to add one.
                       </EmptyDescription>
                     </EmptyHeader>
+                    <EmptyContent>
+                      <Button onClick={() => setInviteDialogOpen(true)}>Invite Member</Button>
+                    </EmptyContent>
                   </Empty>
                 </div>
               ) : (

@@ -30,7 +30,6 @@ export const getAllOrganization_member = async (organizationId?: number) => {
     return { success: false, message: "User not logged in", data: [] };
   }
 
-<<<<<<< HEAD
   // 2. Determine which organization to fetch
   let targetOrgId = organizationId;
   
@@ -41,16 +40,6 @@ export const getAllOrganization_member = async (organizationId?: number) => {
       .select("organization_id")
       .eq("user_id", user.id)
       .maybeSingle();
-=======
-  // 2. Find the user's organization_id
-  const { data: member } = await adminClient
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
->>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
 
     if (!member) {
       return { success: true, message: "User not registered in any organization", data: [] };

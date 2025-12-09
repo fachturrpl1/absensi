@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useOrgStore } from '@/store/org-store'
@@ -13,6 +14,11 @@ interface BreadcrumbItem {
 export function OrgBreadcrumb() {
   const pathname = usePathname()
   const { organizationName } = useOrgStore()
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  useEffect(() => {
+    setIsHydrated(true)
+  }, [])
 
   // Mapping pathname ke breadcrumb labels
   const pathMapping: Record<string, string> = {
@@ -40,6 +46,7 @@ export function OrgBreadcrumb() {
     '/organization': 'Organization',
     '/organization/new': 'New',
     '/organization/settings': 'Settings',
+    '/organization/finger': 'Fingerprint',
 
     // Fingerprint
     '/finger': 'Fingerprint',
@@ -58,14 +65,23 @@ export function OrgBreadcrumb() {
     '/member-schedules': '/schedule',
     '/leaves/new': '/leaves',
     '/leaves/types': '/leaves',
-    '/organization/new': '/organization',
-    '/organization/settings': '/organization',
   }
 
   const buildBreadcrumbs = (): BreadcrumbItem[] => {
     const items: BreadcrumbItem[] = []
 
-    // Tambah organization name jika ada
+    // Jika di halaman /organization, hanya tampilkan organization name
+    if (pathname === '/organization') {
+      if (organizationName) {
+        items.push({
+          label: organizationName,
+          href: '/organization',
+        })
+      }
+      return items
+    }
+
+    // Untuk halaman lain, tambah organization name jika ada
     if (organizationName) {
       items.push({
         label: organizationName,
@@ -73,27 +89,27 @@ export function OrgBreadcrumb() {
       })
     }
 
-    // Cek apakah ada parent page
-    const parentPath = parentMapping[pathname]
-    if (parentPath) {
-      const parentLabel = pathMapping[parentPath]
-      if (parentLabel) {
-        items.push({
-          label: parentLabel,
-          href: parentPath,
-        })
+    // Cek apakah ada parent page (skip untuk /organization/* pages)
+    if (!pathname.startsWith('/organization/')) {
+      const parentPath = parentMapping[pathname]
+      if (parentPath) {
+        const parentLabel = pathMapping[parentPath]
+        if (parentLabel) {
+          items.push({
+            label: parentLabel,
+            href: parentPath,
+          })
+        }
       }
     }
 
-    // Tambah current page berdasarkan pathname (skip jika di halaman /organization)
-    if (pathname !== '/organization') {
-      const currentLabel = pathMapping[pathname]
-      if (currentLabel && currentLabel !== organizationName) {
-        items.push({
-          label: currentLabel,
-          href: pathname,
-        })
-      }
+    // Tambah current page berdasarkan pathname
+    const currentLabel = pathMapping[pathname]
+    if (currentLabel && currentLabel !== organizationName) {
+      items.push({
+        label: currentLabel,
+        href: pathname,
+      })
     }
 
     return items
@@ -106,10 +122,15 @@ export function OrgBreadcrumb() {
     return null
   }
 
+  // Jangan render sampai client-side hydration selesai
+  if (!isHydrated) {
+    return null
+  }
+
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="flex items-center gap-2 text-sm text-muted-foreground" suppressHydrationWarning>
       {breadcrumbs.map((item, index) => (
-        <div key={index} className="flex items-center gap-2">
+        <div key={index} className="flex items-center gap-2" suppressHydrationWarning>
           {index > 0 && <ChevronRight className="h-4 w-4" />}
           {item.href ? (
             <Link

@@ -25,7 +25,7 @@ import {
   CheckCircle2,
   AlertCircle,
   XCircle,
-} from 'lucide-react';
+} from '@/components/icons/lucide-exports';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { motion } from 'framer-motion';
@@ -100,8 +100,15 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [currentPage, setCurrentPage] = useState(1);
+  const orgStore = useOrgStore();
   const [activeOrgId, setActiveOrgId] = useState<number | null>(null);
   
+  console.log('[LiveAttendance] Initializing activeOrgId', { activeOrgId: orgStore.organizationId });
+
+  useEffect(() => {
+    setActiveOrgId(orgStore.organizationId);
+  }, [orgStore.organizationId]);
+
   const toggleRow = (id: number) => {
     const newExpanded = new Set(expandedRows);
     if (newExpanded.has(id)) {
@@ -112,20 +119,22 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
     setExpandedRows(newExpanded);
   };
 
-   useEffect(() => {
-    const orgId = useOrgStore.getState().organizationId;
-    if (orgId) {
-      setActiveOrgId(orgId);
-    }
-  }, []);
-
   const fetchAttendanceRecords = useCallback(async (force = false) => {
     const now = Date.now();
+    const storeOrgId = useOrgStore.getState().organizationId;
+    const orgId = activeOrgId || storeOrgId;
     
-    if (!activeOrgId) {
-    console.log('[LiveAttendance] No active organization, skipping fetch');
-    return;
-  }
+    console.log('[LiveAttendance] fetchAttendanceRecords called', {
+      activeOrgId,
+      storeOrgId,
+      finalOrgId: orgId,
+      force,
+    });
+    
+    if (!orgId) {
+      console.log('[LiveAttendance] No active organization, skipping fetch');
+      return;
+    }
     
     // Check cache first
     if (!force && attendanceCache.data && (now - attendanceCache.timestamp) < ATTENDANCE_CACHE_DURATION) {
@@ -152,18 +161,35 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
         throw new Error('User not authenticated');
       }
 
-      const { data: orgMember } = await supabase
+      console.log('[LiveAttendance] Validating user membership', {
+        userId: user.id,
+        organizationId: orgId,
+      });
+
+      const { data: orgMember, error: memberError } = await supabase
         .from('organization_members')
         .select('organization_id')
         .eq('user_id', user.id)
-        .eq('organization_id', activeOrgId)
+        .eq('organization_id', orgId)
+        .eq('is_active', true)
         .maybeSingle();
 
+      console.log('[LiveAttendance] Membership check result', {
+        orgMember,
+        memberError,
+      });
+
       if (!orgMember?.organization_id) {
-        throw new Error('Organization not found');
+        console.error('[LiveAttendance] User not member of organization', {
+          userId: user.id,
+          organizationId: orgId,
+        });
+        throw new Error(`User is not a member of organization ${orgId}`);
       }
 
-      const { data } = await supabase
+      console.log('[LiveAttendance] Fetching attendance records for org', orgMember.organization_id);
+
+      const { data, error: attendanceError } = await supabase
         .from('attendance_records')
         .select(`
           id,
@@ -192,6 +218,10 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
         .order('actual_check_in', { ascending: false })
         .limit(50);
 
+      if (attendanceError) {
+        console.error('[LiveAttendance] Error fetching attendance records', attendanceError);
+      }
+
       const transformedData = data?.map((record: any) => {
         const member = record.organization_members;
         const profile = member?.user_profiles;
@@ -218,8 +248,10 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
       attendanceCache.timestamp = Date.now();
       setRecords(transformedData);
       setLastUpdate(new Date());
+      console.log('[LiveAttendance] Successfully fetched', transformedData.length, 'records');
     } catch (error) {
-      console.error('Failed to fetch attendance records:', error);
+      console.error('[LiveAttendance] Failed to fetch attendance records:', error);
+      // Don't throw, just log - allow component to continue
     } finally {
       attendanceCache.isLoading = false;
     }
@@ -231,31 +263,36 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
   //   if (orgId) fetchAttendanceRecords(true);
   // }, [fetchAttendanceRecords]);
 
+  // Initialize activeOrgId from store on mount
   useEffect(() => {
-      const unsubscribe = useOrgStore.subscribe(
-        (state) => state.organizationId,
-        (newOrgId) => {
-          setActiveOrgId(newOrgId);
-        }
-      );
-      return unsubscribe;
-    }, []);
+    const organizationId = useOrgStore.getState().organizationId;
+    console.log('[LiveAttendance] Initializing from store', { organizationId });
+    if (organizationId) {
+      setActiveOrgId(organizationId);
+    }
+  }, []);
 
-
-// useEffect untuk auto refresh
-useEffect(() => {
-  if (autoRefresh && activeOrgId) {
-    console.log('[LiveAttendance] Setting up auto refresh');
-    const interval = setInterval(() => {
+  // Fetch when activeOrgId changes
+  useEffect(() => {
+    if (activeOrgId) {
+      console.log('[LiveAttendance] activeOrgId changed, fetching', { activeOrgId });
       fetchAttendanceRecords(true);
-    }, refreshInterval);
-    return () => {
-      console.log('[LiveAttendance] Clearing auto refresh');
-      clearInterval(interval);
-    };
-  }
-  return undefined;
-}, [activeOrgId, autoRefresh, refreshInterval, fetchAttendanceRecords]);
+    }
+  }, [activeOrgId, fetchAttendanceRecords]);
+
+  // useEffect untuk auto refresh
+  useEffect(() => {
+    if (autoRefresh && activeOrgId) {
+      console.log('[LiveAttendance] Setting up auto refresh', { activeOrgId, refreshInterval });
+      const interval = setInterval(() => {
+        fetchAttendanceRecords(true);
+      }, refreshInterval);
+      return () => {
+        console.log('[LiveAttendance] Clearing auto refresh');
+        clearInterval(interval);
+      };
+    }
+  }, [autoRefresh, refreshInterval, fetchAttendanceRecords, activeOrgId]);
 
   const totalPages = Math.ceil(records.length / pageSize);
   const paginatedRecords = records.slice(

@@ -40,7 +40,6 @@ import { Input } from "@/components/ui/input"
 
 import { toast } from "sonner"
 import Link from "next/link"
-import { useParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
@@ -61,8 +60,6 @@ const roleSchema = z.object({
 type RoleForm = z.infer<typeof roleSchema>
 
 export default function RolesPage() {
-    const params = useParams()
-    const roleId = Number(params.id)
     const orgStore = useOrgStore()
     useOrgGuard()
 
@@ -86,11 +83,7 @@ export default function RolesPage() {
             const typedResponse = response as { success: boolean; data: IRole[]; message: string }
             if (!typedResponse.success) throw new Error(typedResponse.message)
             
-            // Filter roles by organization
-            const filteredRoles = typedResponse.data.filter(
-                (role: IRole) => role.organization_id === orgStore.organizationId
-            )
-            setroles(filteredRoles)
+            setroles(typedResponse.data)
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'Unknown error')
         } finally {

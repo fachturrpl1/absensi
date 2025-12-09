@@ -87,7 +87,7 @@ import {
 
 import { getCurrentUserOrganization, updateOrganization, regenerateInviteCode, OrganizationUpdateData } from "@/action/organization-settings";
 
-import { INDUSTRY_OPTIONS, findIndustryValue, getIndustryLabel } from "@/lib/constants/industries";
+import { INDUSTRY_OPTIONS, findIndustryValue } from "@/lib/constants/industries";
 
 import { useImageCompression } from "@/hooks/use-image-compression";
 import { useOrgStore } from "@/store/org-store";
@@ -266,7 +266,6 @@ export default function SettingsPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   const [geoData, setGeoData] = useState<GeoCountry | null>(null);
-  const [geoLoading, setGeoLoading] = useState(false);
   const [statePopoverOpen, setStatePopoverOpen] = useState(false);
   const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
   const geoCacheRef = useRef<Record<string, GeoCountry>>({});
@@ -294,7 +293,6 @@ export default function SettingsPage() {
         return geoCacheRef.current[key];
       }
 
-      setGeoLoading(true);
       try {
         const response = await fetch(`/api/geo/${key}`);
         if (!response.ok) {
@@ -308,8 +306,6 @@ export default function SettingsPage() {
         organizationLogger.error("Geo data error:", error);
         toast.error("Failed to load geographic data");
         return null;
-      } finally {
-        setGeoLoading(false);
       }
     },
     [],
@@ -1057,7 +1053,6 @@ export default function SettingsPage() {
         {/* Form Section with 2 Column Layout */}
         <div className="grid gap-6 lg:grid-cols-2">
 
-          {/* Organization Information */}
           {/* Left Column - Basic Information */}
           <Card className="border shadow-sm">
             <CardHeader className="pb-4">
@@ -1186,21 +1181,6 @@ export default function SettingsPage() {
                 </Select>
               </div>
 
-              {/* Time Format */}
-              <div className="space-y-2">
-                <Label htmlFor="time_format" className="text-sm font-medium">
-                  Time Format
-                </Label>
-                <Select value={formData.time_format} onValueChange={(value: '12h' | '24h') => setFormData({...formData, time_format: value})}>
-                  <SelectTrigger id="time_format" className="h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="24h">24-Hour (HH:MM)</SelectItem>
-                    <SelectItem value="12h">12-Hour (HH:MM AM/PM)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </CardContent>
           </Card>
 
@@ -1208,7 +1188,7 @@ export default function SettingsPage() {
           <Card className="border shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <MapPin className="h-5 w-5 text-primary" />
+                <Mail className="h-5 w-5 text-primary" />
                 Contact & Location
               </CardTitle>
               <CardDescription>

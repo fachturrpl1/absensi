@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Upload, X, FileText, Loader2, CheckCircle2 } from "lucide-react"
+import { Loader2 } from "@/components/icons/lucide-exports"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -34,7 +34,6 @@ export default function MembersImportSimpleMappingPage() {
   const [file, setFile] = useState<File | null>(null)
   const [excelHeaders, setExcelHeaders] = useState<string[]>([])
   const [preview, setPreview] = useState<Record<string, string>[]>([])
-  const [totalRows, setTotalRows] = useState(0)
   const [mapping, setMapping] = useState<ColumnMapping>({})
   const [loading, setLoading] = useState(false)
   const [processing, setProcessing] = useState(false)
@@ -256,7 +255,7 @@ export default function MembersImportSimpleMappingPage() {
   const getPreviewValue = (header: string) => {
     if (!preview.length) return ""
     const firstRow = preview[0]
-    return firstRow[header] || ""
+    return firstRow?.[header] || ""
   }
 
   return (

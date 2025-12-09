@@ -67,10 +67,6 @@ import { formatLocalTime } from '@/utils/timezone';
 import { getAllAttendance } from '@/action/attendance';
 import { toast } from 'sonner';
 import { useOrgStore } from '@/store/org-store';
-<<<<<<< HEAD
-import { useSafeDateRange, useHydration } from '@/lib/use-hydration';
-=======
->>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
 
 interface ModernAttendanceListProps {
   initialData?: any[];
@@ -79,34 +75,12 @@ interface ModernAttendanceListProps {
 
 export default function ModernAttendanceList({ initialData: _initialData, initialStats: _initialStats }: ModernAttendanceListProps) {
   const orgStore = useOrgStore();
-<<<<<<< HEAD
-  const isHydrated = useHydration();
-  const { dateRange: safeDateRange, isHydrated: dateRangeHydrated } = useSafeDateRange();
-  
-=======
->>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [userTimezone, setUserTimezone] = useState('UTC');
   const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
   
-<<<<<<< HEAD
-  // Use safe date range from hook
-  const [dateRange, setDateRange] = useState<DateFilterState>(safeDateRange);
-  
-  // Update dateRange when safe date range changes
-  useEffect(() => {
-    setDateRange(safeDateRange);
-  }, [safeDateRange]);
-  
-  // Set selected org from store after hydration
-  useEffect(() => {
-    if (isHydrated && orgStore.organizationId) {
-      setSelectedOrgId(orgStore.organizationId);
-    }
-  }, [isHydrated, orgStore.organizationId]);
-=======
   // Date filter state (same as Dashboard)
   const [dateRange, setDateRange] = useState<DateFilterState>({
     from: new Date(),
@@ -132,7 +106,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       setSelectedOrgId(orgStore.organizationId);
     }
   }, [orgStore.organizationId]);
->>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
   
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -168,16 +141,9 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const handleOrgChange = (orgId: string) => {
     const id = parseInt(orgId);
     setSelectedOrgId(id);
-<<<<<<< HEAD
-    // Don't reset page here, let the useEffect handle it
-  };
-
-  // Handle edit button click
-=======
     setCurrentPage(1); // Reset to first page
   };
 
->>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
   const handleEditClick = () => {
     const recordsToEdit = attendanceData.filter(r => selectedRecords.includes(r.id));
     setEditingRecords(recordsToEdit);
@@ -210,18 +176,12 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchQuery(searchInput);
-      setCurrentPage(1); // Reset to first page on search
     }, 500);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
   // Fetch data using Server Action with pagination
   const fetchData = useCallback(async () => {
-    // Skip fetch if not hydrated or dateRange is not initialized
-    if (!isHydrated || !dateRangeHydrated || !dateRange || dateRange.from.getTime() === 0 || dateRange.to.getTime() === 0) {
-      return;
-    }
-    
     setLoading(true);
     try {
       const [listResult] = await Promise.all([
@@ -282,55 +242,40 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     } finally {
       setLoading(false);
     }
-<<<<<<< HEAD
-  }, [currentPage, itemsPerPage, dateRange, searchQuery, statusFilter, departmentFilter, selectedOrgId, orgStore.organizationId, isHydrated, dateRangeHydrated]);
-=======
   }, [currentPage, itemsPerPage, dateRange, searchQuery, statusFilter, departmentFilter, selectedOrgId, orgStore.organizationId]);
->>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
 
   // Trigger fetch when filters change (and initial load)
   useEffect(() => {
-    // Only fetch if hydrated and dateRange has been properly initialized
-    if (!isHydrated || !dateRangeHydrated || !dateRange || dateRange.from.getTime() === 0 || dateRange.to.getTime() === 0) {
-      return; // Skip fetch until hydration complete and dateRange initialized
-    }
     console.log('🔄 Fetch triggered:', { currentPage, dateRange, searchQuery, statusFilter, departmentFilter });
     fetchData();
-  }, [fetchData, dateRange, currentPage, searchQuery, statusFilter, departmentFilter, isHydrated, dateRangeHydrated]);
+  }, [fetchData]);
   
-  // Log attendanceData changes (only after hydration)
+  // Log attendanceData changes
   useEffect(() => {
-    if (isHydrated && attendanceData.length > 0) {
-      console.log('📊 Attendance data state updated:', {
-        length: attendanceData.length,
-        totalItems,
-        loading,
-        firstItem: attendanceData[0]
-      });
-    }
-  }, [attendanceData, totalItems, loading, isHydrated]);
+    console.log('📊 Attendance data state updated:', {
+      length: attendanceData.length,
+      totalItems,
+      loading,
+      firstItem: attendanceData[0]
+    });
+  }, [attendanceData, totalItems, loading]);
 
   // Reset to page 1 when filters change (except pagination itself)
   useEffect(() => {
-    // Only reset if hydrated and dateRange has been properly initialized
-    if (isHydrated && dateRangeHydrated && dateRange && dateRange.from.getTime() !== 0 && dateRange.to.getTime() !== 0) {
-      setCurrentPage(1);
-    }
-  }, [dateRange, searchQuery, statusFilter, departmentFilter, isHydrated, dateRangeHydrated]);
+    setCurrentPage(1);
+  }, [dateRange, searchQuery, statusFilter, departmentFilter]);
 
   // Auto-refresh Timer - Disabled for now to prevent errors
   // useEffect(() => {
-  //   // Only run timer if hydrated, not loading and not paused
-  //   if (!isHydrated || loading || isAutoRefreshPaused) return;
-  //   // Also skip if dateRange not initialized
-  //   if (dateRange.from.getTime() === 0 || dateRange.to.getTime() === 0) return;
+  //   // Only run timer if not loading and not paused
+  //   if (loading || isAutoRefreshPaused) return;
 
   //   const timer = setInterval(() => {
   //     fetchData();
   //   }, 10000); // 10 seconds
 
   //   return () => clearInterval(timer);
-  // }, [loading, isAutoRefreshPaused, fetchData, dateRange, isHydrated]);
+  // }, [loading, isAutoRefreshPaused, fetchData]);
 
   // Helper component to display device location
   const LocationDisplay = ({ checkInLocationName, checkOutLocationName }: any) => {
@@ -445,22 +390,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     }
   };
 
-  // Don't render until hydration is complete
-  if (!isHydrated || !dateRangeHydrated) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="animate-pulse space-y-4">
-              <div className="h-10 bg-gray-200 rounded"></div>
-              <div className="h-64 bg-gray-200 rounded"></div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Filters & Actions */}
@@ -516,8 +445,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             {/* Additional Filters */}
             <div className="flex flex-wrap items-center gap-2">
               <Select value={selectedOrgId?.toString() || ''} onValueChange={handleOrgChange}>
-<<<<<<< HEAD
-=======
                 <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder="Select Organization" />
                 </SelectTrigger>
@@ -534,7 +461,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     </SelectItem>
                   )}
                 </SelectContent>
->>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
               </Select>
 
               <Select value={statusFilter} onValueChange={setStatusFilter}>
