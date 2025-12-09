@@ -126,7 +126,7 @@ export default function MembersPage() {
   const [submittingInvite, setSubmittingInvite] = React.useState(false)
   const [exporting, setExporting] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState<string>("")
-  const [selectedMemberIds, setSelectedMemberIds] = React.useState<string[]>([])
+  const [selectedMemberIds] = React.useState<string[]>([])
   const [exportDialogOpen, setExportDialogOpen] = React.useState(false)
   const [selectedExportFields, setSelectedExportFields] = React.useState<string[]>(
     EXPORT_FIELDS.map((f) => f.key),
@@ -668,8 +668,6 @@ export default function MembersPage() {
                     members={members}
                     isLoading={loading}
                     onDelete={fetchMembers}
-                    selectedIds={selectedMemberIds}
-                    onSelectionChange={setSelectedMemberIds}
                   />
                 </div>
               )}

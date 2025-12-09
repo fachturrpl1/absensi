@@ -40,7 +40,6 @@ export function Wizard({
           {steps.map((step, index) => {
             const isCompleted = step.number < currentStep
             const isCurrent = step.number === currentStep
-            const isUpcoming = step.number > currentStep
 
             return (
               <React.Fragment key={step.number}>

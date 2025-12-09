@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Upload, X, FileText, Loader2, CheckCircle2 } from "lucide-react"
+import { Loader2, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -10,7 +10,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "sonner"
-import Link from "next/link"
 
 const DATABASE_FIELDS = [
   { key: "email", label: "Email", required: true },
@@ -34,7 +33,6 @@ export default function MembersImportSimpleMappingPage() {
   const [file, setFile] = useState<File | null>(null)
   const [excelHeaders, setExcelHeaders] = useState<string[]>([])
   const [preview, setPreview] = useState<Record<string, string>[]>([])
-  const [totalRows, setTotalRows] = useState(0)
   const [mapping, setMapping] = useState<ColumnMapping>({})
   const [loading, setLoading] = useState(false)
   const [processing, setProcessing] = useState(false)
@@ -98,8 +96,6 @@ export default function MembersImportSimpleMappingPage() {
 
       setExcelHeaders(data.headers || [])
       setPreview(data.preview || [])
-      setTotalRows(data.totalRows || 0)
-
       // Auto-map common column names
       const autoMapping: ColumnMapping = {}
       DATABASE_FIELDS.forEach((field) => {
@@ -129,7 +125,7 @@ export default function MembersImportSimpleMappingPage() {
 
       setMapping(autoMapping)
       setTestSummary(null)
-      toast.success(`File loaded. Found ${data.totalRows} rows and ${data.headers.length} columns`)
+      toast.success(`File loaded. Found ${data.totalRows || 0} rows and ${data.headers.length} columns`)
     } catch (error) {
       console.error("Error reading Excel:", error)
       toast.error("Failed to read Excel file")
@@ -254,8 +250,8 @@ export default function MembersImportSimpleMappingPage() {
   }
 
   const getPreviewValue = (header: string) => {
-    if (!preview.length) return ""
     const firstRow = preview[0]
+    if (!firstRow) return ""
     return firstRow[header] || ""
   }
 
@@ -291,10 +287,8 @@ export default function MembersImportSimpleMappingPage() {
             <Button
               onClick={async () => {
                 if (file) {
-                  // Reload data dari file yang sudah ada
                   await loadFileHeaders(file)
                 } else {
-                  // Jika belum ada file, redirect ke halaman upload
                   router.push("/members/import-simple")
                 }
               }}
@@ -317,14 +311,6 @@ export default function MembersImportSimpleMappingPage() {
             >
               Cancel
             </Button>
-            <div className="flex flex-col text-sm text-muted-foreground ml-4">
-              <Link href="/members" className="hover:text-foreground">
-                Booking List
-              </Link>
-              <Link href="/members/import" className="hover:text-foreground">
-                Import a File
-              </Link>
-            </div>
           </div>
         </div>
 

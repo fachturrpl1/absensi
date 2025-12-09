@@ -193,7 +193,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           search: searchQuery || undefined,
           status: statusFilter === 'all' ? undefined : statusFilter,
           department: departmentFilter === 'all' ? undefined : departmentFilter,
-          organizationId: selectedOrgId || orgStore.organizationId || undefined,
         })
       ]);
 

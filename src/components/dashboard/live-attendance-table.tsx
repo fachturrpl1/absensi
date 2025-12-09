@@ -232,14 +232,13 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
   // }, [fetchAttendanceRecords]);
 
   useEffect(() => {
-      const unsubscribe = useOrgStore.subscribe(
-        (state) => state.organizationId,
-        (newOrgId) => {
-          setActiveOrgId(newOrgId);
-        }
-      );
-      return unsubscribe;
-    }, []);
+    const unsubscribe = useOrgStore.subscribe((state, prev) => {
+      if (state.organizationId !== prev.organizationId) {
+        setActiveOrgId(state.organizationId);
+      }
+    });
+    return unsubscribe;
+  }, []);
 
 
 // useEffect untuk auto refresh

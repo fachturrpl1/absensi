@@ -29,8 +29,14 @@ export function DashboardLayoutWrapper({
     '/role-selector',
   ];
 
+  // Pages that should hide only the navbar (keep sidebar/layout)
+  const hideNavbarPaths = ['/members/import-simple', '/members/import-simple-1'];
+
   // Check if current path is public (no sidebar/navbar)
   const isPublicPath = publicPaths.some(path => pathname?.startsWith(path));
+
+  // Check if navbar should be hidden
+  const hideNavbar = hideNavbarPaths.some(path => pathname?.startsWith(path));
 
   // If public path, render children without layout
   if (isPublicPath) {
@@ -44,7 +50,7 @@ export function DashboardLayoutWrapper({
     <SidebarProvider defaultOpen={true}>
       <AppSidebarNew />
       <SidebarInset className="flex flex-col min-w-0">
-        <NavbarNew />
+        {!hideNavbar && <NavbarNew />}
         <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6 w-full min-w-0">
           {children}
         </div>
