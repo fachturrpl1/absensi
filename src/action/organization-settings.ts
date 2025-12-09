@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 import { organizationLogger } from '@/lib/logger';
@@ -62,6 +63,7 @@ export async function getCurrentUserOrganization(organizationId?: number): Promi
       return { success: false, message: "User not authenticated" };
     }
 
+<<<<<<< HEAD
     // Determine which organization to fetch
     let targetOrgId = organizationId;
     
@@ -83,6 +85,13 @@ export async function getCurrentUserOrganization(organizationId?: number): Promi
     // Fetch organization data
     const { data: org, error: orgError } = await supabase
       .from("organizations")
+=======
+    const adminClient = createAdminClient();
+
+    // Get user's organization through organization_members (latest membership regardless of active status)
+    const { data: member, error: memberError } = await adminClient
+      .from("organization_members")
+>>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
       .select(`
         id,
         code,
@@ -107,7 +116,13 @@ export async function getCurrentUserOrganization(organizationId?: number): Promi
         created_at,
         updated_at
       `)
+<<<<<<< HEAD
       .eq("id", targetOrgId)
+=======
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+>>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
       .maybeSingle();
 
     if (orgError) {

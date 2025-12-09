@@ -12,3 +12,8 @@ export default function FingerPage() {
     </div>
   )
 }
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8

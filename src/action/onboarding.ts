@@ -38,22 +38,7 @@ export async function joinOrganization(invitationCode: string): Promise<{
       return { success: false, message: "User not authenticated" };
     }
 
-    // Check if user is already in an organization
-    const { data: existingMember } = await supabase
-      .from("organization_members")
-      .select("id, organization:organizations(name)")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (existingMember) {
-      const orgName = (existingMember.organization as unknown as { name: string })?.name || 'Unknown Organization';
-      return { 
-        success: false, 
-        message: `You are already a member of "${orgName}". Please contact your admin if you need to switch organizations.` 
-      };
-    }
-
-    // Find organization by invitation code
+    // Find organization by invitation code (case-insensitive)
     const { data: organization, error: orgError } = await supabase
       .from("organizations")
       .select("id, name, is_active")
@@ -79,16 +64,52 @@ export async function joinOrganization(invitationCode: string): Promise<{
       };
     }
 
-    // Get user profile to use as member data
-    const { error: profileError } = await supabase
-      .from("user_profiles")
-      .select("first_name, last_name, phone")
-      .eq("id", user.id)
+    // Check if user already has membership (either same org or different org)
+    const { data: existingMembership } = await supabase
+      .from("organization_members")
+      .select("id, organization_id, is_active, organization:organizations(name)")
+      .eq("user_id", user.id)
       .maybeSingle();
 
-    if (profileError) {
-      logger.error("Profile error:", profileError);
-      return { success: false, message: "Failed to get user profile" };
+    if (existingMembership) {
+      const orgName = (existingMembership.organization as unknown as { name: string })?.name || 'another organization';
+
+      // Attempting to join a different organization while membership exists
+      if (existingMembership.organization_id !== organization.id) {
+        return { 
+          success: false, 
+          message: `You are already a member of "${orgName}". Please contact your admin if you need to switch organizations.` 
+        };
+      }
+
+      // Membership already exists for this organization
+      if (!existingMembership.is_active) {
+        const { error: reactivateError } = await supabase
+          .from("organization_members")
+          .update({
+            is_active: true,
+            employment_status: 'active',
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", existingMembership.id);
+
+        if (reactivateError) {
+          logger.error("Failed to reactivate membership:", reactivateError);
+          return { success: false, message: "Failed to reactivate your membership. Please try again." };
+        }
+
+        revalidatePath("/");
+        return { 
+          success: true, 
+          message: `Your access to "${organization.name}" has been reactivated. Welcome back!` 
+        };
+      }
+
+      // Already active member
+      return { 
+        success: true, 
+        message: `You are already an active member of "${organization.name}".` 
+      };
     }
 
     // Create organization member record
@@ -108,7 +129,11 @@ export async function joinOrganization(invitationCode: string): Promise<{
 
     if (memberError) {
       logger.error("Member creation error:", memberError);
-      return { success: false, message: "Failed to join organization. Please try again." };
+      // Berikan pesan error yang lebih spesifik agar mudah debug
+      return { 
+        success: false, 
+        message: memberError.message || "Failed to join organization. Please try again." 
+      };
     }
 
     revalidatePath("/");

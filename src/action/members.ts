@@ -1,5 +1,6 @@
 "use server";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { IOrganization_member } from "@/interface";
 
 import { memberLogger } from '@/lib/logger';
@@ -20,6 +21,7 @@ export const createOrganizationMember = async (Organization_member: Partial<IOrg
 };
 export const getAllOrganization_member = async (organizationId?: number) => {
   const supabase = await getSupabase();
+  const adminClient = createAdminClient();
 
   // 1. Retrieve user from cookies
   const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -28,6 +30,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
     return { success: false, message: "User not logged in", data: [] };
   }
 
+<<<<<<< HEAD
   // 2. Determine which organization to fetch
   let targetOrgId = organizationId;
   
@@ -38,6 +41,16 @@ export const getAllOrganization_member = async (organizationId?: number) => {
       .select("organization_id")
       .eq("user_id", user.id)
       .maybeSingle();
+=======
+  // 2. Find the user's organization_id
+  const { data: member } = await adminClient
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", user.id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+>>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
 
     if (!member) {
       return { success: true, message: "User not registered in any organization", data: [] };
@@ -48,7 +61,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
   memberLogger.debug(`📍 Fetching members for organization: ${targetOrgId}`);
 
   // 3. Fetch all members belonging to the organization
-  const { data, error } = await supabase
+  const { data, error } = await adminClient
     .from("organization_members")
     .select(`
       *,

@@ -67,7 +67,10 @@ import { formatLocalTime } from '@/utils/timezone';
 import { getAllAttendance } from '@/action/attendance';
 import { toast } from 'sonner';
 import { useOrgStore } from '@/store/org-store';
+<<<<<<< HEAD
 import { useSafeDateRange, useHydration } from '@/lib/use-hydration';
+=======
+>>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
 
 interface ModernAttendanceListProps {
   initialData?: any[];
@@ -76,15 +79,19 @@ interface ModernAttendanceListProps {
 
 export default function ModernAttendanceList({ initialData: _initialData, initialStats: _initialStats }: ModernAttendanceListProps) {
   const orgStore = useOrgStore();
+<<<<<<< HEAD
   const isHydrated = useHydration();
   const { dateRange: safeDateRange, isHydrated: dateRangeHydrated } = useSafeDateRange();
   
+=======
+>>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [userTimezone, setUserTimezone] = useState('UTC');
   const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
   
+<<<<<<< HEAD
   // Use safe date range from hook
   const [dateRange, setDateRange] = useState<DateFilterState>(safeDateRange);
   
@@ -99,6 +106,33 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       setSelectedOrgId(orgStore.organizationId);
     }
   }, [isHydrated, orgStore.organizationId]);
+=======
+  // Date filter state (same as Dashboard)
+  const [dateRange, setDateRange] = useState<DateFilterState>({
+    from: new Date(),
+    to: new Date(),
+    preset: 'today',
+  });
+  
+  // Initialize date range after hydration
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
+    
+    setDateRange({
+      from: today,
+      to: endOfToday,
+      preset: 'today',
+    });
+    
+    // Set selected org from store
+    if (orgStore.organizationId) {
+      setSelectedOrgId(orgStore.organizationId);
+    }
+  }, [orgStore.organizationId]);
+>>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
   
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,10 +168,16 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const handleOrgChange = (orgId: string) => {
     const id = parseInt(orgId);
     setSelectedOrgId(id);
+<<<<<<< HEAD
     // Don't reset page here, let the useEffect handle it
   };
 
   // Handle edit button click
+=======
+    setCurrentPage(1); // Reset to first page
+  };
+
+>>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
   const handleEditClick = () => {
     const recordsToEdit = attendanceData.filter(r => selectedRecords.includes(r.id));
     setEditingRecords(recordsToEdit);
@@ -242,7 +282,11 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     } finally {
       setLoading(false);
     }
+<<<<<<< HEAD
   }, [currentPage, itemsPerPage, dateRange, searchQuery, statusFilter, departmentFilter, selectedOrgId, orgStore.organizationId, isHydrated, dateRangeHydrated]);
+=======
+  }, [currentPage, itemsPerPage, dateRange, searchQuery, statusFilter, departmentFilter, selectedOrgId, orgStore.organizationId]);
+>>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
 
   // Trigger fetch when filters change (and initial load)
   useEffect(() => {
@@ -472,6 +516,25 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             {/* Additional Filters */}
             <div className="flex flex-wrap items-center gap-2">
               <Select value={selectedOrgId?.toString() || ''} onValueChange={handleOrgChange}>
+<<<<<<< HEAD
+=======
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Select Organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {orgStore.organizations && orgStore.organizations.length > 0 ? (
+                    orgStore.organizations.map((org) => (
+                      <SelectItem key={org.id} value={org.id.toString()}>
+                        {org.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="" disabled>
+                      No organizations available
+                    </SelectItem>
+                  )}
+                </SelectContent>
+>>>>>>> 78a3e19297b9ab29b4f92c9dd4dc37dc636d89f8
               </Select>
 
               <Select value={statusFilter} onValueChange={setStatusFilter}>

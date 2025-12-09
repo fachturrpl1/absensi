@@ -17,93 +17,49 @@ import { Fingerprint, Check, Loader2, Search, Users, RefreshCw, Filter } from 'l
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { createClient } from '@/utils/supabase/client'
-import { useOrgStore } from '@/store/org-store'
 
-interface Member {
+interface Student {
   id: string
-  organization_member_id: number
-  first_name: string
-  last_name: string
-  email: string
+  nisn: string
+  name: string
   finger1_registered: boolean
   finger2_registered: boolean
+  fingerprint_id: number | null
 }
 
 type FilterStatus = 'all' | 'none' | 'partial' | 'complete'
 
 export default function FingerPage() {
-  const orgStore = useOrgStore()
-  const [members, setMembers] = useState<Member[]>([])
+  const [students, setStudents] = useState<Student[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
   const [isLoading, setIsLoading] = useState(true)
-  const [loadingMemberId, setLoadingMemberId] = useState<string | null>(null)
+  const [loadingStudentId, setLoadingStudentId] = useState<string | null>(null)
 
   const supabase = createClient()
 
-  const fetchMembers = async () => {
+  const fetchStudents = async () => {
     setIsLoading(true)
     try {
-      if (!orgStore.organizationId) {
-        toast.error('Please select an organization')
-        setIsLoading(false)
-        return
-      }
-
       const { data, error } = await supabase
-        .from('organization_members')
-        .select(`
-          id,
-          user_id,
-          user_profiles!user_id (
-            id,
-            first_name,
-            last_name,
-            email
-          ),
-          finger1_registered,
-          finger2_registered
-        `)
-        .eq('organization_id', orgStore.organizationId)
-        .eq('is_active', true)
-        .order('id', { ascending: true })
+        .from('students')
+        .select('id, nisn, name, finger1_registered, finger2_registered, fingerprint_id')
+        .order('name')
 
       if (error) {
-        toast.error('Failed to load members')
-        console.error('Error fetching members:', error)
-      } else if (data && data.length > 0) {
-        // Fetch user_profiles terpisah jika FK gagal
-        const userIds = (data || []).map((item: any) => item.user_id).filter(Boolean);
-        let userProfilesMap: any = {};
-        
-        if (userIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from('user_profiles')
-            .select('id, first_name, last_name, email')
-            .in('id', userIds);
-          
-          if (profiles) {
-            profiles.forEach((p: any) => {
-              userProfilesMap[p.id] = p;
-            });
-          }
-        }
-        
-        const formattedData = (data || []).map((item: any) => {
-          const userProfile = item.user_profiles || userProfilesMap[item.user_id];
-          return {
-            id: userProfile?.id || item.user_id || '',
-            organization_member_id: item.id,
-            first_name: userProfile?.first_name || '',
-            last_name: userProfile?.last_name || '',
-            email: userProfile?.email || '',
+        toast.error('Failed to load students')
+        console.error('Error fetching students:', error)
+      } else {
+        setStudents(
+          (data || []).map((item) => ({
+            id: item.id,
+            nisn: item.nisn,
+            name: item.name,
             finger1_registered: item.finger1_registered || false,
             finger2_registered: item.finger2_registered || false,
-          };
-        });
-        setMembers(formattedData);
-      } else {
-        setMembers([]);
+            fingerprint_id: item.fingerprint_id ?? null,
+          }))
+        )
       }
     } finally {
       setIsLoading(false)
@@ -111,33 +67,30 @@ export default function FingerPage() {
   }
 
   useEffect(() => {
-    if (orgStore.organizationId) {
-      fetchMembers();
-    }
-  }, [orgStore.organizationId])
+    fetchStudents()
+  }, [])
 
-  const getFingerStatus = (member: Member): FilterStatus => {
-    if (member.finger1_registered && member.finger2_registered) return 'complete'
-    if (member.finger1_registered || member.finger2_registered) return 'partial'
+  const getFingerStatus = (student: Student): FilterStatus => {
+    if (student.finger1_registered && student.finger2_registered) return 'complete'
+    if (student.finger1_registered || student.finger2_registered) return 'partial'
     return 'none'
   }
 
-  const filteredMembers = members.filter((member) => {
+  const filteredStudents = students.filter((student) => {
     // Search filter
     const matchesSearch =
-      member.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchQuery.toLowerCase())
+      student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.nisn.toLowerCase().includes(searchQuery.toLowerCase())
 
     if (!matchesSearch) return false
 
     // Status filter
     if (filterStatus === 'all') return true
-    return getFingerStatus(member) === filterStatus
+    return getFingerStatus(student) === filterStatus
   })
 
-  const handleRegister = async (memberId: string, fingerNumber: 1 | 2): Promise<boolean> => {
-    setLoadingMemberId(`${memberId}-${fingerNumber}`)
+  const handleRegister = async (studentId: string, fingerNumber: 1 | 2): Promise<boolean> => {
+    setLoadingStudentId(`${studentId}-${fingerNumber}`)
     
     try {
       // Simulate fingerprint registration process
@@ -147,36 +100,36 @@ export default function FingerPage() {
       const isSuccess = Math.random() > 0.3
 
       if (isSuccess) {
-        // Find the member and update
-        const member = members.find((m) => m.id === memberId)
-        if (!member) return false
+        // Find the student and update
+        const student = students.find((s) => s.id === studentId)
+        if (!student) return false
 
         // Update database
         const updateField = fingerNumber === 1 ? 'finger1_registered' : 'finger2_registered'
         const { error } = await supabase
-          .from('organization_members')
+          .from('students')
           .update({ [updateField]: true })
-          .eq('id', member.organization_member_id)
+          .eq('id', studentId)
 
         if (error) {
-          console.error('Error updating member:', error)
+          console.error('Error updating student:', error)
           toast.error('Failed to save data')
           return false
         }
 
         // Update local state
-        setMembers((prev) =>
-          prev.map((m) =>
-            m.id === memberId
+        setStudents((prev) =>
+          prev.map((s) =>
+            s.id === studentId
               ? {
-                  ...m,
+                  ...s,
                   [`finger${fingerNumber}_registered`]: true,
                 }
-              : m
+              : s
           )
         )
 
-        toast.success(`Finger ${fingerNumber} for ${member.first_name} registered successfully`)
+        toast.success(`Finger ${fingerNumber} for ${student.name} registered successfully`)
         return true
       } else {
         toast.error('Fingerprint invalid or not detected. Please try again.')
@@ -187,12 +140,12 @@ export default function FingerPage() {
       toast.error('Sensor error occurred. Please try again.')
       return false
     } finally {
-      setLoadingMemberId(null)
+      setLoadingStudentId(null)
     }
   }
 
-  const registeredCount = members.filter(
-    (m) => m.finger1_registered && m.finger2_registered
+  const registeredCount = students.filter(
+    (s) => s.finger1_registered && s.finger2_registered
   ).length
 
   return (
@@ -209,7 +162,7 @@ export default function FingerPage() {
             <div>
               <p className="text-sm text-muted-foreground">Fully Registered</p>
               <p className="text-2xl font-semibold text-foreground">
-                {registeredCount} <span className="text-muted-foreground font-normal text-sm">/ {members.length}</span>
+                {registeredCount} <span className="text-muted-foreground font-normal text-sm">/ {students.length}</span>
               </p>
             </div>
           </div>
@@ -222,7 +175,7 @@ export default function FingerPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name or email..."
+            placeholder="Search by name or NISN..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -233,7 +186,7 @@ export default function FingerPage() {
         <Button
           variant="outline"
           size="icon"
-          onClick={fetchMembers}
+          onClick={fetchStudents}
           disabled={isLoading}
           className="shrink-0"
           title="Refresh data"
@@ -264,7 +217,7 @@ export default function FingerPage() {
                     : 'hover:bg-muted text-foreground'
                 )}
               >
-                All Members
+                All Students
               </button>
               <button
                 onClick={() => setFilterStatus('none')}
@@ -304,10 +257,10 @@ export default function FingerPage() {
         </div>
       </div>
 
-      {/* Members Table */}
+      {/* Students Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Members</CardTitle>
+          <CardTitle>Students</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border overflow-hidden">
@@ -316,7 +269,7 @@ export default function FingerPage() {
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead className="font-semibold text-foreground w-16">No</TableHead>
                   <TableHead className="font-semibold text-foreground">Name</TableHead>
-                  <TableHead className="font-semibold text-foreground">Email</TableHead>
+                  <TableHead className="font-semibold text-foreground">NISN</TableHead>
                   <TableHead className="font-semibold text-foreground text-center">Finger 1</TableHead>
                   <TableHead className="font-semibold text-foreground text-center">Finger 2</TableHead>
                 </TableRow>
@@ -329,16 +282,16 @@ export default function FingerPage() {
                       Loading data...
                     </TableCell>
                   </TableRow>
-                ) : filteredMembers.length === 0 ? (
+                ) : filteredStudents.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                      {members.length === 0 ? 'No members found' : 'No data found'}
+                      {students.length === 0 ? 'No students found' : 'No data found'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredMembers.map((member, index) => (
+                  filteredStudents.map((student, index) => (
                     <TableRow
-                      key={member.id}
+                      key={student.id}
                       className={cn(
                         'transition-colors duration-200',
                         index % 2 === 0 ? 'bg-background' : 'bg-muted/30',
@@ -349,25 +302,27 @@ export default function FingerPage() {
                         {index + 1}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {member.first_name} {member.last_name}
+                        {student.name}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {member.email}
+                        {student.nisn}
                       </TableCell>
                       <TableCell className="text-center">
                         <FingerButtonComponent
                           fingerNumber={1}
-                          isRegistered={member.finger1_registered}
-                          isLoading={loadingMemberId === `${member.id}-1`}
-                          onRegister={() => handleRegister(member.id, 1)}
+                          isRegistered={student.finger1_registered}
+                          isLoading={loadingStudentId === `${student.id}-1`}
+                          onRegister={() => handleRegister(student.id, 1)}
+                          studentName={student.name}
                         />
                       </TableCell>
                       <TableCell className="text-center">
                         <FingerButtonComponent
                           fingerNumber={2}
-                          isRegistered={member.finger2_registered}
-                          isLoading={loadingMemberId === `${member.id}-2`}
-                          onRegister={() => handleRegister(member.id, 2)}
+                          isRegistered={student.finger2_registered}
+                          isLoading={loadingStudentId === `${student.id}-2`}
+                          onRegister={() => handleRegister(student.id, 2)}
+                          studentName={student.name}
                         />
                       </TableCell>
                     </TableRow>
@@ -388,6 +343,7 @@ interface FingerButtonComponentProps {
   isRegistered: boolean
   isLoading: boolean
   onRegister: () => Promise<boolean>
+  studentName: string
 }
 
 function FingerButtonComponent({
@@ -395,11 +351,13 @@ function FingerButtonComponent({
   isRegistered,
   isLoading,
   onRegister,
+  studentName,
 }: FingerButtonComponentProps) {
   const handleClick = async () => {
     if (isRegistered) return
 
-    toast.info(`Please place finger ${fingerNumber} on the fingerprint sensor...`)
+    const namePrefix = studentName ? `${studentName}: ` : ''
+    toast.info(`${namePrefix}Please place finger ${fingerNumber} on the fingerprint sensor...`)
     await onRegister()
   }
 
@@ -438,3 +396,5 @@ function FingerButtonComponent({
     </Button>
   )
 }
+
+
