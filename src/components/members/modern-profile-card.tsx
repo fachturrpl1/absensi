@@ -10,7 +10,7 @@ import {
   Clock,
   MoreVertical,
   Edit,
-  Trash,
+  Trash2,
   Send,
   UserCheck,
   UserX,
@@ -172,7 +172,7 @@ export function ModernProfileCard({
                     onClick={onDelete}
                     className="text-destructive"
                   >
-                    <Trash className="mr-2 h-4 w-4" />
+                    <Trash2 className="mr-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 )}

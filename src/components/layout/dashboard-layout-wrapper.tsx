@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebarNew } from '@/components/layout-new/app-sidebar-new';
@@ -12,11 +11,6 @@ export function DashboardLayoutWrapper({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
 
   // Pages that should NOT have sidebar/navbar
   const publicPaths = [
@@ -32,52 +26,26 @@ export function DashboardLayoutWrapper({
     '/organization-inactive',
     '/subscription-expired',
     '/offline',
-    '/organization-selector',
     '/role-selector',
-  ];
-
-  // Pages that should have sidebar but NO navbar
-  const sidebarOnlyPaths = [
-    '/members/import-simple',
   ];
 
   // Check if current path is public (no sidebar/navbar)
   const isPublicPath = publicPaths.some(path => pathname?.startsWith(path));
-
-  // Check if current path should have sidebar only (no navbar)
-  const isSidebarOnlyPath = sidebarOnlyPaths.some(path => pathname?.startsWith(path));
 
   // If public path, render children without layout
   if (isPublicPath) {
     return <>{children}</>;
   }
 
-  // Don't render SidebarProvider until hydration is complete
-  if (!isHydrated) {
-    return <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">{children}</div>;
-  }
-
-  // If sidebar only path, render with sidebar but no navbar
-  if (isSidebarOnlyPath) {
-    return (
-      <SidebarProvider defaultOpen={true}>
-        <AppSidebarNew />
-        <SidebarInset>
-          <div className="flex flex-1 flex-col">
-            {children}
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
-    );
-  }
-
   // Dashboard pages: render with sidebar/navbar
+  // Always render NavbarNew to avoid hydration mismatch
+  // NavbarNew handles its own hydration internally
   return (
     <SidebarProvider defaultOpen={true}>
       <AppSidebarNew />
-      <SidebarInset>
+      <SidebarInset className="flex flex-col min-w-0">
         <NavbarNew />
-        <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
+        <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6 w-full min-w-0">
           {children}
         </div>
       </SidebarInset>

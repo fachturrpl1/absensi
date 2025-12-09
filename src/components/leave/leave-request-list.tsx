@@ -25,7 +25,7 @@ import {
   Loader2,
   Grid3x3,
   List,
-  Trash
+  Trash2
 } from "lucide-react";
 import { ILeaveRequest } from "@/lib/leave/types";
 import { formatLeaveDateRange, getStatusColor } from "@/lib/leave/utils";
@@ -412,7 +412,7 @@ export function LeaveRequestList({
                             className="gap-1 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700 dark:border-orange-500 dark:text-orange-500 dark:hover:bg-orange-950 w-full sm:w-auto"
                             onClick={() => onDelete?.(request)}
                           >
-                            <Trash className="h-3 w-3" />
+                            <Trash2 className="h-3 w-3" />
                             <span className="ml-1">Cancel</span>
                           </Button>
                         )}

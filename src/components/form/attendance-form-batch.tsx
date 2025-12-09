@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, X, Plus, Trash } from "lucide-react"
+import { Loader2, X, Plus, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -699,7 +699,7 @@ export function AttendanceFormBatch() {
                                 onClick={() => removeBatchEntry(entry.id)}
                                 disabled={isSubmitting}
                               >
-                                <Trash className="h-4 w-4 text-red-500" />
+                                <Trash2 className="h-4 w-4 text-red-500" />
                               </Button>
                             </div>
 

@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { MembersTable } from "@/components/members-table"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { User, Shield, Mail, Plus, FileDown, FileUp, Loader2, Search, FileSpreadsheet, Minus } from "lucide-react"
+import { User, Shield, Mail, Plus, FileDown, Loader2, Search, FileSpreadsheet, Minus } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -477,22 +477,9 @@ export default function MembersPage() {
                   disabled={isLoadingInviteData}
                   className="whitespace-nowrap"
                 >
-                  <Link href="/members/import">
-                    <FileUp className="mr-2 h-4 w-4" />
-                    Import
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={isLoadingInviteData}
-                  className="whitespace-nowrap"
-                >
                   <Link href="/members/import-simple">
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Simple Import
+                    Import
                   </Link>
                 </Button>
                 <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>

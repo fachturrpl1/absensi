@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { CalendarIcon, ChevronDown, Loader2, Plus, Trash, X } from "lucide-react"
+import { CalendarIcon, ChevronDown, Loader2, Plus, Trash2, X } from "lucide-react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
@@ -347,18 +347,12 @@ function SingleEntryForm({
       <div className="space-y-3">
         <FormLabel>Filter & Search Members</FormLabel>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <Select
-            value={selectedGroup || "__ALL_GROUPS__"}
-            onValueChange={(value) =>
-              setSelectedGroup(value === "__ALL_GROUPS__" ? "" : value)
-            }
-          >
+          <Select value={selectedGroup} onValueChange={setSelectedGroup}>
             <SelectTrigger>
               <SelectValue placeholder="All Groups" />
             </SelectTrigger>
             <SelectContent>
-              {/* value untuk SelectItem tidak boleh string kosong */}
-              <SelectItem value="__ALL_GROUPS__">All Groups</SelectItem>
+              <SelectItem value="">All Groups</SelectItem>
               {groups.map((group) => (
                 <SelectItem key={group} value={group}>
                   {group}
@@ -521,18 +515,12 @@ function BatchEntryForm({
       <div className="space-y-3">
         <FormLabel>Filter Group & Members</FormLabel>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <Select
-            value={selectedGroup || "__ALL_GROUPS__"}
-            onValueChange={(value) =>
-              setSelectedGroup(value === "__ALL_GROUPS__" ? "" : value)
-            }
-          >
+          <Select value={selectedGroup} onValueChange={setSelectedGroup}>
             <SelectTrigger>
               <SelectValue placeholder="All Groups" />
             </SelectTrigger>
             <SelectContent>
-              {/* value untuk SelectItem tidak boleh string kosong */}
-              <SelectItem value="__ALL_GROUPS__">All Groups</SelectItem>
+              <SelectItem value="">All Groups</SelectItem>
               {groups.map((group) => (
                 <SelectItem key={group} value={group}>
                   {group}
@@ -680,7 +668,7 @@ function BatchEntryItem({
             onClick={onRemove}
             disabled={isSubmitting}
           >
-            <Trash className="h-4 w-4 text-red-500" />
+            <Trash2 className="h-4 w-4 text-red-500" />
           </Button>
         </div>
 

@@ -117,15 +117,6 @@ export default function MembersImportSimplePage() {
               Cancel
             </Button>
           </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <Link href="/members" className="hover:text-foreground">
-              Booking List
-            </Link>
-            <span>|</span>
-            <Link href="/members/import" className="hover:text-foreground">
-              Import a File
-            </Link>
-          </div>
         </div>
 
         {/* Main Content - File Import Section */}

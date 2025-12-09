@@ -19,6 +19,7 @@ import {
   Plus,
   ListChecks,
   Cpu,
+  Fingerprint,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -48,6 +49,7 @@ interface NavSubItem {
   icon?: any;
   badge?: string;
   requiresAdmin?: boolean;
+  hideOn?: string[]; // Hide on specific routes
 }
 
 interface NavMainItem {
@@ -56,11 +58,30 @@ interface NavMainItem {
   icon: any;
   subItems?: NavSubItem[];
   badge?: string;
+  hideOn?: string[]; // Hide on specific routes
 }
 
 interface NavGroup {
   label?: string;
   items: NavMainItem[];
+}
+
+// Helper function untuk determine menu visibility berdasarkan pathname
+const shouldShowMenuItem = (pathname: string, itemTitle: string): boolean => {
+  // Di halaman /organization, hanya tampilkan menu khusus organization
+  if (pathname.startsWith('/organization')) {
+    // Hanya tampilkan menu yang relevan dengan organization
+    const organizationMenus = ['All Organizations', 'Settings']
+    return organizationMenus.includes(itemTitle)
+  }
+  
+  // Di halaman lain, sembunyikan menu organization
+  if (itemTitle === 'All Organizations') {
+    return false
+  }
+  
+  // Tampilkan menu lainnya (termasuk Fingerprint Scanner)
+  return true
 }
 
 const getSidebarGroups = (): NavGroup[] => [
@@ -100,10 +121,16 @@ const getSidebarGroups = (): NavGroup[] => [
         ],
       },
       {
+        title: 'All Organizations',
+        url: '/organization',
+        icon: Building2,
+      },
+      {
         title: 'Organization',
         icon: Users,
         subItems: [
           { title: 'Members', url: '/members', icon: Users },
+          { title: 'Fingerprint', url: '/finger', icon: Fingerprint },
           { title: 'Groups', url: '/group', icon: Building2 },
           { title: 'Positions', url: '/position', icon: Briefcase },
         ],
@@ -133,6 +160,11 @@ function NavMain({ items }: { items: NavMainItem[] }) {
   return (
     <SidebarMenu>
       {items.map((item) => {
+        // Check if menu should be shown based on current pathname
+        if (!shouldShowMenuItem(pathname, item.title)) {
+          return null
+        }
+        
         const hasSubItems = item.subItems && item.subItems.length > 0;
         const isActive = item.url === pathname || item.subItems?.some(sub => sub.url === pathname);
 

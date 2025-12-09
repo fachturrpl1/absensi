@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Edit, Trash, Save, X, Loader2 } from "lucide-react";
+import { Edit, Trash2, Save, X, Loader2 } from "lucide-react";
 import { ILeaveType } from "@/lib/leave/types";
 import { createLeaveType, updateLeaveType, deleteLeaveType } from "@/action/admin-leaves";
 import { useOrgStore } from "@/store/org-store";
@@ -679,7 +679,7 @@ export function LeaveTypeManager({ leaveTypes, onUpdate, triggerCreate }: LeaveT
                           onClick={() => handleDeleteClick(type.id)}
                           disabled={loading}
                         >
-                          <Trash className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
                     </div>

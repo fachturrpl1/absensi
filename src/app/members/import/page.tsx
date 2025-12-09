@@ -161,10 +161,11 @@ export default function MembersImportPage() {
       }
 
       const summary = data.summary || { success: 0, failed: 0, errors: [] }
-      setImportSummary(summary)
 
       if (mode === "test") {
         // Hanya validasi, tidak ada perubahan data
+        // Jangan set importSummary untuk test, hanya set testSummary
+        setImportSummary(null) // Reset import summary untuk test
         setTestSummary({
           success: summary.success,
           failed: summary.failed,
@@ -181,6 +182,8 @@ export default function MembersImportPage() {
         }
         // Tetap di step 2 untuk test
       } else {
+        // Mode import: set importSummary dan tidak set testSummary
+        setImportSummary(summary)
         if (summary.success > 0) {
           toast.success(`Import completed! Success: ${summary.success}, Failed: ${summary.failed}`)
         } else {
@@ -536,7 +539,71 @@ export default function MembersImportPage() {
           {/* Step 3: Import */}
           {currentStep === 3 && (
             <div className="space-y-4">
-              {!importSummary && !loading && (
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <p className="text-lg font-medium">Processing import...</p>
+                  <p className="text-sm text-muted-foreground">
+                    Please wait while we import your data
+                  </p>
+                </div>
+              ) : importSummary ? (
+                <div className="space-y-4">
+                  <Alert variant={importSummary.success > 0 ? "default" : "destructive"}>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      {importSummary.success > 0
+                        ? `Import completed! ${importSummary.success} rows imported successfully.`
+                        : "Import failed. No rows were imported."}
+                      {importSummary.failed > 0 && (
+                        <span className="ml-1">
+                          {importSummary.failed} row(s) failed.
+                        </span>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+
+                  {importSummary.errors.length > 0 && (
+                    <div className="border rounded-lg">
+                      <div className="p-3 bg-muted/50 border-b">
+                        <p className="text-sm font-medium">Errors ({importSummary.errors.length})</p>
+                      </div>
+                      <ScrollArea className="h-48">
+                        <div className="p-4 space-y-2">
+                          {importSummary.errors.map((error, idx) => (
+                            <div key={idx} className="text-sm text-destructive">
+                              <strong>Row {error.row}:</strong> {error.message}
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setCurrentStep(1)
+                        setFile(null)
+                        setExcelHeaders([])
+                        setPreview([])
+                        setMapping({})
+                        setImportSummary(null)
+                      }}
+                    >
+                      Start Over
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        window.location.href = "/members"
+                      }}
+                    >
+                      Go to Members
+                    </Button>
+                  </div>
+                </div>
+              ) : (
                 <>
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
@@ -615,98 +682,32 @@ export default function MembersImportPage() {
                       </div>
                     )}
                   </div>
-                </>
-              )}
-
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                  <p className="text-lg font-medium">Processing import...</p>
-                  <p className="text-sm text-muted-foreground">
-                    Please wait while we import your data
-                  </p>
-                </div>
-              ) : importSummary ? (
-                <div className="space-y-4">
-                  <Alert variant={importSummary.success > 0 ? "default" : "destructive"}>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      {importSummary.success > 0
-                        ? `Import completed! ${importSummary.success} rows imported successfully.`
-                        : "Import failed. No rows were imported."}
-                      {importSummary.failed > 0 && (
-                        <span className="ml-1">
-                          {importSummary.failed} row(s) failed.
-                        </span>
-                      )}
-                    </AlertDescription>
-                  </Alert>
-
-                  {importSummary.errors.length > 0 && (
-                    <div className="border rounded-lg">
-                      <div className="p-3 bg-muted/50 border-b">
-                        <p className="text-sm font-medium">Errors ({importSummary.errors.length})</p>
-                      </div>
-                      <ScrollArea className="h-48">
-                        <div className="p-4 space-y-2">
-                          {importSummary.errors.map((error, idx) => (
-                            <div key={idx} className="text-sm text-destructive">
-                              <strong>Row {error.row}:</strong> {error.message}
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  )}
 
                   <div className="flex justify-end gap-2 pt-4 border-t">
                     <Button
                       variant="outline"
-                      onClick={() => {
-                        setCurrentStep(1)
-                        setFile(null)
-                        setExcelHeaders([])
-                        setPreview([])
-                        setMapping({})
-                        setImportSummary(null)
-                      }}
+                      onClick={() => setCurrentStep(2)}
                     >
-                      Start Over
+                      Back
                     </Button>
                     <Button
-                      onClick={() => {
-                        window.location.href = "/members"
-                      }}
+                      onClick={() => runImport("import")}
+                      disabled={loading}
                     >
-                      Go to Members
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="mr-2 h-4 w-4" />
+                          Import
+                        </>
+                      )}
                     </Button>
                   </div>
-                </div>
-              ) : (
-                <div className="flex justify-end gap-2 pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={() => setCurrentStep(2)}
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    onClick={() => runImport("import")}
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Import
-                      </>
-                    )}
-                  </Button>
-                </div>
+                </>
               )}
             </div>
           )}

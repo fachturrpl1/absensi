@@ -27,6 +27,7 @@ import {
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { SearchDialog } from './search-dialog';
+import { OrgBreadcrumb } from './org-breadcrumb';
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown';
 
 export function NavbarNew() {
@@ -72,7 +73,7 @@ export function NavbarNew() {
       <div className="flex items-center gap-2">
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mr-2 h-4" />
-        {/* <DynamicBreadcrumb /> */}
+        <OrgBreadcrumb />
       </div>
 
       {/* Right Side Actions */}

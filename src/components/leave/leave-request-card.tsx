@@ -13,7 +13,7 @@ import {
   MapPin,
   CheckCircle,
   XCircle,
-  Trash,
+  Trash2,
 } from "lucide-react";
 import { ILeaveRequest } from "@/lib/leave/types";
 import { format, differenceInDays } from "date-fns";
@@ -234,7 +234,7 @@ export function LeaveRequestCard({
                 disabled={isLoading}
                 className="flex-1 h-8 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
               >
-                <Trash className="h-3 w-3 mr-1" />
+                <Trash2 className="h-3 w-3 mr-1" />
                 Cancel
               </Button>
             )}

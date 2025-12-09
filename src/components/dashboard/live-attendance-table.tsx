@@ -30,6 +30,7 @@ import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/utils/supabase/client';
 import { useOrgStore } from '@/store/org-store';
 
 interface AttendanceRecord {
@@ -99,8 +100,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [currentPage, setCurrentPage] = useState(1);
-  // Bisa menerima ID organisasi dari store (number) maupun dari cookie (string)
-  const [activeOrgId, setActiveOrgId] = useState<string | number | null>(null);
+  const [activeOrgId, setActiveOrgId] = useState<number | null>(null);
   
   const toggleRow = (id: number) => {
     const newExpanded = new Set(expandedRows);
@@ -112,10 +112,11 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
     setExpandedRows(newExpanded);
   };
 
-  useEffect(() => {
-    const orgId = useOrgStore.getState().organizationId ||
-      document.cookie.split('; ').find(row => row.startsWith('org_id='))?.split('=')[1] || null;
-    setActiveOrgId(orgId);
+   useEffect(() => {
+    const orgId = useOrgStore.getState().organizationId;
+    if (orgId) {
+      setActiveOrgId(orgId);
+    }
   }, []);
 
   const fetchAttendanceRecords = useCallback(async (force = false) => {
@@ -142,23 +143,76 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
     attendanceCache.isLoading = true;
 
     try {
-      const today = new Date().toISOString().split('T')[0] as string;
-      const params = new URLSearchParams();
-      params.set('startDate', today);
-      params.set('endDate', today);
-      params.set('limit', '50');
+      const supabase = createClient();
+      const today = new Date().toISOString().split('T')[0];
 
-      const response = await fetch(`/api/attendance-records?${params.toString()}`, {
-        cache: 'no-store',
-      });
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to fetch attendance records');
+      // Get current user's organization
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
       }
 
-      const transformedData = result.data || [];
+      const { data: orgMember } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .eq('organization_id', activeOrgId)
+        .maybeSingle();
+
+      if (!orgMember?.organization_id) {
+        throw new Error('Organization not found');
+      }
+
+      const { data } = await supabase
+        .from('attendance_records')
+        .select(`
+          id,
+          status,
+          actual_check_in,
+          actual_check_out,
+          work_duration_minutes,
+          late_minutes,
+          notes,
+          organization_member_id,
+          organization_members!inner (
+            id,
+            organization_id,
+            user_profiles!inner (
+              first_name,
+              last_name,
+              profile_photo_url
+            ),
+            departments!organization_members_department_id_fkey (
+              name
+            )
+          )
+        `)
+        .eq('organization_members.organization_id', orgMember.organization_id)
+        .eq('attendance_date', today)
+        .order('actual_check_in', { ascending: false })
+        .limit(50);
+
+      const transformedData = data?.map((record: any) => {
+        const member = record.organization_members;
+        const profile = member?.user_profiles;
+        const department = member?.departments;
+
+        return {
+          id: record.id,
+          member_id: member?.id,
+          member_name: profile?.first_name || profile?.last_name || 'Unknown',
+          department_name: department?.name || 'N/A',
+          status: record.status,
+          actual_check_in: record.actual_check_in,
+          actual_check_out: record.actual_check_out,
+          work_duration_minutes: record.work_duration_minutes,
+          scheduled_duration_minutes: 480,
+          late_minutes: record.late_minutes,
+          notes: record.notes,
+          location: null,
+          profile_photo_url: profile?.profile_photo_url,
+        };
+      }) || [];
 
       attendanceCache.data = transformedData;
       attendanceCache.timestamp = Date.now();
@@ -171,22 +225,22 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
     }
   }, [activeOrgId]);
 
-  useEffect(() => {
-    const unsubscribe = useOrgStore.subscribe((state) => {
-      setActiveOrgId(state.organizationId);
-    });
-    return unsubscribe;
-  }, []);
+  // Organization change handler - removed as it's not used
+  // const handleOrgChange = useCallback((orgId: string | null) => {
+  //   setActiveOrgId(orgId);
+  //   if (orgId) fetchAttendanceRecords(true);
+  // }, [fetchAttendanceRecords]);
 
-// useEffect untuk initialize dari store saat mount
-useEffect(() => {
-  const orgId = useOrgStore.getState().organizationId ||
-    document.cookie.split('; ').find(row => row.startsWith('org_id='))?.split('=')[1] || null;
-  console.log('[LiveAttendance] Initial orgId:', orgId);
-  if (orgId && orgId !== activeOrgId) {
-    setActiveOrgId(orgId);
-  }
-}, []);
+  useEffect(() => {
+      const unsubscribe = useOrgStore.subscribe(
+        (state) => state.organizationId,
+        (newOrgId) => {
+          setActiveOrgId(newOrgId);
+        }
+      );
+      return unsubscribe;
+    }, []);
+
 
 // useEffect untuk auto refresh
 useEffect(() => {
