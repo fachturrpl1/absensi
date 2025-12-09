@@ -7,6 +7,7 @@ import { BreadcrumbItem } from '@/components/ui/breadcrumb';
 // Combined paths - paths yang tidak perlu dipisah
 const combinedPaths: Record<string, string> = {
   '/organization/settings': 'Settings',
+  '/settings': 'Settings',
   '/settings/invitations': 'Invitations',
 };
 
@@ -25,6 +26,7 @@ const parentMapping: Record<string, string> = {
 
 // Path mapping untuk breadcrumb labels
 const pathMapping: Record<string, string> = {
+  'settings': 'Settings',
   'members': 'Members',
   'attendance': 'Attendance',
   'schedule': 'Schedules',
@@ -36,8 +38,8 @@ const pathMapping: Record<string, string> = {
   'role': 'Roles',
   'permission': 'Permissions',
   'analytics': 'Analytics',
-  'organization': 'Organization',
-  'settings': 'Settings',
+  '/organization': 'Organization',
+  '/settings': 'Settings',
   'account': 'Account',
   'users': 'Users',
   'locations': 'Locations',

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -54,7 +54,8 @@ export default function FingerPage() {
         .from('organization_members')
         .select(`
           id,
-          user_profiles (
+          user_id,
+          user_profiles!user_id (
             id,
             first_name,
             last_name,
@@ -65,22 +66,44 @@ export default function FingerPage() {
         `)
         .eq('organization_id', orgStore.organizationId)
         .eq('is_active', true)
-        .order('user_profiles(first_name)')
+        .order('id', { ascending: true })
 
       if (error) {
         toast.error('Failed to load members')
         console.error('Error fetching members:', error)
+      } else if (data && data.length > 0) {
+        // Fetch user_profiles terpisah jika FK gagal
+        const userIds = (data || []).map((item: any) => item.user_id).filter(Boolean);
+        let userProfilesMap: any = {};
+        
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('user_profiles')
+            .select('id, first_name, last_name, email')
+            .in('id', userIds);
+          
+          if (profiles) {
+            profiles.forEach((p: any) => {
+              userProfilesMap[p.id] = p;
+            });
+          }
+        }
+        
+        const formattedData = (data || []).map((item: any) => {
+          const userProfile = item.user_profiles || userProfilesMap[item.user_id];
+          return {
+            id: userProfile?.id || item.user_id || '',
+            organization_member_id: item.id,
+            first_name: userProfile?.first_name || '',
+            last_name: userProfile?.last_name || '',
+            email: userProfile?.email || '',
+            finger1_registered: item.finger1_registered || false,
+            finger2_registered: item.finger2_registered || false,
+          };
+        });
+        setMembers(formattedData);
       } else {
-        const formattedData = (data || []).map((item: any) => ({
-          id: item.user_profiles?.id || '',
-          organization_member_id: item.id,
-          first_name: item.user_profiles?.first_name || '',
-          last_name: item.user_profiles?.last_name || '',
-          email: item.user_profiles?.email || '',
-          finger1_registered: item.finger1_registered || false,
-          finger2_registered: item.finger2_registered || false,
-        }))
-        setMembers(formattedData)
+        setMembers([]);
       }
     } finally {
       setIsLoading(false)
@@ -88,7 +111,9 @@ export default function FingerPage() {
   }
 
   useEffect(() => {
-    fetchMembers()
+    if (orgStore.organizationId) {
+      fetchMembers();
+    }
   }, [orgStore.organizationId])
 
   const getFingerStatus = (member: Member): FilterStatus => {
@@ -335,7 +360,6 @@ export default function FingerPage() {
                           isRegistered={member.finger1_registered}
                           isLoading={loadingMemberId === `${member.id}-1`}
                           onRegister={() => handleRegister(member.id, 1)}
-                          memberName={member.first_name}
                         />
                       </TableCell>
                       <TableCell className="text-center">
@@ -344,7 +368,6 @@ export default function FingerPage() {
                           isRegistered={member.finger2_registered}
                           isLoading={loadingMemberId === `${member.id}-2`}
                           onRegister={() => handleRegister(member.id, 2)}
-                          memberName={member.first_name}
                         />
                       </TableCell>
                     </TableRow>
@@ -365,7 +388,6 @@ interface FingerButtonComponentProps {
   isRegistered: boolean
   isLoading: boolean
   onRegister: () => Promise<boolean>
-  memberName: string
 }
 
 function FingerButtonComponent({
@@ -373,7 +395,6 @@ function FingerButtonComponent({
   isRegistered,
   isLoading,
   onRegister,
-  memberName,
 }: FingerButtonComponentProps) {
   const handleClick = async () => {
     if (isRegistered) return

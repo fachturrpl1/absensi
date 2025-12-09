@@ -18,7 +18,7 @@ export const createOrganizationMember = async (Organization_member: Partial<IOrg
   }
   return { success: true, message: "Members added successfully", data: data as IOrganization_member };
 };
-export const getAllOrganization_member = async () => {
+export const getAllOrganization_member = async (organizationId?: number) => {
   const supabase = await getSupabase();
 
   // 1. Retrieve user from cookies
@@ -28,16 +28,24 @@ export const getAllOrganization_member = async () => {
     return { success: false, message: "User not logged in", data: [] };
   }
 
-  // 2. Find the user's organization_id
-  const { data: member } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  // 2. Determine which organization to fetch
+  let targetOrgId = organizationId;
+  
+  if (!targetOrgId) {
+    // If no organizationId provided, get user's first organization
+    const { data: member } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-  if (!member) {
-    return { success: true, message: "User not registered in any organization", data: [] };
+    if (!member) {
+      return { success: true, message: "User not registered in any organization", data: [] };
+    }
+    targetOrgId = member.organization_id;
   }
+
+  memberLogger.debug(`📍 Fetching members for organization: ${targetOrgId}`);
 
   // 3. Fetch all members belonging to the organization
   const { data, error } = await supabase
@@ -65,16 +73,16 @@ export const getAllOrganization_member = async () => {
         description
       )
     `)
-    .eq("organization_id", member.organization_id)
+    .eq("organization_id", targetOrgId)
+    .eq("is_active", true)
     .order("created_at", { ascending: true });
 
   if (error) {
-     
-    memberLogger.error('getAllOrganization_member - error fetching organization_members for org', error)
+    memberLogger.error('❌ getAllOrganization_member - error fetching organization_members for org', error);
     return { success: false, message: error.message, data: [] };
   }
 
-  
+  memberLogger.info(`✅ Fetched ${data?.length || 0} members for organization ${targetOrgId}`);
   return { success: true, data: data as IOrganization_member[] };
 };
 

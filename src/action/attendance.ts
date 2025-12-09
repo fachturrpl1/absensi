@@ -94,12 +94,14 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
       created_at,
       work_duration_minutes,
       remarks,
+      check_in_device_id,
+      check_out_device_id,
       organization_members (
         id,
         user_id,
         organization_id,
         department_id,
-        user_profiles (
+        user_profiles!user_id (
           first_name,
           last_name,
           profile_photo_url
@@ -109,15 +111,11 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
           name,
           timezone,
           time_format
+        ),
+        departments!department_id (
+          id,
+          name
         )
-      ),
-      check_in_device:attendance_devices (
-        device_name,
-        location
-      ),
-      check_out_device:attendance_devices (
-        device_name,
-        location
       )
     `, { count: 'exact' })
     .eq("organization_members.organization_id", userMember.organization_id);
@@ -161,35 +159,66 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     attendanceLogger.error("Error code:", error.code);
     attendanceLogger.error("Error message:", error.message);
     attendanceLogger.error("Error details:", JSON.stringify(error));
+    attendanceLogger.error("Query parameters:", { dateFrom, dateTo, status, organizationId });
+    attendanceLogger.error("🔍 Debug: Trying to fetch departments relationship");
     return { success: false, data: [], message: `Query error: ${error.message}` };
   }
 
   attendanceLogger.info("✅ Attendance records fetched:", data?.length || 0);
 
   // Transform format
-  const mapped = (data || []).map((item: any) => ({
-    id: item.id,
-    member: {
-      name: `${item.organization_members?.user_profiles?.first_name || ''} ${item.organization_members?.user_profiles?.last_name || ''}`,
-      avatar: item.organization_members?.user_profiles?.profile_photo_url,
-      position: '', // Position not fetched in query above, add if needed
-      department: item.organization_members?.departments?.name || 'No Department',
-    },
-    date: item.attendance_date,
-    checkIn: item.actual_check_in,
-    checkOut: item.actual_check_out,
-    workHours: item.work_duration_minutes 
-      ? `${Math.floor(item.work_duration_minutes / 60)}h ${item.work_duration_minutes % 60}m` 
-      : (item.actual_check_in ? '-' : '-'),
-    status: item.status,
-    checkInLocationName: item.check_in_device?.location || item.check_in_device?.device_name || null,
-    checkOutLocationName: item.check_out_device?.location || item.check_out_device?.device_name || null,
-    notes: item.remarks || '',
-    timezone: item.organization_members?.organizations?.timezone || "Asia/Jakarta",
-    time_format: item.organization_members?.organizations?.time_format || "24h",
-  }));
+  const mapped = (data || []).map((item: any) => {
+    const firstName = item.organization_members?.user_profiles?.first_name || '';
+    const lastName = item.organization_members?.user_profiles?.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    const departmentName = item.organization_members?.departments?.name;
+    
+    // Debug: Log items dengan nama kosong atau user_profiles null
+    if (!fullName || !item.organization_members?.user_profiles) {
+      attendanceLogger.warn("⚠️ Member dengan nama kosong atau user_profiles null:", {
+        id: item.id,
+        organization_member_id: item.organization_member_id,
+        user_id: item.organization_members?.user_id,
+        user_profiles: item.organization_members?.user_profiles,
+        department: departmentName,
+        rawData: item.organization_members
+      });
+    }
+    
+    return {
+      id: item.id,
+      member: {
+        name: fullName || `Member #${item.organization_member_id}`, // Fallback jika nama kosong
+        avatar: item.organization_members?.user_profiles?.profile_photo_url,
+        position: '', // Position not fetched in query above, add if needed
+        department: departmentName || '', // Empty string jika tidak ada department
+      },
+      date: item.attendance_date,
+      checkIn: item.actual_check_in,
+      checkOut: item.actual_check_out,
+      workHours: item.work_duration_minutes 
+        ? `${Math.floor(item.work_duration_minutes / 60)}h ${item.work_duration_minutes % 60}m` 
+        : (item.actual_check_in ? '-' : '-'),
+      status: item.status,
+      checkInDeviceId: item.check_in_device_id || null,
+      checkOutDeviceId: item.check_out_device_id || null,
+      checkInLocationName: null, // Will be fetched separately if needed
+      checkOutLocationName: null, // Will be fetched separately if needed
+      notes: item.remarks || '',
+      timezone: item.organization_members?.organizations?.timezone || "Asia/Jakarta",
+      time_format: item.organization_members?.organizations?.time_format || "24h",
+    };
+  });
 
   attendanceLogger.info("✅ Attendance data transformed:", mapped.length);
+  attendanceLogger.debug("📊 Sample mapped data:", mapped[0]);
+  attendanceLogger.info("ℹ️ Department names are now fetched from departments table");
+  
+  // Debug: Log members dengan nama kosong
+  const emptyNameCount = mapped.filter(m => !m.member.name || m.member.name.startsWith('Member #')).length;
+  if (emptyNameCount > 0) {
+    attendanceLogger.warn(`⚠️ ${emptyNameCount} member(s) dengan nama kosong atau tidak ter-fetch`);
+  }
 
   return { 
     success: true, 

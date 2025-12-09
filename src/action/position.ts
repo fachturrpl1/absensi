@@ -1,10 +1,8 @@
-
 "use server";
-import {supabase} from "@/config/supabase-config";
 import { IPositions } from "@/interface";
 import { createClient } from "@/utils/supabase/server";
 
-export const getAllPositions = async () => {
+export const getAllPositions = async (organizationId?: number) => {
   const supabase = await createClient();
 
   // 1. Retrieve user from cookies
@@ -14,22 +12,29 @@ export const getAllPositions = async () => {
     return { success: false, message: "User not logged in", data: [] };
   }
 
-  // 2. Find user's organization_id
-  const { data: member } = await supabase
-   .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  // 2. Determine which organization to fetch
+  let targetOrgId = organizationId;
+  
+  if (!targetOrgId) {
+    // If no organizationId provided, get user's first organization
+    const { data: member } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-  if (!member) {
-    return { success: true, message: "User not registered in any organization", data: [] };
+    if (!member) {
+      return { success: true, message: "User not registered in any organization", data: [] };
+    }
+    targetOrgId = member.organization_id;
   }
 
-  // 3. Fetch all members for the organization
+  // 3. Fetch all positions for the organization
   const { data, error } = await supabase
     .from("positions")
     .select("*")
-    .eq("organization_id", member.organization_id)
+    .eq("organization_id", targetOrgId)
+    .eq("is_active", true)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -40,6 +45,7 @@ export const getAllPositions = async () => {
 };
 
 export async function createPositions(payload: Partial<IPositions>) {
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from("positions")
         .insert(payload)
@@ -54,6 +60,7 @@ export async function createPositions(payload: Partial<IPositions>) {
 }
 
 export async function updatePositions(id: string, payload: Partial<IPositions>) {
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from("positions")
         .update({ ...payload, updated_at: new Date().toISOString() })
@@ -68,9 +75,9 @@ export async function updatePositions(id: string, payload: Partial<IPositions>) 
     return { success: true, data: data as IPositions[] };
 }
 
-
 export const deletePositions = async ( PositionsId: string | number) => {
-     const id = String(PositionsId) // convert to string
+    const supabase = await createClient();
+    const id = String(PositionsId)
     const { data, error } = await supabase
         .from("positions").delete().eq("id", id)
         .select()

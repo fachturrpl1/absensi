@@ -55,7 +55,8 @@ import { getOrgRoles } from "@/lib/rbac"
 import { useGroups } from "@/hooks/use-groups"
 import { usePositions } from "@/hooks/use-positions"
 import { FlexibleImportDialog } from "@/components/members/flexible-import-dialog"
-//tes
+import { useOrgStore } from "@/store/org-store"
+import { useOrgGuard } from "@/hooks/use-org-guard"
 const inviteSchema = z.object({
   email: z.string().email("Invalid email address"),
   role_id: z.string().optional(),
@@ -70,6 +71,8 @@ type ImportSummary = { success: number; failed: number; errors: string[] }
 export default function MembersPage() {
   const searchParams = useSearchParams()
   const supabase = createClient()
+  const orgStore = useOrgStore()
+  useOrgGuard()
 
   const [members, setMembers] = React.useState<IOrganization_member[]>([])
   const [loading, setLoading] = React.useState<boolean>(true)
@@ -113,25 +116,15 @@ export default function MembersPage() {
     try {
       setLoading(true)
       
-      // Get organization ID
-      const { data: { user } } = await supabase.auth.getUser()
-      let orgId = ""
-
-      if (user) {
-        const { data } = await supabase
-          .from("organization_members")
-          .select("organization_id")
-          .eq("user_id", user.id)
-          .maybeSingle()
-
-        if (data) {
-          orgId = String(data.organization_id)
-        }
+      if (!orgStore.organizationId) {
+        toast.error('Please select an organization')
+        setLoading(false)
+        return
       }
 
-      // Fetch all data
+      // Fetch all data with organizationId
       const [memberRes, userRes, groupsRes] = await Promise.all([
-        getAllOrganization_member(),
+        getAllOrganization_member(orgStore.organizationId),
         getAllUsers(),
         getAllGroups(),
       ])
@@ -159,12 +152,8 @@ export default function MembersPage() {
         return { ...m, user: u, groupName }
       })
 
-      // Filter by organization
-      const filteredMembers = orgId
-        ? mergedMembers.filter((m: any) => String(m.organization_id) === orgId)
-        : mergedMembers
-      
-      setMembers(filteredMembers)
+      // Members sudah di-filter di server, tidak perlu filter lagi
+      setMembers(mergedMembers)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
@@ -174,7 +163,7 @@ export default function MembersPage() {
 
   React.useEffect(() => {
     fetchMembers()
-  }, [])
+  }, [orgStore.organizationId])
   async function onSubmitInvite(values: InviteFormValues) {
     try {
       setSubmittingInvite(true)

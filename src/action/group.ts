@@ -1,10 +1,8 @@
 "use server";
-import {supabase} from "@/config/supabase-config";
 import { IGroup } from "@/interface";
 import { createClient } from "@/utils/supabase/server";
 
-
-export const getAllGroups = async () => {
+export const getAllGroups = async (organizationId?: number) => {
   const supabase = await createClient();
 
   // 1. Retrieve user from cookies
@@ -14,22 +12,29 @@ export const getAllGroups = async () => {
     return { success: false, message: "User not logged in", data: [] };
   }
 
-  // 2. Find user's organization_id
-  const { data: member } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  // 2. Determine which organization to fetch
+  let targetOrgId = organizationId;
+  
+  if (!targetOrgId) {
+    // If no organizationId provided, get user's first organization
+    const { data: member } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-  if (!member) {
-    return { success: true, message: "User not registered in any organization", data: [] };
+    if (!member) {
+      return { success: true, message: "User not registered in any organization", data: [] };
+    }
+    targetOrgId = member.organization_id;
   }
 
   // 3. Fetch all groups for the organization
   const { data, error } = await supabase
     .from("departments")
     .select("*")
-    .eq("organization_id", member.organization_id)
+    .eq("organization_id", targetOrgId)
+    .eq("is_active", true)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -40,16 +45,16 @@ export const getAllGroups = async () => {
 };
 
 export async function createGroup(payload: Partial<IGroup>) {
-  const supabaseServer = await createClient();
+  const supabase = await createClient();
 
   // 1. Retrieve logged-in user
-  const { data: { user }, error: userError } = await supabaseServer.auth.getUser();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
     return { success: false, message: "User not logged in", data: [] };
   }
 
   // 2. Find organization_id from organization_members
-  const { data: member, error: memberError } = await supabaseServer
+  const { data: member, error: memberError } = await supabase
     .from("organization_members")
     .select("organization_id")
     .eq("user_id", user.id)
@@ -82,6 +87,7 @@ export async function createGroup(payload: Partial<IGroup>) {
 
 
 export async function updateGroup(id: string, payload: Partial<IGroup>) {
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from("departments")
         .update({ ...payload, updated_at: new Date().toISOString() })
@@ -96,9 +102,9 @@ export async function updateGroup(id: string, payload: Partial<IGroup>) {
     return { success: true, data: data as IGroup[] };
 }
 
-
 export const deleteGroup = async ( groupId: string | number) => {
-     const id = String(groupId)
+    const supabase = await createClient();
+    const id = String(groupId)
     const { data, error } = await supabase
         .from("departments").delete().eq("id", id)
         .select()

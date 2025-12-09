@@ -95,8 +95,6 @@ import { organizationLogger } from '@/lib/logger';
 
 import { cn } from "@/lib/utils";
 import type { GeoCountry, GeoCity } from "@/types/geo";
-import OrganizationSettingsLoading from "./loading";
-// Removed debug imports - functions moved inline
 
 
 // Helper functions for geo data
@@ -186,7 +184,7 @@ interface OrganizationData {
 
 
 
-export default function OrganizationSettingsPage() {
+export default function SettingsPage() {
   const queryClient = useQueryClient();
 
   const orgStore = useOrgStore();
@@ -386,7 +384,7 @@ export default function OrganizationSettingsPage() {
             currency_code: data.currency_code || "USD",
 
             country_code: countryCode,
-            industry: findIndustryValue(data.industry), // Normalize industry value
+            industry: findIndustryValue(data.industry),
 
             time_format: data.time_format || '24h'
 
@@ -776,15 +774,15 @@ export default function OrganizationSettingsPage() {
 
         name: formData.name,
 
-        legal_name: formData.name, // Sync legal_name with name
+        legal_name: formData.name,
 
         description: formData.description,
 
         address: formData.address,
 
-        city: cityLabel, // Save label (e.g., "Malang") instead of value (e.g., "id-ji-malang")
+        city: cityLabel,
 
-        state_province: stateLabel, // Save label (e.g., "Jawa Timur") instead of value (e.g., "id-ji")
+        state_province: stateLabel,
 
         postal_code: formData.postal_code,
 
@@ -810,7 +808,7 @@ export default function OrganizationSettingsPage() {
 
       
       
-      const result = await updateOrganization(updateData);
+      const result = await updateOrganization(updateData, orgStore.organizationId);
 
       
       
@@ -879,7 +877,7 @@ export default function OrganizationSettingsPage() {
 
     try {
 
-      const result = await regenerateInviteCode();
+      const result = await regenerateInviteCode(orgStore.organizationId);
 
       
       
@@ -927,7 +925,11 @@ export default function OrganizationSettingsPage() {
 
   if (loading) {
 
-    return <OrganizationSettingsLoading />;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
 
@@ -1161,8 +1163,7 @@ export default function OrganizationSettingsPage() {
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
                   placeholder="Brief description of your organization"
-                  rows={3}
-                  className="resize-none"
+                  className="min-h-20 resize-none"
                 />
               </div>
 
@@ -1171,21 +1172,32 @@ export default function OrganizationSettingsPage() {
                 <Label htmlFor="industry" className="text-sm font-medium">
                   Industry
                 </Label>
-                <Select 
-                  value={formData.industry || ""} 
-                  onValueChange={(value) => setFormData({...formData, industry: value})}
-                >
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Select industry type">
-                      {formData.industry ? getIndustryLabel(formData.industry) : "Select industry type"}
-                    </SelectValue>
+                <Select value={formData.industry} onValueChange={(value) => setFormData({...formData, industry: value})}>
+                  <SelectTrigger id="industry" className="h-10">
+                    <SelectValue placeholder="Select industry" />
                   </SelectTrigger>
-                  <SelectContent className="max-h-64 overflow-y-auto">
+                  <SelectContent>
                     {INDUSTRY_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Time Format */}
+              <div className="space-y-2">
+                <Label htmlFor="time_format" className="text-sm font-medium">
+                  Time Format
+                </Label>
+                <Select value={formData.time_format} onValueChange={(value: '12h' | '24h') => setFormData({...formData, time_format: value})}>
+                  <SelectTrigger id="time_format" className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="24h">24-Hour (HH:MM)</SelectItem>
+                    <SelectItem value="12h">12-Hour (HH:MM AM/PM)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1196,325 +1208,264 @@ export default function OrganizationSettingsPage() {
           <Card className="border shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Phone className="h-5 w-5 text-primary" />
+                <MapPin className="h-5 w-5 text-primary" />
                 Contact & Location
               </CardTitle>
               <CardDescription>
                 Contact details and address information
               </CardDescription>
             </CardHeader>
+
             <CardContent className="space-y-6">
-              {/* Contact Information */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
-                    <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                    Email Address
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    placeholder="info@company.com"
-                    className="h-10"
-                  />
-                </div>
-
-
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-sm font-medium flex items-center gap-2">
-                    <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                    Phone Number
-                  </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    placeholder="+62 21 1234 5678"
-                    className="h-10"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="website" className="text-sm font-medium flex items-center gap-2">
-                    <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-                    Website
-                  </Label>
-                  <Input
-                    id="website"
-                    type="url"
-                    value={formData.website}
-                    onChange={(e) => setFormData({...formData, website: e.target.value})}
-                    placeholder="https://company.com"
-                    className="h-10"
-                  />
-                </div>
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium">
+                  <Mail className="inline h-4 w-4 mr-1" />
+                  Email Address
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  placeholder="info@example.com"
+                  className="h-10"
+                />
               </div>
 
-              {/* Location Information */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="address" className="text-sm font-medium flex items-center gap-2">
-                    <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                    Address
-                  </Label>
-                  <Textarea
-                    id="address"
-                    value={formData.address}
+              {/* Phone */}
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-sm font-medium">
+                  <Phone className="inline h-4 w-4 mr-1" />
+                  Phone Number
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  placeholder="+62 xxx xxxx xxxx"
+                  className="h-10"
+                />
+              </div>
 
-                    onChange={(e) => setFormData({...formData, address: e.target.value})}
-                    placeholder="Full organization address"
-                    rows={2}
-                    className="resize-none"
-                  />
-                </div>
+              {/* Website */}
+              <div className="space-y-2">
+                <Label htmlFor="website" className="text-sm font-medium">
+                  <Globe className="inline h-4 w-4 mr-1" />
+                  Website
+                </Label>
+                <Input
+                  id="website"
+                  type="url"
+                  value={formData.website}
+                  onChange={(e) => setFormData({...formData, website: e.target.value})}
+                  placeholder="https://example.com"
+                  className="h-10"
+                />
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="country_code" className="text-sm font-medium">
-                      Country
-                    </Label>
-                    <Select
-                      value={formData.country_code}
-                      onValueChange={(value) =>
-                        setFormData({
-                          ...formData,
-                          country_code: value,
-                          city: "",
-                          state_province: "",
-                        })
-                      }
+              <Separator />
+
+              {/* Address */}
+              <div className="space-y-2">
+                <Label htmlFor="address" className="text-sm font-medium">
+                  Street Address
+                </Label>
+                <Input
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => setFormData({...formData, address: e.target.value})}
+                  placeholder="123 Main Street"
+                  className="h-10"
+                />
+              </div>
+
+              {/* Country */}
+              <div className="space-y-2">
+                <Label htmlFor="country" className="text-sm font-medium">
+                  Country
+                </Label>
+                <Select value={formData.country_code} onValueChange={(value) => setFormData({...formData, country_code: value})}>
+                  <SelectTrigger id="country" className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ID">Indonesia</SelectItem>
+                    <SelectItem value="MY">Malaysia</SelectItem>
+                    <SelectItem value="SG">Singapore</SelectItem>
+                    <SelectItem value="TH">Thailand</SelectItem>
+                    <SelectItem value="PH">Philippines</SelectItem>
+                    <SelectItem value="VN">Vietnam</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* State/Province */}
+              <div className="space-y-2">
+                <Label htmlFor="state" className="text-sm font-medium">
+                  State / Province
+                </Label>
+                <Popover open={statePopoverOpen} onOpenChange={setStatePopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={statePopoverOpen}
+                      className="w-full justify-between h-10"
                     >
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Select country" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ID">Indonesia</SelectItem>
-                        <SelectItem value="MY">Malaysia</SelectItem>
-                        <SelectItem value="SG">Singapore</SelectItem>
-                        <SelectItem value="TH">Thailand</SelectItem>
-                        <SelectItem value="PH">Philippines</SelectItem>
-                        <SelectItem value="VN">Vietnam</SelectItem>
-                        <SelectItem value="US">United States</SelectItem>
-                        <SelectItem value="GB">United Kingdom</SelectItem>
-                        <SelectItem value="AU">Australia</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="state_province" className="text-sm font-medium">
-                      State/Province
-                    </Label>
-                    <Popover open={statePopoverOpen} onOpenChange={setStatePopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={statePopoverOpen}
-                          className="h-10 w-full justify-between"
-                          disabled={stateOptions.length === 0 || geoLoading}
-                        >
-                          {stateLabel || "Select province..."}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Search province..." />
-                          <CommandList>
-                            <CommandEmpty>
-                              {geoLoading ? "Loading..." : "No province found."}
-                            </CommandEmpty>
-                            <CommandGroup>
-                              {stateOptions.map((state) => (
-                                <CommandItem
-                                  key={state.value}
-                                  value={state.value}
-                                  onSelect={() => {
-                                    setFormData({
-                                      ...formData,
-                                      state_province: state.value,
-                                      city: "",
-                                    });
-                                    setStatePopoverOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      formData.state_province === state.value
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                  {state.label}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="city" className="text-sm font-medium">
-                      City
-                    </Label>
-                    <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={cityPopoverOpen}
-                          className="h-10 w-full justify-between"
-                          disabled={cityOptions.length === 0 || !formData.state_province || geoLoading}
-                        >
-                          {cityLabel || "Select city..."}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Search city..." />
-                          <CommandList>
-                            <CommandEmpty>
-                              {geoLoading ? "Loading..." : cityOptions.length === 0 ? "Select a province first" : "No city found."}
-                            </CommandEmpty>
-                            <CommandGroup>
-                              {cityOptions.map((city) => (
-                                <CommandItem
-                                  key={city.value}
-                                  value={city.value}
-                                  onSelect={() => {
-                                    setFormData({
-                                      ...formData,
-                                      city: city.value,
-                                    });
-                                    setCityPopoverOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      formData.city === city.value
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                  {city.label}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="postal_code" className="text-sm font-medium">
-                      Postal Code
-                    </Label>
-                    <Input
-                      id="postal_code"
-                      value={formData.postal_code}
-                      onChange={(e) => setFormData({...formData, postal_code: e.target.value})}
-                      placeholder="Enter postal code"
-                      className="h-10"
-                    />
-                  </div>
-                </div>
+                      {stateLabel || "Select state..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search state..." />
+                      <CommandEmpty>No state found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandList>
+                          {stateOptions.map((state) => (
+                            <CommandItem
+                              key={state.value}
+                              value={state.value}
+                              onSelect={(currentValue) => {
+                                setFormData({...formData, state_province: currentValue === formData.state_province ? "" : currentValue});
+                                setStatePopoverOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.state_province === state.value ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {state.label}
+                            </CommandItem>
+                          ))}
+                        </CommandList>
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Regional Settings - Full Width Card */}
-        <Card className="border shadow-sm mt-6">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Clock className="h-5 w-5 text-primary" />
-              Regional Settings
-            </CardTitle>
-            <CardDescription>
-              Timezone, and currency
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {/* City */}
+              <div className="space-y-2">
+                <Label htmlFor="city" className="text-sm font-medium">
+                  City
+                </Label>
+                <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={cityPopoverOpen}
+                      className="w-full justify-between h-10"
+                      disabled={!formData.state_province}
+                    >
+                      {cityLabel || "Select city..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search city..." />
+                      <CommandEmpty>No city found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandList>
+                          {cityOptions.map((city) => (
+                            <CommandItem
+                              key={city.value}
+                              value={city.value}
+                              onSelect={(currentValue) => {
+                                setFormData({...formData, city: currentValue === formData.city ? "" : currentValue});
+                                setCityPopoverOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.city === city.value ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {city.label}
+                            </CommandItem>
+                          ))}
+                        </CommandList>
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Postal Code */}
+              <div className="space-y-2">
+                <Label htmlFor="postal_code" className="text-sm font-medium">
+                  Postal Code
+                </Label>
+                <Input
+                  id="postal_code"
+                  value={formData.postal_code}
+                  onChange={(e) => setFormData({...formData, postal_code: e.target.value})}
+                  placeholder="12345"
+                  className="h-10"
+                />
+              </div>
+
+              <Separator />
+
+              {/* Timezone */}
               <div className="space-y-2">
                 <Label htmlFor="timezone" className="text-sm font-medium">
+                  <Clock className="inline h-4 w-4 mr-1" />
                   Timezone
                 </Label>
                 <Select value={formData.timezone} onValueChange={(value) => setFormData({...formData, timezone: value})}>
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Select timezone" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-64 overflow-y-auto">
-                    <SelectItem value="Asia/Jakarta">Asia/Jakarta (WIB, UTC+7)</SelectItem>
-                    <SelectItem value="Asia/Makassar">Asia/Makassar (WITA, UTC+8)</SelectItem>
-                    <SelectItem value="Asia/Jayapura">Asia/Jayapura (WIT, UTC+9)</SelectItem>
-                    <SelectItem value="Asia/Singapore">Asia/Singapore (UTC+8)</SelectItem>
-                    <SelectItem value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur (UTC+8)</SelectItem>
-                    <SelectItem value="Asia/Bangkok">Asia/Bangkok (UTC+7)</SelectItem>
-                    <SelectItem value="America/New_York">America/New_York (UTC-5/-4)</SelectItem>
-                    <SelectItem value="Europe/London">Europe/London (UTC+0/+1)</SelectItem>
-                    <SelectItem value="UTC">UTC (Coordinated Universal Time)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="time_format" className="text-sm font-medium">
-                  Time Format
-                </Label>
-                <Select value={formData.time_format} onValueChange={(value: '12h' | '24h') => setFormData({...formData, time_format: value})}>
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Select time format" />
+                  <SelectTrigger id="timezone" className="h-10">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="12h">12-Hour Format (AM/PM)</SelectItem>
-                    <SelectItem value="24h">24-Hour Format</SelectItem>
+                    <SelectItem value="UTC">UTC</SelectItem>
+                    <SelectItem value="Asia/Jakarta">Asia/Jakarta (UTC+7)</SelectItem>
+                    <SelectItem value="Asia/Bangkok">Asia/Bangkok (UTC+7)</SelectItem>
+                    <SelectItem value="Asia/Singapore">Asia/Singapore (UTC+8)</SelectItem>
+                    <SelectItem value="Asia/Manila">Asia/Manila (UTC+8)</SelectItem>
+                    <SelectItem value="Asia/Hong_Kong">Asia/Hong_Kong (UTC+8)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
+              {/* Currency */}
               <div className="space-y-2">
                 <Label htmlFor="currency" className="text-sm font-medium">
                   Currency
                 </Label>
                 <Select value={formData.currency_code} onValueChange={(value) => setFormData({...formData, currency_code: value})}>
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Select currency" />
+                  <SelectTrigger id="currency" className="h-10">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="IDR">IDR - Indonesian Rupiah</SelectItem>
                     <SelectItem value="USD">USD - US Dollar</SelectItem>
-                    <SelectItem value="EUR">EUR - Euro</SelectItem>
-                    <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                    <SelectItem value="SGD">SGD - Singapore Dollar</SelectItem>
+                    <SelectItem value="IDR">IDR - Indonesian Rupiah</SelectItem>
                     <SelectItem value="MYR">MYR - Malaysian Ringgit</SelectItem>
+                    <SelectItem value="SGD">SGD - Singapore Dollar</SelectItem>
+                    <SelectItem value="THB">THB - Thai Baht</SelectItem>
+                    <SelectItem value="PHP">PHP - Philippine Peso</SelectItem>
+                    <SelectItem value="VND">VND - Vietnamese Dong</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Save Button */}
-        <div className="flex justify-end pt-6">
-          <Button 
-            onClick={handleSave} 
+        <div className="mt-8 flex justify-end gap-3">
+          <Button
+            onClick={handleSave}
             disabled={saving}
             size="lg"
-            className="min-w-[160px] gap-2 px-6 py-3 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+            className="gap-2"
           >
             {saving ? (
               <>
@@ -1524,7 +1475,7 @@ export default function OrganizationSettingsPage() {
             ) : (
               <>
                 <Save className="h-4 w-4" />
-                Save
+                Save Changes
               </>
             )}
           </Button>
