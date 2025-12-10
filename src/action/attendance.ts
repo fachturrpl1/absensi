@@ -422,3 +422,61 @@ export async function createManualAttendance(payload: ManualAttendancePayload) {
     };
   }
 }
+
+export async function deleteAttendanceRecord(id: string) {
+  try {
+    const supabase = await getSupabase();
+    
+    attendanceLogger.info("🗑️ Deleting attendance record:", id);
+
+    const { error } = await supabase
+      .from("attendance_records")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      attendanceLogger.error("❌ Error deleting attendance:", error);
+      return { success: false, message: error.message };
+    }
+
+    attendanceLogger.info("✓ Attendance record deleted successfully");
+    revalidatePath("/attendance");
+
+    return { success: true };
+  } catch (err) {
+    attendanceLogger.error("❌ Exception deleting attendance:", err);
+    return { 
+      success: false, 
+      message: err instanceof Error ? err.message : "An error occurred" 
+    };
+  }
+}
+
+export async function deleteMultipleAttendanceRecords(ids: string[]) {
+  try {
+    const supabase = await getSupabase();
+    
+    attendanceLogger.info("🗑️ Deleting multiple attendance records:", ids);
+
+    const { error } = await supabase
+      .from("attendance_records")
+      .delete()
+      .in("id", ids);
+
+    if (error) {
+      attendanceLogger.error("❌ Error deleting attendance records:", error);
+      return { success: false, message: error.message };
+    }
+
+    attendanceLogger.info("✓ Attendance records deleted successfully");
+    revalidatePath("/attendance");
+
+    return { success: true };
+  } catch (err) {
+    attendanceLogger.error("❌ Exception deleting attendance records:", err);
+    return { 
+      success: false, 
+      message: err instanceof Error ? err.message : "An error occurred" 
+    };
+  }
+}

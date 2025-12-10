@@ -8,6 +8,10 @@ export interface CreateOrganizationInput {
   orgName: string;
   orgCode: string;
   timezone: string;
+  industry?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
   address?: string;
   city?: string;
   stateProvince?: string;
@@ -100,6 +104,10 @@ export async function createOrganization(
           legal_name: input.orgName,
           code: input.orgCode,
           timezone: input.timezone,
+          industry: input.industry || null,
+          phone: input.phone || null,
+          email: input.email || null,
+          website: input.website || null,
           address: input.address || null,
           city: input.city || null,
           state_province: input.stateProvince || null,

@@ -2,6 +2,7 @@
 
 import { useOrgStore } from '@/store/org-store'
 import { useEffect, useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -163,6 +164,7 @@ const EnhancedStatCard = ({
 export default function ImprovedDashboard() {
   const orgStore = useOrgStore();
   const { organizationName, loading: orgLoading } = useOrganizationName();
+  const queryClient = useQueryClient();
   const [isHydrated, setIsHydrated] = useState(false);
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -205,6 +207,20 @@ export default function ImprovedDashboard() {
     setIsHydrated(true);
   }, []);
 
+  // Invalidate cache when organization changes
+  useEffect(() => {
+    if (orgStore.organizationId) {
+      // Invalidate ALL organization-related queries
+      queryClient.invalidateQueries({ queryKey: ['organization'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
+      queryClient.invalidateQueries({ queryKey: ['members'] })
+      queryClient.invalidateQueries({ queryKey: ['attendance'] })
+      queryClient.invalidateQueries({ queryKey: ['leaves'] })
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+    }
+  }, [orgStore.organizationId, queryClient])
+
   // Fetch data
   useEffect(() => {
     if (!isHydrated) return;
@@ -222,8 +238,8 @@ export default function ImprovedDashboard() {
         
         console.log('[DASHBOARD] Fetching data for organization:', orgId);
         
-        // API will read organizationId from cookie as fallback
-        const response = await fetch(`/api/attendance-records?limit=1000&t=${Date.now()}`);
+        // Pass organizationId as query parameter
+        const response = await fetch(`/api/attendance-records?organizationId=${orgId}&limit=1000&t=${Date.now()}`);
         const result = await response.json();
 
         if (result.success && result.data) {

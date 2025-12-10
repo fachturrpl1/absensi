@@ -98,19 +98,25 @@ export function OrgBreadcrumb() {
     // Use displayName (which has fallback to localStorage) instead of organizationName
     const nameToDisplay = displayName || organizationName
 
-    // Jika di halaman /organization, hanya tampilkan organization name
+    // Jika di halaman /organization, tampilkan "Organizations"
     if (pathname === '/organization') {
-      if (nameToDisplay) {
-        items.push({
-          label: nameToDisplay,
-          href: '/organization',
-        })
-      }
+      items.push({
+        label: 'Organizations',
+        href: '/organization',
+      })
       return items
     }
 
-    // Untuk halaman lain, tambah organization name jika ada
-    if (nameToDisplay) {
+    // Untuk halaman organization/*, tampilkan "Organizations" sebagai parent
+    if (pathname.startsWith('/organization/')) {
+      items.push({
+        label: 'Organizations',
+        href: '/organization',
+      })
+    }
+    
+    // Tambahkan nama organisasi jika ada, tidak di halaman /organization, dan bukan halaman new organization
+    if (nameToDisplay && pathname !== '/organization' && !pathname.startsWith('/organization/new')) {
       items.push({
         label: nameToDisplay,
         href: '/organization',

@@ -64,7 +64,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import z from 'zod';
 import { cn } from '@/lib/utils';
 import { formatLocalTime } from '@/utils/timezone';
-import { getAllAttendance } from '@/action/attendance';
+import { getAllAttendance, deleteAttendanceRecord, deleteMultipleAttendanceRecords } from '@/action/attendance';
 import { toast } from 'sonner';
 import { useOrgStore } from '@/store/org-store';
 
@@ -119,6 +119,8 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingRecords, setEditingRecords] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
 
   // Edit form schema
   const editFormSchema = z.object({
@@ -142,6 +144,72 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     const id = parseInt(orgId);
     setSelectedOrgId(id);
     setCurrentPage(1); // Reset to first page
+  };
+
+  const handleDeleteClick = async (recordId: string) => {
+    setRecordToDelete(recordId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!recordToDelete) return;
+    
+    try {
+      setIsSubmitting(true);
+      const result = await deleteAttendanceRecord(recordToDelete);
+      
+      if (result.success) {
+        toast.success('Attendance record deleted successfully');
+        setDeleteDialogOpen(false);
+        setRecordToDelete(null);
+        // Refresh data
+        const orgId = selectedOrgId || orgStore.organizationId;
+        if (orgId) {
+          const response = await getAllAttendance({ organizationId: orgId });
+          if (response.success) {
+            setAttendanceData(response.data);
+            setTotalItems(response.meta?.total || 0);
+          }
+        }
+      } else {
+        toast.error(result.message || 'Failed to delete record');
+      }
+    } catch (error) {
+      toast.error('Error deleting record');
+      console.error('Delete error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteMultiple = async () => {
+    if (selectedRecords.length === 0) return;
+    
+    try {
+      setIsSubmitting(true);
+      const result = await deleteMultipleAttendanceRecords(selectedRecords);
+      
+      if (result.success) {
+        toast.success(`${selectedRecords.length} record(s) deleted successfully`);
+        setSelectedRecords([]);
+        // Refresh data
+        const orgId = selectedOrgId || orgStore.organizationId;
+        if (orgId) {
+          const response = await getAllAttendance({ organizationId: orgId });
+          if (response.success) {
+            setAttendanceData(response.data);
+            setTotalItems(response.meta?.total || 0);
+          }
+        }
+      } else {
+        toast.error(result.message || 'Failed to delete records');
+      }
+    } catch (error) {
+      toast.error('Error deleting records');
+      console.error('Delete error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEditClick = () => {
@@ -540,6 +608,15 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     {selectedRecords.length === 1 ? 'Edit' : 'Bulk Edit'}
                   </Button>
                   <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDeleteMultiple}
+                    disabled={isSubmitting}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Selected
+                  </Button>
+                  <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setSelectedRecords([])}
@@ -633,7 +710,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem 
+                          className="text-destructive"
+                          onClick={() => handleDeleteClick(record.id)}
+                        >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
@@ -820,7 +900,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive">
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => handleDeleteClick(record.id)}
+                            >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete
                             </DropdownMenuItem>
@@ -1092,6 +1175,44 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Attendance Record</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this attendance record? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm">
+            <p className="font-medium text-destructive mb-1">Warning</p>
+            <p className="text-destructive/80">
+              This will permanently delete the attendance record from the database.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

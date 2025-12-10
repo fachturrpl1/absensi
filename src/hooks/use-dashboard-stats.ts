@@ -68,8 +68,8 @@ export function useDashboardStats() {
     },
     enabled: !!organizationId,
     staleTime: 1000 * 30, // 30 seconds - fresh data quickly
-    gcTime: 1000 * 60 * 5, // 5 minutes in cache
-    refetchInterval: 1000 * 60, // Auto-refresh every 60 seconds
+    gcTime: 1000 * 60 * 2, // 2 minutes in cache (reduced from 5)
+    refetchInterval: false, // Disable auto-refresh (use manual invalidation instead)
     refetchOnWindowFocus: true, // Refresh when user returns to tab
     refetchOnMount: true, // Always fetch fresh data on mount
   })

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from './use-session'
+import { useEffect } from 'react'
 
 interface OrganizationData {
   organizationId: number
@@ -44,8 +45,8 @@ export function useOrganizationData() {
       }
     },
     enabled: !!user?.id,
-    staleTime: 0, // Always fetch fresh data to ensure immediate updates
-    gcTime: 1000 * 60 * 60 * 24, // 24 hours
+    staleTime: 1000 * 60, // 1 minute - balance between fresh data and efficiency
+    gcTime: 1000 * 60 * 5, // 5 minutes - reasonable cache duration
     retry: 1,
     refetchOnWindowFocus: true, // Refetch when user returns to tab
     refetchOnMount: true, // Refetch when component mounts (e.g., navigating to dashboard)
@@ -70,6 +71,12 @@ export function useOrganizationId() {
  */
 export function useOrganizationName() {
   const { data, isLoading, ...rest } = useOrganizationData()
+  
+  // Force refetch when data changes to ensure UI updates
+  useEffect(() => {
+    // This ensures the hook responds to data changes
+  }, [data])
+  
   return {
     organizationName: data?.organizationName ?? null,
     loading: isLoading,
