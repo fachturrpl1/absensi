@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, ArrowRight, ArrowLeft, CheckCircle2, Loader2, Home } from "lucide-react"
+import { AlertCircle, ArrowRight, ArrowLeft, CheckCircle2, Loader2 } from "lucide-react"
 import { createOrganization, validateOrganizationCode, getAvailableTimezones, getAvailableRoles } from "@/action/create-organization"
 import { toast } from "sonner"
 

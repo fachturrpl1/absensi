@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { IOrganization } from "@/interface";
+
 
 export interface CreateOrganizationInput {
   orgName: string;

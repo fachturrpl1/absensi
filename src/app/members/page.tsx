@@ -11,7 +11,6 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyContent,
   EmptyMedia,
 } from "@/components/ui/empty"
 import {
@@ -51,7 +50,6 @@ import { getAllUsers } from "@/action/users"
 import { getAllGroups } from "@/action/group"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
 // ContentLayout removed - using new layout system
-import { createClient } from "@/utils/supabase/client"
 import { createInvitation } from "@/action/invitations"
 import { getOrgRoles } from "@/lib/rbac"
 import { useGroups } from "@/hooks/use-groups"
@@ -119,7 +117,7 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
 ]
 export default function MembersPage() {
   const searchParams = useSearchParams()
-  const supabase = createClient()
+
   const orgStore = useOrgStore()
 
   const [members, setMembers] = React.useState<IOrganization_member[]>([])

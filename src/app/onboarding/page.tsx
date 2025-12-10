@@ -406,9 +406,6 @@ export default function OnboardingPage() {
                     <Building2 className="h-8 w-8 text-purple-400" />
                   </div>
                   <h3 className="text-xl font-semibold text-white">Create New Organization</h3>
-                  <p className="text-gray-300">
-                    Set up your own organization and invite team members
-                  </p>
                 </div>
 
                 <div className="space-y-6">
