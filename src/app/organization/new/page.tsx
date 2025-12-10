@@ -10,8 +10,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, ArrowRight, ArrowLeft, CheckCircle2, Loader2 } from "lucide-react"
-import { createOrganization, validateOrganizationCode } from "@/action/create-organization"
+import { AlertCircle, ArrowRight, ArrowLeft, CheckCircle2, Loader2, Home } from "lucide-react"
+import { createOrganization, validateOrganizationCode, getAvailableTimezones, getAvailableRoles } from "@/action/create-organization"
+import { toast } from "sonner"
 
 const SETUP_STEPS = [
   { number: 1, title: "Organization Info"},
@@ -29,6 +30,9 @@ export default function NewOrganizationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isHydrated, setIsHydrated] = useState(false)
+  const [timezones, setTimezones] = useState<string[]>([])
+  const [roles, setRoles] = useState<Array<{ id: string; code: string; name: string }>>([]) 
+  const [isLoadingData, setIsLoadingData] = useState(true)
 
   const [formData, setFormData] = useState({
     orgName: "",
@@ -43,7 +47,25 @@ export default function NewOrganizationPage() {
 
   useEffect(() => {
     setIsHydrated(true)
+    loadInitialData()
   }, [])
+
+  const loadInitialData = async () => {
+    try {
+      setIsLoadingData(true)
+      const [tzResult, rolesResult] = await Promise.all([
+        getAvailableTimezones(),
+        getAvailableRoles()
+      ])
+      setTimezones(tzResult)
+      setRoles(rolesResult)
+    } catch (err) {
+      console.error("Error loading initial data:", err)
+      toast.error("Failed to load form data")
+    } finally {
+      setIsLoadingData(false)
+    }
+  }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -67,18 +89,43 @@ export default function NewOrganizationPage() {
     try {
       const result = await validateOrganizationCode(code)
       setCodeValid(result.isValid)
+      if (!result.isValid) {
+        toast.error(result.message || "Organization code already exists")
+      }
     } catch (err) {
       console.error("Error validating code:", err)
       setCodeValid(false)
+      toast.error("Failed to validate organization code")
     } finally {
       setCodeValidating(false)
     }
   }
 
+  const validateWorkTimes = (): boolean => {
+    const startTime = new Date(`2024-01-01 ${formData.workStartTime}`)
+    const endTime = new Date(`2024-01-01 ${formData.workEndTime}`)
+    
+    if (endTime <= startTime) {
+      setError("Work end time must be after work start time")
+      return false
+    }
+    return true
+  }
+
   const handleNextStep = () => {
+    setError(null)
+    
     if (currentStep === 1) {
-      if (!formData.orgName || !formData.orgCode) {
-        setError("Organization name and code are required")
+      if (!formData.orgName || !formData.orgName.trim()) {
+        setError("Organization name is required")
+        return
+      }
+      if (formData.orgName.length < 2) {
+        setError("Organization name must be at least 2 characters")
+        return
+      }
+      if (!formData.orgCode || !formData.orgCode.trim()) {
+        setError("Organization code is required")
         return
       }
       if (!codeValid) {
@@ -87,9 +134,14 @@ export default function NewOrganizationPage() {
       }
     }
 
+    if (currentStep === 2) {
+      if (!validateWorkTimes()) {
+        return
+      }
+    }
+
     if (currentStep < SETUP_STEPS.length) {
       setCurrentStep(currentStep + 1)
-      setError(null)
     }
   }
 
@@ -115,7 +167,12 @@ export default function NewOrganizationPage() {
         return
       }
 
+      if (!validateWorkTimes()) {
+        return
+      }
+
       console.log("[NEW-ORG] Creating organization:", formData)
+      toast.loading("Creating organization...")
       
       // Call server action to create organization
       const result = await createOrganization({
@@ -128,6 +185,7 @@ export default function NewOrganizationPage() {
       })
 
       if (!result.success) {
+        toast.error(result.message || "Failed to create organization")
         setError(result.message || "Failed to create organization")
         return
       }
@@ -140,23 +198,40 @@ export default function NewOrganizationPage() {
         orgStore.setTimezone(formData.timezone)
         userStore.setRole("A001", result.data.organizationId)
 
+        toast.success(`Organization "${result.data.organizationName}" created successfully!`)
+        
         // Redirect to dashboard
-        router.push("/")
+        setTimeout(() => {
+          router.push("/")
+        }, 1000)
       }
     } catch (err) {
       console.error("[NEW-ORG] Error completing setup:", err)
-      setError(err instanceof Error ? err.message : "Failed to complete setup")
+      const errorMsg = err instanceof Error ? err.message : "Failed to complete setup"
+      toast.error(errorMsg)
+      setError(errorMsg)
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  if (!isHydrated) {
+  const handleCancel = () => {
+    if (currentStep > 1 || formData.orgName || formData.orgCode) {
+      if (confirm("Are you sure you want to cancel? Your progress will be lost.")) {
+        router.push("/organization")
+      }
+    } else {
+      router.push("/organization")
+    }
+  }
+
+  if (!isHydrated || isLoadingData) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center space-y-4">
           <Skeleton className="h-8 w-32 mx-auto" />
           <Skeleton className="h-4 w-48 mx-auto" />
+          <Skeleton className="h-4 w-40 mx-auto" />
         </div>
       </div>
     )
@@ -164,8 +239,20 @@ export default function NewOrganizationPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6 overflow-auto max-w-4xl mx-auto w-full">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Create</h1>
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">Create Organization</h1>
+          <p className="text-sm text-muted-foreground">Set up your new organization in a few simple steps</p>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleCancel}
+          className="h-10 w-10"
+          title="Back to organizations"
+        >
+          <Home className="h-5 w-5" />
+        </Button>
       </div>
 
       <Card>
@@ -210,158 +297,189 @@ export default function NewOrganizationPage() {
           {/* Step 1: Organization Info */}
           {currentStep === 1 && (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="orgName">Organization Name</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="orgName">Organization Name</Label>
+                  <Input
+                    id="orgName"
+                    placeholder="e.g., PT Maju Jaya"
+                    value={formData.orgName}
+                    onChange={(e) => handleInputChange("orgName", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="orgCode">Organization Code</Label>
+                  <div className="flex gap-2">
                     <Input
-                      id="orgName"
-                      placeholder="e.g., PT Maju Jaya"
-                      value={formData.orgName}
-                      onChange={(e) => handleInputChange("orgName", e.target.value)}
+                      id="orgCode"
+                      placeholder="e.g., PTMJ"
+                      value={formData.orgCode}
+                      onChange={(e) => handleInputChange("orgCode", e.target.value.toUpperCase())}
+                      disabled={codeValidating}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="orgCode">Organization Code</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="orgCode"
-                        placeholder="e.g., PTMJ"
-                        value={formData.orgCode}
-                        onChange={(e) => handleInputChange("orgCode", e.target.value)}
-                        disabled={codeValidating}
-                      />
-                      {codeValidating && <Loader2 className="h-5 w-5 animate-spin" />}
-                    </div>
-                    {!codeValid && formData.orgCode && (
-                      <p className="text-sm text-red-500">Code is invalid or already exists</p>
+                    {codeValidating && <Loader2 className="h-5 w-5 animate-spin flex-shrink-0" />}
+                    {!codeValidating && codeValid && formData.orgCode && (
+                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
                     )}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="timezone">Timezone</Label>
-                    <Input
-                      id="timezone"
-                      placeholder="e.g., Asia/Jakarta"
-                      value={formData.timezone}
-                      onChange={(e) => handleInputChange("timezone", e.target.value)}
-                    />
-                  </div>
+                  {!codeValid && formData.orgCode && (
+                    <p className="text-sm text-red-500">❌ Code is invalid or already exists</p>
+                  )}
+                  {codeValid && formData.orgCode && (
+                    <p className="text-sm text-green-600">✅ Code is available</p>
+                  )}
                 </div>
-              )}
-
-              {/* Step 2: Basic Settings */}
-              {currentStep === 2 && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="workStartTime">Work Start Time</Label>
-                    <Input
-                      id="workStartTime"
-                      type="time"
-                      value={formData.workStartTime}
-                      onChange={(e) => handleInputChange("workStartTime", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="workEndTime">Work End Time</Label>
-                    <Input
-                      id="workEndTime"
-                      type="time"
-                      value={formData.workEndTime}
-                      onChange={(e) => handleInputChange("workEndTime", e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Step 3: Import Members */}
-              {currentStep === 3 && (
-                <div className="space-y-4">
-                  <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                    <p className="text-muted-foreground">
-                      Upload member data via Excel file
-                    </p>
-                    <Input
-                      type="file"
-                      accept=".xlsx,.xls,.csv"
-                      className="mt-4"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Step 4: Role Assignment */}
-              {currentStep === 4 && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="defaultRole">Default Role</Label>
-                    <select
-                      id="defaultRole"
-                      value={formData.defaultRoleId}
-                      onChange={(e) => handleInputChange("defaultRoleId", e.target.value)}
-                      className="w-full px-3 py-2 border rounded-md"
-                    >
-                      <option value="1">Admin</option>
-                      <option value="2">Manager</option>
-                      <option value="3">Staff</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {/* Navigation Buttons */}
-              <div className="flex justify-between pt-6">
-                <Button
-                  variant="outline"
-                  onClick={handlePrevStep}
-                  disabled={currentStep === 1}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Previous
-                </Button>
-
-                {currentStep === SETUP_STEPS.length ? (
-                  <Button
-                    onClick={handleCompleteSetup}
-                    disabled={isSubmitting}
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="timezone">Timezone</Label>
+                  <select
+                    id="timezone"
+                    value={formData.timezone}
+                    onChange={(e) => handleInputChange("timezone", e.target.value)}
+                    className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
                   >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Completing...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Complete Setup
-                      </>
-                    )}
-                  </Button>
-                ) : (
-                  <Button onClick={handleNextStep}>
-                    Next
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                )}
+                    {timezones.map((tz) => (
+                      <option key={tz} value={tz}>
+                        {tz}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          )}
 
-      {/* Submitting State */}
-      {isSubmitting && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-96">
-            <CardContent className="pt-6 space-y-4">
-              <div className="flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          {/* Step 2: Basic Settings */}
+          {currentStep === 2 && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="workStartTime">Work Start Time</Label>
+                  <Input
+                    id="workStartTime"
+                    type="time"
+                    value={formData.workStartTime}
+                    onChange={(e) => handleInputChange("workStartTime", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="workEndTime">Work End Time</Label>
+                  <Input
+                    id="workEndTime"
+                    type="time"
+                    value={formData.workEndTime}
+                    onChange={(e) => handleInputChange("workEndTime", e.target.value)}
+                  />
+                </div>
               </div>
-              <p className="text-center font-medium">Creating your organization...</p>
-              <p className="text-center text-sm text-muted-foreground">
-                This may take a moment. Please don't close this window.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <p className="text-sm text-blue-900 dark:text-blue-100">
+                  <strong>Work Hours:</strong> {formData.workStartTime} - {formData.workEndTime}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Import Members */}
+          {currentStep === 3 && (
+            <div className="space-y-4">
+              <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                <p className="text-sm text-amber-900 dark:text-amber-100">
+                  <strong>Note:</strong> You can import members later from the Members page. For now, you can skip this step.
+                </p>
+              </div>
+              <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                <p className="text-muted-foreground">
+                  Upload member data via Excel file (optional)
+                </p>
+                <Input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  className="mt-4"
+                  disabled
+                />
+                <p className="text-xs text-muted-foreground mt-2">Coming soon</p>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Role Assignment */}
+          {currentStep === 4 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="defaultRole">Default Role for New Members</Label>
+                <select
+                  id="defaultRole"
+                  value={formData.defaultRoleId}
+                  onChange={(e) => handleInputChange("defaultRoleId", e.target.value)}
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
+                >
+                  {roles.length === 0 ? (
+                    <option value="A001">Admin (Default)</option>
+                  ) : (
+                    roles.map((role) => (
+                      <option key={role.id} value={role.code}>
+                        {role.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  This role will be assigned to new members when they join the organization.
+                </p>
+              </div>
+              <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <p className="text-sm text-green-900 dark:text-green-100">
+                  <strong>Ready to create!</strong> Click "Complete Setup" to create your organization.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between pt-6">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handlePrevStep}
+                disabled={currentStep === 1}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Previous
+              </Button>
+            </div>
+
+            {currentStep === SETUP_STEPS.length ? (
+              <Button
+                onClick={handleCompleteSetup}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Completing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Complete Setup
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button onClick={handleNextStep}>
+                Next
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
-
-

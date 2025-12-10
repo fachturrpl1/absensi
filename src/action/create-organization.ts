@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { createSupabaseClient } from "@/config/supabase-config";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { IOrganization } from "@/interface";
 
 export interface CreateOrganizationInput {
@@ -69,7 +69,23 @@ export async function createOrganization(
       invCode: invCode,
     });
 
-    const adminClient = await createSupabaseClient();
+    // Create admin client with service role key for insert operations
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error("[CREATE-ORG] Missing environment variables:", {
+        hasUrl: !!supabaseUrl,
+        hasKey: !!serviceRoleKey,
+      });
+      return {
+        success: false,
+        message: "Server configuration error",
+        error: "Missing Supabase credentials",
+      };
+    }
+    
+    const adminClient = createAdminClient(supabaseUrl, serviceRoleKey);
     const { data: organization, error: orgError } = await adminClient
       .from("organizations")
       .insert([
@@ -90,7 +106,12 @@ export async function createOrganization(
       .single();
 
     if (orgError || !organization) {
-      console.error("[CREATE-ORG] Error creating organization:", orgError);
+      console.error("[CREATE-ORG] Error creating organization:", {
+        error: orgError,
+        message: orgError?.message,
+        details: orgError?.details,
+        hint: orgError?.hint,
+      });
       return {
         success: false,
         message: "Failed to create organization",
@@ -116,7 +137,11 @@ export async function createOrganization(
       .single();
 
     if (memberError || !member) {
-      console.error("[CREATE-ORG] Error adding member:", memberError);
+      console.error("[CREATE-ORG] Error adding member:", {
+        error: memberError,
+        message: memberError?.message,
+        details: memberError?.details,
+      });
       // Rollback: delete organization
       await adminClient
         .from("organizations")
@@ -135,6 +160,7 @@ export async function createOrganization(
     console.log("[CREATE-ORG] Assigning admin role to user");
 
     // Get admin role (A001)
+    // Get admin role (A001) from system_roles
     const { data: adminRole, error: roleError } = await adminClient
       .from("system_roles")
       .select("id")
@@ -142,7 +168,11 @@ export async function createOrganization(
       .single();
 
     if (roleError || !adminRole) {
-      console.error("[CREATE-ORG] Error fetching admin role:", roleError);
+      console.error("[CREATE-ORG] Error fetching admin role:", {
+        error: roleError,
+        message: roleError?.message,
+        details: roleError?.details,
+      });
       // Rollback: delete member and organization
       await adminClient
         .from("organization_members")
@@ -155,7 +185,7 @@ export async function createOrganization(
       return {
         success: false,
         message: "Failed to assign role",
-        error: "Admin role not found",
+        error: roleError?.message || "Admin role not found",
       };
     }
 
@@ -170,7 +200,11 @@ export async function createOrganization(
       ]);
 
     if (memberRoleError) {
-      console.error("[CREATE-ORG] Error assigning role:", memberRoleError);
+      console.error("[CREATE-ORG] Error assigning role:", {
+        error: memberRoleError,
+        message: memberRoleError?.message,
+        details: memberRoleError?.details,
+      });
       // Rollback: delete member and organization
       await adminClient
         .from("organization_members")
@@ -183,7 +217,7 @@ export async function createOrganization(
       return {
         success: false,
         message: "Failed to assign role to member",
-        error: memberRoleError.message || "Database error",
+        error: memberRoleError?.message || "Database error",
       };
     }
 
@@ -225,7 +259,10 @@ export async function validateOrganizationCode(
   code: string
 ): Promise<{ isValid: boolean; message?: string }> {
   try {
-    const supabase = await createSupabaseClient();
+    const supabase = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+    );
 
     const { data, error } = await supabase
       .from("organizations")
@@ -287,7 +324,10 @@ export async function getAvailableRoles(): Promise<
   Array<{ id: string; code: string; name: string }>
 > {
   try {
-    const supabase = await createSupabaseClient();
+    const supabase = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+    );
 
     const { data, error } = await supabase
       .from("system_roles")

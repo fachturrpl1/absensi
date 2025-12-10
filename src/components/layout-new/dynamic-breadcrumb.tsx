@@ -99,7 +99,7 @@ export function DynamicBreadcrumb() {
       ];
     }
 
-    const items: BreadcrumbItem[] = [{ label: 'Home', href: '/', isCurrentPage: false }];
+    const items: BreadcrumbItemType[] = [{ label: 'Home', href: '/', isCurrentPage: false }];
     
     // Check if current path has a parent in parentMapping
     const parent = parentMapping[pathname];
@@ -186,30 +186,4 @@ export function DynamicBreadcrumb() {
       ))}
     </div>
   );
-}
-
-/*
-  return (
-//     <Breadcrumb>
-//       <BreadcrumbList>
-//         {breadcrumbs.map((crumb, index) => (
-//           <React.Fragment key={crumb.href}>
-//             <BreadcrumbItem className={index === 0 ? "hidden md:block" : undefined}>
-//               {crumb.isCurrentPage ? (
-//                 <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-//               ) : (
-//                 <BreadcrumbLink asChild>
-//                   <Link href={crumb.href}>{crumb.label}</Link>
-//                 </BreadcrumbLink>
-//               )}
-//             </BreadcrumbItem>
-//             {/* {index < breadcrumbs.length - 1 && (
-//               <BreadcrumbSeparator className={index === 0 ? "hidden md:block" : undefined} />
-//             )} */}
-//           </React.Fragment>
-//         ))}
-//       </BreadcrumbList>
-//     </Breadcrumb>
-//   );
-*/
 }

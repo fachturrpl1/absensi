@@ -15,10 +15,35 @@ export function OrgBreadcrumb() {
   const pathname = usePathname()
   const { organizationName } = useOrgStore()
   const [isHydrated, setIsHydrated] = useState(false)
+  const [displayName, setDisplayName] = useState<string | null>(null)
 
   useEffect(() => {
+    // Set hydrated flag
     setIsHydrated(true)
+    
+    // Try to get organizationName from localStorage as fallback
+    // This handles the case where Zustand hasn't hydrated yet
+    if (!organizationName) {
+      try {
+        const storedState = localStorage.getItem('org-store')
+        if (storedState) {
+          const parsed = JSON.parse(storedState)
+          if (parsed.state?.organizationName) {
+            setDisplayName(parsed.state.organizationName)
+          }
+        }
+      } catch (error) {
+        console.error('Error reading from localStorage:', error)
+      }
+    }
   }, [])
+
+  // Update displayName when organizationName changes (after Zustand hydration)
+  useEffect(() => {
+    if (organizationName) {
+      setDisplayName(organizationName)
+    }
+  }, [organizationName])
 
   // Mapping pathname ke breadcrumb labels
   const pathMapping: Record<string, string> = {
@@ -69,12 +94,15 @@ export function OrgBreadcrumb() {
 
   const buildBreadcrumbs = (): BreadcrumbItem[] => {
     const items: BreadcrumbItem[] = []
+    
+    // Use displayName (which has fallback to localStorage) instead of organizationName
+    const nameToDisplay = displayName || organizationName
 
     // Jika di halaman /organization, hanya tampilkan organization name
     if (pathname === '/organization') {
-      if (organizationName) {
+      if (nameToDisplay) {
         items.push({
-          label: organizationName,
+          label: nameToDisplay,
           href: '/organization',
         })
       }
@@ -82,9 +110,9 @@ export function OrgBreadcrumb() {
     }
 
     // Untuk halaman lain, tambah organization name jika ada
-    if (organizationName) {
+    if (nameToDisplay) {
       items.push({
-        label: organizationName,
+        label: nameToDisplay,
         href: '/organization',
       })
     }
@@ -105,7 +133,7 @@ export function OrgBreadcrumb() {
 
     // Tambah current page berdasarkan pathname
     const currentLabel = pathMapping[pathname]
-    if (currentLabel && currentLabel !== organizationName) {
+    if (currentLabel && currentLabel !== nameToDisplay) {
       items.push({
         label: currentLabel,
         href: pathname,
@@ -123,7 +151,8 @@ export function OrgBreadcrumb() {
   }
 
   // Jangan render sampai client-side hydration selesai
-  if (!isHydrated) {
+  // Tapi jika ada displayName dari localStorage, boleh render
+  if (!isHydrated && !displayName) {
     return null
   }
 
