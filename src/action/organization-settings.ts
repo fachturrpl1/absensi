@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 import { organizationLogger } from '@/lib/logger';
@@ -24,8 +23,8 @@ export interface OrganizationUpdateData {
   time_format?: '12h' | '24h';
 }
 
-// Get current user's organization
-export async function getCurrentUserOrganization(): Promise<{
+// Get organization by ID (with fallback to user's organization)
+export async function getCurrentUserOrganization(organizationId?: number | null): Promise<{
   success: boolean;
   data?: {
     id: number;
@@ -63,57 +62,63 @@ export async function getCurrentUserOrganization(): Promise<{
       return { success: false, message: "User not authenticated" };
     }
 
-    const adminClient = createAdminClient();
+    // Determine which organization to fetch
+    let targetOrgId = organizationId;
+    
+    if (!targetOrgId) {
+      // If no organizationId provided, get user's first organization
+      const { data: member, error: memberError } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
 
-    // Get user's organization through organization_members (latest membership regardless of active status)
-    const { data: member, error: memberError } = await adminClient
-      .from("organization_members")
+      if (memberError || !member) {
+        return { success: false, message: "No organization found for this user" };
+      }
+      targetOrgId = member.organization_id;
+    }
+
+    // Fetch organization data
+    const { data: org, error: orgError } = await supabase
+      .from("organizations")
       .select(`
         id,
+        code,
+        name,
+        legal_name,
+        description,
+        address,
+        city,
+        state_province,
+        postal_code,
+        phone,
+        email,
+        website,
+        logo_url,
+        timezone,
+        currency_code,
+        country_code,
+        industry,
+        inv_code,
         is_active,
-        employment_status,
-        organization:organizations(
-          id,
-          code,
-          name,
-          legal_name,
-          description,
-          address,
-          city,
-          state_province,
-          postal_code,
-          phone,
-          email,
-          website,
-          logo_url,
-          timezone,
-          currency_code,
-          country_code,
-          industry,
-          inv_code,
-          is_active,
-          time_format,
-          created_at,
-          updated_at
-        )
+        time_format,
+        created_at,
+        updated_at
       `)
-      .eq("user_id", user.id)
-      .order("updated_at", { ascending: false })
-      .limit(1)
+      .eq("id", targetOrgId)
       .maybeSingle();
 
-    if (memberError) {
-      organizationLogger.error("Member query error:", memberError);
+    if (orgError) {
+      organizationLogger.error("Organization query error:", orgError);
       return { success: false, message: "Failed to fetch organization data" };
     }
 
-    if (!member || !member.organization) {
-      return { success: false, message: "No organization found for this user" };
+    if (!org) {
+      return { success: false, message: "Organization not found" };
     }
 
-  // org comes from supabase select shape; use any here to avoid tight typing in this helper
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const org = member.organization as any;
     const timeFormat = org.time_format === '12h' ? '12h' : '24h';
     
     return {
@@ -155,7 +160,7 @@ export async function getCurrentUserOrganization(): Promise<{
 }
 
 // Update organization data
-export async function updateOrganization(updateData: OrganizationUpdateData): Promise<{
+export async function updateOrganization(updateData: OrganizationUpdateData, organizationId?: number | null): Promise<{
   success: boolean;
   message: string;
 }> {
@@ -169,16 +174,22 @@ export async function updateOrganization(updateData: OrganizationUpdateData): Pr
       return { success: false, message: "User not authenticated" };
     }
 
-    // Get user's organization ID
-    const { data: member, error: memberError } = await supabase
-      .from("organization_members")
-      .select("organization_id")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .maybeSingle();
+    // Determine which organization to update
+    let targetOrgId = organizationId;
+    
+    if (!targetOrgId) {
+      // If no organizationId provided, get user's first organization
+      const { data: member, error: memberError } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
 
-    if (memberError || !member) {
-      return { success: false, message: "No organization found for this user" };
+      if (memberError || !member) {
+        return { success: false, message: "No organization found for this user" };
+      }
+      targetOrgId = member.organization_id;
     }
 
     // Update organization data - legal_name always syncs with name
@@ -204,7 +215,7 @@ export async function updateOrganization(updateData: OrganizationUpdateData): Pr
         time_format: updateData.time_format || '24h',
         updated_at: new Date().toISOString()
       })
-      .eq("id", member.organization_id);
+      .eq("id", targetOrgId);
 
     if (updateError) {
       organizationLogger.error("Organization update error:", updateError);
@@ -239,7 +250,7 @@ function generateInvitationCode(): string {
 }
 
 // Regenerate organization invite code
-export async function regenerateInviteCode(): Promise<{
+export async function regenerateInviteCode(organizationId?: number | null): Promise<{
   success: boolean;
   data?: string;
   message: string;
@@ -254,16 +265,22 @@ export async function regenerateInviteCode(): Promise<{
       return { success: false, message: "User not authenticated" };
     }
 
-    // Get user's organization ID
-    const { data: member, error: memberError } = await supabase
-      .from("organization_members")
-      .select("organization_id")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .maybeSingle();
+    // Determine which organization to update
+    let targetOrgId = organizationId;
+    
+    if (!targetOrgId) {
+      // If no organizationId provided, get user's first organization
+      const { data: member, error: memberError } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
 
-    if (memberError || !member) {
-      return { success: false, message: "No organization found for this user" };
+      if (memberError || !member) {
+        return { success: false, message: "No organization found for this user" };
+      }
+      targetOrgId = member.organization_id;
     }
 
     // Generate new unique invitation code
@@ -297,7 +314,7 @@ export async function regenerateInviteCode(): Promise<{
         inv_code: newInvCode,
         updated_at: new Date().toISOString()
       })
-      .eq("id", member.organization_id);
+      .eq("id", targetOrgId);
 
     if (updateError) {
       organizationLogger.error("Invite code update error:", updateError);

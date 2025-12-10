@@ -1,10 +1,14 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { getAllPositions } from '@/action/position'
 
 import { logger } from '@/lib/logger';
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const response = await getAllPositions()
+    // Get organizationId from query parameter if provided
+    const organizationId = request.nextUrl.searchParams.get('organizationId');
+    const orgId = organizationId ? parseInt(organizationId, 10) : undefined;
+    
+    const response = await getAllPositions(orgId)
     
     if (!response.success) {
       return NextResponse.json(

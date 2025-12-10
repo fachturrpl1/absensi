@@ -73,7 +73,8 @@ export async function loginMultiOrg(formData: FormData): Promise<LoginResponse> 
         is_active
       ),
       organization_member_roles (
-        role:system_roles (
+        id,
+        system_roles (
           id,
           code,
           name,
@@ -99,8 +100,8 @@ export async function loginMultiOrg(formData: FormData): Promise<LoginResponse> 
       // Extract roles from organization_member_roles
       if (member.organization_member_roles && Array.isArray(member.organization_member_roles)) {
         for (const memberRole of member.organization_member_roles) {
-          if (memberRole.role && Array.isArray(memberRole.role) && memberRole.role.length > 0) {
-            const role = memberRole.role[0]
+          if (memberRole.system_roles && Array.isArray(memberRole.system_roles) && memberRole.system_roles.length > 0) {
+            const role = memberRole.system_roles[0]
             if (role) {
               roles.push({
                 id: role.id,
@@ -156,6 +157,8 @@ export async function getUserOrganizations(): Promise<{
     return { success: false, message: "User not authenticated" }
   }
 
+  console.log('🔍 getUserOrganizations: User authenticated:', user.id)
+
   const { data: orgMembers, error: orgMembersError } = await supabase
     .from("organization_members")
     .select(`
@@ -169,7 +172,8 @@ export async function getUserOrganizations(): Promise<{
         country_code
       ),
       organization_member_roles (
-        role:system_roles (
+        id,
+        system_roles (
           id,
           code,
           name,
@@ -180,6 +184,8 @@ export async function getUserOrganizations(): Promise<{
     .eq("user_id", user.id)
     .eq("is_active", true)
 
+    console.log('🔍 getUserOrganizations: Query result:', orgMembers)
+    console.log('🔍 getUserOrganizations: Query error:', orgMembersError)
   if (orgMembersError) {
     return { success: false, message: "Failed to fetch organizations" }
   }
@@ -193,8 +199,8 @@ export async function getUserOrganizations(): Promise<{
 
       if (member.organization_member_roles && Array.isArray(member.organization_member_roles)) {
         for (const memberRole of member.organization_member_roles) {
-          if (memberRole.role && Array.isArray(memberRole.role) && memberRole.role.length > 0) {
-            const role = memberRole.role[0]!
+          if (memberRole.system_roles && Array.isArray(memberRole.system_roles) && memberRole.system_roles.length > 0) {
+            const role = memberRole.system_roles[0]!
             roles.push({
               id: role.id,
               code: role.code,

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Loader2, CheckCircle2 } from "lucide-react"
+import { Loader2, CheckCircle2 } from "@/components/icons/lucide-exports"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -251,8 +251,7 @@ export default function MembersImportSimpleMappingPage() {
 
   const getPreviewValue = (header: string) => {
     const firstRow = preview[0]
-    if (!firstRow) return ""
-    return firstRow[header] || ""
+    return firstRow?.[header] || ""
   }
 
   return (

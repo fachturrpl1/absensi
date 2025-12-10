@@ -2,12 +2,15 @@
 
 import * as React from 'react';
 import { usePathname } from 'next/navigation';
-import { BreadcrumbItem } from '@/components/ui/breadcrumb';
 
 // Combined paths - paths yang tidak perlu dipisah
 const combinedPaths: Record<string, string> = {
+  '/organization': 'Organization',
   '/organization/settings': 'Settings',
+  '/organization/finger': 'Fingerprint',
+  '/settings': 'Settings',
   '/settings/invitations': 'Invitations',
+  'account': 'Account',
 };
 
 // Parent mapping untuk breadcrumb hierarchy
@@ -21,10 +24,12 @@ const parentMapping: Record<string, string> = {
   '/leaves/types': '/leaves',
   '/group': '/members',
   '/position': '/members',
+  '/organization/finger': '/organization',
 };
 
 // Path mapping untuk breadcrumb labels
 const pathMapping: Record<string, string> = {
+  'settings': 'Settings',
   'members': 'Members',
   'attendance': 'Attendance',
   'schedule': 'Schedules',
@@ -36,8 +41,6 @@ const pathMapping: Record<string, string> = {
   'role': 'Roles',
   'permission': 'Permissions',
   'analytics': 'Analytics',
-  'organization': 'Organization',
-  'settings': 'Settings',
   'account': 'Account',
   'users': 'Users',
   'locations': 'Locations',
@@ -53,6 +56,8 @@ const pathMapping: Record<string, string> = {
   'dashboard': 'Dashboard',
   'devices': 'Devices',
   'attendance-devices': 'Devices',
+  'finger': 'Fingerprint',
+  'organization': 'Organization',
 };
 
 // Function to check if segment is an ID (UUID or numeric)
@@ -60,7 +65,7 @@ function isId(segment: string): boolean {
   return /^\d+$/.test(segment) || /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(segment);
 }
 
-interface BreadcrumbItem {
+interface BreadcrumbItemType {
   label: string;
   href: string;
   isCurrentPage: boolean;
@@ -68,8 +73,9 @@ interface BreadcrumbItem {
 
 export function DynamicBreadcrumb() {
   const pathname = usePathname();
+  
   // Generate breadcrumb items from pathname
-  React.useMemo((): BreadcrumbItem[] => {
+  const breadcrumbs = React.useMemo((): BreadcrumbItemType[] => {
     const paths = pathname.split('/').filter(Boolean);
     console.log('[BREADCRUMB] pathname:', pathname, 'paths:', paths);
     
@@ -79,13 +85,20 @@ export function DynamicBreadcrumb() {
 
     // Check if current path is a combined path
     if (combinedPaths[pathname]) {
+      // Special case for /organization - show as current page
+      if (pathname === '/organization') {
+        return [
+          { label: 'Home', href: '/', isCurrentPage: false },
+          { label: combinedPaths[pathname], href: pathname, isCurrentPage: true },
+        ];
+      }
       return [
         { label: 'Home', href: '/', isCurrentPage: false },
         { label: combinedPaths[pathname], href: pathname, isCurrentPage: true },
       ];
     }
 
-    const items: BreadcrumbItem[] = [{ label: 'Home', href: '/', isCurrentPage: false }];
+    const items: BreadcrumbItemType[] = [{ label: 'Home', href: '/', isCurrentPage: false }];
     
     // Check if current path has a parent in parentMapping
     const parent = parentMapping[pathname];
@@ -156,27 +169,20 @@ export function DynamicBreadcrumb() {
     return items;
   }, [pathname]);
 
-//   return (
-//     <Breadcrumb>
-//       <BreadcrumbList>
-//         {breadcrumbs.map((crumb, index) => (
-//           <React.Fragment key={crumb.href}>
-//             <BreadcrumbItem className={index === 0 ? "hidden md:block" : undefined}>
-//               {crumb.isCurrentPage ? (
-//                 <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-//               ) : (
-//                 <BreadcrumbLink asChild>
-//                   <Link href={crumb.href}>{crumb.label}</Link>
-//                 </BreadcrumbLink>
-//               )}
-//             </BreadcrumbItem>
-//             {/* {index < breadcrumbs.length - 1 && (
-//               <BreadcrumbSeparator className={index === 0 ? "hidden md:block" : undefined} />
-//             )} */}
-//           </React.Fragment>
-//         ))}
-//       </BreadcrumbList>
-//     </Breadcrumb>
-//   );
-// }
+  return (
+    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+      {breadcrumbs.map((crumb, index) => (
+        <React.Fragment key={crumb.href}>
+          {index > 0 && <span className="mx-1">/</span>}
+          {crumb.isCurrentPage ? (
+            <span className="text-foreground font-medium">{crumb.label}</span>
+          ) : (
+            <a href={crumb.href} className="hover:text-foreground transition-colors">
+              {crumb.label}
+            </a>
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
 }

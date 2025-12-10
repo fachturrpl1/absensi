@@ -315,7 +315,3 @@ export default function NewOrganization() {
     </div>
   )
 }
-
-
-
-

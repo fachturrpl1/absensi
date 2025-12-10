@@ -17,6 +17,7 @@ export type GetAttendanceParams = {
   search?: string;
   status?: string;
   department?: string;
+  organizationId?: number;  // Add organization ID parameter
 };
 
 export type GetAttendanceResult = {
@@ -41,7 +42,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     dateTo,
     search,
     status,
-    department
+    organizationId  // Get organization ID from params
   } = params;
 
   // Get current user's organization
@@ -52,16 +53,33 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
   }
 
   // Get user's organization membership
-  const { data: userMember, error: memberError } = await supabase
+  // Note: User might be registered in multiple organizations
+  let query_org = supabase
     .from("organization_members")
     .select("organization_id, id")
     .eq("user_id", user.id)
-    .maybeSingle();
+    .eq("is_active", true);
 
-  if (memberError || !userMember) {
-    attendanceLogger.error("❌ User not in any organization");
-    return { success: false, data: [] };
+  // If organizationId is provided, filter by it
+  if (organizationId) {
+    query_org = query_org.eq("organization_id", organizationId);
   }
+
+  const { data: userMembers, error: memberError } = await query_org.limit(1);
+  const userMember = userMembers?.[0];
+
+  if (memberError) {
+    attendanceLogger.error("❌ Member query error:", memberError);
+    return { success: false, data: [], message: memberError.message };
+  }
+
+  if (!userMember || !userMembers || userMembers.length === 0) {
+    attendanceLogger.error("❌ User not in any active organization");
+    return { success: false, data: [], message: "User not registered in any active organization" };
+  }
+
+  attendanceLogger.info("✅ User organization found:", userMember.organization_id);
+  attendanceLogger.info("📍 Total organizations:", userMembers?.length || 0);
 
   // Start building the query
   let query = supabase
@@ -76,34 +94,28 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
       created_at,
       work_duration_minutes,
       remarks,
-      organization_members!inner (
+      check_in_device_id,
+      check_out_device_id,
+      organization_members (
         id,
         user_id,
         organization_id,
         department_id,
-        user_profiles!inner (
+        user_profiles!user_id (
           first_name,
           last_name,
           profile_photo_url
-        ),
-        departments:departments!organization_members_department_id_fkey (
-          id,
-          name
         ),
         organizations (
           id,
           name,
           timezone,
           time_format
+        ),
+        departments!department_id (
+          id,
+          name
         )
-      ),
-      check_in_device:attendance_devices!check_in_device_id (
-        device_name,
-        location
-      ),
-      check_out_device:attendance_devices!check_out_device_id (
-        device_name,
-        location
       )
     `, { count: 'exact' })
     .eq("organization_members.organization_id", userMember.organization_id);
@@ -121,15 +133,16 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     query = query.eq("status", status);
   }
 
-  if (department && department !== 'all') {
-    query = query.eq("organization_members.departments.name", department);
-  }
+  // Note: Department filtering removed due to ambiguous relationship
+  // Can be added back after fixing the FK relationship in database
+  // if (department && department !== 'all') {
+  //   query = query.eq("organization_members.department_id", department);
+  // }
 
   if (search) {
-    // Search by member name using ilike on user_profiles
-    // Note: Supabase doesn't support nested OR queries directly, so we use textSearch or filter manually
-    // For now, we'll search in first_name and last_name
-    query = query.or(`organization_members.user_profiles.first_name.ilike.%${search}%,organization_members.user_profiles.last_name.ilike.%${search}%`);
+    // Search by member name - filter manually after fetch
+    // Supabase doesn't support nested OR queries with ilike directly
+    attendanceLogger.info(`🔍 Search query: ${search}`);
   }
 
   // Apply pagination
@@ -142,31 +155,70 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
 
   if (error) {
     attendanceLogger.error("❌ Error fetching attendance:", error);
-    return { success: false, data: [] };
+    attendanceLogger.error("Organization ID:", userMember.organization_id);
+    attendanceLogger.error("Error code:", error.code);
+    attendanceLogger.error("Error message:", error.message);
+    attendanceLogger.error("Error details:", JSON.stringify(error));
+    attendanceLogger.error("Query parameters:", { dateFrom, dateTo, status, organizationId });
+    attendanceLogger.error("🔍 Debug: Trying to fetch departments relationship");
+    return { success: false, data: [], message: `Query error: ${error.message}` };
   }
 
+  attendanceLogger.info("✅ Attendance records fetched:", data?.length || 0);
+
   // Transform format
-  const mapped = (data || []).map((item: any) => ({
-    id: item.id,
-    member: {
-      name: `${item.organization_members?.user_profiles?.first_name || ''} ${item.organization_members?.user_profiles?.last_name || ''}`,
-      avatar: item.organization_members?.user_profiles?.profile_photo_url,
-      position: '', // Position not fetched in query above, add if needed
-      department: item.organization_members?.departments?.name || 'No Department',
-    },
-    date: item.attendance_date,
-    checkIn: item.actual_check_in,
-    checkOut: item.actual_check_out,
-    workHours: item.work_duration_minutes 
-      ? `${Math.floor(item.work_duration_minutes / 60)}h ${item.work_duration_minutes % 60}m` 
-      : (item.actual_check_in ? '-' : '-'),
-    status: item.status,
-    checkInLocationName: item.check_in_device?.location || item.check_in_device?.device_name || null,
-    checkOutLocationName: item.check_out_device?.location || item.check_out_device?.device_name || null,
-    notes: item.remarks || '',
-    timezone: item.organization_members?.organizations?.timezone || "Asia/Jakarta",
-    time_format: item.organization_members?.organizations?.time_format || "24h",
-  }));
+  const mapped = (data || []).map((item: any) => {
+    const firstName = item.organization_members?.user_profiles?.first_name || '';
+    const lastName = item.organization_members?.user_profiles?.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    const departmentName = item.organization_members?.departments?.name;
+    
+    // Debug: Log items dengan nama kosong atau user_profiles null
+    if (!fullName || !item.organization_members?.user_profiles) {
+      attendanceLogger.warn("⚠️ Member dengan nama kosong atau user_profiles null:", {
+        id: item.id,
+        organization_member_id: item.organization_member_id,
+        user_id: item.organization_members?.user_id,
+        user_profiles: item.organization_members?.user_profiles,
+        department: departmentName,
+        rawData: item.organization_members
+      });
+    }
+    
+    return {
+      id: item.id,
+      member: {
+        name: fullName || `Member #${item.organization_member_id}`, // Fallback jika nama kosong
+        avatar: item.organization_members?.user_profiles?.profile_photo_url,
+        position: '', // Position not fetched in query above, add if needed
+        department: departmentName || '', // Empty string jika tidak ada department
+      },
+      date: item.attendance_date,
+      checkIn: item.actual_check_in,
+      checkOut: item.actual_check_out,
+      workHours: item.work_duration_minutes 
+        ? `${Math.floor(item.work_duration_minutes / 60)}h ${item.work_duration_minutes % 60}m` 
+        : (item.actual_check_in ? '-' : '-'),
+      status: item.status,
+      checkInDeviceId: item.check_in_device_id || null,
+      checkOutDeviceId: item.check_out_device_id || null,
+      checkInLocationName: null, // Will be fetched separately if needed
+      checkOutLocationName: null, // Will be fetched separately if needed
+      notes: item.remarks || '',
+      timezone: item.organization_members?.organizations?.timezone || "Asia/Jakarta",
+      time_format: item.organization_members?.organizations?.time_format || "24h",
+    };
+  });
+
+  attendanceLogger.info("✅ Attendance data transformed:", mapped.length);
+  attendanceLogger.debug("📊 Sample mapped data:", mapped[0]);
+  attendanceLogger.info("ℹ️ Department names are now fetched from departments table");
+  
+  // Debug: Log members dengan nama kosong
+  const emptyNameCount = mapped.filter(m => !m.member.name || m.member.name.startsWith('Member #')).length;
+  if (emptyNameCount > 0) {
+    attendanceLogger.warn(`⚠️ ${emptyNameCount} member(s) dengan nama kosong atau tidak ter-fetch`);
+  }
 
   return { 
     success: true, 
@@ -254,12 +306,14 @@ export const getAttendanceStats = async (params: GetAttendanceParams = {}): Prom
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false };
 
-  const { data: userMember } = await supabase
+  const { data: userMembers } = await supabase
     .from("organization_members")
     .select("organization_id")
     .eq("user_id", user.id)
-    .maybeSingle();
+    .eq("is_active", true)
+    .limit(1);
 
+  const userMember = userMembers?.[0];
   if (!userMember) return { success: false };
 
   // Base query builder

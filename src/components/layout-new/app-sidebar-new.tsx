@@ -137,7 +137,7 @@ const getSidebarGroups = (): NavGroup[] => [
       },
       {
         title: 'Settings',
-        url: '/organization/settings',
+        url: '/settings',
         icon: Settings,
       },
     ],

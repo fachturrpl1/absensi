@@ -5,5 +5,3 @@ export default function NewOrganizationLayout({
 }) {
   return children
 }
-
-

@@ -5,7 +5,3 @@ export default function FingerLayout({
 }) {
   return children
 }
-
-
-
-

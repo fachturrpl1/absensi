@@ -195,8 +195,8 @@ export async function middleware(req: NextRequest) {
 
   // Redirect logic based on user authentication
   if (user && pathname.startsWith("/auth/login")) {
-    // Redirect to organization-selector instead of dashboard
-    return NextResponse.redirect(new URL("/organization-selector", req.url))
+    // Redirect to organization instead of dashboard
+    return NextResponse.redirect(new URL("/organization", req.url))
   }
 
   // Allow newly signed up users to see signup page briefly before redirect
@@ -219,9 +219,9 @@ export async function middleware(req: NextRequest) {
   }
 
   // Check if authenticated user has selected organization
-  // Allow access to organization-selector and special pages without organization check
+  // Allow access to organization and special pages without organization check
   const excludedPaths = [
-    "/organization-selector",
+    "/organization",
     "/onboarding",
     "/account-inactive",
     "/organization-inactive",
@@ -232,11 +232,11 @@ export async function middleware(req: NextRequest) {
   // For authenticated users accessing protected pages, check if organization is selected
   if (user && !isExcludedPath && !isPublicPath) {
     // Check if organization ID is in cookies or session
-    // If not, redirect to organization-selector
+    // If not, redirect to organization
     const orgIdCookie = req.cookies.get('org_id')?.value  
     
     if (!orgIdCookie) {
-      return NextResponse.redirect(new URL("/organization-selector", req.url))
+      return NextResponse.redirect(new URL("/organization", req.url))
     }
   }
 

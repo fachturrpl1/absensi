@@ -3,7 +3,7 @@
 import React from "react"
 import { PositionsTable } from "@/components/positions-table"
 import { Button } from "@/components/ui/button"
-import { Plus, Briefcase, Search } from "lucide-react"
+import { Plus, Briefcase } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -39,7 +39,6 @@ import {
     EmptyHeader,
     EmptyTitle,
     EmptyDescription,
-    EmptyContent,
     EmptyMedia,
 } from "@/components/ui/empty"
 import {
@@ -72,7 +71,6 @@ export default function PositionsPage() {
     const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
     const [loading, setLoading] = React.useState<boolean>(true)
     const [organizationId, setOrganizationId] = React.useState<string>("")
-    const [searchQuery, setSearchQuery] = React.useState<string>("")
 
     const supabase = createClient()
 
@@ -204,20 +202,11 @@ export default function PositionsPage() {
         <div className="flex flex-1 flex-col gap-4 w-full">
             <div className="w-full">
                 <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div className="bg-white text-black px-4 md:px-6 py-4 rounded-t-lg border-b-2 border-black-200">
-                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Positions</h1>
-                    </div>
+
                     
                     <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
                         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                             <div className="flex-1 relative">
-                                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                                <Input
-                                    placeholder="Search positions..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10"
-                                />
                             </div>
                             <div className="flex gap-3 sm:gap-2 flex-wrap">
                                 <Dialog open={open} onOpenChange={handleDialogOpenChange}>
@@ -387,9 +376,6 @@ export default function PositionsPage() {
                                                 There are no positions for this organization. Use the &quot;Add&quot; button to create a new position.
                                             </EmptyDescription>
                                         </EmptyHeader>
-                                        <EmptyContent>
-                                            <Button onClick={() => setOpen(true)}>Add Position</Button>
-                                        </EmptyContent>
                                     </Empty>
                                 </div>
                             ) : (

@@ -11,7 +11,11 @@ export function usePositions() {
     queryKey: ["positions", organizationId], // Include organizationId untuk isolasi cache
     queryFn: async () => {
       logger.debug('[React Query] Fetching positions via API for org:', organizationId)
-      const response = await fetch('/api/positions', { credentials: 'same-origin' })
+      const url = new URL('/api/positions', window.location.origin)
+      if (organizationId) {
+        url.searchParams.append('organizationId', organizationId.toString())
+      }
+      const response = await fetch(url.toString(), { credentials: 'same-origin' })
       const json = await response.json()
       if (!json.success) {
         throw new Error(json.message || 'Failed to fetch positions')

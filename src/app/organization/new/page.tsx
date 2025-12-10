@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, ArrowRight, ArrowLeft, CheckCircle2, Loader2 } from "lucide-react"
+import { createOrganization, validateOrganizationCode } from "@/action/create-organization"
 
 const SETUP_STEPS = [
   { number: 1, title: "Organization Info"},
@@ -35,8 +36,10 @@ export default function NewOrganizationPage() {
     timezone: "Asia/Jakarta",
     workStartTime: "08:00",
     workEndTime: "17:00",
-    defaultRoleId: "1",
+    defaultRoleId: "A001",
   })
+  const [codeValidating, setCodeValidating] = useState(false)
+  const [codeValid, setCodeValid] = useState(true)
 
   useEffect(() => {
     setIsHydrated(true)
@@ -47,12 +50,39 @@ export default function NewOrganizationPage() {
       ...prev,
       [field]: value
     }))
+    
+    // Validate organization code when it changes
+    if (field === "orgCode") {
+      validateCode(value)
+    }
+  }
+
+  const validateCode = async (code: string) => {
+    if (!code || code.length < 2) {
+      setCodeValid(false)
+      return
+    }
+    
+    setCodeValidating(true)
+    try {
+      const result = await validateOrganizationCode(code)
+      setCodeValid(result.isValid)
+    } catch (err) {
+      console.error("Error validating code:", err)
+      setCodeValid(false)
+    } finally {
+      setCodeValidating(false)
+    }
   }
 
   const handleNextStep = () => {
     if (currentStep === 1) {
       if (!formData.orgName || !formData.orgCode) {
         setError("Organization name and code are required")
+        return
+      }
+      if (!codeValid) {
+        setError("Organization code is invalid or already exists")
         return
       }
     }
@@ -80,22 +110,41 @@ export default function NewOrganizationPage() {
         return
       }
 
-      if (!formData.defaultRoleId) {
-        setError("Default role is not selected")
+      if (!codeValid) {
+        setError("Organization code is invalid or already exists")
         return
       }
 
-      console.log("Creating organization:", formData)
+      console.log("[NEW-ORG] Creating organization:", formData)
       
-      // Set organization in store
-      orgStore.setOrganizationId(1, formData.orgName)
-      orgStore.setTimezone(formData.timezone)
-      userStore.setRole("A001", 1)
+      // Call server action to create organization
+      const result = await createOrganization({
+        orgName: formData.orgName,
+        orgCode: formData.orgCode,
+        timezone: formData.timezone,
+        workStartTime: formData.workStartTime,
+        workEndTime: formData.workEndTime,
+        defaultRoleId: formData.defaultRoleId,
+      })
 
-      // Redirect to dashboard
-      router.push("/")
+      if (!result.success) {
+        setError(result.message || "Failed to create organization")
+        return
+      }
+
+      console.log("[NEW-ORG] Organization created:", result.data)
+      
+      // Set organization in store with actual data from server
+      if (result.data) {
+        orgStore.setOrganizationId(result.data.organizationId, result.data.organizationName)
+        orgStore.setTimezone(formData.timezone)
+        userStore.setRole("A001", result.data.organizationId)
+
+        // Redirect to dashboard
+        router.push("/")
+      }
     } catch (err) {
-      console.error("Error completing setup:", err)
+      console.error("[NEW-ORG] Error completing setup:", err)
       setError(err instanceof Error ? err.message : "Failed to complete setup")
     } finally {
       setIsSubmitting(false)
@@ -172,12 +221,19 @@ export default function NewOrganizationPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="orgCode">Organization Code</Label>
-                    <Input
-                      id="orgCode"
-                      placeholder="e.g., PTMJ"
-                      value={formData.orgCode}
-                      onChange={(e) => handleInputChange("orgCode", e.target.value)}
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        id="orgCode"
+                        placeholder="e.g., PTMJ"
+                        value={formData.orgCode}
+                        onChange={(e) => handleInputChange("orgCode", e.target.value)}
+                        disabled={codeValidating}
+                      />
+                      {codeValidating && <Loader2 className="h-5 w-5 animate-spin" />}
+                    </div>
+                    {!codeValid && formData.orgCode && (
+                      <p className="text-sm text-red-500">Code is invalid or already exists</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="timezone">Timezone</Label>

@@ -21,9 +21,12 @@ import { toast } from "sonner";
 import { getDashboardStats } from "@/action/dashboard";
 import { AttendanceAnalytics } from "@/components/attendance/attendance-analytics";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useOrganizationGuard } from "@/hooks/use-organization-guard";
 import { DateFilterBar, DateFilterState } from "@/components/analytics/date-filter-bar";
+import useOrgStore from "@/store/org-store";
 
 export default function AttendanceDashboard() {
+  const {isChecking,hasOrganization} = useOrganizationGuard();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("overview");
@@ -45,9 +48,22 @@ export default function AttendanceDashboard() {
   }, []);
 
   const loadData = useCallback(async () => {
+      console.log('🔍 loadData: Called with isChecking:', isChecking, 'hasOrganization:', hasOrganization);
+    
+    // Prevent loading if organization check is still in progress or no organization
+    if (isChecking || !hasOrganization) {
+    console.log('⏳ loadData: Skipping because:', {
+      isChecking,
+      hasOrganization,
+      reason: isChecking ? 'still checking' : 'no organization'
+    });
+    return;
+  }
+    
     setLoading(true);
     try {
-      const data = await getDashboardStats();
+      const orgId = useOrgStore.getState().organizationId || null;
+      const data = await getDashboardStats(orgId || undefined);
       setStats(data);
     } catch (error) {
       console.error("Error loading attendance stats:", error);
@@ -55,11 +71,24 @@ export default function AttendanceDashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isChecking, hasOrganization]);
 
   useEffect(() => {
+  // Only load data when organization check is complete and we have organization
+  if (!isChecking && hasOrganization) {
     loadData();
-  }, [loadData]);
+  }
+}, [isChecking, hasOrganization])
+  if (isChecking || !hasOrganization) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Checking organization...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Don't render Tabs until hydration is complete
   if (!isHydrated) {

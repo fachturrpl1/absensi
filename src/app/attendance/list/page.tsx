@@ -9,10 +9,6 @@ export default async function AttendancePage() {
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
-        </div>
-        
         <div className="flex items-center gap-2">
           <Link href="/attendance/add">
             <Button className="w-full sm:w-auto">
@@ -23,7 +19,6 @@ export default async function AttendancePage() {
           </Link>
         </div>
       </div>
-
       <ModernAttendanceList />
     </div>
   )

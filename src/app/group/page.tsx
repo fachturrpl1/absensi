@@ -9,7 +9,6 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyContent,
   EmptyMedia,
 } from "@/components/ui/empty"
 import {
@@ -50,8 +49,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { getAllOrganization } from "@/action/organization"
-import { createClient } from "@/utils/supabase/client"
 import { Can } from "@/components/can"
+import { useOrgStore } from "@/store/org-store"
+import { useOrgGuard } from "@/hooks/use-org-guard"
 
 const groupSchema = z.object({
   organization_id: z.string().min(1, "Organization is required"),
@@ -64,25 +64,33 @@ const groupSchema = z.object({
 type GroupForm = z.infer<typeof groupSchema>
 
 export default function GroupsPage() {
+  const orgStore = useOrgStore()
+  useOrgGuard()
+  
   const [isModalOpen, setIsModalOpen] = React.useState(false)
   const [editingDetail, setEditingDetail] = React.useState<IGroup | null>(null)
   const [groups, setGroups] = React.useState<IGroup[]>([])
   const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = React.useState<boolean>(true)
-  const [organizationId, setOrganizationId] = React.useState<string>("")
   const [searchQuery, setSearchQuery] = React.useState<string>("")
-  const supabase = createClient()
 
   const fetchGroups = async () => {
     try {
       setLoading(true)
+      
+      if (!orgStore.organizationId) {
+        toast.error('Please select an organization')
+        setLoading(false)
+        return
+      }
+      
       const response = await getAllGroups()
       if (!response.success) throw new Error(response.message)
       
-      // Filter by organization if user has one
-      const filteredGroups = organizationId 
-        ? response.data.filter((g: IGroup) => String(g.organization_id) === organizationId)
-        : response.data
+      // Filter by organization from store
+      const filteredGroups = response.data.filter(
+        (g: IGroup) => Number(g.organization_id) === orgStore.organizationId
+      )
       
       setGroups(filteredGroups)
     } catch (error: unknown) {
@@ -102,35 +110,15 @@ export default function GroupsPage() {
     }
   }
 
-  const fetchOrganizationId = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data, error } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-
-      if (error) throw error
-      if (data && data.length > 0 && data[0]?.organization_id) {
-        setOrganizationId(String(data[0].organization_id))
-      }
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error instanceof Error ? error.message : 'Unknown error' : 'Unknown error')
-    }
-  }
-
   React.useEffect(() => {
-    fetchOrganizationId()
     fetchOrganizations()
   }, [])
 
   React.useEffect(() => {
-    if (organizationId) {
+    if (orgStore.organizationId) {
       fetchGroups()
     }
-  }, [organizationId])
+  }, [orgStore.organizationId])
 
   const form = useForm<GroupForm>({
     resolver: zodResolver(groupSchema),
@@ -143,18 +131,18 @@ export default function GroupsPage() {
     },
   })
 
-  // sinkronkan orgId ke form setelah didapat dari supabase
+  // sinkronkan orgId ke form setelah didapat dari store
   React.useEffect(() => {
-    if (organizationId && !isModalOpen) {
+    if (orgStore.organizationId && !isModalOpen) {
       form.reset({
-        organization_id: organizationId,
+        organization_id: String(orgStore.organizationId),
         code: "",
         name: "",
         description: "",
         is_active: true,
       })
     }
-  }, [organizationId, form, isModalOpen])
+  }, [orgStore.organizationId, form, isModalOpen])
 
   const handleSubmit = async (values: GroupForm) => {
     try {
@@ -180,7 +168,7 @@ export default function GroupsPage() {
     if (!open) {
       setEditingDetail(null)
       form.reset({
-        organization_id: organizationId || "",
+        organization_id: orgStore.organizationId ? String(orgStore.organizationId) : "",
         code: "",
         name: "",
         description: "",
@@ -217,7 +205,7 @@ export default function GroupsPage() {
                       onClick={() => {
                         setEditingDetail(null)
                         form.reset({
-                          organization_id: organizationId || "",
+                          organization_id: orgStore.organizationId ? String(orgStore.organizationId) : "",
                           code: "",
                           name: "",
                           description: "",
@@ -242,14 +230,14 @@ export default function GroupsPage() {
                         className="space-y-4"
                       >
                         {/* Organization field */}
-                        {organizationId ? (
+                        {orgStore.organizationId ? (
                           <FormField
                             control={form.control}
                             name="organization_id"
                             render={({ field }) => (
                               <input
                                 type="hidden"
-                                value={organizationId}
+                                value={String(orgStore.organizationId || "")}
                                 onChange={field.onChange}
                               />
                             )}
@@ -364,9 +352,6 @@ export default function GroupsPage() {
                         There are no groups for this organization. Use the "Add Group" button to create one.
                       </EmptyDescription>
                     </EmptyHeader>
-                    <EmptyContent>
-                      <Button onClick={() => setIsModalOpen(true)}>Add Group</Button>
-                    </EmptyContent>
                   </Empty>
                 </div>
               ) : (
