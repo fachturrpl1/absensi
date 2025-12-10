@@ -247,10 +247,11 @@ export async function createOrganization(
 
 /**
  * Generate random invitation code
+ * @deprecated Not currently used, but kept for future reference
  */
-function generateInvitationCode(): string {
-  return Math.random().toString(36).substring(2, 10).toUpperCase();
-}
+// function generateInvitationCode(): string {
+//   return Math.random().toString(36).substring(2, 10).toUpperCase();
+// }
 
 /**
  * Validate organization code uniqueness

@@ -78,8 +78,6 @@ import {
 
   Globe,
 
-  MapPin,
-
   Clock,
 
   Image as ImageIcon,

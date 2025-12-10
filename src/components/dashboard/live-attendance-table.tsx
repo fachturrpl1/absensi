@@ -265,11 +265,12 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
 
   // Initialize activeOrgId from store on mount
   useEffect(() => {
-    const organizationId = useOrgStore.getState().organizationId;
-    console.log('[LiveAttendance] Initializing from store', { organizationId });
-    if (organizationId) {
-      setActiveOrgId(organizationId);
-    }
+    const unsubscribe = useOrgStore.subscribe((state, prev) => {
+      if (state.organizationId !== prev.organizationId) {
+        setActiveOrgId(state.organizationId);
+      }
+    });
+    return unsubscribe;
   }, []);
 
   // Fetch when activeOrgId changes
@@ -292,6 +293,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
         clearInterval(interval);
       };
     }
+    return undefined;
   }, [autoRefresh, refreshInterval, fetchAttendanceRecords, activeOrgId]);
 
   const totalPages = Math.ceil(records.length / pageSize);

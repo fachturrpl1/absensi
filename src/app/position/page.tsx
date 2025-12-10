@@ -3,7 +3,7 @@
 import React from "react"
 import { PositionsTable } from "@/components/positions-table"
 import { Button } from "@/components/ui/button"
-import { Plus, Briefcase, Search } from "lucide-react"
+import { Plus, Briefcase } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -71,7 +71,6 @@ export default function PositionsPage() {
     const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
     const [loading, setLoading] = React.useState<boolean>(true)
     const [organizationId, setOrganizationId] = React.useState<string>("")
-    const [searchQuery, setSearchQuery] = React.useState<string>("")
 
     const supabase = createClient()
 

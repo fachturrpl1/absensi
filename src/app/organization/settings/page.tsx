@@ -396,7 +396,7 @@ export default function OrganizationSettingsPage() {
 
         } else {
 
-          toast.error(result.message || "Failed to load organization data");
+          toast.error(refreshResult.message || "Failed to load organization data");
 
         }
 

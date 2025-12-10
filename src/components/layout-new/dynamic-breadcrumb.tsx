@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { usePathname } from 'next/navigation';
-import Link from 'next/link';
 
 // Combined paths - paths yang tidak perlu dipisah
 const combinedPaths: Record<string, string> = {

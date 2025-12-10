@@ -94,7 +94,7 @@ export function DynamicBreadcrumb() {
     if (parent) {
       const parentSegments = parent.split('/').filter(Boolean);
       const lastSegment = parentSegments[parentSegments.length - 1];
-      const parentLabel = pathMapping[lastSegment] || lastSegment;
+      const parentLabel = lastSegment ? (pathMapping[lastSegment] || lastSegment) : parent;
 
       items.push({
         label: parentLabel,
