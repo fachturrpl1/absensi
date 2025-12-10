@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useOrgStore } from "@/store/org-store"
 import { useUserStore } from "@/store/user-store"
@@ -14,9 +14,29 @@ import { AlertCircle, ArrowRight, ArrowLeft, CheckCircle2, Loader2, Home } from 
 import { createOrganization, validateOrganizationCode, getAvailableTimezones, getAvailableRoles } from "@/action/create-organization"
 import { toast } from "sonner"
 
+// Type for geo data
+interface GeoCity {
+  value: string
+  label: string
+  postal_codes?: string[]  // Multiple postal codes per city
+}
+
+interface GeoState {
+  value: string
+  label: string
+  state_code?: string
+  cities: GeoCity[]
+}
+
+interface GeoCountry {
+  code: string
+  name: string
+  states: GeoState[]
+}
+
 const SETUP_STEPS = [
   { number: 1, title: "Organization Info"},
-  { number: 2, title: "Basic Settings"},
+  { number: 2, title: "Address & Location"},
   { number: 3, title: "Import Members"},
   { number: 4, title: "Role Assignment"},
 ]
@@ -31,37 +51,93 @@ export default function NewOrganizationPage() {
   const [error, setError] = useState<string | null>(null)
   const [isHydrated, setIsHydrated] = useState(false)
   const [timezones, setTimezones] = useState<string[]>([])
-  const [roles, setRoles] = useState<Array<{ id: string; code: string; name: string }>>([]) 
+  const [roles, setRoles] = useState<Array<{ id: string; code: string; name: string }>>(
+    [
+      { id: "1", code: "A001", name: "Admin" },
+      { id: "2", code: "US001", name: "User" },
+      { id: "5", code: "SA001", name: "Super Admin" },
+      { id: "6", code: "SP001", name: "Support" },
+      { id: "7", code: "B001", name: "Billing" },
+      { id: "8", code: "P001", name: "Petugas" },
+    ]
+  )
+  const [locationData, setLocationData] = useState<GeoCountry | null>(null)
   const [isLoadingData, setIsLoadingData] = useState(true)
 
   const [formData, setFormData] = useState({
     orgName: "",
     orgCode: "",
     timezone: "Asia/Jakarta",
-    workStartTime: "08:00",
-    workEndTime: "17:00",
+    address: "",
+    city: "",
+    stateProvince: "",
+    postalCode: "",
     defaultRoleId: "A001",
   })
   const [codeValidating, setCodeValidating] = useState(false)
   const [codeValid, setCodeValid] = useState(true)
+  const [availableCities, setAvailableCities] = useState<GeoCity[]>([])
+  const [availablePostalCodes, setAvailablePostalCodes] = useState<string[]>([])
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const codeValidationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     setIsHydrated(true)
     loadInitialData()
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (codeValidationTimeoutRef.current) {
+        clearTimeout(codeValidationTimeoutRef.current)
+      }
+    }
   }, [])
 
   const loadInitialData = async () => {
     try {
       setIsLoadingData(true)
-      const [tzResult, rolesResult] = await Promise.all([
+      const [tzResult, rolesResult, geoResult] = await Promise.all([
         getAvailableTimezones(),
-        getAvailableRoles()
+        getAvailableRoles(),
+        fetch('/api/geo/ID').then(res => res.json()).catch(() => null)
       ])
       setTimezones(tzResult)
-      setRoles(rolesResult)
+      
+      // Load geo data for Indonesia
+      if (geoResult && geoResult.code === 'ID') {
+        setLocationData(geoResult)
+        console.log("[LOAD-DATA] Geo data loaded for Indonesia:", geoResult.states.length, "provinces")
+      } else {
+        console.warn("[LOAD-DATA] Failed to load geo data")
+        setLocationData(null)
+      }
+      
+      // If roles is empty, use fallback roles
+      if (rolesResult && rolesResult.length > 0) {
+        setRoles(rolesResult)
+      } else {
+        console.warn("[LOAD-DATA] No roles from database, using fallback")
+        setRoles([
+          { id: "1", code: "A001", name: "Admin" },
+          { id: "2", code: "US001", name: "User" },
+          { id: "5", code: "SA001", name: "Super Admin" },
+          { id: "6", code: "SP001", name: "Support" },
+          { id: "7", code: "B001", name: "Billing" },
+          { id: "8", code: "P001", name: "Petugas" },
+        ])
+      }
     } catch (err) {
       console.error("Error loading initial data:", err)
       toast.error("Failed to load form data")
+      // Set fallback roles on error
+      setRoles([
+        { id: "1", code: "A001", name: "Admin" },
+        { id: "2", code: "US001", name: "User" },
+        { id: "5", code: "SA001", name: "Super Admin" },
+        { id: "6", code: "SP001", name: "Support" },
+        { id: "7", code: "B001", name: "Billing" },
+        { id: "8", code: "P001", name: "Petugas" },
+      ])
     } finally {
       setIsLoadingData(false)
     }
@@ -73,9 +149,58 @@ export default function NewOrganizationPage() {
       [field]: value
     }))
     
-    // Validate organization code when it changes
+    // Update cities when province changes
+    if (field === "stateProvince") {
+      if (locationData) {
+        const selectedState = locationData?.states.find(s => s.value === value)
+        if (selectedState) {
+          setAvailableCities(selectedState.cities)
+          setAvailablePostalCodes([])
+          // Reset city and postal code when province changes
+          setFormData(prev => ({
+            ...prev,
+            city: "",
+            postalCode: ""
+          }))
+        } else {
+          setAvailableCities([])
+          setAvailablePostalCodes([])
+        }
+      }
+    }
+    
+    // Update postal codes when city changes
+    if (field === "city" && formData.stateProvince) {
+      if (locationData) {
+        const selectedState = locationData?.states.find(s => s.value === formData.stateProvince)
+        if (selectedState) {
+          const selectedCity = selectedState.cities.find(c => c.value === value)
+          if (selectedCity && selectedCity.postal_codes && selectedCity.postal_codes.length > 0) {
+            // If city has postal_codes array, populate dropdown with all of them
+            setAvailablePostalCodes(selectedCity.postal_codes)
+          } else {
+            // If no postal_codes in geo data, leave empty for user to input
+            setAvailablePostalCodes([])
+          }
+          setFormData(prev => ({
+            ...prev,
+            postalCode: ""
+          }))
+        }
+      }
+    }
+    
+    // Debounce organization code validation (wait 1 second after user stops typing)
     if (field === "orgCode") {
-      validateCode(value)
+      // Clear previous timeout
+      if (codeValidationTimeoutRef.current) {
+        clearTimeout(codeValidationTimeoutRef.current)
+      }
+      
+      // Set new timeout for validation
+      codeValidationTimeoutRef.current = setTimeout(() => {
+        validateCode(value)
+      }, 1000)
     }
   }
 
@@ -101,16 +226,6 @@ export default function NewOrganizationPage() {
     }
   }
 
-  const validateWorkTimes = (): boolean => {
-    const startTime = new Date(`2024-01-01 ${formData.workStartTime}`)
-    const endTime = new Date(`2024-01-01 ${formData.workEndTime}`)
-    
-    if (endTime <= startTime) {
-      setError("Work end time must be after work start time")
-      return false
-    }
-    return true
-  }
 
   const handleNextStep = () => {
     setError(null)
@@ -134,11 +249,6 @@ export default function NewOrganizationPage() {
       }
     }
 
-    if (currentStep === 2) {
-      if (!validateWorkTimes()) {
-        return
-      }
-    }
 
     if (currentStep < SETUP_STEPS.length) {
       setCurrentStep(currentStep + 1)
@@ -167,26 +277,35 @@ export default function NewOrganizationPage() {
         return
       }
 
-      if (!validateWorkTimes()) {
-        return
-      }
-
       console.log("[NEW-ORG] Creating organization:", formData)
-      toast.loading("Creating organization...")
+      const toastId = toast.loading("Creating organization...")
       
       // Call server action to create organization
       const result = await createOrganization({
         orgName: formData.orgName,
         orgCode: formData.orgCode,
         timezone: formData.timezone,
-        workStartTime: formData.workStartTime,
-        workEndTime: formData.workEndTime,
+        address: formData.address,
+        city: formData.city,
+        stateProvince: formData.stateProvince,
+        postalCode: formData.postalCode,
         defaultRoleId: formData.defaultRoleId,
       })
 
       if (!result.success) {
-        toast.error(result.message || "Failed to create organization")
-        setError(result.message || "Failed to create organization")
+        const errorMsg = result.message || "Failed to create organization"
+        const errorDetail = result.error ? ` (${result.error})` : ""
+        const fullError = errorMsg + errorDetail
+        
+        console.error("[NEW-ORG] Creation failed:", {
+          message: result.message,
+          error: result.error,
+          fullError: fullError,
+        })
+        
+        toast.dismiss(toastId)
+        toast.error(fullError)
+        setError(fullError)
         return
       }
 
@@ -198,6 +317,7 @@ export default function NewOrganizationPage() {
         orgStore.setTimezone(formData.timezone)
         userStore.setRole("A001", result.data.organizationId)
 
+        toast.dismiss(toastId)
         toast.success(`Organization "${result.data.organizationName}" created successfully!`)
         
         // Redirect to dashboard
@@ -217,13 +337,17 @@ export default function NewOrganizationPage() {
 
   const handleCancel = () => {
     if (currentStep > 1 || formData.orgName || formData.orgCode) {
-      if (confirm("Are you sure you want to cancel? Your progress will be lost.")) {
-        router.push("/organization")
-      }
+      setShowCancelDialog(true)
     } else {
       router.push("/organization")
     }
   }
+
+  const handleConfirmCancel = () => {
+    setShowCancelDialog(false)
+    router.push("/organization")
+  }
+
 
   if (!isHydrated || isLoadingData) {
     return (
@@ -251,7 +375,7 @@ export default function NewOrganizationPage() {
           className="h-10 w-10"
           title="Back to organizations"
         >
-          <Home className="h-5 w-5" />
+
         </Button>
       </div>
 
@@ -348,32 +472,77 @@ export default function NewOrganizationPage() {
             </div>
           )}
 
-          {/* Step 2: Basic Settings */}
+          {/* Step 2: Address */}
           {currentStep === 2 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="address">Street Address</Label>
+                <Input
+                  id="address"
+                  placeholder="e.g., Jl. Merdeka No. 123"
+                  value={formData.address}
+                  onChange={(e) => handleInputChange("address", e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="workStartTime">Work Start Time</Label>
-                  <Input
-                    id="workStartTime"
-                    type="time"
-                    value={formData.workStartTime}
-                    onChange={(e) => handleInputChange("workStartTime", e.target.value)}
-                  />
+                  <Label htmlFor="stateProvince">State/Province</Label>
+                  <select
+                    id="stateProvince"
+                    value={formData.stateProvince}
+                    onChange={(e) => handleInputChange("stateProvince", e.target.value)}
+                    className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
+                  >
+                    <option value="">-- Select Province --</option>
+                    {locationData?.states.map((state) => (
+                      <option key={state.value} value={state.value}>
+                        {state.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="workEndTime">Work End Time</Label>
-                  <Input
-                    id="workEndTime"
-                    type="time"
-                    value={formData.workEndTime}
-                    onChange={(e) => handleInputChange("workEndTime", e.target.value)}
-                  />
+                  <Label htmlFor="city">City</Label>
+                  <select
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => handleInputChange("city", e.target.value)}
+                    disabled={!formData.stateProvince || availableCities.length === 0}
+                    className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">-- Select City --</option>
+                    {availableCities.map((city, index) => (
+                      <option key={`${city.value}-${index}`} value={city.value}>
+                        {city.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="postalCode">Postal Code</Label>
+                  <select
+                    id="postalCode"
+                    value={formData.postalCode}
+                    onChange={(e) => handleInputChange("postalCode", e.target.value)}
+                    disabled={!formData.city || availablePostalCodes.length === 0}
+                    className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">-- Select Postal Code --</option>
+                    {availablePostalCodes.length > 0 ? (
+                      availablePostalCodes.map((code, idx) => (
+                        <option key={`${code}-${idx}`} value={code}>
+                          {code}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">-- No postal code available --</option>
+                    )}
+                  </select>
                 </div>
               </div>
               <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <p className="text-sm text-blue-900 dark:text-blue-100">
-                  <strong>Work Hours:</strong> {formData.workStartTime} - {formData.workEndTime}
+                  <strong>Note:</strong> Select province first, then city and postal code will be available. All fields are optional and can be updated later.
                 </p>
               </div>
             </div>
@@ -413,15 +582,11 @@ export default function NewOrganizationPage() {
                   onChange={(e) => handleInputChange("defaultRoleId", e.target.value)}
                   className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
                 >
-                  {roles.length === 0 ? (
-                    <option value="A001">Admin (Default)</option>
-                  ) : (
-                    roles.map((role) => (
-                      <option key={role.id} value={role.code}>
-                        {role.name}
-                      </option>
-                    ))
-                  )}
+                  {roles.map((role) => (
+                    <option key={role.code} value={role.code}>
+                      {role.name}
+                    </option>
+                  ))}
                 </select>
                 <p className="text-xs text-muted-foreground">
                   This role will be assigned to new members when they join the organization.
@@ -480,6 +645,47 @@ export default function NewOrganizationPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Custom Cancel Confirmation Dialog */}
+      {showCancelDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Cancel Organization Setup?</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                You are on <strong>Step {currentStep} of {SETUP_STEPS.length}</strong>. If you cancel now, all your progress will be lost.
+              </p>
+              <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <p className="text-xs text-amber-900 dark:text-amber-100">
+                  <strong>Data that will be lost:</strong>
+                  {formData.orgName && <div>• Organization Name: {formData.orgName}</div>}
+                  {formData.orgCode && <div>• Organization Code: {formData.orgCode}</div>}
+                  {formData.address && <div>• Address: {formData.address}</div>}
+                  {formData.city && <div>• City: {formData.city}</div>}
+                </p>
+              </div>
+              <div className="flex gap-3 justify-end pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCancelDialog(false)}
+                  className="px-6"
+                >
+                  Continue Setup
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleConfirmCancel}
+                  className="px-6"
+                >
+                  Yes, Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

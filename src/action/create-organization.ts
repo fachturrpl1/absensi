@@ -8,8 +8,10 @@ export interface CreateOrganizationInput {
   orgName: string;
   orgCode: string;
   timezone: string;
-  workStartTime: string;
-  workEndTime: string;
+  address?: string;
+  city?: string;
+  stateProvince?: string;
+  postalCode?: string;
   defaultRoleId: string;
 }
 
@@ -66,6 +68,10 @@ export async function createOrganization(
       name: input.orgName,
       code: input.orgCode,
       timezone: input.timezone,
+      address: input.address,
+      city: input.city,
+      stateProvince: input.stateProvince,
+      postalCode: input.postalCode,
       invCode: invCode,
     });
 
@@ -94,11 +100,13 @@ export async function createOrganization(
           legal_name: input.orgName,
           code: input.orgCode,
           timezone: input.timezone,
-          work_start_time: input.workStartTime,
-          work_end_time: input.workEndTime,
+          address: input.address || null,
+          city: input.city || null,
+          state_province: input.stateProvince || null,
+          postal_code: input.postalCode || null,
+          country_code: "ID",
           is_active: true,
           is_suspended: false,
-          created_by: user.id,
           inv_code: invCode,
         },
       ])
@@ -130,6 +138,7 @@ export async function createOrganization(
         {
           user_id: user.id,
           organization_id: organization.id,
+          hire_date: new Date().toISOString().split('T')[0],
           is_active: true,
         },
       ])
@@ -141,6 +150,13 @@ export async function createOrganization(
         error: memberError,
         message: memberError?.message,
         details: memberError?.details,
+        hint: memberError?.hint,
+        code: memberError?.code,
+        inputData: {
+          user_id: user.id,
+          organization_id: organization.id,
+          is_active: true,
+        },
       });
       // Rollback: delete organization
       await adminClient
@@ -156,22 +172,24 @@ export async function createOrganization(
 
     console.log("[CREATE-ORG] Member added:", member.id);
 
-    // 6. Assign admin role to user
-    console.log("[CREATE-ORG] Assigning admin role to user");
+    // 6. Assign default role to user
+    console.log("[CREATE-ORG] Assigning default role to user:", input.defaultRoleId);
 
-    // Get admin role (A001)
-    // Get admin role (A001) from system_roles
-    const { data: adminRole, error: roleError } = await adminClient
+    // Get selected role from system_roles
+    const { data: selectedRole, error: roleError } = await adminClient
       .from("system_roles")
       .select("id")
-      .eq("code", "A001")
+      .eq("code", input.defaultRoleId)
       .single();
 
-    if (roleError || !adminRole) {
-      console.error("[CREATE-ORG] Error fetching admin role:", {
+    if (roleError || !selectedRole) {
+      console.error("[CREATE-ORG] Error fetching selected role:", {
+        roleCode: input.defaultRoleId,
         error: roleError,
         message: roleError?.message,
         details: roleError?.details,
+        hint: roleError?.hint,
+        code: roleError?.code,
       });
       // Rollback: delete member and organization
       await adminClient
@@ -185,7 +203,7 @@ export async function createOrganization(
       return {
         success: false,
         message: "Failed to assign role",
-        error: roleError?.message || "Admin role not found",
+        error: roleError?.message || `Role ${input.defaultRoleId} not found`,
       };
     }
 
@@ -195,7 +213,7 @@ export async function createOrganization(
       .insert([
         {
           organization_member_id: member.id,
-          role_id: adminRole.id,
+          role_id: selectedRole.id,
         },
       ]);
 
@@ -204,6 +222,12 @@ export async function createOrganization(
         error: memberRoleError,
         message: memberRoleError?.message,
         details: memberRoleError?.details,
+        hint: memberRoleError?.hint,
+        code: memberRoleError?.code,
+        inputData: {
+          organization_member_id: member.id,
+          role_id: selectedRole.id,
+        },
       });
       // Rollback: delete member and organization
       await adminClient
@@ -224,11 +248,16 @@ export async function createOrganization(
     console.log("[CREATE-ORG] Admin role assigned successfully");
 
     // 7. Success - return organization details
-    console.log("[CREATE-ORG] Organization creation completed successfully");
+    console.log("[CREATE-ORG] Organization creation completed successfully", {
+      organizationId: organization.id,
+      organizationName: organization.name,
+      organizationCode: organization.code,
+      assignedRole: input.defaultRoleId,
+    });
 
     return {
       success: true,
-      message: "Organization created successfully",
+      message: `Organization "${organization.name}" created successfully with role ${input.defaultRoleId}`,
       data: {
         organizationId: organization.id,
         organizationName: organization.name,
@@ -237,10 +266,11 @@ export async function createOrganization(
     };
   } catch (error) {
     console.error("[CREATE-ORG] Unexpected error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return {
       success: false,
       message: "An unexpected error occurred",
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: errorMessage,
     };
   }
 }

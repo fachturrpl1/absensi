@@ -193,6 +193,13 @@ export default function ImprovedDashboard() {
     return () => clearInterval(timer);
   }, []);
 
+  // Monitor organization changes
+  useEffect(() => {
+    if (orgStore.organizationId) {
+      console.log('[DASHBOARD] Organization changed to:', orgStore.organizationId, orgStore.organizationName);
+    }
+  }, [orgStore.organizationId, orgStore.organizationName]);
+
   // Hydration check
   useEffect(() => {
     setIsHydrated(true);
@@ -213,17 +220,22 @@ export default function ImprovedDashboard() {
           return;
         }
         
+        console.log('[DASHBOARD] Fetching data for organization:', orgId);
+        
         // API will read organizationId from cookie as fallback
-        const response = await fetch(`/api/attendance-records?limit=1000`);
+        const response = await fetch(`/api/attendance-records?limit=1000&t=${Date.now()}`);
         const result = await response.json();
 
         if (result.success && result.data) {
+          console.log('[DASHBOARD] Fetched', result.data.length, 'records for org', orgId);
           setAllRecords(result.data);
         } else {
           console.error('Failed to fetch attendance records:', result.message);
+          setAllRecords([]);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
+        setAllRecords([]);
       } finally {
         setIsLoading(false);
       }
