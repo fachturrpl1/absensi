@@ -1,9 +1,6 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import React from "react"
 import {
   Table,
   TableBody,
@@ -11,390 +8,841 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { Input } from '@/components/ui/input'
-import { Fingerprint, Check, Loader2, Search, Users, RefreshCw, Filter } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
-import { createClient } from '@/utils/supabase/client'
+} from "@/components/ui/table"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Fingerprint, Users, RefreshCw, Search, Check, Loader2, Monitor } from "lucide-react"
+import { toast } from "sonner"
+import { cn } from "@/lib/utils"
+import { createClient } from "@/utils/supabase/client"
+import { useOrgStore } from "@/store/org-store"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
-interface Student {
-  id: string
-  nisn: string
-  name: string
-  finger1_registered: boolean
-  finger2_registered: boolean
-  fingerprint_id: number | null
+interface Device {
+  device_code: string
+  device_name: string
+  location: string | null
+  organization_id?: number
 }
 
-type FilterStatus = 'all' | 'none' | 'partial' | 'complete'
+interface Member {
+  id: number
+  user_id: string
+  full_name: string
+  phone: string | null
+  email: string | null
+  department_name: string | null
+  finger1_registered: boolean
+  finger2_registered: boolean
+}
+
+type FilterStatus = "all" | "complete" | "partial" | "unregistered"
 
 export default function FingerPage() {
-  const [students, setStudents] = useState<Student[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
-  const [isLoading, setIsLoading] = useState(true)
-  const [loadingStudentId, setLoadingStudentId] = useState<string | null>(null)
+  const [members, setMembers] = React.useState<Member[]>([])
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [devices, setDevices] = React.useState<Device[]>([])
+  const [selectedDevice, setSelectedDevice] = React.useState("")
+  const [loadingDevices, setLoadingDevices] = React.useState(false)
+  const [mounted, setMounted] = React.useState(false)
+  const [showConfirmDialog, setShowConfirmDialog] = React.useState(false)
+  const [registeringMember, setRegisteringMember] = React.useState<{ member: Member; fingerNumber: 1 | 2 } | null>(null)
+  const [isRegistering, setIsRegistering] = React.useState(false)
+  const [selectedDepartment, setSelectedDepartment] = React.useState<string>("all")
+  const [selectedStatus, setSelectedStatus] = React.useState<FilterStatus>("all")
+  const { organizationId } = useOrgStore()
 
-  const supabase = createClient()
-
-  const fetchStudents = async () => {
-    setIsLoading(true)
+  const fetchDevices = async () => {
+    setLoadingDevices(true)
     try {
+      const supabase = createClient()
+
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError) {
+        console.error('User error:', userError)
+        setLoadingDevices(false)
+        return
+      }
+      
+      if (!user) {
+        console.log('No user logged in')
+        setLoadingDevices(false)
+        return
+      }
+
+      let orgId = organizationId
+      
+      if (!orgId) {
+        const { data: member, error: memberError } = await supabase
+          .from("organization_members")
+          .select("organization_id")
+          .eq("user_id", user.id)
+          .maybeSingle()
+
+        if (memberError) {
+          console.error('Member error:', memberError)
+          setLoadingDevices(false)
+          return
+        }
+
+        if (!member) {
+          console.log('User not in organization')
+          setLoadingDevices(false)
+          return
+        }
+        
+        orgId = member.organization_id
+      }
+
+      console.log('✅ Fetching devices for organization:', orgId)
+
       const { data, error } = await supabase
-        .from('students')
-        .select('id, nisn, name, finger1_registered, finger2_registered, fingerprint_id')
-        .order('name')
+        .from('attendance_devices')
+        .select('device_code, device_name, location, organization_id')
+        .eq('is_active', true)
+        .eq('device_type_id', 8)
+        .eq('organization_id', orgId)
+        .order('device_name')
 
       if (error) {
-        toast.error('Failed to load students')
-        console.error('Error fetching students:', error)
-      } else {
-        setStudents(
-          (data || []).map((item) => ({
-            id: item.id,
-            nisn: item.nisn,
-            name: item.name,
-            finger1_registered: item.finger1_registered || false,
-            finger2_registered: item.finger2_registered || false,
-            fingerprint_id: item.fingerprint_id ?? null,
-          }))
-        )
+        console.error('❌ Error loading devices:', error)
+        toast.error(`Error loading devices: ${error.message}`)
+        setLoadingDevices(false)
+        return
       }
+
+      console.log('✅ Devices loaded:', data?.length || 0, 'devices')
+
+      if (data && data.length > 0) {
+        const invalidDevices = data.filter((d: any) => d.organization_id !== orgId)
+        if (invalidDevices.length > 0) {
+          console.error('❌ SECURITY WARNING: Found devices from different organization!', invalidDevices)
+          toast.error("Security error: Invalid devices detected")
+          setLoadingDevices(false)
+          return
+        }
+        console.log('✅ All devices validated for organization:', orgId)
+      }
+
+      const validDevices = (data || []).filter((d: any): d is Device => {
+        if (!d.device_code || typeof d.device_code !== 'string' || d.device_code.trim() === '') {
+          console.warn('⚠️ Device with empty device_code found:', d)
+          return false
+        }
+        return true
+      })
+
+      if (validDevices.length !== (data || []).length) {
+        console.warn(`⚠️ Filtered out ${(data || []).length - validDevices.length} invalid devices`)
+      }
+
+      setDevices(validDevices)
+      
+      if (validDevices && validDevices.length > 0) {
+        const firstDeviceCode = validDevices[0].device_code
+        if (typeof window !== 'undefined') {
+          const saved = localStorage.getItem("selected_fingerprint_device")
+          if (saved && validDevices.find(d => d.device_code === saved)) {
+            setSelectedDevice(saved)
+            console.log('✅ Restored saved device:', saved)
+          } else if (firstDeviceCode) {
+            setSelectedDevice(firstDeviceCode)
+            console.log('✅ Auto-selected first device:', firstDeviceCode)
+          }
+        } else if (firstDeviceCode) {
+          setSelectedDevice(firstDeviceCode)
+        }
+      } else {
+        console.warn('⚠️ No valid devices found')
+      }
+    } catch (error: any) {
+      console.error('Fetch devices error:', error)
+      toast.error(`Failed to load devices: ${error.message}`)
+    } finally {
+      setLoadingDevices(false)
+    }
+  }
+
+  const fetchMembers = async () => {
+    setIsLoading(true)
+    try {
+      const supabase = createClient()
+
+      console.log('=== FETCHING MEMBERS ===')
+
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError) {
+        console.error("User error:", userError)
+        toast.error("Failed to get user")
+        setIsLoading(false)
+        return
+      }
+      
+      if (!user) {
+        console.error("No user logged in")
+        toast.error("User not logged in")
+        setIsLoading(false)
+        return
+      }
+
+      console.log('User ID:', user.id)
+
+      let orgId = organizationId
+      
+      if (!orgId) {
+        const { data: member, error: memberError } = await supabase
+          .from("organization_members")
+          .select("organization_id")
+          .eq("user_id", user.id)
+          .maybeSingle()
+
+        if (memberError) {
+          console.error("Member error:", memberError)
+          toast.error("Failed to get organization")
+          setIsLoading(false)
+          return
+        }
+
+        if (!member) {
+          console.error("User not in organization")
+          toast.error("User not in organization")
+          setIsLoading(false)
+          return
+        }
+        
+        orgId = member.organization_id
+      }
+
+      console.log('✅ Organization ID:', orgId)
+      console.log('✅ Fetching members for organization:', orgId)
+
+      const { data: membersData, error: membersError } = await supabase
+        .from('organization_members')
+        .select(`
+          id,
+          user_id,
+          department_id,
+          organization_id,
+          user_profiles (
+            first_name,
+            last_name,
+            display_name,
+            email,
+            phone
+          )
+        `)
+        .eq('is_active', true)
+        .eq('organization_id', orgId)
+
+      if (membersError) {
+        console.error('❌ Error fetching members:', membersError)
+        toast.error(membersError.message)
+        setIsLoading(false)
+        return
+      }
+
+      console.log('✅ Members fetched:', membersData?.length || 0)
+
+      if (membersData && membersData.length > 0) {
+        const invalidMembers = membersData.filter((m: any) => m.organization_id !== orgId)
+        if (invalidMembers.length > 0) {
+          console.error('❌ SECURITY WARNING: Found members from different organization!', invalidMembers)
+          toast.error("Security error: Invalid data detected")
+          setIsLoading(false)
+          return
+        }
+      }
+
+      const { data: departments, error: deptError } = await supabase
+        .from('departments')
+        .select('id, name')
+        .eq('organization_id', orgId)
+
+      if (deptError) {
+        console.warn('⚠️ Departments error:', deptError.message)
+      }
+
+      console.log('✅ Departments fetched:', departments?.length || 0)
+
+      const deptMap = new Map(departments?.map((d: any) => [d.id, d.name]) || [])
+
+      const memberIds = membersData?.map((m: any) => m.id) || []
+      let biometricData: any[] = []
+      
+      if (memberIds.length > 0) {
+        try {
+          const { data: bioData, error: bioError } = await supabase
+            .from('biometric_data')
+            .select('organization_member_id, finger_number')
+            .in('organization_member_id', memberIds)
+            .eq('biometric_type', 'fingerprint')
+            .eq('is_active', true)
+          
+          if (bioError) {
+            console.warn('Biometric data not available:', bioError.message)
+          } else {
+            biometricData = bioData || []
+          }
+        } catch (bioErr) {
+          console.warn('Biometric data table might not exist, continuing without it')
+        }
+      }
+
+      const fingerMap = new Map<number, Set<number>>()
+      biometricData.forEach((bio: any) => {
+        if (!fingerMap.has(bio.organization_member_id)) {
+          fingerMap.set(bio.organization_member_id, new Set())
+        }
+        fingerMap.get(bio.organization_member_id)?.add(bio.finger_number)
+      })
+
+      const transformedMembers = membersData?.map((m: any) => {
+        const profile = m.user_profiles
+        let fullName = 'No Name'
+        
+        if (profile) {
+          if (profile.display_name) {
+            fullName = profile.display_name
+          } else if (profile.first_name || profile.last_name) {
+            fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+          }
+        }
+
+        const fingers = fingerMap.get(m.id) || new Set()
+
+        return {
+          id: m.id,
+          user_id: m.user_id,
+          full_name: fullName,
+          phone: profile?.phone || 'No Phone',
+          email: profile?.email || null,
+          department_name: deptMap.get(m.department_id) || 'No Department',
+          finger1_registered: fingers.has(1),
+          finger2_registered: fingers.has(2)
+        }
+      }) || []
+
+      console.log('✅ Members transformed:', transformedMembers.length)
+      console.log('📊 SUMMARY:')
+      console.log(`   - Organization ID: ${orgId}`)
+      console.log(`   - Total Members: ${transformedMembers.length}`)
+      console.log(`   - Finger 1 Registered: ${transformedMembers.filter(m => m.finger1_registered).length}`)
+      console.log(`   - Finger 2 Registered: ${transformedMembers.filter(m => m.finger2_registered).length}`)
+      console.log(`   - Both Registered: ${transformedMembers.filter(m => m.finger1_registered && m.finger2_registered).length}`)
+      
+      setMembers(transformedMembers)
+      
+      if (transformedMembers.length === 0) {
+        toast.info("No members found in your organization")
+      }
+    } catch (error: any) {
+      console.error('❌ Fetch error:', error)
+      toast.error(error.message || "Failed to fetch members")
     } finally {
       setIsLoading(false)
     }
   }
 
-  useEffect(() => {
-    fetchStudents()
+  React.useEffect(() => {
+    setMounted(true)
   }, [])
 
-  const getFingerStatus = (student: Student): FilterStatus => {
-    if (student.finger1_registered && student.finger2_registered) return 'complete'
-    if (student.finger1_registered || student.finger2_registered) return 'partial'
-    return 'none'
+  React.useEffect(() => {
+    if (mounted) {
+      fetchDevices()
+      fetchMembers()
+    }
+  }, [mounted, organizationId])
+
+  React.useEffect(() => {
+    if (mounted && selectedDevice) {
+      localStorage.setItem("selected_fingerprint_device", selectedDevice)
+    }
+  }, [selectedDevice, mounted])
+
+  const getUniqueDepartments = (): string[] => {
+    const deptNames: string[] = []
+    members.forEach(member => {
+      if (member.department_name) {
+        deptNames.push(member.department_name)
+      }
+    })
+    return Array.from(new Set(deptNames)).sort()
   }
 
-  const filteredStudents = students.filter((student) => {
-    // Search filter
-    const matchesSearch =
-      student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.nisn.toLowerCase().includes(searchQuery.toLowerCase())
+  const getFilteredMembers = (): Member[] => {
+    return members.filter(member => {
+      const matchesSearch = 
+        member.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (member.phone && member.phone.toLowerCase().includes(searchQuery.toLowerCase()))
 
-    if (!matchesSearch) return false
+      const matchesDepartment = 
+        selectedDepartment === "all" || member.department_name === selectedDepartment
 
-    // Status filter
-    if (filterStatus === 'all') return true
-    return getFingerStatus(student) === filterStatus
-  })
+      const matchesStatus = 
+        selectedStatus === "all" ||
+        (selectedStatus === "complete" && member.finger1_registered && member.finger2_registered) ||
+        (selectedStatus === "partial" && (member.finger1_registered || member.finger2_registered) && !(member.finger1_registered && member.finger2_registered)) ||
+        (selectedStatus === "unregistered" && !member.finger1_registered && !member.finger2_registered)
 
-  const handleRegister = async (studentId: string, fingerNumber: 1 | 2): Promise<boolean> => {
-    setLoadingStudentId(`${studentId}-${fingerNumber}`)
+      return matchesSearch && matchesDepartment && matchesStatus
+    })
+  }
+
+  const filteredMembers = getFilteredMembers()
+  const uniqueDepartments = getUniqueDepartments()
+
+  const handleFingerClick = async (member: Member, fingerNumber: 1 | 2) => {
+    if (!selectedDevice) {
+      toast.error("Please select a fingerprint device first")
+      return
+    }
+
+    const isRegistered = fingerNumber === 1 ? member.finger1_registered : member.finger2_registered
     
-    try {
-      // Simulate fingerprint registration process
-      await new Promise((resolve) => setTimeout(resolve, 2500))
-
-      // Simulate success/failure (70% success rate)
-      const isSuccess = Math.random() > 0.3
-
-      if (isSuccess) {
-        // Find the student and update
-        const student = students.find((s) => s.id === studentId)
-        if (!student) return false
-
-        // Update database
-        const updateField = fingerNumber === 1 ? 'finger1_registered' : 'finger2_registered'
-        const { error } = await supabase
-          .from('students')
-          .update({ [updateField]: true })
-          .eq('id', studentId)
-
-        if (error) {
-          console.error('Error updating student:', error)
-          toast.error('Failed to save data')
-          return false
-        }
-
-        // Update local state
-        setStudents((prev) =>
-          prev.map((s) =>
-            s.id === studentId
-              ? {
-                  ...s,
-                  [`finger${fingerNumber}_registered`]: true,
-                }
-              : s
-          )
-        )
-
-        toast.success(`Finger ${fingerNumber} for ${student.name} registered successfully`)
-        return true
-      } else {
-        toast.error('Fingerprint invalid or not detected. Please try again.')
-        return false
-      }
-    } catch (error) {
-      console.error('Error:', error)
-      toast.error('Sensor error occurred. Please try again.')
-      return false
-    } finally {
-      setLoadingStudentId(null)
+    if (isRegistered) {
+      setRegisteringMember({ member, fingerNumber })
+      setShowConfirmDialog(true)
+    } else {
+      await handleRegister(member, fingerNumber)
     }
   }
 
-  const registeredCount = students.filter(
-    (s) => s.finger1_registered && s.finger2_registered
-  ).length
+  const handleConfirmReRegister = async () => {
+    setShowConfirmDialog(false)
+    if (registeringMember) {
+      await handleRegister(registeringMember.member, registeringMember.fingerNumber)
+    }
+  }
+
+  const handleRegister = async (member: Member, fingerNumber: 1 | 2) => {
+    if (!selectedDevice) {
+      toast.error("Please select a fingerprint device first")
+      return
+    }
+
+    setIsRegistering(true)
+
+    try {
+      console.log('=== STARTING REGISTRATION ===')
+      console.log('Member:', member.full_name, '| User ID:', member.user_id)
+      console.log('Device:', selectedDevice, '| Finger:', fingerNumber)
+
+      const supabase = createClient()
+
+      const payload = {
+        user_id: member.user_id,
+        name: member.full_name
+      }
+
+      const { data: command, error: insertError } = await supabase
+        .from('device_commands')
+        .insert({
+          device_code: selectedDevice,
+          command_type: 'REGISTER',
+          payload: payload,
+          status: 'PENDING'
+        })
+        .select()
+        .single()
+
+      if (insertError) {
+        console.error('Insert error:', insertError)
+        toast.error(`Failed to send command: ${insertError.message}`)
+        setIsRegistering(false)
+        return
+      }
+
+      console.log('Command inserted, ID:', command.id)
+      toast.info(`Command sent to device. Please scan finger ${fingerNumber} on the device.`)
+
+      const startTime = Date.now()
+      const timeout = 120000
+      const pollInterval = 1000
+
+      const pollStatus = async (): Promise<boolean> => {
+        while (Date.now() - startTime < timeout) {
+          await new Promise(resolve => setTimeout(resolve, pollInterval))
+
+          const { data: status } = await supabase
+            .from('device_commands')
+            .select('status, error_message')
+            .eq('id', command.id)
+            .single()
+
+          console.log('Status:', status?.status)
+
+          if (status?.status === 'EXECUTED') {
+            return true
+          }
+
+          if (status?.status === 'FAILED') {
+            toast.error(status.error_message || 'Registration failed')
+            return false
+          }
+        }
+
+        toast.error('Timeout: Device not responding')
+        return false
+      }
+
+      const success = await pollStatus()
+
+      if (success) {
+        const { data: existing } = await supabase
+          .from('biometric_data')
+          .select('id')
+          .eq('organization_member_id', member.id)
+          .eq('finger_number', fingerNumber)
+          .eq('biometric_type', 'fingerprint')
+          .maybeSingle()
+
+        if (existing) {
+          await supabase
+            .from('biometric_data')
+            .update({ is_active: true, updated_at: new Date().toISOString() })
+            .eq('id', existing.id)
+        } else {
+          await supabase
+            .from('biometric_data')
+            .insert({
+              organization_member_id: member.id,
+              biometric_type: 'fingerprint',
+              finger_number: fingerNumber,
+              is_active: true
+            })
+        }
+
+        setMembers(prev => prev.map(m =>
+          m.id === member.id
+            ? { ...m, [`finger${fingerNumber}_registered`]: true }
+            : m
+        ))
+
+        toast.success('Registration successful!')
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error)
+      toast.error(error.message || 'An error occurred')
+    } finally {
+      setIsRegistering(false)
+      setRegisteringMember(null)
+    }
+  }
+
+  const registeredCount = members.filter(m => m.finger1_registered && m.finger2_registered).length
+  const partialCount = members.filter(m => (m.finger1_registered || m.finger2_registered) && !(m.finger1_registered && m.finger2_registered)).length
+  const unregisteredCount = members.filter(m => !m.finger1_registered && !m.finger2_registered).length
 
   return (
-    <div className="w-full flex flex-col gap-6 p-4 md:p-6">
-      {/* Header */}
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
+      <div className="w-full space-y-6 min-w-0">
 
-      {/* Stats Card */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Users className="w-5 h-5 text-primary" />
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="flex items-center gap-3 px-4 py-3 bg-card rounded-lg shadow-sm border">
+              <div className="p-2 rounded-lg bg-green-100">
+                <Check className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Complete (2 Fingers)</p>
+                <p className="text-lg font-semibold">{registeredCount}/{members.length}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Fully Registered</p>
-              <p className="text-2xl font-semibold text-foreground">
-                {registeredCount} <span className="text-muted-foreground font-normal text-sm">/ {students.length}</span>
-              </p>
+
+            <div className="flex items-center gap-3 px-4 py-3 bg-card rounded-lg shadow-sm border">
+              <div className="p-2 rounded-lg bg-yellow-100">
+                <Fingerprint className="w-5 h-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Partial (1 Finger)</p>
+                <p className="text-lg font-semibold">{partialCount}/{members.length}</p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Search, Refresh, and Filter Bar */}
-      <div className="flex gap-2 w-full items-center">
-        {/* Search Input */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name or NISN..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
-        {/* Refresh Button */}
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={fetchStudents}
-          disabled={isLoading}
-          className="shrink-0"
-          title="Refresh data"
-        >
-          <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
-        </Button>
-
-        {/* Filter Dropdown */}
-        <div className="relative group">
-          <Button
-            variant={filterStatus !== 'all' ? 'default' : 'outline'}
-            size="icon"
-            className="shrink-0"
-            title="Filter options"
-          >
-            <Filter className="w-4 h-4" />
-          </Button>
-          
-          {/* Filter Menu */}
-          <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-            <div className="p-2 space-y-1">
-              <button
-                onClick={() => setFilterStatus('all')}
-                className={cn(
-                  'w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
-                  filterStatus === 'all'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'hover:bg-muted text-foreground'
-                )}
-              >
-                All Students
-              </button>
-              <button
-                onClick={() => setFilterStatus('none')}
-                className={cn(
-                  'w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
-                  filterStatus === 'none'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'hover:bg-muted text-foreground'
-                )}
-              >
-                Not Registered
-              </button>
-              <button
-                onClick={() => setFilterStatus('partial')}
-                className={cn(
-                  'w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
-                  filterStatus === 'partial'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'hover:bg-muted text-foreground'
-                )}
-              >
-                Partial (1 Finger)
-              </button>
-              <button
-                onClick={() => setFilterStatus('complete')}
-                className={cn(
-                  'w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
-                  filterStatus === 'complete'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'hover:bg-muted text-foreground'
-                )}
-              >
-                Complete (2 Fingers)
-              </button>
+            <div className="flex items-center gap-3 px-4 py-3 bg-card rounded-lg shadow-sm border">
+              <div className="p-2 rounded-lg bg-red-100">
+                <Users className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Not Registered</p>
+                <p className="text-lg font-semibold">{unregisteredCount}/{members.length}</p>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Students Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Students</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-lg border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="font-semibold text-foreground w-16">No</TableHead>
-                  <TableHead className="font-semibold text-foreground">Name</TableHead>
-                  <TableHead className="font-semibold text-foreground">NISN</TableHead>
-                  <TableHead className="font-semibold text-foreground text-center">Finger 1</TableHead>
-                  <TableHead className="font-semibold text-foreground text-center">Finger 2</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                      <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
-                      Loading data...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredStudents.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                      {students.length === 0 ? 'No students found' : 'No data found'}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredStudents.map((student, index) => (
-                    <TableRow
-                      key={student.id}
-                      className={cn(
-                        'transition-colors duration-200',
-                        index % 2 === 0 ? 'bg-background' : 'bg-muted/30',
-                        'hover:bg-primary/5'
-                      )}
+          <div className="flex flex-col gap-3 w-full">
+            <div className="flex flex-col sm:flex-row gap-2 w-full items-start sm:items-center">
+              <div className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border shadow-sm shrink-0">
+                <Monitor className="w-4 h-4 text-primary" />
+                <div className="flex items-center gap-2">
+                  {!mounted || loadingDevices ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Loading devices...</span>
+                    </div>
+                  ) : devices.length === 0 ? (
+                    <span className="text-sm font-medium text-destructive">No devices found</span>
+                  ) : (
+                    <Select
+                      value={selectedDevice}
+                      onValueChange={setSelectedDevice}
+                      disabled={!mounted || loadingDevices || devices.length === 0}
                     >
-                      <TableCell className="font-medium text-muted-foreground">
-                        {index + 1}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {student.name}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {student.nisn}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <FingerButtonComponent
-                          fingerNumber={1}
-                          isRegistered={student.finger1_registered}
-                          isLoading={loadingStudentId === `${student.id}-1`}
-                          onRegister={() => handleRegister(student.id, 1)}
-                          studentName={student.name}
-                        />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <FingerButtonComponent
-                          fingerNumber={2}
-                          isRegistered={student.finger2_registered}
-                          isLoading={loadingStudentId === `${student.id}-2`}
-                          onRegister={() => handleRegister(student.id, 2)}
-                          studentName={student.name}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                      <SelectTrigger className="h-6 border-0 shadow-none p-0 font-mono font-semibold text-sm hover:bg-transparent focus:ring-0">
+                        <SelectValue placeholder="Pilih...">
+                          {selectedDevice && devices.find(d => d.device_code === selectedDevice)?.device_code.replace(/_/g, ' ')}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="w-[320px]">
+                        {devices.length === 0 ? (
+                          <div className="p-4 text-center text-muted-foreground">
+                            <Monitor className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm font-medium">Tidak ada mesin aktif</p>
+                            <p className="text-xs mt-1">Hubungi administrator</p>
+                          </div>
+                        ) : (
+                          devices.map((device, index) => {
+                            const deviceKey = device.device_code || `device-${index}`
+                            const deviceValue = device.device_code || ''
+                            
+                            return (
+                              <SelectItem 
+                                key={deviceKey}
+                                value={deviceValue}
+                                className="cursor-pointer"
+                                disabled={!device.device_code}
+                              >
+                                <div className="flex items-start gap-3 py-1">
+                                  <div className="p-2 rounded-md bg-primary/10 mt-0.5 shrink-0">
+                                    <Monitor className="w-4 h-4 text-primary" />
+                                  </div>
+                                  <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                                    <span className="font-semibold text-sm font-mono">
+                                      {device.device_code || '(No Code)'}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground truncate">
+                                      {device.device_name || '(No Name)'}
+                                    </span>
+                                    {device.location && (
+                                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                        📍 {device.location}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            )
+                          })
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  fetchDevices()
+                  fetchMembers()
+                }}
+                disabled={isLoading || loadingDevices}
+                className="shrink-0"
+              >
+                <RefreshCw className={cn("w-4 h-4", (isLoading || loadingDevices) && "animate-spin")} />
+              </Button>
+
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name or phone..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                <SelectTrigger className="w-full sm:w-[250px]">
+                  <SelectValue placeholder="Filter Department..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {uniqueDepartments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as FilterStatus)}>
+                <SelectTrigger className="w-full sm:w-[250px]">
+                  <SelectValue placeholder="Filter Status..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="complete">Complete (2 Fingers)</SelectItem>
+                  <SelectItem value="partial">Partial (1 Finger)</SelectItem>
+                  <SelectItem value="unregistered">Not Registered</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className="bg-card rounded-xl shadow-sm border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="font-semibold w-16">No</TableHead>
+                <TableHead className="font-semibold">Full Name</TableHead>
+                <TableHead className="font-semibold">Phone Number</TableHead>
+                <TableHead className="font-semibold">Class</TableHead>
+                <TableHead className="font-semibold text-center">Finger 1</TableHead>
+                <TableHead className="font-semibold text-center">Finger 2</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12">
+                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
+                    Loading data...
+                  </TableCell>
+                </TableRow>
+              ) : filteredMembers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    {searchQuery || selectedDepartment !== "all" || selectedStatus !== "all" 
+                      ? "No data found" 
+                      : "No members registered yet"}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredMembers.map((member, index) => (
+                  <TableRow
+                    key={member.id}
+                    className={cn(
+                      "transition-colors",
+                      index % 2 === 0 ? "bg-background" : "bg-muted/30",
+                      "hover:bg-primary/5"
+                    )}
+                  >
+                    <TableCell className="font-medium text-muted-foreground">
+                      {index + 1}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <div>{member.full_name}</div>
+                      {member.email && (
+                        <div className="text-xs text-muted-foreground">{member.email}</div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {member.phone}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">
+                        {member.department_name}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex justify-center">
+                        <Button
+                          variant={member.finger1_registered ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleFingerClick(member, 1)}
+                          disabled={isRegistering}
+                          className={cn(
+                            "gap-2 transition-all",
+                            member.finger1_registered && "bg-green-600 hover:bg-green-700 text-white"
+                          )}
+                        >
+                          {member.finger1_registered ? (
+                            <>
+                              <Check className="w-4 h-4" />
+                              Registered
+                            </>
+                          ) : (
+                            <>
+                              <Fingerprint className="w-4 h-4" />
+                              Finger 1
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex justify-center">
+                        <Button
+                          variant={member.finger2_registered ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleFingerClick(member, 2)}
+                          disabled={isRegistering}
+                          className={cn(
+                            "gap-2 transition-all",
+                            member.finger2_registered && "bg-green-600 hover:bg-green-700 text-white"
+                          )}
+                        >
+                          {member.finger2_registered ? (
+                            <>
+                              <Check className="w-4 h-4" />
+                              Registered
+                            </>
+                          ) : (
+                            <>
+                              <Fingerprint className="w-4 h-4" />
+                              Finger 2
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Konfirmasi Re-Register Sidik Jari</AlertDialogTitle>
+              <AlertDialogDescription>
+                Sidik jari {registeringMember?.fingerNumber} untuk {registeringMember?.member.full_name} sudah terdaftar.
+                Apakah Anda yakin ingin mendaftarkan ulang?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmReRegister}>
+                Ya, Daftar Ulang
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   )
 }
-
-// Finger Button Component
-interface FingerButtonComponentProps {
-  fingerNumber: 1 | 2
-  isRegistered: boolean
-  isLoading: boolean
-  onRegister: () => Promise<boolean>
-  studentName: string
-}
-
-function FingerButtonComponent({
-  fingerNumber,
-  isRegistered,
-  isLoading,
-  onRegister,
-  studentName,
-}: FingerButtonComponentProps) {
-  const handleClick = async () => {
-    if (isRegistered) return
-
-    const namePrefix = studentName ? `${studentName}: ` : ''
-    toast.info(`${namePrefix}Please place finger ${fingerNumber} on the fingerprint sensor...`)
-    await onRegister()
-  }
-
-  if (isRegistered) {
-    return (
-      <Badge variant="default" className="gap-1.5 py-1.5 px-3 bg-green-600 hover:bg-green-700">
-        <Check className="w-3.5 h-3.5" />
-        Registered
-      </Badge>
-    )
-  }
-
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleClick}
-      disabled={isLoading}
-      className={cn(
-        'gap-2 transition-all duration-300',
-        'hover:bg-primary hover:text-primary-foreground hover:border-primary',
-        isLoading && 'bg-primary/10 border-primary'
-      )}
-    >
-      {isLoading ? (
-        <>
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Scanning...
-        </>
-      ) : (
-        <>
-          <Fingerprint className="w-4 h-4" />
-          Finger {fingerNumber}
-        </>
-      )}
-    </Button>
-  )
-}
-
 
