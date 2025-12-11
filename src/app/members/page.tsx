@@ -11,7 +11,6 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyContent,
   EmptyMedia,
 } from "@/components/ui/empty"
 import {
@@ -51,11 +50,11 @@ import { getAllUsers } from "@/action/users"
 import { getAllGroups } from "@/action/group"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
 // ContentLayout removed - using new layout system
-import { createClient } from "@/utils/supabase/client"
 import { createInvitation } from "@/action/invitations"
 import { getOrgRoles } from "@/lib/rbac"
 import { useGroups } from "@/hooks/use-groups"
 import { usePositions } from "@/hooks/use-positions"
+import { useOrgStore } from "@/store/org-store"
 //tes
 const inviteSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -118,7 +117,8 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
 ]
 export default function MembersPage() {
   const searchParams = useSearchParams()
-  const supabase = createClient()
+
+  const orgStore = useOrgStore()
 
   const [members, setMembers] = React.useState<IOrganization_member[]>([])
   const [loading, setLoading] = React.useState<boolean>(true)
@@ -165,27 +165,21 @@ export default function MembersPage() {
     try {
       setLoading(true)
       
-      // Get organization ID
-      const { data: { user } } = await supabase.auth.getUser()
-      let orgId = ""
+      // Get organization ID from store
+      const orgId = orgStore.organizationId
+      console.log('[MEMBERS] Fetching members for org:', orgId)
 
-      if (user) {
-        const { data } = await supabase
-          .from("organization_members")
-          .select("organization_id")
-          .eq("user_id", user.id)
-          .maybeSingle()
-
-        if (data) {
-          orgId = String(data.organization_id)
-        }
+      if (!orgId) {
+        console.error('[MEMBERS] No organization ID found')
+        setMembers([])
+        return
       }
 
       // Fetch all data
       const [memberRes, userRes, groupsRes] = await Promise.all([
-        getAllOrganization_member(),
+        getAllOrganization_member(orgId),
         getAllUsers(),
-        getAllGroups(),
+        getAllGroups(orgId),
       ])
 
       if (!memberRes.success) throw new Error(memberRes.message)
@@ -211,12 +205,9 @@ export default function MembersPage() {
         return { ...m, user: u, groupName }
       })
 
-      // Filter by organization
-      const filteredMembers = orgId
-        ? mergedMembers.filter((m: any) => String(m.organization_id) === orgId)
-        : mergedMembers
-      
-      setMembers(filteredMembers)
+      // Members are already filtered by organization from API
+      console.log('[MEMBERS] Fetched', mergedMembers.length, 'members for org', orgId)
+      setMembers(mergedMembers)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
@@ -224,9 +215,16 @@ export default function MembersPage() {
     }
   }
 
+  // Monitor organization changes
+  React.useEffect(() => {
+    if (orgStore.organizationId) {
+      console.log('[MEMBERS] Organization changed to:', orgStore.organizationId, orgStore.organizationName)
+    }
+  }, [orgStore.organizationId, orgStore.organizationName])
+
   React.useEffect(() => {
     fetchMembers()
-  }, [])
+  }, [orgStore.organizationId])
   async function onSubmitInvite(values: InviteFormValues) {
     try {
       setSubmittingInvite(true)
@@ -243,7 +241,7 @@ export default function MembersPage() {
         toast.success("Invitation sent successfully via email!")
         setInviteDialogOpen(false)
         inviteForm.reset()
-        fetchMembers()
+        await fetchMembers()
       } else {
         toast.error(result.message || "Failed to send invitation")
       }
@@ -324,9 +322,6 @@ export default function MembersPage() {
     <div className="flex flex-1 flex-col gap-4 w-full">
       <div className="w-full">
         <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="bg-white text-black px-4 md:px-6 py-4 rounded-t-lg border-b-2 border-black-200">
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Members</h1>
-          </div>
           
           <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center sm:justify-between" suppressHydrationWarning>
@@ -657,9 +652,6 @@ export default function MembersPage() {
                         There are no members for this organization. Use the "Invite Member" button to add one.
                       </EmptyDescription>
                     </EmptyHeader>
-                    <EmptyContent>
-                      <Button onClick={() => setInviteDialogOpen(true)}>Invite Member</Button>
-                    </EmptyContent>
                   </Empty>
                 </div>
               ) : (

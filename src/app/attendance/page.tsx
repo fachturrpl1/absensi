@@ -27,6 +27,7 @@ import useOrgStore from "@/store/org-store";
 
 export default function AttendanceDashboard() {
   const {isChecking,hasOrganization} = useOrganizationGuard();
+  const orgStore = useOrgStore();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("overview");
@@ -48,37 +49,47 @@ export default function AttendanceDashboard() {
   }, []);
 
   const loadData = useCallback(async () => {
-      console.log('🔍 loadData: Called with isChecking:', isChecking, 'hasOrganization:', hasOrganization);
+    console.log('[ATTENDANCE] loadData: Called with isChecking:', isChecking, 'hasOrganization:', hasOrganization, 'orgId:', orgStore.organizationId);
     
     // Prevent loading if organization check is still in progress or no organization
     if (isChecking || !hasOrganization) {
-    console.log('⏳ loadData: Skipping because:', {
-      isChecking,
-      hasOrganization,
-      reason: isChecking ? 'still checking' : 'no organization'
-    });
-    return;
-  }
+      console.log('[ATTENDANCE] loadData: Skipping because:', {
+        isChecking,
+        hasOrganization,
+        reason: isChecking ? 'still checking' : 'no organization'
+      });
+      return;
+    }
     
     setLoading(true);
     try {
-      const orgId = useOrgStore.getState().organizationId || null;
+      const orgId = orgStore.organizationId || null;
+      console.log('[ATTENDANCE] Fetching stats for org:', orgId);
       const data = await getDashboardStats(orgId || undefined);
+      console.log('[ATTENDANCE] Fetched stats:', data);
       setStats(data);
     } catch (error) {
-      console.error("Error loading attendance stats:", error);
+      console.error("[ATTENDANCE] Error loading attendance stats:", error);
       toast.error("Failed to load attendance statistics");
+      setStats(null);
     } finally {
       setLoading(false);
     }
-  }, [isChecking, hasOrganization]);
+  }, [isChecking, hasOrganization, orgStore.organizationId]);
+
+  // Monitor organization changes
+  useEffect(() => {
+    if (orgStore.organizationId) {
+      console.log('[ATTENDANCE] Organization changed to:', orgStore.organizationId, orgStore.organizationName);
+    }
+  }, [orgStore.organizationId, orgStore.organizationName]);
 
   useEffect(() => {
-  // Only load data when organization check is complete and we have organization
-  if (!isChecking && hasOrganization) {
-    loadData();
-  }
-}, [isChecking, hasOrganization])
+    // Only load data when organization check is complete and we have organization
+    if (!isChecking && hasOrganization) {
+      loadData();
+    }
+  }, [isChecking, hasOrganization, loadData])
   if (isChecking || !hasOrganization) {
     return (
       <div className="flex items-center justify-center h-screen">

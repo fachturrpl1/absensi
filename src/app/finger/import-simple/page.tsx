@@ -6,7 +6,7 @@ import { FileText, Upload, X, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 
-export default function MembersImportSimplePage() {
+export default function FingerImportSimplePage() {
   const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
   const [isDragActive, setIsDragActive] = useState(false)
@@ -35,7 +35,7 @@ export default function MembersImportSimplePage() {
       console.error("Error storing file:", error)
     }
 
-    router.push(`/members/import-simple/mapping?file=${encodeURIComponent(selectedFile.name)}`)
+    router.push(`/finger/import-simple/mapping?file=${encodeURIComponent(selectedFile.name)}`)
   }
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -150,7 +150,7 @@ export default function MembersImportSimplePage() {
               </p>
               <div className="pt-2">
                 <a
-                  href="/templates/members-import-template.xlsx"
+                  href="/templates/finger-import-template.xlsx"
                   download
                   className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                 >
@@ -184,9 +184,4 @@ export default function MembersImportSimplePage() {
     </div>
   )
 }
-
-
-
-
-
 

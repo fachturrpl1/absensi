@@ -30,7 +30,12 @@ export function DashboardLayoutWrapper({
   ];
 
   // Pages that should hide only the navbar (keep sidebar/layout)
-  const hideNavbarPaths = ['/members/import-simple', '/members/import-simple-1'];
+  const hideNavbarPaths = [
+    '/members/import-simple',
+    '/members/import-simple-1',
+    '/finger/import-simple',
+    '/finger/import-simple/mapping',
+  ];
 
   // Check if current path is public (no sidebar/navbar)
   const isPublicPath = publicPaths.some(path => pathname?.startsWith(path));
