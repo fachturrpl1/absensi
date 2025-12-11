@@ -1,307 +1,369 @@
-"use server";
+"use server"
 
-import { createClient } from "@/utils/supabase/server";
-import { createSupabaseClient } from "@/config/supabase-config";
+import { createClient } from "@/utils/supabase/server"
+import { Organization, Role } from "@/lib/types/organization"
 
-export interface CreateOrganizationInput {
-  orgName: string;
-  orgCode: string;
-  timezone: string;
-  workStartTime: string;
-  workEndTime: string;
-  defaultRoleId: string;
-}
-
-export interface CreateOrganizationResult {
-  success: boolean;
-  message: string;
-  data?: {
-    organizationId: number;
-    organizationName: string;
-    organizationCode: string;
-  };
-  error?: string;
+interface LoginResponse {
+  success: boolean
+  message?: string
+  user?: {
+    id: string
+    email: string
+    first_name: string
+    last_name: string
+    avatar: string
+  }
+  organizations?: Organization[]
 }
 
 /**
- * Create a new organization with complete setup
- * - Create organization record
- * - Add current user as organization member
- * - Assign admin role to user
- * - Setup default settings
+ * Multi-Org Login
+ * Fetch user's organizations and roles after login
  */
-export async function createOrganization(
-  input: CreateOrganizationInput
-): Promise<CreateOrganizationResult> {
-  try {
-    const supabase = await createClient();
+export async function loginMultiOrg(formData: FormData): Promise<LoginResponse> {
+  const supabase = await createClient()
 
-    // 1. Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return {
-        success: false,
-        message: "User not authenticated",
-        error: "Please login first",
-      };
+  const email = formData.get("email") as string
+  const password = formData.get("password") as string
+
+  if (!email || !password) {
+    return { success: false, message: "Email and password are required" }
+  }
+
+  // Sign in with email and password
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+
+  if (error) {
+    return { success: false, message: error.message }
+  }
+
+  if (!data.user) {
+    return { success: false, message: "Login failed. Please ensure your email is confirmed." }
+  }
+
+  const user = data.user
+
+  // Get user profile
+  const { data: profile, error: profileError } = await supabase
+    .from("user_profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single()
+
+  if (profileError || !profile) {
+    return { success: false, message: "User profile not found" }
+  }
+
+  // Get user's organizations with roles
+  const { data: orgMembers, error: orgMembersError } = await supabase
+    .from("organization_members")
+    .select(`
+      id,
+      organization_id,
+      is_active,
+      organizations (
+        id,
+        name,
+        code,
+        timezone,
+        country_code,
+        is_active
+      ),
+      organization_member_roles (
+        id,
+        system_roles (
+          id,
+          code,
+          name,
+          description
+        )
+      )
+    `)
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+
+  if (orgMembersError) {
+    return { success: false, message: "Failed to fetch organizations" }
+  }
+
+  // Transform organizations data
+  const organizations: Organization[] = []
+
+  if (orgMembers && orgMembers.length > 0) {
+    for (const member of orgMembers) {
+      const org = member.organizations as any
+      const roles: Role[] = []
+
+      // Extract roles from organization_member_roles
+      if (member.organization_member_roles && Array.isArray(member.organization_member_roles)) {
+        for (const memberRole of member.organization_member_roles) {
+          if (memberRole.system_roles && Array.isArray(memberRole.system_roles) && memberRole.system_roles.length > 0) {
+            const role = memberRole.system_roles[0]
+            if (role) {
+              roles.push({
+                id: role.id,
+                code: role.code,
+                name: role.name,
+                description: role.description,
+              })
+            }
+          }
+        }
+      }
+
+      if (org) {
+        organizations.push({
+          id: org.id,
+          name: org.name,
+          code: org.code,
+          timezone: org.timezone,
+          country_code: org.country_code,
+          roles,
+        })
+      }
     }
+  }
 
-    console.log("[CREATE-ORG] Starting organization creation for user:", user.id);
-
-    // 2. Validate input
-    if (!input.orgName || !input.orgCode) {
       return {
-        success: false,
-        message: "Organization name and code are required",
-        error: "Missing required fields",
-      };
-    }
+    success: true,
+    user: {
+      id: user.id,
+      email: user.email || "",
+      first_name: profile.first_name || "",
+      last_name: profile.last_name || "",
+      avatar: profile.profile_photo_url || "",
+    },
+    organizations,
+  }
+}
 
-    // 3. Generate invitation code
-    const invCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+/**
+ * Get User Organizations
+ * Fetch organizations for current logged-in user
+ */
+export async function getUserOrganizations(): Promise<{
+  success: boolean
+  message?: string
+  organizations?: Organization[]
+}> {
+  const supabase = await createClient()
 
-    // 4. Create organization
-    console.log("[CREATE-ORG] Creating organization:", {
-      name: input.orgName,
-      code: input.orgCode,
-      timezone: input.timezone,
-      invCode: invCode,
-    });
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-    const adminClient = await createSupabaseClient();
-    const { data: organization, error: orgError } = await adminClient
-      .from("organizations")
-      .insert([
-        {
-          name: input.orgName,
-          legal_name: input.orgName,
-          code: input.orgCode,
-          timezone: input.timezone,
-          work_start_time: input.workStartTime,
-          work_end_time: input.workEndTime,
-          is_active: true,
-          is_suspended: false,
-          created_by: user.id,
-          inv_code: invCode,
-        },
-      ])
-      .select()
-      .single();
+  if (userError || !user) {
+    return { success: false, message: "User not authenticated" }
+  }
 
-    if (orgError || !organization) {
-      console.error("[CREATE-ORG] Error creating organization:", orgError);
-      return {
-        success: false,
-        message: "Failed to create organization",
-        error: orgError?.message || "Database error",
-      };
-    }
+  console.log('🔍 getUserOrganizations: User authenticated:', user.id)
 
-    console.log("[CREATE-ORG] Organization created:", organization.id);
-
-    // 5. Add user as organization member
-    console.log("[CREATE-ORG] Adding user as organization member");
-
-    const { data: member, error: memberError } = await adminClient
-      .from("organization_members")
-      .insert([
-        {
-          user_id: user.id,
-          organization_id: organization.id,
-          is_active: true,
-        },
-      ])
-      .select()
-      .single();
-
-    if (memberError || !member) {
-      console.error("[CREATE-ORG] Error adding member:", memberError);
-      // Rollback: delete organization
-      await adminClient
-        .from("organizations")
-        .delete()
-        .eq("id", organization.id);
-      return {
-        success: false,
-        message: "Failed to add user to organization",
-        error: memberError?.message || "Database error",
-      };
-    }
-
-    console.log("[CREATE-ORG] Member added:", member.id);
-
-    // 6. Assign admin role to user
-    console.log("[CREATE-ORG] Assigning admin role to user");
-
-    // Get admin role (A001)
-    const { data: adminRole, error: roleError } = await adminClient
-      .from("system_roles")
-      .select("id")
-      .eq("code", "A001")
-      .single();
-
-    if (roleError || !adminRole) {
-      console.error("[CREATE-ORG] Error fetching admin role:", roleError);
-      // Rollback: delete member and organization
-      await adminClient
+  const { data: orgMembers, error: orgMembersError } = await supabase
         .from("organization_members")
-        .delete()
-        .eq("id", member.id);
-      await adminClient
-        .from("organizations")
-        .delete()
-        .eq("id", organization.id);
-      return {
-        success: false,
-        message: "Failed to assign role",
-        error: "Admin role not found",
-      };
+    .select(`
+      id,
+      organization_id,
+      organizations (
+        id,
+        name,
+        code,
+        timezone,
+        country_code
+      ),
+      organization_member_roles (
+        id,
+        system_roles (
+          id,
+          code,
+          name,
+          description
+        )
+      )
+    `)
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+
+    console.log('🔍 getUserOrganizations: Query result:', orgMembers)
+    console.log('🔍 getUserOrganizations: Query error:', orgMembersError)
+  if (orgMembersError) {
+    return { success: false, message: "Failed to fetch organizations" }
+  }
+
+  const organizations: Organization[] = []
+
+  if (orgMembers && orgMembers.length > 0) {
+    for (const member of orgMembers) {
+      const org = member.organizations as any
+      const roles: Role[] = []
+
+      if (member.organization_member_roles && Array.isArray(member.organization_member_roles)) {
+        for (const memberRole of member.organization_member_roles) {
+          if (memberRole.system_roles && Array.isArray(memberRole.system_roles) && memberRole.system_roles.length > 0) {
+            const role = memberRole.system_roles[0]!
+            roles.push({
+              id: role.id,
+              code: role.code,
+              name: role.name,
+              description: role.description,
+            })
+          }
+        }
+      }
+
+      if (org) {
+        organizations.push({
+          id: org.id,
+          name: org.name,
+          code: org.code,
+          timezone: org.timezone,
+          country_code: org.country_code,
+          roles,
+        })
+      }
     }
-
-    // Create organization_member_roles record
-    const { error: memberRoleError } = await adminClient
-      .from("organization_member_roles")
-      .insert([
-        {
-          organization_member_id: member.id,
-          role_id: adminRole.id,
-        },
-      ]);
-
-    if (memberRoleError) {
-      console.error("[CREATE-ORG] Error assigning role:", memberRoleError);
-      // Rollback: delete member and organization
-      await adminClient
-        .from("organization_members")
-        .delete()
-        .eq("id", member.id);
-      await adminClient
-        .from("organizations")
-        .delete()
-        .eq("id", organization.id);
-      return {
-        success: false,
-        message: "Failed to assign role to member",
-        error: memberRoleError.message || "Database error",
-      };
-    }
-
-    console.log("[CREATE-ORG] Admin role assigned successfully");
-
-    // 7. Success - return organization details
-    console.log("[CREATE-ORG] Organization creation completed successfully");
+  }
 
     return {
       success: true,
-      message: "Organization created successfully",
-      data: {
-        organizationId: organization.id,
-        organizationName: organization.name,
-        organizationCode: organization.code,
-      },
-    };
-  } catch (error) {
-    console.error("[CREATE-ORG] Unexpected error:", error);
-    return {
-      success: false,
-      message: "An unexpected error occurred",
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
+    organizations,
   }
 }
 
 /**
- * Generate random invitation code
- * @deprecated Not currently used, but kept for future reference
+ * Get Organization Roles
+ * Fetch available roles for a specific organization
  */
-// function generateInvitationCode(): string {
-//   return Math.random().toString(36).substring(2, 10).toUpperCase();
-// }
+export async function getOrganizationRoles(organizationId: number): Promise<{
+  success: boolean
+  message?: string
+  roles?: Role[]
+}> {
+  const supabase = await createClient()
 
-/**
- * Validate organization code uniqueness
- */
-export async function validateOrganizationCode(
-  code: string
-): Promise<{ isValid: boolean; message?: string }> {
-  try {
-    const supabase = await createSupabaseClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-    const { data, error } = await supabase
-      .from("organizations")
-      .select("id")
-      .eq("code", code.toUpperCase())
-      .maybeSingle();
+  if (userError || !user) {
+    return { success: false, message: "User not authenticated" }
+  }
 
-    if (error) {
-      return {
-        isValid: false,
-        message: "Error validating code",
-      };
+  // Verify user is member of this organization
+  const { data: member, error: memberError } = await supabase
+    .from("organization_members")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("organization_id", organizationId)
+    .eq("is_active", true)
+    .maybeSingle()
+
+  if (memberError || !member) {
+    return { success: false, message: "User is not a member of this organization" }
+  }
+
+  // Get roles for this member
+  const { data: memberRoles, error: rolesError } = await supabase
+    .from("organization_member_roles")
+    .select(`
+      role:system_roles (
+        id,
+        code,
+        name,
+        description
+      )
+    `)
+    .eq("organization_member_id", member.id)
+
+  if (rolesError) {
+    return { success: false, message: "Failed to fetch roles" }
+  }
+
+  const roles: Role[] = []
+
+  if (memberRoles && Array.isArray(memberRoles)) {
+    for (const memberRole of memberRoles) {
+      if (memberRole.role && Array.isArray(memberRole.role) && memberRole.role.length > 0) {
+        const role = memberRole.role[0]!
+        roles.push({
+          id: role.id,
+          code: role.code,
+          name: role.name,
+          description: role.description,
+        })
+      }
     }
-
-    if (data) {
-      return {
-        isValid: false,
-        message: "Organization code already exists",
-      };
     }
 
     return {
-      isValid: true,
-    };
-  } catch (error) {
-    console.error("[VALIDATE-CODE] Error:", error);
-    return {
-      isValid: false,
-      message: "Error validating code",
-    };
+    success: true,
+    roles,
   }
 }
 
 /**
- * Get available timezones
+ * Get Role Permissions
+ * Fetch permissions for a specific role
  */
-export async function getAvailableTimezones(): Promise<string[]> {
-  return [
-    "Asia/Jakarta",
-    "Asia/Bangkok",
-    "Asia/Singapore",
-    "Asia/Manila",
-    "Asia/Hong_Kong",
-    "Asia/Shanghai",
-    "Asia/Tokyo",
-    "Asia/Seoul",
-    "UTC",
-    "Europe/London",
-    "Europe/Paris",
-    "America/New_York",
-    "America/Los_Angeles",
-  ];
+export async function getRolePermissions(roleId: number): Promise<{
+  success: boolean
+  message?: string
+  permissions?: string[]
+}> {
+  const supabase = await createClient()
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+  if (userError || !user) {
+    return { success: false, message: "User not authenticated" }
+  }
+
+  // Get permissions for this role
+  const { data: rolePermissions, error: permError } = await supabase
+    .from("role_permissions")
+    .select(`
+      permission:nfk_permissions (
+        code
+      )
+    `)
+    .eq("role_id", roleId)
+
+  if (permError) {
+    return { success: false, message: "Failed to fetch permissions" }
+  }
+
+  const permissions: string[] = []
+
+  if (rolePermissions && Array.isArray(rolePermissions)) {
+    for (const rp of rolePermissions) {
+      if (rp.permission && Array.isArray(rp.permission) && rp.permission.length > 0) {
+        const permission = rp.permission[0]!
+        if (permission && permission.code) {
+          permissions.push(permission.code)
+        }
+      }
+    }
+  }
+
+  return {
+    success: true,
+    permissions,
+  }
 }
 
 /**
- * Get available roles for organization
+ * Logout Multi-Org
+ * Clear session and redirect
  */
-export async function getAvailableRoles(): Promise<
-  Array<{ id: string; code: string; name: string }>
-> {
-  try {
-    const supabase = await createSupabaseClient();
+export async function logoutMultiOrg(): Promise<{
+  success: boolean
+  message?: string
+}> {
+  const supabase = await createClient()
 
-    const { data, error } = await supabase
-      .from("system_roles")
-      .select("id, code, name")
-      .order("code", { ascending: true });
+  const { error } = await supabase.auth.signOut()
 
-    if (error || !data) {
-      console.error("[GET-ROLES] Error:", error);
-      return [];
-    }
-
-    return data;
-  } catch (error) {
-    console.error("[GET-ROLES] Error:", error);
-    return [];
+  if (error) {
+    return { success: false, message: error.message }
   }
+
+  return { success: true }
 }

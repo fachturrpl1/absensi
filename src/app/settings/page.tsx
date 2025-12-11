@@ -1186,7 +1186,7 @@ export default function SettingsPage() {
           <Card className="border shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Mail className="h-5 w-5 text-primary" />
+                <Phone className="h-5 w-5 text-primary" />
                 Contact & Location
               </CardTitle>
               <CardDescription>
@@ -1197,8 +1197,8 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">
-                  <Mail className="inline h-4 w-4 mr-1" />
+                <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
+                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
                   Email Address
                 </Label>
                 <Input
@@ -1213,8 +1213,8 @@ export default function SettingsPage() {
 
               {/* Phone */}
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-medium">
-                  <Phone className="inline h-4 w-4 mr-1" />
+                <Label htmlFor="phone" className="text-sm font-medium flex items-center gap-2">
+                  <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                   Phone Number
                 </Label>
                 <Input
@@ -1229,8 +1229,8 @@ export default function SettingsPage() {
 
               {/* Website */}
               <div className="space-y-2">
-                <Label htmlFor="website" className="text-sm font-medium">
-                  <Globe className="inline h-4 w-4 mr-1" />
+                <Label htmlFor="website" className="text-sm font-medium flex items-center gap-2">
+                  <Globe className="h-3.5 w-3.5 text-muted-foreground" />
                   Website
                 </Label>
                 <Input
@@ -1259,156 +1259,161 @@ export default function SettingsPage() {
                 />
               </div>
 
-              {/* Country */}
-              <div className="space-y-2">
-                <Label htmlFor="country" className="text-sm font-medium">
-                  Country
-                </Label>
-                <Select value={formData.country_code} onValueChange={(value) => setFormData({...formData, country_code: value})}>
-                  <SelectTrigger id="country" className="h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ID">Indonesia</SelectItem>
-                    <SelectItem value="MY">Malaysia</SelectItem>
-                    <SelectItem value="SG">Singapore</SelectItem>
-                    <SelectItem value="TH">Thailand</SelectItem>
-                    <SelectItem value="PH">Philippines</SelectItem>
-                    <SelectItem value="VN">Vietnam</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Country and State/Province in Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="country" className="text-sm font-medium">
+                    Country
+                  </Label>
+                  <Select value={formData.country_code} onValueChange={(value) => setFormData({...formData, country_code: value})}>
+                    <SelectTrigger id="country" className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ID">Indonesia</SelectItem>
+                      <SelectItem value="MY">Malaysia</SelectItem>
+                      <SelectItem value="SG">Singapore</SelectItem>
+                      <SelectItem value="TH">Thailand</SelectItem>
+                      <SelectItem value="PH">Philippines</SelectItem>
+                      <SelectItem value="VN">Vietnam</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="state" className="text-sm font-medium">
+                    State / Province
+                  </Label>
+                  <Popover open={statePopoverOpen} onOpenChange={setStatePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={statePopoverOpen}
+                        className="w-full justify-between h-10"
+                      >
+                        {stateLabel || "Select state..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Search state..." />
+                        <CommandEmpty>No state found.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandList>
+                            {stateOptions.map((state) => (
+                              <CommandItem
+                                key={state.value}
+                                value={state.value}
+                                onSelect={(currentValue) => {
+                                  setFormData({...formData, state_province: currentValue === formData.state_province ? "" : currentValue});
+                                  setStatePopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.state_province === state.value ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {state.label}
+                              </CommandItem>
+                            ))}
+                          </CommandList>
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
 
-              {/* State/Province */}
-              <div className="space-y-2">
-                <Label htmlFor="state" className="text-sm font-medium">
-                  State / Province
-                </Label>
-                <Popover open={statePopoverOpen} onOpenChange={setStatePopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={statePopoverOpen}
-                      className="w-full justify-between h-10"
-                    >
-                      {stateLabel || "Select state..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command>
-                      <CommandInput placeholder="Search state..." />
-                      <CommandEmpty>No state found.</CommandEmpty>
-                      <CommandGroup>
-                        <CommandList>
-                          {stateOptions.map((state) => (
-                            <CommandItem
-                              key={state.value}
-                              value={state.value}
-                              onSelect={(currentValue) => {
-                                setFormData({...formData, state_province: currentValue === formData.state_province ? "" : currentValue});
-                                setStatePopoverOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  formData.state_province === state.value ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {state.label}
-                            </CommandItem>
-                          ))}
-                        </CommandList>
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
+              {/* City and Postal Code in Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city" className="text-sm font-medium">
+                    City
+                  </Label>
+                  <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={cityPopoverOpen}
+                        className="w-full justify-between h-10"
+                        disabled={!formData.state_province}
+                      >
+                        {cityLabel || "Select city..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Search city..." />
+                        <CommandEmpty>No city found.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandList>
+                            {cityOptions.map((city) => (
+                              <CommandItem
+                                key={city.value}
+                                value={city.value}
+                                onSelect={(currentValue) => {
+                                  setFormData({...formData, city: currentValue === formData.city ? "" : currentValue});
+                                  setCityPopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.city === city.value ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {city.label}
+                              </CommandItem>
+                            ))}
+                          </CommandList>
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
-              {/* City */}
-              <div className="space-y-2">
-                <Label htmlFor="city" className="text-sm font-medium">
-                  City
-                </Label>
-                <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={cityPopoverOpen}
-                      className="w-full justify-between h-10"
-                      disabled={!formData.state_province}
-                    >
-                      {cityLabel || "Select city..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command>
-                      <CommandInput placeholder="Search city..." />
-                      <CommandEmpty>No city found.</CommandEmpty>
-                      <CommandGroup>
-                        <CommandList>
-                          {cityOptions.map((city) => (
-                            <CommandItem
-                              key={city.value}
-                              value={city.value}
-                              onSelect={(currentValue) => {
-                                setFormData({...formData, city: currentValue === formData.city ? "" : currentValue});
-                                setCityPopoverOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  formData.city === city.value ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {city.label}
-                            </CommandItem>
-                          ))}
-                        </CommandList>
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Postal Code */}
-              <div className="space-y-2">
-                <Label htmlFor="postal_code" className="text-sm font-medium">
-                  Postal Code
-                </Label>
-                <Input
-                  id="postal_code"
-                  value={formData.postal_code}
-                  onChange={(e) => setFormData({...formData, postal_code: e.target.value})}
-                  placeholder="12345"
-                  className="h-10"
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="postal_code" className="text-sm font-medium">
+                    Postal Code
+                  </Label>
+                  <Input
+                    id="postal_code"
+                    value={formData.postal_code}
+                    onChange={(e) => setFormData({...formData, postal_code: e.target.value})}
+                    placeholder="12345"
+                    className="h-10"
+                  />
+                </div>
               </div>
 
               <Separator />
 
               {/* Timezone */}
               <div className="space-y-2">
-                <Label htmlFor="timezone" className="text-sm font-medium">
-                  <Clock className="inline h-4 w-4 mr-1" />
+                <Label htmlFor="timezone" className="text-sm font-medium flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                   Timezone
                 </Label>
                 <Select value={formData.timezone} onValueChange={(value) => setFormData({...formData, timezone: value})}>
                   <SelectTrigger id="timezone" className="h-10">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="UTC">UTC</SelectItem>
-                    <SelectItem value="Asia/Jakarta">Asia/Jakarta (UTC+7)</SelectItem>
-                    <SelectItem value="Asia/Bangkok">Asia/Bangkok (UTC+7)</SelectItem>
+                  <SelectContent className="max-h-64 overflow-y-auto">
+                    <SelectItem value="Asia/Jakarta">Asia/Jakarta (WIB, UTC+7)</SelectItem>
+                    <SelectItem value="Asia/Makassar">Asia/Makassar (WITA, UTC+8)</SelectItem>
+                    <SelectItem value="Asia/Jayapura">Asia/Jayapura (WIT, UTC+9)</SelectItem>
                     <SelectItem value="Asia/Singapore">Asia/Singapore (UTC+8)</SelectItem>
-                    <SelectItem value="Asia/Manila">Asia/Manila (UTC+8)</SelectItem>
-                    <SelectItem value="Asia/Hong_Kong">Asia/Hong_Kong (UTC+8)</SelectItem>
+                    <SelectItem value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur (UTC+8)</SelectItem>
+                    <SelectItem value="Asia/Bangkok">Asia/Bangkok (UTC+7)</SelectItem>
+                    <SelectItem value="America/New_York">America/New_York (UTC-5/-4)</SelectItem>
+                    <SelectItem value="Europe/London">Europe/London (UTC+0/+1)</SelectItem>
+                    <SelectItem value="UTC">UTC (Coordinated Universal Time)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1438,12 +1443,12 @@ export default function SettingsPage() {
         </div>
 
         {/* Save Button */}
-        <div className="mt-8 flex justify-end gap-3">
+        <div className="flex justify-end pt-6">
           <Button
             onClick={handleSave}
             disabled={saving}
             size="lg"
-            className="gap-2"
+            className="min-w-[160px] gap-2 px-6 py-3 text-base font-semibold bg-black text-white hover:bg-black/90 disabled:opacity-60"
           >
             {saving ? (
               <>

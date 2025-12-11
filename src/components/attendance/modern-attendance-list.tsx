@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
 import {
   Search,
@@ -16,11 +17,11 @@ import {
   MoreVertical,
   Mail,
   Grid3x3,
-  List,
-  X,
   ChevronLeft,
   ChevronRight,
   MoreHorizontal,
+  RotateCcw,
+  Plus,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -137,13 +138,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   });
   
   // Handle edit button click
-  // Handle organization change
-  const handleOrgChange = (orgId: string) => {
-    const id = parseInt(orgId);
-    setSelectedOrgId(id);
-    setCurrentPage(1); // Reset to first page
-  };
-
   const handleEditClick = () => {
     const recordsToEdit = attendanceData.filter(r => selectedRecords.includes(r.id));
     setEditingRecords(recordsToEdit);
@@ -392,126 +386,99 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   return (
     <div className="space-y-6">
       {/* Filters & Actions */}
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="border border-gray-200 shadow-sm">
+        <CardContent className="p-4 md:p-6">
           <div className="flex flex-col gap-4">
-            {/* Date Filter + Search + View Toggle Row */}
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-              <div className="flex flex-1 flex-wrap items-center gap-2">
-                {/* Date Filter */}
-                <DateFilterBar 
-                  dateRange={dateRange} 
-                  onDateRangeChange={setDateRange}
+            {/* Search Bar with Icon Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                  placeholder="Search by name or department..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="pl-10 border-gray-300"
                 />
-                
-                {/* Search */}
-                  <div className="relative flex-1 min-w-[200px] sm:min-w-[250px] max-w-full sm:max-w-sm">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by name or department..."
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    className="pl-9 pr-20"
-                  />
-                </div>
               </div>
-
-              {/* View Mode Toggle */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center rounded-lg border">
-                  <Button
-                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('list')}
-                    className="rounded-r-none"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('grid')}
-                    className="rounded-l-none border-l"
-                  >
-                    <Grid3x3 className="h-4 w-4" />
-                  </Button>
-                  </div>
-                </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => {
+                    // Refresh data
+                    fetchData();
+                  }}
+                  title="Refresh"
+                  className="border-gray-300"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </Button>
+                <Button 
+                  variant={viewMode === 'grid' ? 'default' : 'outline'}
+                  size="icon"
+                  onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+                  title={viewMode === 'list' ? 'Switch to grid view' : 'Switch to list view'}
+                  className={viewMode === 'grid' ? '' : 'border-gray-300'}
+                >
+                  <Grid3x3 className="w-4 h-4" />
+                </Button>
               </div>
             </div>
 
-            {/* Additional Filters */}
-            <div className="flex flex-wrap items-center gap-2">
-              <Select value={selectedOrgId?.toString() || ''} onValueChange={handleOrgChange}>
-                <SelectTrigger className="w-full sm:w-[200px]">
-                  <SelectValue placeholder="Select Organization" />
-                </SelectTrigger>
-                <SelectContent>
-                  {orgStore.organizations && orgStore.organizations.length > 0 ? (
-                    orgStore.organizations.map((org) => (
-                      <SelectItem key={org.id} value={org.id.toString()}>
-                        {org.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="" disabled>
-                      No organizations available
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+            {/* Filters Row */}
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center sm:justify-between sm:flex-nowrap">
+              <div className="flex flex-col sm:flex-row gap-3 flex-wrap items-start sm:items-center flex-1 min-w-0">
+                {/* Date Filter */}
+                <div className="w-full sm:w-auto">
+                  <DateFilterBar 
+                    dateRange={dateRange} 
+                    onDateRangeChange={setDateRange}
+                  />
+                </div>
 
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="present">Present</SelectItem>
-                  <SelectItem value="late">Late</SelectItem>
-                  <SelectItem value="absent">Absent</SelectItem>
-                  <SelectItem value="leave">On Leave</SelectItem>
-                </SelectContent>
-              </Select>
+                {/* Status Filter */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Status:</span>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-40 border-gray-300">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="present">Present</SelectItem>
+                      <SelectItem value="late">Late</SelectItem>
+                      <SelectItem value="absent">Absent</SelectItem>
+                      <SelectItem value="leave">On Leave</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Groups</SelectItem>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {/* Department Filter */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Groups:</span>
+                  <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px] border-gray-300">
+                      <SelectValue placeholder="Department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Groups</SelectItem>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-              {(searchQuery || statusFilter !== 'all' || departmentFilter !== 'all' || dateRange.preset !== 'today') && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSearchInput('');
-                    setSearchQuery('');
-                    setStatusFilter('all');
-                    setDepartmentFilter('all');
-                    // Reset to today
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    const endOfToday = new Date(today);
-                    endOfToday.setHours(23, 59, 59, 999);
-                    setDateRange({ from: today, to: endOfToday, preset: 'today' });
-                  }}
-                  className="w-full sm:w-auto"
-                >
-                  <X className="mr-2 h-3 w-3" />
-                  <span className="hidden sm:inline">Clear All Filters</span>
-                  <span className="sm:hidden">Clear</span>
+              {/* Manual Entry Button */}
+              <Link href="/attendance/add" className="w-full sm:w-auto shrink-0">
+                <Button className="w-full sm:w-auto bg-black text-white hover:bg-black/90 whitespace-nowrap">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Manual Entry
                 </Button>
-              )}
+              </Link>
             </div>
 
             {/* Selected Actions */}
