@@ -70,7 +70,7 @@ export default function FingerPage() {
   const [selectedStatus, setSelectedStatus] = React.useState<FilterStatus>("all")
   const { organizationId } = useOrgStore()
 
-  const fetchDevices = async () => {
+  const fetchDevices = React.useCallback(async () => {
     setLoadingDevices(true)
     try {
       const supabase = createClient()
@@ -179,9 +179,9 @@ export default function FingerPage() {
     } finally {
       setLoadingDevices(false)
     }
-  }
+  }, [organizationId])
 
-  const fetchMembers = async () => {
+  const fetchMembers = React.useCallback(async () => {
     setIsLoading(true)
     try {
       const supabase = createClient()
@@ -291,28 +291,91 @@ export default function FingerPage() {
         try {
           const { data: bioData, error: bioError } = await supabase
             .from('biometric_data')
-            .select('organization_member_id, finger_number')
+            .select('organization_member_id, finger_number, template_data')
             .in('organization_member_id', memberIds)
-            .eq('biometric_type', 'fingerprint')
+            .eq('biometric_type', 'FINGERPRINT')
             .eq('is_active', true)
           
           if (bioError) {
-            console.warn('Biometric data not available:', bioError.message)
+            console.warn('⚠️ Biometric data error:', bioError.message)
           } else {
             biometricData = bioData || []
+            console.log('✅ Biometric data fetched:', biometricData.length, 'records')
+            console.log('📋 Sample biometric data:', biometricData.slice(0, 5))
           }
         } catch (bioErr) {
-          console.warn('Biometric data table might not exist, continuing without it')
+          console.warn('⚠️ Biometric data table might not exist, continuing without it:', bioErr)
         }
       }
 
-      const fingerMap = new Map<number, Set<number>>()
+      // Group biometric data by member_id and sort by enrollment_date
+      const memberBiometricMap = new Map<number, any[]>()
       biometricData.forEach((bio: any) => {
-        if (!fingerMap.has(bio.organization_member_id)) {
-          fingerMap.set(bio.organization_member_id, new Set())
+        const memberId = bio.organization_member_id
+        if (!memberId) return
+        
+        // Check if template_data has local_id (means registered)
+        let hasLocalId = false
+        if (bio.template_data) {
+          try {
+            const templateData = typeof bio.template_data === 'string' 
+              ? JSON.parse(bio.template_data) 
+              : bio.template_data
+            if (templateData && typeof templateData.local_id === 'number') {
+              hasLocalId = true
+            }
+          } catch {
+            // Ignore parse errors
+          }
         }
-        fingerMap.get(bio.organization_member_id)?.add(bio.finger_number)
+        
+        // Only process if has local_id or has valid finger_number
+        if (hasLocalId || (bio.finger_number && (bio.finger_number === 1 || bio.finger_number === 2))) {
+          if (!memberBiometricMap.has(memberId)) {
+            memberBiometricMap.set(memberId, [])
+          }
+          memberBiometricMap.get(memberId)!.push(bio)
+        }
       })
+      
+      // Sort each member's biometric records by enrollment_date or created_at
+      memberBiometricMap.forEach((records) => {
+        records.sort((a, b) => {
+          const dateA = a.enrollment_date || a.created_at || ''
+          const dateB = b.enrollment_date || b.created_at || ''
+          return dateA.localeCompare(dateB)
+        })
+      })
+      
+      // Map to finger numbers (1 or 2)
+      const fingerMap = new Map<number, Set<number>>()
+      memberBiometricMap.forEach((records, memberId) => {
+        records.forEach((bio, index) => {
+          let fingerNumber = bio.finger_number
+          
+          // If finger_number is null, assign based on order (first = 1, second = 2)
+          if (!fingerNumber || (fingerNumber !== 1 && fingerNumber !== 2)) {
+            fingerNumber = index + 1 // First record = 1, second record = 2
+            if (fingerNumber > 2) {
+              // If more than 2 records, only count first 2
+              return
+            }
+          }
+          
+          if (!fingerMap.has(memberId)) {
+            fingerMap.set(memberId, new Set())
+          }
+          fingerMap.get(memberId)!.add(Number(fingerNumber))
+          
+          console.log(`✅ Member ${memberId}: Assigned finger ${fingerNumber} (record ${index + 1} of ${records.length})`)
+        })
+      })
+      
+      console.log('✅ Finger map created:', fingerMap.size, 'members with registered fingers')
+      console.log('📊 Finger map details:', Array.from(fingerMap.entries()).map(([id, fingers]) => ({
+        memberId: id,
+        fingers: Array.from(fingers)
+      })))
 
       const transformedMembers = membersData?.map((m: any) => {
         const profile = m.user_profiles
@@ -327,6 +390,13 @@ export default function FingerPage() {
         }
 
         const fingers = fingerMap.get(m.id) || new Set()
+        const finger1Registered = fingers.has(1)
+        const finger2Registered = fingers.has(2)
+        
+        // Debug logging for members with registered fingers
+        if (finger1Registered || finger2Registered) {
+          console.log(`✅ Member ${m.id} (${fullName}): Finger 1=${finger1Registered}, Finger 2=${finger2Registered}, Fingers Set:`, Array.from(fingers))
+        }
 
         return {
           id: m.id,
@@ -335,8 +405,8 @@ export default function FingerPage() {
           phone: profile?.phone || 'No Phone',
           email: profile?.email || null,
           department_name: deptMap.get(m.department_id) || 'No Department',
-          finger1_registered: fingers.has(1),
-          finger2_registered: fingers.has(2)
+          finger1_registered: finger1Registered,
+          finger2_registered: finger2Registered
         }
       }) || []
 
@@ -359,7 +429,7 @@ export default function FingerPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [organizationId])
 
   React.useEffect(() => {
     setMounted(true)
@@ -370,7 +440,45 @@ export default function FingerPage() {
       fetchDevices()
       fetchMembers()
     }
-  }, [mounted, organizationId])
+  }, [mounted, fetchDevices, fetchMembers])
+
+  // Setup real-time subscription for biometric_data changes
+  React.useEffect(() => {
+    if (!mounted) return
+
+    const supabase = createClient()
+    
+    const channel = supabase
+      .channel('biometric-data-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'biometric_data',
+          filter: `biometric_type=eq.FINGERPRINT`
+        },
+        (payload) => {
+          console.log('🔄 Biometric data change detected:', payload.eventType, payload)
+          
+          // Refresh members data when biometric data changes
+          fetchMembers()
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time subscription active for biometric_data')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Real-time subscription error')
+        }
+      })
+
+    // Cleanup subscription on unmount
+    return () => {
+      console.log('🧹 Cleaning up real-time subscription')
+      supabase.removeChannel(channel)
+    }
+  }, [mounted, organizationId, fetchMembers])
 
   React.useEffect(() => {
     if (mounted && selectedDevice) {
@@ -512,7 +620,7 @@ export default function FingerPage() {
           .select('id')
           .eq('organization_member_id', member.id)
           .eq('finger_number', fingerNumber)
-          .eq('biometric_type', 'fingerprint')
+          .eq('biometric_type', 'FINGERPRINT')
           .maybeSingle()
 
         if (existing) {
@@ -525,7 +633,7 @@ export default function FingerPage() {
             .from('biometric_data')
             .insert({
               organization_member_id: member.id,
-              biometric_type: 'fingerprint',
+              biometric_type: 'FINGERPRINT',
               finger_number: fingerNumber,
               is_active: true
             })
@@ -672,18 +780,6 @@ export default function FingerPage() {
                 >
                   <RefreshCw className={cn("w-4 h-4", (isLoading || loadingDevices) && "animate-spin")} />
                 </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0"
-                  disabled={isLoading || loadingDevices}
-                >
-                  <Link href="/finger/import-simple">
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Import Members
-                  </Link>
-                </Button>
               </div>
 
               <div className="relative flex-1">
@@ -721,6 +817,19 @@ export default function FingerPage() {
                   <SelectItem value="unregistered">Not Registered</SelectItem>
                 </SelectContent>
               </Select>
+
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                disabled={isLoading || loadingDevices}
+              >
+                <Link href="/finger/import-simple">
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Import 
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
