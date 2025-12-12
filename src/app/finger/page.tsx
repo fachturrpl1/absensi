@@ -444,32 +444,46 @@ export default function FingerPage() {
 
   // Setup real-time subscription for biometric_data changes
   React.useEffect(() => {
-    if (!mounted) return
+    if (!mounted || !organizationId) return
 
     const supabase = createClient()
     
     const channel = supabase
-      .channel('biometric-data-changes')
+      .channel(`biometric-data-changes-${organizationId}`)
       .on(
         'postgres_changes',
         {
           event: '*', // Listen to INSERT, UPDATE, DELETE
           schema: 'public',
-          table: 'biometric_data',
-          filter: `biometric_type=eq.FINGERPRINT`
+          table: 'biometric_data'
         },
         (payload) => {
-          console.log('🔄 Biometric data change detected:', payload.eventType, payload)
+          // Filter only FINGERPRINT type in the callback
+          const newData = payload.new as any
+          const oldData = payload.old as any
           
-          // Refresh members data when biometric data changes
-          fetchMembers()
+          // Check if the change is for FINGERPRINT type
+          const isFingerprint = 
+            (newData?.biometric_type === 'FINGERPRINT') || 
+            (oldData?.biometric_type === 'FINGERPRINT')
+          
+          if (isFingerprint) {
+            console.log('🔄 Biometric data change detected:', payload.eventType, payload)
+            
+            // Refresh members data when biometric data changes
+            fetchMembers()
+          }
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Real-time subscription active for biometric_data')
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time subscription error')
+          console.error('❌ Real-time subscription error - this may be due to real-time not being enabled for biometric_data table in Supabase')
+          console.error('💡 To enable: Run this SQL in Supabase SQL Editor:')
+          console.error('   ALTER PUBLICATION supabase_realtime ADD TABLE biometric_data;')
+        } else {
+          console.log('📡 Real-time subscription status:', status)
         }
       })
 
