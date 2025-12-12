@@ -13,8 +13,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File
     const mappingJson = formData.get("mapping") as string
     const mode = (formData.get("mode") as string) || "import" // 'test' or 'import'
-    const trackHistory = formData.get("trackHistory") === "true" // kept for parity, unused
-    const allowMatchingWithSubfields = formData.get("allowMatchingWithSubfields") === "true" // kept for parity, unused
+    // Note: trackHistory and allowMatchingWithSubfields are kept in formData for parity but not used
 
     if (!file) {
       return NextResponse.json({ success: false, message: "No file provided" }, { status: 400 })
@@ -101,17 +100,23 @@ export async function POST(request: NextRequest) {
       const row = rows[i]
       const rowNumber = i + 2 // considering header row
 
-      const firstName = mapping.first_name ? String(row[mapping.first_name]).trim() : ""
+      if (!row) {
+        failed++
+        errors.push(`Row ${rowNumber}: Empty row`)
+        continue
+      }
+
+      const firstName = mapping.first_name ? String(row[mapping.first_name] || "").trim() : ""
       if (!firstName) {
         failed++
         errors.push(`Row ${rowNumber}: Nama Depan is required`)
         continue
       }
 
-      const lastName = mapping.last_name ? String(row[mapping.last_name]).trim() : ""
-      const phone = mapping.phone ? String(row[mapping.phone]).trim() : ""
-      const departmentRaw = mapping.department_id ? String(row[mapping.department_id]).trim() : ""
-      const isActiveRaw = mapping.is_active ? String(row[mapping.is_active]).trim().toLowerCase() : ""
+      const lastName = mapping.last_name ? String(row[mapping.last_name] || "").trim() : ""
+      const phone = mapping.phone ? String(row[mapping.phone] || "").trim() : ""
+      const departmentRaw = mapping.department_id ? String(row[mapping.department_id] || "").trim() : ""
+      const isActiveRaw = mapping.is_active ? String(row[mapping.is_active] || "").trim().toLowerCase() : ""
 
       const departmentId = departmentRaw ? Number(departmentRaw) : null
       const isActive =

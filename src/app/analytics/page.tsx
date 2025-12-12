@@ -15,6 +15,7 @@ import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { AnalyticsSkeleton } from '@/components/analytics/analytics-skeleton';
+import { useOrgStore } from '@/store/org-store';
 import {
   AreaChart, 
   Area, 
@@ -56,6 +57,7 @@ const COLORS = {
 };
 
 export default function AnalyticsPage() {
+  const { organizationId } = useOrgStore();
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [masterData, setMasterData] = useState<MasterData>({ totalMembers: 0, totalDepartments: 0, averageTeamSize: 0 });
@@ -78,20 +80,14 @@ export default function AnalyticsPage() {
       try {
         setIsLoading(true);
         const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
+        
+        if (!organizationId) {
+          console.log('[ANALYTICS] No organization ID from store');
           setIsLoading(false);
           return;
         }
-
-        const { data: orgMember } = await supabase
-          .from('organization_members')
-          .select('organization_id')
-          .eq('user_id', user.id)
-          .single();
-
-        if (!orgMember) return;
-        const orgId = orgMember.organization_id;
+        
+        const orgId = organizationId;
 
         // Fetch master data - still safe as it only counts, doesn't return sensitive data
         const [membersResult, deptsResult] = await Promise.all([
@@ -114,7 +110,7 @@ export default function AnalyticsPage() {
 
         // Fetch attendance records using secure API route (last 90 days)
         const startDate = format(subDays(new Date(), 90), 'yyyy-MM-dd');
-        const response = await fetch(`/api/attendance-records?startDate=${startDate}`);
+        const response = await fetch(`/api/attendance-records?organizationId=${orgId}&startDate=${startDate}`);
         const result = await response.json();
 
         if (result.success && result.data) {
@@ -130,7 +126,7 @@ export default function AnalyticsPage() {
     };
 
     fetchData();
-  }, []);
+  }, [organizationId]);
 
   const getFilterLabel = () => {
     if (!dateRange.preset) {

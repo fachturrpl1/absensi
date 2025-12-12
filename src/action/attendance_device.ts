@@ -9,10 +9,10 @@ async function getSupabase() {
   return await createClient();
 }
 
-export const getAllAttendanceDevices = async () => {
+export const getAllAttendanceDevices = async (organizationId?: number | string) => {
   const supabase = await getSupabase();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("attendance_devices")
     .select(`
       *,
@@ -20,6 +20,13 @@ export const getAllAttendanceDevices = async () => {
       organizations (id, name)
     `)
     .order("created_at", { ascending: false });
+
+  // Filter by organization if provided
+  if (organizationId) {
+    query = query.eq("organization_id", organizationId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     attendanceLogger.error("❌ Error fetching attendance devices:", error);

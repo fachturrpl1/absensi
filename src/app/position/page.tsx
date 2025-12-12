@@ -49,10 +49,10 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { getAllOrganization } from "@/action/organization"
-import { createClient } from "@/utils/supabase/client"
 import { Can } from "@/components/can"
-
+import { useOrgStore } from "@/store/org-store"
 import { logger } from '@/lib/logger';
+
 const positionSchema = z.object({
     organization_id: z.string().min(1, "Organization is required"),
     code: z.string().min(2, "min 2 characters"),
@@ -65,28 +65,28 @@ const positionSchema = z.object({
 type PositionsForm = z.infer<typeof positionSchema>
 
 export default function PositionsPage() {
+    const { organizationId: storeOrgId } = useOrgStore()
     const [open, setOpen] = React.useState(false)
     const [editingDetail, setEditingDetail] = React.useState<IPositions | null>(null)
     const [positions, setPositions] = React.useState<IPositions[]>([])
     const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
     const [loading, setLoading] = React.useState<boolean>(true)
-    const [organizationId, setOrganizationId] = React.useState<string>("")
-
-    const supabase = createClient()
 
     const fetchPositions = async () => {
         try {
             setLoading(true)
-            const response: unknown = await getAllPositions()
+            
+            if (!storeOrgId) {
+                toast.error('Please select an organization')
+                setLoading(false)
+                return
+            }
+            
+            const response: unknown = await getAllPositions(storeOrgId)
             const typedResponse = response as { success: boolean; data: IPositions[]; message: string }
             if (!typedResponse.success) throw new Error(typedResponse.message)
             
-            // Filter by organization if user has one
-            const filteredPositions = organizationId 
-                ? typedResponse.data.filter((p: IPositions) => String(p.organization_id) === organizationId)
-                : typedResponse.data
-            
-            setPositions(filteredPositions)
+            setPositions(typedResponse.data)
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'An error occurred')
         } finally {
@@ -105,35 +105,15 @@ export default function PositionsPage() {
         }
     }
 
-    const fetchOrganizationId = async () => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) return
-
-            const { data, error } = await supabase
-                .from("organization_members")
-                .select("organization_id")
-                .eq("user_id", user.id)
-
-            if (error) throw error
-            if (data && data.length > 0 && data[0]?.organization_id) {
-                setOrganizationId(String(data[0].organization_id))
-            }
-        } catch (error: unknown) {
-            toast.error(error instanceof Error ? error.message : 'Unknown error')
-        }
-    }
-
     React.useEffect(() => {
-        fetchOrganizationId()
         fetchOrganizations()
     }, [])
 
     React.useEffect(() => {
-        if (organizationId) {
+        if (storeOrgId) {
             fetchPositions()
         }
-    }, [organizationId])
+    }, [storeOrgId])
 
     const form = useForm<PositionsForm>({
         resolver: zodResolver(positionSchema),
@@ -147,11 +127,11 @@ export default function PositionsPage() {
         },
     })
 
-    // sinkronkan orgId ke form setelah didapat dari supabase
+    // sinkronkan orgId ke form setelah didapat dari store
     React.useEffect(() => {
-        if (organizationId && !open) {
+        if (storeOrgId && !open) {
             form.reset({
-                organization_id: organizationId,
+                organization_id: String(storeOrgId),
                 code: "",
                 title: "",
                 description: "",
@@ -159,7 +139,7 @@ export default function PositionsPage() {
                 is_active: true,
             })
         }
-    }, [organizationId, form, open])
+    }, [storeOrgId, form, open])
 
 
 
@@ -187,7 +167,7 @@ export default function PositionsPage() {
         if (!isOpen) {
             setEditingDetail(null)
             form.reset({
-                organization_id: organizationId || "",
+                organization_id: String(storeOrgId || ""),
                 code: "",
                 title: "",
                 description: "",
@@ -216,7 +196,7 @@ export default function PositionsPage() {
                                             onClick={() => {
                                                 setEditingDetail(null)
                                                 form.reset({
-                                                    organization_id: organizationId || "",
+                                                    organization_id: String(storeOrgId || ""),
                                                     code: "",
                                                     title: "",
                                                     description: "",
@@ -242,14 +222,14 @@ export default function PositionsPage() {
                                     className="space-y-4"
                                 >
                                     {/* Organization field */}
-                                    {organizationId ? (
+                                    {storeOrgId ? (
                                         <FormField
                                             control={form.control}
                                             name="organization_id"
                                             render={({ field }) => (
                                                 <input
                                                     type="hidden" 
-                                                    value={organizationId}
+                                                    value={String(storeOrgId)}
                                                     onChange={field.onChange}
                                                 />
                                             )}

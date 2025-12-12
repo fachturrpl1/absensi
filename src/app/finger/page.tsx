@@ -157,7 +157,8 @@ export default function FingerPage() {
       setDevices(validDevices)
       
       if (validDevices && validDevices.length > 0) {
-        const firstDeviceCode = validDevices[0].device_code
+        const firstDevice = validDevices[0]
+        const firstDeviceCode = firstDevice?.device_code
         if (typeof window !== 'undefined') {
           const saved = localStorage.getItem("selected_fingerprint_device")
           if (saved && validDevices.find(d => d.device_code === saved)) {
