@@ -39,11 +39,6 @@ export default function FingerImportSimpleMappingPage() {
   const [trackHistory, setTrackHistory] = useState(false)
   const [allowMatchingWithSubfields, setAllowMatchingWithSubfields] = useState(true)
   const [sheetName, setSheetName] = useState("Sheet1")
-  const [testSummary, setTestSummary] = useState<{
-    success: number
-    failed: number
-    errors: string[]
-  } | null>(null)
 
   // Load file from URL params or sessionStorage
   useEffect(() => {
@@ -115,7 +110,6 @@ export default function FingerImportSimpleMappingPage() {
       })
 
       setMapping(autoMapping)
-      setTestSummary(null)
       toast.success(`File loaded. Found ${data.totalRows || 0} rows and ${data.headers.length} columns`)
     } catch (error) {
       console.error("Error reading Excel:", error)
@@ -147,8 +141,6 @@ export default function FingerImportSimpleMappingPage() {
     }
 
     setProcessing(true)
-    setTestSummary(null)
-
     try {
       const formData = new FormData()
       formData.append("file", file)
@@ -170,7 +162,6 @@ export default function FingerImportSimpleMappingPage() {
       }
 
       const summary = data.summary || { success: 0, failed: 0, errors: [] }
-      setTestSummary(summary)
 
       if (summary.failed === 0) {
         toast.success(`Test passed! All ${summary.success} rows are valid.`)
