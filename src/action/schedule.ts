@@ -5,31 +5,37 @@ import { IWorkSchedule, IWorkScheduleDetail } from "@/interface"
 
 
 
-export const getAllWorkSchedules = async () => {
+export const getAllWorkSchedules = async (organizationId?: number | string) => {
     const supabase = await createClient();
     
-    // Get current user's organization
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-        return { success: false, message: "User not authenticated", data: [] };
-    }
+    let finalOrgId = organizationId;
+    
+    // If no organizationId provided, get from current user
+    if (!finalOrgId) {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+            return { success: false, message: "User not authenticated", data: [] };
+        }
 
-    // Get user's organization membership
-    const { data: member, error: memberError } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+        // Get user's organization membership
+        const { data: member, error: memberError } = await supabase
+            .from("organization_members")
+            .select("organization_id")
+            .eq("user_id", user.id)
+            .maybeSingle();
 
-    if (memberError || !member) {
-        return { success: false, message: "User not in any organization", data: [] };
+        if (memberError || !member) {
+            return { success: false, message: "User not in any organization", data: [] };
+        }
+        
+        finalOrgId = member.organization_id;
     }
 
     // Fetch work schedules ONLY for user's organization
     const { data, error } = await supabase
         .from("work_schedules")
         .select("*, work_schedule_details(*)")
-        .eq("organization_id", member.organization_id)
+        .eq("organization_id", finalOrgId)
         .order("created_at", { ascending: false });
 
     if (error) {

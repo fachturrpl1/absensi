@@ -1,59 +1,105 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { getAllMemberSchedule } from "@/action/members_schedule"
 import { getAllOrganization_member } from "@/action/members"
 import { getAllWorkSchedules } from "@/action/schedule"
-import { createClient } from "@/utils/supabase/server"
 import MemberSchedulesClient from "./member-schedules-client"
 import { IMemberSchedule, IOrganization_member, IWorkSchedule } from "@/interface"
+import { useOrgStore } from "@/store/org-store"
+import { toast } from "sonner"
 
-// Server Component - fetch data di server (SSR)
-export default async function MemberSchedulesPage() {
-  const supabase = await createClient()
-  
-  // Get organization ID
-  const { data: { user } } = await supabase.auth.getUser()
-  let organizationId = ""
-  
-  if (user) {
-    const { data } = await supabase
-      .from("organization_members")
-      .select("organization_id")
-      .eq("user_id", user.id)
-      .maybeSingle()
-    
-    if (data && data.organization_id) {
-      organizationId = String(data.organization_id)
+// Client Component - fetch data berdasarkan organization dari store
+export default function MemberSchedulesPage() {
+  const { organizationId } = useOrgStore()
+  const [schedules, setSchedules] = useState<IMemberSchedule[]>([])
+  const [members, setMembers] = useState<IOrganization_member[]>([])
+  const [workSchedules, setWorkSchedules] = useState<IWorkSchedule[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!organizationId) {
+        console.log('[MEMBER-SCHEDULES] No organization ID from store')
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        setIsLoading(true)
+        const [schedulesRes, membersRes, workSchedulesRes] = await Promise.all([
+          getAllMemberSchedule(organizationId),
+          getAllOrganization_member(organizationId),
+          getAllWorkSchedules(organizationId),
+        ])
+
+        // Validate and safely extract data
+        if (!schedulesRes || typeof schedulesRes !== 'object') {
+          console.error('[MEMBER-SCHEDULES] Invalid schedules response:', schedulesRes)
+          setSchedules([])
+        } else if (schedulesRes.success && Array.isArray(schedulesRes.data)) {
+          setSchedules(schedulesRes.data as IMemberSchedule[])
+        } else {
+          console.warn('[MEMBER-SCHEDULES] Schedules fetch failed:', schedulesRes.message)
+          setSchedules([])
+        }
+
+        if (!membersRes || typeof membersRes !== 'object') {
+          console.error('[MEMBER-SCHEDULES] Invalid members response:', membersRes)
+          setMembers([])
+        } else if (membersRes.success && Array.isArray(membersRes.data)) {
+          setMembers(membersRes.data as IOrganization_member[])
+        } else {
+          console.warn('[MEMBER-SCHEDULES] Members fetch failed:', membersRes.message)
+          setMembers([])
+        }
+
+        if (!workSchedulesRes || typeof workSchedulesRes !== 'object') {
+          console.error('[MEMBER-SCHEDULES] Invalid work schedules response:', workSchedulesRes)
+          setWorkSchedules([])
+        } else if (workSchedulesRes.success && Array.isArray(workSchedulesRes.data)) {
+          setWorkSchedules(workSchedulesRes.data as IWorkSchedule[])
+        } else {
+          console.warn('[MEMBER-SCHEDULES] Work schedules fetch failed:', workSchedulesRes.message)
+          setWorkSchedules([])
+        }
+      } catch (error) {
+        console.error('[MEMBER-SCHEDULES] Error fetching data:', error)
+        toast.error('Failed to load member schedules')
+        setSchedules([])
+        setMembers([])
+        setWorkSchedules([])
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }
 
-  // Fetch all data di server - 1 round trip saja!
-  // All functions now automatically filter by user's organization
-  const [schedulesRes, membersRes, workSchedulesRes] = await Promise.all([
-    getAllMemberSchedule(),
-    getAllOrganization_member(),
-    getAllWorkSchedules(),
-  ])
+    fetchData()
+  }, [organizationId])
 
-  const schedules = (schedulesRes.success ? schedulesRes.data : []) as IMemberSchedule[]
-  const members = (membersRes.success ? membersRes.data : []) as IOrganization_member[]
-  const workSchedules = (workSchedulesRes.success ? workSchedulesRes.data : []) as IWorkSchedule[]
-
-  // Filter members by organization
-  const filteredMembers = organizationId
-    ? members.filter((m) => String(m.organization_id) === organizationId)
-    : members
-
-  // Show message if user has no organization
-  if (!organizationId || organizationId === '') {
+  if (!organizationId) {
     return (
       <div className="flex flex-1 flex-col gap-4 w-full">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center space-y-4">
             <div className="text-6xl">🏢</div>
-            <h2 className="text-2xl font-semibold">No Organization Assigned</h2>
+            <h2 className="text-2xl font-semibold">No Organization Selected</h2>
             <p className="text-muted-foreground max-w-md">
-              You are not currently assigned to any organization. 
-              Please contact your administrator to get access to member schedules.
+              Please select an organization to view member schedules.
             </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 w-full">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground">Loading member schedules...</p>
           </div>
         </div>
       </div>
@@ -64,7 +110,7 @@ export default async function MemberSchedulesPage() {
     <div className="flex flex-1 flex-col gap-4 w-full">
       <MemberSchedulesClient
         initialSchedules={schedules}
-        initialMembers={filteredMembers}
+        initialMembers={members}
         initialWorkSchedules={workSchedules}
       />
     </div>

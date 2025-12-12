@@ -3,7 +3,7 @@
 import React from "react"
 import { GroupsTable } from "@/components/groups-table"
 import { Button } from "@/components/ui/button"
-import { Plus, Group as GroupIcon, Search } from "lucide-react"
+import { Plus, Group as GroupIcon } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -72,7 +72,6 @@ export default function GroupsPage() {
   const [groups, setGroups] = React.useState<IGroup[]>([])
   const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = React.useState<boolean>(true)
-  const [searchQuery, setSearchQuery] = React.useState<string>("")
 
   const fetchGroups = async () => {
     try {
@@ -84,15 +83,10 @@ export default function GroupsPage() {
         return
       }
       
-      const response = await getAllGroups()
+      const response = await getAllGroups(orgStore.organizationId)
       if (!response.success) throw new Error(response.message)
       
-      // Filter by organization from store
-      const filteredGroups = response.data.filter(
-        (g: IGroup) => Number(g.organization_id) === orgStore.organizationId
-      )
-      
-      setGroups(filteredGroups)
+      setGroups(response.data)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
@@ -182,21 +176,9 @@ export default function GroupsPage() {
     <div className="flex flex-1 flex-col gap-4 w-full">
       <div className="w-full">
         <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="bg-white text-black px-4 md:px-6 py-4 rounded-t-lg border-b-2 border-black-200">
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Groups</h1>
-          </div>
           
           <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="Search groups..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
               <div className="flex gap-3 sm:gap-2 flex-wrap">
                 <Dialog open={isModalOpen} onOpenChange={handleDialogOpenChange}>
                   <DialogTrigger asChild>

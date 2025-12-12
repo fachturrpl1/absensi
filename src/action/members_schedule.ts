@@ -2,31 +2,37 @@
 import { createClient } from "@/utils/supabase/server";
 import { IMemberSchedule } from "@/interface";
 
-export const getAllMemberSchedule = async () => {
+export const getAllMemberSchedule = async (organizationId?: number | string) => {
   const supabase = await createClient();
   
-  // Get current user's organization
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    return { success: false, message: "User not authenticated", data: [] };
-  }
+  let finalOrgId = organizationId;
+  
+  // If no organizationId provided, get from current user
+  if (!finalOrgId) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return { success: false, message: "User not authenticated", data: [] };
+    }
 
-  // Get user's organization membership
-  const { data: userMember, error: memberError } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
+    // Get user's organization membership
+    const { data: userMember, error: memberError } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-  if (memberError || !userMember) {
-    return { success: false, message: "User not in any organization", data: [] };
+    if (memberError || !userMember) {
+      return { success: false, message: "User not in any organization", data: [] };
+    }
+    
+    finalOrgId = userMember.organization_id;
   }
 
   // Get all member IDs in the same organization
   const { data: orgMembers, error: orgMembersError } = await supabase
     .from("organization_members")
     .select("id")
-    .eq("organization_id", userMember.organization_id);
+    .eq("organization_id", finalOrgId);
 
   if (orgMembersError) {
     return { success: false, message: orgMembersError.message, data: [] };
@@ -61,6 +67,7 @@ export const getAllMemberSchedule = async () => {
       )
     `)
     .in("organization_member_id", memberIds)
+    .eq("organization_id", finalOrgId)
     .order("created_at", { ascending: false });
 
   if (error) {

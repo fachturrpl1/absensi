@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Loader2, CheckCircle2 } from "@/components/icons/lucide-exports"
+import { Loader2 } from "@/components/icons/lucide-exports"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -19,7 +19,6 @@ const DATABASE_FIELDS = [
   { key: "is_active", label: "Status", required: false },
 ] as const
 
-const NOT_MAPPED_OPTION = "__NOT_MAPPED__"
 
 type ColumnMapping = {
   [key: string]: string | null
@@ -107,7 +106,7 @@ export default function FingerImportSimpleMappingPage() {
             (field.key === "first_name" && (headerLower.includes("first") || headerLower.includes("nama depan"))) ||
             (field.key === "last_name" && (headerLower.includes("last") || headerLower.includes("nama belakang"))) ||
             (field.key === "phone" && (headerLower.includes("phone") || headerLower.includes("telepon") || headerLower.includes("hp"))) ||
-            (field.key === "department" && (headerLower.includes("department") || headerLower.includes("departemen") || headerLower.includes("divisi"))) ||
+            (field.key === "department_id" && (headerLower.includes("department") || headerLower.includes("departemen") || headerLower.includes("divisi"))) ||
             (field.key === "is_active" && (headerLower.includes("active") || headerLower.includes("status")))
           )
         })

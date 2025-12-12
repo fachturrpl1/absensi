@@ -21,18 +21,17 @@ import { toast } from "sonner";
 import { getDashboardStats } from "@/action/dashboard";
 import { AttendanceAnalytics } from "@/components/attendance/attendance-analytics";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { useOrganizationGuard } from "@/hooks/use-organization-guard";
 import { DateFilterBar, DateFilterState } from "@/components/analytics/date-filter-bar";
-import useOrgStore from "@/store/org-store";
+import { useOrgStore } from "@/store/org-store";
 
 export default function AttendanceDashboard() {
-  const {isChecking,hasOrganization} = useOrganizationGuard();
-  const orgStore = useOrgStore();
+  const { organizationId } = useOrgStore();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [distChartType, setDistChartType] = useState<'donut' | 'pie' | 'bar'>('donut');
   const [isHydrated, setIsHydrated] = useState(false);
+  const [mounted, setMounted] = useState(false);
   
   // Date filter state
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
@@ -45,27 +44,23 @@ export default function AttendanceDashboard() {
 
   // Track hydration
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     setIsHydrated(true);
   }, []);
 
   const loadData = useCallback(async () => {
-    console.log('[ATTENDANCE] loadData: Called with isChecking:', isChecking, 'hasOrganization:', hasOrganization, 'orgId:', orgStore.organizationId);
-    
-    // Prevent loading if organization check is still in progress or no organization
-    if (isChecking || !hasOrganization) {
-      console.log('[ATTENDANCE] loadData: Skipping because:', {
-        isChecking,
-        hasOrganization,
-        reason: isChecking ? 'still checking' : 'no organization'
-      });
+    if (!mounted || !organizationId) {
+      console.log('[ATTENDANCE] loadData: Skipping - mounted:', mounted, 'orgId:', organizationId);
       return;
     }
     
     setLoading(true);
     try {
-      const orgId = orgStore.organizationId || null;
-      console.log('[ATTENDANCE] Fetching stats for org:', orgId);
-      const data = await getDashboardStats(orgId || undefined);
+      console.log('[ATTENDANCE] Fetching stats for org:', organizationId);
+      const data = await getDashboardStats(organizationId);
       console.log('[ATTENDANCE] Fetched stats:', data);
       setStats(data);
     } catch (error) {
@@ -75,31 +70,15 @@ export default function AttendanceDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [isChecking, hasOrganization, orgStore.organizationId]);
+  }, [mounted, organizationId]);
 
   // Monitor organization changes
   useEffect(() => {
-    if (orgStore.organizationId) {
-      console.log('[ATTENDANCE] Organization changed to:', orgStore.organizationId, orgStore.organizationName);
-    }
-  }, [orgStore.organizationId, orgStore.organizationName]);
-
-  useEffect(() => {
-    // Only load data when organization check is complete and we have organization
-    if (!isChecking && hasOrganization) {
+    if (organizationId) {
+      console.log('[ATTENDANCE] Organization changed to:', organizationId);
       loadData();
     }
-  }, [isChecking, hasOrganization, loadData])
-  if (isChecking || !hasOrganization) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Checking organization...</p>
-        </div>
-      </div>
-    );
-  }
+  }, [organizationId, loadData]);
 
   // Don't render Tabs until hydration is complete
   if (!isHydrated) {
