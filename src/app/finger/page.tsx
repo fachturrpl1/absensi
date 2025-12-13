@@ -46,6 +46,7 @@ interface Member {
   id: number
   user_id: string
   full_name: string
+  first_name: string | null
   phone: string | null
   email: string | null
   department_name: string | null
@@ -381,8 +382,10 @@ export default function FingerPage() {
       const transformedMembers = membersData?.map((m: any) => {
         const profile = m.user_profiles
         let fullName = 'No Name'
+        let firstName = null
         
         if (profile) {
+          firstName = profile.first_name || null
           if (profile.display_name) {
             fullName = profile.display_name
           } else if (profile.first_name || profile.last_name) {
@@ -403,6 +406,7 @@ export default function FingerPage() {
           id: m.id,
           user_id: m.user_id,
           full_name: fullName,
+          first_name: firstName,
           phone: profile?.phone || 'No Phone',
           email: profile?.email || null,
           department_name: deptMap.get(m.department_id) || 'No Department',
@@ -854,9 +858,9 @@ export default function FingerPage() {
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="font-semibold w-16">No</TableHead>
+                <TableHead className="font-semibold w-32">Nick Name</TableHead>
                 <TableHead className="font-semibold">Full Name</TableHead>
-                <TableHead className="font-semibold">Phone Number</TableHead>
-                <TableHead className="font-semibold">Class</TableHead>
+                <TableHead className="font-semibold">Group</TableHead>
                 <TableHead className="font-semibold text-center">Finger 1</TableHead>
                 <TableHead className="font-semibold text-center">Finger 2</TableHead>
               </TableRow>
@@ -891,13 +895,10 @@ export default function FingerPage() {
                       {index + 1}
                     </TableCell>
                     <TableCell className="font-medium">
-                      <div>{member.full_name}</div>
-                      {member.email && (
-                        <div className="text-xs text-muted-foreground">{member.email}</div>
-                      )}
+                      <div className="font-semibold">{member.first_name || '-'}</div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {member.phone}
+                    <TableCell className="font-medium">
+                      <div>{member.full_name}</div>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-muted-foreground">
