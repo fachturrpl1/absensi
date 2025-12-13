@@ -110,17 +110,14 @@ export default function OrganizationPage() {
       console.log("[ORG-PAGE] Organization selected, navigating to home...")
       
       // Add small delay to ensure cookie is properly set before navigation
-      await new Promise(resolve => setTimeout(resolve, 200))
+      await new Promise(resolve => setTimeout(resolve, 300))
       
       console.log("[ORG-PAGE] Attempting to navigate to /")
       
-      // Navigate to home
-      const navigationPromise = router.push("/")
-      console.log("[ORG-PAGE] Navigation promise created")
-      
-      // Wait for navigation to complete
-      await navigationPromise
-      console.log("[ORG-PAGE] Navigation completed")
+      // Use window.location.href for hard redirect to ensure middleware processes new request with cookie
+      // This is more reliable than router.push() for cookie-dependent redirects
+      window.location.href = "/"
+      console.log("[ORG-PAGE] Hard redirect initiated")
     } catch (error) {
       console.error("[ORG-PAGE] Error selecting organization:", error)
       console.error("[ORG-PAGE] Error details:", {

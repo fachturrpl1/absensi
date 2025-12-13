@@ -46,6 +46,18 @@ export async function middleware(req: NextRequest) {
     },
   })
 
+  const orgIdCookie = req.cookies.get('org_id')
+  if (orgIdCookie) {
+    response.cookies.set({
+      name: 'org_id',
+      value: orgIdCookie.value,
+      path: '/',
+      maxAge: 2592000,
+      sameSite: 'lax',
+    })
+    logger.info(`[MIDDLEWARE] Preserving org_id cookie: ${orgIdCookie.value}`)
+  }
+
   const authCookieNames = getAuthCookieNames()
 
   const supabase = createServerClient(
