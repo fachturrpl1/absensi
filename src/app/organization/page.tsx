@@ -196,7 +196,7 @@ export default function OrganizationPage() {
             {filteredOrganizations.map((org) => (
               <Card 
                 key={org.id}
-                className="cursor-pointer hover:shadow-lg transition-all hover:border-primary"
+                className="transition-all"
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -210,7 +210,7 @@ export default function OrganizationPage() {
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">{org.timezone}</p>
                   <Button 
-                    className="w-full" 
+                    className="w-full cursor-pointer hover:shadow-lg" 
                     variant="outline"
                     onClick={(e) => {
                       e.preventDefault()
