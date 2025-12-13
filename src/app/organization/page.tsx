@@ -109,10 +109,24 @@ export default function OrganizationPage() {
       
       console.log("[ORG-PAGE] Organization selected, navigating to home...")
       
+      // Add small delay to ensure cookie is properly set before navigation
+      await new Promise(resolve => setTimeout(resolve, 200))
+      
+      console.log("[ORG-PAGE] Attempting to navigate to /")
+      
       // Navigate to home
-      router.push("/")
+      const navigationPromise = router.push("/")
+      console.log("[ORG-PAGE] Navigation promise created")
+      
+      // Wait for navigation to complete
+      await navigationPromise
+      console.log("[ORG-PAGE] Navigation completed")
     } catch (error) {
       console.error("[ORG-PAGE] Error selecting organization:", error)
+      console.error("[ORG-PAGE] Error details:", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      })
     }
   }
 
