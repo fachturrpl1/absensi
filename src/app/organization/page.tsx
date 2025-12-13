@@ -90,14 +90,21 @@ export default function OrganizationPage() {
       console.log("[ORG-PAGE] Setting role")
       authStore.setRole("admin", 1)
       
-      // Set cookie
-      document.cookie = `org_id=${org.id}; path=/; max-age=2592000`
-      console.log("[ORG-PAGE] Cookie set")
+      // Set cookie with SameSite and Secure flags for production
+      const cookieValue = `org_id=${org.id}; path=/; max-age=2592000; SameSite=Lax`
+      document.cookie = cookieValue
+      console.log("[ORG-PAGE] Cookie set:", cookieValue)
+      
+      // Verify cookie was set
+      const cookieCheck = document.cookie.includes(`org_id=${org.id}`)
+      console.log("[ORG-PAGE] Cookie verification:", cookieCheck)
       
       console.log("[ORG-PAGE] Organization selected, navigating to home...")
       
-      // Navigate to home
-      router.push("/")
+      // Navigate to home with a small delay to ensure cookie is set
+      setTimeout(() => {
+        router.push("/")
+      }, 100)
     } catch (error) {
       console.error("[ORG-PAGE] Error selecting organization:", error)
     }
@@ -190,7 +197,6 @@ export default function OrganizationPage() {
               <Card 
                 key={org.id}
                 className="cursor-pointer hover:shadow-lg transition-all hover:border-primary"
-                onClick={() => handleSelectOrganization(org)}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -236,7 +242,6 @@ export default function OrganizationPage() {
                     <tr
                       key={org.id}
                       className="border-b hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => handleSelectOrganization(org)}
                     >
                       <td className="px-6 py-4">
                         <div className="space-y-1">
@@ -248,7 +253,19 @@ export default function OrganizationPage() {
                       <td className="px-6 py-4 text-sm">
                         <Badge variant="outline">{org.country_code}</Badge>
                       </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">{org.timezone}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleSelectOrganization(org)
+                          }}
+                        >
+                          Select
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

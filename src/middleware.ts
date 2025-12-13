@@ -233,9 +233,12 @@ export async function middleware(req: NextRequest) {
   if (user && !isExcludedPath && !isPublicPath) {
     // Check if organization ID is in cookies or session
     // If not, redirect to organization
-    const orgIdCookie = req.cookies.get('org_id')?.value  
+    const orgIdCookie = req.cookies.get('org_id')?.value
+    
+    logger.info(`[MIDDLEWARE] Checking org_id cookie for user ${user.id}: ${orgIdCookie || 'NOT FOUND'}`)
     
     if (!orgIdCookie) {
+      logger.warn(`[MIDDLEWARE] No org_id cookie found, redirecting to /organization`)
       return NextResponse.redirect(new URL("/organization", req.url))
     }
   }
