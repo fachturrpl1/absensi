@@ -75,7 +75,7 @@ export default function OrganizationPage() {
   )
 
   // Handle organization selection
-  const handleSelectOrganization = (org: Organization) => {
+  const handleSelectOrganization = async (org: Organization) => {
     try {
       console.log("[ORG-PAGE] Selecting organization:", org)
       
@@ -90,21 +90,27 @@ export default function OrganizationPage() {
       console.log("[ORG-PAGE] Setting role")
       authStore.setRole("admin", 1)
       
-      // Set cookie with SameSite and Secure flags for production
-      const cookieValue = `org_id=${org.id}; path=/; max-age=2592000; SameSite=Lax`
-      document.cookie = cookieValue
-      console.log("[ORG-PAGE] Cookie set:", cookieValue)
+      // Set cookie via API route (server-side) to ensure middleware can read it
+      console.log("[ORG-PAGE] Setting cookie via API...")
+      const cookieResponse = await fetch("/api/organization/select", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ organizationId: org.id }),
+      })
       
-      // Verify cookie was set
-      const cookieCheck = document.cookie.includes(`org_id=${org.id}`)
-      console.log("[ORG-PAGE] Cookie verification:", cookieCheck)
+      if (!cookieResponse.ok) {
+        throw new Error("Failed to set organization cookie")
+      }
+      
+      const cookieData = await cookieResponse.json()
+      console.log("[ORG-PAGE] Cookie set via API:", cookieData)
       
       console.log("[ORG-PAGE] Organization selected, navigating to home...")
       
-      // Navigate to home with a small delay to ensure cookie is set
-      setTimeout(() => {
-        router.push("/")
-      }, 100)
+      // Navigate to home
+      router.push("/")
     } catch (error) {
       console.error("[ORG-PAGE] Error selecting organization:", error)
     }
