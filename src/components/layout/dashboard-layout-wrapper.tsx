@@ -27,6 +27,7 @@ export function DashboardLayoutWrapper({
     '/subscription-expired',
     '/offline',
     '/role-selector',
+    '/organization',
   ];
 
   // Pages that should hide only the navbar (keep sidebar/layout)
