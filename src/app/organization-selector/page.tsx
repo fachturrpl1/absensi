@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useOrgStore } from "@/store/org-store"
-import { useUserStore } from "@/store/user-store"
+import { useAuthStore } from "@/store/user-store"
 import { Organization } from "@/lib/types/organization"
 import { getUserOrganizations } from "@/action/auth-multi-org"
 import { Button } from "@/components/ui/button"
@@ -42,7 +42,7 @@ import { NavUser } from "@/components/layout-new/nav-user"
 export default function OrganizationSelector() {
   const router = useRouter()
   const orgStore = useOrgStore()
-  const userStore = useUserStore()
+  const authStore = useAuthStore()
   
   // State untuk data dan UI
   const [organizations, setOrganizations] = useState<Organization[]>([])
@@ -85,26 +85,31 @@ export default function OrganizationSelector() {
   }, [])
 
   // Handle organization selection
-  const handleSelectOrganization = async (org: Organization) => {
+  const handleSelectOrganization = (org: Organization) => {
     try {
-      console.log("Selecting organization:", org)
+      console.log("[ORG-SELECTOR] Selecting organization:", org)
       
       // Set organization in store
+      console.log("[ORG-SELECTOR] Setting org ID:", org.id, org.name)
       orgStore.setOrganizationId(org.id, org.name)
+      
+      console.log("[ORG-SELECTOR] Setting timezone:", org.timezone)
       orgStore.setTimezone(org.timezone)
       
       // Set user role
-      userStore.setRole("A001", 1)
+      console.log("[ORG-SELECTOR] Setting role")
+      authStore.setRole("admin", 1)
       
       // Set cookie
       document.cookie = `org_id=${org.id}; path=/; max-age=2592000`
+      console.log("[ORG-SELECTOR] Cookie set")
       
-      console.log("Organization selected, navigating to home...")
+      console.log("[ORG-SELECTOR] Organization selected, navigating to home...")
       
-      // Navigate immediately without delay
+      // Navigate to home
       router.push("/")
     } catch (error) {
-      console.error("Error selecting organization:", error)
+      console.error("[ORG-SELECTOR] Error selecting organization:", error)
     }
   }
 
@@ -310,7 +315,11 @@ export default function OrganizationSelector() {
 
                         <Button 
                           className="w-full mt-4"
-                          onClick={() => handleSelectOrganization(org)}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleSelectOrganization(org)
+                          }}
                         >
                           Select Organization
                         </Button>

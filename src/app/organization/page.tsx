@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useOrgStore } from "@/store/org-store"
-import { useUserStore } from "@/store/user-store"
+import { useAuthStore } from "@/store/user-store"
 import { Organization } from "@/lib/types/organization"
 import { getUserOrganizations } from "@/action/auth-multi-org"
 import { Button } from "@/components/ui/button"
@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input"
 export default function OrganizationPage() {
   const router = useRouter()
   const orgStore = useOrgStore()
-  const userStore = useUserStore()
+  const authStore = useAuthStore()
   
   // State untuk data dan UI
   const [organizations, setOrganizations] = useState<Organization[]>([])
@@ -76,18 +76,31 @@ export default function OrganizationPage() {
 
   // Handle organization selection
   const handleSelectOrganization = (org: Organization) => {
-    console.log("Selecting organization:", org)
-    
-    orgStore.setOrganizationId(org.id, org.name)
-    orgStore.setTimezone(org.timezone)
-    
-    userStore.setRole("A001", 1)
-    
-    document.cookie = `org_id=${org.id}; path=/; max-age=2592000`
-    
-    setTimeout(() => {
+    try {
+      console.log("[ORG-PAGE] Selecting organization:", org)
+      
+      // Set organization in store
+      console.log("[ORG-PAGE] Setting org ID:", org.id, org.name)
+      orgStore.setOrganizationId(org.id, org.name)
+      
+      console.log("[ORG-PAGE] Setting timezone:", org.timezone)
+      orgStore.setTimezone(org.timezone)
+      
+      // Set user role
+      console.log("[ORG-PAGE] Setting role")
+      authStore.setRole("admin", 1)
+      
+      // Set cookie
+      document.cookie = `org_id=${org.id}; path=/; max-age=2592000`
+      console.log("[ORG-PAGE] Cookie set")
+      
+      console.log("[ORG-PAGE] Organization selected, navigating to home...")
+      
+      // Navigate to home
       router.push("/")
-    }, 500)
+    } catch (error) {
+      console.error("[ORG-PAGE] Error selecting organization:", error)
+    }
   }
 
   if (!isHydrated) {
@@ -190,7 +203,15 @@ export default function OrganizationPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">{org.timezone}</p>
-                  <Button className="w-full" variant="outline">
+                  <Button 
+                    className="w-full" 
+                    variant="outline"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleSelectOrganization(org)
+                    }}
+                  >
                     Select
                     <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>
