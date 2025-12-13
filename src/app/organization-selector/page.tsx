@@ -85,19 +85,27 @@ export default function OrganizationSelector() {
   }, [])
 
   // Handle organization selection
-  const handleSelectOrganization = (org: Organization) => {
-    console.log("Selecting organization:", org)
-    
-    orgStore.setOrganizationId(org.id, org.name)
-    orgStore.setTimezone(org.timezone)
-    
-    userStore.setRole("A001", 1)
-    
-    document.cookie = `org_id=${org.id}; path=/; max-age=2592000`
-    
-    setTimeout(() => {
+  const handleSelectOrganization = async (org: Organization) => {
+    try {
+      console.log("Selecting organization:", org)
+      
+      // Set organization in store
+      orgStore.setOrganizationId(org.id, org.name)
+      orgStore.setTimezone(org.timezone)
+      
+      // Set user role
+      userStore.setRole("A001", 1)
+      
+      // Set cookie
+      document.cookie = `org_id=${org.id}; path=/; max-age=2592000`
+      
+      console.log("Organization selected, navigating to home...")
+      
+      // Navigate immediately without delay
       router.push("/")
-    }, 500)
+    } catch (error) {
+      console.error("Error selecting organization:", error)
+    }
   }
 
   // Filter organizations
@@ -264,8 +272,7 @@ export default function OrganizationSelector() {
                   {filteredOrganizations.map((org) => (
                     <Card 
                       key={org.id}
-                      className="cursor-pointer hover:shadow-lg transition-all hover:border-primary"
-                      onClick={() => handleSelectOrganization(org)}
+                      className="hover:shadow-lg transition-all hover:border-primary"
                     >
                       <CardHeader>
                         <div className="flex items-center gap-2">
@@ -301,7 +308,10 @@ export default function OrganizationSelector() {
                           </div>
                         </div>
 
-                        <Button className="w-full mt-4">
+                        <Button 
+                          className="w-full mt-4"
+                          onClick={() => handleSelectOrganization(org)}
+                        >
                           Select Organization
                         </Button>
                       </CardContent>
@@ -314,7 +324,6 @@ export default function OrganizationSelector() {
                     <Card 
                       key={org.id}
                       className="cursor-pointer hover:shadow-lg transition-all hover:border-primary"
-                      onClick={() => handleSelectOrganization(org)}
                     >
                       <div className="flex items-center p-4">
                         <div className="flex-shrink-0 mr-4">
@@ -338,7 +347,12 @@ export default function OrganizationSelector() {
                           </div>
                         </div>
                         <div className="flex-shrink-0">
-                          <Button onClick={() => handleSelectOrganization(org)}>
+                          <Button 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleSelectOrganization(org)
+                            }}
+                          >
                             Select
                           </Button>
                         </div>
