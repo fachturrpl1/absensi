@@ -17,6 +17,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/utils/supabase/client"
 import { useOrgStore } from "@/store/org-store"
+import { useRouter } from "next/navigation"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,6 +74,14 @@ export default function FingerPage() {
   const [activeFingerNumber, setActiveFingerNumber] = React.useState<1 | 2 | null>(null)
   const { organizationId } = useOrgStore()
   const [isHydrated, setIsHydrated] = React.useState(false)
+  const router = useRouter()
+
+  // Handle click on member name to navigate to profile
+  const handleMemberClick = (memberId: number) => {
+    if (memberId) {
+      router.push(`/members/${memberId}`)
+    }
+  }
 
   // Hydration effect
   React.useEffect(() => {
@@ -470,13 +479,14 @@ export default function FingerPage() {
     }
   }, [mounted, isHydrated, fetchDevices, fetchMembers])
 
-  // Setup real-time subscription for biometric_data changes
+  // Setup real-time subscriptions
   React.useEffect(() => {
     if (!mounted || !organizationId) return
 
     const supabase = createClient()
     
-    const channel = supabase
+    // Subscribe to biometric_data changes
+    const biometricChannel = supabase
       .channel(`biometric-data-changes-${organizationId}`)
       .on(
         'postgres_changes',
@@ -497,8 +507,6 @@ export default function FingerPage() {
           
           if (isFingerprint) {
             console.log('🔄 Biometric data change detected:', payload.eventType, payload)
-            
-            // Refresh members data when biometric data changes
             fetchMembers()
           }
         }
@@ -507,18 +515,47 @@ export default function FingerPage() {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Real-time subscription active for biometric_data')
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time subscription error - this may be due to real-time not being enabled for biometric_data table in Supabase')
+          console.error('❌ Real-time subscription error for biometric_data - this may be due to real-time not being enabled for the table in Supabase')
           console.error('💡 To enable: Run this SQL in Supabase SQL Editor:')
           console.error('   ALTER PUBLICATION supabase_realtime ADD TABLE biometric_data;')
         } else {
-          console.log('📡 Real-time subscription status:', status)
+          console.log('📡 Biometric subscription status:', status)
         }
       })
 
-    // Cleanup subscription on unmount
+    // Subscribe to organization_members changes
+    const membersChannel = supabase
+      .channel(`org-members-changes-${organizationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'organization_members',
+          filter: `organization_id=eq.${organizationId}`
+        },
+        (payload) => {
+          console.log('🔄 New member detected:', payload)
+          fetchMembers()
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time subscription active for organization_members')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Real-time subscription error for organization_members - this may be due to real-time not being enabled for the table in Supabase')
+          console.error('💡 To enable: Run this SQL in Supabase SQL Editor:')
+          console.error('   ALTER PUBLICATION supabase_realtime ADD TABLE organization_members;')
+        } else {
+          console.log('📡 Members subscription status:', status)
+        }
+      })
+
+    // Cleanup subscriptions on unmount
     return () => {
-      console.log('🧹 Cleaning up real-time subscription')
-      supabase.removeChannel(channel)
+      console.log('🧹 Cleaning up real-time subscriptions')
+      supabase.removeChannel(biometricChannel)
+      supabase.removeChannel(membersChannel)
     }
   }, [mounted, organizationId, fetchMembers])
 
@@ -1003,11 +1040,17 @@ export default function FingerPage() {
                     <TableCell className="font-medium text-muted-foreground">
                       {index + 1}
                     </TableCell>
-                    <TableCell className="font-medium">
-                      <div className="font-semibold">{member.first_name || '-'}</div>
+                    <TableCell 
+                      className="font-medium text-foreground hover:underline cursor-pointer"
+                      onClick={() => handleMemberClick(member.id)}
+                    >
+                      {member.first_name || 'N/A'}
                     </TableCell>
-                    <TableCell className="font-medium">
-                      <div>{member.full_name}</div>
+                    <TableCell 
+                      className="text-foreground hover:underline cursor-pointer"
+                      onClick={() => handleMemberClick(member.id)}
+                    >
+                      {member.full_name}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-muted-foreground">
