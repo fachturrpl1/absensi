@@ -493,22 +493,43 @@ export default function FingerPage() {
         {
           event: '*', // Listen to INSERT, UPDATE, DELETE
           schema: 'public',
-          table: 'biometric_data'
+          table: 'biometric_data',
+          filter: `organization_id=eq.${organizationId}`
         },
         (payload) => {
-          // Filter only FINGERPRINT type in the callback
-          const newData = payload.new as any
-          const oldData = payload.old as any
+          console.log('🔄 Biometric data change detected:', payload.eventType, payload)
           
-          // Check if the change is for FINGERPRINT type
-          const isFingerprint = 
-            (newData?.biometric_type === 'FINGERPRINT') || 
-            (oldData?.biometric_type === 'FINGERPRINT')
-          
-          if (isFingerprint) {
-            console.log('🔄 Biometric data change detected:', payload.eventType, payload)
-            fetchMembers()
+          // Optimistic update: Update UI immediately
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            const updatedData = payload.new
+            
+            setMembers(prevMembers => 
+              prevMembers.map(member => {
+                if (member.id === updatedData.organization_member_id) {
+                  // Update finger registration status based on the update
+                  const finger1 = updatedData.finger_number === 1 ? 
+                    (updatedData.status === 'REGISTERED') : 
+                    member.finger1_registered
+                    
+                  const finger2 = updatedData.finger_number === 2 ? 
+                    (updatedData.status === 'REGISTERED') : 
+                    member.finger2_registered
+                  
+                  console.log(`🔄 Updating member ${member.id} - Finger ${updatedData.finger_number} status: ${updatedData.status}`)
+                  
+                  return {
+                    ...member,
+                    finger1_registered: finger1,
+                    finger2_registered: finger2
+                  }
+                }
+                return member
+              })
+            )
           }
+          
+          // Still fetch fresh data to ensure consistency
+          fetchMembers()
         }
       )
       .subscribe((status) => {
@@ -529,13 +550,13 @@ export default function FingerPage() {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'organization_members',
           filter: `organization_id=eq.${organizationId}`
         },
         (payload) => {
-          console.log('🔄 New member detected:', payload)
+          console.log('🔄 Organization members change detected:', payload.eventType, payload)
           fetchMembers()
         }
       )
@@ -666,7 +687,7 @@ export default function FingerPage() {
       toast.info(`Command sent to device. Please scan finger ${fingerNumber} on the device.`)
 
       const startTime = Date.now()
-      const timeout = 120000
+      const timeout = 30000
       const pollInterval = 1000
 
       const pollStatus = async (): Promise<boolean> => {
@@ -692,10 +713,10 @@ export default function FingerPage() {
         }
 
         // Timeout reached - auto-cancel the command
-        console.log('⏱️ Timeout reached (2 minutes), auto-cancelling command...')
+        console.log('⏱️ Timeout reached (30 secocds), auto-failed command...')
         const { error: cancelError } = await supabase
           .from('device_commands')
-          .update({ status: 'CANCELLED' })
+          .update({ status: 'FAILED' })
           .eq('id', command?.id)
           .select()
 
@@ -705,7 +726,7 @@ export default function FingerPage() {
           console.log('✅ Command auto-cancelled successfully')
         }
 
-        toast.error('Timeout: Device not responding - registration cancelled')
+        toast.error('Timeout: Device not responding - registration failed')
         return false
       }
 
