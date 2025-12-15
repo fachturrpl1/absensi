@@ -57,7 +57,7 @@ const COLORS = {
 };
 
 export default function AnalyticsPage() {
-  const { isHydrated, organizationId } = useHydration();
+  const { organizationId } = useHydration();
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [masterData, setMasterData] = useState<MasterData>({ totalMembers: 0, totalDepartments: 0, averageTeamSize: 0 });
@@ -76,10 +76,12 @@ export default function AnalyticsPage() {
   });
 
   useEffect(() => {
-    if (!isHydrated || !organizationId) {
-      console.log('[ANALYTICS] Waiting for hydration - isHydrated:', isHydrated, 'orgId:', organizationId)
+    if (!organizationId) {
+      console.log('[ANALYTICS] Waiting for organization ID - orgId:', organizationId)
       return
     }
+    
+    console.log('[ANALYTICS] Starting to fetch data - orgId:', organizationId)
 
     const fetchData = async () => {
       try {
