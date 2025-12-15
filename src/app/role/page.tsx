@@ -47,8 +47,8 @@ import z from "zod"
 import { IRole } from "@/interface"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import { createRole, deleteRole, getAllRole, updateRole } from "@/action/role"
-import { useOrgStore } from "@/store/org-store"
 import { useOrgGuard } from "@/hooks/use-org-guard"
+import { useHydration } from "@/hooks/useHydration"
 
 const roleSchema = z.object({
     code: z.string().min(2, "min 2 characters"),
@@ -60,7 +60,7 @@ const roleSchema = z.object({
 type RoleForm = z.infer<typeof roleSchema>
 
 export default function RolesPage() {
-    const orgStore = useOrgStore()
+    const { organizationId } = useHydration()
     useOrgGuard()
 
     const [open, setOpen] = React.useState(false)
@@ -73,7 +73,7 @@ export default function RolesPage() {
         try {
             setLoading(true)
             
-            if (!orgStore.organizationId) {
+            if (!organizationId) {
                 toast.error('Please select an organization')
                 setLoading(false)
                 return
@@ -93,7 +93,7 @@ export default function RolesPage() {
 
     React.useEffect(() => {
         fetchroles()
-    }, [orgStore.organizationId])
+    }, [organizationId, fetchroles])
 
     const form = useForm<RoleForm>({
         resolver: zodResolver(roleSchema),
@@ -106,7 +106,7 @@ export default function RolesPage() {
 
     const handleSubmit = async (values: RoleForm) => {
         try {
-            if (!orgStore.organizationId) {
+            if (!organizationId) {
                 toast.error('Please select an organization')
                 return
             }
@@ -130,8 +130,8 @@ export default function RolesPage() {
     const handleDelete = async (roleId: string | number) => {
         try {
             setLoading(true)
-            const response = await deleteRole(roleId)
-            if (!response.success) throw new Error(response.message)
+            const result = await deleteRole(roleId)
+            if (!result.success) throw new Error(result.message)
             toast.success('Role deleted successfully')
             fetchroles()
         } catch (error: unknown) {

@@ -40,6 +40,8 @@ import {
   getAllGroups,
   updateGroup,
 } from "@/action/group"
+import { getAllOrganization } from "@/action/organization"
+import { Can } from "@/components/can"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import {
   Select,
@@ -48,10 +50,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { getAllOrganization } from "@/action/organization"
-import { Can } from "@/components/can"
-import { useOrgStore } from "@/store/org-store"
 import { useOrgGuard } from "@/hooks/use-org-guard"
+import { useHydration } from "@/hooks/useHydration"
 
 const groupSchema = z.object({
   organization_id: z.string().min(1, "Organization is required"),
@@ -64,7 +64,7 @@ const groupSchema = z.object({
 type GroupForm = z.infer<typeof groupSchema>
 
 export default function GroupsPage() {
-  const orgStore = useOrgStore()
+  const { isHydrated, organizationId } = useHydration()
   useOrgGuard()
   
   const [isModalOpen, setIsModalOpen] = React.useState(false)
@@ -77,16 +77,16 @@ export default function GroupsPage() {
     try {
       setLoading(true)
       
-      if (!orgStore.organizationId) {
+      if (!organizationId) {
         toast.error('Please select an organization')
         setLoading(false)
         return
       }
       
-      const response = await getAllGroups(orgStore.organizationId)
-      if (!response.success) throw new Error(response.message)
+      const result = await getAllGroups(organizationId)
+      if (!result.success) throw new Error(result.message)
       
-      setGroups(response.data)
+      setGroups(result.data)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
@@ -109,10 +109,11 @@ export default function GroupsPage() {
   }, [])
 
   React.useEffect(() => {
-    if (orgStore.organizationId) {
+    if (isHydrated && organizationId) {
+      console.log('[GROUP-PAGE] Hydration complete, fetching groups')
       fetchGroups()
     }
-  }, [orgStore.organizationId])
+  }, [isHydrated, organizationId, fetchGroups])
 
   const form = useForm<GroupForm>({
     resolver: zodResolver(groupSchema),
@@ -127,16 +128,16 @@ export default function GroupsPage() {
 
   // sinkronkan orgId ke form setelah didapat dari store
   React.useEffect(() => {
-    if (orgStore.organizationId && !isModalOpen) {
+    if (organizationId && !isModalOpen) {
       form.reset({
-        organization_id: String(orgStore.organizationId),
+        organization_id: String(organizationId),
         code: "",
         name: "",
         description: "",
         is_active: true,
       })
     }
-  }, [orgStore.organizationId, form, isModalOpen])
+  }, [organizationId, form, isModalOpen])
 
   const handleSubmit = async (values: GroupForm) => {
     try {
@@ -162,7 +163,7 @@ export default function GroupsPage() {
     if (!open) {
       setEditingDetail(null)
       form.reset({
-        organization_id: orgStore.organizationId ? String(orgStore.organizationId) : "",
+        organization_id: organizationId ? String(organizationId) : "",
         code: "",
         name: "",
         description: "",
@@ -187,7 +188,7 @@ export default function GroupsPage() {
                       onClick={() => {
                         setEditingDetail(null)
                         form.reset({
-                          organization_id: orgStore.organizationId ? String(orgStore.organizationId) : "",
+                          organization_id: organizationId ? String(organizationId) : "",
                           code: "",
                           name: "",
                           description: "",
@@ -212,14 +213,14 @@ export default function GroupsPage() {
                         className="space-y-4"
                       >
                         {/* Organization field */}
-                        {orgStore.organizationId ? (
+                        {organizationId ? (
                           <FormField
                             control={form.control}
                             name="organization_id"
                             render={({ field }) => (
                               <input
                                 type="hidden"
-                                value={String(orgStore.organizationId || "")}
+                                value={String(organizationId || "")}
                                 onChange={field.onChange}
                               />
                             )}

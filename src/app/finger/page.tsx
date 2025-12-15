@@ -70,6 +70,12 @@ export default function FingerPage() {
   const [selectedDepartment, setSelectedDepartment] = React.useState<string>("all")
   const [selectedStatus, setSelectedStatus] = React.useState<FilterStatus>("all")
   const { organizationId } = useOrgStore()
+  const [isHydrated, setIsHydrated] = React.useState(false)
+
+  // Hydration effect
+  React.useEffect(() => {
+    setIsHydrated(true)
+  }, [])
 
   const fetchDevices = React.useCallback(async () => {
     setLoadingDevices(true)
@@ -188,33 +194,37 @@ export default function FingerPage() {
     try {
       const supabase = createClient()
 
-      console.log('=== FETCHING MEMBERS ===')
+      console.log('[FINGER-PAGE] === FETCHING MEMBERS ===')
+      console.log('[FINGER-PAGE] organizationId from store:', organizationId)
+      console.log('[FINGER-PAGE] isHydrated:', isHydrated)
 
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError) {
-        console.error("User error:", userError)
+        console.error("[FINGER-PAGE] User error:", userError)
         toast.error("Failed to get user")
         setIsLoading(false)
         return
       }
       
       if (!user) {
-        console.error("No user logged in")
+        console.error("[FINGER-PAGE] No user logged in")
         toast.error("User not logged in")
         setIsLoading(false)
         return
       }
 
-      console.log('User ID:', user.id)
+      console.log('[FINGER-PAGE] User ID:', user.id)
 
       let orgId = organizationId
       
       if (!orgId) {
+        console.log('[FINGER-PAGE] organizationId is null, fetching from database')
         const { data: member, error: memberError } = await supabase
           .from("organization_members")
           .select("organization_id")
           .eq("user_id", user.id)
-          .maybeSingle()
+          .eq("is_active", true)
+          .single()
 
         if (memberError) {
           console.error("Member error:", memberError)
@@ -440,12 +450,23 @@ export default function FingerPage() {
     setMounted(true)
   }, [])
 
+  // Fetch data when hydration completes
   React.useEffect(() => {
-    if (mounted) {
+    if (isHydrated && organizationId) {
+      console.log('[FINGER-PAGE] Hydration complete, organizationId available:', organizationId)
       fetchDevices()
       fetchMembers()
     }
-  }, [mounted, fetchDevices, fetchMembers])
+  }, [isHydrated, organizationId, fetchDevices, fetchMembers])
+
+  // Legacy: Also fetch when mounted (for backward compatibility)
+  React.useEffect(() => {
+    if (mounted && !isHydrated) {
+      console.log('[FINGER-PAGE] Mounted but not hydrated yet')
+      fetchDevices()
+      fetchMembers()
+    }
+  }, [mounted, isHydrated, fetchDevices, fetchMembers])
 
   // Setup real-time subscription for biometric_data changes
   React.useEffect(() => {

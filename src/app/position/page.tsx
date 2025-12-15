@@ -50,7 +50,7 @@ import {
 } from "@/components/ui/select"
 import { getAllOrganization } from "@/action/organization"
 import { Can } from "@/components/can"
-import { useOrgStore } from "@/store/org-store"
+import { useHydration } from "@/hooks/useHydration"
 import { logger } from '@/lib/logger';
 
 const positionSchema = z.object({
@@ -65,7 +65,7 @@ const positionSchema = z.object({
 type PositionsForm = z.infer<typeof positionSchema>
 
 export default function PositionsPage() {
-    const { organizationId: storeOrgId } = useOrgStore()
+    const { isHydrated, organizationId } = useHydration()
     const [open, setOpen] = React.useState(false)
     const [editingDetail, setEditingDetail] = React.useState<IPositions | null>(null)
     const [positions, setPositions] = React.useState<IPositions[]>([])
@@ -76,14 +76,14 @@ export default function PositionsPage() {
         try {
             setLoading(true)
             
-            if (!storeOrgId) {
+            if (!organizationId) {
                 toast.error('Please select an organization')
                 setLoading(false)
                 return
             }
             
-            const response: unknown = await getAllPositions(storeOrgId)
-            const typedResponse = response as { success: boolean; data: IPositions[]; message: string }
+            const result = await getAllPositions(organizationId)
+            const typedResponse = result as { success: boolean; data: IPositions[]; message: string }
             if (!typedResponse.success) throw new Error(typedResponse.message)
             
             setPositions(typedResponse.data)
@@ -110,10 +110,11 @@ export default function PositionsPage() {
     }, [])
 
     React.useEffect(() => {
-        if (storeOrgId) {
+        if (isHydrated && organizationId) {
+            console.log('[POSITION-PAGE] Hydration complete, fetching positions')
             fetchPositions()
         }
-    }, [storeOrgId])
+    }, [isHydrated, organizationId, fetchPositions])
 
     const form = useForm<PositionsForm>({
         resolver: zodResolver(positionSchema),
@@ -129,9 +130,9 @@ export default function PositionsPage() {
 
     // sinkronkan orgId ke form setelah didapat dari store
     React.useEffect(() => {
-        if (storeOrgId && !open) {
+        if (organizationId && !open) {
             form.reset({
-                organization_id: String(storeOrgId),
+                organization_id: String(organizationId),
                 code: "",
                 title: "",
                 description: "",
@@ -139,7 +140,7 @@ export default function PositionsPage() {
                 is_active: true,
             })
         }
-    }, [storeOrgId, form, open])
+    }, [organizationId, form, open])
 
 
 
@@ -167,7 +168,7 @@ export default function PositionsPage() {
         if (!isOpen) {
             setEditingDetail(null)
             form.reset({
-                organization_id: String(storeOrgId || ""),
+                organization_id: String(organizationId || ""),
                 code: "",
                 title: "",
                 description: "",
@@ -196,7 +197,7 @@ export default function PositionsPage() {
                                             onClick={() => {
                                                 setEditingDetail(null)
                                                 form.reset({
-                                                    organization_id: String(storeOrgId || ""),
+                                                    organization_id: String(organizationId || ""),
                                                     code: "",
                                                     title: "",
                                                     description: "",
@@ -222,14 +223,14 @@ export default function PositionsPage() {
                                     className="space-y-4"
                                 >
                                     {/* Organization field */}
-                                    {storeOrgId ? (
+                                    {organizationId ? (
                                         <FormField
                                             control={form.control}
                                             name="organization_id"
                                             render={({ field }) => (
                                                 <input
                                                     type="hidden" 
-                                                    value={String(storeOrgId)}
+                                                    value={String(organizationId)}
                                                     onChange={field.onChange}
                                                 />
                                             )}

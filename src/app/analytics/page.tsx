@@ -15,7 +15,7 @@ import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { AnalyticsSkeleton } from '@/components/analytics/analytics-skeleton';
-import { useOrgStore } from '@/store/org-store';
+import { useHydration } from '@/hooks/useHydration';
 import {
   AreaChart, 
   Area, 
@@ -57,7 +57,7 @@ const COLORS = {
 };
 
 export default function AnalyticsPage() {
-  const { organizationId } = useOrgStore();
+  const { isHydrated, organizationId } = useHydration();
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [masterData, setMasterData] = useState<MasterData>({ totalMembers: 0, totalDepartments: 0, averageTeamSize: 0 });
@@ -76,6 +76,11 @@ export default function AnalyticsPage() {
   });
 
   useEffect(() => {
+    if (!isHydrated || !organizationId) {
+      console.log('[ANALYTICS] Waiting for hydration - isHydrated:', isHydrated, 'orgId:', organizationId)
+      return
+    }
+
     const fetchData = async () => {
       try {
         setIsLoading(true);
