@@ -439,7 +439,6 @@ export default function MemberProfileEnhanced({
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <CardTitle className="text-base font-semibold">Contact & Information</CardTitle>
-                  <CardDescription>Basic employment and contact details.</CardDescription>
                 </div>
                 <div className="relative w-[200px]">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -498,7 +497,6 @@ export default function MemberProfileEnhanced({
               <Card className="border-muted-foreground/20">
                 <CardHeader className="flex flex-col gap-0.5 pb-3">
                   <CardTitle className="text-base font-semibold">Work Schedule</CardTitle>
-                  <CardDescription>Current work schedule and hours.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center justify-between rounded-lg border bg-card/60 p-3">
@@ -673,7 +671,6 @@ export default function MemberProfileEnhanced({
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex-1">
                   <CardTitle className="text-base font-semibold">Attendance Percentage</CardTitle>
-                  <CardDescription>Attendance distribution across the evaluation period.</CardDescription>
                 </div>
                 {/* Attendance Rate with Trend */}
                 <div className="flex items-center gap-2 shrink-0">
