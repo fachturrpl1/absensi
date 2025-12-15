@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -94,7 +94,6 @@ export default function NewOrganizationPageFix() {
       case "orgCode":
         if (!value || !value.trim()) return "Organization code is required";
         if (value.length > 20) return "Maximum 20 characters allowed";
-        if (!codeValid) return "Organization code already exists or is invalid";
         return "";
       case "phone":
         if (value && value.length > 20) return "Maximum 20 characters allowed";
@@ -208,6 +207,7 @@ export default function NewOrganizationPageFix() {
     const value = e.target.value.toUpperCase().slice(0, 20);
     setFormData((prev) => ({ ...prev, orgCode: value }));
     setError(null);
+    setFieldErrors((prev) => ({ ...prev, orgCode: "" }));
 
     if (codeValidationTimeoutRef.current) {
       clearTimeout(codeValidationTimeoutRef.current);
@@ -221,11 +221,19 @@ export default function NewOrganizationPageFix() {
           setCodeValid(result.isValid);
           if (!result.isValid) {
             setError(result.message || "Organization code already exists");
+            setFieldErrors((prev) => ({
+              ...prev,
+              orgCode: result.message || "Organization code already exists",
+            }));
           }
         } catch (err) {
           console.error("Code validation error:", err);
           setCodeValid(false);
           setError("Error validating code");
+          setFieldErrors((prev) => ({
+            ...prev,
+            orgCode: "Error validating code",
+          }));
         } finally {
           setCodeValidating(false);
         }
@@ -423,10 +431,7 @@ export default function NewOrganizationPageFix() {
                             id="orgCode"
                             placeholder="e.g., PTMJ"
                             value={formData.orgCode}
-                            onChange={(e) => {
-                              handleCodeChange(e);
-                              updateFieldWithValidation("orgCode", e.target.value.toUpperCase());
-                            }}
+                            onChange={handleCodeChange}
                             disabled={isSubmitting}
                             className={`pr-10 ${fieldErrors.orgCode ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                             maxLength={20}

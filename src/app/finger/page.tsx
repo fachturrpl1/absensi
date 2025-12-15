@@ -69,6 +69,8 @@ export default function FingerPage() {
   const [isRegistering, setIsRegistering] = React.useState(false)
   const [selectedDepartment, setSelectedDepartment] = React.useState<string>("all")
   const [selectedStatus, setSelectedStatus] = React.useState<FilterStatus>("all")
+  const [activeMemberId, setActiveMemberId] = React.useState<number | null>(null)
+  const [activeFingerNumber, setActiveFingerNumber] = React.useState<1 | 2 | null>(null)
   const { organizationId } = useOrgStore()
   const [isHydrated, setIsHydrated] = React.useState(false)
 
@@ -588,20 +590,23 @@ export default function FingerPage() {
     }
 
     setIsRegistering(true)
+    setActiveMemberId(member.id)
+    setActiveFingerNumber(fingerNumber)
+
+    const supabase = createClient()
+    let command: any = null
 
     try {
       console.log('=== STARTING REGISTRATION ===')
       console.log('Member:', member.full_name, '| User ID:', member.user_id)
       console.log('Device:', selectedDevice, '| Finger:', fingerNumber)
 
-      const supabase = createClient()
-
       const payload = {
         user_id: member.user_id,
         name: member.full_name
       }
 
-      const { data: command, error: insertError } = await supabase
+      const { data: commandData, error: insertError } = await supabase
         .from('device_commands')
         .insert({
           device_code: selectedDevice,
@@ -619,7 +624,8 @@ export default function FingerPage() {
         return
       }
 
-      console.log('Command inserted, ID:', command.id)
+      command = commandData
+      console.log('Command inserted, ID:', command?.id)
       toast.info(`Command sent to device. Please scan finger ${fingerNumber} on the device.`)
 
       const startTime = Date.now()
@@ -648,7 +654,21 @@ export default function FingerPage() {
           }
         }
 
-        toast.error('Timeout: Device not responding')
+        // Timeout reached - auto-cancel the command
+        console.log('⏱️ Timeout reached (2 minutes), auto-cancelling command...')
+        const { error: cancelError } = await supabase
+          .from('device_commands')
+          .update({ status: 'CANCELLED' })
+          .eq('id', command?.id)
+          .select()
+
+        if (cancelError) {
+          console.error('Failed to auto-cancel command:', cancelError)
+        } else {
+          console.log('✅ Command auto-cancelled successfully')
+        }
+
+        toast.error('Timeout: Device not responding - registration cancelled')
         return false
       }
 
@@ -690,9 +710,77 @@ export default function FingerPage() {
     } catch (error: any) {
       console.error('Registration error:', error)
       toast.error(error.message || 'An error occurred')
+      
+      // Auto-cancel on error
+      if (command?.id) {
+        try {
+          await supabase
+            .from('device_commands')
+            .update({ status: 'CANCELLED' })
+            .eq('id', command.id)
+            .select()
+        } catch (cancelErr) {
+          console.error('Failed to cancel command on error:', cancelErr)
+        }
+      }
     } finally {
       setIsRegistering(false)
       setRegisteringMember(null)
+      setActiveMemberId(null)
+      setActiveFingerNumber(null)
+    }
+  }
+
+  const handleCancelRegistration = async () => {
+    if (!activeMemberId || !activeFingerNumber || !selectedDevice) {
+      toast.error("No active registration to cancel")
+      return
+    }
+
+    try {
+      const supabase = createClient()
+      
+      // Find and cancel the pending command
+      const { data: commands, error: fetchError } = await supabase
+        .from('device_commands')
+        .select('id')
+        .eq('device_code', selectedDevice)
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      if (fetchError || !commands || commands.length === 0) {
+        console.error('No pending command found')
+        toast.error("No pending command to cancel")
+        return
+      }
+
+      const { error: updateError } = await supabase
+        .from('device_commands')
+        .update({ status: 'CANCELLED' })
+        .eq('id', commands[0]?.id)
+        .select()
+
+      if (updateError) {
+        console.error('Cancel error:', updateError)
+        toast.error(`Failed to cancel: ${updateError.message}`)
+        return
+      }
+
+      toast.success('Registration cancelled')
+      
+      // Reset states immediately
+      setIsRegistering(false)
+      setActiveMemberId(null)
+      setActiveFingerNumber(null)
+      setShowConfirmDialog(false)
+      setRegisteringMember(null)
+      
+      // Refresh data
+      fetchMembers()
+    } catch (error: any) {
+      console.error('Cancel error:', error)
+      toast.error(error.message || 'Failed to cancel')
     }
   }
 
@@ -928,54 +1016,100 @@ export default function FingerPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center">
-                        <Button
-                          variant={member.finger1_registered ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handleFingerClick(member, 1)}
-                          disabled={isRegistering}
-                          className={cn(
-                            "gap-2 transition-all",
-                            member.finger1_registered && "bg-green-600 hover:bg-green-700 text-white"
-                          )}
-                        >
-                          {member.finger1_registered ? (
-                            <>
-                              <Check className="w-4 h-4" />
-                              Registered
-                            </>
-                          ) : (
-                            <>
-                              <Fingerprint className="w-4 h-4" />
-                              Finger 1
-                            </>
-                          )}
-                        </Button>
+                        {activeMemberId === member.id && activeFingerNumber === 1 ? (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleCancelRegistration}
+                            disabled={!isRegistering}
+                            className="gap-2"
+                          >
+                            {isRegistering ? (
+                              <>
+                                <Fingerprint className="w-4 h-4 animate-pulse" />
+                                Cancel
+                              </>
+                            ) : (
+                              <>
+                                <Check className="w-4 h-4" />
+                                Done
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant={member.finger1_registered ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleFingerClick(member, 1)}
+                            disabled={isRegistering || activeMemberId !== null}
+                            className={cn(
+                              "gap-2 transition-all",
+                              member.finger1_registered && "bg-green-600 hover:bg-green-700 text-white",
+                              activeMemberId !== null && activeMemberId !== member.id && "opacity-50 cursor-not-allowed"
+                            )}
+                          >
+                            {member.finger1_registered ? (
+                              <>
+                                <Check className="w-4 h-4" />
+                                Registered
+                              </>
+                            ) : (
+                              <>
+                                <Fingerprint className="w-4 h-4" />
+                                Finger 1
+                              </>
+                            )}
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center">
-                        <Button
-                          variant={member.finger2_registered ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handleFingerClick(member, 2)}
-                          disabled={isRegistering}
-                          className={cn(
-                            "gap-2 transition-all",
-                            member.finger2_registered && "bg-green-600 hover:bg-green-700 text-white"
-                          )}
-                        >
-                          {member.finger2_registered ? (
-                            <>
-                              <Check className="w-4 h-4" />
-                              Registered
-                            </>
-                          ) : (
-                            <>
-                              <Fingerprint className="w-4 h-4" />
-                              Finger 2
-                            </>
-                          )}
-                        </Button>
+                        {activeMemberId === member.id && activeFingerNumber === 2 ? (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleCancelRegistration}
+                            disabled={!isRegistering}
+                            className="gap-2"
+                          >
+                            {isRegistering ? (
+                              <>
+                                <Fingerprint className="w-4 h-4 animate-pulse" />
+                                Cancel
+                              </>
+                            ) : (
+                              <>
+                                <Check className="w-4 h-4" />
+                                Done
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant={member.finger2_registered ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleFingerClick(member, 2)}
+                            disabled={isRegistering || activeMemberId !== null}
+                            className={cn(
+                              "gap-2 transition-all",
+                              member.finger2_registered && "bg-green-600 hover:bg-green-700 text-white",
+                              activeMemberId !== null && activeMemberId !== member.id && "opacity-50 cursor-not-allowed"
+                            )}
+                          >
+                            {member.finger2_registered ? (
+                              <>
+                                <Check className="w-4 h-4" />
+                                Registered
+                              </>
+                            ) : (
+                              <>
+                                <Fingerprint className="w-4 h-4" />
+                                Finger 2
+                              </>
+                            )}
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
