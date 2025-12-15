@@ -304,9 +304,6 @@ export default function AnalyticsPage() {
       >
         <div>
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Analytics Overview</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Comprehensive attendance insights and performance metrics
-          </p>
         </div>
         <DateFilterBar dateRange={dateRange} onDateRangeChange={setDateRange} />
       </motion.div>
