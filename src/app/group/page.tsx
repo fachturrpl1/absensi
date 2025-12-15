@@ -73,7 +73,7 @@ export default function GroupsPage() {
   const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = React.useState<boolean>(true)
 
-  const fetchGroups = async () => {
+  const fetchGroups = React.useCallback(async () => {
     try {
       setLoading(true)
       
@@ -92,7 +92,7 @@ export default function GroupsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [organizationId])
 
   const fetchOrganizations = async () => {
     try {

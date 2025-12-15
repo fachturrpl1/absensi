@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useOrgStore } from '@/store/org-store'
@@ -151,14 +152,26 @@ export function OrgBreadcrumb() {
 
   const breadcrumbs = buildBreadcrumbs()
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log('[BREADCRUMB] Render state:', {
+      pathname,
+      organizationName,
+      displayName,
+      isHydrated,
+      breadcrumbsCount: breadcrumbs.length,
+      breadcrumbs: breadcrumbs.map(b => b.label),
+    })
+  }, [pathname, organizationName, displayName, isHydrated, breadcrumbs])
+
   // Jika tidak ada breadcrumb, jangan render
   if (breadcrumbs.length === 0) {
     return null
   }
 
   // Jangan render sampai client-side hydration selesai
-  // Tapi jika ada displayName dari localStorage, boleh render
-  if (!isHydrated && !displayName) {
+  // Tapi jika ada displayName dari localStorage atau organizationName dari store, boleh render
+  if (!isHydrated && !displayName && !organizationName) {
     return null
   }
 

@@ -72,7 +72,7 @@ export default function PositionsPage() {
     const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
     const [loading, setLoading] = React.useState<boolean>(true)
 
-    const fetchPositions = async () => {
+    const fetchPositions = React.useCallback(async () => {
         try {
             setLoading(true)
             
@@ -92,7 +92,7 @@ export default function PositionsPage() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [organizationId])
 
     const fetchOrganizations = async () => {
         try {

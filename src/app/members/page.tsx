@@ -160,7 +160,7 @@ export default function MembersPage() {
 
   const isLoadingInviteData = rolesLoading || deptLoading || posLoading
 
-  const fetchMembers = async () => {
+  const fetchMembers = React.useCallback(async () => {
     try {
       setLoading(true)
       
@@ -210,7 +210,7 @@ export default function MembersPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [organizationId])
 
   // Monitor organization changes
   React.useEffect(() => {
