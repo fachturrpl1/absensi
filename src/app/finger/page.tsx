@@ -77,6 +77,7 @@ export default function FingerPage() {
   const router = useRouter()
   const [pageSize, setPageSize] = React.useState("10")
   const [pageIndex, setPageIndex] = React.useState(0)
+  const registrationCompleteRef = React.useRef(false)
 
   // Handle click on member name to navigate to profile
   const handleMemberClick = (memberId: number) => {
@@ -144,7 +145,7 @@ export default function FingerPage() {
 
       if (error) {
         console.error('❌ Error loading devices:', error)
-        toast.error(`Error loading devices: ${error.message}`)
+        // toast.error(`Error loading devices: ${error.message}`)
         setLoadingDevices(false)
         return
       }
@@ -155,7 +156,7 @@ export default function FingerPage() {
         const invalidDevices = data.filter((d: any) => d.organization_id !== orgId)
         if (invalidDevices.length > 0) {
           console.error('❌ SECURITY WARNING: Found devices from different organization!', invalidDevices)
-          toast.error("Security error: Invalid devices detected")
+          // toast.error("Security error: Invalid devices detected")
           setLoadingDevices(false)
           return
         }
@@ -196,7 +197,7 @@ export default function FingerPage() {
       }
     } catch (error: any) {
       console.error('Fetch devices error:', error)
-      toast.error(`Failed to load devices: ${error.message}`)
+      // toast.error(`Failed to load devices: ${error.message}`)
     } finally {
       setLoadingDevices(false)
     }
@@ -214,14 +215,14 @@ export default function FingerPage() {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError) {
         console.error("[FINGER-PAGE] User error:", userError)
-        toast.error("Failed to get user")
+        // toast.error("Failed to get user")
         setIsLoading(false)
         return
       }
       
       if (!user) {
         console.error("[FINGER-PAGE] No user logged in")
-        toast.error("User not logged in")
+        // toast.error("User not logged in")
         setIsLoading(false)
         return
       }
@@ -241,14 +242,14 @@ export default function FingerPage() {
 
         if (memberError) {
           console.error("Member error:", memberError)
-          toast.error("Failed to get organization")
+          // toast.error("Failed to get organization")
           setIsLoading(false)
           return
         }
 
         if (!member) {
           console.error("User not in organization")
-          toast.error("User not in organization")
+          // toast.error("User not in organization")
           setIsLoading(false)
           return
         }
@@ -279,7 +280,7 @@ export default function FingerPage() {
 
       if (membersError) {
         console.error('❌ Error fetching members:', membersError)
-        toast.error(membersError.message)
+        // toast.error(membersError.message)
         setIsLoading(false)
         return
       }
@@ -290,7 +291,7 @@ export default function FingerPage() {
         const invalidMembers = membersData.filter((m: any) => m.organization_id !== orgId)
         if (invalidMembers.length > 0) {
           console.error('❌ SECURITY WARNING: Found members from different organization!', invalidMembers)
-          toast.error("Security error: Invalid data detected")
+          // toast.error("Security error: Invalid data detected")
           setIsLoading(false)
           return
         }
@@ -453,7 +454,7 @@ export default function FingerPage() {
       // }
     } catch (error: any) {
       console.error('❌ Fetch error:', error)
-      toast.error(error.message || "Failed to fetch members")
+      // toast.error(error.message || "Failed to fetch members")
     } finally {
       setIsLoading(false)
     }
@@ -589,18 +590,13 @@ export default function FingerPage() {
           
           if (payload.new && payload.new.status === 'EXECUTED') {
             console.log('✅ Command EXECUTED - updating member fingerprint status')
+            console.log('Payload:', payload.new)
             
-            // Get the command to find which member and finger was registered
-            const command = payload.new
-            if (command.payload && activeMemberId && activeFingerNumber) {
-              // Update member's finger status immediately
-              setMembers(prev => prev.map(m =>
-                m.id === activeMemberId
-                  ? { ...m, [`finger${activeFingerNumber}_registered`]: true }
-                  : m
-              ))
-              
-              console.log(`✅ Updated member ${activeMemberId} finger ${activeFingerNumber} status to registered`)
+            // Fetch fresh data to ensure consistency
+            // This is more reliable than trying to use stale state values
+            fetchMembers().then(() => {
+              registrationCompleteRef.current = true
+              console.log('✅ Members data refreshed after EXECUTED command')
               toast.success('Registration successful!')
               
               // Reset registration state
@@ -608,7 +604,18 @@ export default function FingerPage() {
               setActiveMemberId(null)
               setActiveFingerNumber(null)
               setRegisteringMember(null)
-            }
+            })
+          } else if (payload.new && payload.new.status === 'FAILED') {
+            console.log('❌ Command FAILED')
+            registrationCompleteRef.current = true
+            
+            // Reset registration state on failure
+            setIsRegistering(false)
+            setActiveMemberId(null)
+            setActiveFingerNumber(null)
+            setRegisteringMember(null)
+            
+            toast.error(payload.new.error_message || 'Registration failed on device')
           }
         }
       )
@@ -631,7 +638,7 @@ export default function FingerPage() {
       supabase.removeChannel(membersChannel)
       supabase.removeChannel(commandsChannel)
     }
-  }, [mounted, organizationId, fetchMembers, activeMemberId, activeFingerNumber])
+  }, [mounted, organizationId, fetchMembers])
 
   React.useEffect(() => {
     if (mounted && selectedDevice) {
@@ -693,7 +700,7 @@ export default function FingerPage() {
 
   const handleFingerClick = async (member: Member, fingerNumber: 1 | 2) => {
     if (!selectedDevice) {
-      toast.error("Please select a fingerprint device first")
+      // toast.error("Please select a fingerprint device first")
       return
     }
 
@@ -716,7 +723,7 @@ export default function FingerPage() {
 
   const handleRegister = async (member: Member, fingerNumber: 1 | 2) => {
     if (!selectedDevice) {
-      toast.error("Please select a fingerprint device first")
+      // toast.error("Please select a fingerprint device first")
       return
     }
 
@@ -726,6 +733,7 @@ export default function FingerPage() {
 
     const supabase = createClient()
     let command: any = null
+    registrationCompleteRef.current = false
 
     try {
       console.log('=== STARTING REGISTRATION ===')
@@ -750,7 +758,7 @@ export default function FingerPage() {
 
       if (insertError) {
         console.error('Insert error:', insertError)
-        toast.error(`Failed to send command: ${insertError.message}`)
+        // toast.error(`Failed to send command: ${insertError.message}`)
         setIsRegistering(false)
         return
       }
@@ -760,12 +768,18 @@ export default function FingerPage() {
       // toast.info(`Command sent to device. Please scan finger ${fingerNumber} on the device.`)
 
       const startTime = Date.now()
-      const timeout = 30000
+      const timeout = 90000
       const pollInterval = 1000
 
       const pollStatus = async (): Promise<boolean> => {
-        while (Date.now() - startTime < timeout) {
+        while (Date.now() - startTime < timeout && !registrationCompleteRef.current) {
           await new Promise(resolve => setTimeout(resolve, pollInterval))
+
+          // Stop polling if real-time update already completed
+          if (registrationCompleteRef.current) {
+            console.log('✅ Real-time update already completed, stopping polling')
+            return true
+          }
 
           const { data: status } = await supabase
             .from('device_commands')
@@ -773,20 +787,24 @@ export default function FingerPage() {
             .eq('id', command.id)
             .single()
 
-          console.log('Status:', status?.status)
+          console.log('📊 Polling status:', status?.status, '| Elapsed:', Date.now() - startTime, 'ms')
 
           if (status?.status === 'EXECUTED') {
+            console.log('✅ Polling detected EXECUTED status')
+            registrationCompleteRef.current = true
             return true
           }
 
           if (status?.status === 'FAILED') {
-            toast.error(status.error_message || 'Registration failed')
+            console.log('❌ Polling detected FAILED status')
+            registrationCompleteRef.current = true
+            // toast.error(status.error_message || 'Registration failed')
             return false
           }
         }
 
         // Timeout reached - auto-cancel the command
-        console.log('⏱️ Timeout reached (30 secocds), auto-failed command...')
+        console.log('⏱️ Timeout reached (60 seconds), auto-failed command...')
         const { error: cancelError } = await supabase
           .from('device_commands')
           .update({ status: 'FAILED' })
@@ -796,7 +814,7 @@ export default function FingerPage() {
         if (cancelError) {
           console.error('Failed to auto-cancel command:', cancelError)
         } else {
-          console.log('✅ Command auto-cancelled successfully')
+          console.log('✅ Command auto-failed successfully')
         }
 
         toast.error('Timeout: Device not responding - registration failed')
@@ -838,9 +856,6 @@ export default function FingerPage() {
 
         toast.success('Registration successful!')
       }
-    } catch (error: any) {
-      console.error('Registration error:', error)
-      toast.error(error.message || 'An error occurred')
       
       // Auto-cancel on error
       if (command?.id) {
@@ -864,7 +879,7 @@ export default function FingerPage() {
 
   const handleCancelRegistration = async () => {
     if (!activeMemberId || !activeFingerNumber || !selectedDevice) {
-      toast.error("No active registration to cancel")
+      // toast.error("No active registration to cancel")
       return
     }
 
@@ -882,7 +897,7 @@ export default function FingerPage() {
 
       if (fetchError || !commands || commands.length === 0) {
         console.error('No pending command found')
-        toast.error("No pending command to cancel")
+        // toast.error("No pending command to cancel")
         return
       }
 
@@ -894,7 +909,7 @@ export default function FingerPage() {
 
       if (updateError) {
         console.error('Cancel error:', updateError)
-        toast.error(`Failed to cancel: ${updateError.message}`)
+        // toast.error(`Failed to cancel: ${updateError.message}`)
         return
       }
 
@@ -911,7 +926,7 @@ export default function FingerPage() {
       fetchMembers()
     } catch (error: any) {
       console.error('Cancel error:', error)
-      toast.error(error.message || 'Failed to cancel')
+      // toast.error(error.message || 'Failed to cancel')
     }
   }
 
