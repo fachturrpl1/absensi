@@ -344,6 +344,30 @@ export const getMembersByGroupId = async (groupId: string) => {
   return { success: true, data: data as IOrganization_member[] };
 };
 
+export const getMembersByPositionId = async (positionId: string) => {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select(`
+      *,
+      user:user_id (
+        id,
+        email,
+        first_name,
+        middle_name,
+        last_name,
+        display_name
+      )
+    `)
+    .eq("position_id", positionId);
+
+  if (error) {
+    return { success: false, message: error.message, data: [] };
+  }
+
+  return { success: true, data: data as IOrganization_member[] };
+};
+
 export const moveMembersToGroup = async (memberIds: string[], targetGroupId: string) => {
   const supabase = await getSupabase();
   const { data, error } = await supabase

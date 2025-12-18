@@ -16,8 +16,9 @@ import * as z from "zod"
 import { PlusCircle, Search, RotateCcw } from 'lucide-react'
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { getGroupById, getAllGroups, createGroup } from '@/action/group'
+import { createClient } from '@/utils/supabase/client'
 import { getMembersByGroupId, moveMembersToGroup } from '@/action/members'
 import { IGroup, IOrganization_member } from '@/interface'
 import { toast } from 'sonner'
@@ -30,8 +31,15 @@ const createGroupSchema = z.object({
 })
 
 export default function MoveGroupPage() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const groupId = searchParams.get('id')
+
+  const handleMemberClick = (memberId: string) => {
+    if (memberId) {
+      router.push(`/members/${memberId}`)
+    }
+  }
 
   const [group, setGroup] = useState<IGroup | null>(null)
   const [members, setMembers] = useState<IOrganization_member[]>([])   
@@ -82,9 +90,43 @@ export default function MoveGroupPage() {
         if (!groupRes.success || !groupRes.data) throw new Error(groupRes.message)
         setGroup(groupRes.data)
 
-        const membersRes = await getMembersByGroupId(groupId)
-        if (!membersRes.success) throw new Error(membersRes.message)
-        setMembers(membersRes.data)
+        // Ambil data member seperti pola page finger
+        const supabase = createClient()
+        const { data: membersData, error: membersError } = await supabase
+          .from('organization_members')
+          .select(`
+            id,
+            user_id,
+            department_id,
+            organization_id,
+            user_profiles (
+              id,
+              first_name,
+              last_name,
+              display_name,
+              email,
+              phone
+            )
+          `)
+          .eq('is_active', true)
+          .eq('department_id', groupId)
+
+        if (membersError) throw new Error(membersError.message)
+        if (!membersData) throw new Error('Members not found')
+
+        // Transform ke struktur IOrganization_member dengan field user
+        const transformed = membersData.map((m: any) => ({
+          ...m,
+          user: m.user_profiles ? {
+            id: m.user_profiles.id,
+            first_name: m.user_profiles.first_name,
+            last_name: m.user_profiles.last_name,
+            display_name: m.user_profiles.display_name,
+            email: m.user_profiles.email,
+            phone: m.user_profiles.phone,
+          } : undefined,
+        }))
+        setMembers(transformed)
 
         // Get organization_id from the source group
         const organizationId = groupRes.data.organization_id;
@@ -130,16 +172,34 @@ export default function MoveGroupPage() {
       {
         accessorKey: "user.first_name",
         header: "Nickname",
-        cell: ({ row }) => row.original.user?.first_name || "-",
+        cell: ({ row }) => {
+          const member = row.original;
+          return (
+            <div 
+              onClick={() => handleMemberClick(member.id)}
+              className="text-primary hover:underline cursor-pointer"
+            >
+              {member.user?.first_name || '-'}
+            </div>
+          )
+        },
       },
       {
         id: "fullName",
         header: "Full Name",
         cell: ({ row }) => {
-          const user = row.original.user
-          return `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || '-'
+          const member = row.original;
+          const fullName = `${member.user?.first_name || ''} ${member.user?.last_name || ''}`.trim();
+          return (
+            <div 
+              onClick={() => handleMemberClick(member.id)}
+              className="text-primary hover:underline cursor-pointer"
+            >
+              {fullName || '-'}
+            </div>
+          )
         },
-      },
+      }
     ],
     []
   )
@@ -172,13 +232,6 @@ export default function MoveGroupPage() {
           const nameA = a.user?.display_name || `${a.user?.first_name || ''} ${a.user?.last_name || ''}`.trim();
           const nameB = b.user?.display_name || `${b.user?.first_name || ''} ${b.user?.last_name || ''}`.trim();
           return nameB.localeCompare(nameA);
-        });
-        break;
-      case "a-z":
-        result.sort((a, b) => {
-          const nameA = a.user?.display_name || `${a.user?.first_name || ''} ${a.user?.last_name || ''}`.trim();
-          const nameB = b.user?.display_name || `${b.user?.first_name || ''} ${b.user?.last_name || ''}`.trim();
-          return nameA.localeCompare(nameB);
         });
         break;
       case "newest":
@@ -340,8 +393,6 @@ export default function MoveGroupPage() {
               <SelectContent>
                 <SelectItem value="newest">Newest</SelectItem>
                 <SelectItem value="oldest">Oldest</SelectItem>
-                <SelectItem value="a-z">A-Z</SelectItem>
-                <SelectItem value="z-a">Z-A</SelectItem>
               </SelectContent>
             </Select>
           </div>

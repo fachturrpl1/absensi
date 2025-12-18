@@ -75,6 +75,21 @@ export async function updatePositions(id: string, payload: Partial<IPositions>) 
     return { success: true, data: data as IPositions[] };
 }
 
+export const getPositionById = async (positionId: string) => {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from("positions")
+        .select("*")
+        .eq("id", positionId)
+        .single();
+
+    if (error) {
+        return { success: false, message: error.message, data: null };
+    }
+
+    return { success: true, data: data as IPositions };
+};
+
 export const deletePositions = async ( PositionsId: string | number) => {
     const supabase = await createClient();
     const id = String(PositionsId)

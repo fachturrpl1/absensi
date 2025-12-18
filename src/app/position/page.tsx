@@ -1,9 +1,20 @@
 "use client"
 
 import React from "react"
-import { PositionsTable } from "@/components/positions-table"
 import { Button } from "@/components/ui/button"
-import { Plus, Briefcase } from "lucide-react"
+import { Plus, Briefcase, Search, RotateCcw, Pencil, Trash, ChevronRight, ChevronsLeft, ChevronLeft, ChevronsRight } from "lucide-react"
+import Link from "next/link"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import {
     Dialog,
     DialogContent,
@@ -28,6 +39,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
 
 import { IPositions } from "@/interface"
+import { deletePositions } from "@/action/position"
 import {
     createPositions,
     getAllPositions,
@@ -71,6 +83,78 @@ export default function PositionsPage() {
     const [positions, setPositions] = React.useState<IPositions[]>([])
     const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
     const [loading, setLoading] = React.useState<boolean>(true)
+    const [searchTerm, setSearchTerm] = React.useState("")
+    const [filterStatus, setFilterStatus] = React.useState<'all' | 'active' | 'inactive'>('all')
+    const [sortOrder, setSortOrder] = React.useState("newest")
+    const [pageIndex, setPageIndex] = React.useState(0)
+    const [pageSize, setPageSize] = React.useState("10") // setPageSize akan digunakan nanti
+
+    const handleDelete = async (id: string) => {
+        try {
+            const result = await deletePositions(id)
+            if (result.success) {
+                toast.success("Position deleted successfully")
+                fetchPositions()
+            } else {
+                toast.error(result.message || "Failed to delete position")
+            }
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "An error occurred")
+        }
+    }
+
+    const filteredData = React.useMemo(() => {
+        let filtered = [...positions]
+        if (searchTerm) {
+            const lowercasedQuery = searchTerm.toLowerCase()
+            filtered = filtered.filter((position) => {
+                const code = (position.code || "").toLowerCase()
+                const title = (position.title || "").toLowerCase()
+                const description = (position.description || "").toLowerCase()
+                const level = (position.level || "").toLowerCase()
+                return (
+                    code.includes(lowercasedQuery) ||
+                    title.includes(lowercasedQuery) ||
+                    description.includes(lowercasedQuery) ||
+                    level.includes(lowercasedQuery)
+                )
+            })
+        }
+        if (filterStatus !== "all") {
+            filtered = filtered.filter((position) => {
+                if (filterStatus === "active") return position.is_active
+                if (filterStatus === "inactive") return !position.is_active
+                return true
+            })
+        }
+        if (sortOrder === "newest") {
+            filtered.sort((a, b) => new Date((b as any).created_at || 0).getTime() - new Date((a as any).created_at || 0).getTime())
+        } else if (sortOrder === "oldest") {
+            filtered.sort((a, b) => new Date((a as any).created_at || 0).getTime() - new Date((b as any).created_at || 0).getTime())
+        } else if (sortOrder === "a-z") {
+            filtered.sort((a, b) => (a.title || "").toLowerCase().localeCompare((b.title || "").toLowerCase()))
+        } else if (sortOrder === "z-a") {
+            filtered.sort((a, b) => (b.title || "").toLowerCase().localeCompare((a.title || "").toLowerCase()))
+        }
+        return filtered
+    }, [searchTerm, filterStatus, sortOrder, positions])
+
+    const pageSizeNum = parseInt(pageSize)
+    const totalPages = Math.ceil(filteredData.length / pageSizeNum)
+    const paginatedData = filteredData.slice(
+        pageIndex * pageSizeNum,
+        (pageIndex + 1) * pageSizeNum
+    )
+
+    React.useEffect(() => {
+        setPageIndex(0)
+    }, [searchTerm, filterStatus, sortOrder])
+
+    React.useEffect(() => {
+        if (pageIndex >= totalPages && totalPages > 0) {
+            setPageIndex(totalPages - 1)
+        }
+    }, [totalPages, pageIndex])
 
     const fetchPositions = React.useCallback(async () => {
         try {
@@ -186,8 +270,55 @@ export default function PositionsPage() {
 
                     
                     <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
-                        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
                             <div className="flex-1 relative">
+                                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                                <Input
+                                    placeholder="Search positions..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-10"
+                                />
+                            </div>
+                            <div className="flex gap-3 sm:gap-2 flex-wrap">
+                                <Button variant="outline" size="sm" onClick={fetchPositions} className="whitespace-nowrap">
+                                    <RotateCcw className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+                            <div className="flex gap-3 sm:gap-2 flex-wrap">
+                                <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}>
+                                    <SelectTrigger className="w-full sm:w-[180px]">
+                                        <SelectValue placeholder="Filter by status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Status</SelectItem>
+                                        <SelectItem value="active">Active</SelectItem>
+                                        <SelectItem value="inactive">Inactive</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={sortOrder} onValueChange={setSortOrder}>
+                                    <SelectTrigger className="w-full sm:w-[180px]">
+                                        <SelectValue placeholder="Sort by" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="newest">Newest</SelectItem>
+                                        <SelectItem value="oldest">Oldest</SelectItem>
+                                        <SelectItem value="a-z">A-Z</SelectItem>
+                                        <SelectItem value="z-a">Z-A</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={pageSize} onValueChange={setPageSize}>
+                                    <SelectTrigger className="w-[100px]">
+                                        <SelectValue placeholder="Show" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="10">10</SelectItem>
+                                        <SelectItem value="20">20</SelectItem>
+                                        <SelectItem value="50">50</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="flex gap-3 sm:gap-2 flex-wrap">
                                 <Dialog open={open} onOpenChange={handleDialogOpenChange}>
@@ -208,17 +339,17 @@ export default function PositionsPage() {
                                             }}
                                             className="whitespace-nowrap"
                                         >
-                                            Add Position <Plus className="ml-2 h-4 w-4" />
+                                            Add<Plus className="ml-2 h-4 w-4" />
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent aria-describedby={undefined}>
-                            <DialogHeader>
-                                <DialogTitle>
-                                    {editingDetail ? 'Edit' : 'Add'} Position
-                                </DialogTitle>
-                            </DialogHeader>
-                            <Form {...form}>
-                                <form
+                                        <DialogHeader>
+                                            <DialogTitle>
+                                                {editingDetail ? 'Edit' : 'Add'}
+                                            </DialogTitle>
+                                        </DialogHeader>
+                                        <Form {...form}>
+                                            <form
                                     onSubmit={form.handleSubmit(handleSubmit)}
                                     className="space-y-4"
                                 >
@@ -285,7 +416,7 @@ export default function PositionsPage() {
                                         name="title"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Position Name</FormLabel>
+                                                <FormLabel>Name</FormLabel>
                                                 <FormControl>
                                                     <Input type="text" {...field} />
                                                 </FormControl>
@@ -360,16 +491,125 @@ export default function PositionsPage() {
                                     </Empty>
                                 </div>
                             ) : (
-                                <PositionsTable 
-                                    positions={positions}
-                                    isLoading={loading}
-                                    onDelete={fetchPositions}
-                                    onEdit={(position) => {
-                                        setEditingDetail(position)
-                                        form.reset(position)
-                                        setOpen(true)
-                                    }}
-                                />
+                                <>
+                                <div className="border rounded-lg overflow-hidden">
+                                    <table className="w-full">
+                                        <thead className="bg-muted/50 border-b">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Code</th>
+                                                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Position Name</th>
+                                                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Description</th>
+                                                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Level</th>
+                                                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Status</th>
+                                                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {loading ? (
+                                                <tr>
+                                                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
+                                                </tr>
+                                            ) : paginatedData.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No positions found</td>
+                                                </tr>
+                                            ) : (
+                                                paginatedData.map((position) => (
+                                                    <tr key={position.id} className="border-b hover:bg-muted/30 transition-colors">
+                                                        <td className="px-4 py-3 text-sm">{position.code}</td>
+                                                        <td className="px-4 py-3 text-sm">{position.title}</td>
+                                                        <td className="px-4 py-3 text-sm">{position.description || "-"}</td>
+                                                        <td className="px-4 py-3 text-sm">{position.level || "-"}</td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            {position.is_active ? (
+                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white">Active</span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 text-black">Inactive</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            <div className="flex items-center gap-2">
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingDetail(position); form.reset(position); setOpen(true); }} title="Edit position">
+                                                                    <Pencil className="w-4 h-4" />
+                                                                </Button>
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="Delete position">
+                                                                            <Trash className="w-4 h-4" />
+                                                                        </Button>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent>
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle>Delete Position</AlertDialogTitle>
+                                                                            <AlertDialogDescription>Are you sure you want to delete {position.title}? This action cannot be undone.</AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                            <AlertDialogAction onClick={() => handleDelete(position.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                <Link href={`/position/${position.id}`}>
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8" title="View Members">
+                                                                        <ChevronRight className="w-4 h-4" />
+                                                                    </Button>
+                                                                </Link>
+                                                                </AlertDialog>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-gray-50 rounded-md border">
+                                    <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-nowrap justify-center w-full md:w-auto">
+                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(0)} disabled={pageIndex === 0 || loading} className="h-8 w-8 p-0" title="First page">
+                                            <ChevronsLeft className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(pageIndex - 1)} disabled={pageIndex === 0 || loading} className="h-8 w-8 p-0" title="Previous page">
+                                            <ChevronLeft className="h-4 w-4" />
+                                        </Button>
+                                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap ml-1 sm:ml-2">Page</span>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max={totalPages}
+                                            value={pageIndex + 1}
+                                            onChange={(e) => {
+                                                const page = e.target.value ? Number(e.target.value) - 1 : 0;
+                                                setPageIndex(page);
+                                            }}
+                                            className="w-10 sm:w-12 h-8 px-2 border border-gray-300 rounded text-xs sm:text-sm text-center mx-1 sm:mx-2"
+                                            disabled={loading || totalPages === 0}
+                                        />
+                                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/ {totalPages}</span>
+                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(pageIndex + 1)} disabled={pageIndex >= totalPages - 1 || loading} className="h-8 w-8 p-0" title="Next page">
+                                            <ChevronRight className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(totalPages - 1)} disabled={pageIndex >= totalPages - 1 || loading} className="h-8 w-8 p-0" title="Last page">
+                                            <ChevronsRight className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    <div className="flex flex-row items-center justify-center md:justify-end gap-2 md:gap-4 w-full md:w-auto">
+                                        <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                                            {`Showing ${paginatedData.length > 0 ? pageIndex * parseInt(pageSize) + 1 : 0} to ${Math.min((pageIndex + 1) * parseInt(pageSize), filteredData.length)} of ${filteredData.length} total records`}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Select value={pageSize} onValueChange={(value) => { setPageSize(value); setPageIndex(0); }}>
+                                                <SelectTrigger className="h-8 w-[70px]">
+                                                    <SelectValue placeholder={pageSize} />
+                                                </SelectTrigger>
+                                                <SelectContent side="top">
+                                                    <SelectItem value="10">10</SelectItem>
+                                                    <SelectItem value="20">20</SelectItem>
+                                                    <SelectItem value="50">50</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                </div>
+                                </>
                             )}
                         </div>
                     </div>
