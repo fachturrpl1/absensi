@@ -48,8 +48,10 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [visibleColumns, setVisibleColumns] = React.useState({
     members: true,
-    phone: true,
+    // phone: true,
     group: true,
+    gender: true,
+    religion: true,
     role: true,
     status: true,
     actions: true,
@@ -226,14 +228,14 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
             >
               Members
             </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
+            {/* <DropdownMenuCheckboxItem
               checked={visibleColumns.phone}
               onCheckedChange={(checked) =>
                 setVisibleColumns((prev) => ({ ...prev, phone: checked }))
               }
             >
               Phone Number
-            </DropdownMenuCheckboxItem>
+            </DropdownMenuCheckboxItem> */}
             <DropdownMenuCheckboxItem
               checked={visibleColumns.group}
               onCheckedChange={(checked) =>
@@ -241,6 +243,22 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
               }
             >
               Group
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={visibleColumns.gender}
+              onCheckedChange={(checked) =>
+                setVisibleColumns((prev) => ({ ...prev, gender: checked }))
+              }
+            >
+              Gender
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={visibleColumns.religion}
+              onCheckedChange={(checked) =>
+                setVisibleColumns((prev) => ({ ...prev, religion: checked }))
+              }
+            >
+              Religion
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
               checked={visibleColumns.role}
@@ -279,11 +297,17 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
             {visibleColumns.members && (
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Members</th>
             )}
-            {visibleColumns.phone && (
+            {/* {visibleColumns.phone && (
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Phone Number</th>
-            )}
+            )} */}
             {visibleColumns.group && (
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Group</th>
+            )}
+            {visibleColumns.gender && (
+              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Gender</th>
+            )}
+            {visibleColumns.religion && (
+              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Religion</th>
             )}
             {visibleColumns.role && (
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Role</th>
@@ -313,7 +337,6 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
             </tr>
           ) : (
             paginatedData.map((member) => {
-              const user = (member as any).user
               const role = (member as any).role
 
               return (
@@ -327,15 +350,27 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
                     </td>
                   )}
 
-                  {visibleColumns.phone && (
+                  {/* {visibleColumns.phone && (
                     <td className="px-4 py-3 text-sm">
                       {user?.phone || "No Phone"}
                     </td>
-                  )}
+                  )} */}
 
                   {visibleColumns.group && (
                     <td className="px-4 py-3 text-sm">
                       {(member as any).groupName || "-"}
+                    </td>
+                  )}
+
+                  {visibleColumns.gender && (
+                    <td className="px-4 py-3 text-sm">
+                      {(member as any).biodata?.jenis_kelamin || "-"}
+                    </td>
+                  )}
+
+                  {visibleColumns.religion && (
+                    <td className="px-4 py-3 text-sm">
+                      {(member as any).biodata?.agama || "-"}
                     </td>
                   )}
 

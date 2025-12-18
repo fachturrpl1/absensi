@@ -8,6 +8,17 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useForm } from "react-hook-form"
@@ -47,6 +58,7 @@ export default function MoveGroupPage() {
   const [allGroups, setAllGroups] = useState<IGroup[]>([])
   const [targetGroupId, setTargetGroupId] = useState<string>("")
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
   const [searchQuery, setSearchQuery] = useState("")
   const [sortOrder, setSortOrder] = useState("newest")
@@ -99,6 +111,7 @@ export default function MoveGroupPage() {
             user_id,
             department_id,
             organization_id,
+            biodata:biodata_nik (*),
             user_profiles (
               id,
               first_name,
@@ -125,6 +138,7 @@ export default function MoveGroupPage() {
             email: m.user_profiles.email,
             phone: m.user_profiles.phone,
           } : undefined,
+          biodata: m.biodata,
         }))
         setMembers(transformed)
 
@@ -198,6 +212,22 @@ export default function MoveGroupPage() {
               {fullName || '-'}
             </div>
           )
+        },
+      },
+      {
+        id: "gender",
+        header: "Gender",
+        cell: ({ row }) => {
+          const member = row.original as any;
+          return <div>{member.biodata?.jenis_kelamin || '-'}</div>
+        },
+      },
+      {
+        id: "religion",
+        header: "Religion",
+        cell: ({ row }) => {
+          const member = row.original as any;
+          return <div>{member.biodata?.agama || '-'}</div>
         },
       }
     ],
@@ -364,12 +394,27 @@ export default function MoveGroupPage() {
                 ))}
             </SelectContent>
           </Select>
-          <Button 
-            onClick={handleMoveMembers}
-            disabled={!targetGroupId || Object.keys(rowSelection).length === 0}
-          >
-            Move Selected ({Object.keys(rowSelection).length})
-          </Button>
+          <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+            <AlertDialogTrigger asChild>
+              <Button 
+                disabled={!targetGroupId || Object.keys(rowSelection).length === 0}
+              >
+                Move Selected ({Object.keys(rowSelection).length})
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirm Move</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to move {Object.keys(rowSelection).length} selected members to the "{allGroups.find(g => g.id === targetGroupId)?.name || ''}" group?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleMoveMembers}>Move</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between pt-4">

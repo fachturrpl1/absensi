@@ -54,6 +54,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
     .from("organization_members")
     .select(`
       *,
+      biodata:biodata_nik (*),
       user:user_id (
         id,
         email,
