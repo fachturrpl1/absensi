@@ -328,20 +328,24 @@ export function DataTable<TData, TValue>({
 
                     return (
                       <TableHead key={header.id} className={cn("px-2 py-3", getColumnWidth())}>
-                        <button
-                          type="button"
-                          className={cn(
-                            "flex w-full items-center justify-start gap-2 text-sm font-medium truncate",
-                            canSort ? "cursor-pointer select-none" : "cursor-default",
-                          )}
-                          onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
-                          disabled={isLoading}
-                          title={typeof header.column.columnDef.header === 'string' ? header.column.columnDef.header : ''}
-                        >
-                          <span className="truncate">
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                          </span>
-                        </button>
+                        {header.column.id === 'select' ? (
+                          flexRender(header.column.columnDef.header, header.getContext())
+                        ) : (
+                          <button
+                            type="button"
+                            className={cn(
+                              "flex w-full items-center justify-start gap-2 text-sm font-medium truncate",
+                              canSort ? "cursor-pointer select-none" : "cursor-default",
+                            )}
+                            onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                            disabled={isLoading}
+                            title={typeof header.column.columnDef.header === 'string' ? header.column.columnDef.header : ''}
+                          >
+                            <span className="truncate">
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                            </span>
+                          </button>
+                        )}
                       </TableHead>
                     )
                   })}

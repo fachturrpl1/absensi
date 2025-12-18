@@ -319,3 +319,42 @@ export const getUserOrganizationId = async (userId: string) => {
 
   return { success: true, message: "Organization found", organizationId: data.organization_id };
 };
+
+export const getMembersByGroupId = async (groupId: string) => {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select(`
+      *,
+      user:user_id (
+        id,
+        email,
+        first_name,
+        middle_name,
+        last_name,
+        display_name
+      )
+    `)
+    .eq("department_id", groupId);
+
+  if (error) {
+    return { success: false, message: error.message, data: [] };
+  }
+
+  return { success: true, data: data as IOrganization_member[] };
+};
+
+export const moveMembersToGroup = async (memberIds: string[], targetGroupId: string) => {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .update({ department_id: targetGroupId })
+    .in("id", memberIds)
+    .select();
+
+  if (error) {
+    return { success: false, message: error.message, data: null };
+  }
+
+  return { success: true, message: "Members moved successfully", data };
+};

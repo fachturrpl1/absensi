@@ -742,7 +742,8 @@ export default function FingerPage() {
 
       const payload = {
         user_id: member.user_id,
-        name: member.full_name
+        name: member.first_name || member.full_name,
+        finger_index: fingerNumber
       }
 
       const { data: commandData, error: insertError } = await supabase
