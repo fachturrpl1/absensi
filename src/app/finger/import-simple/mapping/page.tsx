@@ -11,12 +11,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "sonner"
 
+// Mapping kolom Excel ke kolom tabel biodata
 const DATABASE_FIELDS = [
-  { key: "first_name", label: "Nama Depan", required: true },
-  { key: "last_name", label: "Nama Belakang", required: false },
-  { key: "phone", label: "Nomor Telepon", required: false },
-  { key: "department_id", label: "Departemen", required: false },
-  { key: "is_active", label: "Status", required: false },
+  { key: "nik",           label: "NIK",            required: true },
+  { key: "nama",          label: "Nama Lengkap",   required: true },
+  { key: "nickname",      label: "Nickname",       required: false },
+  { key: "nisn",          label: "NISN",           required: false },
+  { key: "jenis_kelamin", label: "Jenis Kelamin",  required: true }, // L / P
+  { key: "tempat_lahir",  label: "Tempat Lahir",   required: false },
+  { key: "tanggal_lahir", label: "Tanggal Lahir",  required: false },
+  { key: "agama",         label: "Agama",          required: false },
+  { key: "jalan",         label: "Jalan",          required: false },
+  { key: "rt",            label: "RT",             required: false },
+  { key: "rw",            label: "RW",             required: false },
+  { key: "dusun",         label: "Dusun",          required: false },
+  { key: "kelurahan",     label: "Kelurahan",      required: false },
+  { key: "kecamatan",     label: "Kecamatan",      required: false },
+  { key: "no_telepon",    label: "No Telepon",     required: false },
+  { key: "email",         label: "Email",          required: false },
+  { key: "department_id", label: "Department/Group", required: false },
 ] as const
 
 
@@ -98,11 +111,24 @@ export default function FingerImportSimpleMappingPage() {
             headerLower === fieldLower ||
             headerLower.includes(fieldLower) ||
             fieldLower.includes(headerLower) ||
-            (field.key === "first_name" && (headerLower.includes("first") || headerLower.includes("nama depan"))) ||
-            (field.key === "last_name" && (headerLower.includes("last") || headerLower.includes("nama belakang"))) ||
-            (field.key === "phone" && (headerLower.includes("phone") || headerLower.includes("telepon") || headerLower.includes("hp"))) ||
-            (field.key === "department_id" && (headerLower.includes("department") || headerLower.includes("departemen") || headerLower.includes("divisi"))) ||
-            (field.key === "is_active" && (headerLower.includes("active") || headerLower.includes("status")))
+            // variasi nama kolom umum
+            (field.key === "nik" && headerLower.includes("nik")) ||
+            (field.key === "nama" && (headerLower.includes("nama") || headerLower.includes("name"))) ||
+            (field.key === "nickname" && (headerLower.includes("nickname") || headerLower.includes("nick") || headerLower.includes("panggilan"))) ||
+            (field.key === "nisn" && headerLower.includes("nisn")) ||
+            (field.key === "jenis_kelamin" && (headerLower.includes("jenis kelamin") || headerLower.includes("jk") || headerLower.includes("gender"))) ||
+            (field.key === "tempat_lahir" && (headerLower.includes("tempat lahir") || headerLower.includes("kota lahir"))) ||
+            (field.key === "tanggal_lahir" && (headerLower.includes("tanggal lahir") || headerLower.includes("tgl lahir"))) ||
+            (field.key === "agama" && headerLower.includes("agama")) ||
+            (field.key === "jalan" && (headerLower.includes("jalan") || headerLower.includes("alamat"))) ||
+            (field.key === "rt" && headerLower === "rt") ||
+            (field.key === "rw" && headerLower === "rw") ||
+            (field.key === "dusun" && headerLower.includes("dusun")) ||
+            (field.key === "kelurahan" && (headerLower.includes("kelurahan") || headerLower.includes("desa"))) ||
+            (field.key === "kecamatan" && headerLower.includes("kecamatan")) ||
+            (field.key === "no_telepon" && (headerLower.includes("telepon") || headerLower.includes("no hp") || headerLower.includes("hp") || headerLower.includes("phone"))) ||
+            (field.key === "email" && headerLower.includes("email")) ||
+            (field.key === "department_id" && (headerLower.includes("department") || headerLower.includes("departemen") || headerLower.includes("divisi") || headerLower.includes("group")))
           )
         })
 
@@ -135,8 +161,13 @@ export default function FingerImportSimpleMappingPage() {
       return
     }
 
-    if (!mapping.first_name) {
-      toast.error("Please map the Nama Depan column (required)")
+    if (!mapping.nik) {
+      toast.error("Please map the NIK column (required)")
+      return
+    }
+
+    if (!mapping.nama) {
+      toast.error("Please map the Nama Lengkap column (required)")
       return
     }
 
@@ -182,8 +213,13 @@ export default function FingerImportSimpleMappingPage() {
       return
     }
 
-    if (!mapping.first_name) {
-      toast.error("Please map the Nama Depan column (required)")
+    if (!mapping.nik) {
+      toast.error("Please map the NIK column (required)")
+      return
+    }
+
+    if (!mapping.nama) {
+      toast.error("Please map the Nama Lengkap column (required)")
       return
     }
 
@@ -239,7 +275,7 @@ export default function FingerImportSimpleMappingPage() {
           <div className="flex items-center gap-4 w-full">
             <Button
               onClick={handleImport}
-              disabled={!file || processing || !mapping.first_name}
+              disabled={!file || processing || !mapping.nik || !mapping.nama}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {processing ? (
@@ -253,7 +289,7 @@ export default function FingerImportSimpleMappingPage() {
             </Button>
             <Button
               onClick={handleTest}
-              disabled={!file || processing || !mapping.first_name}
+              disabled={!file || processing || !mapping.nik || !mapping.nama}
               variant="outline"
             >
               Test
@@ -305,83 +341,90 @@ export default function FingerImportSimpleMappingPage() {
           <div className="absolute bottom-0 left-0 right-0 border-b" style={{ left: "-24px", right: "-24px" }}></div>
 
           {/* Left panel */}
-          <div className="w-80 pr-6 border-r pt-6 pb-6 relative z-10" style={{ marginTop: "-1px" }}>
-            <div className="space-y-4 pb-6 border-b">
-              <h2 className="font-semibold text-lg">Data to import</h2>
+          <div className="w-80 pr-4 border-r pt-6 pb-6 relative z-10 flex flex-col" style={{ marginTop: "-1px" }}>
+            <div className="space-y-6 pb-6 border-b">
+              <div>
+                <h2 className="font-semibold text-lg mb-4">Data to import</h2>
 
-              {file ? (
-                <>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">File:</p>
-                    <p className="text-sm">{file.name}</p>
-                  </div>
+                {file ? (
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">File</p>
+                      <p className="text-sm font-medium wrap-break-word">{file.name}</p>
+                    </div>
 
-                  <div>
-                    <Label htmlFor="sheet" className="text-sm font-medium text-muted-foreground mb-2 block">
-                      Sheet:
-                    </Label>
-                    <Select value={sheetName} onValueChange={setSheetName}>
-                      <SelectTrigger id="sheet">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Sheet1">Sheet1</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="sheet" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Sheet
+                      </Label>
+                      <Select value={sheetName} onValueChange={setSheetName}>
+                        <SelectTrigger id="sheet" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Sheet1">Sheet1</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="use-header"
-                      checked={useFirstRowAsHeader}
-                      onCheckedChange={(checked) => setUseFirstRowAsHeader(checked === true)}
-                    />
-                    <Label htmlFor="use-header" className="text-sm cursor-pointer">
-                      Use first row as header
-                    </Label>
+                    <div className="flex items-start space-x-3">
+                      <Checkbox
+                        id="use-header"
+                        checked={useFirstRowAsHeader}
+                        onCheckedChange={(checked) => setUseFirstRowAsHeader(checked === true)}
+                        className="mt-0.5"
+                      />
+                      <Label htmlFor="use-header" className="text-sm cursor-pointer leading-relaxed">
+                        Use first row as header
+                      </Label>
+                    </div>
                   </div>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">No file selected</p>
-              )}
+                ) : (
+                  <p className="text-sm text-muted-foreground">No file selected</p>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-4 pt-6">
+            <div className="space-y-4 pt-10 pb-6">
               <h2 className="font-semibold text-lg">Advanced</h2>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="track-history"
-                  checked={trackHistory}
-                  onCheckedChange={(checked) => setTrackHistory(checked === true)}
-                />
-                <Label htmlFor="track-history" className="text-sm cursor-pointer">
-                  Track history during import
-                </Label>
-              </div>
+              <div className="space-y-3">
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id="track-history"
+                    checked={trackHistory}
+                    onCheckedChange={(checked) => setTrackHistory(checked === true)}
+                    className="mt-0.5"
+                  />
+                  <Label htmlFor="track-history" className="text-sm cursor-pointer leading-relaxed">
+                    Track history during import
+                  </Label>
+                </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="allow-matching"
-                  checked={allowMatchingWithSubfields}
-                  onCheckedChange={(checked) => setAllowMatchingWithSubfields(checked === true)}
-                />
-                <Label htmlFor="allow-matching" className="text-sm cursor-pointer">
-                  Allow matching with subfields
-                </Label>
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id="allow-matching"
+                    checked={allowMatchingWithSubfields}
+                    onCheckedChange={(checked) => setAllowMatchingWithSubfields(checked === true)}
+                    className="mt-0.5"
+                  />
+                  <Label htmlFor="allow-matching" className="text-sm cursor-pointer leading-relaxed">
+                    Allow matching with subfields
+                  </Label>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Right panel */}
-          <div className="flex-1 pl-6 pt-6 pb-6 relative z-10">
+          <div className="flex-1 pl-4 pt-6 pb-6 relative z-10">
             {loading ? (
               <div className="flex items-center justify-center h-96">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : excelHeaders.length > 0 ? (
-              <div>
-                <ScrollArea className="h-[calc(100vh-250px)]">
+              <div className="border rounded-lg overflow-hidden">
+                <div className="h-[500px] overflow-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -447,7 +490,7 @@ export default function FingerImportSimpleMappingPage() {
                       })}
                     </TableBody>
                   </Table>
-                </ScrollArea>
+                </div>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No data to map. Please upload a file first.</p>

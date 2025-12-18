@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx'
 /**
  * API Route: GET /api/members/import/headers
  * 
- * Purpose: Read Excel file and extract headers from the first row
+ * Purpose: Read Excel file and extract headers (supports custom header row)
  * 
  * Request Body: FormData with 'file' field
  * Response: { success: boolean, headers: string[], preview: Record<string, any>[] }
@@ -13,6 +13,11 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
+    const headerRowInput = formData.get('headerRow')
+    const headerRowCountInput = formData.get('headerRowCount')
+    const requestedSheet = (formData.get('sheetName') || '') as string
+    const headerRow = Math.max(1, Number(headerRowInput) || 1)
+    const headerRowCount = Math.max(1, Number(headerRowCountInput) || 1)
 
     if (!file) {
       return NextResponse.json(
@@ -40,7 +45,10 @@ export async function POST(request: NextRequest) {
     const workbook = XLSX.read(buffer, { type: 'array' })
     
     // Get first sheet
-    const sheetName = workbook.SheetNames?.[0]
+    const sheetNames = workbook.SheetNames || []
+    const sheetName = requestedSheet && sheetNames.includes(requestedSheet)
+      ? requestedSheet
+      : sheetNames[0]
     if (!sheetName) {
       return NextResponse.json(
         { success: false, message: 'No sheet found in Excel file' },
@@ -56,10 +64,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Convert to JSON to get headers and preview
-    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { 
+    // Convert to JSON (array-of-arrays) so we can pick a specific header row
+    const rows = XLSX.utils.sheet_to_json<(string | number)[]>(sheet, { 
+      header: 1,   // return array rows so header row is selectable
       defval: '',
-      raw: false // Convert all values to strings for consistency
+      raw: false,  // Convert all values to strings for consistency
     })
 
     if (!rows.length) {
@@ -69,14 +78,55 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Extract headers from first row keys
-    const headers = Object.keys(rows[0] || {})
+    if (headerRow > rows.length) {
+      return NextResponse.json(
+        { success: false, message: `Header row ${headerRow} is outside the data range (total rows: ${rows.length})` },
+        { status: 400 }
+      )
+    }
+
+    const headerRows = rows.slice(headerRow - 1, headerRow - 1 + headerRowCount)
+    const maxCols = headerRows.reduce((max, row) => Math.max(max, row.length), 0)
+
+    // Build headers, combining multi-row headers if provided.
+    // For merged/parent headers, we forward-fill the top row value.
+    const headers: string[] = []
+    let carryParent = ""
+    for (let col = 0; col < maxCols; col++) {
+      // Determine parent (top row with forward-fill)
+      const topCellRaw = String((headerRows[0]?.[col] ?? "")).trim()
+      if (topCellRaw) {
+        carryParent = topCellRaw
+      }
+      const parent = carryParent
+
+      // Use the deepest row value for the child (typically last header row)
+      const childRaw = String((headerRows[headerRows.length - 1]?.[col] ?? "")).trim()
+      const child = childRaw
+
+      let header = ""
+      if (child && parent && child.toLowerCase() === parent.toLowerCase()) {
+        header = child // avoid duplicates like "No - No"
+      } else if (child && parent) {
+        header = `${parent} - ${child}`
+      } else if (child) {
+        header = child
+      } else if (parent) {
+        header = parent
+      }
+
+      headers.push(header || `__EMPTY_${col}`)
+    }
+    
+    const dataRows = rows.slice(headerRow - 1 + headerRowCount) // rows after header rows
     
     // Get preview (first 5 rows for user to see)
-    const preview = rows.slice(0, 5).map(row => {
+    const preview = dataRows.slice(0, 5).map(row => {
       const previewRow: Record<string, string> = {}
       headers.forEach(header => {
-        previewRow[header] = String(row[header] || '').trim()
+        // @ts-ignore row is an array, use index based on header position
+        const cellIndex = headers.indexOf(header)
+        previewRow[header] = String((row as any)?.[cellIndex] || '').trim()
       })
       return previewRow
     })
@@ -85,7 +135,9 @@ export async function POST(request: NextRequest) {
       success: true,
       headers,
       preview,
-      totalRows: rows.length,
+      totalRows: dataRows.length,
+      sheetName,
+      sheetNames,
     })
   } catch (error) {
     console.error('Error reading Excel headers:', error)

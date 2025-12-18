@@ -206,10 +206,12 @@ export default function FingerPage() {
       }
 
       console.log('User ID:', user.id)
+      console.log('🔵 Organization ID from store:', organizationId)
 
       let orgId = organizationId
       
       if (!orgId) {
+        console.log('⚠️ No organizationId from store, fetching from database...')
         const { data: member, error: memberError } = await supabase
           .from("organization_members")
           .select("organization_id")
@@ -231,18 +233,21 @@ export default function FingerPage() {
         }
         
         orgId = member.organization_id
+        console.log('✅ Organization ID from database:', orgId)
       }
 
-      console.log('✅ Organization ID:', orgId)
+      console.log('✅ Using Organization ID:', orgId, '(type:', typeof orgId, ')')
       console.log('✅ Fetching members for organization:', orgId)
 
-      const { data: membersData, error: membersError } = await supabase
+      // First, fetch ALL members (including inactive) to debug
+      const { data: allMembersData, error: allMembersError } = await supabase
         .from('organization_members')
         .select(`
           id,
           user_id,
           department_id,
           organization_id,
+          is_active,
           user_profiles (
             first_name,
             last_name,
@@ -251,17 +256,40 @@ export default function FingerPage() {
             phone
           )
         `)
-        .eq('is_active', true)
         .eq('organization_id', orgId)
 
-      if (membersError) {
-        console.error('❌ Error fetching members:', membersError)
-        toast.error(membersError.message)
+      if (allMembersError) {
+        console.error('❌ Error fetching all members:', allMembersError)
+      } else {
+        console.log('📊 ALL members (including inactive):', allMembersData?.length || 0)
+        console.log('📋 Sample ALL members:', allMembersData?.slice(0, 5).map((m: any) => ({
+          id: m.id,
+          user_id: m.user_id,
+          is_active: m.is_active,
+          is_active_type: typeof m.is_active,
+          has_profile: !!m.user_profiles,
+          name: m.user_profiles?.first_name || 'No name'
+        })))
+      }
+
+      if (allMembersError) {
+        console.error('❌ Error fetching members:', allMembersError)
+        toast.error(allMembersError.message)
         setIsLoading(false)
         return
       }
 
-      console.log('✅ Members fetched:', membersData?.length || 0)
+      // Now filter active members in JavaScript
+      const membersData = allMembersData?.filter((m: any) => {
+        const isActive = m.is_active === true || m.is_active === 'true' || m.is_active === 1 || String(m.is_active).toLowerCase() === 'true'
+        if (!isActive) {
+          console.log(`⚠️ Filtering out inactive member ${m.id}: is_active = ${m.is_active} (type: ${typeof m.is_active})`)
+        }
+        return isActive
+      }) || []
+
+      console.log('✅ Active members after filter:', membersData.length)
+      console.log('📋 Sample active members data:', membersData?.slice(0, 3))
 
       if (membersData && membersData.length > 0) {
         const invalidMembers = membersData.filter((m: any) => m.organization_id !== orgId)
@@ -270,6 +298,13 @@ export default function FingerPage() {
           toast.error("Security error: Invalid data detected")
           setIsLoading(false)
           return
+        }
+        
+        // Check for members without user_profiles
+        const membersWithoutProfile = membersData.filter((m: any) => !m.user_profiles)
+        if (membersWithoutProfile.length > 0) {
+          console.warn('⚠️ Found members without user_profiles:', membersWithoutProfile.length)
+          console.warn('⚠️ Sample:', membersWithoutProfile.slice(0, 3))
         }
       }
 
@@ -379,10 +414,25 @@ export default function FingerPage() {
         fingers: Array.from(fingers)
       })))
 
-      const transformedMembers = membersData?.map((m: any) => {
+      // Filter members with is_active = true (handle both boolean and string)
+      const activeMembers = membersData?.filter((m: any) => {
+        const isActive = m.is_active === true || m.is_active === 'true' || m.is_active === 1
+        if (!isActive) {
+          console.log(`⚠️ Member ${m.id} is not active: is_active = ${m.is_active} (type: ${typeof m.is_active})`)
+        }
+        return isActive
+      }) || []
+
+      console.log(`✅ Filtered active members: ${activeMembers.length} of ${membersData?.length || 0} total`)
+
+      const transformedMembers = activeMembers.map((m: any) => {
         const profile = m.user_profiles
         let fullName = 'No Name'
         let firstName = null
+        
+        if (!profile) {
+          console.warn(`⚠️ Member ${m.id} (user_id: ${m.user_id}) has no user_profiles`)
+        }
         
         if (profile) {
           firstName = profile.first_name || null
@@ -419,7 +469,21 @@ export default function FingerPage() {
       console.log('📊 SUMMARY:')
       console.log(`   - Organization ID: ${orgId}`)
       console.log(`   - Total Members: ${transformedMembers.length}`)
+      console.log(`   - Members with profiles: ${transformedMembers.filter(m => m.full_name !== 'No Name').length}`)
       console.log(`   - Finger 1 Registered: ${transformedMembers.filter(m => m.finger1_registered).length}`)
+      console.log(`   - Finger 2 Registered: ${transformedMembers.filter(m => m.finger2_registered).length}`)
+      
+      // Log first few members for debugging
+      if (transformedMembers.length > 0) {
+        console.log('📋 First 5 members:', transformedMembers.slice(0, 5).map(m => ({
+          id: m.id,
+          name: m.full_name,
+          first_name: m.first_name,
+          department: m.department_name,
+          finger1: m.finger1_registered,
+          finger2: m.finger2_registered
+        })))
+      }
       console.log(`   - Finger 2 Registered: ${transformedMembers.filter(m => m.finger2_registered).length}`)
       console.log(`   - Both Registered: ${transformedMembers.filter(m => m.finger1_registered && m.finger2_registered).length}`)
       
@@ -447,14 +511,15 @@ export default function FingerPage() {
     }
   }, [mounted, fetchDevices, fetchMembers])
 
-  // Setup real-time subscription for biometric_data changes
+  // Setup real-time subscription for biometric_data and organization_members changes
   React.useEffect(() => {
     if (!mounted || !organizationId) return
 
     const supabase = createClient()
     
-    const channel = supabase
-      .channel(`biometric-data-changes-${organizationId}`)
+    // Subscribe to biometric_data changes
+    const biometricChannelName = `biometric-data-changes-${organizationId}`
+    const biometricChannel = supabase.channel(biometricChannelName)
       .on(
         'postgres_changes',
         {
@@ -492,10 +557,49 @@ export default function FingerPage() {
         }
       })
 
-    // Cleanup subscription on unmount
+    // Subscribe to organization_members changes (for new imports)
+    const membersChannelName = `organization-members-changes-${organizationId}`
+    const membersChannel = supabase.channel(membersChannelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'organization_members',
+          filter: `organization_id=eq.${organizationId}`
+        },
+        (payload) => {
+          console.log('🔄 Organization members change detected:', payload.eventType, payload)
+          
+          // Refresh members data when organization_members changes
+          fetchMembers()
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time subscription active for organization_members')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Real-time subscription error - this may be due to real-time not being enabled for organization_members table in Supabase')
+          console.error('💡 To enable: Run this SQL in Supabase SQL Editor:')
+          console.error('   ALTER PUBLICATION supabase_realtime ADD TABLE organization_members;')
+        } else {
+          console.log('📡 Real-time subscription status (members):', status)
+        }
+      })
+
+    // Cleanup subscriptions on unmount
     return () => {
-      console.log('🧹 Cleaning up real-time subscription')
-      supabase.removeChannel(channel)
+      console.log('🧹 Cleaning up real-time subscriptions')
+      try {
+        if (biometricChannel) {
+          supabase.removeChannel(biometricChannel)
+        }
+        if (membersChannel) {
+          supabase.removeChannel(membersChannel)
+        }
+      } catch (error) {
+        console.error('Error cleaning up channels:', error)
+      }
     }
   }, [mounted, organizationId, fetchMembers])
 

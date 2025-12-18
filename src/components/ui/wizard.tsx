@@ -91,16 +91,9 @@ export function Wizard({
         {/* Content Area */}
         <div className="flex-1 flex flex-col">{children}</div>
 
-        {/* Footer with Step Counter and Navigation */}
+        {/* Footer with Navigation */}
         {showNavigation && (
-          <div className="flex items-center justify-between mt-6 pt-6 border-t">
-            {/* Step Counter */}
-            <div className="text-sm text-muted-foreground">
-              <span className="underline">
-                Step {currentStep} of {steps.length}
-              </span>
-            </div>
-
+          <div className="flex items-center justify-end mt-6 pt-6 border-t">
             {/* Navigation Buttons */}
             <div className="flex gap-2">
               {onPrevious && currentStep > 1 && (
