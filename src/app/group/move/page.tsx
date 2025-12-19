@@ -229,6 +229,22 @@ export default function MoveGroupPage() {
           const member = row.original as any;
           return <div>{member.biodata?.agama || '-'}</div>
         },
+      },
+      {
+        id: "nik",
+        header: "NIK",
+        cell: ({ row }) => {
+          const member = row.original as any;
+          return <div>{member.biodata?.nik || '-'}</div>
+        },
+      },
+      {
+        id: "nisn",
+        header: "NISN",
+        cell: ({ row }) => {
+          const member = row.original as any;
+          return <div>{member.biodata?.nisn || '-'}</div>
+        },
       }
     ],
     []

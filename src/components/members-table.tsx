@@ -49,6 +49,8 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
   const [visibleColumns, setVisibleColumns] = React.useState({
     members: true,
     // phone: true,
+    nik: true,
+    nisn: true,
     group: true,
     gender: true,
     religion: true,
@@ -228,14 +230,23 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
             >
               Members
             </DropdownMenuCheckboxItem>
-            {/* <DropdownMenuCheckboxItem
-              checked={visibleColumns.phone}
+            {/* Phone Number Checkbox */}
+            <DropdownMenuCheckboxItem
+              checked={visibleColumns.nik}
               onCheckedChange={(checked) =>
-                setVisibleColumns((prev) => ({ ...prev, phone: checked }))
+                setVisibleColumns((prev) => ({ ...prev, nik: checked }))
               }
             >
-              Phone Number
-            </DropdownMenuCheckboxItem> */}
+              NIK
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={visibleColumns.nisn}
+              onCheckedChange={(checked) =>
+                setVisibleColumns((prev) => ({ ...prev, nisn: checked }))
+              }
+            >
+              NISN
+            </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
               checked={visibleColumns.group}
               onCheckedChange={(checked) =>
@@ -297,9 +308,13 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
             {visibleColumns.members && (
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Members</th>
             )}
-            {/* {visibleColumns.phone && (
-              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Phone Number</th>
-            )} */}
+            {/* Phone Header */}
+            {visibleColumns.nik && (
+              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">NIK</th>
+            )}
+            {visibleColumns.nisn && (
+              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">NISN</th>
+            )}
             {visibleColumns.group && (
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Group</th>
             )}
@@ -350,11 +365,19 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
                     </td>
                   )}
 
-                  {/* {visibleColumns.phone && (
+                  {/* Phone Cell */}
+
+                  {visibleColumns.nik && (
                     <td className="px-4 py-3 text-sm">
-                      {user?.phone || "No Phone"}
+                      {(member as any).biodata?.nik || "-"}
                     </td>
-                  )} */}
+                  )}
+
+                  {visibleColumns.nisn && (
+                    <td className="px-4 py-3 text-sm">
+                      {(member as any).biodata?.nisn || "-"}
+                    </td>
+                  )}
 
                   {visibleColumns.group && (
                     <td className="px-4 py-3 text-sm">
