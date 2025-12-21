@@ -365,7 +365,7 @@ export async function POST(request: NextRequest) {
         } else {
           const parsed = new Date(tanggalLahirRaw)
           if (!isNaN(parsed.getTime())) {
-            tanggalLahir = parsed.toISOString().split("T")[0]
+            tanggalLahir = parsed.toISOString().split("T")[0] || null
           } else {
             failed++
             errors.push({

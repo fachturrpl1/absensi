@@ -194,11 +194,18 @@ export async function POST(request: NextRequest) {
       ? "id, name, code, is_active, organization_id, description"
       : "id, name, code, is_active, organization_id"
     
-    const { data: departments } = await adminClient
+    const { data: departments, error: deptError } = await adminClient
       .from("departments")
       .select(deptFields)
       .eq("organization_id", orgId)
       .eq("is_active", true)
+
+    if (deptError) {
+      return NextResponse.json(
+        { success: false, message: `Failed to fetch departments: ${deptError.message}` },
+        { status: 500 }
+      )
+    }
 
     // Helper normalize string
     const normalizeForMatching = (str: string): string => {
@@ -435,7 +442,7 @@ export async function POST(request: NextRequest) {
           } else {
             const parsed = new Date(tanggalLahirRaw)
             if (!isNaN(parsed.getTime())) {
-              tanggalLahir = parsed.toISOString().split("T")[0]
+              tanggalLahir = parsed.toISOString().split("T")[0] || null
             } else {
               failed++
               errors.push({ row: rowNumber, message: `Tanggal Lahir invalid: "${tanggalLahirRaw}"` })
@@ -450,8 +457,10 @@ export async function POST(request: NextRequest) {
           const deptResult = findDepartmentId(departmentValue, departments)
           if (deptResult.id) {
             departmentId = deptResult.id
-            const dept = departments.find((d: any) => Number(d.id) === Number(departmentId))
-            departmentName = dept?.name || undefined
+            const dept = (departments as unknown as { id: number; name: string }[]).find(
+              (d) => Number(d.id) === Number(departmentId)
+            )
+            departmentName = (dept && dept.name) ? dept.name : undefined
           }
         }
 
@@ -702,9 +711,10 @@ export async function POST(request: NextRequest) {
         const AUDIT_BATCH_SIZE = 50
         for (let i = 0; i < auditLogs.length; i += AUDIT_BATCH_SIZE) {
           const batch = auditLogs.slice(i, i + AUDIT_BATCH_SIZE)
-          await adminClient.from("audit_logs").insert(batch).catch((err) => {
-            console.error("[MEMBERS IMPORT] Failed to write audit log batch:", err)
-          })
+          const { error: auditError } = await adminClient.from("audit_logs").insert(batch)
+          if (auditError) {
+            console.error("[MEMBERS IMPORT] Failed to write audit log batch:", auditError)
+          }
         }
       }
 
@@ -809,7 +819,7 @@ export async function POST(request: NextRequest) {
         } else {
           const parsed = new Date(tanggalLahirRaw)
           if (!isNaN(parsed.getTime())) {
-            tanggalLahir = parsed.toISOString().split("T")[0]
+            tanggalLahir = parsed.toISOString().split("T")[0] || null
             } else {
             failed++
             errors.push({
@@ -1110,8 +1120,10 @@ export async function POST(request: NextRequest) {
           // Kumpulkan data untuk preview halaman finger (hanya yang punya email)
           let departmentName: string | undefined = undefined
           if (departmentId && departments && departments.length > 0) {
-            const dept = departments.find((d: any) => Number(d.id) === Number(departmentId))
-            departmentName = dept?.name || undefined
+            const dept = (departments as unknown as { id: number; name: string }[]).find(
+              (d) => Number(d.id) === Number(departmentId)
+            )
+            departmentName = (dept && dept.name) ? dept.name : undefined
           }
           
           fingerPagePreview.push({
@@ -1305,13 +1317,14 @@ export async function POST(request: NextRequest) {
                 .update(updateData)
                 .eq("id", existingMember.id)
 
-            if (updateMemberError) {
-              failed++
-              errors.push({
-                row: rowNumber,
-                message: `Baris ${rowNumber}: Gagal memperbarui member organisasi - ${updateMemberError.message}`,
-              })
-              continue
+              if (updateMemberError) {
+                failed++
+                errors.push({
+                  row: rowNumber,
+                  message: `Baris ${rowNumber}: Gagal memperbarui member organisasi - ${updateMemberError.message}`,
+                })
+                continue
+              }
             }
           } else {
             const { data: newMember, error: memberInsertError } = await adminClient

@@ -1,7 +1,6 @@
 "use client"
 
 import React from "react"
-import Link from "next/link"
 import {
   Table,
   TableBody,
@@ -12,7 +11,7 @@ import {
 } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Fingerprint, Users, RefreshCw, Search, Check, Loader2, Monitor, FileSpreadsheet, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
+import { Fingerprint, Users, RefreshCw, Search, Check, Loader2, Monitor, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/utils/supabase/client"
@@ -279,9 +278,9 @@ export default function FingerPage() {
         `)
         .eq('organization_id', orgId)
 
-      if (membersError) {
-        console.error('❌ Error fetching members:', membersError)
-        toast.error(membersError.message)
+      if (allMembersError) {
+        console.error('❌ Error fetching members:', allMembersError)
+        toast.error(allMembersError.message)
         setIsLoading(false)
         return
       }
@@ -580,35 +579,6 @@ export default function FingerPage() {
           console.error('💡 To enable: Run this SQL in Supabase SQL Editor:')
           console.error('   ALTER PUBLICATION supabase_realtime ADD TABLE biometric_data;')
         } else {
-          console.log('📡 Biometric subscription status:', status)
-        }
-      })
-
-    // Subscribe to organization_members changes
-    const membersChannel = supabase
-      .channel(`org-members-changes-${organizationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'organization_members',
-          filter: `organization_id=eq.${organizationId}`
-        },
-        (payload) => {
-          console.log('🔄 Organization members change detected:', payload.eventType, payload)
-          fetchMembers()
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time subscription active for organization_members')
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time subscription error for organization_members - this may be due to real-time not being enabled for the table in Supabase')
-          console.error('💡 To enable: Run this SQL in Supabase SQL Editor:')
-          console.error('   ALTER PUBLICATION supabase_realtime ADD TABLE organization_members;')
-        } else {
-          console.log('📡 Members subscription status:', status)
         }
       })
 
@@ -1072,14 +1042,6 @@ export default function FingerPage() {
                 </SelectContent>
               </Select>
 
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                disabled={isLoading || loadingDevices}
-              >
-              </Button>
             </div>
           </div>
         </div>
