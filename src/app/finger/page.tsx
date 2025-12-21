@@ -1079,10 +1079,6 @@ export default function FingerPage() {
                 className="shrink-0"
                 disabled={isLoading || loadingDevices}
               >
-                <Link href="/finger/import-simple">
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Import 
-                </Link>
               </Button>
             </div>
           </div>
