@@ -199,7 +199,7 @@ export default function MembersPage() {
           (m.groups && (m.groups as any).name) ||
           (m.departments && (m.departments as any).name) ||
           ""
-        return { ...m, user: u, groupName }
+        return { ...m, user: u, groupName, biodata: m.biodata }
       })
 
       // Members are already filtered by organization from API

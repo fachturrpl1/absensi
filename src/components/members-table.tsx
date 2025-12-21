@@ -48,8 +48,12 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [visibleColumns, setVisibleColumns] = React.useState({
     members: true,
-    phone: true,
+    // phone: true,
+    nik: true,
+    nisn: true,
     group: true,
+    gender: true,
+    religion: true,
     role: true,
     status: true,
     actions: true,
@@ -226,13 +230,22 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
             >
               Members
             </DropdownMenuCheckboxItem>
+            {/* Phone Number Checkbox */}
             <DropdownMenuCheckboxItem
-              checked={visibleColumns.phone}
+              checked={visibleColumns.nik}
               onCheckedChange={(checked) =>
-                setVisibleColumns((prev) => ({ ...prev, phone: checked }))
+                setVisibleColumns((prev) => ({ ...prev, nik: checked }))
               }
             >
-              Phone Number
+              NIK
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={visibleColumns.nisn}
+              onCheckedChange={(checked) =>
+                setVisibleColumns((prev) => ({ ...prev, nisn: checked }))
+              }
+            >
+              NISN
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
               checked={visibleColumns.group}
@@ -241,6 +254,22 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
               }
             >
               Group
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={visibleColumns.gender}
+              onCheckedChange={(checked) =>
+                setVisibleColumns((prev) => ({ ...prev, gender: checked }))
+              }
+            >
+              Gender
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={visibleColumns.religion}
+              onCheckedChange={(checked) =>
+                setVisibleColumns((prev) => ({ ...prev, religion: checked }))
+              }
+            >
+              Religion
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
               checked={visibleColumns.role}
@@ -279,11 +308,21 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
             {visibleColumns.members && (
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Members</th>
             )}
-            {visibleColumns.phone && (
-              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Phone Number</th>
+            {/* Phone Header */}
+            {visibleColumns.nik && (
+              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">NIK</th>
+            )}
+            {visibleColumns.nisn && (
+              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">NISN</th>
             )}
             {visibleColumns.group && (
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Group</th>
+            )}
+            {visibleColumns.gender && (
+              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Gender</th>
+            )}
+            {visibleColumns.religion && (
+              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Religion</th>
             )}
             {visibleColumns.role && (
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Role</th>
@@ -313,7 +352,6 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
             </tr>
           ) : (
             paginatedData.map((member) => {
-              const user = (member as any).user
               const role = (member as any).role
 
               return (
@@ -327,15 +365,35 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
                     </td>
                   )}
 
-                  {visibleColumns.phone && (
+                  {/* Phone Cell */}
+
+                  {visibleColumns.nik && (
                     <td className="px-4 py-3 text-sm">
-                      {user?.phone || "No Phone"}
+                      {(member as any).biodata?.nik || "-"}
+                    </td>
+                  )}
+
+                  {visibleColumns.nisn && (
+                    <td className="px-4 py-3 text-sm">
+                      {(member as any).biodata?.nisn || "-"}
                     </td>
                   )}
 
                   {visibleColumns.group && (
                     <td className="px-4 py-3 text-sm">
                       {(member as any).groupName || "-"}
+                    </td>
+                  )}
+
+                  {visibleColumns.gender && (
+                    <td className="px-4 py-3 text-sm">
+                      {(member as any).biodata?.jenis_kelamin || "-"}
+                    </td>
+                  )}
+
+                  {visibleColumns.religion && (
+                    <td className="px-4 py-3 text-sm">
+                      {(member as any).biodata?.agama || "-"}
                     </td>
                   )}
 
