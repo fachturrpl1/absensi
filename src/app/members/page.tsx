@@ -54,7 +54,7 @@ import { createInvitation } from "@/action/invitations"
 import { getOrgRoles } from "@/lib/rbac"
 import { useGroups } from "@/hooks/use-groups"
 import { usePositions } from "@/hooks/use-positions"
-import { useOrgStore } from "@/store/org-store"
+import { useHydration } from "@/hooks/useHydration"
 //tes
 const inviteSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -117,8 +117,7 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
 ]
 export default function MembersPage() {
   const searchParams = useSearchParams()
-
-  const orgStore = useOrgStore()
+  const { isHydrated, organizationId } = useHydration()
 
   const [members, setMembers] = React.useState<IOrganization_member[]>([])
   const [loading, setLoading] = React.useState<boolean>(true)
@@ -161,15 +160,13 @@ export default function MembersPage() {
 
   const isLoadingInviteData = rolesLoading || deptLoading || posLoading
 
-  const fetchMembers = async () => {
+  const fetchMembers = React.useCallback(async () => {
     try {
       setLoading(true)
       
-      // Get organization ID from store
-      const orgId = orgStore.organizationId
-      console.log('[MEMBERS] Fetching members for org:', orgId)
+      console.log('[MEMBERS] Fetching members - isHydrated:', isHydrated, 'orgId:', organizationId)
 
-      if (!orgId) {
+      if (!organizationId) {
         console.error('[MEMBERS] No organization ID found')
         setMembers([])
         return
@@ -177,9 +174,9 @@ export default function MembersPage() {
 
       // Fetch all data
       const [memberRes, userRes, groupsRes] = await Promise.all([
-        getAllOrganization_member(orgId),
+        getAllOrganization_member(organizationId),
         getAllUsers(),
-        getAllGroups(orgId),
+        getAllGroups(organizationId),
       ])
 
       if (!memberRes.success) throw new Error(memberRes.message)
@@ -206,25 +203,28 @@ export default function MembersPage() {
       })
 
       // Members are already filtered by organization from API
-      console.log('[MEMBERS] Fetched', mergedMembers.length, 'members for org', orgId)
+      console.log('[MEMBERS] Fetched', mergedMembers.length, 'members for org', organizationId)
       setMembers(mergedMembers)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
-  }
+  }, [organizationId])
 
   // Monitor organization changes
   React.useEffect(() => {
-    if (orgStore.organizationId) {
-      console.log('[MEMBERS] Organization changed to:', orgStore.organizationId, orgStore.organizationName)
+    if (organizationId) {
+      console.log('[MEMBERS] Organization changed to:', organizationId)
     }
-  }, [orgStore.organizationId, orgStore.organizationName])
+  }, [organizationId])
 
   React.useEffect(() => {
-    fetchMembers()
-  }, [orgStore.organizationId])
+    if (isHydrated && organizationId) {
+      console.log('[MEMBERS] Hydration complete, fetching members')
+      fetchMembers()
+    }
+  }, [isHydrated, organizationId, fetchMembers])
   async function onSubmitInvite(values: InviteFormValues) {
     try {
       setSubmittingInvite(true)

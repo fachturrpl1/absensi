@@ -46,8 +46,8 @@ function parseNumber(value: string | number | undefined): number {
   if (typeof value === 'string') return parseFloat(value) || 0;
   return 0;
 }
-import { useOrgStore } from "@/store/org-store";
 import { useUserStore } from "@/store/user-store";
+import { useHydration } from "@/hooks/useHydration";
 import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
 import { LeaveRequestList } from "@/components/leave/leave-request-list";
@@ -68,6 +68,7 @@ interface LeaveStatistics {
 }
 
 export default function LeavesPage() {
+  const { organizationId } = useHydration();
   // const [balances, setBalances] = useState<LeaveBalanceWithType[]>([]);
   const [requests, setRequests] = useState<ILeaveRequest[]>([]);
   const [allRequests, setAllRequests] = useState<ILeaveRequest[]>([]);
@@ -105,8 +106,6 @@ export default function LeavesPage() {
   const [statusChartType, setStatusChartType] = useState<'donut' | 'pie' | 'bar'>('donut');
   const [typeChartType, setTypeChartType] = useState<'donut' | 'pie' | 'bar'>('donut');
   const [detailedChartType, setDetailedChartType] = useState<'donut' | 'pie' | 'bar'>('donut');
-  
-  const { organizationId } = useOrgStore();
   const { role, permissions } = useUserStore();
 
   // Allow all roles to access, but show different data based on role

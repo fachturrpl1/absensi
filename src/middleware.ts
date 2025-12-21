@@ -46,6 +46,18 @@ export async function middleware(req: NextRequest) {
     },
   })
 
+  const orgIdCookie = req.cookies.get('org_id')
+  if (orgIdCookie) {
+    response.cookies.set({
+      name: 'org_id',
+      value: orgIdCookie.value,
+      path: '/',
+      maxAge: 2592000,
+      sameSite: 'lax',
+    })
+    logger.info(`[MIDDLEWARE] Preserving org_id cookie: ${orgIdCookie.value}`)
+  }
+
   const authCookieNames = getAuthCookieNames()
 
   const supabase = createServerClient(
@@ -233,11 +245,18 @@ export async function middleware(req: NextRequest) {
   if (user && !isExcludedPath && !isPublicPath) {
     // Check if organization ID is in cookies or session
     // If not, redirect to organization
-    const orgIdCookie = req.cookies.get('org_id')?.value  
+    const orgIdCookie = req.cookies.get('org_id')?.value
+    
+    logger.info(`[MIDDLEWARE] Checking org_id cookie for user ${user.id} on path ${pathname}`)
+    logger.info(`[MIDDLEWARE] org_id cookie value: ${orgIdCookie || 'NOT FOUND'}`)
+    logger.info(`[MIDDLEWARE] All cookies: ${JSON.stringify(req.cookies.getAll())}`)
     
     if (!orgIdCookie) {
+      logger.warn(`[MIDDLEWARE] No org_id cookie found for path ${pathname}, redirecting to /organization`)
       return NextResponse.redirect(new URL("/organization", req.url))
     }
+    
+    logger.info(`[MIDDLEWARE] org_id cookie found: ${orgIdCookie}, allowing access to ${pathname}`)
   }
 
   return response

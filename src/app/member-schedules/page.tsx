@@ -6,24 +6,26 @@ import { getAllOrganization_member } from "@/action/members"
 import { getAllWorkSchedules } from "@/action/schedule"
 import MemberSchedulesClient from "./member-schedules-client"
 import { IMemberSchedule, IOrganization_member, IWorkSchedule } from "@/interface"
-import { useOrgStore } from "@/store/org-store"
+import { useHydration } from "@/hooks/useHydration"
 import { toast } from "sonner"
 
 // Client Component - fetch data berdasarkan organization dari store
 export default function MemberSchedulesPage() {
-  const { organizationId } = useOrgStore()
+  const { organizationId } = useHydration()
   const [schedules, setSchedules] = useState<IMemberSchedule[]>([])
   const [members, setMembers] = useState<IOrganization_member[]>([])
   const [workSchedules, setWorkSchedules] = useState<IWorkSchedule[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    if (!organizationId) {
+      console.log('[MEMBER-SCHEDULES] Waiting for organizationId - orgId:', organizationId)
+      return
+    }
+    
+    console.log('[MEMBER-SCHEDULES] Starting fetch with organizationId:', organizationId)
+
     const fetchData = async () => {
-      if (!organizationId) {
-        console.log('[MEMBER-SCHEDULES] No organization ID from store')
-        setIsLoading(false)
-        return
-      }
 
       try {
         setIsLoading(true)
@@ -38,9 +40,10 @@ export default function MemberSchedulesPage() {
           console.error('[MEMBER-SCHEDULES] Invalid schedules response:', schedulesRes)
           setSchedules([])
         } else if (schedulesRes.success && Array.isArray(schedulesRes.data)) {
+          console.log('[MEMBER-SCHEDULES] ✅ Fetched', schedulesRes.data.length, 'schedules for org', organizationId)
           setSchedules(schedulesRes.data as IMemberSchedule[])
         } else {
-          console.warn('[MEMBER-SCHEDULES] Schedules fetch failed:', schedulesRes.message)
+          console.warn('[MEMBER-SCHEDULES] ❌ Schedules fetch failed:', schedulesRes.message)
           setSchedules([])
         }
 
@@ -48,9 +51,10 @@ export default function MemberSchedulesPage() {
           console.error('[MEMBER-SCHEDULES] Invalid members response:', membersRes)
           setMembers([])
         } else if (membersRes.success && Array.isArray(membersRes.data)) {
+          console.log('[MEMBER-SCHEDULES] ✅ Fetched', membersRes.data.length, 'members for org', organizationId)
           setMembers(membersRes.data as IOrganization_member[])
         } else {
-          console.warn('[MEMBER-SCHEDULES] Members fetch failed:', membersRes.message)
+          console.warn('[MEMBER-SCHEDULES] ❌ Members fetch failed:', membersRes.message)
           setMembers([])
         }
 
@@ -58,9 +62,10 @@ export default function MemberSchedulesPage() {
           console.error('[MEMBER-SCHEDULES] Invalid work schedules response:', workSchedulesRes)
           setWorkSchedules([])
         } else if (workSchedulesRes.success && Array.isArray(workSchedulesRes.data)) {
+          console.log('[MEMBER-SCHEDULES] ✅ Fetched', workSchedulesRes.data.length, 'work schedules for org', organizationId)
           setWorkSchedules(workSchedulesRes.data as IWorkSchedule[])
         } else {
-          console.warn('[MEMBER-SCHEDULES] Work schedules fetch failed:', workSchedulesRes.message)
+          console.warn('[MEMBER-SCHEDULES] ❌ Work schedules fetch failed:', workSchedulesRes.message)
           setWorkSchedules([])
         }
       } catch (error) {

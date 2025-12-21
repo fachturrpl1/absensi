@@ -45,7 +45,7 @@ function createTemplateWorkbook() {
     "Contoh: Dusun Melati",
     "Contoh: Kelurahan Sukamaju",
     "Contoh: Kecamatan Sukamakmur",
-    "Contoh: 08123456789",
+    "Contoh: +628123456789",
     "Contoh: budi@example.com",
     "Contoh: X-RPL atau nama Group"
   ]

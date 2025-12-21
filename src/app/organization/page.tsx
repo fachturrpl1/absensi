@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useOrgStore } from "@/store/org-store"
-import { useUserStore } from "@/store/user-store"
+import { useAuthStore } from "@/store/user-store"
 import { Organization } from "@/lib/types/organization"
 import { getUserOrganizations } from "@/action/auth-multi-org"
 import { Button } from "@/components/ui/button"
@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input"
 export default function OrganizationPage() {
   const router = useRouter()
   const orgStore = useOrgStore()
-  const userStore = useUserStore()
+  const authStore = useAuthStore()
   
   // State untuk data dan UI
   const [organizations, setOrganizations] = useState<Organization[]>([])
@@ -75,19 +75,56 @@ export default function OrganizationPage() {
   )
 
   // Handle organization selection
-  const handleSelectOrganization = (org: Organization) => {
-    console.log("Selecting organization:", org)
-    
-    orgStore.setOrganizationId(org.id, org.name)
-    orgStore.setTimezone(org.timezone)
-    
-    userStore.setRole("A001", 1)
-    
-    document.cookie = `org_id=${org.id}; path=/; max-age=2592000`
-    
-    setTimeout(() => {
-      router.push("/")
-    }, 500)
+  const handleSelectOrganization = async (org: Organization) => {
+    try {
+      console.log("[ORG-PAGE] Selecting organization:", org)
+      
+      // Set organization in store
+      console.log("[ORG-PAGE] Setting org ID:", org.id, org.name)
+      orgStore.setOrganizationId(org.id, org.name)
+      
+      console.log("[ORG-PAGE] Setting timezone:", org.timezone)
+      orgStore.setTimezone(org.timezone)
+      
+      // Set user role
+      console.log("[ORG-PAGE] Setting role")
+      authStore.setRole("admin", 1)
+      
+      // Set cookie via API route (server-side) to ensure middleware can read it
+      console.log("[ORG-PAGE] Setting cookie via API...")
+      const cookieResponse = await fetch("/api/organization/select", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ organizationId: org.id }),
+      })
+      
+      if (!cookieResponse.ok) {
+        throw new Error("Failed to set organization cookie")
+      }
+      
+      const cookieData = await cookieResponse.json()
+      console.log("[ORG-PAGE] Cookie set via API:", cookieData)
+      
+      console.log("[ORG-PAGE] Organization selected, navigating to home...")
+      
+      // Add small delay to ensure cookie is properly set before navigation
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      console.log("[ORG-PAGE] Attempting to navigate to /")
+      
+      // Use window.location.href for hard redirect to ensure middleware processes new request with cookie
+      // This is more reliable than router.push() for cookie-dependent redirects
+      window.location.href = "/"
+      console.log("[ORG-PAGE] Hard redirect initiated")
+    } catch (error) {
+      console.error("[ORG-PAGE] Error selecting organization:", error)
+      console.error("[ORG-PAGE] Error details:", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      })
+    }
   }
 
   if (!isHydrated) {
@@ -176,8 +213,7 @@ export default function OrganizationPage() {
             {filteredOrganizations.map((org) => (
               <Card 
                 key={org.id}
-                className="cursor-pointer hover:shadow-lg transition-all hover:border-primary"
-                onClick={() => handleSelectOrganization(org)}
+                className="transition-all"
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -190,7 +226,15 @@ export default function OrganizationPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">{org.timezone}</p>
-                  <Button className="w-full" variant="outline">
+                  <Button 
+                    className="w-full cursor-pointer hover:shadow-lg" 
+                    variant="outline"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleSelectOrganization(org)
+                    }}
+                  >
                     Select
                     <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -215,7 +259,6 @@ export default function OrganizationPage() {
                     <tr
                       key={org.id}
                       className="border-b hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => handleSelectOrganization(org)}
                     >
                       <td className="px-6 py-4">
                         <div className="space-y-1">
@@ -227,7 +270,19 @@ export default function OrganizationPage() {
                       <td className="px-6 py-4 text-sm">
                         <Badge variant="outline">{org.country_code}</Badge>
                       </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">{org.timezone}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleSelectOrganization(org)
+                          }}
+                        >
+                          Select
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -11,7 +11,7 @@ import { ArrowLeft, Settings, RefreshCw, Loader2, Plus, FolderKanban, ToggleRigh
 import { getOrganizationLeaveTypes } from "@/action/admin-leaves";
 import { ILeaveType } from "@/lib/leave/types";
 import { useUserStore } from "@/store/user-store";
-import { useOrgStore } from "@/store/org-store";
+import { useHydration } from "@/hooks/useHydration";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { LeaveTypeManager } from "@/components/leave/leave-type-manager";
@@ -22,7 +22,7 @@ export default function LeaveTypesPage() {
   const [triggerCreate, setTriggerCreate] = useState(false);
   
   const { role, permissions } = useUserStore();
-  const { organizationId } = useOrgStore();
+  const { isHydrated, organizationId } = useHydration();
   const router = useRouter();
   
   // Role codes: A001 = Admin Org, SA001 = Super Admin
@@ -53,6 +53,11 @@ export default function LeaveTypesPage() {
   }, [organizationId]);
 
   useEffect(() => {
+    if (!isHydrated || !organizationId) {
+      console.log('[LEAVE-TYPES] Waiting for hydration - isHydrated:', isHydrated, 'orgId:', organizationId)
+      return
+    }
+
     // Check permission
     if (!canManageLeaveTypes) {
       toast.error("You do not have access to this page");
@@ -61,7 +66,7 @@ export default function LeaveTypesPage() {
     }
 
     loadLeaveTypes();
-  }, [canManageLeaveTypes, loadLeaveTypes, router]);
+  }, [isHydrated, organizationId, canManageLeaveTypes, loadLeaveTypes, router]);
 
   if (!canManageLeaveTypes) {
     return null;

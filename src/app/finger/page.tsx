@@ -12,11 +12,12 @@ import {
 } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Fingerprint, Users, RefreshCw, Search, Check, Loader2, Monitor, FileSpreadsheet } from "lucide-react"
+import { Fingerprint, Users, RefreshCw, Search, Check, Loader2, Monitor, FileSpreadsheet, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/utils/supabase/client"
 import { useOrgStore } from "@/store/org-store"
+import { useRouter } from "next/navigation"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,7 +70,26 @@ export default function FingerPage() {
   const [isRegistering, setIsRegistering] = React.useState(false)
   const [selectedDepartment, setSelectedDepartment] = React.useState<string>("all")
   const [selectedStatus, setSelectedStatus] = React.useState<FilterStatus>("all")
+  const [activeMemberId, setActiveMemberId] = React.useState<number | null>(null)
+  const [activeFingerNumber, setActiveFingerNumber] = React.useState<1 | 2 | null>(null)
   const { organizationId } = useOrgStore()
+  const [isHydrated, setIsHydrated] = React.useState(false)
+  const router = useRouter()
+  const [pageSize, setPageSize] = React.useState("10")
+  const [pageIndex, setPageIndex] = React.useState(0)
+  const registrationCompleteRef = React.useRef(false)
+
+  // Handle click on member name to navigate to profile
+  const handleMemberClick = (memberId: number) => {
+    if (memberId) {
+      router.push(`/members/${memberId}`)
+    }
+  }
+
+  // Hydration effect
+  React.useEffect(() => {
+    setIsHydrated(true)
+  }, [])
 
   const fetchDevices = React.useCallback(async () => {
     setLoadingDevices(true)
@@ -125,7 +145,7 @@ export default function FingerPage() {
 
       if (error) {
         console.error('❌ Error loading devices:', error)
-        toast.error(`Error loading devices: ${error.message}`)
+        // toast.error(`Error loading devices: ${error.message}`)
         setLoadingDevices(false)
         return
       }
@@ -136,7 +156,7 @@ export default function FingerPage() {
         const invalidDevices = data.filter((d: any) => d.organization_id !== orgId)
         if (invalidDevices.length > 0) {
           console.error('❌ SECURITY WARNING: Found devices from different organization!', invalidDevices)
-          toast.error("Security error: Invalid devices detected")
+          // toast.error("Security error: Invalid devices detected")
           setLoadingDevices(false)
           return
         }
@@ -177,7 +197,7 @@ export default function FingerPage() {
       }
     } catch (error: any) {
       console.error('Fetch devices error:', error)
-      toast.error(`Failed to load devices: ${error.message}`)
+      // toast.error(`Failed to load devices: ${error.message}`)
     } finally {
       setLoadingDevices(false)
     }
@@ -188,46 +208,47 @@ export default function FingerPage() {
     try {
       const supabase = createClient()
 
-      console.log('=== FETCHING MEMBERS ===')
+      console.log('[FINGER-PAGE] === FETCHING MEMBERS ===')
+      console.log('[FINGER-PAGE] organizationId from store:', organizationId)
+      console.log('[FINGER-PAGE] isHydrated:', isHydrated)
 
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError) {
-        console.error("User error:", userError)
-        toast.error("Failed to get user")
+        console.error("[FINGER-PAGE] User error:", userError)
+        // toast.error("Failed to get user")
         setIsLoading(false)
         return
       }
       
       if (!user) {
-        console.error("No user logged in")
-        toast.error("User not logged in")
+        console.error("[FINGER-PAGE] No user logged in")
+        // toast.error("User not logged in")
         setIsLoading(false)
         return
       }
 
       console.log('User ID:', user.id)
-      console.log('🔵 Organization ID from store:', organizationId)
 
       let orgId = organizationId
       
       if (!orgId) {
-        console.log('⚠️ No organizationId from store, fetching from database...')
         const { data: member, error: memberError } = await supabase
           .from("organization_members")
           .select("organization_id")
           .eq("user_id", user.id)
-          .maybeSingle()
+          .eq("is_active", true)
+          .single()
 
         if (memberError) {
           console.error("Member error:", memberError)
-          toast.error("Failed to get organization")
+          // toast.error("Failed to get organization")
           setIsLoading(false)
           return
         }
 
         if (!member) {
           console.error("User not in organization")
-          toast.error("User not in organization")
+          // toast.error("User not in organization")
           setIsLoading(false)
           return
         }
@@ -258,23 +279,9 @@ export default function FingerPage() {
         `)
         .eq('organization_id', orgId)
 
-      if (allMembersError) {
-        console.error('❌ Error fetching all members:', allMembersError)
-      } else {
-        console.log('📊 ALL members (including inactive):', allMembersData?.length || 0)
-        console.log('📋 Sample ALL members:', allMembersData?.slice(0, 5).map((m: any) => ({
-          id: m.id,
-          user_id: m.user_id,
-          is_active: m.is_active,
-          is_active_type: typeof m.is_active,
-          has_profile: !!m.user_profiles,
-          name: m.user_profiles?.first_name || 'No name'
-        })))
-      }
-
-      if (allMembersError) {
-        console.error('❌ Error fetching members:', allMembersError)
-        toast.error(allMembersError.message)
+      if (membersError) {
+        console.error('❌ Error fetching members:', membersError)
+        toast.error(membersError.message)
         setIsLoading(false)
         return
       }
@@ -295,7 +302,7 @@ export default function FingerPage() {
         const invalidMembers = membersData.filter((m: any) => m.organization_id !== orgId)
         if (invalidMembers.length > 0) {
           console.error('❌ SECURITY WARNING: Found members from different organization!', invalidMembers)
-          toast.error("Security error: Invalid data detected")
+          // toast.error("Security error: Invalid data detected")
           setIsLoading(false)
           return
         }
@@ -459,7 +466,7 @@ export default function FingerPage() {
           first_name: firstName,
           phone: profile?.phone || 'No Phone',
           email: profile?.email || null,
-          department_name: deptMap.get(m.department_id) || 'No Department',
+          department_name: deptMap.get(m.department_id) || 'No Group',
           finger1_registered: finger1Registered,
           finger2_registered: finger2Registered
         }
@@ -489,12 +496,12 @@ export default function FingerPage() {
       
       setMembers(transformedMembers)
       
-      if (transformedMembers.length === 0) {
-        toast.info("No members found in your organization")
-      }
+      // if (transformedMembers.length === 0) {
+      //   toast.info("No members found in your organization")
+      // }
     } catch (error: any) {
       console.error('❌ Fetch error:', error)
-      toast.error(error.message || "Failed to fetch members")
+      // toast.error(error.message || "Failed to fetch members")
     } finally {
       setIsLoading(false)
     }
@@ -504,74 +511,92 @@ export default function FingerPage() {
     setMounted(true)
   }, [])
 
+  // Fetch data when hydration completes
   React.useEffect(() => {
-    if (mounted) {
+    if (isHydrated && organizationId) {
+      console.log('[FINGER-PAGE] Hydration complete, organizationId available:', organizationId)
       fetchDevices()
       fetchMembers()
     }
-  }, [mounted, fetchDevices, fetchMembers])
+  }, [isHydrated, organizationId, fetchDevices, fetchMembers])
 
-  // Setup real-time subscription for biometric_data and organization_members changes
+  // Setup real-time subscription for biometric_data changes
   React.useEffect(() => {
     if (!mounted || !organizationId) return
 
     const supabase = createClient()
     
-    // Subscribe to biometric_data changes
-    const biometricChannelName = `biometric-data-changes-${organizationId}`
-    const biometricChannel = supabase.channel(biometricChannelName)
+    const channel = supabase
+      .channel(`biometric-data-changes-${organizationId}`)
       .on(
         'postgres_changes',
         {
           event: '*', // Listen to INSERT, UPDATE, DELETE
           schema: 'public',
-          table: 'biometric_data'
+          table: 'biometric_data',
+          filter: `organization_id=eq.${organizationId}`
         },
         (payload) => {
-          // Filter only FINGERPRINT type in the callback
-          const newData = payload.new as any
-          const oldData = payload.old as any
+          console.log('🔄 Biometric data change detected:', payload.eventType, payload)
           
-          // Check if the change is for FINGERPRINT type
-          const isFingerprint = 
-            (newData?.biometric_type === 'FINGERPRINT') || 
-            (oldData?.biometric_type === 'FINGERPRINT')
-          
-          if (isFingerprint) {
-            console.log('🔄 Biometric data change detected:', payload.eventType, payload)
+          // Optimistic update: Update UI immediately
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            const updatedData = payload.new
             
-            // Refresh members data when biometric data changes
-            fetchMembers()
+            setMembers(prevMembers => 
+              prevMembers.map(member => {
+                if (member.id === updatedData.organization_member_id) {
+                  // Update finger registration status based on the update
+                  const finger1 = updatedData.finger_number === 1 ? 
+                    (updatedData.status === 'REGISTERED') : 
+                    member.finger1_registered
+                    
+                  const finger2 = updatedData.finger_number === 2 ? 
+                    (updatedData.status === 'REGISTERED') : 
+                    member.finger2_registered
+                  
+                  console.log(`🔄 Updating member ${member.id} - Finger ${updatedData.finger_number} status: ${updatedData.status}`)
+                  
+                  return {
+                    ...member,
+                    finger1_registered: finger1,
+                    finger2_registered: finger2
+                  }
+                }
+                return member
+              })
+            )
           }
+          
+          // Still fetch fresh data to ensure consistency
+          fetchMembers()
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Real-time subscription active for biometric_data')
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time subscription error - this may be due to real-time not being enabled for biometric_data table in Supabase')
+          console.error('❌ Real-time subscription error for biometric_data - this may be due to real-time not being enabled for the table in Supabase')
           console.error('💡 To enable: Run this SQL in Supabase SQL Editor:')
           console.error('   ALTER PUBLICATION supabase_realtime ADD TABLE biometric_data;')
         } else {
-          console.log('📡 Real-time subscription status:', status)
+          console.log('📡 Biometric subscription status:', status)
         }
       })
 
-    // Subscribe to organization_members changes (for new imports)
-    const membersChannelName = `organization-members-changes-${organizationId}`
-    const membersChannel = supabase.channel(membersChannelName)
+    // Subscribe to organization_members changes
+    const membersChannel = supabase
+      .channel(`org-members-changes-${organizationId}`)
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to INSERT, UPDATE, DELETE
+          event: '*',
           schema: 'public',
           table: 'organization_members',
           filter: `organization_id=eq.${organizationId}`
         },
         (payload) => {
           console.log('🔄 Organization members change detected:', payload.eventType, payload)
-          
-          // Refresh members data when organization_members changes
           fetchMembers()
         }
       )
@@ -579,27 +604,18 @@ export default function FingerPage() {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Real-time subscription active for organization_members')
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time subscription error - this may be due to real-time not being enabled for organization_members table in Supabase')
+          console.error('❌ Real-time subscription error for organization_members - this may be due to real-time not being enabled for the table in Supabase')
           console.error('💡 To enable: Run this SQL in Supabase SQL Editor:')
           console.error('   ALTER PUBLICATION supabase_realtime ADD TABLE organization_members;')
         } else {
-          console.log('📡 Real-time subscription status (members):', status)
+          console.log('📡 Members subscription status:', status)
         }
       })
 
-    // Cleanup subscriptions on unmount
+    // Cleanup subscription on unmount
     return () => {
-      console.log('🧹 Cleaning up real-time subscriptions')
-      try {
-        if (biometricChannel) {
-          supabase.removeChannel(biometricChannel)
-        }
-        if (membersChannel) {
-          supabase.removeChannel(membersChannel)
-        }
-      } catch (error) {
-        console.error('Error cleaning up channels:', error)
-      }
+      console.log('🧹 Cleaning up real-time subscription')
+      supabase.removeChannel(channel)
     }
   }, [mounted, organizationId, fetchMembers])
 
@@ -641,9 +657,29 @@ export default function FingerPage() {
   const filteredMembers = getFilteredMembers()
   const uniqueDepartments = getUniqueDepartments()
 
+  // Pagination logic
+  const pageSizeNum = parseInt(pageSize)
+  const totalPages = Math.ceil(filteredMembers.length / pageSizeNum)
+  const paginatedMembers = filteredMembers.slice(
+    pageIndex * pageSizeNum,
+    (pageIndex + 1) * pageSizeNum
+  )
+
+  // Reset page index when filters change
+  React.useEffect(() => {
+    setPageIndex(0)
+  }, [searchQuery, selectedDepartment, selectedStatus])
+
+  // Clamp page index if it exceeds total pages
+  React.useEffect(() => {
+    if (pageIndex >= totalPages && totalPages > 0) {
+      setPageIndex(totalPages - 1)
+    }
+  }, [totalPages, pageIndex])
+
   const handleFingerClick = async (member: Member, fingerNumber: 1 | 2) => {
     if (!selectedDevice) {
-      toast.error("Please select a fingerprint device first")
+      // toast.error("Please select a fingerprint device first")
       return
     }
 
@@ -666,25 +702,30 @@ export default function FingerPage() {
 
   const handleRegister = async (member: Member, fingerNumber: 1 | 2) => {
     if (!selectedDevice) {
-      toast.error("Please select a fingerprint device first")
+      // toast.error("Please select a fingerprint device first")
       return
     }
 
     setIsRegistering(true)
+    setActiveMemberId(member.id)
+    setActiveFingerNumber(fingerNumber)
+
+    const supabase = createClient()
+    let command: any = null
+    registrationCompleteRef.current = false
 
     try {
       console.log('=== STARTING REGISTRATION ===')
       console.log('Member:', member.full_name, '| User ID:', member.user_id)
       console.log('Device:', selectedDevice, '| Finger:', fingerNumber)
 
-      const supabase = createClient()
-
       const payload = {
         user_id: member.user_id,
-        name: member.full_name
+        name: member.first_name || member.full_name,
+        finger_index: fingerNumber
       }
 
-      const { data: command, error: insertError } = await supabase
+      const { data: commandData, error: insertError } = await supabase
         .from('device_commands')
         .insert({
           device_code: selectedDevice,
@@ -697,21 +738,28 @@ export default function FingerPage() {
 
       if (insertError) {
         console.error('Insert error:', insertError)
-        toast.error(`Failed to send command: ${insertError.message}`)
+        // toast.error(`Failed to send command: ${insertError.message}`)
         setIsRegistering(false)
         return
       }
 
-      console.log('Command inserted, ID:', command.id)
-      toast.info(`Command sent to device. Please scan finger ${fingerNumber} on the device.`)
+      command = commandData
+      console.log('Command inserted, ID:', command?.id)
+      // toast.info(`Command sent to device. Please scan finger ${fingerNumber} on the device.`)
 
       const startTime = Date.now()
-      const timeout = 120000
+      const timeout = 90000
       const pollInterval = 1000
 
       const pollStatus = async (): Promise<boolean> => {
-        while (Date.now() - startTime < timeout) {
+        while (Date.now() - startTime < timeout && !registrationCompleteRef.current) {
           await new Promise(resolve => setTimeout(resolve, pollInterval))
+
+          // Stop polling if real-time update already completed
+          if (registrationCompleteRef.current) {
+            console.log('✅ Real-time update already completed, stopping polling')
+            return true
+          }
 
           const { data: status } = await supabase
             .from('device_commands')
@@ -719,19 +767,37 @@ export default function FingerPage() {
             .eq('id', command.id)
             .single()
 
-          console.log('Status:', status?.status)
+          console.log('📊 Polling status:', status?.status, '| Elapsed:', Date.now() - startTime, 'ms')
 
           if (status?.status === 'EXECUTED') {
+            console.log('✅ Polling detected EXECUTED status')
+            registrationCompleteRef.current = true
             return true
           }
 
           if (status?.status === 'FAILED') {
-            toast.error(status.error_message || 'Registration failed')
+            console.log('❌ Polling detected FAILED status')
+            registrationCompleteRef.current = true
+            // toast.error(status.error_message || 'Registration failed')
             return false
           }
         }
 
-        toast.error('Timeout: Device not responding')
+        // Timeout reached - auto-cancel the command
+        console.log('⏱️ Timeout reached (60 seconds), auto-failed command...')
+        const { error: cancelError } = await supabase
+          .from('device_commands')
+          .update({ status: 'FAILED' })
+          .eq('id', command?.id)
+          .select()
+
+        if (cancelError) {
+          console.error('Failed to auto-cancel command:', cancelError)
+        } else {
+          console.log('✅ Command auto-failed successfully')
+        }
+
+        toast.error('Timeout: Device not responding - registration failed')
         return false
       }
 
@@ -770,12 +836,77 @@ export default function FingerPage() {
 
         toast.success('Registration successful!')
       }
-    } catch (error: any) {
-      console.error('Registration error:', error)
-      toast.error(error.message || 'An error occurred')
+      
+      // Auto-cancel on error
+      if (command?.id) {
+        try {
+          await supabase
+            .from('device_commands')
+            .update({ status: 'CANCELLED' })
+            .eq('id', command.id)
+            .select()
+        } catch (cancelErr) {
+          console.error('Failed to cancel command on error:', cancelErr)
+        }
+      }
     } finally {
       setIsRegistering(false)
       setRegisteringMember(null)
+      setActiveMemberId(null)
+      setActiveFingerNumber(null)
+    }
+  }
+
+  const handleCancelRegistration = async () => {
+    if (!activeMemberId || !activeFingerNumber || !selectedDevice) {
+      // toast.error("No active registration to cancel")
+      return
+    }
+
+    try {
+      const supabase = createClient()
+      
+      // Find and cancel the pending command
+      const { data: commands, error: fetchError } = await supabase
+        .from('device_commands')
+        .select('id')
+        .eq('device_code', selectedDevice)
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      if (fetchError || !commands || commands.length === 0) {
+        console.error('No pending command found')
+        // toast.error("No pending command to cancel")
+        return
+      }
+
+      const { error: updateError } = await supabase
+        .from('device_commands')
+        .update({ status: 'CANCELLED' })
+        .eq('id', commands[0]?.id)
+        .select()
+
+      if (updateError) {
+        console.error('Cancel error:', updateError)
+        // toast.error(`Failed to cancel: ${updateError.message}`)
+        return
+      }
+
+      toast.success('Registration cancelled')
+      
+      // Reset states immediately
+      setIsRegistering(false)
+      setActiveMemberId(null)
+      setActiveFingerNumber(null)
+      setShowConfirmDialog(false)
+      setRegisteringMember(null)
+      
+      // Refresh data
+      fetchMembers()
+    } catch (error: any) {
+      console.error('Cancel error:', error)
+      // toast.error(error.message || 'Failed to cancel')
     }
   }
 
@@ -908,7 +1039,7 @@ export default function FingerPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name or phone..."
+                  placeholder="Search by Nick name, Full name, or Groups"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -920,7 +1051,7 @@ export default function FingerPage() {
                   <SelectValue placeholder="Filter Department..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
+                  <SelectItem value="all">All Groups</SelectItem>
                   {uniqueDepartments.map((dept) => (
                     <SelectItem key={dept} value={dept}>
                       {dept}
@@ -977,7 +1108,7 @@ export default function FingerPage() {
                     Loading data...
                   </TableCell>
                 </TableRow>
-              ) : filteredMembers.length === 0 ? (
+              ) : paginatedMembers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     {searchQuery || selectedDepartment !== "all" || selectedStatus !== "all" 
@@ -986,7 +1117,7 @@ export default function FingerPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredMembers.map((member, index) => (
+                paginatedMembers.map((member, index) => (
                   <TableRow
                     key={member.id}
                     className={cn(
@@ -996,13 +1127,19 @@ export default function FingerPage() {
                     )}
                   >
                     <TableCell className="font-medium text-muted-foreground">
-                      {index + 1}
+                      {pageIndex * pageSizeNum + index + 1}
                     </TableCell>
-                    <TableCell className="font-medium">
-                      <div className="font-semibold">{member.first_name || '-'}</div>
+                    <TableCell 
+                      className="font-medium text-foreground hover:underline cursor-pointer"
+                      onClick={() => handleMemberClick(member.id)}
+                    >
+                      {member.first_name || 'N/A'}
                     </TableCell>
-                    <TableCell className="font-medium">
-                      <div>{member.full_name}</div>
+                    <TableCell 
+                      className="text-foreground hover:underline cursor-pointer"
+                      onClick={() => handleMemberClick(member.id)}
+                    >
+                      {member.full_name}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-muted-foreground">
@@ -1011,54 +1148,100 @@ export default function FingerPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center">
-                        <Button
-                          variant={member.finger1_registered ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handleFingerClick(member, 1)}
-                          disabled={isRegistering}
-                          className={cn(
-                            "gap-2 transition-all",
-                            member.finger1_registered && "bg-green-600 hover:bg-green-700 text-white"
-                          )}
-                        >
-                          {member.finger1_registered ? (
-                            <>
-                              <Check className="w-4 h-4" />
-                              Registered
-                            </>
-                          ) : (
-                            <>
-                              <Fingerprint className="w-4 h-4" />
-                              Finger 1
-                            </>
-                          )}
-                        </Button>
+                        {activeMemberId === member.id && activeFingerNumber === 1 ? (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleCancelRegistration}
+                            disabled={!isRegistering}
+                            className="gap-2"
+                          >
+                            {isRegistering ? (
+                              <>
+                                <Fingerprint className="w-4 h-4 animate-pulse" />
+                                Cancel
+                              </>
+                            ) : (
+                              <>
+                                <Check className="w-4 h-4" />
+                                Done
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant={member.finger1_registered ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleFingerClick(member, 1)}
+                            disabled={isRegistering || activeMemberId !== null}
+                            className={cn(
+                              "gap-2 transition-all",
+                              member.finger1_registered && "bg-green-600 hover:bg-green-700 text-white",
+                              activeMemberId !== null && activeMemberId !== member.id && "opacity-50 cursor-not-allowed"
+                            )}
+                          >
+                            {member.finger1_registered ? (
+                              <>
+                                <Check className="w-4 h-4" />
+                                Registered
+                              </>
+                            ) : (
+                              <>
+                                <Fingerprint className="w-4 h-4" />
+                                Finger 1
+                              </>
+                            )}
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center">
-                        <Button
-                          variant={member.finger2_registered ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handleFingerClick(member, 2)}
-                          disabled={isRegistering}
-                          className={cn(
-                            "gap-2 transition-all",
-                            member.finger2_registered && "bg-green-600 hover:bg-green-700 text-white"
-                          )}
-                        >
-                          {member.finger2_registered ? (
-                            <>
-                              <Check className="w-4 h-4" />
-                              Registered
-                            </>
-                          ) : (
-                            <>
-                              <Fingerprint className="w-4 h-4" />
-                              Finger 2
-                            </>
-                          )}
-                        </Button>
+                        {activeMemberId === member.id && activeFingerNumber === 2 ? (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleCancelRegistration}
+                            disabled={!isRegistering}
+                            className="gap-2"
+                          >
+                            {isRegistering ? (
+                              <>
+                                <Fingerprint className="w-4 h-4 animate-pulse" />
+                                Cancel
+                              </>
+                            ) : (
+                              <>
+                                <Check className="w-4 h-4" />
+                                Done
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant={member.finger2_registered ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleFingerClick(member, 2)}
+                            disabled={isRegistering || activeMemberId !== null}
+                            className={cn(
+                              "gap-2 transition-all",
+                              member.finger2_registered && "bg-green-600 hover:bg-green-700 text-white",
+                              activeMemberId !== null && activeMemberId !== member.id && "opacity-50 cursor-not-allowed"
+                            )}
+                          >
+                            {member.finger2_registered ? (
+                              <>
+                                <Check className="w-4 h-4" />
+                                Registered
+                              </>
+                            ) : (
+                              <>
+                                <Fingerprint className="w-4 h-4" />
+                                Finger 2
+                              </>
+                            )}
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1067,6 +1250,93 @@ export default function FingerPage() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination Footer */}
+        {filteredMembers.length > 0 && (
+          <div className="flex items-center justify-between py-4 px-4 bg-gray-50 rounded-md border">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPageIndex(0)}
+                disabled={pageIndex === 0 || isLoading}
+                className="h-8 w-8 p-0"
+                title="First page"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPageIndex(Math.max(0, pageIndex - 1))}
+                disabled={pageIndex === 0 || isLoading}
+                className="h-8 w-8 p-0"
+                title="Previous page"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              
+              <span className="text-sm text-muted-foreground">Page</span>
+              
+              <input
+                type="number"
+                min="1"
+                max={totalPages}
+                value={pageIndex + 1}
+                onChange={(e) => {
+                  const page = e.target.value ? Number(e.target.value) - 1 : 0
+                  setPageIndex(Math.max(0, Math.min(page, totalPages - 1)))
+                }}
+                className="w-12 h-8 px-2 border rounded text-sm text-center"
+                disabled={isLoading}
+              />
+              
+              <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPageIndex(Math.min(totalPages - 1, pageIndex + 1))}
+                disabled={pageIndex >= totalPages - 1 || isLoading}
+                className="h-8 w-8 p-0"
+                title="Next page"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPageIndex(totalPages - 1)}
+                disabled={pageIndex >= totalPages - 1 || isLoading}
+                className="h-8 w-8 p-0"
+                title="Last page"
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {filteredMembers.length > 0 ? pageIndex * parseInt(pageSize) + 1 : 0} to {Math.min((pageIndex + 1) * parseInt(pageSize), filteredMembers.length)} of {filteredMembers.length} total records
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(e.target.value)
+                    setPageIndex(0)
+                  }}
+                  className="px-2 py-1 border rounded text-sm bg-white"
+                >
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
 
         <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
           <AlertDialogContent>

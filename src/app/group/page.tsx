@@ -1,9 +1,9 @@
 "use client"
 
 import React from "react"
-import { GroupsTable } from "@/components/groups-table"
+import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
-import { Plus, Group as GroupIcon } from "lucide-react"
+import { Plus, Group as GroupIcon, Pencil, Trash, Search, RotateCcw, ChevronRight } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -35,11 +35,27 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
 
 import { IGroup } from "@/interface"
+import { ColumnDef } from "@tanstack/react-table"
+import { Badge } from "@/components/ui/badge"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { deleteGroup } from "@/action/group"
 import {
   createGroup,
   getAllGroups,
   updateGroup,
 } from "@/action/group"
+import { getAllOrganization } from "@/action/organization"
+import { Can } from "@/components/can"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import {
   Select,
@@ -48,10 +64,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { getAllOrganization } from "@/action/organization"
-import { Can } from "@/components/can"
-import { useOrgStore } from "@/store/org-store"
 import { useOrgGuard } from "@/hooks/use-org-guard"
+import { useHydration } from "@/hooks/useHydration"
+import Link from "next/link"
 
 const groupSchema = z.object({
   organization_id: z.string().min(1, "Organization is required"),
@@ -64,35 +79,186 @@ const groupSchema = z.object({
 type GroupForm = z.infer<typeof groupSchema>
 
 export default function GroupsPage() {
-  const orgStore = useOrgStore()
+  const { isHydrated, organizationId } = useHydration()
   useOrgGuard()
-  
+
   const [isModalOpen, setIsModalOpen] = React.useState(false)
   const [editingDetail, setEditingDetail] = React.useState<IGroup | null>(null)
   const [groups, setGroups] = React.useState<IGroup[]>([])
   const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = React.useState<boolean>(true)
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const [statusFilter, setStatusFilter] = React.useState("all")
+  const [sortOrder, setSortOrder] = React.useState("newest")
 
-  const fetchGroups = async () => {
+  const filteredAndSortedGroups = React.useMemo(() => {
+    let result = [...groups]
+
+    if (searchQuery) {
+      const lowercasedQuery = searchQuery.toLowerCase()
+      result = result.filter(
+        (group) =>
+          (group.code || "").toLowerCase().includes(lowercasedQuery) ||
+          (group.name || "").toLowerCase().includes(lowercasedQuery) ||
+          (group.description || "").toLowerCase().includes(lowercasedQuery)
+      )
+    }
+
+    if (statusFilter !== "all") {
+      result = result.filter((group) =>
+        statusFilter === "active" ? group.is_active : !group.is_active
+      )
+    }
+
+    switch (sortOrder) {
+      case "oldest":
+        result.sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        )
+        break
+      case "a-z":
+        result.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+        break
+      case "z-a":
+        result.sort((a, b) => (b.name || "").localeCompare(a.name || ""))
+        break
+      case "newest":
+      default:
+        result.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+        break
+    }
+
+    return result
+  }, [groups, searchQuery, statusFilter, sortOrder])
+
+  const handleDelete = async (id: string) => {
+    try {
+      const result = await deleteGroup(id)
+      if (result.success) {
+        toast.success("Group deleted successfully")
+        fetchGroups()
+      } else {
+        toast.error(result.message || "Failed to delete group")
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "An error occurred")
+    }
+  }
+
+  const columns: ColumnDef<IGroup>[] = [
+    {
+      accessorKey: "code",
+      header: "Code",
+    },
+    {
+      accessorKey: "name",
+      header: "Name",
+    },
+    {
+      accessorKey: "description",
+      header: "Description",
+      cell: ({ row }) => row.original.description || "-",
+    },
+    {
+      accessorKey: "is_active",
+      header: "Status",
+      cell: ({ row }) =>
+        row.original.is_active ? (
+          <Badge className="bg-green-500">Active</Badge>
+        ) : (
+          <Badge variant="destructive">Inactive</Badge>
+        ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => {
+              setEditingDetail(row.original)
+              form.reset({
+                organization_id: String(row.original.organization_id),
+                code: row.original.code || "",
+                name: row.original.name,
+                description: row.original.description || "",
+                is_active: row.original.is_active ?? true,
+              })
+              setIsModalOpen(true)
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+              >
+                <Trash className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <Link href={`/group/move?id=${row.original.id}`}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Group</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete {row.original.name}? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => handleDelete(row.original.id)}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      ),
+    },
+  ]
+
+
+  const fetchGroups = React.useCallback(async () => {
     try {
       setLoading(true)
       
-      if (!orgStore.organizationId) {
+      if (!organizationId) {
         toast.error('Please select an organization')
         setLoading(false)
         return
       }
       
-      const response = await getAllGroups(orgStore.organizationId)
-      if (!response.success) throw new Error(response.message)
+      const result = await getAllGroups(organizationId)
+      if (!result.success) throw new Error(result.message)
       
-      setGroups(response.data)
+      setGroups(result.data)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
-  }
+  }, [organizationId])
 
   const fetchOrganizations = async () => {
     try {
@@ -109,10 +275,11 @@ export default function GroupsPage() {
   }, [])
 
   React.useEffect(() => {
-    if (orgStore.organizationId) {
+    if (isHydrated && organizationId) {
+      console.log('[GROUP-PAGE] Hydration complete, fetching groups')
       fetchGroups()
     }
-  }, [orgStore.organizationId])
+  }, [isHydrated, organizationId, fetchGroups])
 
   const form = useForm<GroupForm>({
     resolver: zodResolver(groupSchema),
@@ -127,16 +294,16 @@ export default function GroupsPage() {
 
   // sinkronkan orgId ke form setelah didapat dari store
   React.useEffect(() => {
-    if (orgStore.organizationId && !isModalOpen) {
+    if (organizationId && !isModalOpen) {
       form.reset({
-        organization_id: String(orgStore.organizationId),
+        organization_id: String(organizationId),
         code: "",
         name: "",
         description: "",
         is_active: true,
       })
     }
-  }, [orgStore.organizationId, form, isModalOpen])
+  }, [organizationId, form, isModalOpen])
 
   const handleSubmit = async (values: GroupForm) => {
     try {
@@ -162,7 +329,7 @@ export default function GroupsPage() {
     if (!open) {
       setEditingDetail(null)
       form.reset({
-        organization_id: orgStore.organizationId ? String(orgStore.organizationId) : "",
+        organization_id: organizationId ? String(organizationId) : "",
         code: "",
         name: "",
         description: "",
@@ -172,13 +339,53 @@ export default function GroupsPage() {
   }
 
 
+
   return (
     <div className="flex flex-1 flex-col gap-4 w-full">
       <div className="w-full">
         <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
           
           <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search groups..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex gap-3 sm:gap-2 flex-wrap">
+                <Button variant="outline" size="sm" onClick={() => fetchGroups()} className="whitespace-nowrap">
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+              <div className="flex gap-3 sm:gap-2 flex-wrap">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Select value={sortOrder} onValueChange={setSortOrder}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="newest">Newest</SelectItem>
+                        <SelectItem value="oldest">Oldest</SelectItem>
+                        <SelectItem value="a-z">A-Z</SelectItem>
+                        <SelectItem value="z-a">Z-A</SelectItem>
+                    </SelectContent>
+                </Select>
+              </div>
               <div className="flex gap-3 sm:gap-2 flex-wrap">
                 <Dialog open={isModalOpen} onOpenChange={handleDialogOpenChange}>
                   <DialogTrigger asChild>
@@ -187,7 +394,7 @@ export default function GroupsPage() {
                       onClick={() => {
                         setEditingDetail(null)
                         form.reset({
-                          organization_id: orgStore.organizationId ? String(orgStore.organizationId) : "",
+                          organization_id: organizationId ? String(organizationId) : "",
                           code: "",
                           name: "",
                           description: "",
@@ -197,13 +404,13 @@ export default function GroupsPage() {
                       }}
                       className="whitespace-nowrap"
                     >
-                      Add Group <Plus className="ml-2 h-4 w-4" />
+                      Add<Plus className="ml-2 h-4 w-4" />
                     </Button>
                   </DialogTrigger>
                   <DialogContent aria-describedby={undefined}>
                     <DialogHeader>
                       <DialogTitle>
-                        {editingDetail ? 'Edit Group' : 'Add Group'}
+                        {editingDetail ? 'Edit' : 'Add'}
                       </DialogTitle>
                     </DialogHeader>
                     <Form {...form}>
@@ -212,14 +419,14 @@ export default function GroupsPage() {
                         className="space-y-4"
                       >
                         {/* Organization field */}
-                        {orgStore.organizationId ? (
+                        {organizationId ? (
                           <FormField
                             control={form.control}
                             name="organization_id"
                             render={({ field }) => (
                               <input
                                 type="hidden"
-                                value={String(orgStore.organizationId || "")}
+                                value={String(organizationId || "")}
                                 onChange={field.onChange}
                               />
                             )}
@@ -263,7 +470,7 @@ export default function GroupsPage() {
                             <FormItem>
                               <FormLabel>Code</FormLabel>
                               <FormControl>
-                                <Input type="text" {...field} />
+                                <Input type="text" placeholder="e.g., x_rpl" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -274,9 +481,9 @@ export default function GroupsPage() {
                           name="name"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Group Name</FormLabel>
+                              <FormLabel>Name</FormLabel>
                               <FormControl>
-                                <Input type="text" {...field} />
+                                <Input type="text" placeholder="e.g., X RPL" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -289,7 +496,7 @@ export default function GroupsPage() {
                             <FormItem>
                               <FormLabel>Description</FormLabel>
                               <FormControl>
-                                <Input type="text" {...field ?? ""} />
+                                <Input type="text" placeholder="e.g., Rekayasa Perangkat Lunak" {...field ?? ""} />
                               </FormControl>
                             </FormItem>
                           )}
@@ -331,23 +538,14 @@ export default function GroupsPage() {
                       </EmptyMedia>
                       <EmptyTitle>No groups yet</EmptyTitle>
                       <EmptyDescription>
-                        There are no groups for this organization. Use the "Add Group" button to create one.
+                        There are no groups for this organization. Use the "Add" button to create one.
                       </EmptyDescription>
                     </EmptyHeader>
                   </Empty>
                 </div>
               ) : (
-                <GroupsTable 
-                  groups={groups}
-                  isLoading={loading}
-                  onDelete={fetchGroups}
-                  onEdit={(group) => {
-                    setEditingDetail(group)
-                    form.reset(group)
-                    setIsModalOpen(true)
-                  }}
-                />
-              )}
+                <DataTable columns={columns} data={filteredAndSortedGroups} showColumnToggle={false} />
+            )}
             </div>
           </div>
         </div>

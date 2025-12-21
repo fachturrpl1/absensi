@@ -4,21 +4,22 @@ import { useEffect, useState } from "react";
 import { getAllAttendanceDevices, getDeviceTypes } from "@/action/attendance_device";
 import { IAttendanceDevice, IDeviceType } from "@/interface";
 import LocationList from "./_components/location-list";
-import { useOrgStore } from "@/store/org-store";
+import { useHydration } from "@/hooks/useHydration";
 import { toast } from "sonner";
 
 export default function LocationsPage() {
-  const { organizationId } = useOrgStore();
+  const { isHydrated, organizationId } = useHydration();
   const [devices, setDevices] = useState<IAttendanceDevice[]>([]);
   const [deviceTypes, setDeviceTypes] = useState<IDeviceType[]>([]);
 
   useEffect(() => {
+    if (!isHydrated || !organizationId) {
+      console.log('[LOCATIONS] Waiting for hydration - isHydrated:', isHydrated, 'orgId:', organizationId)
+      return
+    }
+
     const fetchData = async () => {
       try {
-        if (!organizationId) {
-          console.log('[LOCATIONS] No organization ID from store');
-          return;
-        }
 
         const [devicesRes, typesRes] = await Promise.all([
           getAllAttendanceDevices(organizationId),
@@ -47,7 +48,7 @@ export default function LocationsPage() {
     };
 
     fetchData();
-  }, [organizationId]);
+  }, [isHydrated, organizationId]);
 
   if (!organizationId) {
     return (

@@ -22,16 +22,14 @@ import { getDashboardStats } from "@/action/dashboard";
 import { AttendanceAnalytics } from "@/components/attendance/attendance-analytics";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { DateFilterBar, DateFilterState } from "@/components/analytics/date-filter-bar";
-import { useOrgStore } from "@/store/org-store";
+import { useHydration } from "@/hooks/useHydration";
 
 export default function AttendanceDashboard() {
-  const { organizationId } = useOrgStore();
+  const { isHydrated, organizationId } = useHydration();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [distChartType, setDistChartType] = useState<'donut' | 'pie' | 'bar'>('donut');
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [mounted, setMounted] = useState(false);
   
   // Date filter state
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
@@ -42,18 +40,9 @@ export default function AttendanceDashboard() {
     return { from: today, to: endOfToday, preset: 'today' };
   });
 
-  // Track hydration
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
-
   const loadData = useCallback(async () => {
-    if (!mounted || !organizationId) {
-      console.log('[ATTENDANCE] loadData: Skipping - mounted:', mounted, 'orgId:', organizationId);
+    if (!isHydrated || !organizationId) {
+      console.log('[ATTENDANCE] loadData: Skipping - isHydrated:', isHydrated, 'orgId:', organizationId);
       return;
     }
     
@@ -70,7 +59,7 @@ export default function AttendanceDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [mounted, organizationId]);
+  }, [isHydrated, organizationId]);
 
   // Monitor organization changes
   useEffect(() => {

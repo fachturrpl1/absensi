@@ -84,6 +84,43 @@ export const getAllOrganization_member = async (organizationId?: number) => {
     return { success: false, message: error.message, data: [] };
   }
 
+  // 4. Untuk member yang user_id null, ambil data dari biodata berdasarkan employee_id (NIK)
+  if (data && data.length > 0) {
+    const membersWithoutUser = data.filter((m: any) => !m.user_id && m.employee_id);
+    
+    if (membersWithoutUser.length > 0) {
+      const employeeIds = membersWithoutUser.map((m: any) => m.employee_id).filter(Boolean);
+      
+      if (employeeIds.length > 0) {
+        const { data: biodataList, error: biodataError } = await adminClient
+          .from("biodata")
+          .select("nik, nama, nickname, email, no_telepon")
+          .in("nik", employeeIds);
+
+        if (!biodataError && biodataList) {
+          // Merge biodata ke dalam member data
+          const biodataMap = new Map(biodataList.map((b: any) => [b.nik, b]));
+          
+          data.forEach((member: any) => {
+            if (!member.user_id && member.employee_id) {
+              const biodata = biodataMap.get(member.employee_id);
+              if (biodata) {
+                // Buat object user dummy dari biodata untuk konsistensi dengan struktur yang ada
+                member.user = {
+                  id: null,
+                  email: biodata.email || null,
+                  first_name: biodata.nama?.split(" ")[0] || biodata.nama || null,
+                  last_name: biodata.nama?.split(" ").slice(1).join(" ") || null,
+                  display_name: biodata.nickname || biodata.nama || null,
+                };
+              }
+            }
+          });
+        }
+      }
+    }
+  }
+
   memberLogger.info(`✅ Fetched ${data?.length || 0} members for organization ${targetOrgId}`);
   return { success: true, data: data as IOrganization_member[] };
 };
@@ -318,4 +355,43 @@ export const getUserOrganizationId = async (userId: string) => {
   }
 
   return { success: true, message: "Organization found", organizationId: data.organization_id };
+};
+
+export const getMembersByGroupId = async (groupId: string) => {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select(`
+      *,
+      user:user_id (
+        id,
+        email,
+        first_name,
+        middle_name,
+        last_name,
+        display_name
+      )
+    `)
+    .eq("department_id", groupId);
+
+  if (error) {
+    return { success: false, message: error.message, data: [] };
+  }
+
+  return { success: true, data: data as IOrganization_member[] };
+};
+
+export const moveMembersToGroup = async (memberIds: string[], targetGroupId: string) => {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .update({ department_id: targetGroupId })
+    .in("id", memberIds)
+    .select();
+
+  if (error) {
+    return { success: false, message: error.message, data: null };
+  }
+
+  return { success: true, message: "Members moved successfully", data };
 };

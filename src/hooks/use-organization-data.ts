@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from './use-session'
 import { useEffect } from 'react'
+import { useOrgStore } from '@/store/org-store'
 
 interface OrganizationData {
   organizationId: number
@@ -17,14 +18,22 @@ interface OrganizationData {
  */
 export function useOrganizationData() {
   const { data: user } = useSession()
+  const { organizationId: storeOrgId } = useOrgStore()
 
   return useQuery({
-    queryKey: ['organization', 'full-data', user?.id],
+    // Ikat ke user + org aktif di store supaya ikut berubah
+    queryKey: ['organization', 'full-data', user?.id, storeOrgId],
     queryFn: async (): Promise<OrganizationData | null> => {
       if (!user?.id) return null
 
-      // ✅ USE SECURE API ROUTE - hides database structure
-      const response = await fetch('/api/organization/info', {
+      // ✅ USE SECURE API ROUTE - kirim organizationId dari store kalau ada
+      let url = '/api/organization/info'
+      if (storeOrgId) {
+        const params = new URLSearchParams({ organizationId: String(storeOrgId) })
+        url = `/api/organization/info?${params.toString()}`
+      }
+
+      const response = await fetch(url, {
         credentials: 'include',
       })
 

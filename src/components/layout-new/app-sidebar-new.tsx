@@ -68,11 +68,10 @@ interface NavGroup {
 
 // Helper function untuk determine menu visibility berdasarkan pathname
 const shouldShowMenuItem = (pathname: string, itemTitle: string): boolean => {
-  // Di halaman /organization, hanya tampilkan menu khusus organization
+  // Di halaman /organization, hanya tampilkan All Organizations saja
   if (pathname.startsWith('/organization')) {
-    // Hanya tampilkan menu yang relevan dengan organization
-    const organizationMenus = ['All Organizations', 'Settings']
-    return organizationMenus.includes(itemTitle)
+    // Hanya tampilkan All Organizations menu
+    return itemTitle === 'All Organizations'
   }
   
   // Di halaman lain, sembunyikan menu organization

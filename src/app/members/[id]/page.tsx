@@ -23,8 +23,8 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   const schedule = getMockSchedule()
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <div className="max-w-4xl mx-auto py-4">
+    <div className="flex-1 space-y-6 p-4 md:p-6">
+      <div className="w-full">
         {member ? (
           <MemberProfileClient 
             member={member} 

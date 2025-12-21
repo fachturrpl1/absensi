@@ -15,7 +15,7 @@ import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { AnalyticsSkeleton } from '@/components/analytics/analytics-skeleton';
-import { useOrgStore } from '@/store/org-store';
+import { useHydration } from '@/hooks/useHydration';
 import {
   AreaChart, 
   Area, 
@@ -57,7 +57,7 @@ const COLORS = {
 };
 
 export default function AnalyticsPage() {
-  const { organizationId } = useOrgStore();
+  const { organizationId } = useHydration();
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [masterData, setMasterData] = useState<MasterData>({ totalMembers: 0, totalDepartments: 0, averageTeamSize: 0 });
@@ -76,6 +76,13 @@ export default function AnalyticsPage() {
   });
 
   useEffect(() => {
+    if (!organizationId) {
+      console.log('[ANALYTICS] Waiting for organization ID - orgId:', organizationId)
+      return
+    }
+    
+    console.log('[ANALYTICS] Starting to fetch data - orgId:', organizationId)
+
     const fetchData = async () => {
       try {
         setIsLoading(true);
@@ -299,9 +306,6 @@ export default function AnalyticsPage() {
       >
         <div>
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Analytics Overview</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Comprehensive attendance insights and performance metrics
-          </p>
         </div>
         <DateFilterBar dateRange={dateRange} onDateRangeChange={setDateRange} />
       </motion.div>

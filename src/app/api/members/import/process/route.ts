@@ -1,678 +1,1403 @@
-import { NextRequest, NextResponse } from 'next/server'
-import * as XLSX from 'xlsx'
-import { createClient } from '@/utils/supabase/server'
-import { createAdminClient } from '@/utils/supabase/admin'
-import { createInvitation } from '@/action/invitations'
+import { NextRequest, NextResponse } from "next/server"
+import * as XLSX from "xlsx"
+import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
 
-/**
- * Mapping structure from frontend
- * Example:
- * {
- *   "email": "Email Address",
- *   "first_name": "First Name",
- *   "last_name": "Last Name",
- *   "phone": "Phone Number",
- *   "department": "Group",
- *   "role": null  // null means skip this field
- * }
- */
 interface ColumnMapping {
   [databaseField: string]: string | null
 }
 
-interface EnabledFields {
-  [databaseField: string]: boolean
-}
-
-/**
- * API Route: POST /api/members/import/process
- * 
- * Purpose: Process Excel import with user-defined column mapping
- * 
- * Request Body: FormData with:
- *   - file: Excel file
- *   - mapping: JSON string of ColumnMapping
- * 
- * Response: { success: boolean, summary: { success: number, failed: number, errors: string[] } }
- */
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
-    const file = formData.get('file') as File
-    const mappingJson = formData.get('mapping') as string
-    const mode = (formData.get('mode') as string) || 'import' // 'test' or 'import'
-    const enabledJson = formData.get('enabledFields') as string | null
-    const trackHistory = formData.get('trackHistory') === 'true'
-    const allowMatchingWithSubfields = formData.get('allowMatchingWithSubfields') === 'true'
+    const file = formData.get("file") as File
+    const mappingJson = formData.get("mapping") as string
+    const mode = (formData.get("mode") as string) || "import" // 'test' atau 'import'
+    const organizationIdParam = formData.get("organization_id") as string | null
+    const headerRowInput = formData.get("headerRow")
+    const headerRowCountInput = formData.get("headerRowCount")
+    const requestedSheet = (formData.get("sheetName") || "") as string
+    const trackHistory = formData.get("trackHistory") === "true"
+    const allowMatchingWithSubfields = formData.get("allowMatchingWithSubfields") === "true"
 
     if (!file) {
-      return NextResponse.json(
-        { success: false, message: 'No file provided' },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, message: "No file provided" }, { status: 400 })
     }
 
     if (!mappingJson) {
-      return NextResponse.json(
-        { success: false, message: 'No mapping provided' },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, message: "No mapping provided" }, { status: 400 })
     }
 
-    // Parse mapping
     let mapping: ColumnMapping
-    let enabledFields: EnabledFields = {}
     try {
       mapping = JSON.parse(mappingJson)
-      if (enabledJson) {
-        enabledFields = JSON.parse(enabledJson)
+    } catch {
+      return NextResponse.json({ success: false, message: "Invalid mapping JSON" }, { status: 400 })
       }
-    } catch (error) {
+
+    // Minimal required field untuk biodata: nik & nama
+    if (!mapping.nik) {
       return NextResponse.json(
-        { success: false, message: 'Invalid mapping JSON' },
+        { success: false, message: "NIK mapping is required" },
         { status: 400 }
       )
     }
 
-    // Read Excel file
+    if (!mapping.nama) {
+      return NextResponse.json(
+        { success: false, message: "Nama Lengkap mapping is required" },
+        { status: 400 }
+      )
+    }
+
+    const headerRow = Math.max(1, Number(headerRowInput) || 1)
+    const headerRowCount = Math.max(1, Number(headerRowCountInput) || 1)
+
+    // Read workbook
     const buffer = await file.arrayBuffer()
-    const workbook = XLSX.read(buffer, { type: 'array' })
-    
-    const sheetName = workbook.SheetNames?.[0]
+    const workbook = XLSX.read(buffer, { type: "array" })
+    const sheetNames = workbook.SheetNames || []
+    const sheetName = requestedSheet && sheetNames.includes(requestedSheet) ? requestedSheet : sheetNames[0]
     if (!sheetName) {
-      return NextResponse.json(
-        { success: false, message: 'No sheet found in Excel file' },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, message: "No sheet found in Excel file" }, { status: 400 })
     }
-
     const sheet = workbook.Sheets[sheetName]
-
-    // Safety check untuk menghindari error jika sheet tidak ditemukan / undefined
     if (!sheet) {
+      return NextResponse.json({ success: false, message: "Worksheet not found in Excel file" }, { status: 400 })
+    }
+
+    // Use array-of-arrays to respect custom header rows
+    const rowsArray = XLSX.utils.sheet_to_json<(string | number)[]>(sheet, {
+      header: 1,
+      defval: "",
+      raw: false,
+    })
+    if (!rowsArray.length) {
       return NextResponse.json(
-        { success: false, message: 'Worksheet not found in Excel file' },
+        { success: false, message: "Excel file is empty or has no data" },
         { status: 400 }
       )
     }
 
-    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { 
-      defval: '',
-      raw: false
+    if (headerRow > rowsArray.length) {
+      return NextResponse.json(
+        { success: false, message: `Header row ${headerRow} is outside the data range (total rows: ${rowsArray.length})` },
+        { status: 400 }
+      )
+    }
+
+    const headerRows = rowsArray.slice(headerRow - 1, headerRow - 1 + headerRowCount)
+    const maxCols = headerRows.reduce((max, row) => Math.max(max, row.length), 0)
+
+    const headers: string[] = []
+    let carryParent = ""
+    for (let col = 0; col < maxCols; col++) {
+      const topCellRaw = String((headerRows[0]?.[col] ?? "")).trim()
+      if (topCellRaw) {
+        carryParent = topCellRaw
+      }
+      const parent = carryParent
+      const childRaw = String((headerRows[headerRows.length - 1]?.[col] ?? "")).trim()
+      const child = childRaw
+
+      let header = ""
+      if (child && parent && child.toLowerCase() === parent.toLowerCase()) {
+        header = child
+      } else if (child && parent) {
+        header = `${parent} - ${child}`
+      } else if (child) {
+        header = child
+      } else if (parent) {
+        header = parent
+      }
+
+      headers.push(header || `__EMPTY_${col}`)
+    }
+
+    const dataRowsRaw = rowsArray.slice(headerRow - 1 + headerRowCount)
+    if (!dataRowsRaw.length) {
+      return NextResponse.json(
+        { success: false, message: "Excel file has no data rows after header" },
+        { status: 400 }
+      )
+    }
+
+    // Convert data rows into array of objects keyed by headers
+    const rows = dataRowsRaw.map((rowArr) => {
+      const obj: Record<string, any> = {}
+      headers.forEach((header, idx) => {
+        obj[header] = String((rowArr as any)?.[idx] ?? "").trim()
+      })
+      return obj
     })
 
-    if (!rows.length) {
-      return NextResponse.json(
-        { success: false, message: 'Excel file is empty or has no data' },
-        { status: 400 }
-      )
-    }
-
-    // Validate: email is required for invitations
-    if (!mapping.email) {
-      return NextResponse.json(
-        { success: false, message: 'Email mapping is required' },
-        { status: 400 }
-      )
-    }
-
-    // Get current user
+    // Auth & org
     const supabase = await createClient()
     const adminClient = createAdminClient()
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
+      return NextResponse.json({ success: false, message: "User not authenticated" }, { status: 401 })
+    }
+
+    let orgId: number | null = null
+
+    if (organizationIdParam) {
+      orgId = parseInt(organizationIdParam, 10)
+      if (isNaN(orgId)) {
       return NextResponse.json(
-        { success: false, message: 'User not authenticated' },
-        { status: 401 }
+          { success: false, message: "Invalid organization_id" },
+          { status: 400 }
       )
     }
 
-    // Use admin client to avoid RLS hiding membership rows
     const { data: member } = await adminClient
-      .from('organization_members')
-      .select('organization_id')
-      .eq('user_id', user.id)
-      .order('updated_at', { ascending: false })
-      .limit(1)
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .eq("organization_id", orgId)
       .maybeSingle()
 
     if (!member) {
       return NextResponse.json(
-        { success: false, message: 'User not member of any organization' },
+          { success: false, message: "User is not a member of the specified organization" },
+        { status: 403 }
+      )
+    }
+    } else {
+      const { data: member } = await adminClient
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (!member || !member.organization_id) {
+        return NextResponse.json(
+          { success: false, message: "User not member of any organization" },
         { status: 403 }
       )
     }
 
-    // Normalize organization_id to number for comparison
-    const orgId = typeof member.organization_id === 'string' 
+      orgId =
+        typeof member.organization_id === "string"
       ? parseInt(member.organization_id, 10) 
       : member.organization_id
-    
-    console.log(`[IMPORT] Using organization_id: ${orgId} (type: ${typeof orgId}, original: ${member.organization_id}) for user ${user.id}`)
+    }
 
-    // Get reference data for lookups
-    // Use admin client to bypass RLS and get all departments (including inactive)
-    console.log(`[IMPORT] ========================================`)
-    console.log(`[IMPORT] Fetching departments for organization_id: ${orgId} (type: ${typeof orgId})`)
-    console.log(`[IMPORT] Using adminClient to bypass RLS`)
-    
-    // Try multiple query strategies to ensure we get all departments
-    // Include description for subfield matching if enabled
+    // Fetch departments untuk lookup
     const deptFields = allowMatchingWithSubfields 
-      ? 'id, name, code, is_active, organization_id, description'
-      : 'id, name, code, is_active, organization_id'
+      ? "id, name, code, is_active, organization_id, description"
+      : "id, name, code, is_active, organization_id"
     
-    // Strategy 1: Query with number
-    const { data: deptsByNumber, error: errNumber } = await adminClient
-      .from('departments')
+    const { data: departments } = await adminClient
+      .from("departments")
       .select(deptFields)
-      .eq('organization_id', orgId)
-    
-    // Strategy 2: Query with string
-    const { data: deptsByString, error: errString } = await adminClient
-      .from('departments')
-      .select(deptFields)
-      .eq('organization_id', String(orgId))
-    
-    // Strategy 3: Get ALL departments and filter in code
-    const { data: allDepartments, error: allDeptError } = await adminClient
-      .from('departments')
-      .select(deptFields)
-      // NO filters at all - get everything
-    
-    console.log(`[IMPORT] Query results:`)
-    console.log(`  By number (${orgId}): ${deptsByNumber?.length || 0} departments`, errNumber?.message || 'OK')
-    console.log(`  By string ("${orgId}"): ${deptsByString?.length || 0} departments`, errString?.message || 'OK')
-    console.log(`  All departments: ${allDepartments?.length || 0} departments`, allDeptError?.message || 'OK')
-    
-    // Combine all results and deduplicate by id
-    const allDeptResults = [
-      ...(deptsByNumber || []),
-      ...(deptsByString || []),
-      ...(allDepartments || [])
-    ]
-    const uniqueDepts = Array.from(
-      new Map(allDeptResults.map((d: any) => [d.id, d])).values()
-    )
-    
-    // Check if X RPL exists anywhere
-    const xRplMatches = uniqueDepts.filter((d: any) => {
-      const nameMatch = d.name?.toLowerCase().trim() === 'x rpl'
-      const codeMatch = d.code?.toLowerCase().trim() === 'x_rpl'
-      return nameMatch || codeMatch
-    })
-    
-    if (xRplMatches.length > 0) {
-      console.log(`[IMPORT] 🔍 Found X RPL matches:`, xRplMatches.map((d: any) => 
-        `${d.name} (${d.code}) - org:${d.organization_id} (type: ${typeof d.organization_id}) - active:${d.is_active}`
-      ))
-    } else {
-      console.log(`[IMPORT] ⚠️ X RPL not found in results`)
-      // Search in all departments
-      const searchInAll = allDepartments?.filter((d: any) => 
-        d.name?.toLowerCase().includes('rpl') || d.code?.toLowerCase().includes('rpl')
-      ) || []
-      if (searchInAll.length > 0) {
-        console.log(`[IMPORT] But found RPL in other departments:`, searchInAll.map((d: any) => 
-          `${d.name} (${d.code}) - org:${d.organization_id}`
-        ))
-      }
-    }
-    
-    // Filter by organization_id - handle both string and number
-    const departments = uniqueDepts.filter((d: any) => {
-      const deptOrgId = typeof d.organization_id === 'string' 
-        ? parseInt(d.organization_id, 10) 
-        : (typeof d.organization_id === 'number' ? d.organization_id : parseInt(String(d.organization_id), 10))
-      const match = deptOrgId === orgId
-      if (match && (d.name?.toLowerCase().includes('rpl') || d.code?.toLowerCase().includes('rpl'))) {
-        console.log(`[IMPORT] ✅ Found RPL department in filtered results: ${d.name} (${d.code})`)
-      }
-      return match
-    })
-    
-    // Final check: Is X RPL in the departments array?
-    const xRplFinalCheck = departments.find((d: any) => {
-      const nameMatch = d.name?.toLowerCase().trim() === 'x rpl'
-      const codeMatch = d.code?.toLowerCase().trim() === 'x_rpl'
-      return nameMatch || codeMatch
-    })
-    
-    if (xRplFinalCheck) {
-      console.log(`[IMPORT] ✅✅✅ X RPL IS IN DEPARTMENTS ARRAY!`, xRplFinalCheck)
-    } else {
-      console.log(`[IMPORT] ❌❌❌ X RPL NOT IN DEPARTMENTS ARRAY!`)
-      console.log(`[IMPORT] Departments in array:`, departments.map((d: any) => `${d.name} (${d.code})`).join(', '))
-    }
-    
-    console.log(`[IMPORT] Filtered departments for org ${orgId}:`, {
-      count: departments.length,
-      departments: departments.map((d: any) => ({
-        id: d.id,
-        name: d.name,
-        code: d.code,
-        is_active: d.is_active,
-        org_id: d.organization_id
-      }))
-    })
-    
-    if (allDeptError) {
-      console.error('[IMPORT] Error fetching all departments:', allDeptError)
-    }
-    
-    // Log departments for debugging
-    if (departments && departments.length > 0) {
-      console.log(`[IMPORT] ✅ Found ${departments.length} departments for org ${orgId}:`, 
-        departments.map((d: any) => `"${d.name}" (code: "${d.code}")`).join(', '))
-    } else {
-      console.warn(`[IMPORT] ⚠️ No departments found for organization ${orgId}`)
-      console.warn(`[IMPORT] Total departments in DB: ${allDepartments?.length || 0}`)
-      if (allDepartments && allDepartments.length > 0) {
-        const uniqueOrgIds = [...new Set(allDepartments.map((d: any) => {
-          const id = typeof d.organization_id === 'string' 
-            ? parseInt(d.organization_id, 10) 
-            : d.organization_id
-          return id
-        }))]
-        console.warn(`[IMPORT] Available org_ids in departments:`, uniqueOrgIds)
-        console.warn(`[IMPORT] Looking for org_id: ${orgId} (type: ${typeof orgId})`)
-      }
-    }
-    console.log(`[IMPORT] ========================================`)
+      .eq("organization_id", orgId)
+      .eq("is_active", true)
 
-    // Fetch positions with description for subfield matching
-    const { data: positions } = await adminClient
-      .from('positions')
-      .select('id, title, name, code, description')
-      .eq('organization_id', member.organization_id)
-      .eq('is_active', true)
-
-    // Fetch roles with description for subfield matching
-    const { data: roles } = await adminClient
-      .from('system_roles')
-      .select('id, name, code, description')
-
-    // Process each row
-    const summary = {
-      success: 0,
-      failed: 0,
-      errors: [] as string[],
-    }
-
-    // Helper function to normalize string for flexible matching
-    // Removes spaces, dashes, underscores, and converts to lowercase
+    // Helper normalize string
     const normalizeForMatching = (str: string): string => {
-      if (!str) return ''
+      if (!str) return ""
       return str
         .trim()
         .toLowerCase()
-        .replace(/[\s\-_\.]/g, '') // Remove spaces, dashes, underscores, dots
-        .replace(/[^\w]/g, '') // Remove special characters, keep only alphanumeric
+        .replace(/[\s\-_\.]/g, "")
+        .replace(/[^\w]/g, "")
     }
-    
-    // Test normalization with X RPL
-    console.log(`[IMPORT] Testing normalization:`)
-    console.log(`  "X RPL" -> "${normalizeForMatching('X RPL')}"`)
-    console.log(`  "x_rpl" -> "${normalizeForMatching('x_rpl')}"`)
-    console.log(`  "X-RPL" -> "${normalizeForMatching('X-RPL')}"`)
-    console.log(`  "x.rpl" -> "${normalizeForMatching('x.rpl')}"`)
 
-    // Helper function to find ID by name/code with flexible matching
-    // If allowMatchingWithSubfields is true, also searches in description and other subfields
-    const findId = (
-      collection: any[],
+    const findDepartmentId = (
       value: string,
-      keys: string[],
-      subfieldKeys?: string[]
-    ): { id?: string; notFound: boolean } => {
-      if (!value || !collection || collection.length === 0) {
-        console.log(`[FINDID] Empty value or collection. Value: "${value}", Collection length: ${collection?.length || 0}`)
+      departments: any[]
+    ): { id?: number; notFound: boolean } => {
+      if (!value || !departments || departments.length === 0) {
         return { id: undefined, notFound: false }
       }
 
       const searchValue = value.trim()
       const normalizedSearch = normalizeForMatching(searchValue)
       
-      console.log(`[FINDID] Searching for: "${searchValue}" (normalized: "${normalizedSearch}")`)
-      console.log(`[FINDID] Collection has ${collection.length} items`)
-      
       if (!normalizedSearch) {
         return { id: undefined, notFound: false }
       }
       
-      // First try exact match (case-insensitive, trimmed)
-      let match = collection.find((item: any) =>
-        keys.some((key) => {
-          const itemValue = String(item?.[key] ?? '').trim()
-          const match = itemValue.toLowerCase() === searchValue.toLowerCase()
-          if (match) {
-            console.log(`[FINDID] Exact match found: ${key}="${itemValue}"`)
-          }
-          return match
+      let match = departments.find((item: any) => {
+        const nameMatch = String(item?.name ?? "").trim().toLowerCase() === searchValue.toLowerCase()
+        const codeMatch = String(item?.code ?? "").trim().toLowerCase() === searchValue.toLowerCase()
+      return nameMatch || codeMatch
+    })
+    
+      if (!match) {
+        match = departments.find((item: any) => {
+          const nameNormalized = normalizeForMatching(String(item?.name ?? ""))
+          const codeNormalized = normalizeForMatching(String(item?.code ?? ""))
+          return (
+            (nameNormalized === normalizedSearch && nameNormalized.length > 0) ||
+            (codeNormalized === normalizedSearch && codeNormalized.length > 0)
+          )
         })
-      )
-      
-      // If exact match not found, try flexible matching (ignore spaces, dashes, underscores, dots)
-      if (!match) {
-        console.log(`[FINDID] No exact match, trying flexible matching...`)
-        match = collection.find((item: any) =>
-          keys.some((key) => {
-            const itemValue = String(item?.[key] ?? '').trim()
-            const normalizedItem = normalizeForMatching(itemValue)
-            const match = normalizedItem === normalizedSearch && normalizedItem.length > 0
-            if (match) {
-              console.log(`[FINDID] Flexible match found: ${key}="${itemValue}" (normalized: "${normalizedItem}")`)
-            }
-            return match
-          })
-        )
       }
-      
-      // If still not found and allowMatchingWithSubfields is enabled, try matching with subfields
-      if (!match && allowMatchingWithSubfields && subfieldKeys && subfieldKeys.length > 0) {
-        console.log(`[FINDID] No match in primary keys, trying subfield matching...`)
-        match = collection.find((item: any) =>
-          subfieldKeys.some((key) => {
-            const itemValue = String(item?.[key] ?? '').trim()
-            if (!itemValue) return false
-            
-            // Try exact match in subfield
-            if (itemValue.toLowerCase().includes(searchValue.toLowerCase())) {
-              console.log(`[FINDID] Subfield exact match found: ${key}="${itemValue}"`)
-              return true
-            }
-            
-            // Try normalized match in subfield
-            const normalizedItem = normalizeForMatching(itemValue)
-            if (normalizedItem.includes(normalizedSearch) || normalizedSearch.includes(normalizedItem)) {
-              console.log(`[FINDID] Subfield normalized match found: ${key}="${itemValue}" (normalized: "${normalizedItem}")`)
-              return true
-            }
-            
-            return false
-          })
-        )
+
+      if (!match && allowMatchingWithSubfields) {
+        match = departments.find((item: any) => {
+          const descValue = String(item?.description ?? "").trim()
+          if (!descValue) return false
+          return (
+            descValue.toLowerCase().includes(searchValue.toLowerCase()) ||
+            normalizeForMatching(descValue).includes(normalizedSearch)
+          )
+        })
       }
-      
-      // If still not found, try partial match (contains)
+
       if (!match && normalizedSearch.length >= 3) {
-        console.log(`[FINDID] No flexible match, trying partial matching...`)
-        match = collection.find((item: any) =>
-          keys.some((key) => {
-            const itemValue = String(item?.[key] ?? '').trim()
-            const normalizedItem = normalizeForMatching(itemValue)
-            const match = normalizedItem.includes(normalizedSearch) || normalizedSearch.includes(normalizedItem)
-            if (match) {
-              console.log(`[FINDID] Partial match found: ${key}="${itemValue}" (normalized: "${normalizedItem}")`)
-            }
-            return match
-          })
-        )
+        match = departments.find((item: any) => {
+          const nameNormalized = normalizeForMatching(String(item?.name ?? ""))
+          const codeNormalized = normalizeForMatching(String(item?.code ?? ""))
+          return (
+            nameNormalized.includes(normalizedSearch) ||
+            normalizedSearch.includes(nameNormalized) ||
+            codeNormalized.includes(normalizedSearch) ||
+            normalizedSearch.includes(codeNormalized)
+          )
+        })
       }
       
       if (!match) {
-        console.log(`[FINDID] No match found for "${searchValue}"`)
-        // Log all available values for debugging
-        const availableValues = collection.map((item: any) => 
-          keys.map((key) => `${key}="${item[key]}"`).join(', ')
-        ).join(' | ')
-        console.log(`[FINDID] Available values: ${availableValues}`)
         return { id: undefined, notFound: true }
       }
       
-      console.log(`[FINDID] Match found! ID: ${match.id}`)
-      return { id: String(match.id), notFound: false }
+      return { id: Number(match.id), notFound: false }
     }
 
-    // Helper function to get value from Excel row based on mapping
     const getMappedValue = (row: Record<string, any>, dbField: string): string => {
-      // Jika field dimatikan dari UI, selalu kembalikan string kosong
-      if (enabledFields && enabledFields[dbField] === false) {
-        return ''
-      }
       const excelColumn = mapping[dbField]
-      if (!excelColumn) return ''
+      if (!excelColumn) return ""
       
-      // Get value from row, handling various formats
       const rawValue = row[excelColumn]
-      if (rawValue === null || rawValue === undefined) return ''
-      
-      // Convert to string and trim
-      const stringValue = String(rawValue).trim()
-      return stringValue
+      if (rawValue === null || rawValue === undefined) return ""
+
+      return String(rawValue).trim()
     }
 
-    for (let index = 0; index < rows.length; index++) {
-      const row = rows[index]
-      if (!row) continue
+    let success = 0
+    let failed = 0
+    const errors: Array<{ row: number; message: string }> = []
+    // Untuk mode test: kumpulkan data row yang akan muncul di halaman finger
+    const fingerPagePreview: Array<{
+      row: number
+      nik: string
+      nama: string
+      email: string
+      department?: string
+    }> = []
+    let withoutEmailCount = 0 // Hitung yang tidak punya email
 
-      try {
-        // Extract values based on mapping
-        const email = getMappedValue(row, 'email')
-        if (!email || email === '') {
-          summary.failed++
-          summary.errors.push(`Row ${index + 2}: Email is required (column "${mapping.email || 'not mapped'}" is empty)`)
+    // OPTIMASI: Cache listUsers() di awal sekali saja (jangan dipanggil per row)
+    console.log("[MEMBERS IMPORT] Fetching existing users...")
+    const { data: existingUsersData, error: listUsersError } = await adminClient.auth.admin.listUsers()
+    if (listUsersError) {
+      console.error("[MEMBERS IMPORT] Failed to fetch users:", listUsersError)
+      return NextResponse.json(
+        { success: false, message: `Gagal memeriksa user yang sudah ada: ${listUsersError.message}` },
+        { status: 500 }
+      )
+    }
+    
+    // Buat Map untuk lookup cepat berdasarkan email (case-insensitive)
+    const usersByEmail = new Map<string, { id: string; email: string }>()
+    existingUsersData?.users?.forEach((user) => {
+      if (user.email) {
+        usersByEmail.set(user.email.toLowerCase(), { id: user.id, email: user.email })
+      }
+    })
+    console.log(`[MEMBERS IMPORT] Cached ${usersByEmail.size} existing users`)
+
+    // OPTIMASI: Cache existing organization_members untuk batch lookup
+    console.log("[MEMBERS IMPORT] Fetching existing organization members...")
+    const { data: existingMembersData } = await adminClient
+      .from("organization_members")
+      .select("id, user_id, organization_id, biodata_nik")
+      .eq("organization_id", orgId)
+    
+    const membersByUserId = new Map<string, { id: number; biodata_nik: string | null }>()
+    existingMembersData?.forEach((member) => {
+      if (member.user_id) {
+        membersByUserId.set(member.user_id, { id: member.id, biodata_nik: member.biodata_nik })
+      }
+    })
+    console.log(`[MEMBERS IMPORT] Cached ${membersByUserId.size} existing organization members`)
+
+    // OPTIMASI BATCH: Untuk mode import, kumpulkan semua data valid terlebih dahulu
+    if (mode === "import") {
+      console.log("[MEMBERS IMPORT] Starting batch processing mode...")
+      
+      // Kumpulkan semua data yang valid
+      interface ValidRowData {
+        rowNumber: number
+        row: Record<string, any>
+        nik: string
+        nama: string
+        nickname: string
+        nisn: string
+        jenisKelamin: string
+        tempatLahir: string
+        tanggalLahir: string | null
+        agama: string
+        jalan: string
+        rt: string
+        rw: string
+        dusun: string
+        kelurahan: string
+        kecamatan: string
+        noTelepon: string
+        email: string
+        departmentId: number | null
+        departmentName?: string
+      }
+
+      const validRows: ValidRowData[] = []
+      
+      // Validasi dan kumpulkan semua rows yang valid
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i]
+        const rowNumber = headerRow + headerRowCount + i
+
+        if (!row) {
+          failed++
+          errors.push({ row: rowNumber, message: "Empty row" })
           continue
         }
 
-        // Validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        if (!emailRegex.test(email)) {
-          summary.failed++
-          summary.errors.push(`Row ${index + 2}: Invalid email format "${email}". Please check the email address.`)
+        const nik = getMappedValue(row, "nik")
+        const nama = getMappedValue(row, "nama")
+        const nickname = getMappedValue(row, "nickname")
+        const nisn = getMappedValue(row, "nisn")
+        const jenisKelamin = getMappedValue(row, "jenis_kelamin").toUpperCase()
+        const tempatLahir = getMappedValue(row, "tempat_lahir")
+        const tanggalLahirRaw = getMappedValue(row, "tanggal_lahir")
+        const agama = getMappedValue(row, "agama")
+        const jalan = getMappedValue(row, "jalan")
+        const rt = getMappedValue(row, "rt")
+        const rw = getMappedValue(row, "rw")
+        const dusun = getMappedValue(row, "dusun")
+        const kelurahan = getMappedValue(row, "kelurahan")
+        const kecamatan = getMappedValue(row, "kecamatan")
+        const noTelepon = getMappedValue(row, "no_telepon")
+        const email = getMappedValue(row, "email")
+        const departmentValue = getMappedValue(row, "department_id")
+
+        // Validasi dasar
+        if (!nik || !nama) {
+          failed++
+          errors.push({ row: rowNumber, message: !nik ? "NIK is required" : "Nama Lengkap is required" })
           continue
         }
 
-        // Build invitation payload
-        const invitationPayload: Parameters<typeof createInvitation>[0] = {
-          email,
+        const hasEmail = email && email.trim() !== ""
+        if (!hasEmail) {
+          failed++
+          errors.push({ 
+            row: rowNumber, 
+            message: `Baris ${rowNumber}: Data tidak dapat di-import karena tidak memiliki email. Silakan lengkapi kolom email terlebih dahulu.`
+          })
+          continue
         }
 
-        // Map optional fields
-        const phone = getMappedValue(row, 'phone')
-        if (phone) invitationPayload.phone = phone
+        if (email && email !== "") {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+          if (!emailRegex.test(email)) {
+            failed++
+            errors.push({ row: rowNumber, message: `Email format invalid: "${email}"` })
+            continue
+          }
+        }
 
-        // Map department/group
-        const departmentValue = getMappedValue(row, 'department')
-        if (departmentValue && departments) {
-          // Debug: Log search value
-          console.log(`Searching for department: "${departmentValue}"`)
-          
-          const deptResult = findId(
-            departments, 
-            departmentValue, 
-            ['name', 'code'],
-            allowMatchingWithSubfields ? ['description'] : undefined
-          )
-          if (deptResult.id) {
-            const foundDept = departments.find((d: any) => String(d.id) === deptResult.id)
-            console.log(`Found department: ${foundDept?.name} (${foundDept?.code})`)
-            invitationPayload.department_id = deptResult.id
-          } else if (deptResult.notFound) {
-            // Check if department exists in other organizations
-            const { data: deptInOtherOrg } = await adminClient
-              .from('departments')
-              .select('id, name, code, organization_id')
-              .or(`name.ilike.%${departmentValue}%,code.ilike.%${departmentValue}%`)
-              .limit(5)
-            
-            // Try to find exact match in other orgs
-            const exactMatch = deptInOtherOrg?.find((d: any) => {
-              const nameMatch = d.name?.toLowerCase().trim() === departmentValue.toLowerCase().trim()
-              const codeMatch = d.code?.toLowerCase().trim() === departmentValue.toLowerCase().trim()
-              return nameMatch || codeMatch
-            })
-            
-            if (exactMatch) {
-              // Department exists in another organization - auto-create it in current org
-              console.log(`[IMPORT] Department "${departmentValue}" exists in org ${exactMatch.organization_id}, auto-creating in org ${orgId}`)
-              
-              const newDeptCode = exactMatch.code || departmentValue.toLowerCase().replace(/\s+/g, '_')
-              const newDeptName = exactMatch.name || departmentValue
-              
-              const { data: newDept, error: createError } = await adminClient
-                .from('departments')
-                .insert({
-                  organization_id: orgId,
-                  code: newDeptCode,
-                  name: newDeptName,
-                  is_active: true,
-                })
-                .select()
-                .single()
-              
-              if (createError) {
-                console.error(`[IMPORT] Failed to create department:`, createError)
-                const availableDepts = departments
-                  .map((d: any) => `"${d.name}" (code: "${d.code}")`)
-                  .join(', ')
-                summary.failed++
-                summary.errors.push(
-                  `Row ${index + 2}: Department/Group "${departmentValue}" not found and failed to create. Available: ${availableDepts || 'none'}`
-                )
-                continue
-              }
-              
-              // Add to departments array and use it
-              departments.push(newDept)
-              invitationPayload.department_id = String(newDept.id)
-              console.log(`[IMPORT] ✅ Auto-created and using department: ${newDept.name} (${newDept.code})`)
+        if (nik.length < 10) {
+          failed++
+          errors.push({ row: rowNumber, message: `NIK terlalu pendek (minimal 10 karakter): "${nik}"` })
+          continue
+        }
+
+        if (mapping.jenis_kelamin && jenisKelamin !== "L" && jenisKelamin !== "P") {
+          failed++
+          errors.push({ row: rowNumber, message: "Jenis Kelamin must be 'L' or 'P'" })
+          continue
+        }
+
+        let tanggalLahir: string | null = null
+        if (tanggalLahirRaw) {
+          if (/^\d{4}-\d{2}-\d{2}$/.test(tanggalLahirRaw)) {
+            tanggalLahir = tanggalLahirRaw
+          } else {
+            const parsed = new Date(tanggalLahirRaw)
+            if (!isNaN(parsed.getTime())) {
+              tanggalLahir = parsed.toISOString().split("T")[0]
             } else {
-              // Department doesn't exist anywhere - show error
-              const availableDepts = departments
-                .map((d: any) => `"${d.name}" (code: "${d.code}")`)
-                .join(', ')
-              
-              console.log(`[IMPORT] Department "${departmentValue}" not found in any organization`)
-              summary.failed++
-              summary.errors.push(
-                `Row ${index + 2}: Department/Group "${departmentValue}" not found. Available: ${availableDepts || 'none'}`
-              )
+              failed++
+              errors.push({ row: rowNumber, message: `Tanggal Lahir invalid: "${tanggalLahirRaw}"` })
               continue
             }
           }
         }
 
-        // Map position
-        const positionValue = getMappedValue(row, 'position')
-        if (positionValue && positions) {
-          const posResult = findId(
-            positions, 
-            positionValue, 
-            ['title', 'name', 'code'],
-            allowMatchingWithSubfields ? ['description'] : undefined
-          )
-          if (posResult.id) {
-            invitationPayload.position_id = posResult.id
-          } else if (posResult.notFound) {
-            // Position is optional, just log warning but don't fail
-            summary.errors.push(`Row ${index + 2}: Position "${positionValue}" not found (skipped)`)
+        let departmentId: number | null = null
+        let departmentName: string | undefined = undefined
+        if (departmentValue && departments && departments.length > 0) {
+          const deptResult = findDepartmentId(departmentValue, departments)
+          if (deptResult.id) {
+            departmentId = deptResult.id
+            const dept = departments.find((d: any) => Number(d.id) === Number(departmentId))
+            departmentName = dept?.name || undefined
           }
         }
 
-        // Map role
-        const roleValue = getMappedValue(row, 'role')
-        if (roleValue && roles) {
-          // Map Indonesian role names to English/system names
-          const roleMapping: Record<string, string> = {
-            'pengguna': 'User',
-            'pengguna biasa': 'User',
-            'user': 'User',
-            'admin': 'Admin',
-            'administrator': 'Admin',
-            'super admin': 'Super Admin',
-            'superadmin': 'Super Admin',
-          }
-          
-          // Normalize role value for mapping
-          const normalizedRoleValue = roleValue.toLowerCase().trim()
-          const mappedRoleValue = roleMapping[normalizedRoleValue] || roleValue
-          
-          // Try to find role with mapped value first, then original value
-          let roleResult = findId(
-            roles, 
-            mappedRoleValue, 
-            ['name', 'code'],
-            allowMatchingWithSubfields ? ['description'] : undefined
-          )
-          if (roleResult.notFound && mappedRoleValue !== roleValue) {
-            // If mapped value not found, try original value
-            roleResult = findId(
-              roles, 
-              roleValue, 
-              ['name', 'code'],
-              allowMatchingWithSubfields ? ['description'] : undefined
-            )
-          }
-          
-          if (roleResult.id) {
-            invitationPayload.role_id = roleResult.id
-            if (mappedRoleValue !== roleValue) {
-              console.log(`[IMPORT] Mapped role "${roleValue}" to "${mappedRoleValue}"`)
+        validRows.push({
+          rowNumber,
+          row,
+          nik,
+          nama,
+          nickname,
+          nisn,
+          jenisKelamin,
+          tempatLahir,
+          tanggalLahir,
+          agama,
+          jalan,
+          rt,
+          rw,
+          dusun,
+          kelurahan,
+          kecamatan,
+          noTelepon,
+          email,
+          departmentId,
+          departmentName,
+        })
+      }
+
+      console.log(`[MEMBERS IMPORT] Validated ${validRows.length} rows, ${failed} failed validation`)
+
+      // Batch process: Buat user untuk yang belum ada (parallel dengan concurrency limit)
+      const CONCURRENCY_LIMIT = 10 // Process 10 users at a time
+      const usersToCreate = validRows.filter(vr => !usersByEmail.has(vr.email.toLowerCase()))
+      
+      console.log(`[MEMBERS IMPORT] Creating ${usersToCreate.length} new users...`)
+      
+      for (let i = 0; i < usersToCreate.length; i += CONCURRENCY_LIMIT) {
+        const batch = usersToCreate.slice(i, i + CONCURRENCY_LIMIT)
+        await Promise.all(
+          batch.map(async (vr) => {
+            try {
+              const nameParts = vr.nama.trim().split(" ")
+              const firstName = nameParts[0] || vr.nama
+              const lastName = nameParts.slice(1).join(" ") || null
+              const randomPassword = `MB${orgId}${Date.now()}${Math.random().toString(36).substring(2, 15)}`
+
+              const { data: newUser, error: createUserError } = await adminClient.auth.admin.createUser({
+                email: vr.email,
+                password: randomPassword,
+                email_confirm: true,
+                user_metadata: {
+                  first_name: firstName,
+                  last_name: lastName,
+                },
+              })
+
+              if (createUserError || !newUser?.user) {
+                failed++
+                errors.push({
+                  row: vr.rowNumber,
+                  message: `Baris ${vr.rowNumber}: Gagal membuat user - ${createUserError?.message || "Tidak ada user yang dikembalikan"}`,
+                })
+                return null
+              }
+
+              usersByEmail.set(vr.email.toLowerCase(), { id: newUser.user.id, email: vr.email })
+              return { email: vr.email.toLowerCase(), userId: newUser.user.id, rowData: vr }
+            } catch (error: any) {
+              failed++
+              errors.push({
+                row: vr.rowNumber,
+                message: `Baris ${vr.rowNumber}: Gagal membuat user - ${error.message}`,
+              })
+              return null
             }
-          } else if (roleResult.notFound) {
-            // Role is optional, just log warning but don't fail
-            const availableRoles = roles
-              .map((r: any) => `"${r.name}" (code: "${r.code}")`)
-              .join(', ')
-            summary.errors.push(`Row ${index + 2}: Role "${roleValue}" not found (skipped). Available: ${availableRoles || 'none'}`)
-          }
-        }
-
-        // Map message/notes
-        const message = getMappedValue(row, 'message')
-        if (message) invitationPayload.message = message
-
-        // Map status (will be stored in message metadata and applied when invitation is accepted)
-        const statusValue = getMappedValue(row, 'status')
-        if (statusValue) {
-          // Normalize status values
-          const normalizedStatus = statusValue.toLowerCase().trim()
-          const isActive = normalizedStatus === 'aktif' || normalizedStatus === 'active' || normalizedStatus === '1' || normalizedStatus === 'true'
-          // Store status in message if message exists, otherwise create a status note
-          if (invitationPayload.message) {
-            invitationPayload.message += `\n[STATUS:${isActive ? 'ACTIVE' : 'INACTIVE'}]`
-          } else {
-            invitationPayload.message = `[STATUS:${isActive ? 'ACTIVE' : 'INACTIVE'}]`
-          }
-        }
-
-        if (mode === 'test') {
-          // Dry-run: only validate, don't create invitations
-          summary.success++
-        } else {
-          // Create invitation (real import)
-          // Pass organization_id and invited_by to skip member lookup
-          const result = await createInvitation({
-            ...invitationPayload,
-            organization_id: String(orgId),
-            invited_by: user.id,
           })
+        )
+      }
+
+      // Batch upsert user_profiles
+      console.log(`[MEMBERS IMPORT] Batch upserting ${validRows.length} user profiles...`)
+      const profilePayloads = validRows.map((vr) => {
+        const userId = usersByEmail.get(vr.email.toLowerCase())?.id
+        if (!userId) return null
+
+        const nameParts = vr.nama.trim().split(" ")
+        return {
+          id: userId,
+          email: vr.email,
+          first_name: nameParts[0] || vr.nama,
+          last_name: nameParts.slice(1).join(" ") || null,
+          phone: vr.noTelepon || null,
+          display_name: vr.nickname || vr.nama,
+          is_active: true,
+        }
+      }).filter(Boolean) as any[]
+
+      if (profilePayloads.length > 0) {
+        const { error: profileError } = await adminClient
+          .from("user_profiles")
+          .upsert(profilePayloads, { onConflict: "id" })
+
+        if (profileError) {
+          console.error("[MEMBERS IMPORT] Batch profile upsert error:", profileError)
+          // Fallback: upsert satu per satu untuk yang error
+          for (const vr of validRows) {
+            const userId = usersByEmail.get(vr.email.toLowerCase())?.id
+            if (!userId) continue
+            const nameParts = vr.nama.trim().split(" ")
+            await adminClient
+              .from("user_profiles")
+              .upsert({
+                id: userId,
+                email: vr.email,
+                first_name: nameParts[0] || vr.nama,
+                last_name: nameParts.slice(1).join(" ") || null,
+                phone: vr.noTelepon || null,
+                display_name: vr.nickname || vr.nama,
+                is_active: true,
+              }, { onConflict: "id" })
+          }
+        }
+      }
+
+      // Batch insert/update organization_members
+      console.log(`[MEMBERS IMPORT] Batch processing organization members...`)
+      const today = new Date().toISOString().split("T")[0]
+      const membersToInsert: any[] = []
+      const membersToUpdate: Array<{ id: number; data: any }> = []
+
+      for (const vr of validRows) {
+        const userId = usersByEmail.get(vr.email.toLowerCase())?.id
+        if (!userId || !orgId) continue
+
+        const existingMember = membersByUserId.get(userId)
+        if (existingMember) {
+          const updateData: any = { is_active: true }
+          if (vr.departmentId) updateData.department_id = vr.departmentId
+          if (vr.nik) updateData.biodata_nik = vr.nik
+          membersToUpdate.push({ id: existingMember.id, data: updateData })
+        } else {
+          membersToInsert.push({
+            user_id: userId,
+            organization_id: orgId,
+            department_id: vr.departmentId,
+            biodata_nik: vr.nik,
+            hire_date: today,
+            is_active: true,
+          })
+        }
+      }
+
+      // Batch insert new members
+      if (membersToInsert.length > 0) {
+        const { data: newMembers, error: insertError } = await adminClient
+          .from("organization_members")
+          .insert(membersToInsert)
+          .select("id, user_id, biodata_nik")
+
+        if (insertError) {
+          console.error("[MEMBERS IMPORT] Batch member insert error:", insertError)
+        } else if (newMembers) {
+          newMembers.forEach((member: any) => {
+            if (member.user_id) {
+              membersByUserId.set(member.user_id, { id: member.id, biodata_nik: member.biodata_nik })
+            }
+          })
+        }
+      }
+
+      // Batch update existing members (dalam batch kecil untuk menghindari query terlalu besar)
+      const UPDATE_BATCH_SIZE = 50
+      for (let i = 0; i < membersToUpdate.length; i += UPDATE_BATCH_SIZE) {
+        const batch = membersToUpdate.slice(i, i + UPDATE_BATCH_SIZE)
+        await Promise.all(
+          batch.map(({ id, data }) =>
+            adminClient
+              .from("organization_members")
+              .update(data)
+              .eq("id", id)
+          )
+        )
+      }
+
+      // Batch upsert biodata
+      console.log(`[MEMBERS IMPORT] Batch upserting ${validRows.length} biodata records...`)
+      const biodataPayloads = validRows.map((vr) => ({
+        nik: vr.nik,
+        nama: vr.nama,
+        nickname: vr.nickname || null,
+        nisn: vr.nisn || null,
+        jenis_kelamin: vr.jenisKelamin || null,
+        tempat_lahir: vr.tempatLahir || null,
+        tanggal_lahir: vr.tanggalLahir,
+        agama: vr.agama || null,
+        jalan: vr.jalan || null,
+        rt: vr.rt || null,
+        rw: vr.rw || null,
+        dusun: vr.dusun || null,
+        kelurahan: vr.kelurahan || null,
+        kecamatan: vr.kecamatan || null,
+        no_telepon: vr.noTelepon || null,
+        email: vr.email || null,
+        department_id: vr.departmentId,
+      }))
+
+      // Upsert dalam batch (Supabase mendukung batch upsert)
+      const BIODATA_BATCH_SIZE = 100
+      for (let i = 0; i < biodataPayloads.length; i += BIODATA_BATCH_SIZE) {
+        const batch = biodataPayloads.slice(i, i + BIODATA_BATCH_SIZE)
+        const { error: biodataError } = await adminClient
+          .from("biodata")
+          .upsert(batch, { onConflict: "nik" })
+
+        if (biodataError) {
+          console.error(`[MEMBERS IMPORT] Batch biodata upsert error (batch ${i / BIODATA_BATCH_SIZE + 1}):`, biodataError)
+          // Fallback: upsert satu per satu untuk batch yang error
+          for (const payload of batch) {
+            await adminClient
+              .from("biodata")
+              .upsert(payload, { onConflict: "nik" })
+          }
+        }
+      }
+
+      // Audit logs (optional, bisa di-skip jika terlalu lambat)
+      if (trackHistory) {
+        const auditLogs = validRows.map((vr) => ({
+          organization_id: orgId,
+          user_id: user.id,
+          action: "member_import",
+          entity_type: "biodata",
+          entity_id: null,
+          old_values: null,
+          new_values: {
+            nik: vr.nik,
+            nama: vr.nama,
+            email: vr.email,
+            department_id: vr.departmentId,
+            row_number: vr.rowNumber,
+            file_name: file.name,
+          },
+          ip_address: null,
+          user_agent: null,
+          session_id: null,
+        }))
+
+        // Batch insert audit logs dalam batch kecil
+        const AUDIT_BATCH_SIZE = 50
+        for (let i = 0; i < auditLogs.length; i += AUDIT_BATCH_SIZE) {
+          const batch = auditLogs.slice(i, i + AUDIT_BATCH_SIZE)
+          await adminClient.from("audit_logs").insert(batch).catch((err) => {
+            console.error("[MEMBERS IMPORT] Failed to write audit log batch:", err)
+          })
+        }
+      }
+
+      success = validRows.length
+      console.log(`[MEMBERS IMPORT] Batch processing complete: ${success} success, ${failed} failed`)
+
+      // Kumpulkan data untuk preview halaman finger (hanya yang punya email - semua validRows sudah punya email)
+      validRows.forEach((vr) => {
+        fingerPagePreview.push({
+          row: vr.rowNumber,
+          nik: vr.nik,
+          nama: vr.nama,
+          email: vr.email,
+          department: vr.departmentName,
+        })
+      })
+
+      // Skip loop normal untuk mode import
+      // Continue to response section
+    } else {
+      // Mode test: tetap gunakan loop normal (karena perlu cleanup)
+      for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]
+      const rowNumber = headerRow + headerRowCount + i
+
+      if (!row) {
+        failed++
+        errors.push({ row: rowNumber, message: "Empty row" })
+          continue
+        }
+
+      const nik = getMappedValue(row, "nik")
+      const nama = getMappedValue(row, "nama")
+      const nickname = getMappedValue(row, "nickname")
+      const nisn = getMappedValue(row, "nisn")
+      const jenisKelamin = getMappedValue(row, "jenis_kelamin").toUpperCase()
+      const tempatLahir = getMappedValue(row, "tempat_lahir")
+      const tanggalLahirRaw = getMappedValue(row, "tanggal_lahir")
+      const agama = getMappedValue(row, "agama")
+      const jalan = getMappedValue(row, "jalan")
+      const rt = getMappedValue(row, "rt")
+      const rw = getMappedValue(row, "rw")
+      const dusun = getMappedValue(row, "dusun")
+      const kelurahan = getMappedValue(row, "kelurahan")
+      const kecamatan = getMappedValue(row, "kecamatan")
+      const noTelepon = getMappedValue(row, "no_telepon")
+      const email = getMappedValue(row, "email")
+      const departmentValue = getMappedValue(row, "department_id")
+
+      if (!nik) {
+        failed++
+        errors.push({ row: rowNumber, message: "NIK is required" })
+          continue
+        }
+
+      if (!nama) {
+        failed++
+        errors.push({ row: rowNumber, message: "Nama Lengkap is required" })
+        continue
+      }
+
+      // Email wajib untuk bisa di-import (karena perlu user account untuk organization_members)
+      // Validasi email dilakukan di sini untuk semua mode (test dan import)
+      const hasEmail = email && email.trim() !== ""
+      if (!hasEmail) {
+        failed++
+        const errorMessage = `Baris ${rowNumber}: Data tidak dapat di-import karena tidak memiliki email. Silakan lengkapi kolom email terlebih dahulu.`
+        errors.push({ 
+          row: rowNumber, 
+          message: errorMessage
+        })
+        // Di mode test, hitung yang tidak punya email
+        if (mode === "test") {
+          withoutEmailCount++
+        }
+        continue
+      }
+              
+      if (mapping.jenis_kelamin) {
+        if (!jenisKelamin) {
+          failed++
+          errors.push({
+            row: rowNumber,
+            message: "Jenis Kelamin is required (must be 'L' or 'P')",
+          })
+          continue
+        }
+        if (jenisKelamin !== "L" && jenisKelamin !== "P") {
+          failed++
+          errors.push({
+            row: rowNumber,
+            message: "Jenis Kelamin must be 'L' or 'P'",
+          })
+          continue
+        }
+      }
+
+      let tanggalLahir: string | null = null
+      if (tanggalLahirRaw) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(tanggalLahirRaw)) {
+          tanggalLahir = tanggalLahirRaw
+        } else {
+          const parsed = new Date(tanggalLahirRaw)
+          if (!isNaN(parsed.getTime())) {
+            tanggalLahir = parsed.toISOString().split("T")[0]
+            } else {
+            failed++
+            errors.push({
+              row: rowNumber,
+              message: `Tanggal Lahir invalid: "${tanggalLahirRaw}"`,
+            })
+              continue
+            }
+          }
+        }
+
+      // Validasi NIK harus dilakukan sebelum mode test/import
+      if (nik && nik.length < 10) {
+        failed++
+        errors.push({
+          row: rowNumber,
+          message: `NIK terlalu pendek (minimal 10 karakter): "${nik}"`,
+        })
+        continue
+      }
+
+      if (email && email !== "") {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(email)) {
+          failed++
+          errors.push({
+            row: rowNumber,
+            message: `Email format invalid: "${email}"`,
+          })
+          continue
+        }
+      }
+
+      let departmentId: number | null = null
+      if (departmentValue && departments && departments.length > 0) {
+        const deptResult = findDepartmentId(departmentValue, departments)
+        if (deptResult.id) {
+          departmentId = deptResult.id
+        } else if (deptResult.notFound) {
+          errors.push({
+            row: rowNumber,
+            message: `Department "${departmentValue}" not found (skipped)`,
+          })
+        }
+      }
+
+      if (mode === "test") {
+        // Di mode test, lakukan SEMUA operasi yang sama dengan import (termasuk create user, update profile, dll)
+        // Tapi kita akan cleanup setelah test selesai
+        // Row tanpa email sudah di-handle di validasi email di atas
+        
+        try {
+          // Lakukan semua operasi yang sama dengan import mode
+          let userId: string | null = null
+          let createdUserInTest = false
+
+          // OPTIMASI: Gunakan cached usersByEmail map
+          const existingUserData = usersByEmail.get(email.toLowerCase())
+
+          if (existingUserData) {
+            userId = existingUserData.id
+
+            // Test: Cek apakah bisa update user profile
+            const { error: profileError } = await adminClient
+              .from("user_profiles")
+              .upsert(
+                {
+                  id: userId,
+                  email: email,
+                  first_name: nama.split(" ")[0] || nama,
+                  last_name: nama.split(" ").slice(1).join(" ") || null,
+                  phone: noTelepon || null,
+                  display_name: nickname || nama,
+                  is_active: true,
+                },
+                {
+                  onConflict: "id",
+                }
+              )
+
+            if (profileError) {
+              failed++
+              errors.push({
+                row: rowNumber,
+                message: `Baris ${rowNumber}: Gagal memperbarui profil user - ${profileError.message}`,
+              })
+          continue
+        }
+          } else {
+            // Test: Cek apakah bisa create user baru
+            const randomPassword = `TEST${orgId}${Date.now()}${Math.random().toString(36).substring(2, 15)}`
+            const nameParts = nama.trim().split(" ")
+            const firstName = nameParts[0] || nama
+            const lastName = nameParts.slice(1).join(" ") || null
+
+            const { data: newUser, error: createUserError } = await adminClient.auth.admin.createUser({
+              email: email,
+              password: randomPassword,
+              email_confirm: true,
+              user_metadata: {
+                first_name: firstName,
+                last_name: lastName,
+              },
+            })
+
+            if (createUserError) {
+              failed++
+              errors.push({
+                row: rowNumber,
+                message: `Baris ${rowNumber}: Gagal membuat user - ${createUserError.message}`,
+              })
+          continue
+        }
+
+            if (!newUser?.user) {
+              failed++
+              errors.push({
+                row: rowNumber,
+                message: `Baris ${rowNumber}: Gagal membuat user - Tidak ada user yang dikembalikan`,
+              })
+              continue
+            }
+              
+            userId = newUser.user.id
+            createdUserInTest = true
+
+            // OPTIMASI: Hapus delay yang tidak perlu
+            // await new Promise((resolve) => setTimeout(resolve, 100))
+
+            // Test: Cek apakah bisa create user profile
+            const { error: profileError } = await adminClient
+              .from("user_profiles")
+              .upsert(
+                {
+                  id: userId,
+                  email: email,
+                  first_name: firstName,
+                  last_name: lastName,
+                  phone: noTelepon || null,
+                  display_name: nickname || nama,
+                  is_active: true,
+                },
+                {
+                  onConflict: "id",
+                }
+              )
+
+            if (profileError) {
+              failed++
+              errors.push({
+                row: rowNumber,
+                message: `Baris ${rowNumber}: Gagal membuat profil user - ${profileError.message}`,
+              })
+              // Cleanup: hapus user yang baru dibuat
+              try {
+                await adminClient.auth.admin.deleteUser(userId)
+              } catch (deleteError) {
+                console.error(`[MEMBERS IMPORT TEST] Failed to cleanup user ${userId}:`, deleteError)
+              }
+              continue
+            }
+          }
+
+          // Test: Cek apakah bisa membuat organization_member
+          if (orgId && userId) {
+            const today = new Date().toISOString().split("T")[0]
+
+            // OPTIMASI: Gunakan cached membersByUserId map
+            const existingMember = membersByUserId.get(userId)
+
+            if (existingMember) {
+              // Test: update department dan biodata_nik jika diperlukan
+              const updateData: any = {
+                is_active: true,
+              }
+              // Cek department_id dari database (kita perlu query sekali untuk existing member)
+              const { data: memberData } = await adminClient
+                .from("organization_members")
+                .select("department_id")
+                .eq("id", existingMember.id)
+                .single()
+              
+              if (!memberData?.department_id && departmentId) {
+                updateData.department_id = departmentId
+              }
+              // Update biodata_nik dengan NIK jika belum ada atau berbeda
+              if (nik && existingMember.biodata_nik !== nik) {
+                updateData.biodata_nik = nik
+              }
+
+              if (Object.keys(updateData).length > 1) { // Lebih dari is_active saja
+                const { error: updateMemberError } = await adminClient
+                  .from("organization_members")
+                  .update(updateData)
+                  .eq("id", existingMember.id)
+
+                if (updateMemberError) {
+                  failed++
+                  errors.push({
+                    row: rowNumber,
+                    message: `Baris ${rowNumber}: Gagal memperbarui member organisasi - ${updateMemberError.message}`,
+                  })
+                  // Cleanup jika user baru dibuat
+                  if (createdUserInTest) {
+                    try {
+                      await adminClient.auth.admin.deleteUser(userId)
+                    } catch (deleteError) {
+                      console.error(`[MEMBERS IMPORT TEST] Failed to cleanup user ${userId}:`, deleteError)
+                    }
+                  }
+                  continue
+                }
+              } else {
+                // Jika hanya is_active, skip update (tidak perlu query)
+              }
+            } else {
+              // Test: Cek apakah bisa insert organization_member
+              const { error: memberInsertError } = await adminClient
+                .from("organization_members")
+                .insert({
+                  user_id: userId,
+                  organization_id: orgId,
+                  department_id: departmentId,
+                  biodata_nik: nik, // Isi biodata_nik dengan NIK
+                  hire_date: today,
+                  is_active: true,
+                })
+
+              if (memberInsertError) {
+                failed++
+                errors.push({
+                  row: rowNumber,
+                  message: `Baris ${rowNumber}: Gagal membuat member organisasi - ${memberInsertError.message}`,
+                })
+                // Cleanup jika user baru dibuat
+                if (createdUserInTest) {
+                  try {
+                    await adminClient.auth.admin.deleteUser(userId)
+                  } catch (deleteError) {
+                    console.error(`[MEMBERS IMPORT TEST] Failed to cleanup user ${userId}:`, deleteError)
+                  }
+                }
+                continue
+              }
+            }
+          }
+
+          // Test: Cek apakah bisa upsert biodata
+          const biodataPayload: any = {
+            nik,
+            nama,
+            nickname: nickname || null,
+            nisn: nisn || null,
+            jenis_kelamin: jenisKelamin || null,
+            tempat_lahir: tempatLahir || null,
+            tanggal_lahir: tanggalLahir,
+            agama: agama || null,
+            jalan: jalan || null,
+            rt: rt || null,
+            rw: rw || null,
+            dusun: dusun || null,
+            kelurahan: kelurahan || null,
+            kecamatan: kecamatan || null,
+            no_telepon: noTelepon || null,
+            email: email || null,
+            department_id: departmentId,
+          }
+
+          const { error: upsertError } = await adminClient
+            .from("biodata")
+            .upsert(biodataPayload, {
+              onConflict: "nik",
+            })
+
+          if (upsertError) {
+            failed++
+            errors.push({
+              row: rowNumber,
+              message: `Baris ${rowNumber}: Gagal menyimpan biodata - ${upsertError.message}`,
+            })
+            // Cleanup jika user baru dibuat
+            if (createdUserInTest) {
+              try {
+                await adminClient.auth.admin.deleteUser(userId)
+              } catch (deleteError) {
+                console.error(`[MEMBERS IMPORT TEST] Failed to cleanup user ${userId}:`, deleteError)
+              }
+            }
+              continue
+            }
+
+          // OPTIMASI: biodata_nik sudah diisi saat insert/update organization_members di atas
+          // Tidak perlu update lagi di sini
+
+          // Jika semua test passed, hitung sebagai success
+          success++
           
-          if (result.success) {
-            summary.success++
+          // Kumpulkan data untuk preview halaman finger (hanya yang punya email)
+          let departmentName: string | undefined = undefined
+          if (departmentId && departments && departments.length > 0) {
+            const dept = departments.find((d: any) => Number(d.id) === Number(departmentId))
+            departmentName = dept?.name || undefined
+          }
+          
+          fingerPagePreview.push({
+            row: rowNumber,
+            nik,
+            nama,
+            email: email,
+            department: departmentName,
+          })
+
+          // Cleanup: Hapus data yang dibuat di test mode
+          if (createdUserInTest && userId) {
+            // Hapus organization_member yang baru dibuat
+            try {
+              await adminClient
+                .from("organization_members")
+                .delete()
+                .eq("user_id", userId)
+                .eq("organization_id", orgId)
+            } catch (deleteError) {
+              console.error(`[MEMBERS IMPORT TEST] Failed to cleanup organization_member:`, deleteError)
+            }
+
+            // Hapus user profile
+            try {
+              await adminClient
+                .from("user_profiles")
+                .delete()
+                .eq("id", userId)
+            } catch (deleteError) {
+              console.error(`[MEMBERS IMPORT TEST] Failed to cleanup user profile:`, deleteError)
+            }
+
+            // Hapus user dari auth
+            try {
+              await adminClient.auth.admin.deleteUser(userId)
+            } catch (deleteError) {
+              console.error(`[MEMBERS IMPORT TEST] Failed to cleanup user ${userId}:`, deleteError)
+            }
+          }
+        } catch (error: any) {
+          failed++
+          errors.push({
+            row: rowNumber,
+            message: `Validation error: ${error.message || "Unexpected error"}`,
+          })
+        }
+        continue
+      }
+
+      try {
+        // Email sudah divalidasi di atas, jadi pasti ada
+        let userId: string | null = null
+
+        // OPTIMASI: Gunakan cached usersByEmail map
+        const existingUserData = usersByEmail.get(email.toLowerCase())
+
+        if (existingUserData) {
+          userId = existingUserData.id
+
+          const { error: profileError } = await adminClient
+            .from("user_profiles")
+            .upsert(
+              {
+                id: userId,
+                email: email,
+                first_name: nama.split(" ")[0] || nama,
+                last_name: nama.split(" ").slice(1).join(" ") || null,
+                phone: noTelepon || null,
+                display_name: nickname || nama,
+                is_active: true,
+              },
+              {
+                onConflict: "id",
+              }
+            )
+
+          if (profileError) {
+            failed++
+            errors.push({
+              row: rowNumber,
+              message: `Baris ${rowNumber}: Gagal memperbarui profil user - ${profileError.message}`,
+            })
+            continue
+          }
+        } else {
+          const randomPassword = `MB${orgId}${Date.now()}${Math.random().toString(36).substring(2, 15)}`
+
+          const nameParts = nama.trim().split(" ")
+          const firstName = nameParts[0] || nama
+          const lastName = nameParts.slice(1).join(" ") || null
+
+          const { data: newUser, error: createUserError } = await adminClient.auth.admin.createUser({
+            email: email,
+            password: randomPassword,
+            email_confirm: true,
+            user_metadata: {
+              first_name: firstName,
+              last_name: lastName,
+            },
+          })
+
+          if (createUserError) {
+            failed++
+            errors.push({
+              row: rowNumber,
+              message: `Baris ${rowNumber}: Gagal membuat user - ${createUserError.message}`,
+            })
+            continue
+          }
+
+          if (!newUser?.user) {
+            failed++
+            errors.push({
+              row: rowNumber,
+              message: `Baris ${rowNumber}: Gagal membuat user - Tidak ada user yang dikembalikan`,
+            })
+            continue
+          }
             
-            // Track history if enabled
-            if (trackHistory && mode === 'import') {
+          userId = newUser.user.id
+
+          // OPTIMASI: Hapus delay yang tidak perlu
+          // await new Promise((resolve) => setTimeout(resolve, 100))
+
+          // Update cache untuk user baru
+          usersByEmail.set(email.toLowerCase(), { id: userId, email: email })
+
+          const { error: profileError } = await adminClient
+            .from("user_profiles")
+            .upsert(
+              {
+                id: userId,
+                email: email,
+                first_name: firstName,
+                last_name: lastName,
+                phone: noTelepon || null,
+                display_name: nickname || nama,
+                is_active: true,
+              },
+              {
+                onConflict: "id",
+              }
+            )
+
+          if (profileError) {
+            failed++
+            errors.push({
+              row: rowNumber,
+              message: `Baris ${rowNumber}: Gagal membuat profil user - ${profileError.message}`,
+            })
+            try {
+              await adminClient.auth.admin.deleteUser(userId)
+            } catch (deleteError) {
+              console.error(`[MEMBERS IMPORT] Failed to cleanup user ${userId}:`, deleteError)
+            }
+            continue
+          }
+        }
+
+        // Buat/update organization_members (email sudah wajib, jadi userId pasti ada)
+        if (orgId && userId) {
+          const today = new Date().toISOString().split("T")[0]
+
+          // OPTIMASI: Gunakan cached membersByUserId map
+          const existingMember = membersByUserId.get(userId)
+
+          if (existingMember) {
+            // Update department dan biodata_nik jika diperlukan
+            const updateData: any = {
+              is_active: true,
+            }
+            // Cek department_id dari database (kita perlu query sekali untuk existing member)
+            const { data: memberData } = await adminClient
+              .from("organization_members")
+              .select("department_id")
+              .eq("id", existingMember.id)
+              .single()
+            
+            if (!memberData?.department_id && departmentId) {
+              updateData.department_id = departmentId
+            }
+            // Update biodata_nik dengan NIK jika belum ada atau berbeda
+            if (nik && existingMember.biodata_nik !== nik) {
+              updateData.biodata_nik = nik
+            }
+
+            if (Object.keys(updateData).length > 1) { // Lebih dari is_active saja
+              const { error: updateMemberError } = await adminClient
+                .from("organization_members")
+                .update(updateData)
+                .eq("id", existingMember.id)
+
+            if (updateMemberError) {
+              failed++
+              errors.push({
+                row: rowNumber,
+                message: `Baris ${rowNumber}: Gagal memperbarui member organisasi - ${updateMemberError.message}`,
+              })
+              continue
+            }
+          } else {
+            const { data: newMember, error: memberInsertError } = await adminClient
+              .from("organization_members")
+              .insert({
+                user_id: userId,
+                organization_id: orgId,
+                department_id: departmentId,
+                biodata_nik: nik, // Isi biodata_nik dengan NIK
+                hire_date: today,
+                is_active: true,
+              })
+              .select("id")
+              .single()
+
+            if (memberInsertError) {
+              failed++
+              errors.push({
+                row: rowNumber,
+                message: `Baris ${rowNumber}: Gagal membuat member organisasi - ${memberInsertError.message}`,
+              })
+              continue
+            }
+            
+            // Update cache untuk member baru
+            if (newMember) {
+              membersByUserId.set(userId, { id: newMember.id, biodata_nik: nik })
+            }
+          }
+        }
+
+        const biodataPayload: any = {
+          nik,
+          nama,
+          nickname: nickname || null,
+          nisn: nisn || null,
+          jenis_kelamin: jenisKelamin || null,
+          tempat_lahir: tempatLahir || null,
+          tanggal_lahir: tanggalLahir,
+          agama: agama || null,
+          jalan: jalan || null,
+          rt: rt || null,
+          rw: rw || null,
+          dusun: dusun || null,
+          kelurahan: kelurahan || null,
+          kecamatan: kecamatan || null,
+          no_telepon: noTelepon || null,
+          email: email || null,
+          department_id: departmentId,
+        }
+
+        const { error: upsertError } = await adminClient
+          .from("biodata")
+          .upsert(biodataPayload, {
+            onConflict: "nik",
+          })
+
+        if (upsertError) {
+          failed++
+          errors.push({
+            row: rowNumber,
+            message: `Baris ${rowNumber}: Gagal menyimpan biodata - ${upsertError.message}`,
+          })
+          continue
+        }
+
+        // OPTIMASI: biodata_nik sudah diisi saat insert/update organization_members di atas
+        // Tidak perlu update lagi di sini
+
+        if (trackHistory && mode === "import") {
               try {
                 await adminClient
-                  .from('audit_logs')
+              .from("audit_logs")
                   .insert({
                     organization_id: orgId,
                     user_id: user.id,
-                    action: 'member_import',
-                    entity_type: 'organization_member',
-                    entity_id: null, // Will be set when invitation is accepted
+                action: "member_import",
+                entity_type: "biodata",
+                entity_id: null,
                     old_values: null,
                     new_values: {
-                      email: invitationPayload.email,
-                      phone: invitationPayload.phone || null,
-                      department_id: invitationPayload.department_id || null,
-                      position_id: invitationPayload.position_id || null,
-                      role_id: invitationPayload.role_id || null,
-                      source: 'import',
-                      row_number: index + 2,
+                  nik,
+                  nama,
+                  email,
+                  department_id: departmentId,
+                  row_number: rowNumber,
                       file_name: file.name,
                     },
                     ip_address: null,
@@ -680,34 +1405,57 @@ export async function POST(request: NextRequest) {
                     session_id: null,
                   })
               } catch (auditError) {
-                // Log error but don't fail the import
-                console.error('[IMPORT] Failed to write audit log:', auditError)
-              }
-            }
-          } else {
-            summary.failed++
-            summary.errors.push(`Row ${index + 2}: ${result.message || 'Failed to send invitation'}`)
+            console.error("[MEMBERS IMPORT] Failed to write audit log:", auditError)
           }
         }
-      } catch (error) {
-        summary.failed++
-        summary.errors.push(
-          `Row ${index + 2}: ${error instanceof Error ? error.message : 'Unknown error'}`
-        )
+
+        success++
+      } catch (error: any) {
+        failed++
+        errors.push({
+          row: rowNumber,
+          message: error.message || "Unexpected error",
+        })
+        console.error(`[MEMBERS IMPORT] Error processing row ${rowNumber}:`, error)
+      }
+    }
+    } // End of else block (mode test)
+
+    const response: any = {
+      success: true,
+      summary: {
+        success,
+        failed,
+        errors,
+      },
+    }
+
+    // Untuk mode test, tambahkan informasi preview halaman finger
+    if (mode === "test") {
+      const withEmailCount = fingerPagePreview.length
+      const totalWillAppear = withEmailCount
+      
+      let message = ""
+      if (totalWillAppear > 0) {
+        message = `${totalWillAppear} data akan muncul di halaman Fingerprint setelah import`
+      } else {
+        message = "Tidak ada data yang akan muncul di halaman Fingerprint"
+      }
+      
+      response.fingerPagePreview = {
+        totalRows: totalWillAppear,
+        withEmailCount,
+        withoutEmailCount,
+        sampleData: fingerPagePreview.slice(0, 10), // Ambil 10 sample pertama
+        message,
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      summary,
-    })
+    return NextResponse.json(response)
   } catch (error) {
-    console.error('Error processing import:', error)
+    console.error("[MEMBERS IMPORT] Unexpected error:", error)
     return NextResponse.json(
-      {
-        success: false,
-        message: error instanceof Error ? error.message : 'Failed to process import',
-      },
+      { success: false, message: "Unexpected error processing import" },
       { status: 500 }
     )
   }

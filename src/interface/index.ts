@@ -224,8 +224,9 @@ export interface IMemberSchedule{
     id: string;
     organization_member_id: string;
     work_schedule_id: string;
-    shift_id:string;
+    shift_id?: string;
     effective_date: string;
+    end_date?: string | null;
     is_active: boolean;
     created_at: string;
     updated_at?: string;
