@@ -436,7 +436,7 @@ export default function PositionsPage() {
                                             </FormItem>
                                         )}
                                     />
-                                    <FormField
+                                    {/* <FormField
                                         control={form.control}
                                         name="level"
                                         render={({ field }) => (
@@ -447,7 +447,7 @@ export default function PositionsPage() {
                                                 </FormControl>
                                             </FormItem>
                                         )}
-                                    />
+                                    /> */}
                                     <FormField
                                         control={form.control}
                                         name="is_active"
@@ -499,7 +499,7 @@ export default function PositionsPage() {
                                                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Code</th>
                                                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Position Name</th>
                                                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Description</th>
-                                                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Level</th>
+                                                {/* <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Level</th> */}
                                                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Status</th>
                                                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Actions</th>
                                             </tr>
@@ -519,7 +519,7 @@ export default function PositionsPage() {
                                                         <td className="px-4 py-3 text-sm">{position.code}</td>
                                                         <td className="px-4 py-3 text-sm">{position.title}</td>
                                                         <td className="px-4 py-3 text-sm">{position.description || "-"}</td>
-                                                        <td className="px-4 py-3 text-sm">{position.level || "-"}</td>
+                                                        {/* <td className="px-4 py-3 text-sm">{position.level || "-"}</td> */}
                                                         <td className="px-4 py-3 text-sm">
                                                             {position.is_active ? (
                                                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white">Active</span>
@@ -562,7 +562,7 @@ export default function PositionsPage() {
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-gray-50 rounded-md border">
+                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-gray-50 rounded-md border mt-10">
                                     <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-nowrap justify-center w-full md:w-auto">
                                         <Button variant="ghost" size="sm" onClick={() => setPageIndex(0)} disabled={pageIndex === 0 || loading} className="h-8 w-8 p-0" title="First page">
                                             <ChevronsLeft className="h-4 w-4" />
