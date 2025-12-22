@@ -538,36 +538,7 @@ export default function FingerPage() {
         (payload) => {
           console.log('🔄 Biometric data change detected:', payload.eventType, payload)
           
-          // Optimistic update: Update UI immediately
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            const updatedData = payload.new
-            
-            setMembers(prevMembers => 
-              prevMembers.map(member => {
-                if (member.id === updatedData.organization_member_id) {
-                  // Update finger registration status based on the update
-                  const finger1 = updatedData.finger_number === 1 ? 
-                    (updatedData.status === 'REGISTERED') : 
-                    member.finger1_registered
-                    
-                  const finger2 = updatedData.finger_number === 2 ? 
-                    (updatedData.status === 'REGISTERED') : 
-                    member.finger2_registered
-                  
-                  console.log(`🔄 Updating member ${member.id} - Finger ${updatedData.finger_number} status: ${updatedData.status}`)
-                  
-                  return {
-                    ...member,
-                    finger1_registered: finger1,
-                    finger2_registered: finger2
-                  }
-                }
-                return member
-              })
-            )
-          }
-          
-          // Still fetch fresh data to ensure consistency
+          // Refetch all data to ensure consistency
           fetchMembers()
         }
       )
@@ -718,7 +689,7 @@ export default function FingerPage() {
       // toast.info(`Command sent to device. Please scan finger ${fingerNumber} on the device.`)
 
       const startTime = Date.now()
-      const timeout = 90000
+      const timeout = 60000
       const pollInterval = 1000
 
       const pollStatus = async (): Promise<boolean> => {
