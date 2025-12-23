@@ -717,7 +717,8 @@ export default function FingerPage() {
 
       const payload = {
         user_id: member.user_id,
-        name: member.first_name || member.full_name,
+        first_name: member.first_name,
+        full_name: member.full_name,
         finger_index: fingerNumber
       }
 
