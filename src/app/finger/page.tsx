@@ -79,6 +79,7 @@ export default function FingerPage() {
   const [pageIndex, setPageIndex] = React.useState(0)
   const registrationCompleteRef = React.useRef(false)
   const lastPolledStatusRef = React.useRef<string | null>(null)
+  const [activeCommandId, setActiveCommandId] = React.useState<number | null>(null)
 
   // Throttled logger to avoid console spam on loops/polling
   const lastLogRef = React.useRef<Record<string, number>>({})
@@ -584,6 +585,33 @@ export default function FingerPage() {
   }, [mounted, organizationId, fetchMembers])
 
   React.useEffect(() => {
+    if (!mounted || !activeCommandId) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`device-commands-${activeCommandId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'device_commands',
+          filter: `id=eq.${activeCommandId}`
+        },
+        (payload) => {
+          const next = (payload as unknown as { new?: Record<string, unknown> }).new
+          const s = typeof next?.status === 'string' ? (next.status as string) : undefined
+          if (s === 'EXECUTED' || s === 'FAILED' || s === 'CANCELLED') {
+            registrationCompleteRef.current = true
+          }
+        }
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [mounted, activeCommandId])
+
+  React.useEffect(() => {
     if (mounted && selectedDevice) {
       localStorage.setItem("selected_fingerprint_device", selectedDevice)
     }
@@ -677,6 +705,7 @@ export default function FingerPage() {
     const supabase = createClient()
     let command: any = null
     registrationCompleteRef.current = false
+    lastPolledStatusRef.current = null
 
     try {
       console.log('=== STARTING REGISTRATION ===')
@@ -709,6 +738,7 @@ export default function FingerPage() {
 
       command = commandData
       console.log('Command inserted, ID:', command?.id)
+      setActiveCommandId(command?.id ?? null)
       // toast.info(`Command sent to device. Please scan finger ${fingerNumber} on the device.`)
 
       const startTime = Date.now()
@@ -835,6 +865,7 @@ export default function FingerPage() {
         }
       }
     } finally {
+      setActiveCommandId(null)
       setIsRegistering(false)
       setRegisteringMember(null)
       setActiveMemberId(null)
