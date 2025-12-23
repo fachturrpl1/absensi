@@ -79,7 +79,7 @@ export default function FingerPage() {
   const [pageIndex, setPageIndex] = React.useState(0)
   const registrationCompleteRef = React.useRef(false)
   const lastPolledStatusRef = React.useRef<string | null>(null)
-  const [activeCommandId, setActiveCommandId] = React.useState<number | null>(null)
+  const [activeCommandId, setActiveCommandId] = React.useState<string | number | null>(null)
   const realtimeStatusRef = React.useRef<string | null>(null)
 
   // Throttled logger to avoid console spam on loops/polling
@@ -765,13 +765,17 @@ export default function FingerPage() {
             return false
           }
 
-          let status: { status?: string; error_message?: string } | null = null
+          let status: { status?: string } | null = null
           try {
-            const { data } = await supabase
+            const { data, error } = await supabase
               .from('device_commands')
-              .select('status, error_message')
+              .select('status')
               .eq('id', command.id)
               .maybeSingle()
+            if (error) {
+              logOnce('polling-error', 'warn', '⚠️ Polling error reading device_commands:', error)
+              continue
+            }
             status = data as any
           } catch (e) {
             logOnce('polling-error', 'warn', '⚠️ Polling error reading device_commands:', e)
@@ -792,10 +796,7 @@ export default function FingerPage() {
           if (status?.status === 'FAILED') {
             console.log('❌ Polling detected FAILED status')
             registrationCompleteRef.current = true
-            const msg = typeof status?.error_message === 'string' && status.error_message.toLowerCase().includes('timeout')
-              ? 'Timeout Register: device not responding'
-              : (status?.error_message || 'Registration failed')
-            toast.error(msg)
+            toast.error('Registration failed')
             return false
           }
 
@@ -806,7 +807,7 @@ export default function FingerPage() {
         }
 
         // Timeout reached - auto-cancel the command
-        console.log('⏱️ Timeout reached (60 seconds), auto-failed command...')
+        console.log('⏱️ Timeout reached (30 seconds), auto-failed command...')
         const { error: cancelError } = await supabase
           .from('device_commands')
           .update({ status: 'FAILED' })
