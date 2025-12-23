@@ -711,9 +711,9 @@ export default function FingerPage() {
     realtimeStatusRef.current = null
 
     try {
-      console.log('=== STARTING REGISTRATION ===')
-      console.log('Member:', member.full_name, '| User ID:', member.user_id)
-      console.log('Device:', selectedDevice, '| Finger:', fingerNumber)
+      if (DEBUG) console.log('=== STARTING REGISTRATION ===')
+      if (DEBUG) console.log('Member:', member.full_name, '| User ID:', member.user_id)
+      if (DEBUG) console.log('Device:', selectedDevice, '| Finger:', fingerNumber)
 
       const payload = {
         user_id: member.user_id,
@@ -740,7 +740,7 @@ export default function FingerPage() {
       }
 
       command = commandData
-      console.log('Command inserted, ID:', command?.id)
+      if (DEBUG) console.log('Command inserted, ID:', command?.id)
       setActiveCommandId(command?.id ?? null)
       // toast.info(`Command sent to device. Please scan finger ${fingerNumber} on the device.`)
 
