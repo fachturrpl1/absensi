@@ -237,8 +237,9 @@ const cspHeader = isDev ? '' : `
   object-src 'none';
   base-uri 'self';
   form-action 'self';
+  frame-src 'self' https://vercel.live https://*.vercel.live;
   frame-ancestors 'none';
-  connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in;
+  connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in https://vercel.live https://*.vercel.live wss://vercel.live wss://*.vercel.live;
   media-src 'self';
   worker-src 'self' blob:;
   manifest-src 'self';
