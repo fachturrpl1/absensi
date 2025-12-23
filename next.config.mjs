@@ -230,7 +230,7 @@ const withPWA = withPWAInit({
 // Content Security Policy untuk production dengan PWA support
 const cspHeader = isDev ? '' : `
   default-src 'self';
-  script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.supabase.co https://cdn.jsdelivr.net;
+  script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.supabase.co https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live;
   style-src 'self' 'unsafe-inline';
   img-src 'self' blob: data: https://*.supabase.co https://*.supabase.in;
   font-src 'self' data:;

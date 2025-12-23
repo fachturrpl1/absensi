@@ -601,7 +601,7 @@ export default function FingerPage() {
         (payload) => {
           const next = (payload as unknown as { new?: Record<string, unknown> }).new
           const s = typeof next?.status === 'string' ? (next.status as string) : undefined
-          if (s === 'EXECUTED' || s === 'FAILED' || s === 'CANCELLED') {
+          if (s === 'EXECUTED' || s === 'FAILED' || s === 'CANCELLED' || s === 'TIMEOUT') {
             registrationCompleteRef.current = true
             realtimeStatusRef.current = s
           }
@@ -800,6 +800,13 @@ export default function FingerPage() {
             return false
           }
 
+          if (status?.status === 'TIMEOUT') {
+            console.log('⏱️ Polling detected TIMEOUT status')
+            registrationCompleteRef.current = true
+            toast.error('Timeout: device not responding')
+            return false
+          }
+
           if (status?.status === 'CANCELLED') {
             registrationCompleteRef.current = true
             return false
@@ -810,7 +817,7 @@ export default function FingerPage() {
         console.log('⏱️ Timeout reached (30 seconds), auto-failed command...')
         const { error: cancelError } = await supabase
           .from('device_commands')
-          .update({ status: 'FAILED' })
+          .update({ status: 'TIMEOUT' })
           .eq('id', command?.id)
           .select()
 
@@ -820,7 +827,10 @@ export default function FingerPage() {
           console.log('✅ Command auto-failed successfully')
         }
 
-        toast.error('Timeout Register: device not responding')
+        registrationCompleteRef.current = true
+        realtimeStatusRef.current = 'TIMEOUT'
+
+        toast.error('Timeout: device not responding')
         return false
       }
 
@@ -865,7 +875,8 @@ export default function FingerPage() {
       // Auto-cancel on error only if not success
       if (!success && command?.id) {
         try {
-          if (realtimeStatusRef.current !== 'CANCELLED') {
+          const s = realtimeStatusRef.current
+          if (s !== 'CANCELLED' && s !== 'TIMEOUT' && s !== 'FAILED' && s !== 'EXECUTED') {
             await supabase
               .from('device_commands')
               .update({ status: 'CANCELLED' })
@@ -892,6 +903,8 @@ export default function FingerPage() {
     }
 
     try {
+      registrationCompleteRef.current = true
+      realtimeStatusRef.current = 'CANCELLED'
       const supabase = createClient()
       
       // Find and cancel the pending command
