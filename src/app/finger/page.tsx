@@ -80,6 +80,7 @@ export default function FingerPage() {
   const registrationCompleteRef = React.useRef(false)
   const lastPolledStatusRef = React.useRef<string | null>(null)
   const [activeCommandId, setActiveCommandId] = React.useState<number | null>(null)
+  const realtimeStatusRef = React.useRef<string | null>(null)
 
   // Throttled logger to avoid console spam on loops/polling
   const lastLogRef = React.useRef<Record<string, number>>({})
@@ -602,6 +603,7 @@ export default function FingerPage() {
           const s = typeof next?.status === 'string' ? (next.status as string) : undefined
           if (s === 'EXECUTED' || s === 'FAILED' || s === 'CANCELLED') {
             registrationCompleteRef.current = true
+            realtimeStatusRef.current = s
           }
         }
       )
@@ -706,6 +708,7 @@ export default function FingerPage() {
     let command: any = null
     registrationCompleteRef.current = false
     lastPolledStatusRef.current = null
+    realtimeStatusRef.current = null
 
     try {
       console.log('=== STARTING REGISTRATION ===')
@@ -742,7 +745,7 @@ export default function FingerPage() {
       // toast.info(`Command sent to device. Please scan finger ${fingerNumber} on the device.`)
 
       const startTime = Date.now()
-      const timeout = 60000
+      const timeout = 30000
       const pollInterval = 1000
 
       const pollStatus = async (): Promise<boolean> => {
@@ -752,7 +755,8 @@ export default function FingerPage() {
           // Stop polling if real-time update already completed
           if (registrationCompleteRef.current) {
             console.log('✅ Real-time update already completed, stopping polling')
-            return true
+            const rs = realtimeStatusRef.current
+            return rs === 'EXECUTED'
           }
 
           // Guard: prevent 400 Bad Request when command.id is missing
@@ -792,6 +796,11 @@ export default function FingerPage() {
               ? 'Timeout Register: device not responding'
               : (status?.error_message || 'Registration failed')
             toast.error(msg)
+            return false
+          }
+
+          if (status?.status === 'CANCELLED') {
+            registrationCompleteRef.current = true
             return false
           }
         }
@@ -855,11 +864,13 @@ export default function FingerPage() {
       // Auto-cancel on error only if not success
       if (!success && command?.id) {
         try {
-          await supabase
-            .from('device_commands')
-            .update({ status: 'CANCELLED' })
-            .eq('id', command.id)
-            .select()
+          if (realtimeStatusRef.current !== 'CANCELLED') {
+            await supabase
+              .from('device_commands')
+              .update({ status: 'CANCELLED' })
+              .eq('id', command.id)
+              .select()
+          }
         } catch (cancelErr) {
           console.error('Failed to cancel command on error:', cancelErr)
         }
