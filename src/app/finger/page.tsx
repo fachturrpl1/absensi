@@ -57,6 +57,7 @@ interface Member {
 type FilterStatus = "all" | "complete" | "partial" | "unregistered"
 
 export default function FingerPage() {
+  const DEBUG = false
   const [members, setMembers] = React.useState<Member[]>([])
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isLoading, setIsLoading] = React.useState(true)
@@ -77,6 +78,24 @@ export default function FingerPage() {
   const [pageSize, setPageSize] = React.useState("10")
   const [pageIndex, setPageIndex] = React.useState(0)
   const registrationCompleteRef = React.useRef(false)
+  const lastPolledStatusRef = React.useRef<string | null>(null)
+
+  // Throttled logger to avoid console spam on loops/polling
+  const lastLogRef = React.useRef<Record<string, number>>({})
+  const logOnce = React.useCallback((key: string, level: 'log' | 'warn' | 'error' = 'log', ...args: unknown[]) => {
+    const now = Date.now()
+    const last = lastLogRef.current[key] || 0
+    // 10s throttle per key
+    if (now - last > 10000) {
+      const logger: Record<'log' | 'warn' | 'error', (...data: unknown[]) => void> = {
+        log: console.log,
+        warn: console.warn,
+        error: console.error,
+      }
+      logger[level](...args)
+      lastLogRef.current[key] = now
+    }
+  }, [])
 
   // Handle click on member name to navigate to profile
   const handleMemberClick = (memberId: number) => {
@@ -207,9 +226,9 @@ export default function FingerPage() {
     try {
       const supabase = createClient()
 
-      console.log('[FINGER-PAGE] === FETCHING MEMBERS ===')
-      console.log('[FINGER-PAGE] organizationId from store:', organizationId)
-      console.log('[FINGER-PAGE] isHydrated:', isHydrated)
+      if (DEBUG) console.log('[FINGER-PAGE] === FETCHING MEMBERS ===')
+      if (DEBUG) console.log('[FINGER-PAGE] organizationId from store:', organizationId)
+      if (DEBUG) console.log('[FINGER-PAGE] isHydrated:', isHydrated)
 
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError) {
@@ -226,7 +245,7 @@ export default function FingerPage() {
         return
       }
 
-      console.log('User ID:', user.id)
+      if (DEBUG) console.log('User ID:', user.id)
 
       let orgId = organizationId
       
@@ -253,11 +272,11 @@ export default function FingerPage() {
         }
         
         orgId = member.organization_id
-        console.log('✅ Organization ID from database:', orgId)
+        if (DEBUG) console.log('✅ Organization ID from database:', orgId)
       }
 
-      console.log('✅ Using Organization ID:', orgId, '(type:', typeof orgId, ')')
-      console.log('✅ Fetching members for organization:', orgId)
+      if (DEBUG) console.log('✅ Using Organization ID:', orgId, '(type:', typeof orgId, ')')
+      if (DEBUG) console.log('✅ Fetching members for organization:', orgId)
 
       // First, fetch ALL members (including inactive) to debug
       const { data: allMembersData, error: allMembersError } = await supabase
@@ -294,8 +313,8 @@ export default function FingerPage() {
         return isActive
       }) || []
 
-      console.log('✅ Active members after filter:', membersData.length)
-      console.log('📋 Sample active members data:', membersData?.slice(0, 3))
+      if (DEBUG) console.log('✅ Active members after filter:', membersData.length)
+      if (DEBUG) console.log('📋 Sample active members data:', membersData?.slice(0, 3))
 
       if (membersData && membersData.length > 0) {
         const invalidMembers = membersData.filter((m: any) => m.organization_id !== orgId)
@@ -309,8 +328,8 @@ export default function FingerPage() {
         // Check for members without user_profiles
         const membersWithoutProfile = membersData.filter((m: any) => !m.user_profiles)
         if (membersWithoutProfile.length > 0) {
-          console.warn('⚠️ Found members without user_profiles:', membersWithoutProfile.length)
-          console.warn('⚠️ Sample:', membersWithoutProfile.slice(0, 3))
+          logOnce('missing-profile', 'warn', '⚠️ Found members without user_profiles:', membersWithoutProfile.length)
+          if (DEBUG) console.warn('⚠️ Sample:', membersWithoutProfile.slice(0, 3))
         }
       }
 
@@ -323,7 +342,7 @@ export default function FingerPage() {
         console.warn('⚠️ Departments error:', deptError.message)
       }
 
-      console.log('✅ Departments fetched:', departments?.length || 0)
+      if (DEBUG) console.log('✅ Departments fetched:', departments?.length || 0)
 
       const deptMap = new Map(departments?.map((d: any) => [d.id, d.name]) || [])
 
@@ -343,8 +362,8 @@ export default function FingerPage() {
             console.warn('⚠️ Biometric data error:', bioError.message)
           } else {
             biometricData = bioData || []
-            console.log('✅ Biometric data fetched:', biometricData.length, 'records')
-            console.log('📋 Sample biometric data:', biometricData.slice(0, 5))
+            if (DEBUG) console.log('✅ Biometric data fetched:', biometricData.length, 'records')
+            if (DEBUG) console.log('📋 Sample biometric data:', biometricData.slice(0, 5))
           }
         } catch (bioErr) {
           console.warn('⚠️ Biometric data table might not exist, continuing without it:', bioErr)
@@ -410,12 +429,12 @@ export default function FingerPage() {
           }
           fingerMap.get(memberId)!.add(Number(fingerNumber))
           
-          console.log(`✅ Member ${memberId}: Assigned finger ${fingerNumber} (record ${index + 1} of ${records.length})`)
+          if (DEBUG) console.log(`✅ Member ${memberId}: Assigned finger ${fingerNumber} (record ${index + 1} of ${records.length})`)
         })
       })
       
-      console.log('✅ Finger map created:', fingerMap.size, 'members with registered fingers')
-      console.log('📊 Finger map details:', Array.from(fingerMap.entries()).map(([id, fingers]) => ({
+      if (DEBUG) console.log('✅ Finger map created:', fingerMap.size, 'members with registered fingers')
+      if (DEBUG) console.log('📊 Finger map details:', Array.from(fingerMap.entries()).map(([id, fingers]) => ({
         memberId: id,
         fingers: Array.from(fingers)
       })))
@@ -423,13 +442,11 @@ export default function FingerPage() {
       // Filter members with is_active = true (handle both boolean and string)
       const activeMembers = membersData?.filter((m: any) => {
         const isActive = m.is_active === true || m.is_active === 'true' || m.is_active === 1
-        if (!isActive) {
-          console.log(`⚠️ Member ${m.id} is not active: is_active = ${m.is_active} (type: ${typeof m.is_active})`)
-        }
+        if (!isActive && DEBUG) console.log(`⚠️ Member ${m.id} is not active: is_active = ${m.is_active} (type: ${typeof m.is_active})`)
         return isActive
       }) || []
 
-      console.log(`✅ Filtered active members: ${activeMembers.length} of ${membersData?.length || 0} total`)
+      if (DEBUG) console.log(`✅ Filtered active members: ${activeMembers.length} of ${membersData?.length || 0} total`)
 
       const transformedMembers = activeMembers.map((m: any) => {
         const profile = m.user_profiles
@@ -454,7 +471,7 @@ export default function FingerPage() {
         const finger2Registered = fingers.has(2)
         
         // Debug logging for members with registered fingers
-        if (finger1Registered || finger2Registered) {
+        if ((finger1Registered || finger2Registered) && DEBUG) {
           console.log(`✅ Member ${m.id} (${fullName}): Finger 1=${finger1Registered}, Finger 2=${finger2Registered}, Fingers Set:`, Array.from(fingers))
         }
 
@@ -471,16 +488,16 @@ export default function FingerPage() {
         }
       }) || []
 
-      console.log('✅ Members transformed:', transformedMembers.length)
-      console.log('📊 SUMMARY:')
-      console.log(`   - Organization ID: ${orgId}`)
-      console.log(`   - Total Members: ${transformedMembers.length}`)
-      console.log(`   - Members with profiles: ${transformedMembers.filter(m => m.full_name !== 'No Name').length}`)
-      console.log(`   - Finger 1 Registered: ${transformedMembers.filter(m => m.finger1_registered).length}`)
-      console.log(`   - Finger 2 Registered: ${transformedMembers.filter(m => m.finger2_registered).length}`)
+      if (DEBUG) console.log('✅ Members transformed:', transformedMembers.length)
+      if (DEBUG) console.log('📊 SUMMARY:')
+      if (DEBUG) console.log(`   - Organization ID: ${orgId}`)
+      if (DEBUG) console.log(`   - Total Members: ${transformedMembers.length}`)
+      if (DEBUG) console.log(`   - Members with profiles: ${transformedMembers.filter(m => m.full_name !== 'No Name').length}`)
+      if (DEBUG) console.log(`   - Finger 1 Registered: ${transformedMembers.filter(m => m.finger1_registered).length}`)
+      if (DEBUG) console.log(`   - Finger 2 Registered: ${transformedMembers.filter(m => m.finger2_registered).length}`)
       
       // Log first few members for debugging
-      if (transformedMembers.length > 0) {
+      if (transformedMembers.length > 0 && DEBUG) {
         console.log('📋 First 5 members:', transformedMembers.slice(0, 5).map(m => ({
           id: m.id,
           name: m.full_name,
@@ -490,8 +507,8 @@ export default function FingerPage() {
           finger2: m.finger2_registered
         })))
       }
-      console.log(`   - Finger 2 Registered: ${transformedMembers.filter(m => m.finger2_registered).length}`)
-      console.log(`   - Both Registered: ${transformedMembers.filter(m => m.finger1_registered && m.finger2_registered).length}`)
+      if (DEBUG) console.log(`   - Finger 2 Registered: ${transformedMembers.filter(m => m.finger2_registered).length}`)
+      if (DEBUG) console.log(`   - Both Registered: ${transformedMembers.filter(m => m.finger1_registered && m.finger2_registered).length}`)
       
       setMembers(transformedMembers)
       
@@ -533,18 +550,24 @@ export default function FingerPage() {
           event: '*', // Listen to INSERT, UPDATE, DELETE
           schema: 'public',
           table: 'biometric_data',
-          filter: `organization_id=eq.${organizationId}`
+          filter: 'biometric_type=eq.FINGERPRINT'
         },
         (payload) => {
-          console.log('🔄 Biometric data change detected:', payload.eventType, payload)
-          
+          if (DEBUG) console.log('🔄 Biometric data change detected:', payload.eventType)
+          const newRow: any = (payload as any).new
+          const oldRow: any = (payload as any).old
+          const payloadOrgId = newRow?.organization_id ?? oldRow?.organization_id
+          if (!payloadOrgId || payloadOrgId !== organizationId) {
+            if (DEBUG) console.log('🔄 Change from another organization, skipping refetch')
+            return
+          }
           // Refetch all data to ensure consistency
           fetchMembers()
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time subscription active for biometric_data')
+          if (DEBUG) console.log('✅ Real-time subscription active for biometric_data')
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Real-time subscription error for biometric_data - this may be due to real-time not being enabled for the table in Supabase')
           console.error('💡 To enable: Run this SQL in Supabase SQL Editor:')
@@ -702,13 +725,29 @@ export default function FingerPage() {
             return true
           }
 
-          const { data: status } = await supabase
-            .from('device_commands')
-            .select('status, error_message')
-            .eq('id', command.id)
-            .single()
+          // Guard: prevent 400 Bad Request when command.id is missing
+          if (!command || !command.id) {
+            console.warn('⚠️ Polling aborted: missing command.id')
+            return false
+          }
 
-          console.log('📊 Polling status:', status?.status, '| Elapsed:', Date.now() - startTime, 'ms')
+          let status: { status?: string; error_message?: string } | null = null
+          try {
+            const { data } = await supabase
+              .from('device_commands')
+              .select('status, error_message')
+              .eq('id', command.id)
+              .maybeSingle()
+            status = data as any
+          } catch (e) {
+            logOnce('polling-error', 'warn', '⚠️ Polling error reading device_commands:', e)
+            continue
+          }
+
+          if (status?.status !== lastPolledStatusRef.current) {
+            if (DEBUG) console.log('📊 Polling status changed:', status?.status, '| Elapsed:', Date.now() - startTime, 'ms')
+            lastPolledStatusRef.current = status?.status ?? null
+          }
 
           if (status?.status === 'EXECUTED') {
             console.log('✅ Polling detected EXECUTED status')
@@ -719,7 +758,10 @@ export default function FingerPage() {
           if (status?.status === 'FAILED') {
             console.log('❌ Polling detected FAILED status')
             registrationCompleteRef.current = true
-            // toast.error(status.error_message || 'Registration failed')
+            const msg = typeof status?.error_message === 'string' && status.error_message.toLowerCase().includes('timeout')
+              ? 'Timeout Register: device not responding'
+              : (status?.error_message || 'Registration failed')
+            toast.error(msg)
             return false
           }
         }
@@ -738,7 +780,7 @@ export default function FingerPage() {
           console.log('✅ Command auto-failed successfully')
         }
 
-        toast.error('Timeout: Device not responding - registration failed')
+        toast.error('Timeout Register: device not responding')
         return false
       }
 
@@ -776,10 +818,12 @@ export default function FingerPage() {
         ))
 
         toast.success('Registration successful!')
+        // Ensure UI shows latest data even if realtime is delayed
+        await fetchMembers()
       }
       
-      // Auto-cancel on error
-      if (command?.id) {
+      // Auto-cancel on error only if not success
+      if (!success && command?.id) {
         try {
           await supabase
             .from('device_commands')
