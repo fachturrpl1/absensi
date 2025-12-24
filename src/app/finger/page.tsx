@@ -47,6 +47,7 @@ interface Member {
   user_id: string
   display_name: string
   first_name: string | null
+  last_name: string | null
   phone: string | null
   email: string | null
   department_name: string | null
@@ -454,6 +455,7 @@ export default function FingerPage() {
         const profile = m.user_profiles
         let displayName = 'No Name'
         let firstName = null
+        let lastName = null
         
         if (!profile) {
           console.warn(`⚠️ Member ${m.id} (user_id: ${m.user_id}) has no user_profiles`)
@@ -461,6 +463,7 @@ export default function FingerPage() {
         
         if (profile) {
           firstName = profile.first_name || null
+          lastName = profile.last_name || null
           if (profile.display_name) {
             displayName = profile.display_name
           } else if (profile.first_name || profile.last_name) {
@@ -482,6 +485,7 @@ export default function FingerPage() {
           user_id: m.user_id,
           display_name: displayName,
           first_name: firstName,
+          last_name: lastName,
           phone: profile?.phone || 'No Phone',
           email: profile?.email || null,
           department_name: deptMap.get(m.department_id) || 'No Group',
@@ -711,23 +715,19 @@ export default function FingerPage() {
     realtimeStatusRef.current = null
 
     try {
-      if (DEBUG) console.log('=== STARTING REGISTRATION ===')
-      if (DEBUG) console.log('Member:', member.display_name, '| User ID:', member.user_id)
-      if (DEBUG) console.log('Device:', selectedDevice, '| Finger:', fingerNumber)
-
-      const payload = {
-        user_id: member.user_id,
-        first_name: member.first_name,
-        full_name: member.display_name,
-        finger_index: fingerNumber
-      }
-
       const { data: commandData, error: insertError } = await supabase
         .from('device_commands')
         .insert({
           device_code: selectedDevice,
           command_type: 'REGISTER',
-          payload: payload,
+          payload: {
+            user_id: member.user_id,
+            first_name: member.first_name,
+            last_name: member.last_name,
+            full_name: member.display_name || `${member.first_name || ''} ${member.last_name || ''}`.trim(),
+            name: member.display_name || `${member.first_name || ''} ${member.last_name || ''}`.trim(),
+            finger_index: fingerNumber
+          },
           status: 'PENDING'
         })
         .select()
