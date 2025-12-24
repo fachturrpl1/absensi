@@ -1380,7 +1380,7 @@ export default function FingerPage() {
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleConfirmReRegister}>
-                Yes
+                Proceed
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
