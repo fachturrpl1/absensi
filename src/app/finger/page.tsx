@@ -956,6 +956,32 @@ export default function FingerPage() {
   const partialCount = members.filter(m => (m.finger1_registered || m.finger2_registered) && !(m.finger1_registered && m.finger2_registered)).length
   const unregisteredCount = members.filter(m => !m.finger1_registered && !m.finger2_registered).length
 
+  if (isLoading) {
+    // Hanya tampilkan skeleton khusus finger
+    return (
+      <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
+        <div className="w-full space-y-6 min-w-0">
+          <div className="space-y-3">
+            {/* Skeleton header */}
+            <div className="flex gap-3">
+              <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            </div>
+            {/* Skeleton table */}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 animate-pulse">
+                <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+                <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+                <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+                <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
       <div className="w-full space-y-6 min-w-0">
