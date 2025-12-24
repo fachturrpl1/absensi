@@ -1371,16 +1371,16 @@ export default function FingerPage() {
         <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Konfirmasi Re-Register Sidik Jari</AlertDialogTitle>
+              <AlertDialogTitle>Fingerprint re-register confirmation</AlertDialogTitle>
               <AlertDialogDescription>
-                Sidik jari {registeringMember?.fingerNumber} untuk {registeringMember?.member.display_name} sudah terdaftar.
-                Apakah Anda yakin ingin mendaftarkan ulang?
+                Fingerprint {registeringMember?.fingerNumber} for {registeringMember?.member.display_name} had already registered.
+                Are you sure want to re-register?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleConfirmReRegister}>
-                Ya, Daftar Ulang
+                Yes, re-register
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
