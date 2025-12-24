@@ -45,7 +45,7 @@ import {
     getAllPositions,
     updatePositions,
 } from "@/action/position"
-import { TableSkeleton } from "@/components/ui/loading-skeleton"
+ 
 import {
     Empty,
     EmptyHeader,
@@ -477,7 +477,7 @@ export default function PositionsPage() {
 
                         <div className="mt-6">
                             {loading ? (
-                                <TableSkeleton rows={6} columns={5} />
+                                <div className="py-12 text-center text-muted-foreground">Loading...</div>
                             ) : positions.length === 0 ? (
                                 <div className="mt-20">
                                     <Empty>
