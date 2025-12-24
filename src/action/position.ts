@@ -32,9 +32,10 @@ export const getAllPositions = async (organizationId?: number) => {
   // 3. Fetch all positions for the organization
   const { data, error } = await supabase
     .from("positions")
-    .select("*")
+    .select("id, code, title, description, is_active, created_at, organization_id")
     .eq("organization_id", targetOrgId)
     .eq("is_active", true)
+    .limit(200)
     .order("created_at", { ascending: true });
 
   if (error) {

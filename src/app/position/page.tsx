@@ -53,6 +53,7 @@ import {
     EmptyDescription,
     EmptyMedia,
 } from "@/components/ui/empty"
+import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import {
     Select,
     SelectContent,
@@ -477,7 +478,7 @@ export default function PositionsPage() {
 
                         <div className="mt-6">
                             {loading ? (
-                                <div className="py-12 text-center text-muted-foreground">Loading...</div>
+                                <TableSkeleton rows={6} columns={5} />
                             ) : positions.length === 0 ? (
                                 <div className="mt-20">
                                     <Empty>
