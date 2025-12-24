@@ -45,7 +45,7 @@ interface Device {
 interface Member {
   id: number
   user_id: string
-  full_name: string
+  display_name: string
   first_name: string | null
   phone: string | null
   email: string | null
@@ -452,7 +452,7 @@ export default function FingerPage() {
 
       const transformedMembers = activeMembers.map((m: any) => {
         const profile = m.user_profiles
-        let fullName = 'No Name'
+        let displayName = 'No Name'
         let firstName = null
         
         if (!profile) {
@@ -462,9 +462,9 @@ export default function FingerPage() {
         if (profile) {
           firstName = profile.first_name || null
           if (profile.display_name) {
-            fullName = profile.display_name
+            displayName = profile.display_name
           } else if (profile.first_name || profile.last_name) {
-            fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+            displayName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
           }
         }
 
@@ -474,13 +474,13 @@ export default function FingerPage() {
         
         // Debug logging for members with registered fingers
         if ((finger1Registered || finger2Registered) && DEBUG) {
-          console.log(`✅ Member ${m.id} (${fullName}): Finger 1=${finger1Registered}, Finger 2=${finger2Registered}, Fingers Set:`, Array.from(fingers))
+          console.log(`✅ Member ${m.id} (${displayName}): Finger 1=${finger1Registered}, Finger 2=${finger2Registered}, Fingers Set:`, Array.from(fingers))
         }
 
         return {
           id: m.id,
           user_id: m.user_id,
-          full_name: fullName,
+          display_name: displayName,
           first_name: firstName,
           phone: profile?.phone || 'No Phone',
           email: profile?.email || null,
@@ -494,7 +494,7 @@ export default function FingerPage() {
       if (DEBUG) console.log('📊 SUMMARY:')
       if (DEBUG) console.log(`   - Organization ID: ${orgId}`)
       if (DEBUG) console.log(`   - Total Members: ${transformedMembers.length}`)
-      if (DEBUG) console.log(`   - Members with profiles: ${transformedMembers.filter(m => m.full_name !== 'No Name').length}`)
+      if (DEBUG) console.log(`   - Members with profiles: ${transformedMembers.filter(m => m.display_name !== 'No Name').length}`)
       if (DEBUG) console.log(`   - Finger 1 Registered: ${transformedMembers.filter(m => m.finger1_registered).length}`)
       if (DEBUG) console.log(`   - Finger 2 Registered: ${transformedMembers.filter(m => m.finger2_registered).length}`)
       
@@ -502,7 +502,7 @@ export default function FingerPage() {
       if (transformedMembers.length > 0 && DEBUG) {
         console.log('📋 First 5 members:', transformedMembers.slice(0, 5).map(m => ({
           id: m.id,
-          name: m.full_name,
+          name: m.display_name,
           first_name: m.first_name,
           department: m.department_name,
           finger1: m.finger1_registered,
@@ -632,7 +632,7 @@ export default function FingerPage() {
   const getFilteredMembers = (): Member[] => {
     return members.filter(member => {
       const matchesSearch = 
-        member.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (member.phone && member.phone.toLowerCase().includes(searchQuery.toLowerCase()))
 
       const matchesDepartment = 
@@ -712,13 +712,13 @@ export default function FingerPage() {
 
     try {
       if (DEBUG) console.log('=== STARTING REGISTRATION ===')
-      if (DEBUG) console.log('Member:', member.full_name, '| User ID:', member.user_id)
+      if (DEBUG) console.log('Member:', member.display_name, '| User ID:', member.user_id)
       if (DEBUG) console.log('Device:', selectedDevice, '| Finger:', fingerNumber)
 
       const payload = {
         user_id: member.user_id,
         first_name: member.first_name,
-        full_name: member.full_name,
+        full_name: member.display_name,
         finger_index: fingerNumber
       }
 
@@ -1169,7 +1169,7 @@ export default function FingerPage() {
                       className="text-foreground hover:underline cursor-pointer"
                       onClick={() => handleMemberClick(member.id)}
                     >
-                      {member.full_name}
+                      {member.display_name}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-muted-foreground">
@@ -1373,7 +1373,7 @@ export default function FingerPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Konfirmasi Re-Register Sidik Jari</AlertDialogTitle>
               <AlertDialogDescription>
-                Sidik jari {registeringMember?.fingerNumber} untuk {registeringMember?.member.full_name} sudah terdaftar.
+                Sidik jari {registeringMember?.fingerNumber} untuk {registeringMember?.member.display_name} sudah terdaftar.
                 Apakah Anda yakin ingin mendaftarkan ulang?
               </AlertDialogDescription>
             </AlertDialogHeader>
