@@ -190,8 +190,10 @@ export default function PositionsPage() {
     }
 
     React.useEffect(() => {
-        fetchOrganizations()
-    }, [])
+        if (!organizationId) {
+            fetchOrganizations()
+        }
+    }, [organizationId])
 
     React.useEffect(() => {
         if (isHydrated && organizationId) {

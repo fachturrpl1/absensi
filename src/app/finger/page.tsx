@@ -55,6 +55,9 @@ interface Member {
   finger2_registered: boolean
 }
 
+type Department = { id: number; name: string }
+type BioRow = { organization_member_id: number; finger_number: number | null; template_data: unknown }
+
 type FilterStatus = "all" | "complete" | "partial" | "unregistered"
 
 export default function FingerPage() {
@@ -299,6 +302,7 @@ export default function FingerPage() {
           )
         `)
         .eq('organization_id', orgId)
+        .eq('is_active', true)
 
       if (allMembersError) {
         console.error('❌ Error fetching members:', allMembersError)
@@ -307,16 +311,10 @@ export default function FingerPage() {
         return
       }
 
-      // Now filter active members in JavaScript
-      const membersData = allMembersData?.filter((m: any) => {
-        const isActive = m.is_active === true || m.is_active === 'true' || m.is_active === 1 || String(m.is_active).toLowerCase() === 'true'
-        if (!isActive) {
-          console.log(`⚠️ Filtering out inactive member ${m.id}: is_active = ${m.is_active} (type: ${typeof m.is_active})`)
-        }
-        return isActive
-      }) || []
+      // Already filtered by is_active at the query level
+      const membersData = allMembersData || []
 
-      if (DEBUG) console.log('✅ Active members after filter:', membersData.length)
+      if (DEBUG) console.log('✅ Members loaded:', membersData.length)
       if (DEBUG) console.log('📋 Sample active members data:', membersData?.slice(0, 3))
 
       if (membersData && membersData.length > 0) {
@@ -336,41 +334,39 @@ export default function FingerPage() {
         }
       }
 
-      const { data: departments, error: deptError } = await supabase
-        .from('departments')
-        .select('id, name')
-        .eq('organization_id', orgId)
+      // Prepare member IDs early and fetch departments + biometric data in parallel
+      const memberIds = membersData?.map((m: any) => m.id) || []
 
+      const [deptResult, bioResult] = await Promise.all([
+        supabase
+          .from('departments')
+          .select('id, name')
+          .eq('organization_id', orgId),
+        memberIds.length > 0
+          ? supabase
+              .from('biometric_data')
+              .select('organization_member_id, finger_number, template_data')
+              .in('organization_member_id', memberIds)
+              .eq('biometric_type', 'FINGERPRINT')
+              .eq('is_active', true)
+          : Promise.resolve({ data: [], error: null } as { data: any[]; error: any })
+      ])
+
+      const { data: departments, error: deptError } = deptResult as { data: any[] | null; error: any }
       if (deptError) {
         console.warn('⚠️ Departments error:', deptError.message)
       }
-
       if (DEBUG) console.log('✅ Departments fetched:', departments?.length || 0)
+      const deptMap = new Map((departments || []).map((d: any) => [d.id, d.name]))
 
-      const deptMap = new Map(departments?.map((d: any) => [d.id, d.name]) || [])
-
-      const memberIds = membersData?.map((m: any) => m.id) || []
       let biometricData: any[] = []
-      
-      if (memberIds.length > 0) {
-        try {
-          const { data: bioData, error: bioError } = await supabase
-            .from('biometric_data')
-            .select('organization_member_id, finger_number, template_data')
-            .in('organization_member_id', memberIds)
-            .eq('biometric_type', 'FINGERPRINT')
-            .eq('is_active', true)
-          
-          if (bioError) {
-            console.warn('⚠️ Biometric data error:', bioError.message)
-          } else {
-            biometricData = bioData || []
-            if (DEBUG) console.log('✅ Biometric data fetched:', biometricData.length, 'records')
-            if (DEBUG) console.log('📋 Sample biometric data:', biometricData.slice(0, 5))
-          }
-        } catch (bioErr) {
-          console.warn('⚠️ Biometric data table might not exist, continuing without it:', bioErr)
-        }
+      const { data: bioData, error: bioError } = bioResult as { data: any[] | null; error: any }
+      if (bioError) {
+        console.warn('⚠️ Biometric data error:', bioError.message)
+      } else {
+        biometricData = bioData || []
+        if (DEBUG) console.log('✅ Biometric data fetched:', biometricData.length, 'records')
+        if (DEBUG) console.log('📋 Sample biometric data:', biometricData.slice(0, 5))
       }
 
       // Group biometric data by member_id and sort by enrollment_date
@@ -442,14 +438,10 @@ export default function FingerPage() {
         fingers: Array.from(fingers)
       })))
 
-      // Filter members with is_active = true (handle both boolean and string)
-      const activeMembers = membersData?.filter((m: any) => {
-        const isActive = m.is_active === true || m.is_active === 'true' || m.is_active === 1
-        if (!isActive && DEBUG) console.log(`⚠️ Member ${m.id} is not active: is_active = ${m.is_active} (type: ${typeof m.is_active})`)
-        return isActive
-      }) || []
+      // Members are already active from the query
+      const activeMembers = membersData
 
-      if (DEBUG) console.log(`✅ Filtered active members: ${activeMembers.length} of ${membersData?.length || 0} total`)
+      if (DEBUG) console.log(`✅ Active members count: ${activeMembers.length}`)
 
       const transformedMembers = activeMembers.map((m: any) => {
         const profile = m.user_profiles

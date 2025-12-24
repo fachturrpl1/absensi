@@ -271,8 +271,10 @@ export default function GroupsPage() {
   }
 
   React.useEffect(() => {
-    fetchOrganizations()
-  }, [])
+    if (!organizationId) {
+      fetchOrganizations()
+    }
+  }, [organizationId])
 
   React.useEffect(() => {
     if (isHydrated && organizationId) {
