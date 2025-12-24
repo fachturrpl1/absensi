@@ -35,7 +35,6 @@ export const getAllGroups = async (organizationId?: number) => {
     .select("id, code, name, description, is_active, created_at, organization_id")
     .eq("organization_id", targetOrgId)
     .eq("is_active", true)
-    .limit(200)
     .order("created_at", { ascending: true });
 
   if (error) {

@@ -401,7 +401,7 @@ export default function FingerPage() {
           if (!memberBiometricMap.has(memberId)) {
             memberBiometricMap.set(memberId, [])
           }
-        memberBiometricMap.get(memberId)!.push(bio)
+          memberBiometricMap.get(memberId)!.push(bio)
         }
       })
       
@@ -413,7 +413,7 @@ export default function FingerPage() {
           return dateA.localeCompare(dateB)
         })
       })
-
+      
       // Map to finger numbers (1 or 2)
       const fingerMap = new Map<number, Set<number>>()
       memberBiometricMap.forEach((records, memberId) => {
