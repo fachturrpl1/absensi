@@ -1371,16 +1371,16 @@ export default function FingerPage() {
         <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Fingerprint re-register confirmation</AlertDialogTitle>
+              <AlertDialogTitle>Finger re-register confirmation</AlertDialogTitle>
               <AlertDialogDescription>
-                Fingerprint {registeringMember?.fingerNumber} for {registeringMember?.member.display_name} had already registered.
+                Finger {registeringMember?.fingerNumber} for {registeringMember?.member.display_name} had already registered.
                 Are you sure want to re-register?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleConfirmReRegister}>
-                Yes, re-register
+                Yes
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
