@@ -56,7 +56,13 @@ interface Member {
 }
 
 type Department = { id: number; name: string }
-type BioRow = { organization_member_id: number; finger_number: number | null; template_data: unknown }
+type BioRow = {
+  organization_member_id: number
+  finger_number: number | null
+  template_data: unknown
+  enrollment_date?: string | null
+  created_at?: string | null
+}
 
 type FilterStatus = "all" | "complete" | "partial" | "unregistered"
 
@@ -352,15 +358,15 @@ export default function FingerPage() {
           : Promise.resolve({ data: [], error: null } as { data: any[]; error: any })
       ])
 
-      const { data: departments, error: deptError } = deptResult as { data: any[] | null; error: any }
+      const { data: departments, error: deptError } = deptResult as { data: Department[] | null; error: any }
       if (deptError) {
         console.warn('⚠️ Departments error:', deptError.message)
       }
       if (DEBUG) console.log('✅ Departments fetched:', departments?.length || 0)
-      const deptMap = new Map((departments || []).map((d: any) => [d.id, d.name]))
+      const deptMap = new Map((departments || []).map((d: Department) => [d.id, d.name]))
 
-      let biometricData: any[] = []
-      const { data: bioData, error: bioError } = bioResult as { data: any[] | null; error: any }
+      let biometricData: BioRow[] = []
+      const { data: bioData, error: bioError } = bioResult as { data: BioRow[] | null; error: any }
       if (bioError) {
         console.warn('⚠️ Biometric data error:', bioError.message)
       } else {
@@ -370,8 +376,8 @@ export default function FingerPage() {
       }
 
       // Group biometric data by member_id and sort by enrollment_date
-      const memberBiometricMap = new Map<number, any[]>()
-      biometricData.forEach((bio: any) => {
+      const memberBiometricMap = new Map<number, BioRow[]>()
+      biometricData.forEach((bio: BioRow) => {
         const memberId = bio.organization_member_id
         if (!memberId) return
         
@@ -948,30 +954,8 @@ export default function FingerPage() {
   const partialCount = members.filter(m => (m.finger1_registered || m.finger2_registered) && !(m.finger1_registered && m.finger2_registered)).length
   const unregisteredCount = members.filter(m => !m.finger1_registered && !m.finger2_registered).length
 
-  if (isLoading) {
+  if (false && isLoading) {
     // Hanya tampilkan skeleton khusus finger
-    return (
-      <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
-        <div className="w-full space-y-6 min-w-0">
-          <div className="space-y-3">
-            {/* Skeleton header */}
-            <div className="flex gap-3">
-              <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-              <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-            </div>
-            {/* Skeleton table */}
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="flex gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 animate-pulse">
-                <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-                <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-                <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-                <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -1150,12 +1134,21 @@ export default function FingerPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
-                    Loading data...
-                  </TableCell>
-                </TableRow>
+                <>
+                  {Array.from({ length: Math.max(5, pageSizeNum) }).map((_, i) => (
+                    <TableRow key={`sk-${i}`}>
+                      <TableCell colSpan={6}>
+                        <div className="flex items-center gap-4">
+                          <div className="h-5 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                          <div className="h-5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                          <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                          <div className="h-5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                          <div className="h-5 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse ml-auto" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </>
               ) : paginatedMembers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
