@@ -279,9 +279,9 @@ export default function FingerPage() {
         `)
         .eq('organization_id', orgId)
 
-      if (membersError) {
-        console.error('❌ Error fetching members:', membersError)
-        toast.error(membersError.message)
+      if (allMembersError) {
+        console.error('❌ Error fetching members:', allMembersError)
+        toast.error(allMembersError.message)
         setIsLoading(false)
         return
       }
@@ -616,6 +616,7 @@ export default function FingerPage() {
     return () => {
       console.log('🧹 Cleaning up real-time subscription')
       supabase.removeChannel(channel)
+      supabase.removeChannel(membersChannel)
     }
   }, [mounted, organizationId, fetchMembers])
 

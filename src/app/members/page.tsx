@@ -74,30 +74,55 @@ type ExportFieldConfig = {
 
 const EXPORT_FIELDS: ExportFieldConfig[] = [
   {
+    key: "nik",
+    label: "NIK",
+    getValue: (member: any) => member.biodata?.nik || member.biodata_nik || "-",
+  },
+  {
     key: "full_name",
     label: "Full Name",
     getValue: (member: any) => {
+      // Priority: biodata.nama > user full name > email
+      if (member.biodata?.nama) return member.biodata.nama
+      
       const user = member.user
-      if (!user) return "No User"
-      const fullname =
-        [user.first_name, user.middle_name, user.last_name]
-          .filter((part: string | undefined) => part && part.trim() !== "")
-          .join(" ") ||
-        user.display_name ||
-        user.email ||
-        "No User"
-      return fullname
+      if (user) {
+        const fullname =
+          [user.first_name, user.middle_name, user.last_name]
+            .filter((part: string | undefined) => part && part.trim() !== "")
+            .join(" ") ||
+          user.display_name ||
+          user.email
+        if (fullname) return fullname
+      }
+      
+      return "-"
     },
+  },
+  {
+    key: "nickname",
+    label: "Nickname",
+    getValue: (member: any) => member.biodata?.nickname || "-",
+  },
+  {
+    key: "nisn",
+    label: "NISN",
+    getValue: (member: any) => member.biodata?.nisn || "-",
+  },
+  {
+    key: "gender",
+    label: "Gender",
+    getValue: (member: any) => member.biodata?.jenis_kelamin || "-",
   },
   {
     key: "email",
     label: "Email",
-    getValue: (member: any) => member.user?.email || "-",
+    getValue: (member: any) => member.email || member.user?.email || "-",
   },
   {
     key: "phone",
     label: "Phone Number",
-    getValue: (member: any) => member.user?.phone || "-",
+    getValue: (member: any) => member.biodata?.no_telepon || member.user?.phone || "-",
   },
   {
     key: "group",
@@ -105,14 +130,24 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
     getValue: (member: any) => member.groupName || member.departments?.name || "-",
   },
   {
+    key: "position",
+    label: "Position",
+    getValue: (member: any) => member.position?.name || member.positions?.name || "-",
+  },
+  {
     key: "role",
     label: "Role",
-    getValue: (member: any) => member.role?.name || "No Role",
+    getValue: (member: any) => member.role?.name || "-",
   },
   {
     key: "status",
     label: "Status",
     getValue: (member: any) => (member.is_active ? "Active" : "Inactive"),
+  },
+  {
+    key: "hire_date",
+    label: "Hire Date",
+    getValue: (member: any) => member.hire_date || "-",
   },
 ]
 export default function MembersPage() {

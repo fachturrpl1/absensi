@@ -13,36 +13,13 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 
-// Mapping kolom Excel ke kolom tabel biodata member
+// Mapping kolom Excel ke kolom tabel group
 const DATABASE_FIELDS = [
-  { key: "nik",           label: "NIK",            required: true },
-  { key: "nama",          label: "Nama Lengkap",   required: true },
-  { key: "nickname",      label: "Nickname",       required: false },
-  { key: "nisn",          label: "NISN",           required: false },
-  { key: "jenis_kelamin", label: "Jenis Kelamin",  required: true }, // L / P
-  { key: "tempat_lahir",  label: "Tempat Lahir",   required: false },
-  { key: "tanggal_lahir", label: "Tanggal Lahir",  required: false },
-  { key: "agama",         label: "Agama",          required: false },
-  { key: "jalan",         label: "Jalan",          required: false },
-  { key: "rt",            label: "RT",             required: false },
-  { key: "rw",            label: "RW",             required: false },
-  { key: "dusun",         label: "Dusun",          required: false },
-  { key: "kelurahan",     label: "Kelurahan",      required: false },
-  { key: "kecamatan",     label: "Kecamatan",      required: false },
-  { key: "no_telepon",    label: "No Telepon",     required: false },
-  { key: "email",         label: "Email",          required: false },
-  { key: "department_id", label: "Department/Group", required: false },
+  { key: "code", label: "Code", required: false },
+  { key: "name", label: "Name", required: true },
+  { key: "description", label: "Description", required: false },
+  { key: "is_active", label: "Active Status", required: false },
 ] as const
 
 type ColumnMapping = {
@@ -56,7 +33,7 @@ const WIZARD_STEPS: WizardStep[] = [
   { number: 4, title: "Result", description: "Lihat ringkasan hasil import" },
 ]
 
-export default function MembersImportSimplePage() {
+export default function GroupImportPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -73,29 +50,13 @@ export default function MembersImportSimplePage() {
   const [headerRowCount, setHeaderRowCount] = useState<number>(1)
   const [sheetNames, setSheetNames] = useState<string[]>([])
   const [sheetName, setSheetName] = useState<string>("")
+  const [trackHistory, setTrackHistory] = useState(false)
   const [allowMatchingWithSubfields, setAllowMatchingWithSubfields] = useState(true)
-  const [selectedGroupId, setSelectedGroupId] = useState<string>("")
-  const [groups, setGroups] = useState<Array<{ id: string; name: string }>>([])
-  const [loadingGroups, setLoadingGroups] = useState(false)
   const [testSummary, setTestSummary] = useState<{
     success: number
     failed: number
     errors: string[]
   } | null>(null)
-  const [fingerPagePreview, setFingerPagePreview] = useState<{
-    totalRows: number
-    withEmailCount: number
-    withoutEmailCount: number
-    sampleData: Array<{
-      row: number
-      nik: string
-      nama: string
-      email: string
-      department?: string
-    }>
-    message: string
-  } | null>(null)
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [hasTested, setHasTested] = useState(false) // Track apakah sudah test
   const [importSummary, setImportSummary] = useState<{
     success: number
@@ -109,34 +70,6 @@ export default function MembersImportSimplePage() {
     error?: string
   }>>([])
 
-  // Load groups on mount
-  React.useEffect(() => {
-    const fetchGroups = async () => {
-      setLoadingGroups(true)
-      try {
-        const response = await fetch("/api/groups")
-        if (!response.ok) {
-          console.error("Failed to fetch groups:", response.status)
-          setGroups([])
-          return
-        }
-        const data = await response.json()
-        if (data.success && data.data) {
-          setGroups(data.data)
-        } else {
-          setGroups([])
-        }
-      } catch (error) {
-        console.error("Error fetching groups:", error)
-        setGroups([])
-        // Don't show error toast, just silently fail
-      } finally {
-        setLoadingGroups(false)
-      }
-    }
-    fetchGroups()
-  }, [])
-
   const handleFileSelect = async (selectedFile: File, sheetOverride?: string) => {
     if (!selectedFile.name.match(/\.(xlsx|xls|csv)$/i)) {
       toast.error("Please upload an Excel or CSV file (.xlsx, .xls, or .csv)")
@@ -149,7 +82,6 @@ export default function MembersImportSimplePage() {
     setPreview([])
     setMapping({})
     setTestSummary(null)
-    setFingerPagePreview(null)
     setHasTested(false) // Reset test status ketika file baru
     setImportSummary(null)
     setImportResults([])
@@ -164,7 +96,7 @@ export default function MembersImportSimplePage() {
         formData.append("sheetName", chosenSheet)
       }
 
-      const response = await fetch("/api/members/import/headers", {
+      const response = await fetch("/api/group/import/headers", {
         method: "POST",
         body: formData,
       })
@@ -183,7 +115,7 @@ export default function MembersImportSimplePage() {
       setSheetNames(data.sheetNames || [])
       setSheetName(data.sheetName || data.sheetNames?.[0] || "")
 
-      // Auto-map kolom umum ke field biodata
+      // Auto-map kolom umum ke field group
       const autoMapping: ColumnMapping = {}
       DATABASE_FIELDS.forEach((field) => {
         const matchingHeader = data.headers.find((header: string) => {
@@ -194,23 +126,10 @@ export default function MembersImportSimplePage() {
             headerLower === fieldLower ||
             headerLower.includes(fieldLower) ||
             fieldLower.includes(headerLower) ||
-            (field.key === "nik" && headerLower.includes("nik")) ||
-            (field.key === "nama" && (headerLower.includes("nama") || headerLower.includes("name"))) ||
-            (field.key === "nickname" && (headerLower.includes("nickname") || headerLower.includes("nick") || headerLower.includes("panggilan"))) ||
-            (field.key === "nisn" && headerLower.includes("nisn")) ||
-            (field.key === "jenis_kelamin" && (headerLower.includes("jenis kelamin") || headerLower.includes("jk") || headerLower.includes("gender"))) ||
-            (field.key === "tempat_lahir" && (headerLower.includes("tempat lahir") || headerLower.includes("kota lahir"))) ||
-            (field.key === "tanggal_lahir" && (headerLower.includes("tanggal lahir") || headerLower.includes("tgl lahir"))) ||
-            (field.key === "agama" && headerLower.includes("agama")) ||
-            (field.key === "jalan" && (headerLower.includes("jalan") || headerLower.includes("alamat"))) ||
-            (field.key === "rt" && headerLower === "rt") ||
-            (field.key === "rw" && headerLower === "rw") ||
-            (field.key === "dusun" && headerLower.includes("dusun")) ||
-            (field.key === "kelurahan" && (headerLower.includes("kelurahan") || headerLower.includes("desa"))) ||
-            (field.key === "kecamatan" && headerLower.includes("kecamatan")) ||
-            (field.key === "no_telepon" && (headerLower.includes("telepon") || headerLower.includes("no hp") || headerLower.includes("hp") || headerLower.includes("phone"))) ||
-            (field.key === "email" && headerLower.includes("email")) ||
-            (field.key === "department_id" && (headerLower.includes("department") || headerLower.includes("departemen") || headerLower.includes("divisi") || headerLower.includes("group")))
+            (field.key === "code" && (headerLower.includes("code") || headerLower.includes("kode"))) ||
+            (field.key === "name" && (headerLower.includes("name") || headerLower.includes("nama"))) ||
+            (field.key === "description" && (headerLower.includes("description") || headerLower.includes("deskripsi"))) ||
+            (field.key === "is_active" && (headerLower.includes("active") || headerLower.includes("status") || headerLower.includes("aktif")))
           )
         })
 
@@ -254,12 +173,9 @@ export default function MembersImportSimplePage() {
   }
 
   const validateMapping = (): boolean => {
-    if (!mapping.nik) {
-      toast.error("Please map the NIK column (required)")
-      return false
-    }
-    if (!mapping.nama) {
-      toast.error("Please map the Nama Lengkap column (required)")
+    // Minimal Name atau Code harus diisi
+    if (!mapping.name && !mapping.code) {
+      toast.error("Please map either Name or Code column (at least one is required)")
       return false
     }
     return true
@@ -274,13 +190,13 @@ export default function MembersImportSimplePage() {
       formData.append("file", file)
       formData.append("mapping", JSON.stringify(mapping))
       formData.append("mode", "test")
+      formData.append("trackHistory", String(trackHistory))
       formData.append("allowMatchingWithSubfields", String(allowMatchingWithSubfields))
       formData.append("headerRow", String(headerRow || 1))
       formData.append("headerRowCount", String(headerRowCount || 1))
       if (sheetName) formData.append("sheetName", sheetName)
-      if (selectedGroupId) formData.append("groupId", selectedGroupId)
 
-      const response = await fetch("/api/members/import/process", {
+      const response = await fetch("/api/group/import/process", {
         method: "POST",
         body: formData,
       })
@@ -289,17 +205,12 @@ export default function MembersImportSimplePage() {
 
       if (!data.success) {
         toast.error(data.message || "Test failed")
-      return
-    }
+        return
+      }
 
       const summary = data.summary || { success: 0, failed: 0, errors: [] }
       setTestSummary(summary)
       setHasTested(true) // Mark bahwa test sudah dilakukan
-      
-      // Set preview data untuk halaman finger
-      if (data.fingerPagePreview) {
-        setFingerPagePreview(data.fingerPagePreview)
-      }
 
       if (summary.failed === 0) {
         toast.success(`Test passed! All ${summary.success} rows are valid.`)
@@ -323,13 +234,13 @@ export default function MembersImportSimplePage() {
       formData.append("file", file)
       formData.append("mapping", JSON.stringify(mapping))
       formData.append("mode", "import")
+      formData.append("trackHistory", String(trackHistory))
       formData.append("allowMatchingWithSubfields", String(allowMatchingWithSubfields))
       formData.append("headerRow", String(headerRow || 1))
       formData.append("headerRowCount", String(headerRowCount || 1))
       if (sheetName) formData.append("sheetName", sheetName)
-      if (selectedGroupId) formData.append("groupId", selectedGroupId)
 
-      const response = await fetch("/api/members/import/process", {
+      const response = await fetch("/api/group/import/process", {
         method: "POST",
         body: formData,
       })
@@ -361,7 +272,7 @@ export default function MembersImportSimplePage() {
 
       setCurrentStep(4)
     } catch (error) {
-      console.error("Error importing members:", error)
+      console.error("Error importing groups:", error)
       toast.error("Failed to import data")
     } finally {
       setProcessing(false)
@@ -386,24 +297,12 @@ export default function MembersImportSimplePage() {
         toast.error("Silakan lakukan test terlebih dahulu")
         return
       }
-      
-      // Jika ada data yang gagal validasi, tampilkan dialog konfirmasi
-      if (testSummary && testSummary.failed > 0) {
-        setShowConfirmDialog(true)
-      } else {
-        // Jika semua lolos validasi, langsung lanjut ke import
-        setCurrentStep(3)
-      }
+      setCurrentStep(3)
     } else if (currentStep === 3) {
       // tombol Import yang menjalankan proses
     } else if (currentStep === 4) {
-      router.push("/members")
+      router.push("/group")
     }
-  }
-
-  const handleConfirmImport = () => {
-    setShowConfirmDialog(false)
-    setCurrentStep(3)
   }
 
   const handlePrevious = () => {
@@ -414,7 +313,7 @@ export default function MembersImportSimplePage() {
 
   const canGoNext = () => {
     if (currentStep === 1) return !!file
-    if (currentStep === 2) return !!mapping.nik && !!mapping.nama && hasTested // Harus sudah test dulu
+    if (currentStep === 2) return validateMapping() && hasTested // Harus sudah test dulu
     if (currentStep === 3) return false
     if (currentStep === 4) return true
     return false
@@ -424,9 +323,9 @@ export default function MembersImportSimplePage() {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold">Import Members</h1>
+          <h1 className="text-2xl font-bold">Import Groups</h1>
           <p className="text-muted-foreground">
-            Import data member dari file Excel atau CSV dengan proses bertahap.
+            Import data group dari file Excel atau CSV dengan proses bertahap.
           </p>
         </div>
 
@@ -486,7 +385,7 @@ export default function MembersImportSimplePage() {
               </p>
               <div className="pt-2">
                 <a
-                  href="/templates/members-import-template.xlsx"
+                  href="/templates/group-import-template.xlsx"
                   download
                   className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                 >
@@ -555,7 +454,6 @@ export default function MembersImportSimplePage() {
                             onValueChange={(value) => {
                               setSheetName(value)
                               setHasTested(false) // Reset test status ketika sheet berubah
-                              setFingerPagePreview(null) // Reset preview ketika sheet berubah
                               if (file) handleFileSelect(file, value)
                             }}
                             disabled={!sheetNames.length || loading}
@@ -604,7 +502,6 @@ export default function MembersImportSimplePage() {
                               size="sm"
                               onClick={() => {
                                 setHasTested(false) // Reset test status ketika header row berubah
-                                setFingerPagePreview(null) // Reset preview ketika header row berubah
                                 file && handleFileSelect(file)
                               }}
                               disabled={!file || loading}
@@ -628,31 +525,17 @@ export default function MembersImportSimplePage() {
                   <h2 className="font-semibold text-lg">Advanced</h2>
 
                   <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="group-select" className="text-sm font-medium">
-                        Pilih Group (Opsional)
+                    <div className="flex items-start space-x-3">
+                      <Checkbox
+                        id="track-history"
+                        checked={trackHistory}
+                        onCheckedChange={(checked) => setTrackHistory(checked === true)}
+                        className="mt-0.5"
+                      />
+                      <Label htmlFor="track-history" className="text-sm cursor-pointer leading-relaxed">
+                        Track history during import
                       </Label>
-                      <Select
-                        value={selectedGroupId || "none"}
-                        onValueChange={(value) => setSelectedGroupId(value === "none" ? "" : value)}
-                        disabled={loadingGroups}
-                      >
-                        <SelectTrigger id="group-select" className="w-full">
-                          <SelectValue placeholder={loadingGroups ? "Loading groups..." : "Pilih group untuk semua member"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">-- Tidak Ada Group --</SelectItem>
-                          {groups.map((group) => (
-                            <SelectItem key={group.id} value={group.id}>
-                              {group.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Jika dipilih, semua member yang di-import akan otomatis dimasukkan ke group ini
-                      </p>
-                    </div>
+    </div>
 
                     <div className="flex items-start space-x-3">
                       <Checkbox
@@ -669,9 +552,16 @@ export default function MembersImportSimplePage() {
                 </div>
 
                 <div className="pt-6 border-t space-y-4">
+                  <Alert className="border-blue-500/50 bg-blue-500/5">
+                    <AlertCircle className="h-4 w-4 text-blue-600" />
+                    <AlertDescription>
+                      Mapping kolom Excel ke field group. Minimal Name atau Code harus diisi.
+                    </AlertDescription>
+                  </Alert>
+
                   <Button
                     onClick={handleTest}
-                    disabled={!file || processing || !mapping.nik || !mapping.nama}
+                    disabled={!file || processing || (!mapping.name && !mapping.code)}
                     variant="outline"
                     className="w-full"
                   >
@@ -703,15 +593,13 @@ export default function MembersImportSimplePage() {
                                 <div className="max-h-32 overflow-auto">
                                   <ul className="text-xs list-disc list-inside space-y-1">
                                     {testSummary.errors.slice(0, 5).map((error, idx) => {
-                                      const row = typeof error === "object" && error !== null ? (error as any).row : null
                                       const message =
                                         typeof error === "string"
                                           ? error
                                           : typeof error === "object" && error !== null
                                             ? (error as any).message || JSON.stringify(error)
                                             : String(error)
-                                      const displayMessage = row ? `Baris ${row}: ${message}` : message
-                                      return <li key={idx} className="text-destructive">{displayMessage}</li>
+                                      return <li key={idx} className="text-destructive">{message}</li>
                                     })}
                                   </ul>
                                 </div>
@@ -777,7 +665,6 @@ export default function MembersImportSimplePage() {
                                           })
                                           setMapping(newMapping)
                                           setHasTested(false) // Reset test status ketika mapping berubah
-                                          setFingerPagePreview(null) // Reset preview ketika mapping berubah
                                         } else {
                                           const newMapping = { ...mapping }
                                           Object.keys(newMapping).forEach((key) => {
@@ -788,7 +675,6 @@ export default function MembersImportSimplePage() {
                                           newMapping[value] = header
                                           setMapping(newMapping)
                                           setHasTested(false) // Reset test status ketika mapping berubah
-                                          setFingerPagePreview(null) // Reset preview ketika mapping berubah
                                         }
                                       }}
                                     >
@@ -813,66 +699,6 @@ export default function MembersImportSimplePage() {
                         </Table>
                       </div>
                     </div>
-
-                    {/* Finger Page Preview */}
-                    {fingerPagePreview && fingerPagePreview.totalRows > 0 && (
-                      <Alert className="border-blue-500/50 bg-blue-500/5">
-                        <AlertCircle className="h-4 w-4 text-blue-600" />
-                        <AlertDescription>
-                          <div className="space-y-3">
-                            <div>
-                              <p className="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-1">
-                                📋 Preview Halaman Fingerprint
-                              </p>
-                              <p className="text-sm text-blue-600 dark:text-blue-300">
-                                {fingerPagePreview.message.split(" (")[0]}
-                              </p>
-                            </div>
-                            
-                            {fingerPagePreview.sampleData.length > 0 && (
-                              <div className="mt-3">
-                                <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-2">
-                                  Sample data yang akan muncul ({fingerPagePreview.sampleData.length} dari {fingerPagePreview.totalRows}):
-                                </p>
-                                <div className="max-h-48 overflow-auto border rounded-md bg-background/50">
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow className="bg-muted/50">
-                                        <TableHead className="w-12 text-xs">Row</TableHead>
-                                        <TableHead className="text-xs">NIK</TableHead>
-                                        <TableHead className="text-xs">Nama</TableHead>
-                                        <TableHead className="text-xs">Email</TableHead>
-                                        <TableHead className="text-xs">Department</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {fingerPagePreview.sampleData.map((item, idx) => (
-                                        <TableRow key={idx} className="text-xs">
-                                          <TableCell className="font-medium">{item.row}</TableCell>
-                                          <TableCell>{item.nik}</TableCell>
-                                          <TableCell className="font-medium">{item.nama}</TableCell>
-                                          <TableCell className="text-muted-foreground">
-                                            {item.email}
-                                          </TableCell>
-                                          <TableCell className="text-muted-foreground">
-                                            {item.department || "-"}
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                                {fingerPagePreview.totalRows > fingerPagePreview.sampleData.length && (
-                                  <p className="text-xs text-muted-foreground mt-2">
-                                    ... dan {fingerPagePreview.totalRows - fingerPagePreview.sampleData.length} data lainnya
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </AlertDescription>
-                      </Alert>
-                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">No data to map. Please upload a file first.</p>
@@ -925,7 +751,7 @@ export default function MembersImportSimplePage() {
                     </Button>
                     <Button
                       onClick={handleImport}
-                      disabled={processing || !mapping.nik || !mapping.nama}
+                      disabled={processing || (!mapping.name && !mapping.code)}
                       className="flex-1"
                       size="lg"
                     >
@@ -1037,8 +863,8 @@ export default function MembersImportSimplePage() {
                       )}
 
                       <div className="flex gap-2">
-                        <Button onClick={() => router.push("/members")} className="flex-1">
-                          Back to Members Page
+                        <Button onClick={() => router.push("/group")} className="flex-1">
+                          Back to Groups Page
                         </Button>
                         <Button
                           variant="outline"
@@ -1063,96 +889,7 @@ export default function MembersImportSimplePage() {
             </div>
           )}
         </Wizard>
-
-        {/* Confirmation Dialog */}
-        <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-          <AlertDialogContent className="max-w-2xl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Apakah Anda yakin ingin lanjut?</AlertDialogTitle>
-              <AlertDialogDescription asChild>
-                <div className="space-y-3 pt-2">
-                  {testSummary && (
-                    <>
-                      <p className="text-sm">
-                        Beberapa data tidak lolos validasi. Hanya data yang lolos validasi yang akan di-import.
-                      </p>
-                      <div className="space-y-3 pt-2 border-t">
-                        {/* Summary statistik */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="p-3 border rounded-lg bg-green-50 dark:bg-green-950">
-                            <div className="flex flex-col gap-1">
-                              <span className="text-xs font-medium text-green-700 dark:text-green-400">
-                                Data yang BISA di-import:
-                              </span>
-                              <span className="text-2xl font-bold text-green-700 dark:text-green-400">
-                                {testSummary.success} row
-                              </span>
-                            </div>
-                          </div>
-                          <div className="p-3 border rounded-lg bg-red-50 dark:bg-red-950">
-                            <div className="flex flex-col gap-1">
-                              <span className="text-xs font-medium text-red-700 dark:text-red-400">
-                                Data yang TIDAK BISA di-import:
-                              </span>
-                              <span className="text-2xl font-bold text-red-700 dark:text-red-400">
-                                {testSummary.failed} row
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* List errors */}
-                        {testSummary.errors && testSummary.errors.length > 0 && (
-                          <div className="pt-2 border-t">
-                            <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-2">
-                              Alasan data tidak bisa di-import:
-                            </p>
-                            <div className="max-h-40 overflow-auto bg-red-50 dark:bg-red-950/30 rounded-lg p-3">
-                              <ul className="text-xs space-y-1.5">
-                                {testSummary.errors.slice(0, 10).map((error, idx) => {
-                                  const row = typeof error === "object" && error !== null ? (error as any).row : null
-                                  const message =
-                                    typeof error === "string"
-                                      ? error
-                                      : typeof error === "object" && error !== null
-                                        ? (error as any).message || JSON.stringify(error)
-                                        : String(error)
-                                  const displayMessage = row ? `Baris ${row}: ${message}` : message
-                                  return (
-                                    <li key={idx} className="text-red-700 dark:text-red-400 flex items-start gap-1">
-                                      <span className="text-red-500 mt-0.5">•</span>
-                                      <span className="flex-1">{displayMessage}</span>
-                                    </li>
-                                  )
-                                })}
-                                {testSummary.errors.length > 10 && (
-                                  <li className="text-red-600 dark:text-red-500 font-medium pt-1 border-t border-red-200 dark:border-red-900">
-                                    ... dan {testSummary.errors.length - 10} error lainnya
-                                  </li>
-                                )}
-                              </ul>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setShowConfirmDialog(false)}>
-                Tidak
-              </AlertDialogCancel>
-              <AlertDialogAction onClick={handleConfirmImport}>
-                Ya, Import {testSummary?.success || 0} Data
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
     </div>
   )
 }
-
-

@@ -69,6 +69,11 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         code,
         organization_id
       ),
+      positions:position_id (
+        id,
+        name,
+        code
+      ),
       role:role_id (
         id,
         code,
@@ -85,26 +90,27 @@ export const getAllOrganization_member = async (organizationId?: number) => {
     return { success: false, message: error.message, data: [] };
   }
 
-  // 4. Untuk member yang user_id null, ambil data dari biodata berdasarkan employee_id (NIK)
+  // 4. Untuk member yang user_id null, ambil data dari biodata berdasarkan biodata_nik atau employee_id (NIK)
   if (data && data.length > 0) {
-    const membersWithoutUser = data.filter((m: any) => !m.user_id && m.employee_id);
+    const membersWithoutUser = data.filter((m: any) => !m.user_id && (m.biodata_nik || m.employee_id));
     
     if (membersWithoutUser.length > 0) {
-      const employeeIds = membersWithoutUser.map((m: any) => m.employee_id).filter(Boolean);
+      const niks = membersWithoutUser.map((m: any) => m.biodata_nik || m.employee_id).filter(Boolean);
       
-      if (employeeIds.length > 0) {
+      if (niks.length > 0) {
         const { data: biodataList, error: biodataError } = await adminClient
           .from("biodata")
-          .select("nik, nama, nickname, email, no_telepon")
-          .in("nik", employeeIds);
+          .select("nik, nama, nickname, email, no_telepon, jenis_kelamin, agama")
+          .in("nik", niks);
 
         if (!biodataError && biodataList) {
           // Merge biodata ke dalam member data
           const biodataMap = new Map(biodataList.map((b: any) => [b.nik, b]));
           
           data.forEach((member: any) => {
-            if (!member.user_id && member.employee_id) {
-              const biodata = biodataMap.get(member.employee_id);
+            if (!member.user_id && (member.biodata_nik || member.employee_id)) {
+              const nik = member.biodata_nik || member.employee_id;
+              const biodata = biodataMap.get(nik);
               if (biodata) {
                 // Buat object user dummy dari biodata untuk konsistensi dengan struktur yang ada
                 member.user = {
@@ -114,6 +120,10 @@ export const getAllOrganization_member = async (organizationId?: number) => {
                   last_name: biodata.nama?.split(" ").slice(1).join(" ") || null,
                   display_name: biodata.nickname || biodata.nama || null,
                 };
+                // Update biodata relation jika belum ada
+                if (!member.biodata) {
+                  member.biodata = biodata;
+                }
               }
             }
           });

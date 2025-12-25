@@ -2,12 +2,11 @@
 
 import React, { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { FileText, Upload, X, Download, Loader2, CheckCircle2, AlertCircle, Check } from "lucide-react"
+import { FileText, Upload, X, Download, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { Wizard, WizardStep } from "@/components/ui/wizard"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -302,7 +301,7 @@ export default function FingerImportSimplePage() {
       // Create results array from preview data and errors
       const results = preview.map((rowData, index) => {
         const rowNumber = index + 2 // Excel row number (1 for header + 1-based index)
-        const error = summary.errors.find(err => err.row === rowNumber)
+        const error = summary.errors.find((err: any) => err.row === rowNumber)
         
         return {
           row: rowNumber,
@@ -708,12 +707,12 @@ export default function FingerImportSimplePage() {
                                 <p className="text-xs font-medium text-destructive mb-1">Errors:</p>
                                 <div className="max-h-32 overflow-auto">
                                   <ul className="text-xs list-disc list-inside space-y-1">
-                                    {testSummary.errors.slice(0, 5).map((error, idx) => {
+                                    {testSummary.errors.slice(0, 5).map((error: any, idx) => {
                                       const message =
                                         typeof error === "string"
                                           ? error
                                           : typeof error === "object" && error !== null
-                                            ? error.message || JSON.stringify(error)
+                                            ? (error as { message?: string }).message || JSON.stringify(error)
                                             : String(error)
                                       return <li key={idx} className="text-destructive">{message}</li>
                                     })}

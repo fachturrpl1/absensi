@@ -387,6 +387,15 @@ export default function GroupsPage() {
                 </Select>
               </div>
               <div className="flex gap-3 sm:gap-2 flex-wrap">
+                <Link href="/group/import">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="whitespace-nowrap"
+                  >
+                    Import
+                  </Button>
+                </Link>
                 <Dialog open={isModalOpen} onOpenChange={handleDialogOpenChange}>
                   <DialogTrigger asChild>
                     <Button
