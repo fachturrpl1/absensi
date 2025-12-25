@@ -535,7 +535,7 @@ export default function GroupsPage() {
             </div>
 
             <div className="mt-6">
-              {loading && groups.length === 0 ? (
+              {loading ? (
                 <TableSkeleton rows={6} columns={4} />
               ) : groups.length === 0 ? (
                 <div className="mt-20">
