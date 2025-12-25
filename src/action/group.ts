@@ -32,7 +32,7 @@ export const getAllGroups = async (organizationId?: number) => {
   // 3. Fetch all groups for the organization
   const { data, error } = await supabase
     .from("departments")
-    .select("*")
+    .select("id, code, name, description, is_active, created_at, organization_id")
     .eq("organization_id", targetOrgId)
     .eq("is_active", true)
     .order("created_at", { ascending: true });

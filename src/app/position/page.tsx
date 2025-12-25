@@ -45,7 +45,7 @@ import {
     getAllPositions,
     updatePositions,
 } from "@/action/position"
-import { TableSkeleton } from "@/components/ui/loading-skeleton"
+ 
 import {
     Empty,
     EmptyHeader,
@@ -53,6 +53,7 @@ import {
     EmptyDescription,
     EmptyMedia,
 } from "@/components/ui/empty"
+import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import {
     Select,
     SelectContent,
@@ -64,6 +65,7 @@ import { getAllOrganization } from "@/action/organization"
 import { Can } from "@/components/can"
 import { useHydration } from "@/hooks/useHydration"
 import { logger } from '@/lib/logger';
+import { getCache, setCache } from "@/lib/local-cache"
 
 const positionSchema = z.object({
     organization_id: z.string().min(1, "Organization is required"),
@@ -171,6 +173,8 @@ export default function PositionsPage() {
             if (!typedResponse.success) throw new Error(typedResponse.message)
 
             setPositions(typedResponse.data)
+            // cache 2 menit
+            setCache<IPositions[]>(`positions:${organizationId}`, typedResponse.data, 1000 * 120)
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'An error occurred')
         } finally {
@@ -190,12 +194,20 @@ export default function PositionsPage() {
     }
 
     React.useEffect(() => {
-        fetchOrganizations()
-    }, [])
+        if (!organizationId) {
+            fetchOrganizations()
+        }
+    }, [organizationId])
 
     React.useEffect(() => {
         if (isHydrated && organizationId) {
             console.log('[POSITION-PAGE] Hydration complete, fetching positions')
+            const cached = getCache<IPositions[]>(`positions:${organizationId}`)
+            if (cached && cached.length > 0) {
+                setPositions(cached)
+                setLoading(false)
+                return
+            }
             fetchPositions()
         }
     }, [isHydrated, organizationId, fetchPositions])
@@ -366,7 +378,7 @@ export default function PositionsPage() {
                                                         name="organization_id"
                                                         render={({ field }) => (
                                                             <input
-                                                                type="hidden"
+                                                                type="hidden" 
                                                                 value={String(organizationId)}
                                                                 onChange={field.onChange}
                                                             />
@@ -443,17 +455,17 @@ export default function PositionsPage() {
                                                     )}
                                                 />
                                                 {/* <FormField
-                                        // control={form.control}
-                                        // name="level"s
-                                        // render={({ field }) => (
-                                        //     <FormItem>
-                                        //         <FormLabel>Level</FormLabel>
-                                        //         <FormControl>
-                                        //             <Input type="number" {...field ?? ""} />
-                                        //         </FormControl>
-                                        //     </FormItem>
-                                        // )}
-                                    /> */}
+                                                    control={form.control}
+                                                    name="level"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Level</FormLabel>
+                                                            <FormControl>
+                                                                <Input type="number" {...field ?? ""} />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                /> */}
                                                 <FormField
                                                     control={form.control}
                                                     name="is_active"
@@ -480,7 +492,7 @@ export default function PositionsPage() {
                         </div>
 
                         <div className="mt-6">
-                            {loading ? (
+                            {loading && positions.length === 0 ? (
                                 <TableSkeleton rows={6} columns={5} />
                             ) : positions.length === 0 ? (
                                 <div className="mt-20">
@@ -567,6 +579,36 @@ export default function PositionsPage() {
                                                 )}
                                             </tbody>
                                         </table>
+                                    </div>
+                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-gray-50 rounded-md border mt-10">
+                                    <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-nowrap justify-center w-full md:w-auto">
+                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(0)} disabled={pageIndex === 0 || loading} className="h-8 w-8 p-0" title="First page">
+                                            <ChevronsLeft className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(pageIndex - 1)} disabled={pageIndex === 0 || loading} className="h-8 w-8 p-0" title="Previous page">
+                                            <ChevronLeft className="h-4 w-4" />
+                                        </Button>
+                                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap ml-1 sm:ml-2">Page</span>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max={totalPages}
+                                            value={pageIndex + 1}
+                                            onChange={(e) => {
+                                                const page = e.target.value ? Number(e.target.value) - 1 : 0;
+                                                setPageIndex(page);
+                                            }}
+                                            className="w-10 sm:w-12 h-8 px-2 border border-gray-300 rounded text-xs sm:text-sm text-center mx-1 sm:mx-2"
+                                            disabled={loading || totalPages === 0}
+                                        />
+                                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/ {totalPages}</span>
+                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(pageIndex + 1)} disabled={pageIndex >= totalPages - 1 || loading} className="h-8 w-8 p-0" title="Next page">
+                                            <ChevronRight className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(totalPages - 1)} disabled={pageIndex >= totalPages - 1 || loading} className="h-8 w-8 p-0" title="Last page">
+                                            <ChevronsRight className="h-4 w-4" />
+                                        </Button>
+>>>>>>> 73b3e9a39220f2443e1a147fc5080babb86b5fa4
                                     </div>
                                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-gray-50 rounded-md border">
                                         <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-nowrap justify-center w-full md:w-auto">

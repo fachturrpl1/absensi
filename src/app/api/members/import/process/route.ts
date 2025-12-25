@@ -195,11 +195,18 @@ export async function POST(request: NextRequest) {
       ? "id, name, code, is_active, organization_id, description"
       : "id, name, code, is_active, organization_id"
     
-    const { data: departments } = await adminClient
+    const { data: departments, error: deptError } = await adminClient
       .from("departments")
       .select(deptFields)
       .eq("organization_id", orgId)
       .eq("is_active", true)
+
+    if (deptError) {
+      return NextResponse.json(
+        { success: false, message: `Failed to fetch departments: ${deptError.message}` },
+        { status: 500 }
+      )
+    }
 
     // Helper normalize string
     const normalizeForMatching = (str: string): string => {
@@ -443,10 +450,10 @@ export async function POST(request: NextRequest) {
           const deptResult = findDepartmentId(departmentValue, departments)
           if (deptResult.id) {
             departmentId = deptResult.id
-            const dept = departments.find((d: any) => Number(d.id) === Number(departmentId)) as any
-            if (dept && typeof dept === 'object' && 'name' in dept) {
-              departmentName = (dept as { name?: string }).name || undefined
-            }
+            const dept = (departments as unknown as { id: number; name: string }[]).find(
+              (d) => Number(d.id) === Number(departmentId)
+            )
+            departmentName = (dept && dept.name) ? dept.name : undefined
           }
         }
 
@@ -873,10 +880,10 @@ export async function POST(request: NextRequest) {
           // Dapatkan nama department jika ada
           let departmentName: string | undefined = undefined
           if (departmentId && departments && departments.length > 0) {
-            const dept = departments.find((d: any) => Number(d.id) === Number(departmentId)) as any
-            if (dept && typeof dept === 'object' && 'name' in dept) {
-              departmentName = (dept as { name?: string }).name || undefined
-            }
+            const dept = (departments as unknown as { id: number; name: string }[]).find(
+              (d) => Number(d.id) === Number(departmentId)
+            )
+            departmentName = (dept && dept.name) ? dept.name : undefined
           }
           
           // Track untuk preview halaman finger

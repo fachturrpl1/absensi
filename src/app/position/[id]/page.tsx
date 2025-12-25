@@ -89,22 +89,6 @@ export default function PositionDetailPage() {
           )
         },
       },
-      {
-        id: "nik",
-        header: "NIK",
-        cell: ({ row }) => {
-          const member = row.original as any;
-          return <div>{member.biodata?.nik || '-'}</div>
-        },
-      },
-      {
-        id: "nisn",
-        header: "NISN",
-        cell: ({ row }) => {
-          const member = row.original as any;
-          return <div>{member.biodata?.nisn || '-'}</div>
-        },
-      },
     ],
     []
   )

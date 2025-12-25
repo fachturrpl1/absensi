@@ -1,7 +1,6 @@
 "use client"
 
 import React from "react"
-import Link from "next/link"
 import {
   Table,
   TableBody,
@@ -12,7 +11,7 @@ import {
 } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Fingerprint, Users, RefreshCw, Search, Check, Loader2, Monitor, FileSpreadsheet, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
+import { Fingerprint, Users, RefreshCw, Search, Check, Loader2, Monitor, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/utils/supabase/client"
@@ -35,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { getCache, setCache } from "@/lib/local-cache"
 
 interface Device {
   device_code: string
@@ -46,8 +46,9 @@ interface Device {
 interface Member {
   id: number
   user_id: string
-  full_name: string
+  display_name: string
   first_name: string | null
+  last_name: string | null
   phone: string | null
   email: string | null
   department_name: string | null
@@ -55,9 +56,19 @@ interface Member {
   finger2_registered: boolean
 }
 
+type Department = { id: number; name: string }
+type BioRow = {
+  organization_member_id: number
+  finger_number: number | null
+  template_data: unknown
+  enrollment_date?: string | null
+  created_at?: string | null
+}
+
 type FilterStatus = "all" | "complete" | "partial" | "unregistered"
 
 export default function FingerPage() {
+  const DEBUG = false
   const [members, setMembers] = React.useState<Member[]>([])
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isLoading, setIsLoading] = React.useState(true)
@@ -78,6 +89,26 @@ export default function FingerPage() {
   const [pageSize, setPageSize] = React.useState("10")
   const [pageIndex, setPageIndex] = React.useState(0)
   const registrationCompleteRef = React.useRef(false)
+  const lastPolledStatusRef = React.useRef<string | null>(null)
+  const [activeCommandId, setActiveCommandId] = React.useState<string | number | null>(null)
+  const realtimeStatusRef = React.useRef<string | null>(null)
+
+  // Throttled logger to avoid console spam on loops/polling
+  const lastLogRef = React.useRef<Record<string, number>>({})
+  const logOnce = React.useCallback((key: string, level: 'log' | 'warn' | 'error' = 'log', ...args: unknown[]) => {
+    const now = Date.now()
+    const last = lastLogRef.current[key] || 0
+    // 10s throttle per key
+    if (now - last > 10000) {
+      const logger: Record<'log' | 'warn' | 'error', (...data: unknown[]) => void> = {
+        log: console.log,
+        warn: console.warn,
+        error: console.error,
+      }
+      logger[level](...args)
+      lastLogRef.current[key] = now
+    }
+  }, [])
 
   // Handle click on member name to navigate to profile
   const handleMemberClick = (memberId: number) => {
@@ -208,9 +239,9 @@ export default function FingerPage() {
     try {
       const supabase = createClient()
 
-      console.log('[FINGER-PAGE] === FETCHING MEMBERS ===')
-      console.log('[FINGER-PAGE] organizationId from store:', organizationId)
-      console.log('[FINGER-PAGE] isHydrated:', isHydrated)
+      if (DEBUG) console.log('[FINGER-PAGE] === FETCHING MEMBERS ===')
+      if (DEBUG) console.log('[FINGER-PAGE] organizationId from store:', organizationId)
+      if (DEBUG) console.log('[FINGER-PAGE] isHydrated:', isHydrated)
 
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError) {
@@ -227,7 +258,7 @@ export default function FingerPage() {
         return
       }
 
-      console.log('User ID:', user.id)
+      if (DEBUG) console.log('User ID:', user.id)
 
       let orgId = organizationId
       
@@ -254,11 +285,11 @@ export default function FingerPage() {
         }
         
         orgId = member.organization_id
-        console.log('✅ Organization ID from database:', orgId)
+        if (DEBUG) console.log('✅ Organization ID from database:', orgId)
       }
 
-      console.log('✅ Using Organization ID:', orgId, '(type:', typeof orgId, ')')
-      console.log('✅ Fetching members for organization:', orgId)
+      if (DEBUG) console.log('✅ Using Organization ID:', orgId, '(type:', typeof orgId, ')')
+      if (DEBUG) console.log('✅ Fetching members for organization:', orgId)
 
       // First, fetch ALL members (including inactive) to debug
       const { data: allMembersData, error: allMembersError } = await supabase
@@ -272,12 +303,11 @@ export default function FingerPage() {
           user_profiles (
             first_name,
             last_name,
-            display_name,
-            email,
-            phone
+            display_name
           )
         `)
         .eq('organization_id', orgId)
+        .eq('is_active', true)
 
       if (allMembersError) {
         console.error('❌ Error fetching members:', allMembersError)
@@ -286,17 +316,11 @@ export default function FingerPage() {
         return
       }
 
-      // Now filter active members in JavaScript
-      const membersData = allMembersData?.filter((m: any) => {
-        const isActive = m.is_active === true || m.is_active === 'true' || m.is_active === 1 || String(m.is_active).toLowerCase() === 'true'
-        if (!isActive) {
-          console.log(`⚠️ Filtering out inactive member ${m.id}: is_active = ${m.is_active} (type: ${typeof m.is_active})`)
-        }
-        return isActive
-      }) || []
+      // Already filtered by is_active at the query level
+      const membersData = allMembersData || []
 
-      console.log('✅ Active members after filter:', membersData.length)
-      console.log('📋 Sample active members data:', membersData?.slice(0, 3))
+      if (DEBUG) console.log('✅ Members loaded:', membersData.length)
+      if (DEBUG) console.log('📋 Sample active members data:', membersData?.slice(0, 3))
 
       if (membersData && membersData.length > 0) {
         const invalidMembers = membersData.filter((m: any) => m.organization_id !== orgId)
@@ -310,51 +334,49 @@ export default function FingerPage() {
         // Check for members without user_profiles
         const membersWithoutProfile = membersData.filter((m: any) => !m.user_profiles)
         if (membersWithoutProfile.length > 0) {
-          console.warn('⚠️ Found members without user_profiles:', membersWithoutProfile.length)
-          console.warn('⚠️ Sample:', membersWithoutProfile.slice(0, 3))
+          logOnce('missing-profile', 'warn', '⚠️ Found members without user_profiles:', membersWithoutProfile.length)
+          if (DEBUG) console.warn('⚠️ Sample:', membersWithoutProfile.slice(0, 3))
         }
       }
 
-      const { data: departments, error: deptError } = await supabase
-        .from('departments')
-        .select('id, name')
-        .eq('organization_id', orgId)
+      // Prepare member IDs early and fetch departments + biometric data in parallel
+      const memberIds = membersData?.map((m: any) => m.id) || []
 
+      const [deptResult, bioResult] = await Promise.all([
+        supabase
+            .from('departments')
+            .select('id, name')
+          .eq('organization_id', orgId),
+        memberIds.length > 0
+          ? supabase
+              .from('biometric_data')
+              .select('organization_member_id, finger_number, template_data')
+              .in('organization_member_id', memberIds)
+              .eq('biometric_type', 'FINGERPRINT')
+              .eq('is_active', true)
+          : Promise.resolve({ data: [], error: null } as { data: any[]; error: any })
+      ])
+
+      const { data: departments, error: deptError } = deptResult as { data: Department[] | null; error: any }
       if (deptError) {
         console.warn('⚠️ Departments error:', deptError.message)
       }
+      if (DEBUG) console.log('✅ Departments fetched:', departments?.length || 0)
+      const deptMap = new Map((departments || []).map((d: Department) => [d.id, d.name]))
 
-      console.log('✅ Departments fetched:', departments?.length || 0)
-
-      const deptMap = new Map(departments?.map((d: any) => [d.id, d.name]) || [])
-
-      const memberIds = membersData?.map((m: any) => m.id) || []
-      let biometricData: any[] = []
-      
-      if (memberIds.length > 0) {
-        try {
-          const { data: bioData, error: bioError } = await supabase
-            .from('biometric_data')
-            .select('organization_member_id, finger_number, template_data')
-            .in('organization_member_id', memberIds)
-            .eq('biometric_type', 'FINGERPRINT')
-            .eq('is_active', true)
-          
-          if (bioError) {
-            console.warn('⚠️ Biometric data error:', bioError.message)
-          } else {
-            biometricData = bioData || []
-            console.log('✅ Biometric data fetched:', biometricData.length, 'records')
-            console.log('📋 Sample biometric data:', biometricData.slice(0, 5))
-          }
-        } catch (bioErr) {
-          console.warn('⚠️ Biometric data table might not exist, continuing without it:', bioErr)
-        }
+      let biometricData: BioRow[] = []
+      const { data: bioData, error: bioError } = bioResult as { data: BioRow[] | null; error: any }
+      if (bioError) {
+        console.warn('⚠️ Biometric data error:', bioError.message)
+      } else {
+        biometricData = bioData || []
+        if (DEBUG) console.log('✅ Biometric data fetched:', biometricData.length, 'records')
+        if (DEBUG) console.log('📋 Sample biometric data:', biometricData.slice(0, 5))
       }
 
       // Group biometric data by member_id and sort by enrollment_date
-      const memberBiometricMap = new Map<number, any[]>()
-      biometricData.forEach((bio: any) => {
+      const memberBiometricMap = new Map<number, BioRow[]>()
+      biometricData.forEach((bio: BioRow) => {
         const memberId = bio.organization_member_id
         if (!memberId) return
         
@@ -411,31 +433,26 @@ export default function FingerPage() {
           }
           fingerMap.get(memberId)!.add(Number(fingerNumber))
           
-          console.log(`✅ Member ${memberId}: Assigned finger ${fingerNumber} (record ${index + 1} of ${records.length})`)
+          if (DEBUG) console.log(`✅ Member ${memberId}: Assigned finger ${fingerNumber} (record ${index + 1} of ${records.length})`)
         })
       })
       
-      console.log('✅ Finger map created:', fingerMap.size, 'members with registered fingers')
-      console.log('📊 Finger map details:', Array.from(fingerMap.entries()).map(([id, fingers]) => ({
+      if (DEBUG) console.log('✅ Finger map created:', fingerMap.size, 'members with registered fingers')
+      if (DEBUG) console.log('📊 Finger map details:', Array.from(fingerMap.entries()).map(([id, fingers]) => ({
         memberId: id,
         fingers: Array.from(fingers)
       })))
 
-      // Filter members with is_active = true (handle both boolean and string)
-      const activeMembers = membersData?.filter((m: any) => {
-        const isActive = m.is_active === true || m.is_active === 'true' || m.is_active === 1
-        if (!isActive) {
-          console.log(`⚠️ Member ${m.id} is not active: is_active = ${m.is_active} (type: ${typeof m.is_active})`)
-        }
-        return isActive
-      }) || []
+      // Members are already active from the query
+      const activeMembers = membersData
 
-      console.log(`✅ Filtered active members: ${activeMembers.length} of ${membersData?.length || 0} total`)
+      if (DEBUG) console.log(`✅ Active members count: ${activeMembers.length}`)
 
       const transformedMembers = activeMembers.map((m: any) => {
         const profile = m.user_profiles
-        let fullName = 'No Name'
+        let displayName = 'No Name'
         let firstName = null
+        let lastName = null
         
         if (!profile) {
           console.warn(`⚠️ Member ${m.id} (user_id: ${m.user_id}) has no user_profiles`)
@@ -443,10 +460,11 @@ export default function FingerPage() {
         
         if (profile) {
           firstName = profile.first_name || null
+          lastName = profile.last_name || null
           if (profile.display_name) {
-            fullName = profile.display_name
+            displayName = profile.display_name
           } else if (profile.first_name || profile.last_name) {
-            fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+            displayName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
           }
         }
 
@@ -455,15 +473,16 @@ export default function FingerPage() {
         const finger2Registered = fingers.has(2)
         
         // Debug logging for members with registered fingers
-        if (finger1Registered || finger2Registered) {
-          console.log(`✅ Member ${m.id} (${fullName}): Finger 1=${finger1Registered}, Finger 2=${finger2Registered}, Fingers Set:`, Array.from(fingers))
+        if ((finger1Registered || finger2Registered) && DEBUG) {
+          console.log(`✅ Member ${m.id} (${displayName}): Finger 1=${finger1Registered}, Finger 2=${finger2Registered}, Fingers Set:`, Array.from(fingers))
         }
 
         return {
           id: m.id,
           user_id: m.user_id,
-          full_name: fullName,
+          display_name: displayName,
           first_name: firstName,
+          last_name: lastName,
           phone: profile?.phone || 'No Phone',
           email: profile?.email || null,
           department_name: deptMap.get(m.department_id) || 'No Group',
@@ -472,29 +491,33 @@ export default function FingerPage() {
         }
       }) || []
 
-      console.log('✅ Members transformed:', transformedMembers.length)
-      console.log('📊 SUMMARY:')
-      console.log(`   - Organization ID: ${orgId}`)
-      console.log(`   - Total Members: ${transformedMembers.length}`)
-      console.log(`   - Members with profiles: ${transformedMembers.filter(m => m.full_name !== 'No Name').length}`)
-      console.log(`   - Finger 1 Registered: ${transformedMembers.filter(m => m.finger1_registered).length}`)
-      console.log(`   - Finger 2 Registered: ${transformedMembers.filter(m => m.finger2_registered).length}`)
+      if (DEBUG) console.log('✅ Members transformed:', transformedMembers.length)
+      if (DEBUG) console.log('📊 SUMMARY:')
+      if (DEBUG) console.log(`   - Organization ID: ${orgId}`)
+      if (DEBUG) console.log(`   - Total Members: ${transformedMembers.length}`)
+      if (DEBUG) console.log(`   - Members with profiles: ${transformedMembers.filter(m => m.display_name !== 'No Name').length}`)
+      if (DEBUG) console.log(`   - Finger 1 Registered: ${transformedMembers.filter(m => m.finger1_registered).length}`)
+      if (DEBUG) console.log(`   - Finger 2 Registered: ${transformedMembers.filter(m => m.finger2_registered).length}`)
       
       // Log first few members for debugging
-      if (transformedMembers.length > 0) {
+      if (transformedMembers.length > 0 && DEBUG) {
         console.log('📋 First 5 members:', transformedMembers.slice(0, 5).map(m => ({
           id: m.id,
-          name: m.full_name,
+          name: m.display_name,
           first_name: m.first_name,
           department: m.department_name,
           finger1: m.finger1_registered,
           finger2: m.finger2_registered
         })))
       }
-      console.log(`   - Finger 2 Registered: ${transformedMembers.filter(m => m.finger2_registered).length}`)
-      console.log(`   - Both Registered: ${transformedMembers.filter(m => m.finger1_registered && m.finger2_registered).length}`)
+      if (DEBUG) console.log(`   - Finger 2 Registered: ${transformedMembers.filter(m => m.finger2_registered).length}`)
+      if (DEBUG) console.log(`   - Both Registered: ${transformedMembers.filter(m => m.finger1_registered && m.finger2_registered).length}`)
       
       setMembers(transformedMembers)
+      // cache members 5 menit
+      if (organizationId) {
+        setCache<Member[]>(`finger:members:${organizationId}`, transformedMembers, 1000 * 300)
+      }
       
       // if (transformedMembers.length === 0) {
       //   toast.info("No members found in your organization")
@@ -514,6 +537,10 @@ export default function FingerPage() {
   // Fetch data when hydration completes
   React.useEffect(() => {
     if (isHydrated && organizationId) {
+      const cached = getCache<Member[]>(`finger:members:${organizationId}`)
+      if (cached && cached.length > 0) {
+        setMembers(cached)
+      }
       console.log('[FINGER-PAGE] Hydration complete, organizationId available:', organizationId)
       fetchDevices()
       fetchMembers()
@@ -534,81 +561,29 @@ export default function FingerPage() {
           event: '*', // Listen to INSERT, UPDATE, DELETE
           schema: 'public',
           table: 'biometric_data',
-          filter: `organization_id=eq.${organizationId}`
+          filter: 'biometric_type=eq.FINGERPRINT'
         },
         (payload) => {
-          console.log('🔄 Biometric data change detected:', payload.eventType, payload)
-          
-          // Optimistic update: Update UI immediately
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            const updatedData = payload.new
-            
-            setMembers(prevMembers => 
-              prevMembers.map(member => {
-                if (member.id === updatedData.organization_member_id) {
-                  // Update finger registration status based on the update
-                  const finger1 = updatedData.finger_number === 1 ? 
-                    (updatedData.status === 'REGISTERED') : 
-                    member.finger1_registered
-                    
-                  const finger2 = updatedData.finger_number === 2 ? 
-                    (updatedData.status === 'REGISTERED') : 
-                    member.finger2_registered
-                  
-                  console.log(`🔄 Updating member ${member.id} - Finger ${updatedData.finger_number} status: ${updatedData.status}`)
-                  
-                  return {
-                    ...member,
-                    finger1_registered: finger1,
-                    finger2_registered: finger2
-                  }
-                }
-                return member
-              })
-            )
+          if (DEBUG) console.log('🔄 Biometric data change detected:', payload.eventType)
+          const newRow: any = (payload as any).new
+          const oldRow: any = (payload as any).old
+          const payloadOrgId = newRow?.organization_id ?? oldRow?.organization_id
+          if (!payloadOrgId || payloadOrgId !== organizationId) {
+            if (DEBUG) console.log('🔄 Change from another organization, skipping refetch')
+            return
           }
-          
-          // Still fetch fresh data to ensure consistency
+          // Refetch all data to ensure consistency
           fetchMembers()
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time subscription active for biometric_data')
+          if (DEBUG) console.log('✅ Real-time subscription active for biometric_data')
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Real-time subscription error for biometric_data - this may be due to real-time not being enabled for the table in Supabase')
           console.error('💡 To enable: Run this SQL in Supabase SQL Editor:')
           console.error('   ALTER PUBLICATION supabase_realtime ADD TABLE biometric_data;')
         } else {
-          console.log('📡 Biometric subscription status:', status)
-        }
-      })
-
-    // Subscribe to organization_members changes
-    const membersChannel = supabase
-      .channel(`org-members-changes-${organizationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'organization_members',
-          filter: `organization_id=eq.${organizationId}`
-        },
-        (payload) => {
-          console.log('🔄 Organization members change detected:', payload.eventType, payload)
-          fetchMembers()
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time subscription active for organization_members')
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time subscription error for organization_members - this may be due to real-time not being enabled for the table in Supabase')
-          console.error('💡 To enable: Run this SQL in Supabase SQL Editor:')
-          console.error('   ALTER PUBLICATION supabase_realtime ADD TABLE organization_members;')
-        } else {
-          console.log('📡 Members subscription status:', status)
         }
       })
 
@@ -619,6 +594,34 @@ export default function FingerPage() {
       supabase.removeChannel(membersChannel)
     }
   }, [mounted, organizationId, fetchMembers])
+
+  React.useEffect(() => {
+    if (!mounted || !activeCommandId) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`device-commands-${activeCommandId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'device_commands',
+          filter: `id=eq.${activeCommandId}`
+        },
+        (payload) => {
+          const next = (payload as unknown as { new?: Record<string, unknown> }).new
+          const s = typeof next?.status === 'string' ? (next.status as string) : undefined
+          if (s === 'EXECUTED' || s === 'FAILED' || s === 'CANCELLED' || s === 'TIMEOUT') {
+            registrationCompleteRef.current = true
+            realtimeStatusRef.current = s
+          }
+        }
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [mounted, activeCommandId])
 
   React.useEffect(() => {
     if (mounted && selectedDevice) {
@@ -639,7 +642,7 @@ export default function FingerPage() {
   const getFilteredMembers = (): Member[] => {
     return members.filter(member => {
       const matchesSearch = 
-        member.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (member.phone && member.phone.toLowerCase().includes(searchQuery.toLowerCase()))
 
       const matchesDepartment = 
@@ -714,24 +717,23 @@ export default function FingerPage() {
     const supabase = createClient()
     let command: any = null
     registrationCompleteRef.current = false
+    lastPolledStatusRef.current = null
+    realtimeStatusRef.current = null
 
     try {
-      console.log('=== STARTING REGISTRATION ===')
-      console.log('Member:', member.full_name, '| User ID:', member.user_id)
-      console.log('Device:', selectedDevice, '| Finger:', fingerNumber)
-
-      const payload = {
-        user_id: member.user_id,
-        name: member.first_name || member.full_name,
-        finger_index: fingerNumber
-      }
-
       const { data: commandData, error: insertError } = await supabase
         .from('device_commands')
         .insert({
           device_code: selectedDevice,
           command_type: 'REGISTER',
-          payload: payload,
+          payload: {
+            user_id: member.user_id,
+            first_name: member.first_name,
+            last_name: member.last_name,
+            full_name: member.display_name || `${member.first_name || ''} ${member.last_name || ''}`.trim(),
+            name: member.display_name || `${member.first_name || ''} ${member.last_name || ''}`.trim(),
+            finger_index: fingerNumber
+          },
           status: 'PENDING'
         })
         .select()
@@ -745,11 +747,12 @@ export default function FingerPage() {
       }
 
       command = commandData
-      console.log('Command inserted, ID:', command?.id)
+      if (DEBUG) console.log('Command inserted, ID:', command?.id)
+      setActiveCommandId(command?.id ?? null)
       // toast.info(`Command sent to device. Please scan finger ${fingerNumber} on the device.`)
 
       const startTime = Date.now()
-      const timeout = 90000
+      const timeout = 30000
       const pollInterval = 1000
 
       const pollStatus = async (): Promise<boolean> => {
@@ -759,16 +762,37 @@ export default function FingerPage() {
           // Stop polling if real-time update already completed
           if (registrationCompleteRef.current) {
             console.log('✅ Real-time update already completed, stopping polling')
-            return true
+            const rs = realtimeStatusRef.current
+            return rs === 'EXECUTED'
           }
 
-          const { data: status } = await supabase
-            .from('device_commands')
-            .select('status, error_message')
-            .eq('id', command.id)
-            .single()
+          // Guard: prevent 400 Bad Request when command.id is missing
+          if (!command || !command.id) {
+            console.warn('⚠️ Polling aborted: missing command.id')
+            return false
+          }
 
-          console.log('📊 Polling status:', status?.status, '| Elapsed:', Date.now() - startTime, 'ms')
+          let status: { status?: string } | null = null
+          try {
+            const { data, error } = await supabase
+              .from('device_commands')
+              .select('status')
+              .eq('id', command.id)
+              .maybeSingle()
+            if (error) {
+              logOnce('polling-error', 'warn', '⚠️ Polling error reading device_commands:', error)
+              continue
+            }
+            status = data as any
+          } catch (e) {
+            logOnce('polling-error', 'warn', '⚠️ Polling error reading device_commands:', e)
+            continue
+          }
+
+          if (status?.status !== lastPolledStatusRef.current) {
+            if (DEBUG) console.log('📊 Polling status changed:', status?.status, '| Elapsed:', Date.now() - startTime, 'ms')
+            lastPolledStatusRef.current = status?.status ?? null
+          }
 
           if (status?.status === 'EXECUTED') {
             console.log('✅ Polling detected EXECUTED status')
@@ -779,16 +803,28 @@ export default function FingerPage() {
           if (status?.status === 'FAILED') {
             console.log('❌ Polling detected FAILED status')
             registrationCompleteRef.current = true
-            // toast.error(status.error_message || 'Registration failed')
+            toast.error('Registration failed')
+            return false
+          }
+
+          if (status?.status === 'TIMEOUT') {
+            console.log('⏱️ Polling detected TIMEOUT status')
+            registrationCompleteRef.current = true
+            toast.error('Timeout: device not responding')
+            return false
+          }
+
+          if (status?.status === 'CANCELLED') {
+            registrationCompleteRef.current = true
             return false
           }
         }
 
         // Timeout reached - auto-cancel the command
-        console.log('⏱️ Timeout reached (60 seconds), auto-failed command...')
+        console.log('⏱️ Timeout reached (30 seconds), auto-failed command...')
         const { error: cancelError } = await supabase
           .from('device_commands')
-          .update({ status: 'FAILED' })
+          .update({ status: 'TIMEOUT' })
           .eq('id', command?.id)
           .select()
 
@@ -798,7 +834,10 @@ export default function FingerPage() {
           console.log('✅ Command auto-failed successfully')
         }
 
-        toast.error('Timeout: Device not responding - registration failed')
+        registrationCompleteRef.current = true
+        realtimeStatusRef.current = 'TIMEOUT'
+
+        toast.error('Timeout: device not responding')
         return false
       }
 
@@ -836,21 +875,27 @@ export default function FingerPage() {
         ))
 
         toast.success('Registration successful!')
+        // Ensure UI shows latest data even if realtime is delayed
+        await fetchMembers()
       }
       
-      // Auto-cancel on error
-      if (command?.id) {
+      // Auto-cancel on error only if not success
+      if (!success && command?.id) {
         try {
-          await supabase
-            .from('device_commands')
-            .update({ status: 'CANCELLED' })
-            .eq('id', command.id)
-            .select()
+          const s = realtimeStatusRef.current
+          if (s !== 'CANCELLED' && s !== 'TIMEOUT' && s !== 'FAILED' && s !== 'EXECUTED') {
+            await supabase
+              .from('device_commands')
+              .update({ status: 'CANCELLED' })
+              .eq('id', command.id)
+              .select()
+          }
         } catch (cancelErr) {
           console.error('Failed to cancel command on error:', cancelErr)
         }
       }
     } finally {
+      setActiveCommandId(null)
       setIsRegistering(false)
       setRegisteringMember(null)
       setActiveMemberId(null)
@@ -865,6 +910,8 @@ export default function FingerPage() {
     }
 
     try {
+      registrationCompleteRef.current = true
+      realtimeStatusRef.current = 'CANCELLED'
       const supabase = createClient()
       
       // Find and cancel the pending command
@@ -914,6 +961,10 @@ export default function FingerPage() {
   const registeredCount = members.filter(m => m.finger1_registered && m.finger2_registered).length
   const partialCount = members.filter(m => (m.finger1_registered || m.finger2_registered) && !(m.finger1_registered && m.finger2_registered)).length
   const unregisteredCount = members.filter(m => !m.finger1_registered && !m.finger2_registered).length
+
+  if (false && isLoading) {
+    // Hanya tampilkan skeleton khusus finger
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
@@ -979,8 +1030,8 @@ export default function FingerPage() {
                         {devices.length === 0 ? (
                           <div className="p-4 text-center text-muted-foreground">
                             <Monitor className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                            <p className="text-sm font-medium">Tidak ada mesin aktif</p>
-                            <p className="text-xs mt-1">Hubungi administrator</p>
+                            <p className="text-sm font-medium">No active device</p>
+                            <p className="text-xs mt-1">Contact the administrator</p>
                           </div>
                         ) : (
                           devices.map((device, index) => {
@@ -1073,18 +1124,6 @@ export default function FingerPage() {
                 </SelectContent>
               </Select>
 
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                disabled={isLoading || loadingDevices}
-              >
-                <Link href="/finger/import-simple">
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Import 
-                </Link>
-              </Button>
             </div>
           </div>
         </div>
@@ -1102,13 +1141,22 @@ export default function FingerPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
-                    Loading data...
-                  </TableCell>
-                </TableRow>
+              {(isLoading && members.length === 0) ? (
+                <>
+                  {Array.from({ length: Math.max(5, pageSizeNum) }).map((_, i) => (
+                    <TableRow key={`sk-${i}`}>
+                      <TableCell colSpan={6}>
+                        <div className="flex items-center gap-4">
+                          <div className="h-5 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                          <div className="h-5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                          <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                          <div className="h-5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                          <div className="h-5 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse ml-auto" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </>
               ) : paginatedMembers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
@@ -1140,7 +1188,7 @@ export default function FingerPage() {
                       className="text-foreground hover:underline cursor-pointer"
                       onClick={() => handleMemberClick(member.id)}
                     >
-                      {member.full_name}
+                      {member.display_name}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-muted-foreground">
@@ -1342,16 +1390,16 @@ export default function FingerPage() {
         <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Konfirmasi Re-Register Sidik Jari</AlertDialogTitle>
+              <AlertDialogTitle>Finger re-register confirmation</AlertDialogTitle>
               <AlertDialogDescription>
-                Sidik jari {registeringMember?.fingerNumber} untuk {registeringMember?.member.full_name} sudah terdaftar.
-                Apakah Anda yakin ingin mendaftarkan ulang?
+                Finger {registeringMember?.fingerNumber} for {registeringMember?.member.display_name} had already registered.
+                Are you sure want to re-register?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleConfirmReRegister}>
-                Ya, Daftar Ulang
+                Proceed
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

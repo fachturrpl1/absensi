@@ -398,7 +398,6 @@ export const getMembersByPositionId = async (positionId: string) => {
     .from("organization_members")
     .select(`
       *,
-      biodata:biodata_nik (*),
       user:user_id (
         id,
         email,
