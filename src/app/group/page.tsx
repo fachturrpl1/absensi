@@ -90,7 +90,7 @@ export default function GroupsPage() {
   const [loading, setLoading] = React.useState<boolean>(true)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState("all")
-  const [sortOrder, setSortOrder] = React.useState("newest")
+  const [sortOrder] = React.useState("z-a")
 
   const filteredAndSortedGroups = React.useMemo(() => {
     let result = [...groups]
@@ -112,24 +112,12 @@ export default function GroupsPage() {
     }
 
     switch (sortOrder) {
-      case "oldest":
-        result.sort(
-          (a, b) =>
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        )
-        break
       case "a-z":
         result.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
         break
       case "z-a":
-        result.sort((a, b) => (b.name || "").localeCompare(a.name || ""))
-        break
-      case "newest":
       default:
-        result.sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        )
+        result.sort((a, b) => (b.name || "").localeCompare(a.name || ""))
         break
     }
 
@@ -367,13 +355,6 @@ export default function GroupsPage() {
                 />
               </div>
               <div className="flex gap-3 sm:gap-2 flex-wrap">
-                <Button variant="outline" size="sm" onClick={() => fetchGroups()} className="whitespace-nowrap">
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-              <div className="flex gap-3 sm:gap-2 flex-wrap">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-full sm:w-[180px]">
                         <SelectValue placeholder="Filter by status" />
@@ -384,19 +365,9 @@ export default function GroupsPage() {
                         <SelectItem value="inactive">Inactive</SelectItem>
                     </SelectContent>
                 </Select>
-                <Select value={sortOrder} onValueChange={setSortOrder}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                        <SelectValue placeholder="Sort by" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="newest">Newest</SelectItem>
-                        <SelectItem value="oldest">Oldest</SelectItem>
-                        <SelectItem value="a-z">A-Z</SelectItem>
-                        <SelectItem value="z-a">Z-A</SelectItem>
-                    </SelectContent>
-                </Select>
-              </div>
-              <div className="flex gap-3 sm:gap-2 flex-wrap">
+                <Button variant="outline" size="sm" onClick={() => fetchGroups()} className="whitespace-nowrap">
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
                 <Dialog open={isModalOpen} onOpenChange={handleDialogOpenChange}>
                   <DialogTrigger asChild>
                     <Button

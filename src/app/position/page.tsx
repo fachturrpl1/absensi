@@ -87,7 +87,7 @@ export default function PositionsPage() {
     const [loading, setLoading] = React.useState<boolean>(true)
     const [searchTerm, setSearchTerm] = React.useState("")
     const [filterStatus, setFilterStatus] = React.useState<'all' | 'active' | 'inactive'>('all')
-    const [sortOrder, setSortOrder] = React.useState("newest")
+    const [sortOrder] = React.useState("newest")
     const [pageIndex, setPageIndex] = React.useState(0)
     const [pageSize, setPageSize] = React.useState("10") // setPageSize akan digunakan nanti
 
@@ -279,11 +279,9 @@ export default function PositionsPage() {
         <div className="flex flex-1 flex-col gap-4 w-full">
             <div className="w-full">
                 <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
-
-                    
                     <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
                         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-                            <div className="flex-1 relative">
+                            <div className="flex flex-1 items-center gap-3 relative">
                                 <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                                 <Input
                                     placeholder="Search positions..."
@@ -292,14 +290,7 @@ export default function PositionsPage() {
                                     className="pl-10"
                                 />
                             </div>
-                            <div className="flex gap-3 sm:gap-2 flex-wrap">
-                                <Button variant="outline" size="sm" onClick={fetchPositions} className="whitespace-nowrap">
-                                    <RotateCcw className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-                            <div className="flex gap-3 sm:gap-2 flex-wrap">
+                            <div className="flex items-center gap-3 sm:gap-2 flex-wrap">
                                 <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}>
                                     <SelectTrigger className="w-full sm:w-[180px]">
                                         <SelectValue placeholder="Filter by status" />
@@ -310,29 +301,9 @@ export default function PositionsPage() {
                                         <SelectItem value="inactive">Inactive</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <Select value={sortOrder} onValueChange={setSortOrder}>
-                                    <SelectTrigger className="w-full sm:w-[180px]">
-                                        <SelectValue placeholder="Sort by" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="newest">Newest</SelectItem>
-                                        <SelectItem value="oldest">Oldest</SelectItem>
-                                        <SelectItem value="a-z">A-Z</SelectItem>
-                                        <SelectItem value="z-a">Z-A</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <Select value={pageSize} onValueChange={setPageSize}>
-                                    <SelectTrigger className="w-[100px]">
-                                        <SelectValue placeholder="Show" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="10">10</SelectItem>
-                                        <SelectItem value="20">20</SelectItem>
-                                        <SelectItem value="50">50</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="flex gap-3 sm:gap-2 flex-wrap">
+                                <Button variant="outline" size="sm" onClick={fetchPositions} className="whitespace-nowrap">
+                                    <RotateCcw className="h-4 w-4" />
+                                </Button>
                                 <Dialog open={open} onOpenChange={handleDialogOpenChange}>
                                     <DialogTrigger asChild>
                                         <Button
@@ -482,10 +453,10 @@ export default function PositionsPage() {
                             </Form>
                         </DialogContent>
                     </Dialog>
-                            </div>
-                        </div>
+                </div>
+            </div>
 
-                        <div className="mt-6">
+            <div className="mt-6">
                             {loading && positions.length === 0 ? (
                                 <TableSkeleton rows={6} columns={5} />
                             ) : positions.length === 0 ? (
