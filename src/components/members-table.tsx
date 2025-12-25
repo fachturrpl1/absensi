@@ -73,15 +73,25 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
 
   const getFullName = (member: IOrganization_member) => {
     const user = (member as any).user
-    if (!user) return "No User"
-    return (
-      [user.first_name, user.middle_name, user.last_name]
+    const biodata = (member as any).biodata
+    
+    // Try to get name from user first
+    if (user) {
+      const fullName = [user.first_name, user.middle_name, user.last_name]
         .filter((part: any) => part && part.trim() !== "")
-        .join(" ") ||
-      user.display_name ||
-      user.email ||
-      "No User"
-    )
+        .join(" ")
+      if (fullName) return fullName
+      if (user.display_name) return user.display_name
+      if (user.email) return user.email
+    }
+    
+    // Fallback to biodata if user is null or has no name
+    if (biodata) {
+      if (biodata.nama) return biodata.nama
+      if (biodata.nickname) return biodata.nickname
+    }
+    
+    return "No Name"
   }
 
   // Filter and sort data

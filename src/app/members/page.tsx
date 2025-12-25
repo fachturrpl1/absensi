@@ -75,30 +75,55 @@ type ExportFieldConfig = {
 
 const EXPORT_FIELDS: ExportFieldConfig[] = [
   {
+    key: "nik",
+    label: "NIK",
+    getValue: (member: any) => member.biodata?.nik || member.biodata_nik || "-",
+  },
+  {
     key: "full_name",
     label: "Full Name",
     getValue: (member: any) => {
+      // Priority: biodata.nama > user full name > email
+      if (member.biodata?.nama) return member.biodata.nama
+      
       const user = member.user
-      if (!user) return "No User"
-      const fullname =
-        [user.first_name, user.middle_name, user.last_name]
-          .filter((part: string | undefined) => part && part.trim() !== "")
-          .join(" ") ||
-        user.display_name ||
-        user.email ||
-        "No User"
-      return fullname
+      if (user) {
+        const fullname =
+          [user.first_name, user.middle_name, user.last_name]
+            .filter((part: string | undefined) => part && part.trim() !== "")
+            .join(" ") ||
+          user.display_name ||
+          user.email
+        if (fullname) return fullname
+      }
+      
+      return "-"
     },
+  },
+  {
+    key: "nickname",
+    label: "Nickname",
+    getValue: (member: any) => member.biodata?.nickname || "-",
+  },
+  {
+    key: "nisn",
+    label: "NISN",
+    getValue: (member: any) => member.biodata?.nisn || "-",
+  },
+  {
+    key: "gender",
+    label: "Gender",
+    getValue: (member: any) => member.biodata?.jenis_kelamin || "-",
   },
   {
     key: "email",
     label: "Email",
-    getValue: (member: any) => member.user?.email || "-",
+    getValue: (member: any) => member.email || member.user?.email || "-",
   },
   {
     key: "phone",
     label: "Phone Number",
-    getValue: (member: any) => member.user?.phone || "-",
+    getValue: (member: any) => member.biodata?.no_telepon || member.user?.phone || "-",
   },
   {
     key: "group",
@@ -106,14 +131,24 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
     getValue: (member: any) => member.groupName || member.departments?.name || "-",
   },
   {
+    key: "position",
+    label: "Position",
+    getValue: (member: any) => member.position?.title || member.positions?.title || "-",
+  },
+  {
     key: "role",
     label: "Role",
-    getValue: (member: any) => member.role?.name || "No Role",
+    getValue: (member: any) => member.role?.name || "-",
   },
   {
     key: "status",
     label: "Status",
     getValue: (member: any) => (member.is_active ? "Active" : "Inactive"),
+  },
+  {
+    key: "hire_date",
+    label: "Hire Date",
+    getValue: (member: any) => member.hire_date || "-",
   },
 ]
 export default function MembersPage() {
@@ -161,16 +196,23 @@ export default function MembersPage() {
 
   const isLoadingInviteData = rolesLoading || deptLoading || posLoading
 
-  const fetchMembers = React.useCallback(async () => {
+  const fetchMembers = React.useCallback(async (forceRefresh = false) => {
     try {
       setLoading(true)
       
-      console.log('[MEMBERS] Fetching members - isHydrated:', isHydrated, 'orgId:', organizationId)
+      console.log('[MEMBERS] Fetching members - isHydrated:', isHydrated, 'orgId:', organizationId, 'forceRefresh:', forceRefresh)
 
       if (!organizationId) {
         console.error('[MEMBERS] No organization ID found')
         setMembers([])
         return
+      }
+
+      // Clear cache if force refresh
+      if (forceRefresh) {
+        const cacheKey = `members:${organizationId}`
+        localStorage.removeItem(cacheKey)
+        console.log('[MEMBERS] Cache cleared for:', cacheKey)
       }
 
       // Fetch all data
@@ -204,15 +246,17 @@ export default function MembersPage() {
       })
 
       // Members are already filtered by organization from API
-      console.log('[MEMBERS] Fetched', mergedMembers.length, 'members for org', organizationId)
+      console.log('[MEMBERS] ✅ Fetched', mergedMembers.length, 'members for org', organizationId, 'at', new Date().toLocaleTimeString())
       setMembers(mergedMembers)
-      setCache<IOrganization_member[]>(`members:${organizationId}`, mergedMembers, 1000 * 300)
+      // Cache with version to auto-invalidate old cache
+      const CACHE_VERSION = 'v2'
+      setCache<IOrganization_member[]>(`members:${organizationId}:${CACHE_VERSION}`, mergedMembers, 1000 * 300)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
-  }, [organizationId])
+  }, [organizationId, isHydrated])
 
   // Monitor organization changes
   React.useEffect(() => {
@@ -223,14 +267,18 @@ export default function MembersPage() {
 
   React.useEffect(() => {
     if (isHydrated && organizationId) {
-      const cached = getCache<IOrganization_member[]>(`members:${organizationId}`)
+      // Cache version - increment this to invalidate old cache
+      const CACHE_VERSION = 'v2' // Changed from v1 to v2 to fix 1000 limit
+      const cacheKey = `members:${organizationId}:${CACHE_VERSION}`
+      const cached = getCache<IOrganization_member[]>(cacheKey)
       if (cached && cached.length > 0) {
+        console.log('[MEMBERS] Using cached data:', cached.length, 'members')
         setMembers(cached)
         setLoading(false)
         return
       }
-      console.log('[MEMBERS] Hydration complete, fetching members')
-      fetchMembers()
+      console.log('[MEMBERS] Hydration complete, fetching members (cache miss)')
+      fetchMembers(true) // Force refresh to bypass old cache
     }
   }, [isHydrated, organizationId, fetchMembers])
   async function onSubmitInvite(values: InviteFormValues) {

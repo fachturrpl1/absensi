@@ -60,15 +60,21 @@ export function MemberGridCards({ members, onView, onEdit, onDelete }: MemberGri
   // Filter members
   const filteredMembers = members.filter((member: any) => {
     const user = member.user;
+    const biodata = member.biodata;
+    
+    // Get name from user or biodata
     const fullName = user
       ? [user.first_name, user.middle_name, user.last_name]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
-      : '';
+      : (biodata?.nama || '').toLowerCase();
+    
+    // Get email from user or biodata
+    const email = (user?.email || biodata?.email || '').toLowerCase();
     
     const matchesSearch = fullName.includes(searchQuery.toLowerCase()) ||
-                         user?.email?.toLowerCase().includes(searchQuery.toLowerCase());
+                         email.includes(searchQuery.toLowerCase());
     
     const matchesStatus = filterStatus === 'all' || 
                          (filterStatus === 'active' && member.is_active) ||

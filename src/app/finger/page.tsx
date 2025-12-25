@@ -291,29 +291,59 @@ export default function FingerPage() {
       if (DEBUG) console.log('✅ Using Organization ID:', orgId, '(type:', typeof orgId, ')')
       if (DEBUG) console.log('✅ Fetching members for organization:', orgId)
 
-      // First, fetch ALL members (including inactive) to debug
-      const { data: allMembersData, error: allMembersError } = await supabase
-        .from('organization_members')
-        .select(`
-          id,
-          user_id,
-          department_id,
-          organization_id,
-          is_active,
-          user_profiles (
-            first_name,
-            last_name,
-            display_name
-          )
-        `)
-        .eq('organization_id', orgId)
-        .eq('is_active', true)
+      // Fetch members with pagination (Supabase max 1000 per request)
+      let allMembersData: any[] = [];
+      let currentPage = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-      if (allMembersError) {
-        console.error('❌ Error fetching members:', allMembersError)
-        toast.error(allMembersError.message)
-        setIsLoading(false)
-        return
+      while (hasMore) {
+        const from = currentPage * pageSize;
+        const to = from + pageSize - 1;
+        
+        const { data: pageData, error: pageError } = await supabase
+          .from('organization_members')
+          .select(`
+            id,
+            user_id,
+            department_id,
+            organization_id,
+            is_active,
+            user_profiles (
+              first_name,
+              last_name,
+              display_name
+            )
+          `)
+          .eq('organization_id', orgId)
+          .eq('is_active', true)
+          .range(from, to);
+
+        if (pageError) {
+          console.error('❌ Error fetching members page', currentPage, ':', pageError)
+          toast.error(pageError.message)
+          setIsLoading(false)
+          return
+        }
+
+        if (pageData && pageData.length > 0) {
+          allMembersData = allMembersData.concat(pageData);
+          console.log(`📄 Fetched page ${currentPage + 1}: ${pageData.length} members (total: ${allMembersData.length})`);
+          
+          if (pageData.length < pageSize) {
+            hasMore = false;
+          } else {
+            currentPage++;
+          }
+        } else {
+          hasMore = false;
+        }
+
+        // Safety limit: 20 pages (20,000 records)
+        if (currentPage >= 20) {
+          console.warn('⚠️ Reached 20 pages safety limit');
+          hasMore = false;
+        }
       }
 
       // Already filtered by is_active at the query level
@@ -354,6 +384,7 @@ export default function FingerPage() {
               .in('organization_member_id', memberIds)
               .eq('biometric_type', 'FINGERPRINT')
               .eq('is_active', true)
+              .range(0, 9999) // Fetch up to 10000 biometric records
           : Promise.resolve({ data: [], error: null } as { data: any[]; error: any })
       ])
 

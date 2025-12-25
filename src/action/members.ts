@@ -50,61 +50,103 @@ export const getAllOrganization_member = async (organizationId?: number) => {
   memberLogger.debug(`📍 Fetching members for organization: ${targetOrgId}`);
 
   // 3. Fetch all members belonging to the organization
-  const { data, error } = await adminClient
-    .from("organization_members")
-    .select(`
-      *,
-      biodata:biodata_nik (*),
-      user:user_id (
-        id,
-        email,
-        first_name,
-        middle_name,
-        last_name,
-        display_name
-      ),
-      departments:department_id (
-        id,
-        name,
-        code,
-        organization_id
-      ),
-      role:role_id (
-        id,
-        code,
-        name,
-        description
-      )
-    `)
-    .eq("organization_id", targetOrgId)
-    .eq("is_active", true)
-    .order("created_at", { ascending: true });
+  // Note: Increase limit to 10000 to support large organizations
+  // Fetch with explicit limit (Supabase max is 1000 per request by default)
+  // We'll use multiple requests if needed
+  let allData: any[] = [];
+  let currentPage = 0;
+  const pageSize = 1000;
+  let hasMore = true;
 
-  if (error) {
-    memberLogger.error('❌ getAllOrganization_member - error fetching organization_members for org', error);
-    return { success: false, message: error.message, data: [] };
+  while (hasMore) {
+    const from = currentPage * pageSize;
+    const to = from + pageSize - 1;
+    
+    const { data: pageData, error: pageError } = await adminClient
+      .from("organization_members")
+      .select(`
+        *,
+        biodata:biodata_nik (*),
+        user:user_id (
+          id,
+          email,
+          first_name,
+          middle_name,
+          last_name,
+          display_name
+        ),
+        departments:department_id (
+          id,
+          name,
+          code,
+          organization_id
+        ),
+        positions:position_id (
+          id,
+          title,
+          code
+        ),
+        role:role_id (
+          id,
+          code,
+          name,
+          description
+        )
+      `)
+      .eq("organization_id", targetOrgId)
+      .eq("is_active", true)
+      .order("created_at", { ascending: true })
+      .range(from, to);
+
+    if (pageError) {
+      memberLogger.error('❌ Error fetching page', currentPage, pageError);
+      return { success: false, message: pageError.message, data: [] };
+    }
+
+    if (pageData && pageData.length > 0) {
+      allData = allData.concat(pageData);
+      memberLogger.debug(`📄 Fetched page ${currentPage + 1}: ${pageData.length} records (total so far: ${allData.length})`);
+      
+      // If we got less than pageSize, we're done
+      if (pageData.length < pageSize) {
+        hasMore = false;
+      } else {
+        currentPage++;
+      }
+    } else {
+      hasMore = false;
+    }
+
+    // Safety limit: stop after 20 pages (20,000 records)
+    if (currentPage >= 20) {
+      memberLogger.warn('⚠️ Reached safety limit of 20 pages (20,000 records)');
+      hasMore = false;
+    }
   }
 
-  // 4. Untuk member yang user_id null, ambil data dari biodata berdasarkan employee_id (NIK)
+  const data = allData;
+
+  // 4. Untuk member yang user_id null, ambil data dari biodata berdasarkan biodata_nik atau employee_id (NIK)
   if (data && data.length > 0) {
-    const membersWithoutUser = data.filter((m: any) => !m.user_id && m.employee_id);
+    const membersWithoutUser = data.filter((m: any) => !m.user_id && (m.biodata_nik || m.employee_id));
     
     if (membersWithoutUser.length > 0) {
-      const employeeIds = membersWithoutUser.map((m: any) => m.employee_id).filter(Boolean);
+      const niks = membersWithoutUser.map((m: any) => m.biodata_nik || m.employee_id).filter(Boolean);
       
-      if (employeeIds.length > 0) {
+      if (niks.length > 0) {
         const { data: biodataList, error: biodataError } = await adminClient
           .from("biodata")
-          .select("nik, nama, nickname, email, no_telepon")
-          .in("nik", employeeIds);
+          .select("nik, nama, nickname, email, no_telepon, jenis_kelamin, agama")
+          .in("nik", niks);
 
         if (!biodataError && biodataList) {
           // Merge biodata ke dalam member data
           const biodataMap = new Map(biodataList.map((b: any) => [b.nik, b]));
           
           data.forEach((member: any) => {
-            if (!member.user_id && member.employee_id) {
-              const biodata = biodataMap.get(member.employee_id);
+            if (!member.user_id && (member.biodata_nik || member.employee_id)) {
+              const nik = member.biodata_nik || member.employee_id;
+              const biodata = biodataMap.get(nik);
               if (biodata) {
                 // Buat object user dummy dari biodata untuk konsistensi dengan struktur yang ada
                 member.user = {
@@ -114,6 +156,10 @@ export const getAllOrganization_member = async (organizationId?: number) => {
                   last_name: biodata.nama?.split(" ").slice(1).join(" ") || null,
                   display_name: biodata.nickname || biodata.nama || null,
                 };
+                // Update biodata relation jika belum ada
+                if (!member.biodata) {
+                  member.biodata = biodata;
+                }
               }
             }
           });

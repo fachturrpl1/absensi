@@ -137,18 +137,27 @@ export function AttendanceForm() {
 
         const options: MemberOption[] = membersData
           .filter((member) => {
-            if (!member.id || !member.user?.id) return false
+            // Member valid jika punya id (user_id optional)
+            if (!member.id) return false
             const memberId = Number(member.id)
             return !isNaN(memberId) && memberId > 0
           })
           .map((member) => {
-            const displayName = member.user?.display_name?.trim()
-            const concatenated = [member.user?.first_name, member.user?.middle_name, member.user?.last_name]
-              .filter(Boolean)
-              .join(" ")
-
-            const fullName = concatenated.trim()
-            const resolvedLabel = displayName || fullName || member.user?.email || "No Name"
+            const user = member.user
+            const biodata = (member as any).biodata
+            
+            // Get name from user or biodata
+            let resolvedLabel = "No Name"
+            if (user) {
+              const displayName = user.display_name?.trim()
+              const concatenated = [user.first_name, user.middle_name, user.last_name]
+                .filter(Boolean)
+                .join(" ")
+              const fullName = concatenated.trim()
+              resolvedLabel = displayName || fullName || user.email || "No Name"
+            } else if (biodata) {
+              resolvedLabel = biodata.nickname || biodata.nama || "No Name"
+            }
 
             const memberId = String(Number(member.id))
             return {

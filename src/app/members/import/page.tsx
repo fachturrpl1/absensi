@@ -50,7 +50,6 @@ export default function MembersImportPage() {
     failed: number
     errors: string[]
   } | null>(null)
-  const trackHistory = false // Default: track history disabled for wizard import
   const allowMatchingWithSubfields = true // Default: allow subfield matching enabled
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -142,7 +141,6 @@ export default function MembersImportPage() {
       formData.append("file", file)
       formData.append("mapping", JSON.stringify(mapping))
       formData.append("mode", mode)
-      formData.append("trackHistory", String(trackHistory))
       formData.append("allowMatchingWithSubfields", String(allowMatchingWithSubfields))
 
       const response = await fetch("/api/members/import/process", {

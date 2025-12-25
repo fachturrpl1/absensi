@@ -37,7 +37,6 @@ export default function MembersImportSimpleMappingPage() {
   const [loading, setLoading] = useState(false)
   const [processing, setProcessing] = useState(false)
   const [useFirstRowAsHeader, setUseFirstRowAsHeader] = useState(true)
-  const [trackHistory, setTrackHistory] = useState(false)
   const [allowMatchingWithSubfields, setAllowMatchingWithSubfields] = useState(true)
   const [sheetName, setSheetName] = useState("Sheet1")
   const [testSummary, setTestSummary] = useState<{
@@ -163,7 +162,6 @@ export default function MembersImportSimpleMappingPage() {
       formData.append("file", file)
       formData.append("mapping", JSON.stringify(mapping))
       formData.append("mode", "test")
-      formData.append("trackHistory", String(trackHistory))
       formData.append("allowMatchingWithSubfields", String(allowMatchingWithSubfields))
 
       const response = await fetch("/api/members/import/process", {
@@ -212,7 +210,6 @@ export default function MembersImportSimpleMappingPage() {
       formData.append("file", file)
       formData.append("mapping", JSON.stringify(mapping))
       formData.append("mode", "import")
-      formData.append("trackHistory", String(trackHistory))
       formData.append("allowMatchingWithSubfields", String(allowMatchingWithSubfields))
 
       const response = await fetch("/api/members/import/process", {
@@ -377,17 +374,6 @@ export default function MembersImportSimpleMappingPage() {
             <div className="space-y-4 pt-6">
               <h2 className="font-semibold text-lg">Advanced</h2>
               
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="track-history"
-                  checked={trackHistory}
-                  onCheckedChange={(checked) => setTrackHistory(checked === true)}
-                />
-                <Label htmlFor="track-history" className="text-sm cursor-pointer">
-                  Track history during import
-                </Label>
-              </div>
-
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="allow-matching"
