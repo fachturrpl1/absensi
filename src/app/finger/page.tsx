@@ -514,6 +514,10 @@ export default function FingerPage() {
       if (DEBUG) console.log(`   - Both Registered: ${transformedMembers.filter(m => m.finger1_registered && m.finger2_registered).length}`)
       
       setMembers(transformedMembers)
+      // cache members 5 menit
+      if (organizationId) {
+        setCache<Member[]>(`finger:members:${organizationId}`, transformedMembers, 1000 * 300)
+      }
       
       // if (transformedMembers.length === 0) {
       //   toast.info("No members found in your organization")
