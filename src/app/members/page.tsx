@@ -49,6 +49,7 @@ import { getAllOrganization_member } from "@/action/members"
 import { getAllUsers } from "@/action/users"
 import { getAllGroups } from "@/action/group"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
+import { getCache, setCache } from "@/lib/local-cache"
 // ContentLayout removed - using new layout system
 import { createInvitation } from "@/action/invitations"
 import { getOrgRoles } from "@/lib/rbac"
@@ -205,6 +206,7 @@ export default function MembersPage() {
       // Members are already filtered by organization from API
       console.log('[MEMBERS] Fetched', mergedMembers.length, 'members for org', organizationId)
       setMembers(mergedMembers)
+      setCache<IOrganization_member[]>(`members:${organizationId}`, mergedMembers, 1000 * 120)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
@@ -221,6 +223,10 @@ export default function MembersPage() {
 
   React.useEffect(() => {
     if (isHydrated && organizationId) {
+      const cached = getCache<IOrganization_member[]>(`members:${organizationId}`)
+      if (cached && cached.length > 0) {
+        setMembers(cached)
+      }
       console.log('[MEMBERS] Hydration complete, fetching members')
       fetchMembers()
     }
@@ -638,7 +644,7 @@ export default function MembersPage() {
             </div>
 
             <div className="mt-6">
-              {loading ? (
+              {loading && members.length === 0 ? (
                 <TableSkeleton rows={8} columns={6} />
               ) : members.length === 0 ? (
                 <div className="mt-20">

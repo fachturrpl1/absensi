@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { getCache, setCache } from "@/lib/local-cache"
 
 interface Device {
   device_code: string
@@ -515,6 +516,10 @@ export default function FingerPage() {
       if (DEBUG) console.log(`   - Both Registered: ${transformedMembers.filter(m => m.finger1_registered && m.finger2_registered).length}`)
       
       setMembers(transformedMembers)
+      // cache members 2 menit
+      if (organizationId) {
+        setCache<Member[]>(`finger:members:${organizationId}`, transformedMembers, 1000 * 120)
+      }
       
       // if (transformedMembers.length === 0) {
       //   toast.info("No members found in your organization")
@@ -534,6 +539,10 @@ export default function FingerPage() {
   // Fetch data when hydration completes
   React.useEffect(() => {
     if (isHydrated && organizationId) {
+      const cached = getCache<Member[]>(`finger:members:${organizationId}`)
+      if (cached && cached.length > 0) {
+        setMembers(cached)
+      }
       console.log('[FINGER-PAGE] Hydration complete, organizationId available:', organizationId)
       fetchDevices()
       fetchMembers()

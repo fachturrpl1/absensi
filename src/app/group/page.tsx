@@ -57,6 +57,7 @@ import {
 import { getAllOrganization } from "@/action/organization"
 import { Can } from "@/components/can"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
+import { getCache, setCache } from "@/lib/local-cache"
 import {
   Select,
   SelectContent,
@@ -253,6 +254,8 @@ export default function GroupsPage() {
       if (!result.success) throw new Error(result.message)
       
       setGroups(result.data)
+      // cache 2 menit
+      setCache<IGroup[]>(`groups:${organizationId}`, result.data, 1000 * 120)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
@@ -278,6 +281,10 @@ export default function GroupsPage() {
 
   React.useEffect(() => {
     if (isHydrated && organizationId) {
+      const cached = getCache<IGroup[]>(`groups:${organizationId}`)
+      if (cached && cached.length > 0) {
+        setGroups(cached)
+      }
       console.log('[GROUP-PAGE] Hydration complete, fetching groups')
       fetchGroups()
     }
@@ -529,7 +536,7 @@ export default function GroupsPage() {
             </div>
 
             <div className="mt-6">
-              {loading ? (
+              {loading && groups.length === 0 ? (
                 <TableSkeleton rows={6} columns={4} />
               ) : groups.length === 0 ? (
                 <div className="mt-20">

@@ -65,6 +65,7 @@ import { getAllOrganization } from "@/action/organization"
 import { Can } from "@/components/can"
 import { useHydration } from "@/hooks/useHydration"
 import { logger } from '@/lib/logger';
+import { getCache, setCache } from "@/lib/local-cache"
 
 const positionSchema = z.object({
     organization_id: z.string().min(1, "Organization is required"),
@@ -172,6 +173,8 @@ export default function PositionsPage() {
             if (!typedResponse.success) throw new Error(typedResponse.message)
             
             setPositions(typedResponse.data)
+            // cache 2 menit
+            setCache<IPositions[]>(`positions:${organizationId}`, typedResponse.data, 1000 * 120)
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'An error occurred')
         } finally {
@@ -199,6 +202,10 @@ export default function PositionsPage() {
     React.useEffect(() => {
         if (isHydrated && organizationId) {
             console.log('[POSITION-PAGE] Hydration complete, fetching positions')
+            const cached = getCache<IPositions[]>(`positions:${organizationId}`)
+            if (cached && cached.length > 0) {
+                setPositions(cached)
+            }
             fetchPositions()
         }
     }, [isHydrated, organizationId, fetchPositions])
@@ -477,7 +484,7 @@ export default function PositionsPage() {
                         </div>
 
                         <div className="mt-6">
-                            {loading ? (
+                            {loading && positions.length === 0 ? (
                                 <TableSkeleton rows={6} columns={5} />
                             ) : positions.length === 0 ? (
                                 <div className="mt-20">
