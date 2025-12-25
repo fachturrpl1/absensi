@@ -226,6 +226,8 @@ export default function MembersPage() {
       const cached = getCache<IOrganization_member[]>(`members:${organizationId}`)
       if (cached && cached.length > 0) {
         setMembers(cached)
+        setLoading(false)
+        return
       }
       console.log('[MEMBERS] Hydration complete, fetching members')
       fetchMembers()

@@ -283,6 +283,8 @@ export default function GroupsPage() {
       const cached = getCache<IGroup[]>(`groups:${organizationId}`)
       if (cached && cached.length > 0) {
         setGroups(cached)
+        setLoading(false)
+        return
       }
       console.log('[GROUP-PAGE] Hydration complete, fetching groups')
       fetchGroups()

@@ -205,6 +205,8 @@ export default function PositionsPage() {
             const cached = getCache<IPositions[]>(`positions:${organizationId}`)
             if (cached && cached.length > 0) {
                 setPositions(cached)
+                setLoading(false)
+                return
             }
             fetchPositions()
         }
