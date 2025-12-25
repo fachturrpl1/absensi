@@ -50,6 +50,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
   memberLogger.debug(`📍 Fetching members for organization: ${targetOrgId}`);
 
   // 3. Fetch all members belonging to the organization
+  // Note: Increase limit to 10000 to support large organizations
   const { data, error } = await adminClient
     .from("organization_members")
     .select(`
@@ -71,7 +72,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
       ),
       positions:position_id (
         id,
-        name,
+        title,
         code
       ),
       role:role_id (
@@ -83,7 +84,8 @@ export const getAllOrganization_member = async (organizationId?: number) => {
     `)
     .eq("organization_id", targetOrgId)
     .eq("is_active", true)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .range(0, 9999); // Fetch up to 10000 records
 
   if (error) {
     memberLogger.error('❌ getAllOrganization_member - error fetching organization_members for org', error);

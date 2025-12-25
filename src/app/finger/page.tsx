@@ -308,6 +308,7 @@ export default function FingerPage() {
         `)
         .eq('organization_id', orgId)
         .eq('is_active', true)
+        .range(0, 9999) // Fetch up to 10000 records
 
       if (allMembersError) {
         console.error('❌ Error fetching members:', allMembersError)
@@ -354,6 +355,7 @@ export default function FingerPage() {
               .in('organization_member_id', memberIds)
               .eq('biometric_type', 'FINGERPRINT')
               .eq('is_active', true)
+              .range(0, 9999) // Fetch up to 10000 biometric records
           : Promise.resolve({ data: [], error: null } as { data: any[]; error: any })
       ])
 
@@ -591,7 +593,6 @@ export default function FingerPage() {
     return () => {
       console.log('🧹 Cleaning up real-time subscription')
       supabase.removeChannel(channel)
-      supabase.removeChannel(membersChannel)
     }
   }, [mounted, organizationId, fetchMembers])
 

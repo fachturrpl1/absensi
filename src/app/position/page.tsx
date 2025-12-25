@@ -580,37 +580,7 @@ export default function PositionsPage() {
                                             </tbody>
                                         </table>
                                     </div>
-                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-gray-50 rounded-md border mt-10">
-                                    <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-nowrap justify-center w-full md:w-auto">
-                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(0)} disabled={pageIndex === 0 || loading} className="h-8 w-8 p-0" title="First page">
-                                            <ChevronsLeft className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(pageIndex - 1)} disabled={pageIndex === 0 || loading} className="h-8 w-8 p-0" title="Previous page">
-                                            <ChevronLeft className="h-4 w-4" />
-                                        </Button>
-                                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap ml-1 sm:ml-2">Page</span>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max={totalPages}
-                                            value={pageIndex + 1}
-                                            onChange={(e) => {
-                                                const page = e.target.value ? Number(e.target.value) - 1 : 0;
-                                                setPageIndex(page);
-                                            }}
-                                            className="w-10 sm:w-12 h-8 px-2 border border-gray-300 rounded text-xs sm:text-sm text-center mx-1 sm:mx-2"
-                                            disabled={loading || totalPages === 0}
-                                        />
-                                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/ {totalPages}</span>
-                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(pageIndex + 1)} disabled={pageIndex >= totalPages - 1 || loading} className="h-8 w-8 p-0" title="Next page">
-                                            <ChevronRight className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(totalPages - 1)} disabled={pageIndex >= totalPages - 1 || loading} className="h-8 w-8 p-0" title="Last page">
-                                            <ChevronsRight className="h-4 w-4" />
-                                        </Button>
->>>>>>> 73b3e9a39220f2443e1a147fc5080babb86b5fa4
-                                    </div>
-                                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-gray-50 rounded-md border">
+                                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-gray-50 rounded-md border mt-10">
                                         <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-nowrap justify-center w-full md:w-auto">
                                             <Button variant="ghost" size="sm" onClick={() => setPageIndex(0)} disabled={pageIndex === 0 || loading} className="h-8 w-8 p-0" title="First page">
                                                 <ChevronsLeft className="h-4 w-4" />
