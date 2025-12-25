@@ -51,46 +51,80 @@ export const getAllOrganization_member = async (organizationId?: number) => {
 
   // 3. Fetch all members belonging to the organization
   // Note: Increase limit to 10000 to support large organizations
-  const { data, error } = await adminClient
-    .from("organization_members")
-    .select(`
-      *,
-      biodata:biodata_nik (*),
-      user:user_id (
-        id,
-        email,
-        first_name,
-        middle_name,
-        last_name,
-        display_name
-      ),
-      departments:department_id (
-        id,
-        name,
-        code,
-        organization_id
-      ),
-      positions:position_id (
-        id,
-        title,
-        code
-      ),
-      role:role_id (
-        id,
-        code,
-        name,
-        description
-      )
-    `)
-    .eq("organization_id", targetOrgId)
-    .eq("is_active", true)
-    .order("created_at", { ascending: true })
-    .range(0, 9999); // Fetch up to 10000 records
+  // Fetch with explicit limit (Supabase max is 1000 per request by default)
+  // We'll use multiple requests if needed
+  let allData: any[] = [];
+  let currentPage = 0;
+  const pageSize = 1000;
+  let hasMore = true;
 
-  if (error) {
-    memberLogger.error('❌ getAllOrganization_member - error fetching organization_members for org', error);
-    return { success: false, message: error.message, data: [] };
+  while (hasMore) {
+    const from = currentPage * pageSize;
+    const to = from + pageSize - 1;
+    
+    const { data: pageData, error: pageError } = await adminClient
+      .from("organization_members")
+      .select(`
+        *,
+        biodata:biodata_nik (*),
+        user:user_id (
+          id,
+          email,
+          first_name,
+          middle_name,
+          last_name,
+          display_name
+        ),
+        departments:department_id (
+          id,
+          name,
+          code,
+          organization_id
+        ),
+        positions:position_id (
+          id,
+          title,
+          code
+        ),
+        role:role_id (
+          id,
+          code,
+          name,
+          description
+        )
+      `)
+      .eq("organization_id", targetOrgId)
+      .eq("is_active", true)
+      .order("created_at", { ascending: true })
+      .range(from, to);
+
+    if (pageError) {
+      memberLogger.error('❌ Error fetching page', currentPage, pageError);
+      return { success: false, message: pageError.message, data: [] };
+    }
+
+    if (pageData && pageData.length > 0) {
+      allData = allData.concat(pageData);
+      memberLogger.debug(`📄 Fetched page ${currentPage + 1}: ${pageData.length} records (total so far: ${allData.length})`);
+      
+      // If we got less than pageSize, we're done
+      if (pageData.length < pageSize) {
+        hasMore = false;
+      } else {
+        currentPage++;
+      }
+    } else {
+      hasMore = false;
+    }
+
+    // Safety limit: stop after 20 pages (20,000 records)
+    if (currentPage >= 20) {
+      memberLogger.warn('⚠️ Reached safety limit of 20 pages (20,000 records)');
+      hasMore = false;
+    }
   }
+
+  const data = allData;
 
   // 4. Untuk member yang user_id null, ambil data dari biodata berdasarkan biodata_nik atau employee_id (NIK)
   if (data && data.length > 0) {
