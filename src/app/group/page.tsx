@@ -254,8 +254,7 @@ export default function GroupsPage() {
       if (!result.success) throw new Error(result.message)
       
       setGroups(result.data)
-      // cache 2 menit
-      setCache<IGroup[]>(`groups:${organizationId}`, result.data, 1000 * 120)
+      setCache<IGroup[]>(`groups:${organizationId}`, result.data, 1000 * 300)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {

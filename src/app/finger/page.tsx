@@ -303,9 +303,7 @@ export default function FingerPage() {
           user_profiles (
             first_name,
             last_name,
-            display_name,
-            email,
-            phone
+            display_name
           )
         `)
         .eq('organization_id', orgId)
@@ -346,8 +344,8 @@ export default function FingerPage() {
 
       const [deptResult, bioResult] = await Promise.all([
         supabase
-          .from('departments')
-          .select('id, name')
+            .from('departments')
+            .select('id, name')
           .eq('organization_id', orgId),
         memberIds.length > 0
           ? supabase
@@ -516,10 +514,6 @@ export default function FingerPage() {
       if (DEBUG) console.log(`   - Both Registered: ${transformedMembers.filter(m => m.finger1_registered && m.finger2_registered).length}`)
       
       setMembers(transformedMembers)
-      // cache members 2 menit
-      if (organizationId) {
-        setCache<Member[]>(`finger:members:${organizationId}`, transformedMembers, 1000 * 120)
-      }
       
       // if (transformedMembers.length === 0) {
       //   toast.info("No members found in your organization")

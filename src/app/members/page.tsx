@@ -206,7 +206,7 @@ export default function MembersPage() {
       // Members are already filtered by organization from API
       console.log('[MEMBERS] Fetched', mergedMembers.length, 'members for org', organizationId)
       setMembers(mergedMembers)
-      setCache<IOrganization_member[]>(`members:${organizationId}`, mergedMembers, 1000 * 120)
+      setCache<IOrganization_member[]>(`members:${organizationId}`, mergedMembers, 1000 * 300)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
