@@ -361,8 +361,36 @@ export async function POST(request: NextRequest) {
       let tanggalLahir: string | null = null
       if (tanggalLahirRaw) {
         if (/^\d{4}-\d{2}-\d{2}$/.test(tanggalLahirRaw)) {
+          // Already in YYYY-MM-DD format
           tanggalLahir = tanggalLahirRaw
+        } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(tanggalLahirRaw)) {
+          // DD/MM/YYYY format (Indonesian format from template)
+          const parts = tanggalLahirRaw.split('/')
+          const day = parts[0]
+          const month = parts[1]
+          const year = parts[2]
+          if (day && month && year) {
+            const date = new Date(Number(year), Number(month) - 1, Number(day))
+            if (!isNaN(date.getTime()) && date.getFullYear() === Number(year)) {
+              tanggalLahir = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+            } else {
+              failed++
+              errors.push({
+                row: rowNumber,
+                message: `Tanggal Lahir invalid: "${tanggalLahirRaw}" (gunakan format DD/MM/YYYY, contoh: 15/05/1992)`,
+              })
+              continue
+            }
+          } else {
+            failed++
+            errors.push({
+              row: rowNumber,
+              message: `Tanggal Lahir invalid: "${tanggalLahirRaw}" (gunakan format DD/MM/YYYY, contoh: 15/05/1992)`,
+            })
+            continue
+          }
         } else {
+          // Try general date parsing (for other formats)
           const parsed = new Date(tanggalLahirRaw)
           if (!isNaN(parsed.getTime())) {
             tanggalLahir = parsed.toISOString().split("T")[0] || null
@@ -370,7 +398,7 @@ export async function POST(request: NextRequest) {
             failed++
             errors.push({
               row: rowNumber,
-              message: `Tanggal Lahir invalid: "${tanggalLahirRaw}"`,
+              message: `Tanggal Lahir invalid: "${tanggalLahirRaw}" (gunakan format DD/MM/YYYY, contoh: 15/05/1992)`,
             })
             continue
           }
