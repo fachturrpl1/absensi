@@ -7,6 +7,33 @@ interface ColumnMapping {
   [databaseField: string]: string | null
 }
 
+// Helper function to parse date in various formats
+function parseDateString(dateStr: string): string | null {
+  if (!dateStr) return null
+  
+  // Already in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr
+  }
+  
+  // Try DD/MM/YYYY format
+  const ddmmyyyyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (ddmmyyyyMatch && ddmmyyyyMatch[1] && ddmmyyyyMatch[2] && ddmmyyyyMatch[3]) {
+    const day = ddmmyyyyMatch[1].padStart(2, '0')
+    const month = ddmmyyyyMatch[2].padStart(2, '0')
+    const year = ddmmyyyyMatch[3]
+    return `${year}-${month}-${day}`
+  }
+  
+  // Try parsing as Date object
+  const parsed = new Date(dateStr)
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().split("T")[0] || null
+  }
+  
+  return null
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
@@ -430,17 +457,11 @@ export async function POST(request: NextRequest) {
 
         let tanggalLahir: string | null = null
         if (tanggalLahirRaw) {
-          if (/^\d{4}-\d{2}-\d{2}$/.test(tanggalLahirRaw)) {
-            tanggalLahir = tanggalLahirRaw
-          } else {
-            const parsed = new Date(tanggalLahirRaw)
-            if (!isNaN(parsed.getTime())) {
-              tanggalLahir = parsed.toISOString().split("T")[0] || null
-            } else {
-              failed++
-              errors.push({ row: rowNumber, message: `Tanggal Lahir invalid: "${tanggalLahirRaw}"` })
-              continue
-            }
+          tanggalLahir = parseDateString(tanggalLahirRaw)
+          if (!tanggalLahir) {
+            failed++
+            errors.push({ row: rowNumber, message: `Tanggal Lahir invalid: "${tanggalLahirRaw}"` })
+            continue
           }
         }
 
@@ -648,61 +669,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Batch insert new members
-      if (membersToInsert.length > 0) {
-        const insertPayloads = membersToInsert.map(item => item.payload)
-
-        const { data: newMembers, error: insertError } = await adminClient
-          .from("organization_members")
-          .insert(insertPayloads)
-          .select("id, user_id, biodata_nik")
-
-        if (insertError) {
-          console.error("[MEMBERS IMPORT] Batch member insert error:", insertError)
-          // Jika batch insert gagal, tandai semua row sebagai failed
-          membersToInsert.forEach(item => {
-            if (!failedAfterValidation.has(item.rowNumber)) {
-              failed++
-              failedAfterValidation.add(item.rowNumber)
-              errors.push({
-                row: item.rowNumber,
-                message: `Baris ${item.rowNumber}: Gagal membuat member organisasi - ${insertError.message}`,
-              })
-            }
-          })
-        } else if (newMembers) {
-          newMembers.forEach((member: any) => {
-            if (member.user_id) {
-              membersByUserId.set(member.user_id, { id: member.id, biodata_nik: member.biodata_nik })
-            }
-          })
-        }
-      }
-
-      // Batch update existing members (dalam batch kecil untuk menghindari query terlalu besar)
-      const UPDATE_BATCH_SIZE = 50
-      for (let i = 0; i < membersToUpdate.length; i += UPDATE_BATCH_SIZE) {
-        const batch = membersToUpdate.slice(i, i + UPDATE_BATCH_SIZE)
-        await Promise.all(
-          batch.map(async ({ id, data, rowNumber }) => {
-            const { error: updateError } = await adminClient
-              .from("organization_members")
-              .update(data)
-              .eq("id", id)
-            
-            if (updateError && !failedAfterValidation.has(rowNumber)) {
-              failed++
-              failedAfterValidation.add(rowNumber)
-              errors.push({
-                row: rowNumber,
-                message: `Baris ${rowNumber}: Gagal memperbarui member organisasi - ${updateError.message}`,
-              })
-            }
-          })
-        )
-      }
-
-      // Batch upsert biodata
+      // Batch upsert biodata (HARUS DILAKUKAN TERLEBIH DAHULU sebelum insert organization_members)
       console.log(`[MEMBERS IMPORT] Batch upserting biodata records...`)
       const biodataPayloads = validRows
         .filter(vr => !failedAfterValidation.has(vr.rowNumber))
@@ -756,6 +723,60 @@ export async function POST(request: NextRequest) {
             }
           }
         }
+      }
+
+      // Batch insert new members (setelah biodata di-upsert)
+      if (membersToInsert.length > 0) {
+        const insertPayloads = membersToInsert.map(item => item.payload)
+
+        const { data: newMembers, error: insertError } = await adminClient
+          .from("organization_members")
+          .insert(insertPayloads)
+          .select("id, user_id, biodata_nik")
+
+        if (insertError) {
+          console.error("[MEMBERS IMPORT] Batch member insert error:", insertError)
+          // Jika batch insert gagal, tandai semua row sebagai failed
+          membersToInsert.forEach(item => {
+            if (!failedAfterValidation.has(item.rowNumber)) {
+              failed++
+              failedAfterValidation.add(item.rowNumber)
+              errors.push({
+                row: item.rowNumber,
+                message: `Baris ${item.rowNumber}: Gagal membuat member organisasi - ${insertError.message}`,
+              })
+            }
+          })
+        } else if (newMembers) {
+          newMembers.forEach((member: any) => {
+            if (member.user_id) {
+              membersByUserId.set(member.user_id, { id: member.id, biodata_nik: member.biodata_nik })
+            }
+          })
+        }
+      }
+
+      // Batch update existing members (dalam batch kecil untuk menghindari query terlalu besar)
+      const UPDATE_BATCH_SIZE = 50
+      for (let i = 0; i < membersToUpdate.length; i += UPDATE_BATCH_SIZE) {
+        const batch = membersToUpdate.slice(i, i + UPDATE_BATCH_SIZE)
+        await Promise.all(
+          batch.map(async ({ id, data, rowNumber }) => {
+            const { error: updateError } = await adminClient
+              .from("organization_members")
+              .update(data)
+              .eq("id", id)
+            
+            if (updateError && !failedAfterValidation.has(rowNumber)) {
+              failed++
+              failedAfterValidation.add(rowNumber)
+              errors.push({
+                row: rowNumber,
+                message: `Baris ${rowNumber}: Gagal memperbarui member organisasi - ${updateError.message}`,
+              })
+            }
+          })
+        )
       }
 
       // Audit logs (optional, bisa di-skip jika terlalu lambat)
@@ -894,22 +915,16 @@ export async function POST(request: NextRequest) {
 
       let tanggalLahir: string | null = null
       if (tanggalLahirRaw) {
-        if (/^\d{4}-\d{2}-\d{2}$/.test(tanggalLahirRaw)) {
-          tanggalLahir = tanggalLahirRaw
-        } else {
-          const parsed = new Date(tanggalLahirRaw)
-          if (!isNaN(parsed.getTime())) {
-            tanggalLahir = parsed.toISOString().split("T")[0] || null
-            } else {
-            failed++
-            errors.push({
-              row: rowNumber,
-              message: `Tanggal Lahir invalid: "${tanggalLahirRaw}"`,
-            })
-              continue
-            }
-          }
+        tanggalLahir = parseDateString(tanggalLahirRaw)
+        if (!tanggalLahir) {
+          failed++
+          errors.push({
+            row: rowNumber,
+            message: `Tanggal Lahir invalid: "${tanggalLahirRaw}"`,
+          })
+          continue
         }
+      }
 
       // Validasi NIK harus dilakukan sebelum mode test/import
       if (nik && nik.length < 10) {
@@ -1064,6 +1079,51 @@ export async function POST(request: NextRequest) {
           }
 
           // Test: Cek apakah bisa membuat organization_member
+          // Test: Cek apakah bisa upsert biodata (HARUS DILAKUKAN TERLEBIH DAHULU)
+          const biodataPayload: any = {
+            nik,
+            nama,
+            nickname: nickname || null,
+            nisn: nisn || null,
+            jenis_kelamin: jenisKelamin || null,
+            tempat_lahir: tempatLahir || null,
+            tanggal_lahir: tanggalLahir,
+            agama: agama || null,
+            jalan: jalan || null,
+            rt: rt || null,
+            rw: rw || null,
+            dusun: dusun || null,
+            kelurahan: kelurahan || null,
+            kecamatan: kecamatan || null,
+            no_telepon: noTelepon || null,
+            email: email || null,
+            department_id: departmentId,
+          }
+
+          const { error: upsertError } = await adminClient
+            .from("biodata")
+            .upsert(biodataPayload, {
+              onConflict: "nik",
+            })
+
+          if (upsertError) {
+            failed++
+            errors.push({
+              row: rowNumber,
+              message: `Baris ${rowNumber}: Gagal menyimpan biodata - ${upsertError.message}`,
+            })
+            // Cleanup jika user baru dibuat
+            if (createdUserInTest) {
+              try {
+                await adminClient.auth.admin.deleteUser(userId)
+              } catch (deleteError) {
+                console.error(`[MEMBERS IMPORT TEST] Failed to cleanup user ${userId}:`, deleteError)
+              }
+            }
+            continue
+          }
+
+          // Test: Buat/update organization_members (SETELAH biodata di-upsert)
           if (orgId && userId) {
             const today = new Date().toISOString().split("T")[0]
 
@@ -1146,53 +1206,6 @@ export async function POST(request: NextRequest) {
               }
             }
           }
-
-          // Test: Cek apakah bisa upsert biodata
-          const biodataPayload: any = {
-            nik,
-            nama,
-            nickname: nickname || null,
-            nisn: nisn || null,
-            jenis_kelamin: jenisKelamin || null,
-            tempat_lahir: tempatLahir || null,
-            tanggal_lahir: tanggalLahir,
-            agama: agama || null,
-            jalan: jalan || null,
-            rt: rt || null,
-            rw: rw || null,
-            dusun: dusun || null,
-            kelurahan: kelurahan || null,
-            kecamatan: kecamatan || null,
-            no_telepon: noTelepon || null,
-            email: email || null,
-            department_id: departmentId,
-          }
-
-          const { error: upsertError } = await adminClient
-            .from("biodata")
-            .upsert(biodataPayload, {
-              onConflict: "nik",
-            })
-
-          if (upsertError) {
-            failed++
-            errors.push({
-              row: rowNumber,
-              message: `Baris ${rowNumber}: Gagal menyimpan biodata - ${upsertError.message}`,
-            })
-            // Cleanup jika user baru dibuat
-            if (createdUserInTest) {
-              try {
-                await adminClient.auth.admin.deleteUser(userId)
-              } catch (deleteError) {
-                console.error(`[MEMBERS IMPORT TEST] Failed to cleanup user ${userId}:`, deleteError)
-              }
-            }
-              continue
-            }
-
-          // OPTIMASI: biodata_nik sudah diisi saat insert/update organization_members di atas
-          // Tidak perlu update lagi di sini
 
           // Jika semua test passed, hitung sebagai success
           success++
@@ -1364,7 +1377,44 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Buat/update organization_members (email sudah wajib, jadi userId pasti ada)
+        // PENTING: Upsert biodata TERLEBIH DAHULU sebelum insert/update organization_members
+        // karena organization_members memiliki foreign key constraint ke biodata(nik)
+        const biodataPayload: any = {
+          nik,
+          nama,
+          nickname: nickname || null,
+          nisn: nisn || null,
+          jenis_kelamin: jenisKelamin || null,
+          tempat_lahir: tempatLahir || null,
+          tanggal_lahir: tanggalLahir,
+          agama: agama || null,
+          jalan: jalan || null,
+          rt: rt || null,
+          rw: rw || null,
+          dusun: dusun || null,
+          kelurahan: kelurahan || null,
+          kecamatan: kecamatan || null,
+          no_telepon: noTelepon || null,
+          email: email || null,
+          department_id: departmentId,
+        }
+
+        const { error: upsertError } = await adminClient
+          .from("biodata")
+          .upsert(biodataPayload, {
+            onConflict: "nik",
+          })
+
+        if (upsertError) {
+          failed++
+          errors.push({
+            row: rowNumber,
+            message: `Baris ${rowNumber}: Gagal menyimpan biodata - ${upsertError.message}`,
+          })
+          continue
+        }
+
+        // Buat/update organization_members SETELAH biodata di-upsert
         if (orgId && userId) {
           const today = new Date().toISOString().split("T")[0]
 
@@ -1435,44 +1485,6 @@ export async function POST(request: NextRequest) {
             }
           }
         }
-
-        const biodataPayload: any = {
-          nik,
-          nama,
-          nickname: nickname || null,
-          nisn: nisn || null,
-          jenis_kelamin: jenisKelamin || null,
-          tempat_lahir: tempatLahir || null,
-          tanggal_lahir: tanggalLahir,
-          agama: agama || null,
-          jalan: jalan || null,
-          rt: rt || null,
-          rw: rw || null,
-          dusun: dusun || null,
-          kelurahan: kelurahan || null,
-          kecamatan: kecamatan || null,
-          no_telepon: noTelepon || null,
-          email: email || null,
-          department_id: departmentId,
-        }
-
-        const { error: upsertError } = await adminClient
-          .from("biodata")
-          .upsert(biodataPayload, {
-            onConflict: "nik",
-          })
-
-        if (upsertError) {
-          failed++
-          errors.push({
-            row: rowNumber,
-            message: `Baris ${rowNumber}: Gagal menyimpan biodata - ${upsertError.message}`,
-          })
-          continue
-        }
-
-        // OPTIMASI: biodata_nik sudah diisi saat insert/update organization_members di atas
-        // Tidak perlu update lagi di sini
 
         if (trackHistory && mode === "import") {
               try {

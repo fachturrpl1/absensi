@@ -7,6 +7,33 @@ interface ColumnMapping {
   [databaseField: string]: string | null
 }
 
+// Helper function to parse date in various formats
+function parseDateString(dateStr: string): string | null {
+  if (!dateStr) return null
+  
+  // Already in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr
+  }
+  
+  // Try DD/MM/YYYY format
+  const ddmmyyyyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (ddmmyyyyMatch && ddmmyyyyMatch[1] && ddmmyyyyMatch[2] && ddmmyyyyMatch[3]) {
+    const day = ddmmyyyyMatch[1].padStart(2, '0')
+    const month = ddmmyyyyMatch[2].padStart(2, '0')
+    const year = ddmmyyyyMatch[3]
+    return `${year}-${month}-${day}`
+  }
+  
+  // Try parsing as Date object
+  const parsed = new Date(dateStr)
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().split("T")[0] || null
+  }
+  
+  return null
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
@@ -360,48 +387,14 @@ export async function POST(request: NextRequest) {
       // Normalisasi tanggal lahir ke YYYY-MM-DD
       let tanggalLahir: string | null = null
       if (tanggalLahirRaw) {
-        if (/^\d{4}-\d{2}-\d{2}$/.test(tanggalLahirRaw)) {
-          // Already in YYYY-MM-DD format
-          tanggalLahir = tanggalLahirRaw
-        } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(tanggalLahirRaw)) {
-          // DD/MM/YYYY format (Indonesian format from template)
-          const parts = tanggalLahirRaw.split('/')
-          const day = parts[0]
-          const month = parts[1]
-          const year = parts[2]
-          if (day && month && year) {
-            const date = new Date(Number(year), Number(month) - 1, Number(day))
-            if (!isNaN(date.getTime()) && date.getFullYear() === Number(year)) {
-              tanggalLahir = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
-            } else {
-              failed++
-              errors.push({
-                row: rowNumber,
-                message: `Tanggal Lahir invalid: "${tanggalLahirRaw}" (gunakan format DD/MM/YYYY, contoh: 15/05/1992)`,
-              })
-              continue
-            }
-          } else {
-            failed++
-            errors.push({
-              row: rowNumber,
-              message: `Tanggal Lahir invalid: "${tanggalLahirRaw}" (gunakan format DD/MM/YYYY, contoh: 15/05/1992)`,
-            })
-            continue
-          }
-        } else {
-          // Try general date parsing (for other formats)
-          const parsed = new Date(tanggalLahirRaw)
-          if (!isNaN(parsed.getTime())) {
-            tanggalLahir = parsed.toISOString().split("T")[0] || null
-          } else {
-            failed++
-            errors.push({
-              row: rowNumber,
-              message: `Tanggal Lahir invalid: "${tanggalLahirRaw}" (gunakan format DD/MM/YYYY, contoh: 15/05/1992)`,
-            })
-            continue
-          }
+        tanggalLahir = parseDateString(tanggalLahirRaw)
+        if (!tanggalLahir) {
+          failed++
+          errors.push({
+            row: rowNumber,
+            message: `Tanggal Lahir invalid: "${tanggalLahirRaw}" (gunakan format DD/MM/YYYY, contoh: 15/05/1992)`,
+          })
+          continue
         }
       }
 

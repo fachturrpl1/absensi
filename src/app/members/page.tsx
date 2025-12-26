@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { MembersTable } from "@/components/members-table"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { User, Shield, Mail, Plus, FileDown, Loader2, Search, FileSpreadsheet, Minus } from "lucide-react"
+import { User, Shield, Mail, Plus, FileDown, Loader2, Search, FileSpreadsheet, Minus, RefreshCw } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -308,6 +308,25 @@ export default function MembersPage() {
     }
   }
 
+  const handleRefresh = async () => {
+    try {
+      // Clear all members cache
+      if (typeof window !== 'undefined') {
+        const keys = Object.keys(localStorage)
+        keys.forEach(key => {
+          if (key.startsWith('members:')) {
+            localStorage.removeItem(key)
+          }
+        })
+      }
+      // Force refresh data
+      await fetchMembers(true)
+      toast.success("Data berhasil di-refresh!")
+    } catch (error) {
+      toast.error("Gagal refresh data")
+    }
+  }
+
   const handleExportMembers = async () => {
     try {
       const hasSelection = selectedMemberIds.length > 0
@@ -519,6 +538,17 @@ export default function MembersPage() {
                 >
                   <FileDown className="mr-2 h-4 w-4" />
                   Export
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  className="whitespace-nowrap"
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
                 </Button>
                 <Button
                   asChild

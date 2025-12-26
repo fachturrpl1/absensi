@@ -255,6 +255,22 @@ export default function GroupImportPage() {
       const summary = data.summary || { success: 0, failed: 0, errors: [] }
       setImportSummary(summary)
 
+      // Clear all groups cache to force refresh after import
+      if (summary.success > 0) {
+        if (typeof window !== 'undefined') {
+          const keys = Object.keys(localStorage)
+          keys.forEach(key => {
+            if (key.startsWith('groups:')) {
+              localStorage.removeItem(key)
+              console.log('[IMPORT] Cleared cache:', key)
+            }
+          })
+        }
+        toast.success(`Import completed! ${summary.success} groups imported successfully. Cache cleared.`)
+      } else if (summary.failed > 0) {
+        toast.error(`Import failed. ${summary.failed} errors occurred.`)
+      }
+
       // Bentuk hasil per baris dari preview + error summary
       const results = preview.map((rowData, index) => {
         const rowNumber = index + 2 // 1 baris header + index 1-based

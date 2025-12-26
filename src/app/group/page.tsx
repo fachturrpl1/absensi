@@ -3,7 +3,7 @@
 import React from "react"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
-import { Plus, Group as GroupIcon, Pencil, Trash, Search, RotateCcw, ChevronRight } from "lucide-react"
+import { Plus, Group as GroupIcon, Pencil, Trash, Search, RotateCcw, ChevronRight, FileSpreadsheet } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -250,6 +250,25 @@ export default function GroupsPage() {
     }
   }, [organizationId])
 
+  const handleRefresh = React.useCallback(async () => {
+    try {
+      // Clear all groups cache
+      if (typeof window !== 'undefined') {
+        const keys = Object.keys(localStorage)
+        keys.forEach(key => {
+          if (key.startsWith('groups:')) {
+            localStorage.removeItem(key)
+          }
+        })
+      }
+      // Force refresh data
+      await fetchGroups()
+      toast.success("Data berhasil di-refresh!")
+    } catch (error) {
+      toast.error("Gagal refresh data")
+    }
+  }, [fetchGroups])
+
   const fetchOrganizations = async () => {
     try {
       const response = await getAllOrganization()
@@ -365,8 +384,20 @@ export default function GroupsPage() {
                         <SelectItem value="inactive">Inactive</SelectItem>
                     </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm" onClick={() => fetchGroups()} className="whitespace-nowrap">
-                  <RotateCcw className="h-4 w-4" />
+                <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading} className="whitespace-nowrap">
+                  <RotateCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                </Button>
+                <Button
+                  asChild
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="whitespace-nowrap"
+                >
+                  <Link href="/group/import">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Import
+                  </Link>
                 </Button>
                 <Dialog open={isModalOpen} onOpenChange={handleDialogOpenChange}>
                   <DialogTrigger asChild>

@@ -183,7 +183,17 @@ export default function MembersImportPage() {
         // Mode import: set importSummary dan tidak set testSummary
         setImportSummary(summary)
         if (summary.success > 0) {
-          toast.success(`Import completed! Success: ${summary.success}, Failed: ${summary.failed}`)
+          // Clear all members cache to force refresh after import
+          if (typeof window !== 'undefined') {
+            const keys = Object.keys(localStorage)
+            keys.forEach(key => {
+              if (key.startsWith('members:')) {
+                localStorage.removeItem(key)
+                console.log('[IMPORT] Cleared cache:', key)
+              }
+            })
+          }
+          toast.success(`Import completed! Success: ${summary.success}, Failed: ${summary.failed}. Cache cleared - please refresh members page.`)
         } else {
           toast.error(`Import failed. ${summary.errors.length} errors occurred.`)
         }
