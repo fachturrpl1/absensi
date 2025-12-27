@@ -115,6 +115,7 @@ export default function GroupImportPage() {
       setSheetNames(data.sheetNames || [])
       setSheetName(data.sheetName || data.sheetNames?.[0] || "")
 
+      //komentar
       // Auto-map kolom umum ke field group
       const autoMapping: ColumnMapping = {}
       DATABASE_FIELDS.forEach((field) => {
