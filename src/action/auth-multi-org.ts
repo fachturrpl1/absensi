@@ -64,13 +64,14 @@ export async function loginMultiOrg(formData: FormData): Promise<LoginResponse> 
       id,
       organization_id,
       is_active,
-      organizations (
+      organizations!inner (
         id,
         name,
         code,
         timezone,
         country_code,
-        is_active
+        is_active,
+        deleted_at
       ),
       organization_member_roles (
         id,
@@ -84,6 +85,8 @@ export async function loginMultiOrg(formData: FormData): Promise<LoginResponse> 
     `)
     .eq("user_id", user.id)
     .eq("is_active", true)
+    .eq("organizations.is_active", true)
+    .is("organizations.deleted_at", null)
 
   if (orgMembersError) {
     return { success: false, message: "Failed to fetch organizations" }
@@ -164,12 +167,14 @@ export async function getUserOrganizations(): Promise<{
     .select(`
       id,
       organization_id,
-      organizations (
+      organizations!inner (
         id,
         name,
         code,
         timezone,
-        country_code
+        country_code,
+        is_active,
+        deleted_at
       ),
       organization_member_roles (
         id,
@@ -183,6 +188,8 @@ export async function getUserOrganizations(): Promise<{
     `)
     .eq("user_id", user.id)
     .eq("is_active", true)
+    .eq("organizations.is_active", true)
+    .is("organizations.deleted_at", null)
 
     console.log('🔍 getUserOrganizations: Query result:', orgMembers)
     console.log('🔍 getUserOrganizations: Query error:', orgMembersError)

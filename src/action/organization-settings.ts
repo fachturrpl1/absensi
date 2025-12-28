@@ -370,11 +370,43 @@ export async function deleteOrganization(organizationId: number): Promise<{
       return { success: false, message: "Failed to delete organization." };
     }
 
-    // 3. (Optional) Deactivate all members of the organization
-    await supabase
+    const { data: orgMembers, error: orgMembersError } = await supabase
       .from("organization_members")
-      .update({ is_active: false })
+      .select("id")
       .eq("organization_id", organizationId);
+
+    if (orgMembersError) {
+      organizationLogger.error("Fetch organization members error:", orgMembersError);
+    } else if (orgMembers && orgMembers.length > 0) {
+      const memberIds = orgMembers.map(m => m.id as number);
+
+      const { data: adminRoleRows, error: adminRolesError } = await supabase
+        .from("organization_member_roles")
+        .select("organization_member_id, system_roles!inner(code)")
+        .in("organization_member_id", memberIds)
+        .in("system_roles.code", ["A001", "SA001"]);
+
+      if (adminRolesError) {
+        organizationLogger.error("Fetch admin roles error:", adminRolesError);
+      }
+
+      const adminMemberIds = (adminRoleRows || [])
+        .map((r: { organization_member_id: number }) => r.organization_member_id)
+        .filter((id, idx, arr) => arr.indexOf(id) === idx);
+
+      const nonAdminIds = memberIds.filter(id => !adminMemberIds.includes(id));
+
+      if (nonAdminIds.length > 0) {
+        const { error: deactivateError } = await supabase
+          .from("organization_members")
+          .update({ is_active: false })
+          .in("id", nonAdminIds);
+
+        if (deactivateError) {
+          organizationLogger.error("Deactivate non-admin members error:", deactivateError);
+        }
+      }
+    }
 
     revalidatePath("/organization"); // Revalidate the organization list page
 
