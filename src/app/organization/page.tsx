@@ -6,6 +6,7 @@ import { useOrgStore } from "@/store/org-store"
 import { useAuthStore } from "@/store/user-store"
 import { Organization } from "@/lib/types/organization"
 import { getUserOrganizations } from "@/action/auth-multi-org"
+import { getOrganizationCount } from "@/action/organization"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -33,6 +34,24 @@ export default function OrganizationPage() {
   const [isHydrated, setIsHydrated] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [orgCount, setOrgCount] = useState(3); // Default to 3, will be updated
+
+  // Fetch organization count for skeleton loading
+  useEffect(() => {
+    const fetchOrgCount = async () => {
+      const result = await getOrganizationCount();
+      if (result.success && result.count > 0) {
+        setOrgCount(result.count);
+      } else {
+        // Fallback to a default number if the count fails or is zero
+        setOrgCount(1);
+      }
+    };
+
+    if (isHydrated) {
+      fetchOrgCount();
+    }
+  }, [isHydrated]);
 
   // Load organizations
   useEffect(() => {
@@ -182,7 +201,7 @@ export default function OrganizationPage() {
         {loading ? (
           <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
+              {Array.from({ length: orgCount }).map((_, i) => (
                 <Card key={i}>
                   <CardHeader>
                     <Skeleton className="h-6 w-32" />
@@ -259,6 +278,7 @@ export default function OrganizationPage() {
                     <tr
                       key={org.id}
                       className="border-b hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => handleSelectOrganization(org)}
                     >
                       <td className="px-6 py-4">
                         <div className="space-y-1">
@@ -271,17 +291,7 @@ export default function OrganizationPage() {
                         <Badge variant="outline">{org.country_code}</Badge>
                       </td>
                       <td className="px-6 py-4 text-sm text-muted-foreground">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            handleSelectOrganization(org)
-                          }}
-                        >
-                          Select
-                        </Button>
+                        {org.timezone}
                       </td>
                     </tr>
                   ))}

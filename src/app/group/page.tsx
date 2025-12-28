@@ -157,7 +157,7 @@ export default function GroupsPage() {
       header: "Status",
       cell: ({ row }) =>
         row.original.is_active ? (
-          <Badge className="bg-green-500">Active</Badge>
+          <Badge className="bg-green-500 text-primary-foreground">Active</Badge>
         ) : (
           <Badge variant="destructive">Inactive</Badge>
         ),
@@ -361,12 +361,12 @@ export default function GroupsPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 w-full">
       <div className="w-full">
-        <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="w-full bg-card rounded-lg shadow-sm border">
           
           <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search groups..."
                   value={searchQuery}

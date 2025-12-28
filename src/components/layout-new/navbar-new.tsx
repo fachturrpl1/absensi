@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   Sun,
   Moon,
@@ -32,6 +32,10 @@ import { NotificationDropdown } from '@/components/notifications/notification-dr
 
 export function NavbarNew() {
   const router = useRouter();
+  const pathname = usePathname();
+
+  // We want to hide search and new buttons on the organization selection page
+  const showActions = pathname !== '/organization';
   const { theme, setTheme } = useTheme();
 
   // Keyboard shortcuts - Only for Quick Actions
@@ -78,33 +82,37 @@ export function NavbarNew() {
 
       {/* Right Side Actions */}
       <div className="ml-auto flex items-center gap-2">
-        {/* Search */}
-        <SearchDialog />
-        
-        {/* Quick Actions */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
-              <span className="hidden md:inline">New</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {quickActions.map((action) => (
-              <DropdownMenuItem
-                key={action.href}
-                onClick={() => router.push(action.href)}
-                className="cursor-pointer"
-              >
-                <action.icon className="mr-2 h-4 w-4" />
-                {action.label}
-                <DropdownMenuShortcut>{action.kbd}</DropdownMenuShortcut>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {showActions && (
+          <>
+            {/* Search */}
+            <SearchDialog />
+            
+            {/* Quick Actions */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden md:inline">New</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {quickActions.map((action) => (
+                  <DropdownMenuItem
+                    key={action.href}
+                    onClick={() => router.push(action.href)}
+                    className="cursor-pointer"
+                  >
+                    <action.icon className="mr-2 h-4 w-4" />
+                    {action.label}
+                    <DropdownMenuShortcut>{action.kbd}</DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        )}
 
         {/* Notifications */}
         <NotificationDropdown />

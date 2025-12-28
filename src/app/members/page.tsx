@@ -397,12 +397,12 @@ export default function MembersPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 w-full">
       <div className="w-full">
-        <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="w-full bg-card rounded-lg shadow-sm border">
           
           <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center sm:justify-between" suppressHydrationWarning>
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search members..."
                   value={searchQuery}
@@ -423,7 +423,7 @@ export default function MembersPage() {
                     </DialogHeader>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                       <div className="border rounded-lg">
-                        <div className="px-3 py-2 border-b bg-muted/40 text-sm font-semibold">
+                        <div className="px-3 py-2 border-b bg-muted/50 text-sm font-semibold">
                           Field-field tersedia
                         </div>
                         <div className="max-h-64 overflow-y-auto">
@@ -452,7 +452,7 @@ export default function MembersPage() {
                         </div>
                       </div>
                       <div className="border rounded-lg">
-                        <div className="px-3 py-2 border-b bg-muted/40 text-sm font-semibold">
+                        <div className="px-3 py-2 border-b bg-muted/50 text-sm font-semibold">
                           Kolom untuk diekspor
                         </div>
                         <div className="max-h-64 overflow-y-auto">

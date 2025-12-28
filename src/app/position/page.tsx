@@ -278,11 +278,11 @@ export default function PositionsPage() {
     return (
         <div className="flex flex-1 flex-col gap-4 w-full">
             <div className="w-full">
-                <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="w-full bg-card rounded-lg shadow-sm border">
                     <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
                         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
                             <div className="flex flex-1 items-center gap-3 relative">
-                                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Search positions..."
                                     value={searchTerm}
@@ -505,9 +505,9 @@ export default function PositionsPage() {
                                                         {/* <td className="px-4 py-3 text-sm">{position.level || "-"}</td> */}
                                                         <td className="px-4 py-3 text-sm">
                                                             {position.is_active ? (
-                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white">Active</span>
+                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-primary-foreground">Active</span>
                                                             ) : (
-                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 text-black">Inactive</span>
+                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">Inactive</span>
                                                             )}
                                                         </td>
                                                         <td className="px-4 py-3 text-sm">
@@ -545,7 +545,7 @@ export default function PositionsPage() {
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-gray-50 rounded-md border mt-10">
+                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-muted/50 rounded-md border mt-10">
                                     <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-nowrap justify-center w-full md:w-auto">
                                         <Button variant="ghost" size="sm" onClick={() => setPageIndex(0)} disabled={pageIndex === 0 || loading} className="h-8 w-8 p-0" title="First page">
                                             <ChevronsLeft className="h-4 w-4" />
@@ -563,7 +563,7 @@ export default function PositionsPage() {
                                                 const page = e.target.value ? Number(e.target.value) - 1 : 0;
                                                 setPageIndex(page);
                                             }}
-                                            className="w-10 sm:w-12 h-8 px-2 border border-gray-300 rounded text-xs sm:text-sm text-center mx-1 sm:mx-2"
+                                            className="w-10 sm:w-12 h-8 px-2 border rounded text-xs sm:text-sm text-center mx-1 sm:mx-2 bg-background"
                                             disabled={loading || totalPages === 0}
                                         />
                                         <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/ {totalPages}</span>

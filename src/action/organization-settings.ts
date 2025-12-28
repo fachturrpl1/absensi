@@ -338,3 +338,56 @@ export async function regenerateInviteCode(organizationId?: number | null): Prom
     };
   }
 }
+
+// Soft delete an organization
+export async function deleteOrganization(organizationId: number): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  try {
+    const supabase = await createClient();
+    
+    // 1. Get current user and verify permissions (e.g., must be owner or superadmin)
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return { success: false, message: "User not authenticated" };
+    }
+
+    // TODO: Add role-based access control here. For now, we assume the user is authorized.
+
+    // 2. Perform the soft delete by updating flags
+    const { error: updateError } = await supabase
+      .from("organizations")
+      .update({
+        is_active: false,
+        // @ts-ignore
+        deleted_at: new Date().toISOString(), // Assuming you add a 'deleted_at' timestamp column
+      })
+      .eq("id", organizationId);
+
+    if (updateError) {
+      organizationLogger.error("Soft delete organization error:", updateError);
+      return { success: false, message: "Failed to delete organization." };
+    }
+
+    // 3. (Optional) Deactivate all members of the organization
+    await supabase
+      .from("organization_members")
+      .update({ is_active: false })
+      .eq("organization_id", organizationId);
+
+    revalidatePath("/organization"); // Revalidate the organization list page
+
+    return {
+      success: true,
+      message: "Organization has been successfully deleted."
+    };
+
+  } catch (error: unknown) {
+    organizationLogger.error("Delete organization error:", error);
+    return {
+      success: false,
+      message: "An unexpected error occurred while deleting the organization."
+    };
+  }
+}

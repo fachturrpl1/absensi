@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, memo} from 'react';
-import { EllipsisVertical, CircleUser, Settings, LogOut } from 'lucide-react';
+import { EllipsisVertical, CircleUser, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -169,12 +169,6 @@ export const NavUser = memo(function NavUser() {
                 <Link href="/account">
                   <CircleUser />
                   Account
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/organization/settings">
-                  <Settings />
-                  Settings
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>

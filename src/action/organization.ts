@@ -370,3 +370,36 @@ export async function getOrganizationTimezoneByUserId(userId: string) {
 
   return organizations?.timezone ?? "UTC";
 }
+
+/**
+ * Get the count of organizations for the current user.
+ */
+export async function getOrganizationCount(): Promise<{ success: boolean; count: number; message: string }> {
+  try {
+    const supabase = await createClient();
+
+    // 1. Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return { success: false, count: 0, message: "User not authenticated" };
+    }
+
+    // 2. Get the count of user's organization memberships
+    const { count, error: countError } = await supabase
+      .from("organization_members")
+      .select("organization_id", { count: 'exact', head: true })
+      .eq("user_id", user.id);
+
+    if (countError) {
+      organizationLogger.error("Error counting organizations:", countError);
+      return { success: false, count: 0, message: "Failed to count organizations." };
+    }
+
+    return { success: true, count: count ?? 0, message: "Organization count fetched successfully." };
+
+  } catch (error) {
+    organizationLogger.error("Unexpected error in getOrganizationCount:", error);
+    return { success: false, count: 0, message: "An unexpected error occurred." };
+  }
+}

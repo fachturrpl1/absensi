@@ -403,11 +403,11 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
                   {visibleColumns.status && (
                     <td className="px-4 py-3 text-sm">
                       {member.is_active ? (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-primary-foreground">
                           <Check className="w-3 h-3 mr-1" /> Active
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 text-black">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
                           <X className="w-3 h-3 mr-1" /> Inactive
                         </span>
                       )}
@@ -476,7 +476,7 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
       </div>
 
       {/* Pagination Footer */}
-      <div className="flex items-center justify-between py-4 px-4 bg-gray-50 rounded-md border">
+      <div className="flex items-center justify-between py-4 px-4 bg-muted/50 rounded-md border">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -510,7 +510,7 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
               const page = e.target.value ? Number(e.target.value) - 1 : 0
               setPageIndex(Math.max(0, Math.min(page, totalPages - 1)))
             }}
-            className="w-12 h-8 px-2 border rounded text-sm text-center"
+            className="w-12 h-8 px-2 border rounded text-sm text-center bg-background"
             disabled={isLoading}
           />
           
@@ -549,7 +549,7 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
                 setPageSize(e.target.value)
                 setPageIndex(0)
               }}
-              className="px-2 py-1 border rounded text-sm bg-white"
+              className="px-2 py-1 border rounded text-sm bg-background"
             >
               <option value="5">5</option>
               <option value="10">10</option>
