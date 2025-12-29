@@ -32,15 +32,18 @@ import {
 } from "@/components/ui/alert-dialog"
 import { deleteOrganization_member } from "@/action/members"
 import { toast } from "sonner"
+import { useQueryClient } from "@tanstack/react-query"
 
 interface MembersTableProps {
   members: IOrganization_member[]
   isLoading?: boolean
   onDelete?: () => void
+  showPagination?: boolean
 }
 
-export function MembersTable({ members, isLoading = false, onDelete }: MembersTableProps) {
+export function MembersTable({ members, isLoading = false, onDelete, showPagination = true }: MembersTableProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [sortOrder, setSortOrder] = React.useState("newest")
   const [pageSize, setPageSize] = React.useState("10")
   const [pageIndex, setPageIndex] = React.useState(0)
@@ -62,6 +65,7 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
       const result = await deleteOrganization_member(id)
       if (result.success) {
         toast.success("Member deleted successfully")
+        await queryClient.invalidateQueries({ queryKey: ["members"] })
         onDelete?.()
       } else {
         toast.error(result.message || "Failed to delete member")
@@ -157,10 +161,12 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
   // Pagination
   const pageSizeNum = parseInt(pageSize)
   const totalPages = Math.ceil(filteredData.length / pageSizeNum)
-  const paginatedData = filteredData.slice(
-    pageIndex * pageSizeNum,
-    (pageIndex + 1) * pageSizeNum
-  )
+  const paginatedData = showPagination
+    ? filteredData.slice(
+        pageIndex * pageSizeNum,
+        (pageIndex + 1) * pageSizeNum
+      )
+    : filteredData
 
   // Reset page index when filters change
   React.useEffect(() => {
@@ -476,6 +482,7 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
       </div>
 
       {/* Pagination Footer */}
+      {showPagination && (
       <div className="flex items-center justify-between py-4 px-4 bg-muted/50 rounded-md border">
         <div className="flex items-center gap-2">
           <Button
@@ -559,6 +566,7 @@ export function MembersTable({ members, isLoading = false, onDelete }: MembersTa
           </div>
         </div>
       </div>
+      )}
     </div>
   )
 }

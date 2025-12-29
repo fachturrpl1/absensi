@@ -6,6 +6,7 @@ import { z } from "zod"
 import React from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { useQueryClient } from "@tanstack/react-query"
 import { User, Briefcase, CreditCard, Calendar, MapPin, Building, Shield, ArrowLeft } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -82,6 +83,7 @@ export default function MemberEditFormImproved({
     rfidInitial,
 }: MemberEditFormProps) {
     const router = useRouter()
+    const queryClient = useQueryClient()
     const [loading, setLoading] = React.useState(false)
     const [activeTab, setActiveTab] = React.useState("employment")
     
@@ -163,6 +165,7 @@ export default function MemberEditFormImproved({
             }
 
             toast.success("Member updated successfully")
+            await queryClient.invalidateQueries({ queryKey: ["members"] })
             router.push("/members")
             router.refresh()
         } catch (err) {

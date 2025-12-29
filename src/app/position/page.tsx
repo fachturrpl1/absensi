@@ -2,6 +2,7 @@
 
 import React from "react"
 import { Button } from "@/components/ui/button"
+import { useQueryClient } from "@tanstack/react-query"
 import { Plus, Briefcase, Search, RotateCcw, Pencil, Trash, ChevronRight, ChevronsLeft, ChevronLeft, ChevronsRight } from "lucide-react"
 import Link from "next/link"
 import {
@@ -79,6 +80,7 @@ const positionSchema = z.object({
 type PositionsForm = z.infer<typeof positionSchema>
 
 export default function PositionsPage() {
+    const queryClient = useQueryClient()
     const { isHydrated, organizationId } = useHydration()
     const [open, setOpen] = React.useState(false)
     const [editingDetail, setEditingDetail] = React.useState<IPositions | null>(null)
@@ -96,6 +98,7 @@ export default function PositionsPage() {
             const result = await deletePositions(id)
             if (result.success) {
                 toast.success("Position deleted successfully")
+                await queryClient.invalidateQueries({ queryKey: ['positions']})
                 fetchPositions()
             } else {
                 toast.error(result.message || "Failed to delete position")
@@ -169,6 +172,7 @@ export default function PositionsPage() {
             }
             
             const result = await getAllPositions(organizationId)
+            await queryClient.invalidateQueries({ queryKey: ['positions']})
             const typedResponse = result as { success: boolean; data: IPositions[]; message: string }
             if (!typedResponse.success) throw new Error(typedResponse.message)
             
@@ -185,6 +189,7 @@ export default function PositionsPage() {
     const fetchOrganizations = async () => {
         try {
             const response: unknown = await getAllOrganization()
+            await queryClient.invalidateQueries({ queryKey: ['organizations']})
             const typedResponse = response as { success: boolean; data: { id: string; name: string }[]; message: string }
             if (!typedResponse.success) throw new Error(typedResponse.message)
             setOrganizations(typedResponse.data)
@@ -250,6 +255,7 @@ export default function PositionsPage() {
                 res = await createPositions(values)
             }
             if (!res.success) throw new Error(res.message)
+            await queryClient.invalidateQueries({ queryKey: ['positions']})
             toast.success(editingDetail ? 'Saved successfully' : 'Position created successfully')
             setOpen(false)
             setEditingDetail(null)
@@ -585,8 +591,8 @@ export default function PositionsPage() {
                                                 </SelectTrigger>
                                                 <SelectContent side="top">
                                                     <SelectItem value="10">10</SelectItem>
-                                                    <SelectItem value="20">20</SelectItem>
                                                     <SelectItem value="50">50</SelectItem>
+                                                    <SelectItem value="100">100</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>

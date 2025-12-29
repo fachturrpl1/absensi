@@ -1,7 +1,7 @@
 "use client"
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactNode } from 'react'
+import { QueryClient, QueryClientProvider, dehydrate, hydrate, type DehydratedState } from '@tanstack/react-query'
+import { ReactNode, useEffect } from 'react'
 import { useAuthCacheClear } from '@/hooks/use-auth-cache-clear'
 
 // Create a singleton QueryClient instance outside of component
@@ -45,6 +45,29 @@ function AuthCacheClearWrapper({ children }: { children: ReactNode }) {
 export function QueryProvider({ children }: { children: ReactNode }) {
   // Get the singleton QueryClient instance
   const queryClient = getQueryClient()
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const raw = localStorage.getItem('rq-cache-v1')
+      if (raw) {
+        const parsed = JSON.parse(raw) as { buster?: string; data?: DehydratedState | undefined }
+        if (!parsed.buster || parsed.buster === 'rq-v1' || parsed.buster === 'v1') {
+          if (parsed.data) hydrate(queryClient, parsed.data)
+        }
+      }
+    } catch {}
+    const unsub = queryClient.getQueryCache().subscribe(() => {
+      try {
+        const data: DehydratedState = dehydrate(queryClient)
+        const payload: { buster: string; data: DehydratedState } = { buster: 'v1', data }
+        localStorage.setItem('rq-cache-v1', JSON.stringify(payload))
+      } catch {}
+    })
+    return () => {
+      if (typeof unsub === 'function') unsub()
+    }
+  }, [queryClient])
 
   return (
     <QueryClientProvider client={queryClient}>

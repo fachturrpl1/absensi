@@ -239,10 +239,9 @@ export function DataTable<TData, TValue>({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="5">5</SelectItem>
                     <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
                     <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -461,11 +460,9 @@ export function DataTable<TData, TValue>({
                 }}
                 className="px-2 py-1 border rounded text-xs sm:text-sm bg-background"
               >
-                <option value="4">4</option>
-                <option value="8">8</option>
                 <option value="10">10</option>
-                <option value="24">24</option>
-                <option value={filteredData.length}>All</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
               </select>
             </div>
           </div>

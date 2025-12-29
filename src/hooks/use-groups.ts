@@ -4,7 +4,7 @@ import { useOrganizationId } from "./use-organization-id"
 
 import { logger } from '@/lib/logger';
 // Custom hook untuk fetch groups/departments dengan caching via API route (GET)
-export function useGroups() {
+export function useGroups(options?: { enabled?: boolean }) {
   const { data: organizationId } = useOrganizationId()
   
   return useQuery({
@@ -22,7 +22,7 @@ export function useGroups() {
       }
       return json.data as IDepartments[]
     },
-    enabled: !!organizationId, // Only run when organizationId exists
+    enabled: !!organizationId && (options?.enabled ?? true), // Only run when org exists and feature enabled
     staleTime: 5 * 60 * 1000, // 5 menit - groups jarang berubah
     gcTime: 15 * 60 * 1000, // Cache 15 menit
   })

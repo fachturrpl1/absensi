@@ -3,6 +3,7 @@
 import React from "react"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
+import { useQueryClient } from "@tanstack/react-query"
 import { Plus, Group as GroupIcon, Pencil, Trash, Search, RotateCcw, ChevronRight, FileSpreadsheet } from "lucide-react"
 import {
   Empty,
@@ -80,6 +81,7 @@ const groupSchema = z.object({
 type GroupForm = z.infer<typeof groupSchema>
 
 export default function GroupsPage() {
+  const queryClient = useQueryClient()
   const { isHydrated, organizationId } = useHydration()
   useOrgGuard()
 
@@ -129,6 +131,7 @@ export default function GroupsPage() {
       const result = await deleteGroup(id)
       if (result.success) {
         toast.success("Group deleted successfully")
+        await queryClient.invalidateQueries({ queryKey: ['groups']})
         fetchGroups()
       } else {
         toast.error(result.message || "Failed to delete group")
@@ -240,6 +243,7 @@ export default function GroupsPage() {
       
       const result = await getAllGroups(organizationId)
       if (!result.success) throw new Error(result.message)
+      await queryClient.invalidateQueries({ queryKey: ['groups']})
       
       setGroups(result.data)
       setCache<IGroup[]>(`groups:${organizationId}`, result.data, 1000 * 300)
@@ -263,15 +267,17 @@ export default function GroupsPage() {
       }
       // Force refresh data
       await fetchGroups()
-      toast.success("Data berhasil di-refresh!")
+      await queryClient.invalidateQueries({ queryKey: ['groups']})
+      toast.success("Data has been refreshed!!")
     } catch (error) {
-      toast.error("Gagal refresh data")
+      toast.error("Failed at refresh data")
     }
   }, [fetchGroups])
 
   const fetchOrganizations = async () => {
     try {
       const response = await getAllOrganization()
+      await queryClient.invalidateQueries({ queryKey: ['organizations']})
       if (!response.success) throw new Error(response.message)
       setOrganizations(response.data)
     } catch (error: unknown) {
@@ -332,6 +338,7 @@ export default function GroupsPage() {
         res = await createGroup(values)
       }
       if (!res.success) throw new Error(res.message)
+      await queryClient.invalidateQueries({ queryKey: ['groups']})
       toast.success(editingDetail ? 'Saved successfully' : 'Group created successfully')
       setIsModalOpen(false)
       setEditingDetail(null)

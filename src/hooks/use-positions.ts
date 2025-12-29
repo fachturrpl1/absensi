@@ -4,7 +4,7 @@ import { useOrganizationId } from "./use-organization-id"
 
 import { logger } from '@/lib/logger';
 // Custom hook untuk fetch positions dengan caching via API route (GET)
-export function usePositions() {
+export function usePositions(options?: { enabled?: boolean }) {
   const { data: organizationId } = useOrganizationId()
   
   return useQuery({
@@ -22,7 +22,7 @@ export function usePositions() {
       }
       return json.data as IPositions[]
     },
-    enabled: !!organizationId, // Only run when organizationId exists
+    enabled: !!organizationId && (options?.enabled ?? true), // Only run when org exists and feature enabled
     staleTime: 5 * 60 * 1000, // 5 menit - positions jarang berubah
     gcTime: 15 * 60 * 1000, // Cache 15 menit
   })
