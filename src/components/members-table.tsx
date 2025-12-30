@@ -3,7 +3,7 @@
 import React from "react"
 import { IOrganization_member } from "@/interface"
 import { Button } from "@/components/ui/button"
-import { Trash, Pencil, Eye, User, Check, X, Columns3Cog, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
+import { Trash, Pencil, Eye, Check, X, Columns3Cog, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
   DropdownMenu,
@@ -306,10 +306,14 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
                 <tr key={member.id} className="border-b hover:bg-muted/30 transition-colors">
                   {visibleColumns.members && (
                     <td className="px-4 py-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                        <span className="truncate">{getFullName(member)}</span>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/members/${member.id}`)}
+                        className="truncate text-primary hover:underline cursor-pointer"
+                        title="View profile"
+                      >
+                        {getFullName(member)}
+                      </button>
                     </td>
                   )}
                   {visibleColumns.nik && (
