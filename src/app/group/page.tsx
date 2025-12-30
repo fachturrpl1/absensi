@@ -565,3 +565,34 @@ export default function GroupsPage() {
     </div>
   )
 }
+
+              </div>
+            </div>
+
+            <div className="mt-6">
+              {loading ? (
+                <TableSkeleton rows={6} columns={4} />
+              ) : groups.length === 0 ? (
+                <div className="mt-20">
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <GroupIcon className="h-14 w-14 text-muted-foreground mx-auto" />
+                      </EmptyMedia>
+                      <EmptyTitle>No groups yet</EmptyTitle>
+                      <EmptyDescription>
+                        There are no groups for this organization. Use the "Add" button to create one.
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                </div>
+              ) : (
+                <DataTable columns={columns} data={filteredAndSortedGroups} showColumnToggle={false} />
+            )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

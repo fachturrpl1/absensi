@@ -756,3 +756,33 @@ export default function MembersPage() {
     </div>
   )
 }
+
+                <div className="mt-20">
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <User className="h-14 w-14 text-muted-foreground mx-auto" />
+                      </EmptyMedia>
+                      <EmptyTitle>No members yet</EmptyTitle>
+                      <EmptyDescription>
+                        There are no members for this organization. Use the "Invite Member" button to add one.
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                </div>
+              ) : (
+                <div className="min-w-full overflow-x-auto">
+                  <MembersTable 
+                    members={members}
+                    isLoading={loading}
+                    onDelete={fetchMembers}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
