@@ -6,6 +6,7 @@ import { z } from "zod"
 import React from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { useQueryClient } from "@tanstack/react-query"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -71,6 +72,7 @@ export default function MembersForm({
     rfidInitial,
 }: OrganizationMembersFormProps) {
     const router = useRouter()
+    const queryClient = useQueryClient()
     const [loading, setLoading] = React.useState(false)
     const [users, setUsers] = React.useState<IUser[]>([])
     const [loadingForm, setLoadingForm] = React.useState(true)
@@ -196,6 +198,7 @@ export default function MembersForm({
             }
 
             toast.success("Member & RFID card saved successfully");
+            await queryClient.invalidateQueries({ queryKey: ["members"] })
             router.push("/members");
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Unknown error';

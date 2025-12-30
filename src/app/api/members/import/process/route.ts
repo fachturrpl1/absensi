@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Invalid mapping JSON" }, { status: 400 })
       }
 
+    //komentar
     // Minimal required field untuk biodata: nik & nama
     if (!mapping.nik) {
       return NextResponse.json(

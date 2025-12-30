@@ -1,10 +1,10 @@
 "use client"
 
 import React from "react"
-import { useSearchParams } from "next/navigation"
 import { MembersTable } from "@/components/members-table"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { useQueryClient } from "@tanstack/react-query"
 import { User, Shield, Mail, Plus, FileDown, Loader2, Search, FileSpreadsheet, Minus, RefreshCw } from "lucide-react"
 import {
   Empty,
@@ -45,11 +45,7 @@ import * as z from "zod"
 import { useQuery } from "@tanstack/react-query"
 
 import { IOrganization_member } from "@/interface"
-import { getAllOrganization_member } from "@/action/members"
-import { getAllUsers } from "@/action/users"
-import { getAllGroups } from "@/action/group"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
-import { getCache, setCache } from "@/lib/local-cache"
 // ContentLayout removed - using new layout system
 import { createInvitation } from "@/action/invitations"
 import { getOrgRoles } from "@/lib/rbac"
@@ -57,6 +53,7 @@ import { useGroups } from "@/hooks/use-groups"
 import { usePositions } from "@/hooks/use-positions"
 import { useHydration } from "@/hooks/useHydration"
 //tes
+
 const inviteSchema = z.object({
   email: z.string().email("Invalid email address"),
   role_id: z.string().optional(),
@@ -151,15 +148,14 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
     getValue: (member: any) => member.hire_date || "-",
   },
 ]
+
 export default function MembersPage() {
-  const searchParams = useSearchParams()
+  const queryClient = useQueryClient()
   const { isHydrated, organizationId } = useHydration()
 
-  const [members, setMembers] = React.useState<IOrganization_member[]>([])
-  const [loading, setLoading] = React.useState<boolean>(true)
+  const [exporting, setExporting] = React.useState(false)
   const [inviteDialogOpen, setInviteDialogOpen] = React.useState(false)
   const [submittingInvite, setSubmittingInvite] = React.useState(false)
-  const [exporting, setExporting] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState<string>("")
   const [selectedMemberIds] = React.useState<string[]>([])
   const [exportDialogOpen, setExportDialogOpen] = React.useState(false)
@@ -167,21 +163,53 @@ export default function MembersPage() {
     EXPORT_FIELDS.map((f) => f.key),
   )
 
-  // Auto-open invite dialog if action=invite in URL
-  React.useEffect(() => {
-    if (searchParams.get('action') === 'invite') {
-      setInviteDialogOpen(true)
-    }
-  }, [searchParams])
+  const [page, setPage] = React.useState<number>(1)
+  const [pageSize, setPageSize] = React.useState<number>(10)
 
+  interface MembersApiPage {
+    success: boolean
+    data: IOrganization_member[]
+    pagination: { cursor: string | null; limit: number; hasMore: boolean; total: number }
+  }
+
+  const { data: pageData, isLoading: loading, isFetching, refetch } = useQuery<MembersApiPage>({
+    queryKey: ["members", "paged", organizationId, searchQuery, page, pageSize],
+    queryFn: async () => {
+      const url = new URL('/api/members', window.location.origin)
+      url.searchParams.set('limit', String(pageSize))
+      url.searchParams.set('active', 'all')
+      url.searchParams.set('countMode', 'planned')
+      url.searchParams.set('page', String(page))
+      if (organizationId) url.searchParams.set('organizationId', String(organizationId))
+      if (searchQuery) url.searchParams.set('search', searchQuery)
+      const res = await fetch(url.toString(), { credentials: 'same-origin' })
+      const json = await res.json()
+      if (!json?.success) throw new Error(json?.message || 'Failed to fetch members')
+      return json as MembersApiPage
+    },
+    enabled: isHydrated && !!organizationId,
+    staleTime: 60_000,
+    gcTime: 300_000,
+  })
+
+  const members: IOrganization_member[] = pageData?.data ?? []
+  const total: number = pageData?.pagination?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / (pageSize || 1)))
+
+  React.useEffect(() => {
+    setPage(1)
+  }, [searchQuery])
+
+  //komentar
   // Fetch data for invite form
   const { data: roles = [], isLoading: rolesLoading } = useQuery({
     queryKey: ["org-roles"],
     queryFn: getOrgRoles,
+    enabled: inviteDialogOpen,
   })
   
-  const { data: departments = [], isLoading: deptLoading } = useGroups()
-  const { data: positions = [], isLoading: posLoading } = usePositions()
+  const { data: departments = [], isLoading: deptLoading } = useGroups({ enabled: inviteDialogOpen })
+  const { data: positions = [], isLoading: posLoading } = usePositions({ enabled: inviteDialogOpen })
 
   const inviteForm = useForm<InviteFormValues>({
     resolver: zodResolver(inviteSchema),
@@ -196,67 +224,6 @@ export default function MembersPage() {
 
   const isLoadingInviteData = rolesLoading || deptLoading || posLoading
 
-  const fetchMembers = React.useCallback(async (forceRefresh = false) => {
-    try {
-      setLoading(true)
-      
-      console.log('[MEMBERS] Fetching members - isHydrated:', isHydrated, 'orgId:', organizationId, 'forceRefresh:', forceRefresh)
-
-      if (!organizationId) {
-        console.error('[MEMBERS] No organization ID found')
-        setMembers([])
-        return
-      }
-
-      // Clear cache if force refresh
-      if (forceRefresh) {
-        const cacheKey = `members:${organizationId}`
-        localStorage.removeItem(cacheKey)
-        console.log('[MEMBERS] Cache cleared for:', cacheKey)
-      }
-
-      // Fetch all data
-      const [memberRes, userRes, groupsRes] = await Promise.all([
-        getAllOrganization_member(organizationId),
-        getAllUsers(),
-        getAllGroups(organizationId),
-      ])
-
-      if (!memberRes.success) throw new Error(memberRes.message)
-
-      const membersData = memberRes.data
-      const usersData = userRes.success ? userRes.data : []
-      const groupsData = groupsRes?.data || []
-
-      // Create group map
-      const groupMap = new Map<string, string>()
-      groupsData.forEach((g: any) => {
-        if (g && g.id) groupMap.set(String(g.id), g.name)
-      })
-
-      // Manual join
-      const mergedMembers = membersData.map((m: any) => {
-        const u = usersData.find((usr: any) => usr.id === m.user_id)
-        const groupName =
-          groupMap.get(String(m.department_id)) ||
-          (m.groups && (m.groups as any).name) ||
-          (m.departments && (m.departments as any).name) ||
-          ""
-        return { ...m, user: u, groupName, biodata: m.biodata }
-      })
-
-      // Members are already filtered by organization from API
-      console.log('[MEMBERS] ✅ Fetched', mergedMembers.length, 'members for org', organizationId, 'at', new Date().toLocaleTimeString())
-      setMembers(mergedMembers)
-      // Cache with version to auto-invalidate old cache
-      const CACHE_VERSION = 'v2'
-      setCache<IOrganization_member[]>(`members:${organizationId}:${CACHE_VERSION}`, mergedMembers, 1000 * 300)
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : 'An error occurred')
-    } finally {
-      setLoading(false)
-    }
-  }, [organizationId, isHydrated])
 
   // Monitor organization changes
   React.useEffect(() => {
@@ -265,22 +232,7 @@ export default function MembersPage() {
     }
   }, [organizationId])
 
-  React.useEffect(() => {
-    if (isHydrated && organizationId) {
-      // Cache version - increment this to invalidate old cache
-      const CACHE_VERSION = 'v2' // Changed from v1 to v2 to fix 1000 limit
-      const cacheKey = `members:${organizationId}:${CACHE_VERSION}`
-      const cached = getCache<IOrganization_member[]>(cacheKey)
-      if (cached && cached.length > 0) {
-        console.log('[MEMBERS] Using cached data:', cached.length, 'members')
-        setMembers(cached)
-        setLoading(false)
-        return
-      }
-      console.log('[MEMBERS] Hydration complete, fetching members (cache miss)')
-      fetchMembers(true) // Force refresh to bypass old cache
-    }
-  }, [isHydrated, organizationId, fetchMembers])
+  // Initial fetch handled by useInfiniteQuery
   async function onSubmitInvite(values: InviteFormValues) {
     try {
       setSubmittingInvite(true)
@@ -295,9 +247,10 @@ export default function MembersPage() {
 
       if (result.success) {
         toast.success("Invitation sent successfully via email!")
+        await queryClient.invalidateQueries({ queryKey: ['members', 'paged', organizationId, searchQuery, page, pageSize]})
         setInviteDialogOpen(false)
         inviteForm.reset()
-        await fetchMembers()
+        await refetch()
       } else {
         toast.error(result.message || "Failed to send invitation")
       }
@@ -320,10 +273,11 @@ export default function MembersPage() {
         })
       }
       // Force refresh data
-      await fetchMembers(true)
-      toast.success("Data berhasil di-refresh!")
+      await refetch()
+      toast.success("Data has been refreshed!")
+      await queryClient.invalidateQueries({ queryKey: ['members', 'paged', organizationId, searchQuery, page, pageSize]})
     } catch (error) {
-      toast.error("Gagal refresh data")
+      toast.error("Failed to refresh data")
     }
   }
 
@@ -376,7 +330,8 @@ export default function MembersPage() {
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
-      toast.success("Export members berhasil")
+      toast.success("Succesfully exported members")
+      await queryClient.invalidateQueries({ queryKey: ['members']})
     } catch (error) {
       console.error("Export members error:", error)
       toast.error("Gagal mengekspor data members")
@@ -396,12 +351,12 @@ export default function MembersPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 w-full">
       <div className="w-full">
-        <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="w-full bg-card rounded-lg shadow-sm border">
           
           <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center sm:justify-between" suppressHydrationWarning>
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search members..."
                   value={searchQuery}
@@ -422,7 +377,7 @@ export default function MembersPage() {
                     </DialogHeader>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                       <div className="border rounded-lg">
-                        <div className="px-3 py-2 border-b bg-muted/40 text-sm font-semibold">
+                        <div className="px-3 py-2 border-b bg-muted/50 text-sm font-semibold">
                           Field-field tersedia
                         </div>
                         <div className="max-h-64 overflow-y-auto">
@@ -451,7 +406,7 @@ export default function MembersPage() {
                         </div>
                       </div>
                       <div className="border rounded-lg">
-                        <div className="px-3 py-2 border-b bg-muted/40 text-sm font-semibold">
+                        <div className="px-3 py-2 border-b bg-muted/50 text-sm font-semibold">
                           Kolom untuk diekspor
                         </div>
                         <div className="max-h-64 overflow-y-auto">
@@ -745,8 +700,90 @@ export default function MembersPage() {
                   <MembersTable 
                     members={members}
                     isLoading={loading}
-                    onDelete={fetchMembers}
+                    onDelete={() => { refetch() }}
+                    showPagination={false}
                   />
+
+                  {/* Footer Pagination (page-based) */}
+                  <div className="flex items-center justify-between py-4 px-4 bg-muted/50 rounded-md border mt-4">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost" size="sm" className="h-8 w-8 p-0"
+                        onClick={() => setPage(1)}
+                        disabled={page <= 1 || loading || isFetching}
+                        title="First page"
+                      >
+                        «
+                      </Button>
+                      <Button
+                        variant="ghost" size="sm" className="h-8 w-8 p-0"
+                        onClick={() => setPage(Math.max(1, page - 1))}
+                        disabled={page <= 1 || loading || isFetching}
+                        title="Previous page"
+                      >
+                        ‹
+                      </Button>
+
+                      <span className="text-sm text-muted-foreground">Page</span>
+
+                      <input
+                        type="number"
+                        min={1}
+                        max={totalPages}
+                        value={page}
+                        onChange={(e) => {
+                          const p = e.target.value ? Number(e.target.value) : 1
+                          setPage(Math.max(1, Math.min(p, totalPages)))
+                        }}
+                        className="w-14 h-8 px-2 border rounded text-sm text-center bg-background"
+                        disabled={loading || isFetching}
+                      />
+
+                      <span className="text-sm text-muted-foreground">/ {totalPages}</span>
+
+                      <Button
+                        variant="ghost" size="sm" className="h-8 w-8 p-0"
+                        onClick={() => setPage(Math.min(totalPages, page + 1))}
+                        disabled={page >= totalPages || loading || isFetching}
+                        title="Next page"
+                      >
+                        ›
+                      </Button>
+                      <Button
+                        variant="ghost" size="sm" className="h-8 w-8 p-0"
+                        onClick={() => setPage(totalPages)}
+                        disabled={page >= totalPages || loading || isFetching}
+                        title="Last page"
+                      >
+                        »
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div className="text-sm text-muted-foreground">
+                        {total > 0
+                          ? <>Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, total)} of {total} total records</>
+                          : <>Showing 0 to 0 of 0 total records</>
+                        }
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={pageSize}
+                          onChange={(e) => {
+                            const next = Number(e.target.value)
+                            setPageSize(next)
+                            setPage(1) // reset ke halaman 1
+                          }}
+                          className="px-2 py-1 border rounded text-sm bg-background"
+                          disabled={loading || isFetching}
+                        >
+                          <option value={10}>10</option>
+                          <option value={50}>50</option>
+                          <option value={100}>100</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

@@ -239,10 +239,9 @@ export function DataTable<TData, TValue>({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="5">5</SelectItem>
                     <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
                     <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -383,7 +382,7 @@ export function DataTable<TData, TValue>({
 
       {/* Pagination Footer */}
       {showPagination && (
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-gray-50 rounded-md border">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-muted/50 rounded-md border">
           <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-nowrap justify-center w-full md:w-auto">
             <Button
               variant="ghost"
@@ -417,7 +416,7 @@ export function DataTable<TData, TValue>({
                 const page = e.target.value ? Number(e.target.value) - 1 : 0;
                 handlePageIndexChange(page);
               }}
-              className="w-10 sm:w-12 h-8 px-2 border border-gray-300 rounded text-xs sm:text-sm text-center mx-1 sm:mx-2"
+              className="w-10 sm:w-12 h-8 px-2 border rounded text-xs sm:text-sm text-center mx-1 sm:mx-2 bg-background"
               disabled={isLoading || table.getPageCount() === 0}
             />
 
@@ -459,13 +458,11 @@ export function DataTable<TData, TValue>({
                   handlePageSizeChange(e.target.value);
                   handlePageIndexChange(0);
                 }}
-                className="px-2 py-1 border rounded text-xs sm:text-sm bg-white"
+                className="px-2 py-1 border rounded text-xs sm:text-sm bg-background"
               >
-                <option value="4">4</option>
-                <option value="8">8</option>
                 <option value="10">10</option>
-                <option value="24">24</option>
-                <option value={filteredData.length}>All</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
               </select>
             </div>
           </div>

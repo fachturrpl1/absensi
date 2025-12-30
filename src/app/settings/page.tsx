@@ -83,7 +83,7 @@ import {
   Image as ImageIcon,
 } from "@/components/icons/lucide-exports";
 
-import { getCurrentUserOrganization, updateOrganization, regenerateInviteCode, OrganizationUpdateData } from "@/action/organization-settings";
+import { getCurrentUserOrganization, updateOrganization, regenerateInviteCode, deleteOrganization, OrganizationUpdateData } from "@/action/organization-settings";
 
 import { INDUSTRY_OPTIONS, findIndustryValue } from "@/lib/constants/industries";
 
@@ -196,6 +196,10 @@ export default function SettingsPage() {
   const [inviteCodeCopied, setInviteCodeCopied] = useState(false);
 
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
+
+  // State for delete confirmation
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [formData, setFormData] = useState<{
 
@@ -865,6 +869,35 @@ export default function SettingsPage() {
 
 
 
+  const handleDeleteOrganization = async () => {
+    if (!orgData || deleteConfirmation !== orgData.name) {
+      toast.error("Confirmation text does not match the organization name.");
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const result = await deleteOrganization(orgData.id);
+      if (result.success) {
+        toast.success("Organization deleted successfully. Redirecting...");
+
+        // Clear the organization cookie before redirecting
+        await fetch('/api/organization/clear', { method: 'POST' });
+
+        // Hard redirect to organization selection page after deletion
+        setTimeout(() => {
+          window.location.href = "/organization";
+        }, 1500); // Slightly shorter timeout as cookie clearing is fast
+      } else {
+        toast.error(result.message || "Failed to delete organization.");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleRegenerateInviteCode = async () => {
 
     setRegenerating(true);
@@ -1440,7 +1473,58 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+
         </div>
+
+        {/* Danger Zone */}
+        <Card className="border-destructive/50 shadow-sm mt-6">
+          <CardHeader>
+            <CardTitle className="text-destructive">Delete {orgData?.name}</CardTitle>
+            <CardDescription>
+              These actions are permanent and cannot be undone.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">Delete</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the
+                    <strong className="px-1">{orgData?.name}</strong>
+                    organization and all of its associated data, including members, groups, and attendance records.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="space-y-2 py-2">
+                  <Label htmlFor="org-name-confirmation">Please type <strong className="px-1">{orgData?.name}</strong> to confirm.</Label>
+                  <Input
+                    id="org-name-confirmation"
+                    value={deleteConfirmation}
+                    onChange={(e) => setDeleteConfirmation(e.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={deleteConfirmation !== orgData?.name || isDeleting}
+                    onClick={handleDeleteOrganization}
+                    className="bg-destructive hover:bg-destructive/90"
+                  >
+                    {isDeleting ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</>
+                    ) : (
+                      'I understand, delete this organization'
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        </Card>
 
         {/* Save Button */}
         <div className="flex justify-end pt-6">
@@ -1458,7 +1542,7 @@ export default function SettingsPage() {
             ) : (
               <>
                 <Save className="h-4 w-4" />
-                Save Changes
+                Save
               </>
             )}
           </Button>

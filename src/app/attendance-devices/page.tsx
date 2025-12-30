@@ -202,7 +202,7 @@ export default function AttendanceDevicesPage() {
             header: "Status",
             cell: ({ row }) => (
                 row.original.is_active ? 
-                    <Badge className="bg-green-500"><CheckCircle2 className="w-3 h-3 mr-1" /> Active</Badge> : 
+                    <Badge className="bg-green-500 text-primary-foreground"><CheckCircle2 className="w-3 h-3 mr-1" /> Active</Badge> : 
                     <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" /> Inactive</Badge>
             ),
         },
@@ -267,12 +267,12 @@ export default function AttendanceDevicesPage() {
     return (
         <div className="flex flex-1 flex-col gap-4 w-full">
             <div className="w-full">
-                <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="w-full bg-card rounded-lg shadow-sm border">
                     
                     <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
                         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                             <div className="flex-1 relative">
-                                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Search devices..."
                                     value={searchQuery}
@@ -306,11 +306,11 @@ export default function AttendanceDevicesPage() {
                         <div className="flex flex-col sm:flex-row gap-3 flex-wrap items-start sm:items-center sm:justify-between">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
                                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                                    <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Device Type:</span>
+                                    <span className="text-sm font-medium text-foreground whitespace-nowrap">Device Type:</span>
                                     <select
                                         value={filterDeviceType}
                                         onChange={(e) => setFilterDeviceType(e.target.value)}
-                                        className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white flex-1 sm:flex-none"
+                                        className="px-3 py-2 border rounded-md text-sm bg-card flex-1 sm:flex-none"
                                     >
                                         <option value="">All Types</option>
                                         {deviceTypes.map((dt) => (
@@ -322,11 +322,11 @@ export default function AttendanceDevicesPage() {
                                 </div>
 
                                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                                    <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Status:</span>
+                                    <span className="text-sm font-medium text-foreground whitespace-nowrap">Status:</span>
                                     <select
                                         value={filterStatus || "active"}
                                         onChange={(e) => setFilterStatus(e.target.value)}
-                                        className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white flex-1 sm:flex-none"
+                                        className="px-3 py-2 border rounded-md text-sm bg-card flex-1 sm:flex-none"
                                     >
                                         <option value="active">Active</option>
                                         <option value="inactive">Inactive</option>
@@ -361,42 +361,42 @@ export default function AttendanceDevicesPage() {
                                 </div>
                             ) : filteredDevices.length === 0 ? (
                                 <div className="text-center py-10">
-                                    <p className="text-gray-500">No devices match your filters</p>
+                                    <p className="text-muted-foreground">No devices match your filters</p>
                                 </div>
                             ) : viewMode === 'grid' ? (
                                 <div className="space-y-4 min-w-full">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 min-w-full">
                                         {filteredDevices.slice(currentPageIndex * currentPageSize, (currentPageIndex + 1) * currentPageSize).map((device) => (
-                                            <div key={device.id} className="border rounded-lg p-3 hover:shadow-md transition-shadow bg-white">
+                                            <div key={device.id} className="border rounded-lg p-3 hover:shadow-md transition-shadow bg-card">
                                                 <div className="space-y-2">
                                                     <div>
                                                         <h3 className="font-semibold text-base truncate">{device.device_name}</h3>
-                                                        <p className="text-xs text-gray-500 truncate">{device.serial_number || '-'}</p>
+                                                        <p className="text-xs text-muted-foreground truncate">{device.serial_number || '-'}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs text-gray-600">Device Type</p>
+                                                        <p className="text-xs text-muted-foreground">Device Type</p>
                                                         <p className="text-xs font-medium truncate">{device.device_types?.name || '-'}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs text-gray-600">Location</p>
+                                                        <p className="text-xs text-muted-foreground">Location</p>
                                                         <p className="text-xs font-medium truncate">{device.location || '-'}</p>
                                                     </div>
                                                     <div className="flex items-center justify-between pt-1">
-                                                        <span className="text-xs text-gray-600">Status</span>
+                                                        <span className="text-xs text-muted-foreground">Status</span>
                                                         {device.is_active ? (
-                                                            <Badge className="bg-green-500 text-xs py-0.5"><CheckCircle2 className="w-2.5 h-2.5 mr-0.5" /> Active</Badge>
+                                                            <Badge className="bg-green-500 text-primary-foreground text-xs py-0.5"><CheckCircle2 className="w-2.5 h-2.5 mr-0.5" /> Active</Badge>
                                                         ) : (
                                                             <Badge variant="destructive" className="text-xs py-0.5"><XCircle className="w-2.5 h-2.5 mr-0.5" /> Inactive</Badge>
                                                         )}
                                                     </div>
-                                                    <div className="text-xs text-gray-500 pt-1 border-t">
+                                                    <div className="text-xs text-muted-foreground pt-1 border-t">
                                                         <p>Created: {new Date(device.created_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
                                                     </div>
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
-                                    <div className="flex items-center justify-between py-4 px-4 bg-gray-50 rounded-md border">
+                                    <div className="flex items-center justify-between py-4 px-4 bg-muted/50 rounded-md border">
                                         <div className="flex items-center gap-2">
                                             <Button
                                                 variant="ghost"
@@ -428,7 +428,7 @@ export default function AttendanceDevicesPage() {
                                                     const page = e.target.value ? Number(e.target.value) - 1 : 0
                                                     setCurrentPageIndex(Math.max(0, Math.min(page, Math.ceil(filteredDevices.length / currentPageSize) - 1)))
                                                 }}
-                                                className="w-12 h-8 px-2 border rounded text-sm text-center"
+                                                className="w-12 h-8 px-2 border rounded text-sm text-center bg-background"
                                                 disabled={loading}
                                             />
                                             <span className="text-sm text-muted-foreground">/ {Math.ceil(filteredDevices.length / currentPageSize)}</span>
@@ -464,7 +464,7 @@ export default function AttendanceDevicesPage() {
                                                         setCurrentPageSize(Number(e.target.value))
                                                         setCurrentPageIndex(0)
                                                     }}
-                                                    className="px-2 py-1 border rounded text-sm bg-white"
+                                                    className="px-2 py-1 border rounded text-sm bg-background"
                                                 >
                                                     <option value="4">4</option>
                                                     <option value="8">8</option>
@@ -495,7 +495,7 @@ export default function AttendanceDevicesPage() {
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle className="font-semibold tracking-tight border-b border-gray-200 pb-4  ">Edit Device</DialogTitle>
+                        <DialogTitle className="font-semibold tracking-tight border-b pb-4  ">Edit Device</DialogTitle>
                     </DialogHeader>
                     {selectedDevice && (
                         <Form {...editForm}>
@@ -506,7 +506,7 @@ export default function AttendanceDevicesPage() {
                                         <Input 
                                             value={selectedDevice.device_types?.name || '-'} 
                                             disabled 
-                                            className="bg-gray-100 cursor-not-allowed"
+                                            className="bg-muted cursor-not-allowed"
                                         />
                                     </FormControl>
                                 </FormItem>
@@ -516,7 +516,7 @@ export default function AttendanceDevicesPage() {
                                         <Input 
                                             value={selectedDevice.serial_number || '-'} 
                                             disabled 
-                                            className="bg-gray-100 cursor-not-allowed"
+                                            className="bg-muted cursor-not-allowed"
                                         />
                                     </FormControl>
                                 </FormItem>

@@ -1003,8 +1003,8 @@ export default function FingerPage() {
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="flex items-center gap-3 px-4 py-3 bg-card rounded-lg shadow-sm border">
-              <div className="p-2 rounded-lg bg-green-100">
-                <Check className="w-5 h-5 text-green-600" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Check className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Complete (2 Fingers)</p>
@@ -1013,8 +1013,8 @@ export default function FingerPage() {
             </div>
 
             <div className="flex items-center gap-3 px-4 py-3 bg-card rounded-lg shadow-sm border">
-              <div className="p-2 rounded-lg bg-yellow-100">
-                <Fingerprint className="w-5 h-5 text-yellow-600" />
+              <div className="p-2 rounded-lg bg-yellow-500/10">
+                <Fingerprint className="w-5 h-5 text-yellow-500" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Partial (1 Finger)</p>
@@ -1023,8 +1023,8 @@ export default function FingerPage() {
             </div>
 
             <div className="flex items-center gap-3 px-4 py-3 bg-card rounded-lg shadow-sm border">
-              <div className="p-2 rounded-lg bg-red-100">
-                <Users className="w-5 h-5 text-red-600" />
+              <div className="p-2 rounded-lg bg-destructive/10">
+                <Users className="w-5 h-5 text-destructive" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Not Registered</p>
@@ -1177,11 +1177,11 @@ export default function FingerPage() {
                     <TableRow key={`sk-${i}`}>
                       <TableCell colSpan={6}>
                         <div className="flex items-center gap-4">
-                          <div className="h-5 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                          <div className="h-5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                          <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                          <div className="h-5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                          <div className="h-5 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse ml-auto" />
+                          <div className="h-5 w-12 bg-muted rounded animate-pulse" />
+                          <div className="h-5 w-24 bg-muted rounded animate-pulse" />
+                          <div className="h-5 w-40 bg-muted rounded animate-pulse" />
+                          <div className="h-5 w-24 bg-muted rounded animate-pulse" />
+                          <div className="h-5 w-20 bg-muted rounded animate-pulse ml-auto" />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1201,8 +1201,7 @@ export default function FingerPage() {
                     key={member.id}
                     className={cn(
                       "transition-colors",
-                      index % 2 === 0 ? "bg-background" : "bg-muted/30",
-                      "hover:bg-primary/5"
+                      "hover:bg-muted/50"
                     )}
                   >
                     <TableCell className="font-medium text-muted-foreground">
@@ -1255,7 +1254,7 @@ export default function FingerPage() {
                             disabled={isRegistering || activeMemberId !== null}
                             className={cn(
                               "gap-2 transition-all",
-                              member.finger1_registered && "bg-green-600 hover:bg-green-700 text-white",
+                              member.finger1_registered && "bg-green-600 hover:bg-green-700 text-primary-foreground",
                               activeMemberId !== null && activeMemberId !== member.id && "opacity-50 cursor-not-allowed"
                             )}
                           >
@@ -1304,7 +1303,7 @@ export default function FingerPage() {
                             disabled={isRegistering || activeMemberId !== null}
                             className={cn(
                               "gap-2 transition-all",
-                              member.finger2_registered && "bg-green-600 hover:bg-green-700 text-white",
+                              member.finger2_registered && "bg-green-600 hover:bg-green-700 text-primary-foreground",
                               activeMemberId !== null && activeMemberId !== member.id && "opacity-50 cursor-not-allowed"
                             )}
                           >
@@ -1332,7 +1331,7 @@ export default function FingerPage() {
 
         {/* Pagination Footer */}
         {filteredMembers.length > 0 && (
-          <div className="flex items-center justify-between py-4 px-4 bg-gray-50 rounded-md border">
+          <div className="flex items-center justify-between py-4 px-4 bg-muted/50 rounded-md border">
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
@@ -1366,7 +1365,7 @@ export default function FingerPage() {
                   const page = e.target.value ? Number(e.target.value) - 1 : 0
                   setPageIndex(Math.max(0, Math.min(page, totalPages - 1)))
                 }}
-                className="w-12 h-8 px-2 border rounded text-sm text-center"
+                className="w-12 h-8 px-2 border rounded text-sm text-center bg-background"
                 disabled={isLoading}
               />
               
@@ -1405,12 +1404,11 @@ export default function FingerPage() {
                     setPageSize(e.target.value)
                     setPageIndex(0)
                   }}
-                  className="px-2 py-1 border rounded text-sm bg-white"
+                  className="px-2 py-1 border rounded text-sm bg-background"
                 >
-                  <option value="5">5</option>
                   <option value="10">10</option>
-                  <option value="20">20</option>
                   <option value="50">50</option>
+                  <option value="100">100</option>
                 </select>
               </div>
             </div>

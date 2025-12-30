@@ -11,7 +11,11 @@ export function useMembers() {
     queryKey: ["members", organizationId], // Include organizationId untuk isolasi cache
     queryFn: async () => {
       memberLogger.debug('[React Query] Fetching members via API for org:', organizationId)
-      const response = await fetch('/api/members', { credentials: 'same-origin' })
+      const url = new URL('/api/members', window.location.origin)
+      if (organizationId) {
+        url.searchParams.append('organizationId', organizationId.toString())
+      }
+      const response = await fetch(url.toString(), { credentials: 'same-origin' })
       const json = await response.json()
       if (!json.success) {
         throw new Error(json.message || 'Failed to fetch members')

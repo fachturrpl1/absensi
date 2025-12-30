@@ -3,6 +3,7 @@
 import React from "react"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
+import { useQueryClient } from "@tanstack/react-query"
 import { Plus, Group as GroupIcon, Pencil, Trash, Search, RotateCcw, ChevronRight, FileSpreadsheet } from "lucide-react"
 import {
   Empty,
@@ -80,6 +81,7 @@ const groupSchema = z.object({
 type GroupForm = z.infer<typeof groupSchema>
 
 export default function GroupsPage() {
+  const queryClient = useQueryClient()
   const { isHydrated, organizationId } = useHydration()
   useOrgGuard()
 
@@ -129,6 +131,7 @@ export default function GroupsPage() {
       const result = await deleteGroup(id)
       if (result.success) {
         toast.success("Group deleted successfully")
+        await queryClient.invalidateQueries({ queryKey: ['groups']})
         fetchGroups()
       } else {
         toast.error(result.message || "Failed to delete group")
@@ -157,7 +160,7 @@ export default function GroupsPage() {
       header: "Status",
       cell: ({ row }) =>
         row.original.is_active ? (
-          <Badge className="bg-green-500">Active</Badge>
+          <Badge className="bg-green-500 text-primary-foreground">Active</Badge>
         ) : (
           <Badge variant="destructive">Inactive</Badge>
         ),
@@ -240,6 +243,7 @@ export default function GroupsPage() {
       
       const result = await getAllGroups(organizationId)
       if (!result.success) throw new Error(result.message)
+      await queryClient.invalidateQueries({ queryKey: ['groups']})
       
       setGroups(result.data)
       setCache<IGroup[]>(`groups:${organizationId}`, result.data, 1000 * 300)
@@ -263,15 +267,17 @@ export default function GroupsPage() {
       }
       // Force refresh data
       await fetchGroups()
-      toast.success("Data berhasil di-refresh!")
+      await queryClient.invalidateQueries({ queryKey: ['groups']})
+      toast.success("Data has been refreshed!!")
     } catch (error) {
-      toast.error("Gagal refresh data")
+      toast.error("Failed at refresh data")
     }
   }, [fetchGroups])
 
   const fetchOrganizations = async () => {
     try {
       const response = await getAllOrganization()
+      await queryClient.invalidateQueries({ queryKey: ['organizations']})
       if (!response.success) throw new Error(response.message)
       setOrganizations(response.data)
     } catch (error: unknown) {
@@ -309,6 +315,7 @@ export default function GroupsPage() {
     },
   })
 
+  //komentar
   // sinkronkan orgId ke form setelah didapat dari store
   React.useEffect(() => {
     if (organizationId && !isModalOpen) {
@@ -331,6 +338,7 @@ export default function GroupsPage() {
         res = await createGroup(values)
       }
       if (!res.success) throw new Error(res.message)
+      await queryClient.invalidateQueries({ queryKey: ['groups']})
       toast.success(editingDetail ? 'Saved successfully' : 'Group created successfully')
       setIsModalOpen(false)
       setEditingDetail(null)
@@ -360,12 +368,12 @@ export default function GroupsPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 w-full">
       <div className="w-full">
-        <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="w-full bg-card rounded-lg shadow-sm border">
           
           <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search groups..."
                   value={searchQuery}

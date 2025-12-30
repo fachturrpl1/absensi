@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +26,7 @@ import { DateFilterBar, DateFilterState } from "@/components/analytics/date-filt
 import { useHydration } from "@/hooks/useHydration";
 
 export default function AttendanceDashboard() {
+  const queryClient = useQueryClient()
   const { isHydrated, organizationId } = useHydration();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
@@ -48,6 +50,7 @@ export default function AttendanceDashboard() {
     
     setLoading(true);
     try {
+      await queryClient.invalidateQueries({ queryKey: ['dashboard-stats']})
       console.log('[ATTENDANCE] Fetching stats for org:', organizationId);
       const data = await getDashboardStats(organizationId);
       console.log('[ATTENDANCE] Fetched stats:', data);
