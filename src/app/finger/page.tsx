@@ -1047,7 +1047,7 @@ export default function FingerPage() {
   const unregisteredCount = members.filter(m => !m.finger1_registered && !m.finger2_registered).length
 
   if (!isHydrated || isLoading) {
-    return <FingerPageSkeleton />
+    return null
   }
 
   return (
