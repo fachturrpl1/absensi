@@ -35,7 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { getCache, setCache } from "@/lib/local-cache"
-import { Skeleton } from "@/components/ui/skeleton"
+
 
 interface Device {
   device_code: string
@@ -67,62 +67,6 @@ type BioRow = {
 }
 
 type FilterStatus = "all" | "complete" | "partial" | "unregistered"
-
-// Custom Skeleton for this page
-const FingerPageSkeleton = () => (
-  <div className="p-4 md:p-6 space-y-4">
-    {/* Summary Cards Skeleton */}
-    <div className="grid gap-4 md:grid-cols-3">
-      <Skeleton className="h-24 w-full" />
-      <Skeleton className="h-24 w-full" />
-      <Skeleton className="h-24 w-full" />
-    </div>
-
-    {/* Toolbar Skeleton */}
-    <div className="flex flex-col sm:flex-row gap-2 items-center justify-between">
-      <Skeleton className="h-10 w-full sm:w-40" />
-      <Skeleton className="h-10 w-full sm:w-64" />
-      <div className="flex gap-2 w-full sm:w-auto">
-        <Skeleton className="h-10 w-full sm:w-32" />
-        <Skeleton className="h-10 w-full sm:w-32" />
-      </div>
-    </div>
-
-    {/* Table Skeleton */}
-    <div className="border rounded-lg p-2">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead><Skeleton className="h-5 w-10" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-40" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-32" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-28" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-28" /></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {[...Array(10)].map((_, i) => (
-            <TableRow key={i}>
-              <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-              <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-              <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-              <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-              <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-              <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-
-    {/* Pagination Skeleton */}
-    <div className="flex items-center justify-between">
-      <Skeleton className="h-8 w-48" />
-      <Skeleton className="h-8 w-64" />
-    </div>
-  </div>
-);
 
 export default function FingerPage() {
   const DEBUG = false
