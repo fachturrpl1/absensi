@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
@@ -53,17 +53,91 @@ import {
 } from "@/action/invitations";
 import { IMemberInvitation } from "@/interface";
 
+// Extracted Actions cell to avoid using hooks inside table cell renderers
+function InvitationActionsCell({
+  invitation,
+  onResend,
+  onCancel,
+  onDelete,
+}: {
+  invitation: IMemberInvitation;
+  onResend: (id: string) => void;
+  onCancel: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const canResend = invitation.status === "pending" || invitation.status === "expired";
+  const canCancel = invitation.status === "pending";
+
+  return (
+    <div className="flex items-center gap-1">
+      {canResend && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onResend(invitation.id)}
+          className="h-8 w-8 hover:bg-muted"
+          title="Resend Invitation"
+        >
+          <Send className="h-4 w-4" />
+        </Button>
+      )}
+
+      {canCancel && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onCancel(invitation.id)}
+          className="h-8 w-8 hover:bg-muted"
+          title="Cancel Invitation"
+        >
+          <Ban className="h-4 w-4" />
+        </Button>
+      )}
+
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setShowDeleteDialog(true)}
+        className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
+        title="Delete Invitation"
+      >
+        <Trash className="h-4 w-4" />
+      </Button>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Invitation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this invitation? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                onDelete(invitation.id);
+                setShowDeleteDialog(false);
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
 export default function InvitationsClient() {
   const router = useRouter();
   const [invitations, setInvitations] = useState<IMemberInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
 
-  useEffect(() => {
-    loadInvitations();
-  }, []);
-
-  async function loadInvitations() {
+  const loadInvitations = useCallback(async () => {
     try {
       setLoading(true);
       const result = await getAllInvitations();
@@ -72,23 +146,27 @@ export default function InvitationsClient() {
       } else {
         toast.error(result.message || "Failed to load invitations");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while loading invitations");
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    void loadInvitations();
+  }, [loadInvitations]);
 
   async function handleResend(invitationId: string) {
     try {
       const result = await resendInvitation(invitationId);
       if (result.success) {
         toast.success("Invitation resent successfully");
-        loadInvitations();
+        void loadInvitations();
       } else {
         toast.error(result.message || "Failed to resend invitation");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred");
     }
   }
@@ -98,11 +176,11 @@ export default function InvitationsClient() {
       const result = await cancelInvitation(invitationId);
       if (result.success) {
         toast.success("Invitation cancelled");
-        loadInvitations();
+        void loadInvitations();
       } else {
         toast.error(result.message || "Failed to cancel invitation");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred");
     }
   }
@@ -112,11 +190,11 @@ export default function InvitationsClient() {
       const result = await deleteInvitation(invitationId);
       if (result.success) {
         toast.success("Invitation deleted");
-        loadInvitations();
+        void loadInvitations();
       } else {
         toast.error(result.message || "Failed to delete invitation");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred");
     }
   }
@@ -136,8 +214,8 @@ export default function InvitationsClient() {
       accessorKey: "role",
       header: "Role",
       cell: ({ row }) => {
-        const role = row.original.role as any;
-        return role ? (
+        const role = (row.original as unknown as { role?: { name?: string } | null }).role;
+        return role && role.name ? (
           <Badge variant="secondary">{role.name}</Badge>
         ) : (
           <span className="text-muted-foreground text-sm">Not assigned</span>
@@ -148,8 +226,8 @@ export default function InvitationsClient() {
       accessorKey: "department",
       header: "Group",
       cell: ({ row }) => {
-        const dept = row.original.department as any;
-        return dept ? dept.name : <span className="text-muted-foreground text-sm">-</span>;
+        const dept = (row.original as unknown as { department?: { name?: string } | null }).department;
+        return dept && dept.name ? dept.name : <span className="text-muted-foreground text-sm">-</span>;
       },
     },
     {
@@ -157,13 +235,14 @@ export default function InvitationsClient() {
       header: "Status",
       cell: ({ row }) => {
         const status = row.original.status;
-        const variants: Record<string, any> = {
+        const variants = {
           pending: { icon: Clock, color: "bg-yellow-100 text-yellow-800" },
           accepted: { icon: CheckCircle2, color: "bg-green-100 text-green-800" },
           expired: { icon: XCircle, color: "bg-red-100 text-red-800" },
           cancelled: { icon: Ban, color: "bg-gray-100 text-gray-800" },
-        };
-        const variant = variants[status] || variants.pending;
+        } as const;
+        type StatusKey = keyof typeof variants;
+        const variant = variants[(status as StatusKey)] ?? variants.pending;
         const Icon = variant.icon;
         
         return (
@@ -189,77 +268,14 @@ export default function InvitationsClient() {
     {
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => {
-        const invitation = row.original;
-        const canResend = invitation.status === "pending" || invitation.status === "expired";
-        const canCancel = invitation.status === "pending";
-        const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-        return (
-          <div className="flex items-center gap-1">
-            {/* Resend Button */}
-            {canResend && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleResend(invitation.id)}
-                className="h-8 w-8 hover:bg-muted"
-                title="Resend Invitation"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            )}
-            
-            {/* Cancel Button */}
-            {canCancel && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleCancel(invitation.id)}
-                className="h-8 w-8 hover:bg-muted"
-                title="Cancel Invitation"
-              >
-                <Ban className="h-4 w-4" />
-              </Button>
-            )}
-            
-            {/* Delete Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowDeleteDialog(true)}
-              className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
-              title="Delete Invitation"
-            >
-              <Trash className="h-4 w-4" />
-            </Button>
-
-            {/* Delete Confirmation Dialog */}
-            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Invitation</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete this invitation? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => {
-                      handleDelete(invitation.id);
-                      setShowDeleteDialog(false);
-                    }}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        );
-      },
+      cell: ({ row }) => (
+        <InvitationActionsCell
+          invitation={row.original}
+          onResend={handleResend}
+          onCancel={handleCancel}
+          onDelete={handleDelete}
+        />
+      ),
     },
   ];
 

@@ -59,7 +59,9 @@ export function QueryProvider({ children }: { children: ReactNode }) {
     } catch {}
     const unsub = queryClient.getQueryCache().subscribe(() => {
       try {
-        const data: DehydratedState = dehydrate(queryClient)
+        const data: DehydratedState = dehydrate(queryClient, {
+          shouldDehydrateQuery: (q) => q.state.status === 'success',
+        })
         const payload: { buster: string; data: DehydratedState } = { buster: 'v1', data }
         localStorage.setItem('rq-cache-v1', JSON.stringify(payload))
       } catch {}

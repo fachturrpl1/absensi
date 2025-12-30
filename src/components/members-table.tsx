@@ -3,16 +3,8 @@
 import React from "react"
 import { IOrganization_member } from "@/interface"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Trash, Pencil, Eye, User, Shield, Check, X, Filter, Columns3Cog, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
+import { Trash, Pencil, Eye, User, Check, X, Columns3Cog, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
 import { useRouter } from "next/navigation"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -44,18 +36,18 @@ interface MembersTableProps {
 export function MembersTable({ members, isLoading = false, onDelete, showPagination = true }: MembersTableProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const [sortOrder, setSortOrder] = React.useState("newest")
+  const [sortOrder] = React.useState("newest")
   const [pageSize, setPageSize] = React.useState("10")
   const [pageIndex, setPageIndex] = React.useState(0)
   const [globalFilter] = React.useState("")
-  const [statusFilter, setStatusFilter] = React.useState("all")
+  const [statusFilter] = React.useState("all")
   const [visibleColumns, setVisibleColumns] = React.useState({
     members: true,
     // phone: true,
+    nik: true,
     group: true,
     gender: true,
     religion: true,
-    role: true,
     status: true,
     actions: true,
   })
@@ -109,12 +101,12 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
         const fullName = getFullName(member).toLowerCase()
         const phone = ((member as any).user?.phone || "").toLowerCase()
         const group = ((member as any).groupName || "").toLowerCase()
-        const role = ((member as any).role?.name || "").toLowerCase()
+        const nik = (((member as any).biodata?.nik || (member as any).biodata_nik || "") as string).toLowerCase()
         return (
           fullName.includes(searchTerm) ||
           phone.includes(searchTerm) ||
           group.includes(searchTerm) ||
-          role.includes(searchTerm)
+          nik.includes(searchTerm)
         )
       })
     }
@@ -184,54 +176,11 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
     <div className="w-full space-y-4">
       {/* Filters and Controls */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
-        <div className="flex flex-wrap items-center gap-2 w-full">
-          {/* Status Filter */}
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Sort Order */}
-          <Select value={sortOrder} onValueChange={setSortOrder}>
-            <SelectTrigger className="w-[110px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">Newest</SelectItem>
-              <SelectItem value="oldest">Oldest</SelectItem>
-              <SelectItem value="a-z">A-Z</SelectItem>
-              <SelectItem value="z-a">Z-A</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Show Items */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground whitespace-nowrap">Show:</span>
-            <Select value={pageSize} onValueChange={setPageSize}>
-              <SelectTrigger className="w-[70px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
 
         {/* Toggle Columns */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2 w-full sm:w-auto">
+            <Button variant="outline" className="hidden">
               <Columns3Cog className="h-4 w-4" /> Columns
             </Button>
           </DropdownMenuTrigger>
@@ -243,6 +192,14 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
               }
             >
               Members
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={visibleColumns.nik}
+              onCheckedChange={(checked) =>
+                setVisibleColumns((prev) => ({ ...prev, nik: checked }))
+              }
+            >
+              NIK
             </DropdownMenuCheckboxItem>
             {/* <DropdownMenuCheckboxItem
               checked={visibleColumns.phone}
@@ -277,14 +234,6 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
               Religion
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
-              checked={visibleColumns.role}
-              onCheckedChange={(checked) =>
-                setVisibleColumns((prev) => ({ ...prev, role: checked }))
-              }
-            >
-              Role
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
               checked={visibleColumns.status}
               onCheckedChange={(checked) =>
                 setVisibleColumns((prev) => ({ ...prev, status: checked }))
@@ -313,6 +262,9 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
             {visibleColumns.members && (
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Members</th>
             )}
+            {visibleColumns.nik && (
+              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">NIK</th>
+            )}
             {/* {visibleColumns.phone && (
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Phone Number</th>
             )} */}
@@ -324,9 +276,6 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
             )}
             {visibleColumns.religion && (
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Religion</th>
-            )}
-            {visibleColumns.role && (
-              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Role</th>
             )}
             {visibleColumns.status && (
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Status</th>
@@ -353,8 +302,6 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
             </tr>
           ) : (
             paginatedData.map((member) => {
-              const role = (member as any).role
-
               return (
                 <tr key={member.id} className="border-b hover:bg-muted/30 transition-colors">
                   {visibleColumns.members && (
@@ -365,7 +312,11 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
                       </div>
                     </td>
                   )}
-
+                  {visibleColumns.nik && (
+                    <td className="px-4 py-3 text-sm">
+                      {(member as any).biodata?.nik || "-"}
+                    </td>
+                  )}
                   {/* {visibleColumns.phone && (
                     <td className="px-4 py-3 text-sm">
                       {user?.phone || "No Phone"}
@@ -390,21 +341,6 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
                     </td>
                   )}
 
-                  {visibleColumns.role && (
-                    <td className="px-4 py-3 text-sm">
-                      {role ? (
-                        <Badge 
-                          variant={role.code === "A001" ? "default" : "secondary"} 
-                          className="flex items-center gap-1 w-fit"
-                        >
-                          <Shield className="w-3 h-3" />
-                          {role.name}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline">No Role</Badge>
-                      )}
-                    </td>
-                  )}
 
                   {visibleColumns.status && (
                     <td className="px-4 py-3 text-sm">

@@ -237,7 +237,7 @@ export async function GET(req: Request) {
       ...(countMode && { countMode })
     })
 
-    let links: { self: string; next: string | null; first: string; prev?: string | null; last?: string | null } = {
+    const links: { self: string; next: string | null; first: string; prev?: string | null; last?: string | null } = {
       self: `/api/members?${baseParams.toString()}`,
       next: null,
       first: `/api/members?${baseParams.toString()}`
