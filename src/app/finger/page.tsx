@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/select"
 import { getCache, setCache } from "@/lib/local-cache"
 
+
 interface Device {
   device_code: string
   device_name: string
@@ -611,9 +612,6 @@ export default function FingerPage() {
         if (status === 'SUBSCRIBED') {
           if (DEBUG) console.log('✅ Real-time subscription active for biometric_data')
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time subscription error for biometric_data - this may be due to real-time not being enabled for the table in Supabase')
-          console.error('💡 To enable: Run this SQL in Supabase SQL Editor:')
-          console.error('   ALTER PUBLICATION supabase_realtime ADD TABLE biometric_data;')
         } else {
         }
       })
@@ -992,8 +990,8 @@ export default function FingerPage() {
   const partialCount = members.filter(m => (m.finger1_registered || m.finger2_registered) && !(m.finger1_registered && m.finger2_registered)).length
   const unregisteredCount = members.filter(m => !m.finger1_registered && !m.finger2_registered).length
 
-  if (false && isLoading) {
-    // Hanya tampilkan skeleton khusus finger
+  if (!isHydrated || isLoading) {
+    return null
   }
 
   return (

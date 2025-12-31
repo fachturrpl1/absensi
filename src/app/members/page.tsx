@@ -46,6 +46,7 @@ import { useQuery } from "@tanstack/react-query"
 
 import { IOrganization_member } from "@/interface"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
+import { Skeleton } from "@/components/ui/skeleton"
 // ContentLayout removed - using new layout system
 import { createInvitation } from "@/action/invitations"
 import { getOrgRoles } from "@/lib/rbac"
@@ -169,6 +170,28 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
     getValue: (member: any) => member.hire_date || "-",
   },
 ]
+
+const MembersPageSkeleton = () => (
+  <div className="p-4 md:p-6 space-y-4">
+    <div className="flex flex-col sm:flex-row gap-2 items-center justify-between">
+      <Skeleton className="h-10 w-full sm:w-64" />
+      <div className="flex gap-2 w-full sm:w-auto">
+        <Skeleton className="h-10 w-28" />
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+    </div>
+    <TableSkeleton rows={8} columns={6} />
+    <div className="flex items-center justify-between">
+      <Skeleton className="h-8 w-40" />
+      <div className="flex gap-2">
+        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-8 w-24" />
+      </div>
+    </div>
+  </div>
+)
 
 export default function MembersPage() {
   const queryClient = useQueryClient()
@@ -370,6 +393,9 @@ export default function MembersPage() {
   }
 
   return (
+    (!isHydrated || (loading && members.length === 0)) ? (
+      <MembersPageSkeleton />
+    ) : (
     <div className="flex flex-1 flex-col gap-4 w-full">
       <div className="w-full">
         <div className="w-full bg-card rounded-lg shadow-sm border">
@@ -812,5 +838,5 @@ export default function MembersPage() {
         </div>
       </div>
     </div>
-  )
+  ))
 }
