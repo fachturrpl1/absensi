@@ -6,7 +6,7 @@ import { createAdminClient } from "@/utils/supabase/admin"
 interface ColumnMapping {
   [databaseField: string]: string | null
 }
-
+//tes
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()

@@ -225,7 +225,7 @@ export async function GET(req: Request) {
     
     // Fix departments if join failed (similar to getAllOrganization_member)
     if (raw && raw.length > 0) {
-      // Log raw data for debugging
+
       const membersWithDeptId = raw.filter((m: any) => m.department_id != null && m.department_id !== undefined);
       memberLogger.debug(`[API /members] Raw data: ${raw.length} members, ${membersWithDeptId.length} with department_id`);
       if (membersWithDeptId.length > 0 && membersWithDeptId[0]) {
