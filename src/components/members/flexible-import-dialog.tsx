@@ -406,10 +406,9 @@ export function FlexibleImportDialog({
                         }
                       >
                         <SelectTrigger id={field.key}>
-                          <SelectValue placeholder="Select Excel column (optional)" />
+                          <SelectValue placeholder="" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">-- Not mapped --</SelectItem>
                           {excelHeaders.map((header) => (
                             <SelectItem key={header} value={header}>
                               {header}

@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useOrgStore } from "@/store/org-store"
 import { FileText, Upload, X, Download, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -9,10 +10,8 @@ import { Wizard, WizardStep } from "@/components/ui/wizard"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +58,7 @@ const WIZARD_STEPS: WizardStep[] = [
 export default function MembersImportSimplePage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { organizationId } = useOrgStore()
 
   const [currentStep, setCurrentStep] = useState(1)
   const [file, setFile] = useState<File | null>(null)
@@ -69,7 +69,7 @@ export default function MembersImportSimplePage() {
   const [totalRows, setTotalRows] = useState(0)
   const [mapping, setMapping] = useState<ColumnMapping>({})
   const [processing, setProcessing] = useState(false)
-  const [headerRow, setHeaderRow] = useState<number>(1)
+  const [headerRow, setHeaderRow] = useState<number>(0) // 0 = auto-detect
   const [headerRowCount, setHeaderRowCount] = useState<number>(1)
   const [sheetNames, setSheetNames] = useState<string[]>([])
   const [sheetName, setSheetName] = useState<string>("")
@@ -96,6 +96,8 @@ export default function MembersImportSimplePage() {
     message: string
   } | null>(null)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [showUnmappedFieldsDialog, setShowUnmappedFieldsDialog] = useState(false)
+  const [unmappedFields, setUnmappedFields] = useState<string[]>([])
   const [hasTested, setHasTested] = useState(false) // Track apakah sudah test
   const [importSummary, setImportSummary] = useState<{
     success: number
@@ -109,21 +111,50 @@ export default function MembersImportSimplePage() {
     error?: string
   }>>([])
 
-  // Load groups on mount
+  // Load groups on mount and when organizationId changes
+  // Use stable value for dependency array to avoid React warning
+  const orgId = organizationId ?? null
   React.useEffect(() => {
     const fetchGroups = async () => {
+      if (!orgId) {
+        console.log('[GROUPS] No organizationId, skipping fetch')
+        setGroups([])
+        return
+      }
+
       setLoadingGroups(true)
       try {
-        const response = await fetch("/api/groups")
+        // Include organizationId and includeInactive in query params
+        // For import, we want all groups (including inactive ones)
+        const url = new URL("/api/groups", window.location.origin)
+        url.searchParams.append('organizationId', String(orgId))
+        url.searchParams.append('includeInactive', 'true')
+        
+        console.log('[GROUPS] Fetching groups for organizationId:', orgId)
+        const response = await fetch(url.toString())
         if (!response.ok) {
-          console.error("Failed to fetch groups:", response.status)
+          console.error("[GROUPS] Failed to fetch groups:", response.status, response.statusText)
+          const errorText = await response.text()
+          console.error("[GROUPS] Error response:", errorText)
           setGroups([])
           return
         }
         const data = await response.json()
-        if (data.success && data.data) {
-          setGroups(data.data)
+        console.log('[GROUPS] API response:', data)
+        
+        if (data.success && data.data && Array.isArray(data.data)) {
+          console.log('[GROUPS] Raw groups data:', data.data)
+          // Map data to ensure id is string and we have name
+          const mappedGroups = data.data
+            .filter((group: any) => group.id && group.name) // Filter out invalid groups
+            .map((group: any) => ({
+              id: String(group.id), // Ensure id is string
+              name: String(group.name || '') // Ensure name is string
+            }))
+          console.log('[GROUPS] Mapped groups:', mappedGroups.length, 'groups', mappedGroups)
+          setGroups(mappedGroups)
         } else {
+          console.warn('[GROUPS] No groups data or invalid format:', data)
           setGroups([])
         }
       } catch (error) {
@@ -135,7 +166,7 @@ export default function MembersImportSimplePage() {
       }
     }
     fetchGroups()
-  }, [])
+  }, [orgId])
 
   const handleFileSelect = async (selectedFile: File, sheetOverride?: string) => {
     if (!selectedFile.name.match(/\.(xlsx|xls|csv)$/i)) {
@@ -157,7 +188,8 @@ export default function MembersImportSimplePage() {
     try {
       const formData = new FormData()
       formData.append("file", selectedFile)
-      formData.append("headerRow", String(headerRow || 1))
+      // Send 0 to trigger auto-detect, or use manual headerRow if user has set it
+      formData.append("headerRow", String(headerRow || 0))
       formData.append("headerRowCount", String(headerRowCount || 1))
       const chosenSheet = sheetOverride || sheetName
       if (chosenSheet) {
@@ -177,45 +209,158 @@ export default function MembersImportSimplePage() {
         return
       }
 
+      // Update headerRow and headerRowCount from response (in case auto-detect was used)
+      if (data.headerRow) {
+        setHeaderRow(data.headerRow)
+      }
+      if (data.headerRowCount) {
+        setHeaderRowCount(data.headerRowCount)
+      }
+
       setExcelHeaders(data.headers || [])
       setPreview(data.preview || [])
       setTotalRows(data.totalRows || 0)
       setSheetNames(data.sheetNames || [])
       setSheetName(data.sheetName || data.sheetNames?.[0] || "")
 
-      // Auto-map kolom umum ke field biodata
-      const autoMapping: ColumnMapping = {}
-      DATABASE_FIELDS.forEach((field) => {
-        const matchingHeader = data.headers.find((header: string) => {
-          const headerLower = header.toLowerCase().trim()
-          const fieldLower = field.label.toLowerCase()
+      // Show success message with auto-detect info
+      if (data.autoDetected) {
+        toast.success(`Header row otomatis terdeteksi di baris ${data.headerRow}. File berhasil dimuat!`)
+      } else {
+        toast.success(`Excel file loaded. Found ${data.totalRows} rows and ${data.headers.length} columns`)
+      }
 
-          return (
-            headerLower === fieldLower ||
-            headerLower.includes(fieldLower) ||
-            fieldLower.includes(headerLower) ||
-            (field.key === "nik" && headerLower.includes("nik")) ||
-            (field.key === "nama" && (headerLower.includes("nama") || headerLower.includes("name"))) ||
-            (field.key === "nickname" && (headerLower.includes("nickname") || headerLower.includes("nick") || headerLower.includes("panggilan"))) ||
-            (field.key === "nisn" && headerLower.includes("nisn")) ||
-            (field.key === "jenis_kelamin" && (headerLower.includes("jenis kelamin") || headerLower.includes("jk") || headerLower.includes("gender"))) ||
-            (field.key === "tempat_lahir" && (headerLower.includes("tempat lahir") || headerLower.includes("kota lahir"))) ||
-            (field.key === "tanggal_lahir" && (headerLower.includes("tanggal lahir") || headerLower.includes("tgl lahir"))) ||
-            (field.key === "agama" && headerLower.includes("agama")) ||
-            (field.key === "jalan" && (headerLower.includes("jalan") || headerLower.includes("alamat"))) ||
-            (field.key === "rt" && headerLower === "rt") ||
-            (field.key === "rw" && headerLower === "rw") ||
-            (field.key === "dusun" && headerLower.includes("dusun")) ||
-            (field.key === "kelurahan" && (headerLower.includes("kelurahan") || headerLower.includes("desa"))) ||
-            (field.key === "kecamatan" && headerLower.includes("kecamatan")) ||
-            (field.key === "no_telepon" && (headerLower.includes("telepon") || headerLower.includes("no hp") || headerLower.includes("hp") || headerLower.includes("phone"))) ||
-            (field.key === "email" && headerLower.includes("email")) ||
-            (field.key === "department_id" && (headerLower.includes("department") || headerLower.includes("departemen") || headerLower.includes("divisi") || headerLower.includes("group")))
-          )
+      // Auto-map kolom umum ke field biodata (dengan matching yang lebih ketat)
+      // IMPORTANT: One header can only map to one field (prevent duplicate mapping)
+      const autoMapping: ColumnMapping = {}
+      const usedHeaders = new Set<string>() // Track which headers have been mapped
+      
+      // Words that should NOT be matched (common document titles/metadata)
+      const excludeWords = [
+        'daftar', 'list', 'tabel', 'table', 'laporan', 'report',
+        'peserta', 'didik', 'siswa', 'student', 'murid',
+        'tanggal unduh', 'download', 'unduh', 'pengunduh',
+        'kecamatan', 'kabupaten', 'provinsi', 'kota', 'kabupaten kota',
+        'smk', 'sma', 'smp', 'sd', 'sekolah', 'school', 'malang'
+      ]
+      
+      // Field-specific matching with word boundaries to avoid false matches
+      // IMPORTANT: Patterns must be very specific to avoid false matches
+      const matchPatterns: Record<string, (h: string) => boolean> = {
+        nik: (h: string) => {
+          // Only match exact "NIK" or "NIPD" (case-insensitive)
+          // Don't match partial words or similar patterns
+          return /^nik$/i.test(h) || /^nipd$/i.test(h) || /^nomor\s+induk\s+kependudukan$/i.test(h)
+        },
+        nama: (h: string) => /^nama(\s+lengkap)?$/i.test(h) || /^name$/i.test(h),
+        nickname: (h: string) => /^nickname$/i.test(h) || /^nick$/i.test(h) || /^panggilan$/i.test(h),
+        nisn: (h: string) => /^nisn$/i.test(h),
+        jenis_kelamin: (h: string) => /^jenis\s+kelamin$/i.test(h) || /^jk$/i.test(h) || /^gender$/i.test(h),
+        tempat_lahir: (h: string) => /^tempat(\s+lahir)?$/i.test(h) || /^kota\s+lahir$/i.test(h),
+        tanggal_lahir: (h: string) => /^tanggal\s+lahir$/i.test(h) || /^tgl\s+lahir$/i.test(h) || /^ttl$/i.test(h),
+        agama: (h: string) => /^agama$/i.test(h),
+        jalan: (h: string) => /^jalan$/i.test(h) || /^alamat$/i.test(h),
+        rt: (h: string) => /^rt$/i.test(h), // Exact match only
+        rw: (h: string) => /^rw$/i.test(h), // Exact match only
+        dusun: (h: string) => /^dusun$/i.test(h),
+        kelurahan: (h: string) => /^kelurahan$/i.test(h) || /^desa$/i.test(h),
+        kecamatan: (h: string) => /^kecamatan$/i.test(h),
+        no_telepon: (h: string) => /^no\s*(telepon|hp|telp)$/i.test(h) || /^telepon$/i.test(h) || /^phone$/i.test(h),
+        email: (h: string) => /^e-?mail$/i.test(h) || /^surel$/i.test(h) || /^e\s*mail$/i.test(h),
+        department_id: (h: string) => /^department$/i.test(h) || /^departemen$/i.test(h) || /^divisi$/i.test(h) || /^group$/i.test(h) || /^kelompok$/i.test(h) || /^jurusan$/i.test(h),
+      }
+      
+      // First pass: Find exact matches (highest priority)
+      // Normalize by removing common separators (dash, space) for comparison
+      const normalizeForMatch = (text: string): string => {
+        return text.toLowerCase().trim().replace(/[-_\s]/g, '')
+      }
+      
+      DATABASE_FIELDS.forEach((field) => {
+        const fieldNormalized = normalizeForMatch(field.label)
+        const exactMatch = data.headers.find((header: string) => {
+          if (!header || header.trim().length === 0) return false
+          if (usedHeaders.has(header)) return false // Already mapped
+          
+          const headerNormalized = normalizeForMatch(header)
+          return headerNormalized === fieldNormalized
+        })
+        
+        if (exactMatch) {
+          autoMapping[field.key] = exactMatch
+          usedHeaders.add(exactMatch)
+          console.log(`[AUTO-MAP] Exact match: "${exactMatch}" -> "${field.key}"`)
+        }
+      })
+      
+      // Second pass: Find pattern matches (for fields not yet mapped)
+      DATABASE_FIELDS.forEach((field) => {
+        if (autoMapping[field.key]) return // Already mapped
+        
+        const matcher = matchPatterns[field.key]
+        if (!matcher) return
+        
+        const matchingHeader = data.headers.find((header: string) => {
+          if (!header || header.trim().length === 0) return false
+          if (usedHeaders.has(header)) return false // Already mapped to another field
+          
+          const headerLower = header.toLowerCase().trim()
+          
+          // Skip headers that contain exclude words
+          const hasExcludeWord = excludeWords.some(word => {
+            return headerLower.startsWith(word + ' ') || 
+                   headerLower.includes(' ' + word + ' ') ||
+                   headerLower.endsWith(' ' + word) ||
+                   headerLower === word
+          })
+          if (hasExcludeWord) return false
+          
+          // Skip very long headers
+          if (headerLower.length > 50) return false
+          
+          // Try pattern matching
+          return matcher(headerLower)
         })
 
-        autoMapping[field.key] = matchingHeader || null
+        if (matchingHeader) {
+          // Double-check: make sure this header hasn't been mapped already
+          if (usedHeaders.has(matchingHeader)) {
+            console.log(`[AUTO-MAP] WARNING: Header "${matchingHeader}" already mapped, skipping for field "${field.key}"`)
+            autoMapping[field.key] = null
+          } else {
+            autoMapping[field.key] = matchingHeader
+            usedHeaders.add(matchingHeader)
+            console.log(`[AUTO-MAP] Pattern match: "${matchingHeader}" -> "${field.key}"`)
+          }
+        } else {
+          autoMapping[field.key] = null // Explicitly set to null if no match
+        }
       })
+
+      // Validate: Check for duplicate mappings (one header mapped to multiple fields)
+      const mappingValues = Object.values(autoMapping).filter(v => v !== null)
+      const duplicateHeaders = mappingValues.filter((header, index) => mappingValues.indexOf(header) !== index)
+      if (duplicateHeaders.length > 0) {
+        console.error(`[AUTO-MAP] ERROR: Found duplicate mappings:`, duplicateHeaders)
+        // Fix duplicates by keeping only the first mapping
+        const seen = new Set<string>()
+        Object.keys(autoMapping).forEach(key => {
+          const header = autoMapping[key]
+          if (header && seen.has(header)) {
+            console.log(`[AUTO-MAP] Removing duplicate mapping: ${key} -> ${header}`)
+            autoMapping[key] = null
+          } else if (header) {
+            seen.add(header)
+          }
+        })
+      }
+
+      // Log final mapping for debugging
+      console.log(`[AUTO-MAP] Final mapping:`, autoMapping)
+      console.log(`[AUTO-MAP] Used headers:`, Array.from(usedHeaders))
+      console.log(`[AUTO-MAP] Total headers:`, data.headers.length)
+      console.log(`[AUTO-MAP] Mapped headers:`, usedHeaders.size)
+      console.log(`[AUTO-MAP] Unmapped headers:`, data.headers.filter((h: string) => !usedHeaders.has(h)))
 
       setMapping(autoMapping)
       toast.success(`File loaded. Found ${data.totalRows || 0} rows and ${data.headers.length} columns`)
@@ -275,7 +420,8 @@ export default function MembersImportSimplePage() {
       formData.append("mapping", JSON.stringify(mapping))
       formData.append("mode", "test")
       formData.append("allowMatchingWithSubfields", String(allowMatchingWithSubfields))
-      formData.append("headerRow", String(headerRow || 1))
+      // Use detected headerRow (should be > 0 after auto-detect)
+      formData.append("headerRow", String(headerRow > 0 ? headerRow : 1))
       formData.append("headerRowCount", String(headerRowCount || 1))
       if (sheetName) formData.append("sheetName", sheetName)
       if (selectedGroupId) formData.append("groupId", selectedGroupId)
@@ -324,7 +470,8 @@ export default function MembersImportSimplePage() {
       formData.append("mapping", JSON.stringify(mapping))
       formData.append("mode", "import")
       formData.append("allowMatchingWithSubfields", String(allowMatchingWithSubfields))
-      formData.append("headerRow", String(headerRow || 1))
+      // Use detected headerRow (should be > 0 after auto-detect)
+      formData.append("headerRow", String(headerRow > 0 ? headerRow : 1))
       formData.append("headerRowCount", String(headerRowCount || 1))
       if (sheetName) formData.append("sheetName", sheetName)
       if (selectedGroupId) formData.append("groupId", selectedGroupId)
@@ -373,6 +520,28 @@ export default function MembersImportSimplePage() {
     return firstRow?.[header] || ""
   }
 
+  // Fungsi untuk check field yang belum ter-mapping
+  const checkUnmappedFields = (): string[] => {
+    const unmapped: string[] = []
+    
+    DATABASE_FIELDS.forEach((field) => {
+      // Skip NIK karena sudah wajib (di-validasi di canGoNext)
+      if (field.key === "nik") return
+      
+      // Skip department_id jika selectedGroupId sudah dipilih
+      if (field.key === "department_id" && selectedGroupId && selectedGroupId.trim() !== "") {
+        return
+      }
+      
+      // Check jika field belum ter-mapping
+      if (!mapping[field.key] || mapping[field.key] === "" || mapping[field.key] === null) {
+        unmapped.push(field.label)
+      }
+    })
+    
+    return unmapped
+  }
+
   const handleNext = () => {
     if (currentStep === 1) {
       if (!file) {
@@ -382,6 +551,15 @@ export default function MembersImportSimplePage() {
       setCurrentStep(2)
     } else if (currentStep === 2) {
       if (!validateMapping()) return
+      
+      // Check unmapped fields sebelum next
+      const unmapped = checkUnmappedFields()
+      if (unmapped.length > 0) {
+        setUnmappedFields(unmapped)
+        setShowUnmappedFieldsDialog(true)
+        return
+      }
+      
       if (!hasTested) {
         toast.error("Silakan lakukan test terlebih dahulu")
         return
@@ -398,6 +576,24 @@ export default function MembersImportSimplePage() {
       // tombol Import yang menjalankan proses
     } else if (currentStep === 4) {
       router.push("/members")
+    }
+  }
+  
+  const handleUnmappedFieldsNext = () => {
+    setShowUnmappedFieldsDialog(false)
+    setUnmappedFields([])
+    
+    if (!hasTested) {
+      toast.error("Silakan lakukan test terlebih dahulu")
+      return
+    }
+    
+    // Jika ada data yang gagal validasi, tampilkan dialog konfirmasi
+    if (testSummary && testSummary.failed > 0) {
+      setShowConfirmDialog(true)
+    } else {
+      // Jika semua lolos validasi, langsung lanjut ke import
+      setCurrentStep(3)
     }
   }
 
@@ -573,98 +769,43 @@ export default function MembersImportSimplePage() {
                           </Select>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="header-row"
-                            className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
-                          >
-                            Header rows
+                        <div className="space-y-2 pb-2">
+                          <Label htmlFor="group-select" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            Pilih Group (Opsional)
                           </Label>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Input
-                              id="header-row"
-                              type="number"
-                              min={1}
-                              value={headerRow}
-                              onChange={(e) => setHeaderRow(Math.max(1, Number(e.target.value) || 1))}
-                              className="w-16 h-9"
-                            />
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">mulai</span>
-                            <Input
-                              id="header-row-count"
-                              type="number"
-                              min={1}
-                              value={headerRowCount}
-                              onChange={(e) => setHeaderRowCount(Math.max(1, Number(e.target.value) || 1))}
-                              className="w-16 h-9"
-                            />
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">jumlah</span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setHasTested(false) // Reset test status ketika header row berubah
-                                setFingerPagePreview(null) // Reset preview ketika header row berubah
-                                file && handleFileSelect(file)
-                              }}
-                              disabled={!file || loading}
-                              className="h-9"
-                            >
-                              Gunakan
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">
-                            Contoh: jika judul kolom ada di baris 5-6, isi mulai=5 dan jumlah=2.
+                          <Select
+                            value={selectedGroupId || "none"}
+                            onValueChange={(value) => setSelectedGroupId(value === "none" ? "" : value)}
+                            disabled={loadingGroups}
+                          >
+                            <SelectTrigger id="group-select" className="w-full">
+                              <SelectValue placeholder={loadingGroups ? "Loading groups..." : "Pilih group untuk semua member"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">-- Tidak Ada Group --</SelectItem>
+                              {groups.length > 0 ? (
+                                groups.map((group) => (
+                                  <SelectItem key={group.id} value={group.id}>
+                                    {group.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                !loadingGroups && (
+                                  <SelectItem value="none" disabled>
+                                    Tidak ada group tersedia
+                                  </SelectItem>
+                                )
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground">
+                            Jika dipilih, semua member yang di-import akan otomatis dimasukkan ke group ini
                           </p>
-              </div>
-            </div>
+                        </div>
+                      </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">No file selected</p>
-          )}
-        </div>
-      </div>
-
-                <div className="space-y-4 pt-10 pb-6">
-                  <h2 className="font-semibold text-lg">Advanced</h2>
-
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="group-select" className="text-sm font-medium">
-                        Pilih Group (Opsional)
-                      </Label>
-                      <Select
-                        value={selectedGroupId || "none"}
-                        onValueChange={(value) => setSelectedGroupId(value === "none" ? "" : value)}
-                        disabled={loadingGroups}
-                      >
-                        <SelectTrigger id="group-select" className="w-full">
-                          <SelectValue placeholder={loadingGroups ? "Loading groups..." : "Pilih group untuk semua member"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">-- Tidak Ada Group --</SelectItem>
-                          {groups.map((group) => (
-                            <SelectItem key={group.id} value={group.id}>
-                              {group.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Jika dipilih, semua member yang di-import akan otomatis dimasukkan ke group ini
-                      </p>
-                    </div>
-
-                    <div className="flex items-start space-x-3">
-                      <Checkbox
-                        id="allow-matching"
-                        checked={allowMatchingWithSubfields}
-                        onCheckedChange={(checked) => setAllowMatchingWithSubfields(checked === true)}
-                        className="mt-0.5"
-                      />
-                      <Label htmlFor="allow-matching" className="text-sm cursor-pointer leading-relaxed">
-                        Allow matching with subfields
-                      </Label>
-                    </div>
+                    )}
                   </div>
                 </div>
 
@@ -766,9 +907,9 @@ export default function MembersImportSimplePage() {
                                   </TableCell>
                                   <TableCell>
                                     <Select
-                                      value={mappedField || "__UNMAPPED__"}
+                                      value={mappedField || ""}
                                       onValueChange={(value) => {
-                                        if (value === "__UNMAPPED__") {
+                                        if (!value || value === "") {
                                           const newMapping = { ...mapping }
                                           Object.keys(newMapping).forEach((key) => {
                                             if (newMapping[key] === header) {
@@ -793,10 +934,9 @@ export default function MembersImportSimplePage() {
                                       }}
                                     >
                                       <SelectTrigger className="w-full max-w-[280px]">
-                                        <SelectValue placeholder="Select database field" />
+                                        <SelectValue placeholder="" />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="__UNMAPPED__">-- Not Mapped --</SelectItem>
                                         {DATABASE_FIELDS.map((field) => (
                                           <SelectItem key={field.key} value={field.key}>
                                             {field.label}
@@ -1146,6 +1286,40 @@ export default function MembersImportSimplePage() {
               </AlertDialogCancel>
               <AlertDialogAction onClick={handleConfirmImport}>
                 Ya, Import {testSummary?.success || 0} Data
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Dialog untuk menampilkan field yang belum ter-mapping */}
+        <AlertDialog open={showUnmappedFieldsDialog} onOpenChange={setShowUnmappedFieldsDialog}>
+          <AlertDialogContent className="max-w-2xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Field yang Belum Ter-mapping</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3 pt-2">
+                  <p className="text-sm text-muted-foreground">
+                    Beberapa database field belum ter-mapping ke kolom Excel. Field-field berikut akan diabaikan saat import (nilai akan kosong atau menggunakan default):
+                  </p>
+                  <div className="max-h-60 overflow-auto bg-muted/50 rounded-lg p-4">
+                    <ul className="space-y-2">
+                      {unmappedFields.map((field, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm">
+                          <span className="text-muted-foreground mt-0.5">•</span>
+                          <span className="flex-1">{field}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setShowUnmappedFieldsDialog(false)}>
+                Kembali
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleUnmappedFieldsNext}>
+                Lanjutkan
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

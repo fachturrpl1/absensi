@@ -8,7 +8,11 @@ export async function GET(request: NextRequest) {
     const organizationId = request.nextUrl.searchParams.get('organizationId');
     const orgId = organizationId ? parseInt(organizationId, 10) : undefined;
     
-    const response = await getAllGroups(orgId)
+    // Get includeInactive parameter (for import pages, we want all groups)
+    const includeInactiveParam = request.nextUrl.searchParams.get('includeInactive');
+    const includeInactive = includeInactiveParam === 'true' || includeInactiveParam === '1';
+    
+    const response = await getAllGroups(orgId, includeInactive)
     
     if (!response.success) {
       return NextResponse.json(

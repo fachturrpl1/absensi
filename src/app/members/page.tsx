@@ -125,7 +125,28 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
   {
     key: "group",
     label: "Department / Group",
-    getValue: (member: any) => member.groupName || member.departments?.name || "-",
+    getValue: (member: any) => {
+      // Handle groupName (legacy)
+      if (member.groupName) {
+        return member.groupName;
+      }
+      
+      // Handle departments - could be object or array
+      if (member.departments) {
+        if (Array.isArray(member.departments) && member.departments.length > 0) {
+          return member.departments[0]?.name || "-";
+        } else if (typeof member.departments === 'object' && member.departments.name) {
+          return member.departments.name;
+        }
+      }
+      
+      // Fallback: check department_id and log for debugging
+      if (member.department_id) {
+        console.warn(`[MEMBERS UI] Member ${member.id} has department_id ${member.department_id} but no departments object`);
+      }
+      
+      return "-";
+    },
   },
   {
     key: "position",
@@ -784,36 +805,6 @@ export default function MembersPage() {
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-                <div className="mt-20">
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyMedia variant="icon">
-                        <User className="h-14 w-14 text-muted-foreground mx-auto" />
-                      </EmptyMedia>
-                      <EmptyTitle>No members yet</EmptyTitle>
-                      <EmptyDescription>
-                        There are no members for this organization. Use the "Invite Member" button to add one.
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </Empty>
-                </div>
-              ) : (
-                <div className="min-w-full overflow-x-auto">
-                  <MembersTable 
-                    members={members}
-                    isLoading={loading}
-                    onDelete={fetchMembers}
-                  />
                 </div>
               )}
             </div>

@@ -448,9 +448,9 @@ export default function FingerImportSimpleMappingPage() {
                             </TableCell>
                             <TableCell>
                       <Select
-                        value={mappedField || "__UNMAPPED__"}
+                        value={mappedField || ""}
                         onValueChange={(value) => {
-                          if (value === "__UNMAPPED__") {
+                          if (!value || value === "") {
                             const newMapping = { ...mapping }
                             Object.keys(newMapping).forEach((key) => {
                               if (newMapping[key] === header) {
@@ -471,10 +471,9 @@ export default function FingerImportSimpleMappingPage() {
                         }}
                       >
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select database field" />
+                                  <SelectValue placeholder="" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="__UNMAPPED__">-- Not Mapped --</SelectItem>
                                   {DATABASE_FIELDS.map((field) => (
                                     <SelectItem key={field.key} value={field.key}>
                                       {field.label}
