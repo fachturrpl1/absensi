@@ -173,7 +173,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
     memberLogger.debug(`📋 Department IDs to fetch:`, Array.from(deptIds));
     
     // Fetch departments untuk semua member yang perlu (baik yang punya user_id maupun tidak)
-    let departmentsMap = new Map();
+    const departmentsMap = new Map();
     if (deptIds.size > 0) {
       const deptIdsArray = Array.from(deptIds);
       memberLogger.debug(`📥 Fetching ${deptIdsArray.length} departments...`);

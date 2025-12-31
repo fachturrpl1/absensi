@@ -280,9 +280,43 @@ export async function POST(request: NextRequest) {
           continue
         }
 
+        // Auto-generate code from name if code is empty
+        let finalCode = code
+        if (!finalCode && name) {
+          // Generate code from name: convert to uppercase, replace spaces with underscore, remove special chars
+          finalCode = name
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, '_')
+            .replace(/[^A-Z0-9_]/g, '')
+            .substring(0, 50) // Limit length
+          
+          // Ensure uniqueness within this batch and existing groups
+          let uniqueCode = finalCode
+          let suffix = 1
+          const isCodeDuplicate = (testCode: string) => {
+            // Check in existing groups
+            if (existingGroups?.some((g: any) => g.code && g.code.toLowerCase() === testCode.toLowerCase())) {
+              return true
+            }
+            // Check in current batch
+            if (validRows.some(vr => vr.code && vr.code.toLowerCase() === testCode.toLowerCase())) {
+              return true
+            }
+            return false
+          }
+          
+          while (isCodeDuplicate(uniqueCode)) {
+            uniqueCode = `${finalCode}_${suffix}`
+            suffix++
+            if (suffix > 1000) break // Safety limit
+          }
+          finalCode = uniqueCode
+        }
+
         validRows.push({
           rowNumber,
-          code,
+          code: finalCode || name || "", // Fallback to name if still empty
           name: name || code || "",
           description,
           isActive,
@@ -294,7 +328,7 @@ export async function POST(request: NextRequest) {
       // Batch insert all valid groups
       if (validRows.length > 0) {
         const groupsToInsert = validRows.map((vr) => ({
-          code: vr.code,
+          code: vr.code || vr.name, // Ensure code is never null
           name: vr.name,
           description: vr.description,
           is_active: vr.isActive,
@@ -314,7 +348,7 @@ export async function POST(request: NextRequest) {
           for (const vr of validRows) {
             try {
               const { error: singleInsertError } = await adminClient.from("departments").insert({
-                code: vr.code,
+                code: vr.code || vr.name, // Ensure code is never null
                 name: vr.name,
                 description: vr.description,
                 is_active: vr.isActive,
