@@ -340,7 +340,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   // Helper component to display device location
   const LocationDisplay = ({ checkInLocationName, checkOutLocationName }: any) => {
     if (!checkInLocationName && !checkOutLocationName) {
-      return <span className="text-muted-foreground text-xs">No device</span>;
+      return <span className="text-muted-foreground text-xs">No Location</span>;
     }
 
     if (checkInLocationName && checkOutLocationName && checkInLocationName === checkOutLocationName) {
