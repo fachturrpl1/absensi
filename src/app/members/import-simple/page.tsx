@@ -10,6 +10,7 @@ import { Wizard, WizardStep } from "@/components/ui/wizard"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -771,23 +772,23 @@ export default function MembersImportSimplePage() {
 
                         <div className="space-y-2 pb-2">
                           <Label htmlFor="group-select" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            Pilih Group (Opsional)
-                          </Label>
-                          <Select
-                            value={selectedGroupId || "none"}
-                            onValueChange={(value) => setSelectedGroupId(value === "none" ? "" : value)}
-                            disabled={loadingGroups}
-                          >
-                            <SelectTrigger id="group-select" className="w-full">
-                              <SelectValue placeholder={loadingGroups ? "Loading groups..." : "Pilih group untuk semua member"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">-- Tidak Ada Group --</SelectItem>
+                        Pilih Group (Opsional)
+                      </Label>
+                      <Select
+                        value={selectedGroupId || "none"}
+                        onValueChange={(value) => setSelectedGroupId(value === "none" ? "" : value)}
+                        disabled={loadingGroups}
+                      >
+                        <SelectTrigger id="group-select" className="w-full">
+                          <SelectValue placeholder={loadingGroups ? "Loading groups..." : "Pilih group untuk semua member"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">-- Tidak Ada Group --</SelectItem>
                               {groups.length > 0 ? (
                                 groups.map((group) => (
-                                  <SelectItem key={group.id} value={group.id}>
-                                    {group.name}
-                                  </SelectItem>
+                            <SelectItem key={group.id} value={group.id}>
+                              {group.name}
+                            </SelectItem>
                                 ))
                               ) : (
                                 !loadingGroups && (
@@ -796,16 +797,40 @@ export default function MembersImportSimplePage() {
                                   </SelectItem>
                                 )
                               )}
-                            </SelectContent>
-                          </Select>
-                          <p className="text-xs text-muted-foreground">
-                            Jika dipilih, semua member yang di-import akan otomatis dimasukkan ke group ini
-                          </p>
-                        </div>
-                      </div>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Jika dipilih, semua member yang di-import akan otomatis dimasukkan ke group ini
+                      </p>
+                    </div>
+                    </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">No file selected</p>
                     )}
+                  </div>
+                </div>
+
+                {/* Advanced Options */}
+                <div className="pt-6 pb-6 border-t space-y-4">
+                  <div className="space-y-3">
+                    <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Advanced
+                    </Label>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="allow-matching-subfields"
+                          checked={allowMatchingWithSubfields}
+                          onCheckedChange={(checked) => setAllowMatchingWithSubfields(checked === true)}
+                        />
+                        <Label
+                          htmlFor="allow-matching-subfields"
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          Allow matching with subfields
+                        </Label>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

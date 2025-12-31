@@ -463,7 +463,7 @@ export async function POST(request: NextRequest) {
     console.log(`[HEADERS] Header row content (first 10 cols):`, headerRows[0]?.slice(0, 10))
     console.log(`[HEADERS] Raw header row content (first 10 cols):`, rawHeaderRows[0]?.slice(0, 10))
     console.log(`[HEADERS] Max columns: ${maxCols}`)
-    
+
     // Build headers, combining multi-row headers if provided.
     // For merged/parent headers, we forward-fill the top row value.
     // Use formatted values (rows) for headers as they're better for text
@@ -477,7 +477,7 @@ export async function POST(request: NextRequest) {
     
     if (headerRows.length > 1 && headerRows[0]) {
       // Process parent row first to forward-fill merged cells
-      for (let col = 0; col < maxCols; col++) {
+    for (let col = 0; col < maxCols; col++) {
         const topCellStr = String((headerRows[0]?.[col] ?? "")).trim()
         const rawTopRow = rawHeaderRows[0] || []
         const rawTopCell = rawTopRow[col]
@@ -570,7 +570,7 @@ export async function POST(request: NextRequest) {
         } else {
           // Always combine parent and child when both exist: "Data Ayah - Nama"
           // This ensures proper identification of columns under parent headers
-          header = `${parent} - ${child}`
+        header = `${parent} - ${child}`
         }
       } else if (child) {
         // If only child exists, use it
@@ -579,7 +579,7 @@ export async function POST(request: NextRequest) {
         // If only parent exists, use it
         header = parent
       }
-      
+
       // Log for debugging multi-row headers (first 10 columns only to avoid spam)
       if (col < 10 && parent && child && parent !== child) {
         console.log(`[HEADERS] Column ${col}: Parent="${parent}", Child="${child}", Combined="${header}"`)
