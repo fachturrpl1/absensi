@@ -284,15 +284,16 @@ export default function MembersPage() {
       const membersWithDeptId = members.filter((m: any) => m.department_id != null && m.department_id !== undefined)
       console.log('[MEMBERS UI] Members with department_id:', membersWithDeptId.length)
       
-      if (membersWithDeptId.length > 0) {
+      if (membersWithDeptId.length > 0 && membersWithDeptId[0]) {
+        const sample = membersWithDeptId[0] as any;
         console.log('[MEMBERS UI] Sample member with department_id:', {
-          id: membersWithDeptId[0].id,
-          department_id: membersWithDeptId[0].department_id,
-          department_id_type: typeof membersWithDeptId[0].department_id,
-          departments: membersWithDeptId[0].departments,
-          departments_type: typeof membersWithDeptId[0].departments,
-          is_departments_array: Array.isArray(membersWithDeptId[0].departments),
-          biodata_nik: membersWithDeptId[0].biodata_nik
+          id: sample.id,
+          department_id: sample.department_id,
+          department_id_type: typeof sample.department_id,
+          departments: sample.departments,
+          departments_type: typeof sample.departments,
+          is_departments_array: Array.isArray(sample.departments),
+          biodata_nik: sample.biodata_nik
         })
       }
       
@@ -313,25 +314,26 @@ export default function MembersPage() {
       console.log('[MEMBERS UI] Members with departments:', membersWithDept.length)
       console.log('[MEMBERS UI] Members without departments (but have department_id):', membersWithoutDept.length)
       
-      if (membersWithoutDept.length > 0) {
+      if (membersWithoutDept.length > 0 && membersWithoutDept[0]) {
+        const sample = membersWithoutDept[0] as any;
         console.log('[MEMBERS UI] Sample member without departments:', {
-          id: membersWithoutDept[0].id,
-          department_id: membersWithoutDept[0].department_id,
-          department_id_type: typeof membersWithoutDept[0].department_id,
-          departments: membersWithoutDept[0].departments,
-          departments_type: typeof membersWithoutDept[0].departments,
-          is_departments_array: Array.isArray(membersWithoutDept[0].departments),
-          biodata_nik: membersWithoutDept[0].biodata_nik
+          id: sample.id,
+          department_id: sample.department_id,
+          department_id_type: typeof sample.department_id,
+          departments: sample.departments,
+          departments_type: typeof sample.departments,
+          is_departments_array: Array.isArray(sample.departments),
+          biodata_nik: sample.biodata_nik
         })
       }
-      if (membersWithDept.length > 0) {
+      if (membersWithDept.length > 0 && membersWithDept[0]) {
         const sampleMember = membersWithDept[0];
         console.log('[MEMBERS UI] Sample member with departments:', {
-          id: sampleMember.id,
-          department_id: sampleMember.department_id,
-          departments: sampleMember.departments,
-          departments_name: sampleMember.departments?.name || (Array.isArray(sampleMember.departments) ? sampleMember.departments[0]?.name : null),
-          departments_keys: sampleMember.departments ? Object.keys(sampleMember.departments) : null
+          id: sampleMember?.id,
+          department_id: sampleMember?.department_id,
+          departments: sampleMember?.departments,
+          departments_name: sampleMember?.departments?.name || (Array.isArray(sampleMember?.departments) ? sampleMember?.departments[0]?.name : null),
+          departments_keys: sampleMember?.departments ? Object.keys(sampleMember.departments) : null
         })
       }
       

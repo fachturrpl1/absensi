@@ -228,14 +228,15 @@ export async function GET(req: Request) {
       // Log raw data for debugging
       const membersWithDeptId = raw.filter((m: any) => m.department_id != null && m.department_id !== undefined);
       memberLogger.debug(`[API /members] Raw data: ${raw.length} members, ${membersWithDeptId.length} with department_id`);
-      if (membersWithDeptId.length > 0) {
+      if (membersWithDeptId.length > 0 && membersWithDeptId[0]) {
+        const sample = membersWithDeptId[0];
         memberLogger.debug(`[API /members] Sample member with department_id:`, {
-          id: membersWithDeptId[0].id,
-          department_id: membersWithDeptId[0].department_id,
-          department_id_type: typeof membersWithDeptId[0].department_id,
-          departments: membersWithDeptId[0].departments,
-          departments_type: typeof membersWithDeptId[0].departments,
-          is_departments_array: Array.isArray(membersWithDeptId[0].departments)
+          id: sample.id,
+          department_id: sample.department_id,
+          department_id_type: typeof sample.department_id,
+          departments: sample.departments,
+          departments_type: typeof sample.departments,
+          is_departments_array: Array.isArray(sample.departments)
         });
       }
       
@@ -372,11 +373,12 @@ export async function GET(req: Request) {
          (Array.isArray(m.departments) && m.departments.length > 0 && m.departments[0]?.name)));
       const membersWithDeptId = items.filter((m: any) => m.department_id != null && m.department_id !== undefined);
       memberLogger.debug(`[API /members] Final data: ${items.length} members, ${membersWithDeptId.length} with department_id, ${membersWithDept.length} with departments`);
-      if (membersWithDept.length > 0) {
+      if (membersWithDept.length > 0 && membersWithDept[0]) {
+        const sample = membersWithDept[0];
         memberLogger.debug(`[API /members] Sample member with departments:`, {
-          id: membersWithDept[0].id,
-          department_id: membersWithDept[0].department_id,
-          departments: membersWithDept[0].departments
+          id: sample.id,
+          department_id: sample.department_id,
+          departments: sample.departments
         });
       }
     }
