@@ -214,6 +214,114 @@ export async function GET(req: Request) {
     }
 
     const raw = (itemsRaw || []) as IOrganization_member[]
+    
+    // Log raw query result for debugging
+    if (raw && raw.length > 0) {
+      memberLogger.debug(`[API /members] Query returned ${raw.length} members`);
+      const firstMember = raw[0] as any;
+      memberLogger.debug(`[API /members] First member keys:`, Object.keys(firstMember));
+      memberLogger.debug(`[API /members] First member department_id:`, firstMember.department_id, `(type: ${typeof firstMember.department_id})`);
+    }
+    
+    // Fix departments if join failed (similar to getAllOrganization_member)
+    if (raw && raw.length > 0) {
+      // Log raw data for debugging
+      const membersWithDeptId = raw.filter((m: any) => m.department_id != null && m.department_id !== undefined);
+      memberLogger.debug(`[API /members] Raw data: ${raw.length} members, ${membersWithDeptId.length} with department_id`);
+      if (membersWithDeptId.length > 0) {
+        memberLogger.debug(`[API /members] Sample member with department_id:`, {
+          id: membersWithDeptId[0].id,
+          department_id: membersWithDeptId[0].department_id,
+          department_id_type: typeof membersWithDeptId[0].department_id,
+          departments: membersWithDeptId[0].departments,
+          departments_type: typeof membersWithDeptId[0].departments,
+          is_departments_array: Array.isArray(membersWithDeptId[0].departments)
+        });
+      }
+      
+      // Normalize departments structure (Supabase might return array or object)
+      raw.forEach((member: any) => {
+        if (member.departments) {
+          // If departments is an array, take the first element
+          if (Array.isArray(member.departments) && member.departments.length > 0) {
+            member.departments = member.departments[0];
+          }
+          // If departments is null or empty array, set to null
+          else if (Array.isArray(member.departments) && member.departments.length === 0) {
+            member.departments = null;
+          }
+        }
+      });
+      
+      // Collect all department_ids that need to be fetched
+      const deptIds = new Set<number>();
+      raw.forEach((member: any) => {
+        const hasValidDept = member.departments && 
+          (typeof member.departments === 'object' && !Array.isArray(member.departments) && member.departments.name) ||
+          (Array.isArray(member.departments) && member.departments.length > 0 && member.departments[0]?.name);
+        
+        if (member.department_id && !hasValidDept) {
+          const deptId = typeof member.department_id === 'string' ? parseInt(member.department_id, 10) : member.department_id;
+          if (!isNaN(deptId)) {
+            deptIds.add(deptId);
+          }
+        }
+      });
+      
+      memberLogger.debug(`[API /members] Found ${deptIds.size} department_ids to fetch:`, Array.from(deptIds));
+      
+      // Fetch departments if needed
+      if (deptIds.size > 0) {
+        const deptIdsArray = Array.from(deptIds);
+        memberLogger.debug(`[API /members] Fetching ${deptIdsArray.length} departments...`);
+        const { data: deptList, error: deptError } = await admin
+          .from("departments")
+          .select("id, name, code, organization_id")
+          .in("id", deptIdsArray);
+        
+        if (deptError) {
+          memberLogger.error(`[API /members] Error fetching departments:`, deptError);
+        } else if (deptList) {
+          memberLogger.debug(`[API /members] Fetched ${deptList.length} departments:`, deptList.map((d: any) => `${d.id}:${d.name}`));
+          const departmentsMap = new Map();
+          deptList.forEach((dept: any) => {
+            const deptId = typeof dept.id === 'string' ? parseInt(dept.id, 10) : dept.id;
+            if (!isNaN(deptId)) {
+              departmentsMap.set(deptId, dept);
+            }
+          });
+          memberLogger.debug(`[API /members] Departments map keys:`, Array.from(departmentsMap.keys()));
+          
+          // Set departments for all members that need it
+          let fixedCount = 0;
+          raw.forEach((member: any) => {
+            const hasValidDept = member.departments && 
+              (typeof member.departments === 'object' && !Array.isArray(member.departments) && member.departments.name) ||
+              (Array.isArray(member.departments) && member.departments.length > 0 && member.departments[0]?.name);
+            
+            if (member.department_id && !hasValidDept) {
+              const deptId = typeof member.department_id === 'string' ? parseInt(member.department_id, 10) : member.department_id;
+              if (!isNaN(deptId)) {
+                const dept = departmentsMap.get(deptId);
+                if (dept) {
+                  member.departments = dept;
+                  fixedCount++;
+                  memberLogger.debug(`[API /members] Set departments for member ${member.id} (dept_id: ${deptId}):`, dept.name);
+                } else {
+                  memberLogger.warn(`[API /members] Department ID ${deptId} not found in map for member ${member.id}`);
+                }
+              }
+            }
+          });
+          memberLogger.info(`[API /members] Fixed departments for ${fixedCount} members`);
+        } else {
+          memberLogger.warn(`[API /members] No departments returned from query`);
+        }
+      } else {
+        memberLogger.debug(`[API /members] No department_ids to fetch`);
+      }
+    }
+    
     let items: IOrganization_member[] = raw
     let hasMore = false
     let nextCursor: string | null = null
@@ -257,6 +365,22 @@ export async function GET(req: Request) {
       links.first = `/api/members?${baseParams.toString()}`
     }
 
+    // Log final data before return
+    if (items && items.length > 0) {
+      const membersWithDept = items.filter((m: any) => m.departments && 
+        ((typeof m.departments === 'object' && !Array.isArray(m.departments) && m.departments.name) ||
+         (Array.isArray(m.departments) && m.departments.length > 0 && m.departments[0]?.name)));
+      const membersWithDeptId = items.filter((m: any) => m.department_id != null && m.department_id !== undefined);
+      memberLogger.debug(`[API /members] Final data: ${items.length} members, ${membersWithDeptId.length} with department_id, ${membersWithDept.length} with departments`);
+      if (membersWithDept.length > 0) {
+        memberLogger.debug(`[API /members] Sample member with departments:`, {
+          id: membersWithDept[0].id,
+          department_id: membersWithDept[0].department_id,
+          departments: membersWithDept[0].departments
+        });
+      }
+    }
+    
     // Log performance
     const responseTime = Date.now() - startTime
     memberLogger.info('Members pagination', {

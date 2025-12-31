@@ -100,7 +100,12 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
       filtered = filtered.filter((member) => {
         const fullName = getFullName(member).toLowerCase()
         const phone = ((member as any).user?.phone || "").toLowerCase()
-        const group = ((member as any).groupName || "").toLowerCase()
+        const group = (
+          (member as any).groupName || 
+          (member as any).departments?.name || 
+          (Array.isArray((member as any).departments) && (member as any).departments[0]?.name) || 
+          ""
+        ).toLowerCase()
         const nik = (((member as any).biodata?.nik || (member as any).biodata_nik || "") as string).toLowerCase()
         return (
           fullName.includes(searchTerm) ||
@@ -329,7 +334,10 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
 
                   {visibleColumns.group && (
                     <td className="px-4 py-3 text-sm">
-                      {(member as any).groupName || "-"}
+                      {(member as any).groupName || 
+                       ((member as any).departments?.name) || 
+                       (Array.isArray((member as any).departments) && (member as any).departments[0]?.name) || 
+                       "-"}
                     </td>
                   )}
 

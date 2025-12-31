@@ -2,7 +2,7 @@
 import { IGroup } from "@/interface";
 import { createClient } from "@/utils/supabase/server";
 
-export const getAllGroups = async (organizationId?: number) => {
+export const getAllGroups = async (organizationId?: number, includeInactive: boolean = false) => {
   const supabase = await createClient();
 
   // 1. Retrieve user from cookies
@@ -30,12 +30,17 @@ export const getAllGroups = async (organizationId?: number) => {
   }
 
   // 3. Fetch all groups for the organization
-  const { data, error } = await supabase
+  let query = supabase
     .from("departments")
     .select("id, code, name, description, is_active, created_at, organization_id")
-    .eq("organization_id", targetOrgId)
-    .eq("is_active", true)
-    .order("created_at", { ascending: true });
+    .eq("organization_id", targetOrgId);
+  
+  // Only filter by is_active if includeInactive is false
+  if (!includeInactive) {
+    query = query.eq("is_active", true);
+  }
+  
+  const { data, error } = await query.order("created_at", { ascending: true });
 
   if (error) {
     return { success: false, message: error.message, data: [] };
