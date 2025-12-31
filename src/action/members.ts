@@ -158,8 +158,14 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         (Array.isArray(member.departments) && member.departments.length > 0 && member.departments[0]?.name);
       
       if (member.department_id && !hasValidDept) {
-        deptIds.add(member.department_id);
-        membersWithoutDept++;
+        // Convert to number to ensure consistency
+        const deptId = typeof member.department_id === 'string' ? parseInt(member.department_id, 10) : member.department_id;
+        if (!isNaN(deptId)) {
+          deptIds.add(deptId);
+          membersWithoutDept++;
+        } else {
+          memberLogger.warn(`⚠️ Invalid department_id for member ${member.id}:`, member.department_id);
+        }
       }
     });
     
@@ -181,8 +187,13 @@ export const getAllOrganization_member = async (organizationId?: number) => {
       } else if (deptList) {
         memberLogger.debug(`✅ Fetched ${deptList.length} departments:`, deptList.map((d: any) => `${d.id}:${d.name}`));
         deptList.forEach((dept: any) => {
-          departmentsMap.set(dept.id, dept);
+          // Ensure id is number for consistent lookup
+          const deptId = typeof dept.id === 'string' ? parseInt(dept.id, 10) : dept.id;
+          if (!isNaN(deptId)) {
+            departmentsMap.set(deptId, dept);
+          }
         });
+        memberLogger.debug(`📊 Departments map keys:`, Array.from(departmentsMap.keys()));
       } else {
         memberLogger.warn('⚠️ No departments returned from query');
       }
@@ -206,8 +217,11 @@ export const getAllOrganization_member = async (organizationId?: number) => {
           // Tambahkan department_id dari biodata ke set dan fetch jika belum ada di map
           const newDeptIds = new Set<number>();
           biodataList.forEach((b: any) => {
-            if (b.department_id && !departmentsMap.has(b.department_id)) {
-              newDeptIds.add(b.department_id);
+            if (b.department_id) {
+              const biodataDeptId = typeof b.department_id === 'string' ? parseInt(b.department_id, 10) : b.department_id;
+              if (!isNaN(biodataDeptId) && !departmentsMap.has(biodataDeptId)) {
+                newDeptIds.add(biodataDeptId);
+              }
             }
           });
           
@@ -225,7 +239,10 @@ export const getAllOrganization_member = async (organizationId?: number) => {
             } else if (newDeptList) {
               memberLogger.debug(`✅ Fetched ${newDeptList.length} additional departments`);
               newDeptList.forEach((dept: any) => {
-                departmentsMap.set(dept.id, dept);
+                const deptId = typeof dept.id === 'string' ? parseInt(dept.id, 10) : dept.id;
+                if (!isNaN(deptId)) {
+                  departmentsMap.set(deptId, dept);
+                }
               });
             }
           }
@@ -255,10 +272,13 @@ export const getAllOrganization_member = async (organizationId?: number) => {
                 
                 // Jika member tidak punya departments tapi biodata punya department_id, ambil dari biodata
                 if (!hasValidDept && biodata.department_id) {
-                  const dept = departmentsMap.get(biodata.department_id);
-                  if (dept) {
-                    member.departments = dept;
-                    memberLogger.debug(`✅ Set departments from biodata for member ${member.id}:`, dept.name);
+                  const biodataDeptId = typeof biodata.department_id === 'string' ? parseInt(biodata.department_id, 10) : biodata.department_id;
+                  if (!isNaN(biodataDeptId)) {
+                    const dept = departmentsMap.get(biodataDeptId);
+                    if (dept) {
+                      member.departments = dept;
+                      memberLogger.debug(`✅ Set departments from biodata for member ${member.id} (dept_id: ${biodataDeptId}):`, dept.name);
+                    }
                   }
                 }
               }
@@ -266,12 +286,15 @@ export const getAllOrganization_member = async (organizationId?: number) => {
             
             // Fallback: jika member punya department_id tapi tidak punya departments (join gagal)
             if (member.department_id && !hasValidDept) {
-              const dept = departmentsMap.get(member.department_id);
-              if (dept) {
-                member.departments = dept;
-                memberLogger.debug(`✅ Set departments from department_id for member ${member.id}:`, dept.name);
-              } else {
-                memberLogger.warn(`⚠️ Department ID ${member.department_id} not found in departments map for member ${member.id}`);
+              const deptId = typeof member.department_id === 'string' ? parseInt(member.department_id, 10) : member.department_id;
+              if (!isNaN(deptId)) {
+                const dept = departmentsMap.get(deptId);
+                if (dept) {
+                  member.departments = dept;
+                  memberLogger.debug(`✅ Set departments from department_id for member ${member.id} (dept_id: ${deptId}):`, dept.name);
+                } else {
+                  memberLogger.warn(`⚠️ Department ID ${deptId} not found in departments map for member ${member.id}`);
+                }
               }
             }
           });
@@ -281,6 +304,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
     
     // Setelah semua processing, pastikan semua member yang punya department_id punya departments
     // (menggunakan departmentsMap yang sudah di-fetch sebelumnya)
+    let fixedCount = 0;
     data.forEach((member: any) => {
       // Check if departments is valid
       const hasValidDept = member.departments && 
@@ -288,15 +312,26 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         (Array.isArray(member.departments) && member.departments.length > 0 && member.departments[0]?.name);
       
       if (member.department_id && !hasValidDept) {
-        const dept = departmentsMap.get(member.department_id);
-        if (dept) {
-          member.departments = dept;
-          memberLogger.debug(`✅ Set departments from department_id for member ${member.id}:`, dept.name);
+        // Convert department_id to number if it's a string
+        const deptId = typeof member.department_id === 'string' ? parseInt(member.department_id, 10) : member.department_id;
+        
+        if (!isNaN(deptId)) {
+          const dept = departmentsMap.get(deptId);
+          if (dept) {
+            member.departments = dept;
+            fixedCount++;
+            memberLogger.debug(`✅ Set departments from department_id for member ${member.id} (dept_id: ${deptId}):`, dept.name);
+          } else {
+            memberLogger.warn(`⚠️ Department ID ${deptId} (type: ${typeof member.department_id}) not found in departments map for member ${member.id} (biodata_nik: ${member.biodata_nik})`);
+            memberLogger.warn(`⚠️ Available department IDs in map:`, Array.from(departmentsMap.keys()));
+          }
         } else {
-          memberLogger.warn(`⚠️ Department ID ${member.department_id} not found in departments map for member ${member.id} (biodata_nik: ${member.biodata_nik})`);
+          memberLogger.warn(`⚠️ Invalid department_id for member ${member.id}:`, member.department_id);
         }
       }
     });
+    
+    memberLogger.info(`🔧 Fixed departments for ${fixedCount} members`);
   }
 
   memberLogger.info(`✅ Fetched ${data?.length || 0} members for organization ${targetOrgId}`);

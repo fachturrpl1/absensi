@@ -127,6 +127,18 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
     key: "group",
     label: "Department / Group",
     getValue: (member: any) => {
+      // Debug: log first few calls to see what's happening
+      if (member.id === 3328 || member.id === 3321) {
+        console.log(`[MEMBERS UI getValue] Called for member ${member.id}:`, {
+          hasGroupName: !!member.groupName,
+          hasDepartments: !!member.departments,
+          departmentsType: typeof member.departments,
+          isArray: Array.isArray(member.departments),
+          departments: member.departments,
+          department_id: member.department_id
+        });
+      }
+      
       // Handle groupName (legacy)
       if (member.groupName) {
         return member.groupName;
@@ -135,15 +147,35 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
       // Handle departments - could be object or array
       if (member.departments) {
         if (Array.isArray(member.departments) && member.departments.length > 0) {
-          return member.departments[0]?.name || "-";
-        } else if (typeof member.departments === 'object' && member.departments.name) {
-          return member.departments.name;
+          const deptName = member.departments[0]?.name;
+          if (deptName) {
+            if (member.id === 3328 || member.id === 3321) {
+              console.log(`[MEMBERS UI getValue] Returning name from array:`, deptName);
+            }
+            return deptName;
+          } else {
+            console.warn(`[MEMBERS UI getValue] Member ${member.id} has departments array but no name:`, member.departments[0]);
+          }
+        } else if (typeof member.departments === 'object' && !Array.isArray(member.departments)) {
+          const deptName = member.departments.name;
+          if (deptName) {
+            if (member.id === 3328 || member.id === 3321) {
+              console.log(`[MEMBERS UI getValue] Returning name from object:`, deptName);
+            }
+            return deptName;
+          } else {
+            console.warn(`[MEMBERS UI getValue] Member ${member.id} has departments object but no name:`, member.departments);
+            console.warn(`[MEMBERS UI getValue] Departments keys:`, Object.keys(member.departments || {}));
+            console.warn(`[MEMBERS UI getValue] Departments full object:`, JSON.stringify(member.departments, null, 2));
+          }
+        } else {
+          console.warn(`[MEMBERS UI getValue] Member ${member.id} has departments but unexpected type:`, typeof member.departments, member.departments);
         }
       }
       
       // Fallback: check department_id and log for debugging
       if (member.department_id) {
-        console.warn(`[MEMBERS UI] Member ${member.id} has department_id ${member.department_id} but no departments object`);
+        console.warn(`[MEMBERS UI getValue] Member ${member.id} has department_id ${member.department_id} but no valid departments object`);
       }
       
       return "-";
@@ -194,8 +226,11 @@ const MembersPageSkeleton = () => (
 )
 
 export default function MembersPage() {
-  const queryClient = useQueryClient()
   const { isHydrated, organizationId } = useHydration()
+  
+  // Use queryClient - it should be available after QueryProvider mounts
+  // If there's an error, it means QueryProvider is not set up correctly
+  const queryClient = useQueryClient()
 
   const [exporting, setExporting] = React.useState(false)
   const [inviteDialogOpen, setInviteDialogOpen] = React.useState(false)
@@ -239,6 +274,73 @@ export default function MembersPage() {
   const members: IOrganization_member[] = pageData?.data ?? []
   const total: number = pageData?.pagination?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / (pageSize || 1)))
+
+  // Debug: Log members data to check departments
+  React.useEffect(() => {
+    if (members && members.length > 0) {
+      console.log('[MEMBERS UI] Total members:', members.length)
+      
+      // Check all members for department_id
+      const membersWithDeptId = members.filter((m: any) => m.department_id != null && m.department_id !== undefined)
+      console.log('[MEMBERS UI] Members with department_id:', membersWithDeptId.length)
+      
+      if (membersWithDeptId.length > 0) {
+        console.log('[MEMBERS UI] Sample member with department_id:', {
+          id: membersWithDeptId[0].id,
+          department_id: membersWithDeptId[0].department_id,
+          department_id_type: typeof membersWithDeptId[0].department_id,
+          departments: membersWithDeptId[0].departments,
+          departments_type: typeof membersWithDeptId[0].departments,
+          is_departments_array: Array.isArray(membersWithDeptId[0].departments),
+          biodata_nik: membersWithDeptId[0].biodata_nik
+        })
+      }
+      
+      const membersWithDept = members.filter((m: any) => {
+        if (!m.departments) return false
+        if (Array.isArray(m.departments) && m.departments.length > 0 && m.departments[0]?.name) return true
+        if (typeof m.departments === 'object' && m.departments.name) return true
+        return false
+      })
+      const membersWithoutDept = members.filter((m: any) => {
+        if (!m.department_id) return false
+        const hasValidDept = m.departments && 
+          ((typeof m.departments === 'object' && !Array.isArray(m.departments) && m.departments.name) ||
+           (Array.isArray(m.departments) && m.departments.length > 0 && m.departments[0]?.name))
+        return !hasValidDept
+      })
+      
+      console.log('[MEMBERS UI] Members with departments:', membersWithDept.length)
+      console.log('[MEMBERS UI] Members without departments (but have department_id):', membersWithoutDept.length)
+      
+      if (membersWithoutDept.length > 0) {
+        console.log('[MEMBERS UI] Sample member without departments:', {
+          id: membersWithoutDept[0].id,
+          department_id: membersWithoutDept[0].department_id,
+          department_id_type: typeof membersWithoutDept[0].department_id,
+          departments: membersWithoutDept[0].departments,
+          departments_type: typeof membersWithoutDept[0].departments,
+          is_departments_array: Array.isArray(membersWithoutDept[0].departments),
+          biodata_nik: membersWithoutDept[0].biodata_nik
+        })
+      }
+      if (membersWithDept.length > 0) {
+        const sampleMember = membersWithDept[0];
+        console.log('[MEMBERS UI] Sample member with departments:', {
+          id: sampleMember.id,
+          department_id: sampleMember.department_id,
+          departments: sampleMember.departments,
+          departments_name: sampleMember.departments?.name || (Array.isArray(sampleMember.departments) ? sampleMember.departments[0]?.name : null),
+          departments_keys: sampleMember.departments ? Object.keys(sampleMember.departments) : null
+        })
+      }
+      
+      // Log first member structure for debugging
+      if (members.length > 0) {
+        console.log('[MEMBERS UI] First member full structure:', members[0])
+      }
+    }
+  }, [members])
 
   React.useEffect(() => {
     setPage(1)
