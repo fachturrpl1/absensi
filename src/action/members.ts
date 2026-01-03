@@ -63,38 +63,38 @@ export const getAllOrganization_member = async (organizationId?: number) => {
     const to = from + pageSize - 1;
     
     const { data: pageData, error: pageError } = await adminClient
-      .from("organization_members")
-      .select(`
-        *,
-        biodata:biodata_nik (*),
-        user:user_id (
-          id,
-          email,
-          first_name,
-          middle_name,
-          last_name,
-          display_name
-        ),
-        departments:department_id (
-          id,
-          name,
-          code,
-          organization_id
-        ),
-        positions:position_id (
-          id,
+    .from("organization_members")
+    .select(`
+      *,
+      biodata:biodata_nik (*),
+      user:user_id (
+        id,
+        email,
+        first_name,
+        middle_name,
+        last_name,
+        display_name
+      ),
+      departments:department_id (
+        id,
+        name,
+        code,
+        organization_id
+      ),
+      positions:position_id (
+        id,
           title,
-          code
-        ),
-        role:role_id (
-          id,
-          code,
-          name,
-          description
-        )
-      `)
-      .eq("organization_id", targetOrgId)
-      .eq("is_active", true)
+        code
+      ),
+      role:role_id (
+        id,
+        code,
+        name,
+        description
+      )
+    `)
+    .eq("organization_id", targetOrgId)
+    .eq("is_active", true)
       .order("created_at", { ascending: true })
       .range(from, to);
 
@@ -140,7 +140,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
     if (currentPage >= 20) {
       memberLogger.warn('⚠️ Reached safety limit of 20 pages (20,000 records)');
       hasMore = false;
-    }
+  }
   }
 
   const data = allData;

@@ -97,7 +97,6 @@ export default function MembersImportSimplePage() {
     message: string
   } | null>(null)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-  const [showUnmappedFieldsDialog, setShowUnmappedFieldsDialog] = useState(false)
   const [unmappedFields, setUnmappedFields] = useState<string[]>([])
   const [hasTested, setHasTested] = useState(false) // Track apakah sudah test
   const [importSummary, setImportSummary] = useState<{
@@ -553,24 +552,21 @@ export default function MembersImportSimplePage() {
     } else if (currentStep === 2) {
       if (!validateMapping()) return
       
-      // Check unmapped fields sebelum next
-      const unmapped = checkUnmappedFields()
-      if (unmapped.length > 0) {
-        setUnmappedFields(unmapped)
-        setShowUnmappedFieldsDialog(true)
-        return
-      }
-      
       if (!hasTested) {
         toast.error("Silakan lakukan test terlebih dahulu")
         return
       }
       
-      // Jika ada data yang gagal validasi, tampilkan dialog konfirmasi
-      if (testSummary && testSummary.failed > 0) {
+      // Check unmapped fields dan test summary
+      const unmapped = checkUnmappedFields()
+      const hasFailed = testSummary && testSummary.failed > 0
+      
+      // Jika ada unmapped fields atau ada data yang gagal, tampilkan dialog konfirmasi gabungan
+      if (unmapped.length > 0 || hasFailed) {
+        setUnmappedFields(unmapped)
         setShowConfirmDialog(true)
       } else {
-        // Jika semua lolos validasi, langsung lanjut ke import
+        // Jika semua lolos validasi dan tidak ada unmapped fields, langsung lanjut ke import
         setCurrentStep(3)
       }
     } else if (currentStep === 3) {
@@ -579,27 +575,10 @@ export default function MembersImportSimplePage() {
       router.push("/members")
     }
   }
-  
-  const handleUnmappedFieldsNext = () => {
-    setShowUnmappedFieldsDialog(false)
-    setUnmappedFields([])
-    
-    if (!hasTested) {
-      toast.error("Silakan lakukan test terlebih dahulu")
-      return
-    }
-    
-    // Jika ada data yang gagal validasi, tampilkan dialog konfirmasi
-    if (testSummary && testSummary.failed > 0) {
-      setShowConfirmDialog(true)
-    } else {
-      // Jika semua lolos validasi, langsung lanjut ke import
-      setCurrentStep(3)
-    }
-  }
 
   const handleConfirmImport = () => {
     setShowConfirmDialog(false)
+    setUnmappedFields([])
     setCurrentStep(3)
   }
 
@@ -808,7 +787,7 @@ export default function MembersImportSimplePage() {
                       <p className="text-sm text-muted-foreground">No file selected</p>
                     )}
                   </div>
-                </div>
+                    </div>
 
                 {/* Advanced Options */}
                 <div className="pt-6 pb-6 border-t space-y-4">
@@ -818,17 +797,17 @@ export default function MembersImportSimplePage() {
                     </Label>
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2">
-                        <Checkbox
+                      <Checkbox
                           id="allow-matching-subfields"
-                          checked={allowMatchingWithSubfields}
-                          onCheckedChange={(checked) => setAllowMatchingWithSubfields(checked === true)}
-                        />
+                        checked={allowMatchingWithSubfields}
+                        onCheckedChange={(checked) => setAllowMatchingWithSubfields(checked === true)}
+                      />
                         <Label
                           htmlFor="allow-matching-subfields"
                           className="text-sm font-normal cursor-pointer"
                         >
-                          Allow matching with subfields
-                        </Label>
+                        Allow matching with subfields
+                      </Label>
                       </div>
                     </div>
                   </div>
@@ -1229,19 +1208,39 @@ export default function MembersImportSimplePage() {
           )}
         </Wizard>
 
-        {/* Confirmation Dialog */}
+        {/* Confirmation Dialog - Gabungan untuk unmapped fields dan test summary */}
         <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
           <AlertDialogContent className="max-w-2xl">
             <AlertDialogHeader>
               <AlertDialogTitle>Apakah Anda yakin ingin lanjut?</AlertDialogTitle>
               <AlertDialogDescription asChild>
                 <div className="space-y-3 pt-2">
-                  {testSummary && (
-                    <>
+                  {/* Unmapped Fields Section */}
+                  {unmappedFields.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Beberapa database field belum ter-mapping ke kolom Excel. Field-field berikut akan diabaikan saat import (nilai akan kosong atau menggunakan default):
+                      </p>
+                      <div className="max-h-40 overflow-auto bg-muted/50 rounded-lg p-4">
+                        <ul className="space-y-2">
+                          {unmappedFields.map((field, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-sm">
+                              <span className="text-muted-foreground mt-0.5">•</span>
+                              <span className="flex-1">{field}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Test Summary Section */}
+                  {testSummary && testSummary.failed > 0 && (
+                    <div className={`space-y-3 ${unmappedFields.length > 0 ? 'pt-3 border-t' : ''}`}>
                       <p className="text-sm">
                         Beberapa data tidak lolos validasi. Hanya data yang lolos validasi yang akan di-import.
                       </p>
-                      <div className="space-y-3 pt-2 border-t">
+                      <div className="space-y-3 pt-2">
                         {/* Summary statistik */}
                         <div className="grid grid-cols-2 gap-3">
                           <div className="p-3 border rounded-lg bg-green-50 dark:bg-green-950">
@@ -1300,51 +1299,20 @@ export default function MembersImportSimplePage() {
                           </div>
                         )}
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setShowConfirmDialog(false)}>
+              <AlertDialogCancel onClick={() => {
+                setShowConfirmDialog(false)
+                setUnmappedFields([])
+              }}>
                 Tidak
               </AlertDialogCancel>
               <AlertDialogAction onClick={handleConfirmImport}>
-                Ya, Import {testSummary?.success || 0} Data
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* Dialog untuk menampilkan field yang belum ter-mapping */}
-        <AlertDialog open={showUnmappedFieldsDialog} onOpenChange={setShowUnmappedFieldsDialog}>
-          <AlertDialogContent className="max-w-2xl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Field yang Belum Ter-mapping</AlertDialogTitle>
-              <AlertDialogDescription asChild>
-                <div className="space-y-3 pt-2">
-                  <p className="text-sm text-muted-foreground">
-                    Beberapa database field belum ter-mapping ke kolom Excel. Field-field berikut akan diabaikan saat import (nilai akan kosong atau menggunakan default):
-                  </p>
-                  <div className="max-h-60 overflow-auto bg-muted/50 rounded-lg p-4">
-                    <ul className="space-y-2">
-                      {unmappedFields.map((field, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-sm">
-                          <span className="text-muted-foreground mt-0.5">•</span>
-                          <span className="flex-1">{field}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setShowUnmappedFieldsDialog(false)}>
-                Kembali
-              </AlertDialogCancel>
-              <AlertDialogAction onClick={handleUnmappedFieldsNext}>
-                Lanjutkan
+                Ya
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

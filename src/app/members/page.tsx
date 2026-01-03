@@ -227,7 +227,7 @@ const MembersPageSkeleton = () => (
 
 export default function MembersPage() {
   const { isHydrated, organizationId } = useHydration()
-  
+
   // Use queryClient - it should be available after QueryProvider mounts
   // If there's an error, it means QueryProvider is not set up correctly
   const queryClient = useQueryClient()
@@ -271,7 +271,76 @@ export default function MembersPage() {
     gcTime: 300_000,
   })
 
-  const members: IOrganization_member[] = pageData?.data ?? []
+  // Filter members client-side untuk search di semua fields
+  // Ini memastikan search bekerja untuk semua field termasuk joined fields (nama, department)
+  const members: IOrganization_member[] = React.useMemo(() => {
+    const rawMembers = pageData?.data ?? []
+    if (!searchQuery || !searchQuery.trim()) return rawMembers
+    
+    const searchTerm = searchQuery.toLowerCase().trim()
+    return rawMembers.filter((member: any) => {
+      // Search di semua field yang relevan
+      
+      // 1. Nama dari biodata atau user
+      const biodataName = (member.biodata?.nama || '').toLowerCase()
+      const userFirstName = (member.user?.first_name || '').toLowerCase()
+      const userMiddleName = (member.user?.middle_name || '').toLowerCase()
+      const userLastName = (member.user?.last_name || '').toLowerCase()
+      const userDisplayName = (member.user?.display_name || '').toLowerCase()
+      const fullName = (
+        biodataName ||
+        [userFirstName, userMiddleName, userLastName].filter(Boolean).join(' ') ||
+        userDisplayName ||
+        ''
+      )
+      
+      // 2. Email
+      const email = (member.email || member.user?.email || '').toLowerCase()
+      
+      // 3. NIK
+      const nik = ((member.biodata?.nik || member.biodata_nik || '') as string).toLowerCase()
+      
+      // 4. Employee ID
+      const employeeId = ((member.employee_id || '') as string).toLowerCase()
+      
+      // 5. Department/Group name
+      const departmentName = (
+        member.departments?.name ||
+        (Array.isArray(member.departments) && member.departments[0]?.name) ||
+        ''
+      ).toLowerCase()
+      
+      // 6. Position name
+      const positionName = (
+        member.positions?.title ||
+        (Array.isArray(member.positions) && member.positions[0]?.title) ||
+        ''
+      ).toLowerCase()
+      
+      // 7. Role name
+      const roleName = (
+        member.role?.name ||
+        ''
+      ).toLowerCase()
+      
+      // Check if search term matches any field
+      return (
+        fullName.includes(searchTerm) ||
+        email.includes(searchTerm) ||
+        nik.includes(searchTerm) ||
+        employeeId.includes(searchTerm) ||
+        departmentName.includes(searchTerm) ||
+        positionName.includes(searchTerm) ||
+        roleName.includes(searchTerm) ||
+        // Also check individual name parts
+        userFirstName.includes(searchTerm) ||
+        userLastName.includes(searchTerm) ||
+        userDisplayName.includes(searchTerm) ||
+        biodataName.includes(searchTerm)
+      )
+    })
+  }, [pageData?.data, searchQuery])
+  
   const total: number = pageData?.pagination?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / (pageSize || 1)))
 
@@ -497,7 +566,7 @@ export default function MembersPage() {
   }
 
   return (
-    (!isHydrated || (loading && members.length === 0)) ? (
+    (!isHydrated || (loading && members.length === 0 && !searchQuery)) ? (
       <MembersPageSkeleton />
     ) : (
     <div className="flex flex-1 flex-col gap-4 w-full">
@@ -513,6 +582,7 @@ export default function MembersPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
+                  disabled={false} // Search bar tidak pernah di-disable
                 />
               </div>
               <div className="flex gap-3 sm:gap-2 flex-wrap items-center" suppressHydrationWarning>
@@ -830,7 +900,9 @@ export default function MembersPage() {
             </div>
 
             <div className="mt-6">
-              {loading && members.length === 0 ? (
+              {loading && members.length === 0 && !searchQuery ? (
+                <TableSkeleton rows={8} columns={6} />
+              ) : isFetching && members.length === 0 ? (
                 <TableSkeleton rows={8} columns={6} />
               ) : members.length === 0 ? (
                 <div className="mt-20">
@@ -841,16 +913,23 @@ export default function MembersPage() {
                       </EmptyMedia>
                       <EmptyTitle>No members yet</EmptyTitle>
                       <EmptyDescription>
-                        There are no members for this organization. Use the "Invite Member" button to add one.
+                        {searchQuery 
+                          ? `No members found matching "${searchQuery}"`
+                          : "There are no members for this organization. Use the \"Invite Member\" button to add one."}
                       </EmptyDescription>
                     </EmptyHeader>
                   </Empty>
                 </div>
               ) : (
-                <div className="min-w-full overflow-x-auto">
+                <div className="min-w-full overflow-x-auto relative">
+                  {isFetching && members.length > 0 && (
+                    <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  )}
                   <MembersTable 
                     members={members}
-                    isLoading={loading}
+                    isLoading={false}
                     onDelete={() => { refetch() }}
                     showPagination={false}
                   />

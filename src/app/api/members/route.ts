@@ -125,9 +125,8 @@ export async function GET(req: Request) {
         const active = activeParam === 'false' ? false : true
         countQuery = countQuery.eq('is_active', active)
       }
-      if (search) {
-        countQuery = countQuery.ilike('employee_id', `%${search}%`)
-      }
+      // Note: Search di count query dihapus karena akan dilakukan di client-side
+      // untuk mencakup semua field termasuk joined fields (nama, department)
 
       const { count } = await countQuery
       totalCount = count || 0
@@ -173,10 +172,9 @@ export async function GET(req: Request) {
       dataQuery = dataQuery.eq('is_active', active)
     }
 
-    // Safe search on base table only (avoid relational filter issues)
-    if (search) {
-      dataQuery = dataQuery.ilike('employee_id', `%${search}%`)
-    }
+    // Note: Search dihapus dari API query karena akan dilakukan di client-side
+    // untuk mencakup semua field termasuk joined fields (nama dari biodata/user, department name)
+    // Ini memastikan search bekerja untuk semua field yang ditampilkan di UI
 
     // Branch: page-based (offset) vs cursor-based (legacy)
     let itemsRaw: IOrganization_member[] | null = null
@@ -382,7 +380,7 @@ export async function GET(req: Request) {
         });
       }
     }
-    
+
     // Log performance
     const responseTime = Date.now() - startTime
     memberLogger.info('Members pagination', {

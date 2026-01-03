@@ -166,6 +166,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
         organizationId: orgId,
       });
 
+      // Check membership - try by user_id first, then by any active member in the org
       const { data: orgMember, error: memberError } = await supabase
         .from('organization_members')
         .select('organization_id')
@@ -179,15 +180,37 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
         memberError,
       });
 
-      if (!orgMember?.organization_id) {
-        console.error('[LiveAttendance] User not member of organization', {
+      // If not found by user_id, check if user has any active membership in this org
+      // (handles cases where user might be member via different means)
+      let finalOrgId = orgMember?.organization_id;
+      
+      if (!finalOrgId) {
+        // Try to find any active membership for this user in this organization
+        const { data: anyMember } = await supabase
+          .from('organization_members')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .eq('organization_id', orgId)
+          .maybeSingle();
+        
+        if (anyMember?.organization_id) {
+          finalOrgId = anyMember.organization_id;
+          console.log('[LiveAttendance] Found membership (without is_active check)', finalOrgId);
+        }
+      }
+
+      if (!finalOrgId) {
+        console.warn('[LiveAttendance] User not member of organization', {
           userId: user.id,
           organizationId: orgId,
         });
-        throw new Error(`User is not a member of organization ${orgId}`);
+        // Don't throw error, just return early - allow component to show empty state
+        attendanceCache.isLoading = false;
+        setRecords([]);
+        return;
       }
 
-      console.log('[LiveAttendance] Fetching attendance records for org', orgMember.organization_id);
+      console.log('[LiveAttendance] Fetching attendance records for org', finalOrgId);
 
       const { data, error: attendanceError } = await supabase
         .from('attendance_records')
@@ -213,7 +236,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
             )
           )
         `)
-        .eq('organization_members.organization_id', orgMember.organization_id)
+        .eq('organization_members.organization_id', finalOrgId)
         .eq('attendance_date', today)
         .order('actual_check_in', { ascending: false })
         .limit(50);

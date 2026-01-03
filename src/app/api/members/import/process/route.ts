@@ -534,7 +534,7 @@ export async function POST(request: NextRequest) {
       const failedAfterValidation = new Set<number>()
 
       // Batch process: Buat user untuk yang belum ada dan memiliki email (parallel dengan concurrency limit)
-      const CONCURRENCY_LIMIT = 10 // Process 10 users at a time
+      const CONCURRENCY_LIMIT = 20 // Process 20 users at a time (increased for faster import)
       const usersToCreate = validRows.filter(vr => {
         // Hanya buat user jika ada email dan belum ada di cache
         return vr.email && vr.email.trim() !== "" && !usersByEmail.has(vr.email.toLowerCase())
@@ -588,70 +588,78 @@ export async function POST(request: NextRequest) {
       }
 
       // Batch upsert user_profiles (hanya untuk yang punya email)
+      // Split into batches to avoid timeout
       const rowsWithEmail = validRows.filter(vr => vr.email && vr.email.trim() !== "")
       console.log(`[MEMBERS IMPORT] Batch upserting ${rowsWithEmail.length} user profiles (${validRows.length - rowsWithEmail.length} rows without email will skip user profile)...`)
-      const profilePayloads = rowsWithEmail
-        .filter(vr => !failedAfterValidation.has(vr.rowNumber))
-        .map((vr) => {
-          const userId = usersByEmail.get(vr.email.toLowerCase())?.id
-          if (!userId) {
-            // Jika tidak ada userId, berarti row ini gagal
-            if (!failedAfterValidation.has(vr.rowNumber)) {
-              failed++
-              failedAfterValidation.add(vr.rowNumber)
-              errors.push({
-                row: vr.rowNumber,
-                message: `Baris ${vr.rowNumber}: Gagal memproses - user tidak ditemukan`,
-              })
-            }
-            return null
-          }
-
-          const nameParts = vr.nama.trim().split(" ")
-          return {
-            id: userId,
-            email: vr.email,
-            first_name: nameParts[0] || vr.nama,
-            last_name: nameParts.slice(1).join(" ") || null,
-            phone: vr.noTelepon || null,
-            display_name: vr.nickname || vr.nama,
-            is_active: true,
-          }
-        }).filter(Boolean) as any[]
-
-      if (profilePayloads.length > 0) {
-        const { error: profileError } = await adminClient
-          .from("user_profiles")
-          .upsert(profilePayloads, { onConflict: "id" })
-
-        if (profileError) {
-          console.error("[MEMBERS IMPORT] Batch profile upsert error:", profileError)
-          // Fallback: upsert satu per satu untuk yang error
-          for (const vr of validRows) {
-            if (failedAfterValidation.has(vr.rowNumber)) continue
+      const PROFILE_BATCH_SIZE = 200 // Process 200 profiles at a time
+      
+      for (let i = 0; i < rowsWithEmail.length; i += PROFILE_BATCH_SIZE) {
+        const batch = rowsWithEmail.slice(i, i + PROFILE_BATCH_SIZE)
+        const profilePayloads = batch
+          .filter(vr => !failedAfterValidation.has(vr.rowNumber))
+          .map((vr) => {
             const userId = usersByEmail.get(vr.email.toLowerCase())?.id
-            if (!userId) continue
-            const nameParts = vr.nama.trim().split(" ")
-            const { error: singleProfileError } = await adminClient
-              .from("user_profiles")
-              .upsert({
-                id: userId,
-                email: vr.email,
-                first_name: nameParts[0] || vr.nama,
-                last_name: nameParts.slice(1).join(" ") || null,
-                phone: vr.noTelepon || null,
-                display_name: vr.nickname || vr.nama,
-                is_active: true,
-              }, { onConflict: "id" })
-            
-            if (singleProfileError && !failedAfterValidation.has(vr.rowNumber)) {
-              failed++
-              failedAfterValidation.add(vr.rowNumber)
-              errors.push({
-                row: vr.rowNumber,
-                message: `Baris ${vr.rowNumber}: Gagal memperbarui profil user - ${singleProfileError.message}`,
-              })
+            if (!userId) {
+              // Jika tidak ada userId, berarti row ini gagal
+              if (!failedAfterValidation.has(vr.rowNumber)) {
+                failed++
+                failedAfterValidation.add(vr.rowNumber)
+                errors.push({
+                  row: vr.rowNumber,
+                  message: `Baris ${vr.rowNumber}: Gagal memproses - user tidak ditemukan`,
+                })
+              }
+              return null
             }
+
+            const nameParts = vr.nama.trim().split(" ")
+            return {
+              id: userId,
+              email: vr.email,
+              first_name: nameParts[0] || vr.nama,
+              last_name: nameParts.slice(1).join(" ") || null,
+              phone: vr.noTelepon || null,
+              display_name: vr.nickname || vr.nama,
+              is_active: true,
+            }
+          }).filter(Boolean) as any[]
+
+        if (profilePayloads.length > 0) {
+          const { error: profileError } = await adminClient
+            .from("user_profiles")
+            .upsert(profilePayloads, { onConflict: "id" })
+
+          if (profileError) {
+            console.error(`[MEMBERS IMPORT] Batch profile upsert error (batch ${Math.floor(i / PROFILE_BATCH_SIZE) + 1}):`, profileError)
+            // Fallback: upsert satu per satu untuk batch yang error
+            for (const vr of batch) {
+              if (failedAfterValidation.has(vr.rowNumber)) continue
+              const userId = usersByEmail.get(vr.email.toLowerCase())?.id
+              if (!userId) continue
+              const nameParts = vr.nama.trim().split(" ")
+              const { error: singleProfileError } = await adminClient
+                .from("user_profiles")
+                .upsert({
+                  id: userId,
+                  email: vr.email,
+                  first_name: nameParts[0] || vr.nama,
+                  last_name: nameParts.slice(1).join(" ") || null,
+                  phone: vr.noTelepon || null,
+                  display_name: vr.nickname || vr.nama,
+                  is_active: true,
+                }, { onConflict: "id" })
+              
+              if (singleProfileError && !failedAfterValidation.has(vr.rowNumber)) {
+                failed++
+                failedAfterValidation.add(vr.rowNumber)
+                errors.push({
+                  row: vr.rowNumber,
+                  message: `Baris ${vr.rowNumber}: Gagal memperbarui profil user - ${singleProfileError.message}`,
+                })
+              }
+            }
+          } else {
+            console.log(`[MEMBERS IMPORT] Successfully upserted profile batch ${Math.floor(i / PROFILE_BATCH_SIZE) + 1} (${profilePayloads.length} profiles)`)
           }
         }
       }
@@ -775,7 +783,7 @@ export async function POST(request: NextRequest) {
         }))
 
       // Upsert dalam batch (Supabase mendukung batch upsert)
-      const BIODATA_BATCH_SIZE = 100
+      const BIODATA_BATCH_SIZE = 200 // Increased from 100 to 200 for better performance
       for (let i = 0; i < biodataPayloads.length; i += BIODATA_BATCH_SIZE) {
         const batch = biodataPayloads.slice(i, i + BIODATA_BATCH_SIZE)
         const batchPayloads = batch.map(item => item.payload)
@@ -809,41 +817,49 @@ export async function POST(request: NextRequest) {
       console.log(`[MEMBERS IMPORT] Completed biodata upsert for ${biodataPayloads.length} records`)
 
       // Batch insert new members (setelah biodata di-upsert)
+      // Split into smaller batches to avoid timeout and improve performance
       if (membersToInsert.length > 0) {
-        const insertPayloads = membersToInsert.map(item => item.payload)
+        const MEMBER_INSERT_BATCH_SIZE = 500 // Insert 500 members at a time
+        console.log(`[MEMBERS IMPORT] Batch inserting ${membersToInsert.length} new members in batches of ${MEMBER_INSERT_BATCH_SIZE}...`)
+        
+        for (let i = 0; i < membersToInsert.length; i += MEMBER_INSERT_BATCH_SIZE) {
+          const batch = membersToInsert.slice(i, i + MEMBER_INSERT_BATCH_SIZE)
+          const insertPayloads = batch.map(item => item.payload)
 
-        const { data: newMembers, error: insertError } = await adminClient
-          .from("organization_members")
-          .insert(insertPayloads)
-          .select("id, user_id, biodata_nik")
+          const { data: newMembers, error: insertError } = await adminClient
+            .from("organization_members")
+            .insert(insertPayloads)
+            .select("id, user_id, biodata_nik")
 
-        if (insertError) {
-          console.error("[MEMBERS IMPORT] Batch member insert error:", insertError)
-          // Jika batch insert gagal, tandai semua row sebagai failed
-          membersToInsert.forEach(item => {
-            if (!failedAfterValidation.has(item.rowNumber)) {
-              failed++
-              failedAfterValidation.add(item.rowNumber)
-              errors.push({
-                row: item.rowNumber,
-                message: `Baris ${item.rowNumber}: Gagal membuat member organisasi - ${insertError.message}`,
-              })
-            }
-          })
-        } else if (newMembers) {
-          newMembers.forEach((member: any) => {
-            if (member.user_id && orgId) {
-              membersByUserId.set(member.user_id, { id: member.id, biodata_nik: member.biodata_nik, organization_id: orgId })
-            }
-            if (member.biodata_nik && orgId) {
-              membersByBiodataNik.set(member.biodata_nik, { id: member.id, user_id: member.user_id, organization_id: orgId })
-            }
-          })
+          if (insertError) {
+            console.error(`[MEMBERS IMPORT] Batch member insert error (batch ${Math.floor(i / MEMBER_INSERT_BATCH_SIZE) + 1}):`, insertError)
+            // Jika batch insert gagal, tandai semua row dalam batch ini sebagai failed
+            batch.forEach(item => {
+              if (!failedAfterValidation.has(item.rowNumber)) {
+                failed++
+                failedAfterValidation.add(item.rowNumber)
+                errors.push({
+                  row: item.rowNumber,
+                  message: `Baris ${item.rowNumber}: Gagal membuat member organisasi - ${insertError.message}`,
+                })
+              }
+            })
+          } else if (newMembers) {
+            newMembers.forEach((member: any) => {
+              if (member.user_id && orgId) {
+                membersByUserId.set(member.user_id, { id: member.id, biodata_nik: member.biodata_nik, organization_id: orgId })
+              }
+              if (member.biodata_nik && orgId) {
+                membersByBiodataNik.set(member.biodata_nik, { id: member.id, user_id: member.user_id, organization_id: orgId })
+              }
+            })
+            console.log(`[MEMBERS IMPORT] Successfully inserted batch ${Math.floor(i / MEMBER_INSERT_BATCH_SIZE) + 1} (${batch.length} members)`)
+          }
         }
       }
 
       // Batch update existing members (dalam batch kecil untuk menghindari query terlalu besar)
-      const UPDATE_BATCH_SIZE = 50
+      const UPDATE_BATCH_SIZE = 100 // Increased from 50 to 100 for better performance
       for (let i = 0; i < membersToUpdate.length; i += UPDATE_BATCH_SIZE) {
         const batch = membersToUpdate.slice(i, i + UPDATE_BATCH_SIZE)
         await Promise.all(
@@ -1057,276 +1073,46 @@ export async function POST(request: NextRequest) {
       }
 
       if (mode === "test") {
-        // Di mode test, lakukan SEMUA operasi yang sama dengan import (termasuk create user, update profile, dll)
-        // Tapi kita akan cleanup setelah test selesai
-        // Email tidak wajib, jadi userId bisa NULL untuk member tanpa email
+        // Mode test: HANYA validasi data, TIDAK insert/update ke database
+        // Ini membuat testing jauh lebih cepat dan tidak mengubah database
         
         try {
-          // Lakukan semua operasi yang sama dengan import mode
-          let userId: string | null = null
-          let createdUserInTest = false
+          // Validasi: Cek apakah email sudah ada (untuk preview)
           const hasEmail = email && email.trim() !== ""
-
-          // Hanya buat user account jika ada email
+          let userId: string | null = null
           if (hasEmail) {
-            // OPTIMASI: Gunakan cached usersByEmail map
             const existingUserData = usersByEmail.get(email.toLowerCase())
-
             if (existingUserData) {
               userId = existingUserData.id
+            }
+          }
 
-              // Test: Cek apakah bisa update user profile
-              const { error: profileError } = await adminClient
-                .from("user_profiles")
-                .upsert(
-                  {
-                    id: userId,
-                    email: email,
-                    first_name: nama.split(" ")[0] || nama,
-                    last_name: nama.split(" ").slice(1).join(" ") || null,
-                    phone: noTelepon || null,
-                    display_name: nickname || nama,
-                    is_active: true,
-                  },
-                  {
-                    onConflict: "id",
-                  }
-                )
-
-              if (profileError) {
-                failed++
-                errors.push({
-                  row: rowNumber,
-                  message: `Baris ${rowNumber}: Gagal memperbarui profil user - ${profileError.message}`,
-                })
-                continue
-              }
-            } else {
-              // Test: Cek apakah bisa create user baru
-              const randomPassword = `TEST${orgId}${Date.now()}${Math.random().toString(36).substring(2, 15)}`
-              const nameParts = nama.trim().split(" ")
-              const firstName = nameParts[0] || nama
-              const lastName = nameParts.slice(1).join(" ") || null
-
-              const { data: newUser, error: createUserError } = await adminClient.auth.admin.createUser({
-                email: email,
-                password: randomPassword,
-                email_confirm: true,
-                user_metadata: {
-                  first_name: firstName,
-                  last_name: lastName,
-                },
+          // Validasi: Cek apakah department yang dipilih valid
+          if (departmentId) {
+            const deptExists = departments?.some((d: any) => Number(d.id) === Number(departmentId))
+            if (!deptExists) {
+              failed++
+              errors.push({
+                row: rowNumber,
+                message: `Department dengan ID ${departmentId} tidak ditemukan`,
               })
-
-              if (createUserError) {
-                failed++
-                errors.push({
-                  row: rowNumber,
-                  message: `Baris ${rowNumber}: Gagal membuat user - ${createUserError.message}`,
-                })
-                continue
-              }
-
-              if (!newUser?.user) {
-                failed++
-                errors.push({
-                  row: rowNumber,
-                  message: `Baris ${rowNumber}: Gagal membuat user - Tidak ada user yang dikembalikan`,
-                })
-                continue
-              }
-                
-              userId = newUser.user.id
-              createdUserInTest = true
-
-              // Test: Cek apakah bisa create user profile
-              const { error: profileError } = await adminClient
-                .from("user_profiles")
-                .upsert(
-                  {
-                    id: userId,
-                    email: email,
-                    first_name: firstName,
-                    last_name: lastName,
-                    phone: noTelepon || null,
-                    display_name: nickname || nama,
-                    is_active: true,
-                  },
-                  {
-                    onConflict: "id",
-                  }
-                )
-
-              if (profileError) {
-                failed++
-                errors.push({
-                  row: rowNumber,
-                  message: `Baris ${rowNumber}: Gagal membuat profil user - ${profileError.message}`,
-                })
-                // Cleanup: hapus user yang baru dibuat
-                try {
-                  await adminClient.auth.admin.deleteUser(userId)
-                } catch (deleteError) {
-                  console.error(`[MEMBERS IMPORT TEST] Failed to cleanup user ${userId}:`, deleteError)
-                }
-                continue
-              }
+              continue
             }
           }
 
-          // Test: Cek apakah bisa membuat organization_member
-          // Test: Cek apakah bisa upsert biodata (HARUS DILAKUKAN TERLEBIH DAHULU)
-          const biodataPayload: any = {
-            nik,
-            nama,
-            nickname: nickname || null,
-            nisn: nisn || null,
-            jenis_kelamin: jenisKelamin || null,
-            tempat_lahir: tempatLahir || null,
-            tanggal_lahir: tanggalLahir,
-            agama: agama || null,
-            jalan: jalan || null,
-            rt: rt || null,
-            rw: rw || null,
-            dusun: dusun || null,
-          kelurahan: kelurahan || null,
-          kecamatan: kecamatan || null,
-          no_telepon: noTelepon || null,
-          email: email || null,
-          department_id: departmentId || null,
-          }
-
-          const { error: upsertError } = await adminClient
-            .from("biodata")
-            .upsert(biodataPayload, {
-              onConflict: "nik",
-            })
-
-          if (upsertError) {
-            console.error(`[MEMBERS IMPORT] Failed to upsert biodata for NIK ${nik}:`, upsertError)
-            failed++
-            errors.push({
-              row: rowNumber,
-              message: `Baris ${rowNumber}: Gagal menyimpan biodata - ${upsertError.message}`,
-            })
-            // Cleanup jika user baru dibuat
-            if (createdUserInTest && userId) {
-              try {
-                await adminClient.auth.admin.deleteUser(userId)
-              } catch (deleteError) {
-                console.error(`[MEMBERS IMPORT TEST] Failed to cleanup user ${userId}:`, deleteError)
-              }
-            }
-            continue
-          } else {
-            console.log(`[MEMBERS IMPORT] Successfully upserted biodata for NIK: ${nik}`)
-          }
-
-          // Test: Buat/update organization_members (SETELAH biodata di-upsert)
-          // Bisa dibuat dengan user_id NULL untuk member tanpa email
-          if (orgId) {
-            const today = new Date().toISOString().split("T")[0]
-
-            // Cari existing member: berdasarkan userId jika ada, atau berdasarkan biodata_nik jika tidak ada email
-            let existingMember: { id: number; biodata_nik?: string | null; user_id?: string | null; organization_id: number } | null = null
-            if (userId) {
-              existingMember = membersByUserId.get(userId) || null
-            } else if (nik) {
-              existingMember = membersByBiodataNik.get(nik) || null
-              // Pastikan organization_id sama
-              if (existingMember && existingMember.organization_id !== orgId) {
-                existingMember = null
-              }
-            }
-
-            if (existingMember) {
-              // Test: update department dan biodata_nik jika diperlukan
-              const updateData: any = {
-                is_active: true,
-              }
-              // Jika groupIdParam dipilih, selalu update department_id
-              if (groupIdParam && groupIdParam.trim() !== "") {
-                updateData.department_id = departmentId
-                console.log(`[MEMBERS IMPORT TEST] Updating existing member ${existingMember.id} with department_id:`, departmentId)
-              } else {
-                // Jika tidak ada groupIdParam, hanya update jika member belum punya department_id
-                const { data: memberData } = await adminClient
-                  .from("organization_members")
-                  .select("department_id")
-                  .eq("id", existingMember.id)
-                  .single()
-                
-                if (!memberData?.department_id && departmentId) {
-                  updateData.department_id = departmentId
-                }
-              }
-              // Update biodata_nik dengan NIK jika belum ada atau berbeda
-              if (nik && 'biodata_nik' in existingMember && existingMember.biodata_nik !== nik) {
-                updateData.biodata_nik = nik
-              }
-              // Update user_id jika ada (untuk member yang sebelumnya tanpa email, sekarang punya email)
-              if (userId && 'user_id' in existingMember && !existingMember.user_id) {
-                updateData.user_id = userId
-              }
-
-              if (Object.keys(updateData).length > 1) { // Lebih dari is_active saja
-                const { error: updateMemberError } = await adminClient
-                  .from("organization_members")
-                  .update(updateData)
-                  .eq("id", existingMember.id)
-
-                if (updateMemberError) {
-                  failed++
-                  errors.push({
-                    row: rowNumber,
-                    message: `Baris ${rowNumber}: Gagal memperbarui member organisasi - ${updateMemberError.message}`,
-                  })
-                  // Cleanup jika user baru dibuat
-                  if (createdUserInTest && userId) {
-                    try {
-                      await adminClient.auth.admin.deleteUser(userId)
-                    } catch (deleteError) {
-                      console.error(`[MEMBERS IMPORT TEST] Failed to cleanup user ${userId}:`, deleteError)
-                    }
-                  }
-                  continue
-                }
-              } else {
-                // Jika hanya is_active, skip update (tidak perlu query)
-              }
-            } else {
-              // Test: Cek apakah bisa insert organization_member
-              const { error: memberInsertError } = await adminClient
-                .from("organization_members")
-                .insert({
-                  user_id: userId, // NULL untuk member tanpa email
-                  organization_id: orgId,
-                  department_id: departmentId,
-                  biodata_nik: nik, // Wajib untuk memenuhi constraint (user_id OR biodata_nik harus ada)
-                  hire_date: today,
-                  is_active: true,
-                })
-
-              if (memberInsertError) {
-                failed++
-                errors.push({
-                  row: rowNumber,
-                  message: `Baris ${rowNumber}: Gagal membuat member organisasi - ${memberInsertError.message}`,
-                })
-                // Cleanup jika user baru dibuat
-                if (createdUserInTest && userId) {
-                  try {
-                    await adminClient.auth.admin.deleteUser(userId)
-                  } catch (deleteError) {
-                    console.error(`[MEMBERS IMPORT TEST] Failed to cleanup user ${userId}:`, deleteError)
-                  }
-                }
-                continue
-              }
+          // Validasi: Cek apakah NIK sudah ada di organization yang sama (untuk update vs insert)
+          let existingMember: { id: number; biodata_nik?: string | null; user_id?: string | null; organization_id: number } | null = null
+          if (userId) {
+            existingMember = membersByUserId.get(userId) || null
+          } else if (nik) {
+            existingMember = membersByBiodataNik.get(nik) || null
+            // Pastikan organization_id sama
+            if (existingMember && existingMember.organization_id !== orgId) {
+              existingMember = null
             }
           }
 
-          // Jika semua test passed, hitung sebagai success
+          // Jika semua validasi passed, hitung sebagai success
           success++
           
           // Kumpulkan data untuk preview halaman finger (hanya yang punya email)
@@ -1338,58 +1124,13 @@ export async function POST(request: NextRequest) {
             }
           }
           
-            fingerPagePreview.push({
-              row: rowNumber,
+          fingerPagePreview.push({
+            row: rowNumber,
             nik,
             nama,
             email: email,
-              department: departmentName,
-            })
-
-          // Cleanup: Hapus data yang dibuat di test mode
-          // Hapus organization_member (baik yang punya user_id maupun yang tidak)
-          if (orgId) {
-            try {
-              if (userId) {
-                // Hapus berdasarkan user_id
-                await adminClient
-                  .from("organization_members")
-                  .delete()
-                  .eq("user_id", userId)
-                  .eq("organization_id", orgId)
-              } else if (nik) {
-                // Hapus berdasarkan biodata_nik (untuk member tanpa email)
-                await adminClient
-                  .from("organization_members")
-                  .delete()
-                  .eq("biodata_nik", nik)
-                  .eq("organization_id", orgId)
-                  .is("user_id", null)
-              }
-            } catch (deleteError) {
-              console.error(`[MEMBERS IMPORT TEST] Failed to cleanup organization_member:`, deleteError)
-            }
-          }
-
-          // Hapus user profile dan user dari auth (hanya jika user dibuat di test)
-          if (createdUserInTest && userId) {
-            // Hapus user profile
-            try {
-              await adminClient
-                .from("user_profiles")
-                .delete()
-                .eq("id", userId)
-            } catch (deleteError) {
-              console.error(`[MEMBERS IMPORT TEST] Failed to cleanup user profile:`, deleteError)
-            }
-
-            // Hapus user dari auth
-            try {
-              await adminClient.auth.admin.deleteUser(userId)
-            } catch (deleteError) {
-              console.error(`[MEMBERS IMPORT TEST] Failed to cleanup user ${userId}:`, deleteError)
-            }
-          }
+            department: departmentName,
+          })
         } catch (error: any) {
           failed++
           errors.push({
