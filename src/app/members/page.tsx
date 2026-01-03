@@ -81,7 +81,7 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
     key: "full_name",
     label: "Full Name",
     getValue: (member: any) => {
-      // Priority: biodata.nama > user full name > email
+
       if (member.biodata?.nama) return member.biodata.nama
       
       const user = member.user

@@ -96,15 +96,30 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
       remarks,
       check_in_device_id,
       check_out_device_id,
-      organization_members (
+      organization_members!inner (
         id,
         user_id,
         organization_id,
         department_id,
-        user_profiles!user_id (
+        user_profiles (
           first_name,
           last_name,
+          display_name,
+          email,
           profile_photo_url
+        ),
+        user:user_id (
+          first_name,
+          last_name,
+          display_name,
+          email,
+          profile_photo_url
+        ),
+        biodata:biodata_nik (
+          nik,
+          nama,
+          nickname,
+          email
         ),
         organizations (
           id,
@@ -112,7 +127,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
           timezone,
           time_format
         ),
-        departments!department_id (
+        departments!organization_members_department_id_fkey (
           id,
           name
         )
@@ -168,28 +183,47 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
 
   // Transform format
   const mapped = (data || []).map((item: any) => {
-    const firstName = item.organization_members?.user_profiles?.first_name || '';
-    const lastName = item.organization_members?.user_profiles?.last_name || '';
+    // Supabase can return relation as an array or an object depending on FK naming
+    const rawMemberRel = item.organization_members as any;
+    const rawMember = Array.isArray(rawMemberRel) ? rawMemberRel[0] : rawMemberRel;
+    // Support both object and array shapes returned by Supabase
+    const rawProfile = rawMember?.user_profiles as any;
+    const profile = Array.isArray(rawProfile) ? rawProfile[0] : rawProfile;
+    const rawUser = rawMember?.user as any;
+    const user = Array.isArray(rawUser) ? rawUser[0] : rawUser;
+    const rawDept = rawMember?.departments as any;
+    const dept = Array.isArray(rawDept) ? rawDept[0] : rawDept;
+    const biodata = rawMember?.biodata as any;
+
+    // Prefer user/profile fields; fallback to biodata
+    const biodataNama = typeof biodata?.nama === 'string' ? biodata.nama : '';
+    const displayName = (profile?.display_name || user?.display_name || biodata?.nickname || '').trim();
+    const firstName = (profile?.first_name || user?.first_name || (biodataNama ? biodataNama.split(' ')[0] : '')).trim();
+    const lastName = (profile?.last_name || user?.last_name || (biodataNama ? biodataNama.split(' ').slice(1).join(' ') : '')).trim();
+    const email = (profile?.email || user?.email || biodata?.email || '').trim();
     const fullName = `${firstName} ${lastName}`.trim();
-    const departmentName = item.organization_members?.departments?.name;
+    const effectiveName = displayName || fullName || email;
+    const departmentName = (dept?.name || '');
     
     // Debug: Log items dengan nama kosong atau user_profiles null
-    if (!fullName || !item.organization_members?.user_profiles) {
+    if (!effectiveName || !profile) {
       attendanceLogger.warn("⚠️ Member dengan nama kosong atau user_profiles null:", {
         id: item.id,
         organization_member_id: item.organization_member_id,
-        user_id: item.organization_members?.user_id,
-        user_profiles: item.organization_members?.user_profiles,
+        user_id: rawMember?.user_id,
+        user_profiles: profile,
+        user,
+        biodata,
         department: departmentName,
-        rawData: item.organization_members
+        rawData: rawMember
       });
     }
     
     return {
       id: item.id,
       member: {
-        name: fullName || `Member #${item.organization_member_id}`, // Fallback jika nama kosong
-        avatar: item.organization_members?.user_profiles?.profile_photo_url,
+        name: effectiveName || `Member #${item.organization_member_id}`,
+        avatar: (profile?.profile_photo_url || user?.profile_photo_url) || null,
         position: '', // Position not fetched in query above, add if needed
         department: departmentName || '', // Empty string jika tidak ada department
       },

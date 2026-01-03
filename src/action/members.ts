@@ -4,7 +4,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { IOrganization_member } from "@/interface";
 
 import { memberLogger } from '@/lib/logger';
-// Helper function to get the supabase client
+
 async function getSupabase() {
   return await createClient();
 }

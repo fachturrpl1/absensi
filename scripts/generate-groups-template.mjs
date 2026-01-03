@@ -1,7 +1,6 @@
 import XLSX from 'xlsx';
 import { join } from 'path';
 
-// Daftar group dari gambar
 const groups = [
   'X TKJ B',
   'X RPL D',
