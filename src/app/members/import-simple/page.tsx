@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useState } from "react"
+import React, { useRef, useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useOrgStore } from "@/store/org-store"
 import { FileText, Upload, X, Download, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
@@ -78,6 +78,8 @@ export default function MembersImportSimplePage() {
   const [selectedGroupId, setSelectedGroupId] = useState<string>("")
   const [groups, setGroups] = useState<Array<{ id: string; name: string }>>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
+  const isProcessingSheetChangeRef = useRef(false)
+  const previousSheetNameRef = useRef<string>("")
   const [testSummary, setTestSummary] = useState<{
     success: number
     failed: number
@@ -97,7 +99,6 @@ export default function MembersImportSimplePage() {
     message: string
   } | null>(null)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-  const [showUnmappedFieldsDialog, setShowUnmappedFieldsDialog] = useState(false)
   const [unmappedFields, setUnmappedFields] = useState<string[]>([])
   const [hasTested, setHasTested] = useState(false) // Track apakah sudah test
   const [importSummary, setImportSummary] = useState<{
@@ -119,7 +120,8 @@ export default function MembersImportSimplePage() {
     const fetchGroups = async () => {
       if (!orgId) {
         console.log('[GROUPS] No organizationId, skipping fetch')
-        setGroups([])
+        // Don't update if already empty to prevent re-renders
+        setGroups((prevGroups) => prevGroups.length === 0 ? prevGroups : [])
         return
       }
 
@@ -137,7 +139,8 @@ export default function MembersImportSimplePage() {
           console.error("[GROUPS] Failed to fetch groups:", response.status, response.statusText)
           const errorText = await response.text()
           console.error("[GROUPS] Error response:", errorText)
-          setGroups([])
+          // Don't update if already empty to prevent re-renders
+          setGroups((prevGroups) => prevGroups.length === 0 ? prevGroups : [])
           return
         }
         const data = await response.json()
@@ -153,23 +156,40 @@ export default function MembersImportSimplePage() {
               name: String(group.name || '') // Ensure name is string
             }))
           console.log('[GROUPS] Mapped groups:', mappedGroups.length, 'groups', mappedGroups)
-          setGroups(mappedGroups)
+          
+          // Only update if groups actually changed (prevent unnecessary re-renders)
+          setGroups((prevGroups) => {
+            // Check if groups are the same by comparing IDs
+            if (prevGroups.length === mappedGroups.length &&
+                prevGroups.every((prev, idx) => prev.id === mappedGroups[idx]?.id && prev.name === mappedGroups[idx]?.name)) {
+              return prevGroups // Return previous array if unchanged
+            }
+            return mappedGroups
+          })
         } else {
           console.warn('[GROUPS] No groups data or invalid format:', data)
-          setGroups([])
+          setGroups((prevGroups) => prevGroups.length === 0 ? prevGroups : [])
         }
       } catch (error) {
         console.error("Error fetching groups:", error)
-        setGroups([])
+        // Only update if groups is not already empty to prevent unnecessary re-renders
+        setGroups((prevGroups) => prevGroups.length === 0 ? prevGroups : [])
         // Don't show error toast, just silently fail
       } finally {
         setLoadingGroups(false)
       }
     }
-    fetchGroups()
+    
+    // Only fetch if orgId exists and is valid
+    if (orgId) {
+      fetchGroups()
+    } else {
+      // If no orgId, ensure groups is empty (but don't update if already empty)
+      setGroups((prevGroups) => prevGroups.length === 0 ? prevGroups : [])
+    }
   }, [orgId])
 
-  const handleFileSelect = async (selectedFile: File, sheetOverride?: string) => {
+  const handleFileSelect = useCallback(async (selectedFile: File, sheetOverride?: string) => {
     if (!selectedFile.name.match(/\.(xlsx|xls|csv)$/i)) {
       toast.error("Please upload an Excel or CSV file (.xlsx, .xls, or .csv)")
       return
@@ -222,7 +242,10 @@ export default function MembersImportSimplePage() {
       setPreview(data.preview || [])
       setTotalRows(data.totalRows || 0)
       setSheetNames(data.sheetNames || [])
-      setSheetName(data.sheetName || data.sheetNames?.[0] || "")
+      // Only update sheetName if no sheetOverride was provided (to avoid loops)
+      if (!sheetOverride) {
+        setSheetName(data.sheetName || data.sheetNames?.[0] || "")
+      }
 
       // Show success message with auto-detect info
       if (data.autoDetected) {
@@ -372,7 +395,31 @@ export default function MembersImportSimplePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [headerRow, headerRowCount]) // Dependencies for handleFileSelect
+
+  // Handle sheet name changes separately to avoid infinite loops
+  useEffect(() => {
+    // Skip if no file, already processing, or sheetName hasn't actually changed
+    if (!file || isProcessingSheetChangeRef.current || sheetName === previousSheetNameRef.current) {
+      return
+    }
+
+    // Skip if this is the initial load (when sheetName is set from API response)
+    if (!previousSheetNameRef.current && sheetName) {
+      previousSheetNameRef.current = sheetName
+      return
+    }
+
+    // Only reload if sheetName actually changed by user
+    if (sheetName && sheetName !== previousSheetNameRef.current) {
+      isProcessingSheetChangeRef.current = true
+      previousSheetNameRef.current = sheetName
+      
+      handleFileSelect(file, sheetName).finally(() => {
+        isProcessingSheetChangeRef.current = false
+      })
+    }
+  }, [sheetName, file, handleFileSelect]) // Include handleFileSelect in dependencies
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault()
@@ -553,24 +600,21 @@ export default function MembersImportSimplePage() {
     } else if (currentStep === 2) {
       if (!validateMapping()) return
       
-      // Check unmapped fields sebelum next
-      const unmapped = checkUnmappedFields()
-      if (unmapped.length > 0) {
-        setUnmappedFields(unmapped)
-        setShowUnmappedFieldsDialog(true)
-        return
-      }
-      
       if (!hasTested) {
         toast.error("Silakan lakukan test terlebih dahulu")
         return
       }
       
-      // Jika ada data yang gagal validasi, tampilkan dialog konfirmasi
-      if (testSummary && testSummary.failed > 0) {
+      // Check unmapped fields dan test summary
+      const unmapped = checkUnmappedFields()
+      const hasFailed = testSummary && testSummary.failed > 0
+      
+      // Jika ada unmapped fields atau ada data yang gagal, tampilkan dialog konfirmasi gabungan
+      if (unmapped.length > 0 || hasFailed) {
+        setUnmappedFields(unmapped)
         setShowConfirmDialog(true)
       } else {
-        // Jika semua lolos validasi, langsung lanjut ke import
+        // Jika semua lolos validasi dan tidak ada unmapped fields, langsung lanjut ke import
         setCurrentStep(3)
       }
     } else if (currentStep === 3) {
@@ -579,27 +623,10 @@ export default function MembersImportSimplePage() {
       router.push("/members")
     }
   }
-  
-  const handleUnmappedFieldsNext = () => {
-    setShowUnmappedFieldsDialog(false)
-    setUnmappedFields([])
-    
-    if (!hasTested) {
-      toast.error("Silakan lakukan test terlebih dahulu")
-      return
-    }
-    
-    // Jika ada data yang gagal validasi, tampilkan dialog konfirmasi
-    if (testSummary && testSummary.failed > 0) {
-      setShowConfirmDialog(true)
-    } else {
-      // Jika semua lolos validasi, langsung lanjut ke import
-      setCurrentStep(3)
-    }
-  }
 
   const handleConfirmImport = () => {
     setShowConfirmDialog(false)
+    setUnmappedFields([])
     setCurrentStep(3)
   }
 
@@ -750,12 +777,15 @@ export default function MembersImportSimplePage() {
                           <Select
                             value={sheetName || sheetNames[0] || ""}
                             onValueChange={(value) => {
-                              setSheetName(value)
-                              setHasTested(false) // Reset test status ketika sheet berubah
-                              setFingerPagePreview(null) // Reset preview ketika sheet berubah
-                              if (file) handleFileSelect(file, value)
+                              // Only update if value actually changed
+                              if (value !== sheetName) {
+                                setSheetName(value)
+                                setHasTested(false) // Reset test status ketika sheet berubah
+                                setFingerPagePreview(null) // Reset preview ketika sheet berubah
+                                // Don't call handleFileSelect here - let useEffect handle it
+                              }
                             }}
-                            disabled={!sheetNames.length || loading}
+                            disabled={!sheetNames.length || loading || isProcessingSheetChangeRef.current}
                           >
                             <SelectTrigger id="sheet" className="w-full">
                               <SelectValue placeholder="Pilih sheet" />
@@ -775,28 +805,36 @@ export default function MembersImportSimplePage() {
                         Pilih Group (Opsional)
                       </Label>
                       <Select
+                        key={`group-select-${groups.length}-${selectedGroupId || 'none'}`}
                         value={selectedGroupId || "none"}
-                        onValueChange={(value) => setSelectedGroupId(value === "none" ? "" : value)}
+                        onValueChange={(value) => {
+                          // Prevent infinite loops by checking if value actually changed
+                          const newValue = value === "none" ? "" : value
+                          // Only update if value actually changed and not already processing
+                          if (newValue !== selectedGroupId) {
+                            setSelectedGroupId(newValue)
+                          }
+                        }}
                         disabled={loadingGroups}
                       >
                         <SelectTrigger id="group-select" className="w-full">
                           <SelectValue placeholder={loadingGroups ? "Loading groups..." : "Pilih group untuk semua member"} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">-- Tidak Ada Group --</SelectItem>
-                              {groups.length > 0 ? (
-                                groups.map((group) => (
-                            <SelectItem key={group.id} value={group.id}>
-                              {group.name}
+                          {groups.length > 0 ? (
+                            <>
+                              <SelectItem value="none">-- Tidak Ada Group --</SelectItem>
+                              {groups.map((group) => (
+                                <SelectItem key={group.id} value={String(group.id)}>
+                                  {group.name}
+                                </SelectItem>
+                              ))}
+                            </>
+                          ) : (
+                            <SelectItem value="none" disabled={loadingGroups}>
+                              {loadingGroups ? "Loading groups..." : "Tidak ada group tersedia"}
                             </SelectItem>
-                                ))
-                              ) : (
-                                !loadingGroups && (
-                                  <SelectItem value="none" disabled>
-                                    Tidak ada group tersedia
-                                  </SelectItem>
-                                )
-                              )}
+                          )}
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
@@ -808,7 +846,7 @@ export default function MembersImportSimplePage() {
                       <p className="text-sm text-muted-foreground">No file selected</p>
                     )}
                   </div>
-                </div>
+                    </div>
 
                 {/* Advanced Options */}
                 <div className="pt-6 pb-6 border-t space-y-4">
@@ -818,17 +856,17 @@ export default function MembersImportSimplePage() {
                     </Label>
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2">
-                        <Checkbox
+                      <Checkbox
                           id="allow-matching-subfields"
-                          checked={allowMatchingWithSubfields}
-                          onCheckedChange={(checked) => setAllowMatchingWithSubfields(checked === true)}
-                        />
+                        checked={allowMatchingWithSubfields}
+                        onCheckedChange={(checked) => setAllowMatchingWithSubfields(checked === true)}
+                      />
                         <Label
                           htmlFor="allow-matching-subfields"
                           className="text-sm font-normal cursor-pointer"
                         >
-                          Allow matching with subfields
-                        </Label>
+                        Allow matching with subfields
+                      </Label>
                       </div>
                     </div>
                   </div>
@@ -1229,19 +1267,39 @@ export default function MembersImportSimplePage() {
           )}
         </Wizard>
 
-        {/* Confirmation Dialog */}
+        {/* Confirmation Dialog - Gabungan untuk unmapped fields dan test summary */}
         <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
           <AlertDialogContent className="max-w-2xl">
             <AlertDialogHeader>
               <AlertDialogTitle>Apakah Anda yakin ingin lanjut?</AlertDialogTitle>
               <AlertDialogDescription asChild>
                 <div className="space-y-3 pt-2">
-                  {testSummary && (
-                    <>
+                  {/* Unmapped Fields Section */}
+                  {unmappedFields.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Beberapa database field belum ter-mapping ke kolom Excel. Field-field berikut akan diabaikan saat import (nilai akan kosong atau menggunakan default):
+                      </p>
+                      <div className="max-h-40 overflow-auto bg-muted/50 rounded-lg p-4">
+                        <ul className="space-y-2">
+                          {unmappedFields.map((field, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-sm">
+                              <span className="text-muted-foreground mt-0.5">•</span>
+                              <span className="flex-1">{field}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Test Summary Section */}
+                  {testSummary && testSummary.failed > 0 && (
+                    <div className={`space-y-3 ${unmappedFields.length > 0 ? 'pt-3 border-t' : ''}`}>
                       <p className="text-sm">
                         Beberapa data tidak lolos validasi. Hanya data yang lolos validasi yang akan di-import.
                       </p>
-                      <div className="space-y-3 pt-2 border-t">
+                      <div className="space-y-3 pt-2">
                         {/* Summary statistik */}
                         <div className="grid grid-cols-2 gap-3">
                           <div className="p-3 border rounded-lg bg-green-50 dark:bg-green-950">
@@ -1300,51 +1358,20 @@ export default function MembersImportSimplePage() {
                           </div>
                         )}
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setShowConfirmDialog(false)}>
+              <AlertDialogCancel onClick={() => {
+                setShowConfirmDialog(false)
+                setUnmappedFields([])
+              }}>
                 Tidak
               </AlertDialogCancel>
               <AlertDialogAction onClick={handleConfirmImport}>
-                Ya, Import {testSummary?.success || 0} Data
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* Dialog untuk menampilkan field yang belum ter-mapping */}
-        <AlertDialog open={showUnmappedFieldsDialog} onOpenChange={setShowUnmappedFieldsDialog}>
-          <AlertDialogContent className="max-w-2xl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Field yang Belum Ter-mapping</AlertDialogTitle>
-              <AlertDialogDescription asChild>
-                <div className="space-y-3 pt-2">
-                  <p className="text-sm text-muted-foreground">
-                    Beberapa database field belum ter-mapping ke kolom Excel. Field-field berikut akan diabaikan saat import (nilai akan kosong atau menggunakan default):
-                  </p>
-                  <div className="max-h-60 overflow-auto bg-muted/50 rounded-lg p-4">
-                    <ul className="space-y-2">
-                      {unmappedFields.map((field, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-sm">
-                          <span className="text-muted-foreground mt-0.5">•</span>
-                          <span className="flex-1">{field}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setShowUnmappedFieldsDialog(false)}>
-                Kembali
-              </AlertDialogCancel>
-              <AlertDialogAction onClick={handleUnmappedFieldsNext}>
-                Lanjutkan
+                Ya
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
