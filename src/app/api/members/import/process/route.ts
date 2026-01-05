@@ -1073,8 +1073,8 @@ export async function POST(request: NextRequest) {
       }
 
       if (mode === "test") {
-        // Mode test: HANYA validasi data, TIDAK insert/update ke database
-        // Ini membuat testing jauh lebih cepat dan tidak mengubah database
+        // Mode test: Validasi lengkap seperti import mode, TIDAK insert/update ke database
+        // Ini memastikan test mode memberikan hasil yang sama dengan import mode
         
         try {
           // Validasi: Cek apakah email sudah ada (untuk preview)
@@ -1110,6 +1110,26 @@ export async function POST(request: NextRequest) {
             if (existingMember && existingMember.organization_id !== orgId) {
               existingMember = null
             }
+          }
+
+          // Validasi tambahan untuk mengecek kemungkinan error saat import:
+          // 1. Jika akan update existing member, pastikan department_id valid
+          if (existingMember) {
+            // Jika groupIdParam dipilih tapi departmentId null/invalid, ini akan jadi masalah saat update
+            if (groupIdParam && groupIdParam.trim() !== "") {
+              if (!departmentId) {
+                failed++
+                errors.push({
+                  row: rowNumber,
+                  message: `Department ID tidak valid untuk group yang dipilih (akan update member yang sudah ada)`,
+                })
+                continue
+              }
+            }
+          } else {
+            // Jika akan insert member baru, pastikan tidak ada constraint violation
+            // Validasi: Pastikan NIK tidak null (sudah divalidasi di atas)
+            // Validasi: Pastikan tidak ada duplicate (sudah dicek dengan existingMember)
           }
 
           // Jika semua validasi passed, hitung sebagai success
@@ -1320,13 +1340,19 @@ export async function POST(request: NextRequest) {
               console.log(`[MEMBERS IMPORT] Updating existing member ${existingMember.id} with department_id:`, departmentId)
             } else {
               // Jika tidak ada groupIdParam, hanya update jika member belum punya department_id
-              const { data: memberData } = await adminClient
+              const { data: memberData, error: memberDataError } = await adminClient
                 .from("organization_members")
                 .select("department_id")
                 .eq("id", existingMember.id)
                 .single()
               
-              if (!memberData?.department_id && departmentId) {
+              if (memberDataError) {
+                // Jika query gagal (misalnya member tidak ditemukan), anggap member belum punya department_id
+                console.warn(`[MEMBERS IMPORT] Failed to fetch member data for ${existingMember.id}, assuming no department_id:`, memberDataError)
+                if (departmentId) {
+                  updateData.department_id = departmentId
+                }
+              } else if (!memberData?.department_id && departmentId) {
                 updateData.department_id = departmentId
               }
             }
@@ -1349,10 +1375,16 @@ export async function POST(request: NextRequest) {
                 failed++
                 errors.push({
                   row: rowNumber,
-                  message: `Baris ${rowNumber}: Gagal memperbarui member organisasi - ${updateMemberError.message}`,
+                  message: `Baris ${rowNumber}: Gagal memperbarui member organisasi (ID: ${existingMember.id}) - ${updateMemberError.message}`,
                 })
+                console.error(`[MEMBERS IMPORT] Failed to update member ${existingMember.id} for row ${rowNumber}:`, updateMemberError)
                 continue
+              } else {
+                console.log(`[MEMBERS IMPORT] Successfully updated member ${existingMember.id} for row ${rowNumber}`)
               }
+            } else {
+              // Jika hanya is_active yang diupdate, anggap sebagai success (tidak perlu update)
+              console.log(`[MEMBERS IMPORT] Member ${existingMember.id} already up to date for row ${rowNumber}`)
             }
           } else {
             const insertPayload = {

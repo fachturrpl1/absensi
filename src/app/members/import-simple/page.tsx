@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useState } from "react"
+import React, { useRef, useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useOrgStore } from "@/store/org-store"
 import { FileText, Upload, X, Download, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
@@ -78,6 +78,8 @@ export default function MembersImportSimplePage() {
   const [selectedGroupId, setSelectedGroupId] = useState<string>("")
   const [groups, setGroups] = useState<Array<{ id: string; name: string }>>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
+  const isProcessingSheetChangeRef = useRef(false)
+  const previousSheetNameRef = useRef<string>("")
   const [testSummary, setTestSummary] = useState<{
     success: number
     failed: number
@@ -118,7 +120,8 @@ export default function MembersImportSimplePage() {
     const fetchGroups = async () => {
       if (!orgId) {
         console.log('[GROUPS] No organizationId, skipping fetch')
-        setGroups([])
+        // Don't update if already empty to prevent re-renders
+        setGroups((prevGroups) => prevGroups.length === 0 ? prevGroups : [])
         return
       }
 
@@ -136,7 +139,8 @@ export default function MembersImportSimplePage() {
           console.error("[GROUPS] Failed to fetch groups:", response.status, response.statusText)
           const errorText = await response.text()
           console.error("[GROUPS] Error response:", errorText)
-          setGroups([])
+          // Don't update if already empty to prevent re-renders
+          setGroups((prevGroups) => prevGroups.length === 0 ? prevGroups : [])
           return
         }
         const data = await response.json()
@@ -152,23 +156,40 @@ export default function MembersImportSimplePage() {
               name: String(group.name || '') // Ensure name is string
             }))
           console.log('[GROUPS] Mapped groups:', mappedGroups.length, 'groups', mappedGroups)
-          setGroups(mappedGroups)
+          
+          // Only update if groups actually changed (prevent unnecessary re-renders)
+          setGroups((prevGroups) => {
+            // Check if groups are the same by comparing IDs
+            if (prevGroups.length === mappedGroups.length &&
+                prevGroups.every((prev, idx) => prev.id === mappedGroups[idx]?.id && prev.name === mappedGroups[idx]?.name)) {
+              return prevGroups // Return previous array if unchanged
+            }
+            return mappedGroups
+          })
         } else {
           console.warn('[GROUPS] No groups data or invalid format:', data)
-          setGroups([])
+          setGroups((prevGroups) => prevGroups.length === 0 ? prevGroups : [])
         }
       } catch (error) {
         console.error("Error fetching groups:", error)
-        setGroups([])
+        // Only update if groups is not already empty to prevent unnecessary re-renders
+        setGroups((prevGroups) => prevGroups.length === 0 ? prevGroups : [])
         // Don't show error toast, just silently fail
       } finally {
         setLoadingGroups(false)
       }
     }
-    fetchGroups()
+    
+    // Only fetch if orgId exists and is valid
+    if (orgId) {
+      fetchGroups()
+    } else {
+      // If no orgId, ensure groups is empty (but don't update if already empty)
+      setGroups((prevGroups) => prevGroups.length === 0 ? prevGroups : [])
+    }
   }, [orgId])
 
-  const handleFileSelect = async (selectedFile: File, sheetOverride?: string) => {
+  const handleFileSelect = useCallback(async (selectedFile: File, sheetOverride?: string) => {
     if (!selectedFile.name.match(/\.(xlsx|xls|csv)$/i)) {
       toast.error("Please upload an Excel or CSV file (.xlsx, .xls, or .csv)")
       return
@@ -221,7 +242,10 @@ export default function MembersImportSimplePage() {
       setPreview(data.preview || [])
       setTotalRows(data.totalRows || 0)
       setSheetNames(data.sheetNames || [])
-      setSheetName(data.sheetName || data.sheetNames?.[0] || "")
+      // Only update sheetName if no sheetOverride was provided (to avoid loops)
+      if (!sheetOverride) {
+        setSheetName(data.sheetName || data.sheetNames?.[0] || "")
+      }
 
       // Show success message with auto-detect info
       if (data.autoDetected) {
@@ -371,7 +395,31 @@ export default function MembersImportSimplePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [headerRow, headerRowCount]) // Dependencies for handleFileSelect
+
+  // Handle sheet name changes separately to avoid infinite loops
+  useEffect(() => {
+    // Skip if no file, already processing, or sheetName hasn't actually changed
+    if (!file || isProcessingSheetChangeRef.current || sheetName === previousSheetNameRef.current) {
+      return
+    }
+
+    // Skip if this is the initial load (when sheetName is set from API response)
+    if (!previousSheetNameRef.current && sheetName) {
+      previousSheetNameRef.current = sheetName
+      return
+    }
+
+    // Only reload if sheetName actually changed by user
+    if (sheetName && sheetName !== previousSheetNameRef.current) {
+      isProcessingSheetChangeRef.current = true
+      previousSheetNameRef.current = sheetName
+      
+      handleFileSelect(file, sheetName).finally(() => {
+        isProcessingSheetChangeRef.current = false
+      })
+    }
+  }, [sheetName, file, handleFileSelect]) // Include handleFileSelect in dependencies
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault()
@@ -729,12 +777,15 @@ export default function MembersImportSimplePage() {
                           <Select
                             value={sheetName || sheetNames[0] || ""}
                             onValueChange={(value) => {
-                              setSheetName(value)
-                              setHasTested(false) // Reset test status ketika sheet berubah
-                              setFingerPagePreview(null) // Reset preview ketika sheet berubah
-                              if (file) handleFileSelect(file, value)
+                              // Only update if value actually changed
+                              if (value !== sheetName) {
+                                setSheetName(value)
+                                setHasTested(false) // Reset test status ketika sheet berubah
+                                setFingerPagePreview(null) // Reset preview ketika sheet berubah
+                                // Don't call handleFileSelect here - let useEffect handle it
+                              }
                             }}
-                            disabled={!sheetNames.length || loading}
+                            disabled={!sheetNames.length || loading || isProcessingSheetChangeRef.current}
                           >
                             <SelectTrigger id="sheet" className="w-full">
                               <SelectValue placeholder="Pilih sheet" />
@@ -754,28 +805,36 @@ export default function MembersImportSimplePage() {
                         Pilih Group (Opsional)
                       </Label>
                       <Select
+                        key={`group-select-${groups.length}-${selectedGroupId || 'none'}`}
                         value={selectedGroupId || "none"}
-                        onValueChange={(value) => setSelectedGroupId(value === "none" ? "" : value)}
+                        onValueChange={(value) => {
+                          // Prevent infinite loops by checking if value actually changed
+                          const newValue = value === "none" ? "" : value
+                          // Only update if value actually changed and not already processing
+                          if (newValue !== selectedGroupId) {
+                            setSelectedGroupId(newValue)
+                          }
+                        }}
                         disabled={loadingGroups}
                       >
                         <SelectTrigger id="group-select" className="w-full">
                           <SelectValue placeholder={loadingGroups ? "Loading groups..." : "Pilih group untuk semua member"} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">-- Tidak Ada Group --</SelectItem>
-                              {groups.length > 0 ? (
-                                groups.map((group) => (
-                            <SelectItem key={group.id} value={group.id}>
-                              {group.name}
+                          {groups.length > 0 ? (
+                            <>
+                              <SelectItem value="none">-- Tidak Ada Group --</SelectItem>
+                              {groups.map((group) => (
+                                <SelectItem key={group.id} value={String(group.id)}>
+                                  {group.name}
+                                </SelectItem>
+                              ))}
+                            </>
+                          ) : (
+                            <SelectItem value="none" disabled={loadingGroups}>
+                              {loadingGroups ? "Loading groups..." : "Tidak ada group tersedia"}
                             </SelectItem>
-                                ))
-                              ) : (
-                                !loadingGroups && (
-                                  <SelectItem value="none" disabled>
-                                    Tidak ada group tersedia
-                                  </SelectItem>
-                                )
-                              )}
+                          )}
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
