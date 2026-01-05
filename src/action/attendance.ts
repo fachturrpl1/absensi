@@ -121,7 +121,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
         user_id,
         organization_id,
         department_id,
-        user_profiles!inner (
+        user_profiles!inner(
           first_name,
           last_name,
           display_name,
@@ -134,7 +134,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
           timezone,
           time_format
         ),
-        departments (
+        departments!organization_members_department_id_fkey (
           id,
           name
         )
@@ -161,17 +161,34 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
   //   query = query.eq("organization_members.department_id", department);
   // }
 
-  if (search) {
-    // Search by member name - filter manually after fetch
-    // Supabase doesn't support nested OR queries with ilike directly
-    attendanceLogger.info(`🔍 Search query: ${search}`);
+  if (search && search.trim() !== '') {
+    const term = search.trim();
+    const pattern = `%${term}%`;
+    attendanceLogger.info(`🔍 Applying server-side search filter: ${term}`);
+    // Scope OR to user_profiles only to avoid PostgREST logic tree parse issues
+    // This covers display_name/first_name/last_name/email
+    query = query.or(
+      [
+        `display_name.ilike.${pattern}`,
+        `first_name.ilike.${pattern}`,
+        `last_name.ilike.${pattern}`,
+        `email.ilike.${pattern}`,
+      ].join(','),
+      { foreignTable: 'organization_members.user_profiles' }
+    );
+    // Note: If department search is needed later, add a separate UI filter
+    // and apply with eq on department_id to keep query parsable.
   }
 
-  // Apply pagination
+  // Apply pagination and deterministic ordering (newest first)
   const from = (page - 1) * limit;
   const to = from + limit - 1;
   
-  query = query.range(from, to).order("attendance_date", { ascending: false });
+  query = query
+    .order("attendance_date", { ascending: false })
+    .order("actual_check_in", { ascending: false, nullsFirst: true })
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   const { data, error, count } = await query;
 
@@ -216,6 +233,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     return {
       id: item.id,
       member: {
+        id: item.organization_member_id,
         name: effectiveName || `Member #${item.organization_member_id}`,
         avatar: profile?.profile_photo_url,
         position: '', // Position not fetched in query above, add if needed

@@ -6,7 +6,6 @@ import {
   Sun,
   Moon,
   Monitor,
-  Plus,
   UserPlus,
   Clock,
   MapPin,
@@ -26,7 +25,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
-import { SearchDialog } from './search-dialog';
 import { OrgBreadcrumb } from './org-breadcrumb';
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown';
 
@@ -85,16 +83,9 @@ export function NavbarNew() {
         {showActions && (
           <>
             {/* Search */}
-            <SearchDialog />
             
             {/* Quick Actions */}
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden md:inline">New</span>
-                </Button>
-              </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />

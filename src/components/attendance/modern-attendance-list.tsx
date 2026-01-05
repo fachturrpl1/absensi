@@ -11,15 +11,13 @@ import {
   XCircle,
   AlertCircle,
   Timer,
-  Eye,
   Edit,
   Trash2,
-  MoreVertical,
-  Mail,
   Grid3x3,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal,
+  ChevronsLeft,
+  ChevronsRight,
   RotateCcw,
   Plus,
 } from 'lucide-react';
@@ -35,14 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
@@ -119,7 +109,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [totalItems, setTotalItems] = useState(0);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingRecords, setEditingRecords] = useState<any[]>([]);
@@ -127,6 +117,43 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
   const [realtimeActive, setRealtimeActive] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const cacheKeyBase = React.useMemo(() => {
+    const orgId = selectedOrgId || orgStore.organizationId || 'no-org';
+    const fromStr = dateRange.from.toISOString().split('T')[0];
+    const toStr = dateRange.to.toISOString().split('T')[0];
+    const status = statusFilter || 'all';
+    const dept = departmentFilter || 'all';
+    const q = searchQuery || '';
+    return `attendance:list:${orgId}:p=${currentPage}:l=${itemsPerPage}:from=${fromStr}:to=${toStr}:status=${status}:dept=${dept}:q=${q}`;
+  }, [selectedOrgId, orgStore.organizationId, currentPage, itemsPerPage, dateRange.from, dateRange.to, statusFilter, departmentFilter, searchQuery]);
+
+  // Hydrate loading state from localStorage for current key
+  useEffect(() => {
+    if (!isMounted) return;
+    try {
+      const raw = localStorage.getItem(`${cacheKeyBase}:loading`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { loading?: boolean };
+        if (typeof parsed.loading === 'boolean') {
+          setLoading(parsed.loading);
+        }
+      }
+    } catch {}
+  }, [cacheKeyBase, isMounted]);
+
+  // Persist loading state on change
+  useEffect(() => {
+    if (!isMounted) return;
+    try {
+      localStorage.setItem(`${cacheKeyBase}:loading`, JSON.stringify({ loading }));
+    } catch {}
+  }, [loading, cacheKeyBase, isMounted]);
 
   // Edit form schema
   const editFormSchema = z.object({
@@ -215,6 +242,16 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     setEditingRecords(recordsToEdit);
     editForm.reset({
       status: recordsToEdit[0]?.status || 'present',
+      remarks: '',
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSingle = (rec: any) => {
+    setEditingRecords([rec]);
+    setSelectedRecords([rec.id]);
+    editForm.reset({
+      status: rec?.status || 'present',
       remarks: '',
     });
     setEditDialogOpen(true);
@@ -436,45 +473,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   // Pagination Logic
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  
-  const getPageNumbers = () => {
-    const pages: (number | string)[] = [];
-    
-    if (totalPages <= 7) {
-      // Show all pages if total pages <= 7
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      // Always show first page
-      pages.push(1);
-      
-      if (currentPage <= 4) {
-        // Show: 1 2 3 4 5 ... n
-        for (let i = 2; i <= 5; i++) {
-          pages.push(i);
-        }
-        pages.push('ellipsis');
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 3) {
-        // Show: 1 ... n-4 n-3 n-2 n-1 n
-        pages.push('ellipsis');
-        for (let i = totalPages - 4; i <= totalPages; i++) {
-          pages.push(i);
-        }
-      } else {
-        // Show: 1 ... n-1 n n+1 ... last
-        pages.push('ellipsis');
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
-          pages.push(i);
-        }
-        pages.push('ellipsis');
-        pages.push(totalPages);
-      }
-    }
-    
-    return pages;
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -517,98 +515,99 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       {/* Filters & Actions */}
       <Card className="border border-gray-200 shadow-sm">
         <CardContent className="p-4 md:p-6">
-          <div className="flex flex-col gap-4">
-            {/* Search Bar with Icon Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <Input
-                  placeholder="Search by name or department..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  className="pl-10 border-gray-300"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => {
-                    // Refresh data
-                    fetchData();
-                  }}
-                  title="Refresh"
-                  className="border-gray-300"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </Button>
-                <Button 
-                  variant={viewMode === 'grid' ? 'default' : 'outline'}
-                  size="icon"
-                  onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
-                  title={viewMode === 'list' ? 'Switch to grid view' : 'Switch to list view'}
-                  className={viewMode === 'grid' ? '' : 'border-gray-300'}
-                >
-                  <Grid3x3 className="w-4 h-4" />
-                </Button>
-              </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Search */}
+            <div className="flex-1 min-w-[260px] relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                placeholder="Search by name or department..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-10 border-gray-300"
+              />
             </div>
 
-            {/* Filters Row */}
-            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center sm:justify-between sm:flex-nowrap">
-              <div className="flex flex-col sm:flex-row gap-3 flex-wrap items-start sm:items-center flex-1 min-w-0">
-                {/* Date Filter */}
-                <div className="w-full sm:w-auto">
-                  <DateFilterBar 
-                    dateRange={dateRange} 
-                    onDateRangeChange={setDateRange}
-                  />
-                </div>
+            {/* Refresh */}
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => {
+                fetchData();
+              }}
+              title="Refresh"
+              className="border-gray-300 shrink-0"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </Button>
 
-                {/* Status Filter */}
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Status:</span>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full sm:w-40 border-gray-300">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="present">Present</SelectItem>
-                      <SelectItem value="late">Late</SelectItem>
-                      <SelectItem value="absent">Absent</SelectItem>
-                      <SelectItem value="leave">On Leave</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            {/* View toggle */}
+            <Button 
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+              title={viewMode === 'list' ? 'Switch to grid view' : 'Switch to list view'}
+              className={viewMode === 'grid' ? 'shrink-0' : 'border-gray-300 shrink-0'}
+            >
+              <Grid3x3 className="w-4 h-4" />
+            </Button>
 
-                {/* Department Filter */}
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Groups:</span>
-                  <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                    <SelectTrigger className="w-full sm:w-[180px] border-gray-300">
-                      <SelectValue placeholder="Department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Groups</SelectItem>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept} value={dept}>
-                          {dept}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Manual Entry Button */}
-              <Link href="/attendance/add" className="w-full sm:w-auto shrink-0">
-                <Button className="w-full sm:w-auto bg-black text-white hover:bg-black/90 whitespace-nowrap">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Manual Entry
-                </Button>
-              </Link>
+            {/* Date Filter */}
+            <div className="shrink-0">
+              <DateFilterBar 
+                dateRange={dateRange} 
+                onDateRangeChange={setDateRange}
+              />
             </div>
+
+            {/* Status Filter */}
+            <div className="flex items-center gap-2 shrink-0">
+              {isMounted ? (
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-40 border-gray-300">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="present">Present</SelectItem>
+                    <SelectItem value="late">Late</SelectItem>
+                    <SelectItem value="absent">Absent</SelectItem>
+                    <SelectItem value="leave">On Leave</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="w-40 h-9 border border-gray-300 rounded bg-muted/50" aria-hidden />
+              )}
+            </div>
+
+            {/* Department Filter */}
+            <div className="flex items-center gap-2 shrink-0">
+              {isMounted ? (
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                  <SelectTrigger className="w-[180px] border-gray-300">
+                    <SelectValue placeholder="Department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Groups</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="w-[180px] h-9 border border-gray-300 rounded bg-muted/50" aria-hidden />
+              )}
+            </div>
+
+            {/* Manual Entry Button */}
+            <Link href="/attendance/add" className="shrink-0">
+              <Button className="bg-black text-white hover:bg-black/90 whitespace-nowrap">
+                <Plus className="mr-2 h-4 w-4" />
+                Manual Entry
+              </Button>
+            </Link>
+          </div>
 
             {/* Selected Actions */}
             <AnimatePresence>
@@ -623,10 +622,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     {selectedRecords.length} selected
                   </span>
                   <Separator orientation="vertical" className="h-6" />
-                  <Button variant="ghost" size="sm">
+                  {/* <Button variant="ghost" size="sm">
                     <Mail className="mr-2 h-4 w-4" />
                     Send Email
-                  </Button>
+                  </Button> */}
                   <Button 
                     variant="ghost" 
                     size="sm"
@@ -655,7 +654,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
         </CardContent>
       </Card>
 
@@ -717,36 +715,34 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium truncate">{record.member.name}</p>
+                        <p className="font-medium truncate">
+                          <Link href={`/members/${record.member.id ?? ''}`} className="hover:underline">
+                            {record.member.name}
+                          </Link>
+                        </p>
                         <p className="text-sm text-muted-foreground truncate">{record.member.department}</p>
                       </div>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="text-destructive"
-                          onClick={() => handleDeleteClick(record.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title="Edit"
+                        onClick={() => handleEditSingle(record)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        title="Delete"
+                        onClick={() => handleDeleteClick(record.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 text-sm">
@@ -873,7 +869,11 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium">{record.member.name}</p>
+                            <p className="font-medium">
+                              <Link href={`/members/${record.member.id ?? ''}`} className="hover:underline">
+                                {record.member.name}
+                              </Link>
+                            </p>
                             <p className="text-sm text-muted-foreground">{record.member.department}</p>
                           </div>
                         </div>
@@ -911,32 +911,25 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                         />
                       </td>
                       <td className="p-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-destructive"
-                              onClick={() => handleDeleteClick(record.id)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Edit"
+                            onClick={() => handleEditSingle(record)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Delete"
+                            onClick={() => handleDeleteClick(record.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                       );
@@ -946,60 +939,94 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
               </table>
             </div>
 
-            {/* Pagination */}
-            {!loading && totalItems > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t px-4 py-4">
-                <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
-                  Page {currentPage} of {totalPages} ({totalItems} total)
-                </div>
-                <div className="flex items-center gap-1">
-                  {/* Previous Button */}
+            {/* Pagination Footer (aligned with Members) */}
+            {!loading && (
+              <div className="flex items-center justify-between py-4 px-4 bg-muted/50 rounded-md border">
+                <div className="flex items-center gap-2">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      if (currentPage > 1) setCurrentPage(currentPage - 1);
-                    }}
+                    onClick={() => setCurrentPage(1)}
                     disabled={currentPage === 1}
-                    className="gap-1 px-3"
+                    className="h-8 w-8 p-0"
+                    title="First page"
                   >
-                    <ChevronLeft className="h-4 w-4" />
-                    Previous
+                    <ChevronsLeft className="h-4 w-4" />
                   </Button>
-                  
-                  {/* Page Numbers */}
-                  {getPageNumbers().map((page, index) => (
-                    <React.Fragment key={index}>
-                      {typeof page === 'number' ? (
-                        <Button
-                          variant={currentPage === page ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setCurrentPage(page)}
-                          className="w-9 h-9 p-0"
-                        >
-                          {page}
-                        </Button>
-                      ) : (
-                        <span className="flex h-9 w-9 items-center justify-center text-muted-foreground">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </span>
-                      )}
-                    </React.Fragment>
-                  ))}
-
-                  {/* Next Button */}
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                    }}
-                    disabled={currentPage === totalPages}
-                    className="gap-1 px-3"
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="h-8 w-8 p-0"
+                    title="Previous page"
                   >
-                    Next
+                    <ChevronLeft className="  h-4 w-4" />
+                  </Button>
+
+                  <span className="text-sm text-muted-foreground">Page</span>
+
+                  <input
+                    type="number"
+                    min={1}
+                    max={Math.max(1, totalPages)}
+                    value={currentPage}
+                    onChange={(e) => {
+                      const page = e.target.value ? Number(e.target.value) : 1;
+                      const safe = Math.max(1, Math.min(page, Math.max(1, totalPages)));
+                      setCurrentPage(safe);
+                    }}
+                    className="w-12 h-8 px-2 border rounded text-sm text-center bg-background"
+                    disabled={totalItems === 0}
+                  />
+
+                  <span className="text-sm text-muted-foreground">/ {Math.max(1, totalPages)}</span>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.min(totalPages || 1, currentPage + 1))}
+                    disabled={currentPage >= (totalPages || 1)}
+                    className="h-8 w-8 p-0"
+                    title="Next page"
+                  >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.max(1, totalPages))}
+                    disabled={currentPage >= (totalPages || 1)}
+                    className="h-8 w-8 p-0"
+                    title="Last page"
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-muted-foreground">
+                    {totalItems > 0
+                      ? (
+                        <>Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} total records</>
+                        )
+                      : (<>Showing 0 to 0 of 0 total records</>)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        const size = parseInt(e.target.value, 10) || 10;
+                        setItemsPerPage(size);
+                        setCurrentPage(1);
+                      }}
+                      className="px-2 py-1 border rounded text-sm bg-background"
+                    >
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             )}
@@ -1063,7 +1090,11 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-semibold">{record.member.name}</p>
+                        <p className="font-semibold">
+                          <Link href={`/members/${record.member.id ?? ''}`} className="hover:underline">
+                            {record.member.name}
+                          </Link>
+                        </p>
                         <p className="text-sm text-muted-foreground">{record.member.department}</p>
                       </div>
                     </div>
