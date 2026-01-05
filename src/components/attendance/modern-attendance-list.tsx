@@ -264,17 +264,21 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         })
       ]);
 
-      if (listResult.success) {
-        const data = listResult.data || [];
+      const result = (listResult && typeof listResult === 'object' && 'success' in listResult)
+        ? listResult as { success: boolean; data?: any[]; meta?: { total?: number }; message?: string }
+        : { success: false, data: [], meta: { total: 0 }, message: 'Invalid response from server' };
+
+      if (result.success) {
+        const data = result.data || [];
         console.log('📊 Attendance data received:', {
           count: data.length,
-          total: listResult.meta?.total,
+          total: result.meta?.total,
           firstItem: data[0],
           allData: data
         });
         
         setAttendanceData(data);
-        setTotalItems(listResult.meta?.total || 0);
+        setTotalItems(result.meta?.total || 0);
         
         // Set timezone from first record if available (fallback to UTC)
         if (data.length > 0) {
@@ -292,10 +296,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           }
         }
       } else {
-        console.error('Failed to load attendance:', listResult);
+        console.error('Failed to load attendance:', result?.message ?? result);
         setAttendanceData([]);
         setTotalItems(0);
-        toast.error(listResult.message || 'Failed to load attendance data');
+        toast.error(result.message || 'Failed to load attendance data');
       }
     } catch (error) {
       console.error('Fetch error:', error);

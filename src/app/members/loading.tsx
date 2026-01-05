@@ -59,3 +59,12 @@
 //     </div>
 //   )
 // }
+
+export default function Loading() {
+  return (
+    <div className="p-6">
+      <div className="h-4 w-40 bg-muted/50 rounded animate-pulse mb-4" />
+      <div className="h-10 w-full bg-muted/50 rounded animate-pulse" />
+    </div>
+  );
+}

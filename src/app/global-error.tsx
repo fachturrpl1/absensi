@@ -41,8 +41,10 @@ export default function GlobalError({
       
       // Clean up cache after 10 entries to prevent memory leak
       if (globalErrorLogCache.size > 10) {
-        const firstEntry = globalErrorLogCache.values().next().value;
-        globalErrorLogCache.delete(firstEntry);
+        const firstEntry = globalErrorLogCache.values().next().value as string | undefined;
+        if (firstEntry !== undefined) {
+          globalErrorLogCache.delete(firstEntry);
+        }
       }
     } catch {
       // Silently fail to prevent any loops

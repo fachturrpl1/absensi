@@ -50,7 +50,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
     attendanceLogger.error("❌ User not authenticated");
-    return { success: false, data: [] };
+    return { success: false, data: [], message: "User not authenticated" };
   }
 
   // Get user's organization membership
@@ -71,7 +71,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
 
   if (memberError) {
     attendanceLogger.error("❌ Member query error:", memberError);
-    return { success: false, data: [], message: memberError.message };
+    return { success: false, data: [], message: memberError.message || "Member query error" };
   }
 
   if (!userMember || !userMembers || userMembers.length === 0) {
@@ -198,6 +198,8 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     const fullName = `${firstName} ${lastName}`.trim();
     const effectiveName = displayName || fullName || email;
     const departmentName = item.organization_members?.departments?.name;
+    const checkInDevice = (item as any)?.check_in_device as { name?: string; location_name?: string } | undefined;
+    const checkOutDevice = (item as any)?.check_out_device as { name?: string; location_name?: string } | undefined;
     
     // Debug: Log items dengan nama kosong atau user_profiles null
     if (!effectiveName || !profile) {
@@ -228,8 +230,8 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
       status: item.status,
       checkInDeviceId: item.check_in_device_id || null,
       checkOutDeviceId: item.check_out_device_id || null,
-      checkInLocationName: null, // Will be fetched separately if needed
-      checkOutLocationName: null, // Will be fetched separately if needed
+      checkInLocationName: checkInDevice?.location_name || checkInDevice?.name || null,
+      checkOutLocationName: checkOutDevice?.location_name || checkOutDevice?.name || null,
       notes: item.remarks || '',
       timezone: item.organization_members?.organizations?.timezone || "Asia/Jakarta",
       time_format: item.organization_members?.organizations?.time_format || "24h",
