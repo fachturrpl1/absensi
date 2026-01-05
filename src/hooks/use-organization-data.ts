@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from './use-session'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useOrgStore } from '@/store/org-store'
 
 interface OrganizationData {
@@ -19,11 +19,6 @@ interface OrganizationData {
 export function useOrganizationData() {
   const { data: user } = useSession()
   const { organizationId: storeOrgId } = useOrgStore()
-  const [isHydrated, setIsHydrated] = useState(false)
-
-  useEffect(() => {
-    setIsHydrated(true)
-  }, [])
 
   return useQuery({
     // Ikat ke user + org aktif di store supaya ikut berubah
@@ -58,7 +53,7 @@ export function useOrganizationData() {
         memberIsActive: data.memberIsActive,
       }
     },
-    enabled: isHydrated && !!user?.id && !!storeOrgId,
+    enabled: !!user?.id,
     staleTime: 1000 * 60, // 1 minute - balance between fresh data and efficiency
     gcTime: 1000 * 60 * 5, // 5 minutes - reasonable cache duration
     retry: 1,

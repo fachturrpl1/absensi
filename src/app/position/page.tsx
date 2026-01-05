@@ -55,7 +55,6 @@ import {
     EmptyMedia,
 } from "@/components/ui/empty"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
     Select,
     SelectContent,
@@ -79,20 +78,6 @@ const positionSchema = z.object({
 })
 
 type PositionsForm = z.infer<typeof positionSchema>
-
-const PositionPageSkeleton = () => (
-  <div className="p-4 md:p-6 space-y-4">
-    <div className="flex flex-col sm:flex-row gap-2 items-center justify-between">
-      <Skeleton className="h-10 w-full sm:w-64" />
-      <div className="flex gap-2 w-full sm:w-auto">
-        <Skeleton className="h-10 w-full sm:w-40" />
-        <Skeleton className="h-10 w-10" />
-        <Skeleton className="h-10 w-24" />
-      </div>
-    </div>
-    <TableSkeleton rows={8} columns={5} />
-  </div>
-);
 
 export default function PositionsPage() {
     const queryClient = useQueryClient()
@@ -295,9 +280,6 @@ export default function PositionsPage() {
         }
     }
 
-    if (!isHydrated || (loading && positions.length === 0)) {
-        return <PositionPageSkeleton />
-    }
 
     return (
         <div className="flex flex-1 flex-col gap-4 w-full">

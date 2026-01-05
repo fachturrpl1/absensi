@@ -1,10 +1,6 @@
 // import { Skeleton } from "@/components/ui/skeleton"
 // import { Card } from "@/components/ui/card"
 
-export default function MembersLoading() {
-  return null
-}
-
 // export default function MembersLoading() {
 //   return (
 //     <div className="flex flex-1 flex-col gap-4">
@@ -63,3 +59,12 @@ export default function MembersLoading() {
 //     </div>
 //   )
 // }
+
+export default function Loading() {
+  return (
+    <div className="p-6">
+      <div className="h-4 w-40 bg-muted/50 rounded animate-pulse mb-4" />
+      <div className="h-10 w-full bg-muted/50 rounded animate-pulse" />
+    </div>
+  );
+}
