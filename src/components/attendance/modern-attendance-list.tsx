@@ -136,16 +136,15 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     return `attendance:list:${orgId}:p=${currentPage}:l=${itemsPerPage}:from=${fromStr}:to=${toStr}:status=${status}:dept=${dept}:q=${q}`;
   }, [selectedOrgId, orgStore.organizationId, currentPage, itemsPerPage, dateRange.from, dateRange.to, statusFilter, departmentFilter, searchQuery]);
 
-  // Hydrate loading state from localStorage for current key
+  // Hydrate loading state from localStorage for current key (ignore stale >15s)
   useEffect(() => {
     if (!isMounted) return;
     try {
       const raw = localStorage.getItem(`${cacheKeyBase}:loading`);
       if (raw) {
-        const parsed = JSON.parse(raw) as { loading?: boolean };
-        if (typeof parsed.loading === 'boolean') {
-          setLoading(parsed.loading);
-        }
+        const parsed = JSON.parse(raw) as { loading?: boolean; ts?: number };
+        const tooOld = parsed.ts ? (Date.now() - parsed.ts > 15_000) : true;
+        if (typeof parsed.loading === 'boolean' && !tooOld) setLoading(parsed.loading);
       }
     } catch {}
   }, [cacheKeyBase, isMounted]);
@@ -154,7 +153,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   useEffect(() => {
     if (!isMounted) return;
     try {
-      localStorage.setItem(`${cacheKeyBase}:loading`, JSON.stringify({ loading }));
+      localStorage.setItem(`${cacheKeyBase}:loading`, JSON.stringify({ loading, ts: Date.now() }));
     } catch {}
   }, [loading, cacheKeyBase, isMounted]);
 
@@ -171,6 +170,8 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             setAttendanceData(parsed.data);
             setTotalItems(parsed.total || 0);
             if (parsed.tz) setUserTimezone(parsed.tz);
+            // If we successfully hydrated data, ensure loading UI doesn't block
+            setLoading(false);
           }
         }
       }
