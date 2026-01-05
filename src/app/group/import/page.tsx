@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 
 // Mapping kolom Excel ke kolom tabel group
 const DATABASE_FIELDS = [
@@ -28,9 +27,10 @@ type ColumnMapping = {
 
 const WIZARD_STEPS: WizardStep[] = [
   { number: 1, title: "Upload File", description: "Pilih file Excel / CSV" },
-  { number: 2, title: "Mapping & Test", description: "Mapping kolom dan uji data" },
-  { number: 3, title: "Import", description: "Proses import ke database" },
-  { number: 4, title: "Result", description: "Lihat ringkasan hasil import" },
+  { number: 2, title: "Mapping", description: "Mapping kolom Excel ke field database" },
+  { number: 3, title: "Test", description: "Uji data sebelum import" },
+  { number: 4, title: "Import", description: "Proses import ke database" },
+  { number: 5, title: "Result", description: "Lihat ringkasan hasil import" },
 ]
 
 export default function GroupImportPage() {
@@ -46,11 +46,10 @@ export default function GroupImportPage() {
   const [totalRows, setTotalRows] = useState(0)
   const [mapping, setMapping] = useState<ColumnMapping>({})
   const [processing, setProcessing] = useState(false)
-  const [headerRow, setHeaderRow] = useState<number>(1)
+  const [headerRow, setHeaderRow] = useState<number>(0) // 0 = auto-detect
   const [headerRowCount, setHeaderRowCount] = useState<number>(1)
   const [sheetNames, setSheetNames] = useState<string[]>([])
   const [sheetName, setSheetName] = useState<string>("")
-  const [trackHistory, setTrackHistory] = useState(false)
   const [allowMatchingWithSubfields, setAllowMatchingWithSubfields] = useState(true)
   const [testSummary, setTestSummary] = useState<{
     success: number
@@ -89,7 +88,11 @@ export default function GroupImportPage() {
     try {
       const formData = new FormData()
       formData.append("file", selectedFile)
-      formData.append("headerRow", String(headerRow || 1))
+      // If sheet is being changed, reset headerRow to 0 for auto-detect
+      // Otherwise use current headerRow (which might be from previous auto-detect)
+      const shouldAutoDetect = sheetOverride !== undefined && sheetOverride !== sheetName
+      const headerRowToUse = shouldAutoDetect ? 0 : (headerRow || 0)
+      formData.append("headerRow", String(headerRowToUse))
       formData.append("headerRowCount", String(headerRowCount || 1))
       const chosenSheet = sheetOverride || sheetName
       if (chosenSheet) {
@@ -109,11 +112,32 @@ export default function GroupImportPage() {
         return
       }
 
+      // Update headerRow and headerRowCount from response (in case auto-detect was used)
+      if (data.headerRow) {
+        setHeaderRow(data.headerRow)
+      }
+      if (data.headerRowCount) {
+        setHeaderRowCount(data.headerRowCount)
+      }
+
       setExcelHeaders(data.headers || [])
       setPreview(data.preview || [])
       setTotalRows(data.totalRows || 0)
       setSheetNames(data.sheetNames || [])
-      setSheetName(data.sheetName || data.sheetNames?.[0] || "")
+      // Only update sheetName if it's not being overridden (to preserve user selection)
+      if (!sheetOverride) {
+        setSheetName(data.sheetName || data.sheetNames?.[0] || "")
+      } else {
+        // Keep the selected sheet name
+        setSheetName(sheetOverride)
+      }
+
+      // Show success message with auto-detect info
+      if (data.autoDetected) {
+        toast.success(`Header row otomatis terdeteksi di baris ${data.headerRow}. File berhasil dimuat!`)
+      } else {
+        toast.success(`Excel file loaded. Found ${data.totalRows || 0} rows and ${data.headers.length} columns`)
+      }
 
       //komentar
       // Auto-map kolom umum ke field group
@@ -138,7 +162,6 @@ export default function GroupImportPage() {
       })
 
       setMapping(autoMapping)
-      toast.success(`File loaded. Found ${data.totalRows || 0} rows and ${data.headers.length} columns`)
     } catch (error) {
       console.error("Error reading Excel:", error)
       toast.error("Failed to read Excel file")
@@ -191,9 +214,9 @@ export default function GroupImportPage() {
       formData.append("file", file)
       formData.append("mapping", JSON.stringify(mapping))
       formData.append("mode", "test")
-      formData.append("trackHistory", String(trackHistory))
       formData.append("allowMatchingWithSubfields", String(allowMatchingWithSubfields))
-      formData.append("headerRow", String(headerRow || 1))
+      // Use detected headerRow (should be > 0 after auto-detect)
+      formData.append("headerRow", String(headerRow > 0 ? headerRow : 1))
       formData.append("headerRowCount", String(headerRowCount || 1))
       if (sheetName) formData.append("sheetName", sheetName)
 
@@ -235,9 +258,9 @@ export default function GroupImportPage() {
       formData.append("file", file)
       formData.append("mapping", JSON.stringify(mapping))
       formData.append("mode", "import")
-      formData.append("trackHistory", String(trackHistory))
       formData.append("allowMatchingWithSubfields", String(allowMatchingWithSubfields))
-      formData.append("headerRow", String(headerRow || 1))
+      // Use detected headerRow (should be > 0 after auto-detect)
+      formData.append("headerRow", String(headerRow > 0 ? headerRow : 1))
       formData.append("headerRowCount", String(headerRowCount || 1))
       if (sheetName) formData.append("sheetName", sheetName)
 
@@ -310,14 +333,17 @@ export default function GroupImportPage() {
       setCurrentStep(2)
     } else if (currentStep === 2) {
       if (!validateMapping()) return
+      setCurrentStep(3) // Go to Test step
+    } else if (currentStep === 3) {
+      // Test step - user must click Test button, then can proceed
       if (!hasTested) {
         toast.error("Silakan lakukan test terlebih dahulu")
         return
       }
-      setCurrentStep(3)
-    } else if (currentStep === 3) {
-      // tombol Import yang menjalankan proses
+      setCurrentStep(4) // Go to Import step
     } else if (currentStep === 4) {
+      // tombol Import yang menjalankan proses
+    } else if (currentStep === 5) {
       router.push("/group")
     }
   }
@@ -330,9 +356,10 @@ export default function GroupImportPage() {
 
   const canGoNext = () => {
     if (currentStep === 1) return !!file
-    if (currentStep === 2) return validateMapping() && hasTested // Harus sudah test dulu
-    if (currentStep === 3) return false
-    if (currentStep === 4) return true
+    if (currentStep === 2) return validateMapping() // Mapping step - just need valid mapping
+    if (currentStep === 3) return hasTested // Test step - must have tested
+    if (currentStep === 4) return false // Import step - button handles it
+    if (currentStep === 5) return true // Result step
     return false
   }
 
@@ -446,7 +473,7 @@ export default function GroupImportPage() {
             </div>
           )}
 
-          {/* Step 2: Mapping & Test */}
+          {/* Step 2: Mapping */}
           {currentStep === 2 && (
             <div className="flex relative overflow-hidden">
               {/* Left panel */}
@@ -471,6 +498,8 @@ export default function GroupImportPage() {
                             onValueChange={(value) => {
                               setSheetName(value)
                               setHasTested(false) // Reset test status ketika sheet berubah
+                              // Reset headerRow to 0 for auto-detect when sheet changes
+                              setHeaderRow(0)
                               if (file) handleFileSelect(file, value)
                             }}
                             disabled={!sheetNames.length || loading}
@@ -487,73 +516,17 @@ export default function GroupImportPage() {
                             </SelectContent>
                           </Select>
                         </div>
-
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="header-row"
-                            className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
-                          >
-                            Header rows
-                          </Label>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Input
-                              id="header-row"
-                              type="number"
-                              min={1}
-                              value={headerRow}
-                              onChange={(e) => setHeaderRow(Math.max(1, Number(e.target.value) || 1))}
-                              className="w-16 h-9"
-                            />
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">mulai</span>
-                            <Input
-                              id="header-row-count"
-                              type="number"
-                              min={1}
-                              value={headerRowCount}
-                              onChange={(e) => setHeaderRowCount(Math.max(1, Number(e.target.value) || 1))}
-                              className="w-16 h-9"
-                            />
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">jumlah</span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setHasTested(false) // Reset test status ketika header row berubah
-                                file && handleFileSelect(file)
-                              }}
-                              disabled={!file || loading}
-                              className="h-9"
-                            >
-                              Gunakan
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">
-                            Contoh: jika judul kolom ada di baris 5-6, isi mulai=5 dan jumlah=2.
-                          </p>
-              </div>
-            </div>
+                      </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">No file selected</p>
-          )}
-        </div>
-      </div>
+                    )}
+                  </div>
+                </div>
 
                 <div className="space-y-4 pt-10 pb-6">
                   <h2 className="font-semibold text-lg">Advanced</h2>
 
                   <div className="space-y-3">
-                    <div className="flex items-start space-x-3">
-                      <Checkbox
-                        id="track-history"
-                        checked={trackHistory}
-                        onCheckedChange={(checked) => setTrackHistory(checked === true)}
-                        className="mt-0.5"
-                      />
-                      <Label htmlFor="track-history" className="text-sm cursor-pointer leading-relaxed">
-                        Track history during import
-                      </Label>
-    </div>
-
                     <div className="flex items-start space-x-3">
                       <Checkbox
                         id="allow-matching"
@@ -575,63 +548,6 @@ export default function GroupImportPage() {
                       Mapping kolom Excel ke field group. Minimal Name atau Code harus diisi.
                     </AlertDescription>
                   </Alert>
-
-                  <Button
-                    onClick={handleTest}
-                    disabled={!file || processing || (!mapping.name && !mapping.code)}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    {processing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Testing...
-                      </>
-                    ) : (
-                      "Test"
-                    )}
-                  </Button>
-
-                  {/* Test Results - hanya error yang failed */}
-                  {testSummary && testSummary.failed > 0 && (
-                    <div className="space-y-2">
-                      <Alert className="border-destructive/50 bg-destructive/5">
-                        <AlertCircle className="h-4 w-4 text-destructive" />
-                        <AlertDescription>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-4">
-                              <p className="text-sm font-medium text-destructive">
-                                Failed: <span className="font-bold">{testSummary.failed}</span>
-                              </p>
-                            </div>
-                            {testSummary.errors.length > 0 && (
-                              <div className="mt-2">
-                                <p className="text-xs font-medium text-destructive mb-1">Data yang tidak bisa di-import:</p>
-                                <div className="max-h-32 overflow-auto">
-                                  <ul className="text-xs list-disc list-inside space-y-1">
-                                    {testSummary.errors.slice(0, 5).map((error, idx) => {
-                                      const message =
-                                        typeof error === "string"
-                                          ? error
-                                          : typeof error === "object" && error !== null
-                                            ? (error as any).message || JSON.stringify(error)
-                                            : String(error)
-                                      return <li key={idx} className="text-destructive">{message}</li>
-                                    })}
-                                  </ul>
-                                </div>
-                                {testSummary.errors.length > 5 && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    ... dan {testSummary.errors.length - 5} error lainnya
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </AlertDescription>
-                      </Alert>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -723,8 +639,121 @@ export default function GroupImportPage() {
             </div>
           )}
 
-          {/* Step 3: Import */}
+          {/* Step 3: Test */}
           {currentStep === 3 && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Test Data</CardTitle>
+                  <CardDescription>
+                    Uji data sebelum melakukan import. Pastikan semua data valid.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        File: <span className="font-medium">{file?.name}</span>
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Total rows: <span className="font-medium">{totalRows}</span>
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleTest}
+                      disabled={!file || processing || (!mapping.name && !mapping.code)}
+                      variant="outline"
+                    >
+                      {processing ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Testing...
+                        </>
+                      ) : (
+                        "Test"
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Test Results */}
+                  {testSummary && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        {testSummary.success > 0 && (
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-5 w-5 text-green-600" />
+                            <p className="text-sm font-medium text-green-600">
+                              Success: <span className="font-bold">{testSummary.success}</span>
+                            </p>
+                          </div>
+                        )}
+                        {testSummary.failed > 0 && (
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5 text-destructive" />
+                            <p className="text-sm font-medium text-destructive">
+                              Failed: <span className="font-bold">{testSummary.failed}</span>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {testSummary.failed > 0 && (
+                        <Alert className="border-destructive/50 bg-destructive/5">
+                          <AlertCircle className="h-4 w-4 text-destructive" />
+                          <AlertDescription>
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-destructive mb-1">Data yang tidak bisa di-import:</p>
+                              <div className="max-h-64 overflow-auto">
+                                <ul className="text-xs list-disc list-inside space-y-1">
+                                  {testSummary.errors.slice(0, 10).map((error, idx) => {
+                                    const message =
+                                      typeof error === "string"
+                                        ? error
+                                        : typeof error === "object" && error !== null
+                                          ? (error as any).message || JSON.stringify(error)
+                                          : String(error)
+                                    return <li key={idx} className="text-destructive">{message}</li>
+                                  })}
+                                </ul>
+                              </div>
+                              {testSummary.errors.length > 10 && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  ... dan {testSummary.errors.length - 10} error lainnya
+                                </p>
+                              )}
+                            </div>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {testSummary.success > 0 && testSummary.failed === 0 && (
+                        <Alert className="border-green-500/50 bg-green-500/5">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <AlertDescription>
+                            <p className="text-sm font-medium text-green-600">
+                              Semua data valid! Anda dapat melanjutkan ke step Import.
+                            </p>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  )}
+
+                  {!testSummary && (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Klik tombol "Test" untuk memvalidasi data sebelum import.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Step 4: Import */}
+          {currentStep === 4 && (
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -789,8 +818,8 @@ export default function GroupImportPage() {
             </div>
           )}
 
-          {/* Step 4: Result */}
-          {currentStep === 4 && (
+          {/* Step 5: Result */}
+          {currentStep === 5 && (
             <div className="space-y-6">
               <Card>
                 <CardHeader>

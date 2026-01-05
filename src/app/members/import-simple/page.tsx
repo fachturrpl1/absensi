@@ -51,9 +51,10 @@ type ColumnMapping = {
 
 const WIZARD_STEPS: WizardStep[] = [
   { number: 1, title: "Upload File", description: "Pilih file Excel / CSV" },
-  { number: 2, title: "Mapping & Test", description: "Mapping kolom dan uji data" },
-  { number: 3, title: "Import", description: "Proses import ke database" },
-  { number: 4, title: "Result", description: "Lihat ringkasan hasil import" },
+  { number: 2, title: "Mapping", description: "Mapping kolom Excel ke field database" },
+  { number: 3, title: "Test", description: "Uji data sebelum import" },
+  { number: 4, title: "Import", description: "Proses import ke database" },
+  { number: 5, title: "Result", description: "Lihat ringkasan hasil import" },
 ]
 
 export default function MembersImportSimplePage() {
@@ -529,10 +530,26 @@ export default function MembersImportSimplePage() {
         body: formData,
       })
 
+      // Check if response is ok
+      if (!response.ok) {
+        const errorText = await response.text()
+        let errorMessage = "Import failed"
+        try {
+          const errorData = JSON.parse(errorText)
+          errorMessage = errorData.message || errorMessage
+        } catch {
+          errorMessage = errorText || `HTTP ${response.status}: ${response.statusText}`
+        }
+        toast.error(errorMessage)
+        console.error("Import API error:", errorMessage)
+        return
+      }
+
       const data = await response.json()
 
       if (!data.success) {
         toast.error(data.message || "Import failed")
+        console.error("Import failed:", data)
         return
       }
 
@@ -540,24 +557,31 @@ export default function MembersImportSimplePage() {
       setImportSummary(summary)
 
       // Bentuk hasil per baris dari preview + error summary
+      // Perlu menghitung row number dengan benar berdasarkan headerRow
+      const headerRowNum = headerRow > 0 ? headerRow : 1
+      const headerRowCountNum = headerRowCount || 1
+      const startDataRow = headerRowNum + headerRowCountNum
+      
       const results = preview.map((rowData, index) => {
-        const rowNumber = index + 2 // 1 baris header + index 1-based
+        // Row number = header row + header row count + index (1-based dari data rows)
+        const rowNumber = startDataRow + index
         const error = summary.errors.find((err: any) => err.row === rowNumber)
 
         return {
           row: rowNumber,
           data: rowData,
           status: error ? "failed" as const : "success" as const,
-          error: error?.message,
+          error: error?.message || (error ? "Unknown error" : undefined),
         }
       })
 
       setImportResults(results)
 
-      setCurrentStep(4)
+      setCurrentStep(5)
     } catch (error) {
       console.error("Error importing members:", error)
-      toast.error("Failed to import data")
+      const errorMessage = error instanceof Error ? error.message : "Unexpected error processing import"
+      toast.error(errorMessage)
     } finally {
       setProcessing(false)
     }
@@ -599,7 +623,9 @@ export default function MembersImportSimplePage() {
       setCurrentStep(2)
     } else if (currentStep === 2) {
       if (!validateMapping()) return
-      
+      setCurrentStep(3) // Go to Test step
+    } else if (currentStep === 3) {
+      // Test step - user must click Test button, then can proceed
       if (!hasTested) {
         toast.error("Silakan lakukan test terlebih dahulu")
         return
@@ -615,11 +641,11 @@ export default function MembersImportSimplePage() {
         setShowConfirmDialog(true)
       } else {
         // Jika semua lolos validasi dan tidak ada unmapped fields, langsung lanjut ke import
-        setCurrentStep(3)
+        setCurrentStep(4)
       }
-    } else if (currentStep === 3) {
-      // tombol Import yang menjalankan proses
     } else if (currentStep === 4) {
+      // tombol Import yang menjalankan proses
+    } else if (currentStep === 5) {
       router.push("/members")
     }
   }
@@ -627,7 +653,7 @@ export default function MembersImportSimplePage() {
   const handleConfirmImport = () => {
     setShowConfirmDialog(false)
     setUnmappedFields([])
-    setCurrentStep(3)
+    setCurrentStep(4)
   }
 
   const handlePrevious = () => {
@@ -638,9 +664,10 @@ export default function MembersImportSimplePage() {
 
   const canGoNext = () => {
     if (currentStep === 1) return !!file
-    if (currentStep === 2) return !!mapping.nik && !!mapping.nama && hasTested // Harus sudah test dulu
-    if (currentStep === 3) return false
-    if (currentStep === 4) return true
+    if (currentStep === 2) return !!mapping.nik && !!mapping.nama // Mapping step - just need valid mapping
+    if (currentStep === 3) return hasTested // Test step - must have tested
+    if (currentStep === 4) return false // Import step - button handles it
+    if (currentStep === 5) return true // Result step
     return false
   }
 
@@ -657,10 +684,10 @@ export default function MembersImportSimplePage() {
         <Wizard
           steps={WIZARD_STEPS}
           currentStep={currentStep}
-          onNext={currentStep === 3 ? undefined : handleNext}
+          onNext={currentStep === 4 ? undefined : handleNext}
           onPrevious={handlePrevious}
           canGoNext={canGoNext()}
-          showNavigation={currentStep !== 3}
+          showNavigation={currentStep !== 4}
         >
           {/* Step 1: Upload */}
           {currentStep === 1 && (
@@ -754,7 +781,7 @@ export default function MembersImportSimplePage() {
             </div>
           )}
 
-          {/* Step 2: Mapping & Test */}
+          {/* Step 2: Mapping */}
           {currentStep === 2 && (
             <div className="flex relative overflow-hidden">
               {/* Left panel */}
@@ -873,64 +900,12 @@ export default function MembersImportSimplePage() {
                 </div>
 
                 <div className="pt-6 border-t space-y-4">
-                  <Button
-                    onClick={handleTest}
-                    disabled={!file || processing || !mapping.nik || !mapping.nama}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    {processing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Testing...
-                      </>
-                    ) : (
-                      "Test"
-                    )}
-                  </Button>
-
-                  {/* Test Results - hanya error yang failed */}
-                  {testSummary && testSummary.failed > 0 && (
-                    <div className="space-y-2">
-                      <Alert className="border-destructive/50 bg-destructive/5">
-                        <AlertCircle className="h-4 w-4 text-destructive" />
-                        <AlertDescription>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-4">
-                              <p className="text-sm font-medium text-destructive">
-                                Failed: <span className="font-bold">{testSummary.failed}</span>
-                              </p>
-                            </div>
-                            {testSummary.errors.length > 0 && (
-                              <div className="mt-2">
-                                <p className="text-xs font-medium text-destructive mb-1">Data yang tidak bisa di-import:</p>
-                                <div className="max-h-32 overflow-auto">
-                                  <ul className="text-xs list-disc list-inside space-y-1">
-                                    {testSummary.errors.slice(0, 5).map((error, idx) => {
-                                      const row = typeof error === "object" && error !== null ? (error as any).row : null
-                                      const message =
-                                        typeof error === "string"
-                                          ? error
-                                          : typeof error === "object" && error !== null
-                                            ? (error as any).message || JSON.stringify(error)
-                                            : String(error)
-                                      const displayMessage = row ? `Baris ${row}: ${message}` : message
-                                      return <li key={idx} className="text-destructive">{displayMessage}</li>
-                                    })}
-                                  </ul>
-                                </div>
-                                {testSummary.errors.length > 5 && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    ... dan {testSummary.errors.length - 5} error lainnya
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </AlertDescription>
-                      </Alert>
-                    </div>
-                  )}
+                  <Alert className="border-blue-500/50 bg-blue-500/5">
+                    <AlertCircle className="h-4 w-4 text-blue-600" />
+                    <AlertDescription>
+                      Mapping kolom Excel ke field member. NIK dan Nama harus diisi.
+                    </AlertDescription>
+                  </Alert>
                 </div>
               </div>
 
@@ -1084,8 +1059,192 @@ export default function MembersImportSimplePage() {
             </div>
           )}
 
-          {/* Step 3: Import */}
+          {/* Step 3: Test */}
           {currentStep === 3 && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Test Data</CardTitle>
+                  <CardDescription>
+                    Uji data sebelum melakukan import. Pastikan semua data valid.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        File: <span className="font-medium">{file?.name}</span>
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Total rows: <span className="font-medium">{totalRows}</span>
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleTest}
+                      disabled={!file || processing || !mapping.nik || !mapping.nama}
+                      variant="outline"
+                    >
+                      {processing ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Testing...
+                        </>
+                      ) : (
+                        "Test"
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Test Results */}
+                  {testSummary && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        {testSummary.success > 0 && (
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-5 w-5 text-green-600" />
+                            <p className="text-sm font-medium text-green-600">
+                              Success: <span className="font-bold">{testSummary.success}</span>
+                            </p>
+                          </div>
+                        )}
+                        {testSummary.failed > 0 && (
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5 text-destructive" />
+                            <p className="text-sm font-medium text-destructive">
+                              Failed: <span className="font-bold">{testSummary.failed}</span>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {testSummary.failed > 0 && (
+                        <Alert className="border-destructive/50 bg-destructive/5">
+                          <AlertCircle className="h-4 w-4 text-destructive" />
+                          <AlertDescription>
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-destructive mb-1">Data yang tidak bisa di-import:</p>
+                              <div className="max-h-64 overflow-auto">
+                                <ul className="text-xs list-disc list-inside space-y-1">
+                                  {testSummary.errors.slice(0, 10).map((error, idx) => {
+                                    const row = typeof error === "object" && error !== null ? (error as any).row : null
+                                    const message =
+                                      typeof error === "string"
+                                        ? error
+                                        : typeof error === "object" && error !== null
+                                          ? (error as any).message || JSON.stringify(error)
+                                          : String(error)
+                                    const displayMessage = row ? `Baris ${row}: ${message}` : message
+                                    return <li key={idx} className="text-destructive">{displayMessage}</li>
+                                  })}
+                                </ul>
+                              </div>
+                              {testSummary.errors.length > 10 && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  ... dan {testSummary.errors.length - 10} error lainnya
+                                </p>
+                              )}
+                            </div>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {testSummary.success > 0 && testSummary.failed === 0 && (
+                        <Alert className="border-green-500/50 bg-green-500/5">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <AlertDescription>
+                            <p className="text-sm font-medium text-green-600">
+                              Semua data valid! Anda dapat melanjutkan ke step Import.
+                            </p>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {/* Preview Data yang Berhasil */}
+                      {testSummary && testSummary.success > 0 && preview.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-semibold">
+                              Preview Data yang Berhasil ({testSummary.success} data)
+                            </h3>
+                            <p className="text-xs text-muted-foreground">
+                              Menampilkan {Math.min(10, preview.length)} dari {preview.length} baris pertama
+                            </p>
+                          </div>
+                          <div className="border rounded-lg overflow-hidden">
+                            <div className="max-h-96 overflow-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="w-16">No</TableHead>
+                                    {excelHeaders.slice(0, 8).map((header, idx) => (
+                                      <TableHead key={idx} className="min-w-[120px]">
+                                        {header}
+                                      </TableHead>
+                                    ))}
+                                    {excelHeaders.length > 8 && (
+                                      <TableHead className="text-muted-foreground">
+                                        +{excelHeaders.length - 8} kolom lainnya
+                                      </TableHead>
+                                    )}
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {preview.slice(0, 10).map((row, idx) => {
+                                    // Check if this row would be valid (basic check)
+                                    const nikValue = row[mapping.nik || ""] || ""
+                                    const namaValue = row[mapping.nama || ""] || ""
+                                    const isValid = nikValue && namaValue
+                                    
+                                    return (
+                                      <TableRow 
+                                        key={idx}
+                                        className={isValid ? "bg-green-50/50 dark:bg-green-950/20" : ""}
+                                      >
+                                        <TableCell className="font-medium">{idx + 1}</TableCell>
+                                        {excelHeaders.slice(0, 8).map((header, headerIdx) => (
+                                          <TableCell key={headerIdx} className="min-w-[120px]">
+                                            <div className="max-w-[200px] truncate" title={String(row[header] || "")}>
+                                              {String(row[header] || "") || "-"}
+                                            </div>
+                                          </TableCell>
+                                        ))}
+                                        {excelHeaders.length > 8 && (
+                                          <TableCell className="text-muted-foreground text-xs">
+                                            ...
+                                          </TableCell>
+                                        )}
+                                      </TableRow>
+                                    )
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+                          {preview.length > 10 && (
+                            <p className="text-xs text-muted-foreground text-center">
+                              ... dan {preview.length - 10} baris lainnya
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!testSummary && (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Klik tombol "Test" untuk memvalidasi data sebelum import.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Step 4: Import */}
+          {currentStep === 4 && (
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -1150,8 +1309,8 @@ export default function MembersImportSimplePage() {
             </div>
           )}
 
-          {/* Step 4: Result */}
-          {currentStep === 4 && (
+          {/* Step 5: Result */}
+          {currentStep === 5 && (
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -1178,6 +1337,47 @@ export default function MembersImportSimplePage() {
                         </div>
                       </div>
 
+                      {/* Error Summary */}
+                      {importSummary.failed > 0 && importSummary.errors.length > 0 && (
+                        <Alert className="border-destructive/50 bg-destructive/5">
+                          <AlertCircle className="h-4 w-4 text-destructive" />
+                          <AlertDescription>
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-destructive mb-2">
+                                Ringkasan Error ({importSummary.failed} data gagal):
+                              </p>
+                              <div className="max-h-40 overflow-auto space-y-1">
+                                {/* Group errors by message type */}
+                                {(() => {
+                                  const errorGroups = new Map<string, number>()
+                                  importSummary.errors.forEach((err: any) => {
+                                    const msg = err.message || "Unknown error"
+                                    errorGroups.set(msg, (errorGroups.get(msg) || 0) + 1)
+                                  })
+                                  
+                                  return Array.from(errorGroups.entries())
+                                    .sort((a, b) => b[1] - a[1]) // Sort by count
+                                    .slice(0, 5) // Show top 5 error types
+                                    .map(([message, count], idx) => (
+                                      <div key={idx} className="text-xs flex items-start gap-2">
+                                        <span className="text-destructive font-medium min-w-[60px]">
+                                          {count}x:
+                                        </span>
+                                        <span className="text-destructive">{message}</span>
+                                      </div>
+                                    ))
+                                })()}
+                              </div>
+                              {importSummary.errors.length > 5 && (
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Lihat kolom "Error Message" di tabel untuk detail lengkap setiap baris.
+                                </p>
+                              )}
+                            </div>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
                       {importResults.length > 0 && (
                         <div>
                           <h3 className="font-semibold mb-4">Import Results</h3>
@@ -1191,6 +1391,7 @@ export default function MembersImportSimplePage() {
                                       <TableHead key={`${header}-${idx}`} className="min-w-[150px]">{header}</TableHead>
                                     ))}
                                     <TableHead className="min-w-[200px]">Import Result</TableHead>
+                                    <TableHead className="min-w-[300px]">Error Message</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -1220,13 +1421,19 @@ export default function MembersImportSimplePage() {
                                               <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
                                               <div className="flex flex-col min-w-0">
                                                 <span className="text-sm text-red-600 font-medium">Failed</span>
-                                                {result.error && (
-                                                  <span className="text-xs text-red-500 mt-0.5 whitespace-normal">
-                                                    {result.error}
-                                                  </span>
-                                                )}
                                               </div>
                                             </div>
+                                          )}
+                                        </TableCell>
+                                        <TableCell className="min-w-[300px]">
+                                          {!isSuccess && result.error ? (
+                                            <div className="text-xs text-red-600 whitespace-normal break-words">
+                                              {result.error}
+                                            </div>
+                                          ) : isSuccess ? (
+                                            <span className="text-xs text-muted-foreground">-</span>
+                                          ) : (
+                                            <span className="text-xs text-muted-foreground italic">No error message available</span>
                                           )}
                                         </TableCell>
                                       </TableRow>

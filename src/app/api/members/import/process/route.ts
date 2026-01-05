@@ -328,25 +328,50 @@ export async function POST(request: NextRequest) {
     }> = []
     let withoutEmailCount = 0 // Hitung yang tidak punya email
 
-    // OPTIMASI: Cache listUsers() di awal sekali saja (jangan dipanggil per row)
+    // OPTIMASI: Cache listUsers() di awal sekali saja dengan pagination untuk mendapatkan semua users
     console.log("[MEMBERS IMPORT] Fetching existing users...")
-    const { data: existingUsersData, error: listUsersError } = await adminClient.auth.admin.listUsers()
-    if (listUsersError) {
-      console.error("[MEMBERS IMPORT] Failed to fetch users:", listUsersError)
-      return NextResponse.json(
-        { success: false, message: `Gagal memeriksa user yang sudah ada: ${listUsersError.message}` },
-        { status: 500 }
-      )
+    const usersByEmail = new Map<string, { id: string; email: string }>()
+    
+    // Fetch semua users dengan pagination
+    let page = 1
+    const perPage = 1000
+    let hasMore = true
+    
+    while (hasMore) {
+      const { data: existingUsersData, error: listUsersError } = await adminClient.auth.admin.listUsers({
+        page,
+        perPage,
+      })
+      
+      if (listUsersError) {
+        console.error(`[MEMBERS IMPORT] Failed to fetch users (page ${page}):`, listUsersError)
+        // Jika ini page pertama dan error, return error
+        if (page === 1) {
+          return NextResponse.json(
+            { success: false, message: `Gagal memeriksa user yang sudah ada: ${listUsersError.message}` },
+            { status: 500 }
+          )
+        }
+        // Jika error di page selanjutnya, stop pagination
+        break
+      }
+      
+      // Tambahkan users ke cache
+      existingUsersData?.users?.forEach((user) => {
+        if (user.email) {
+          usersByEmail.set(user.email.toLowerCase(), { id: user.id, email: user.email })
+        }
+      })
+      
+      // Jika jumlah users kurang dari perPage, berarti sudah sampai akhir
+      if (!existingUsersData?.users || existingUsersData.users.length < perPage) {
+        hasMore = false
+      } else {
+        page++
+      }
     }
     
-    // Buat Map untuk lookup cepat berdasarkan email (case-insensitive)
-    const usersByEmail = new Map<string, { id: string; email: string }>()
-    existingUsersData?.users?.forEach((user) => {
-      if (user.email) {
-        usersByEmail.set(user.email.toLowerCase(), { id: user.id, email: user.email })
-      }
-    })
-    console.log(`[MEMBERS IMPORT] Cached ${usersByEmail.size} existing users`)
+    console.log(`[MEMBERS IMPORT] Cached ${usersByEmail.size} existing users (from ${page} page(s))`)
 
     // OPTIMASI: Cache existing organization_members untuk batch lookup
     console.log("[MEMBERS IMPORT] Fetching existing organization members...")
@@ -562,12 +587,62 @@ export async function POST(request: NextRequest) {
                 },
               })
 
-              if (createUserError || !newUser?.user) {
+              if (createUserError) {
+                // Jika error karena email sudah terdaftar, cari user yang sudah ada
+                if (createUserError.message?.toLowerCase().includes("already been registered") || 
+                    createUserError.message?.toLowerCase().includes("email already exists")) {
+                  console.log(`[MEMBERS IMPORT] Email ${vr.email} sudah terdaftar, mencari user yang sudah ada...`)
+                  
+                  // Cari user berdasarkan email dari cache atau list users
+                  // Pertama cek cache lagi (mungkin ada race condition)
+                  const cachedUser = usersByEmail.get(vr.email.toLowerCase())
+                  if (cachedUser) {
+                    console.log(`[MEMBERS IMPORT] Found cached user for email ${vr.email}, using userId: ${cachedUser.id}`)
+                    return { email: vr.email.toLowerCase(), userId: cachedUser.id, rowData: vr }
+                  }
+                  
+                  // Jika tidak ada di cache, cari dari list users
+                  const { data: existingUsers, error: listError } = await adminClient.auth.admin.listUsers()
+                  if (!listError && existingUsers?.users) {
+                    const existingUser = existingUsers.users.find(
+                      (u: any) => u.email?.toLowerCase() === vr.email.toLowerCase()
+                    )
+                    
+                    if (existingUser) {
+                      // Update cache
+                      usersByEmail.set(vr.email.toLowerCase(), { id: existingUser.id, email: vr.email })
+                      console.log(`[MEMBERS IMPORT] Found existing user for email ${vr.email}, using userId: ${existingUser.id}`)
+                      return { email: vr.email.toLowerCase(), userId: existingUser.id, rowData: vr }
+                    }
+                  }
+                  
+                  // Jika tidak ditemukan, anggap sebagai error
+                  console.warn(`[MEMBERS IMPORT] Email ${vr.email} dikatakan sudah terdaftar tapi tidak ditemukan`)
+                  failed++
+                  failedAfterValidation.add(vr.rowNumber)
+                  errors.push({
+                    row: vr.rowNumber,
+                    message: `Baris ${vr.rowNumber}: Email sudah terdaftar tapi tidak dapat menemukan user yang sudah ada`,
+                  })
+                  return null
+                } else {
+                  // Error lain selain email sudah terdaftar
+                  failed++
+                  failedAfterValidation.add(vr.rowNumber)
+                  errors.push({
+                    row: vr.rowNumber,
+                    message: `Baris ${vr.rowNumber}: Gagal membuat user - ${createUserError.message}`,
+                  })
+                  return null
+                }
+              }
+
+              if (!newUser?.user) {
                 failed++
                 failedAfterValidation.add(vr.rowNumber)
                 errors.push({
                   row: vr.rowNumber,
-                  message: `Baris ${vr.rowNumber}: Gagal membuat user - ${createUserError?.message || "Tidak ada user yang dikembalikan"}`,
+                  message: `Baris ${vr.rowNumber}: Gagal membuat user - Tidak ada user yang dikembalikan`,
                 })
                 return null
               }
@@ -709,27 +784,35 @@ export async function POST(request: NextRequest) {
           withoutEmailCount++
         }
 
-        // Cek apakah member sudah ada
-        // Untuk member dengan email: cek berdasarkan userId
-        // Untuk member tanpa email: cek berdasarkan biodata_nik
+        // Cek apakah member sudah ada berdasarkan NIK (prioritas utama)
+        // Karena user minta: jika data sudah ada (berdasarkan NIK), update saja, jangan buat baru
         let existingMember = null
-        if (userId) {
-          existingMember = membersByUserId.get(userId)
-        } else if (vr.nik) {
-          // Cari berdasarkan biodata_nik untuk member tanpa email
+        
+        // Prioritas 1: Cek berdasarkan NIK (biodata_nik) - ini yang utama
+        if (vr.nik) {
           existingMember = membersByBiodataNik.get(vr.nik)
           // Pastikan organization_id sama
           if (existingMember && existingMember.organization_id !== orgId) {
             existingMember = null
           }
         }
+        
+        // Prioritas 2: Jika tidak ada berdasarkan NIK, cek berdasarkan userId (untuk member dengan email)
+        if (!existingMember && userId) {
+          existingMember = membersByUserId.get(userId)
+          // Pastikan organization_id sama
+          if (existingMember && existingMember.organization_id !== orgId) {
+            existingMember = null
+          }
+        }
 
+        // SELALU update jika member sudah ada (berdasarkan NIK atau userId)
         if (existingMember) {
           const updateData: any = { is_active: true }
           // Jika groupIdParam dipilih, selalu update department_id (bahkan jika null untuk menghapus)
           if (groupIdParam && groupIdParam.trim() !== "") {
             updateData.department_id = vr.departmentId
-            console.log(`[MEMBERS IMPORT] Updating existing member ${existingMember.id} with department_id:`, vr.departmentId)
+            console.log(`[MEMBERS IMPORT] Updating existing member ${existingMember.id} (NIK: ${vr.nik}) with department_id:`, vr.departmentId)
           } else if (vr.departmentId) {
             // Jika tidak ada groupIdParam, hanya update jika ada departmentId dari Excel
             updateData.department_id = vr.departmentId
@@ -737,7 +820,15 @@ export async function POST(request: NextRequest) {
           if (vr.nik) updateData.biodata_nik = vr.nik
           if (userId) updateData.user_id = userId // Update user_id jika ada
           membersToUpdate.push({ id: existingMember.id, data: updateData, rowNumber: vr.rowNumber })
+          console.log(`[MEMBERS IMPORT] Will UPDATE existing member ID ${existingMember.id} for NIK ${vr.nik} (row ${vr.rowNumber})`)
         } else {
+          // Member tidak ditemukan di cache
+          // PENTING: Karena user minta hanya update (jangan buat baru), 
+          // kita HARUS pastikan tidak ada di database sebelum insert
+          // Tapi query per row terlalu lambat, jadi kita akan batch query semua NIK yang tidak ada di cache
+          console.log(`[MEMBERS IMPORT] Member dengan NIK ${vr.nik} tidak ditemukan di cache, akan dicek lagi nanti (row ${vr.rowNumber})`)
+          
+          // Simpan dulu untuk batch check nanti
           const insertPayload = {
             user_id: userId, // NULL untuk member tanpa email
             organization_id: orgId,
@@ -746,7 +837,6 @@ export async function POST(request: NextRequest) {
             hire_date: today,
             is_active: true,
           }
-          console.log(`[MEMBERS IMPORT] Inserting new member with department_id:`, vr.departmentId, `for NIK:`, vr.nik)
           membersToInsert.push({
             rowNumber: vr.rowNumber, // Store untuk tracking
             payload: insertPayload
@@ -816,34 +906,287 @@ export async function POST(request: NextRequest) {
       }
       console.log(`[MEMBERS IMPORT] Completed biodata upsert for ${biodataPayloads.length} records`)
 
-      // Batch insert new members (setelah biodata di-upsert)
-      // Split into smaller batches to avoid timeout and improve performance
+      // PENTING: Batch check semua NIK yang akan di-insert untuk memastikan tidak ada yang sudah ada
+      // Ini untuk memastikan hanya update, bukan insert baru (sesuai permintaan user)
       if (membersToInsert.length > 0) {
-        const MEMBER_INSERT_BATCH_SIZE = 500 // Insert 500 members at a time
-        console.log(`[MEMBERS IMPORT] Batch inserting ${membersToInsert.length} new members in batches of ${MEMBER_INSERT_BATCH_SIZE}...`)
+        console.log(`[MEMBERS IMPORT] Batch checking ${membersToInsert.length} members yang tidak ada di cache...`)
         
-        for (let i = 0; i < membersToInsert.length; i += MEMBER_INSERT_BATCH_SIZE) {
-          const batch = membersToInsert.slice(i, i + MEMBER_INSERT_BATCH_SIZE)
-          const insertPayloads = batch.map(item => item.payload)
-
-          const { data: newMembers, error: insertError } = await adminClient
+        // Kumpulkan semua NIK yang akan di-insert
+        const niksToCheck = membersToInsert
+          .map(item => item.payload.biodata_nik)
+          .filter((nik): nik is string => !!nik && nik.trim() !== "")
+        
+        // Batch query untuk mengecek apakah NIK-NIK ini sudah ada di database
+        if (niksToCheck.length > 0) {
+          const { data: existingByNik } = await adminClient
             .from("organization_members")
-            .insert(insertPayloads)
-            .select("id, user_id, biodata_nik")
-
-          if (insertError) {
-            console.error(`[MEMBERS IMPORT] Batch member insert error (batch ${Math.floor(i / MEMBER_INSERT_BATCH_SIZE) + 1}):`, insertError)
-            // Jika batch insert gagal, tandai semua row dalam batch ini sebagai failed
-            batch.forEach(item => {
-              if (!failedAfterValidation.has(item.rowNumber)) {
-                failed++
-                failedAfterValidation.add(item.rowNumber)
-                errors.push({
-                  row: item.rowNumber,
-                  message: `Baris ${item.rowNumber}: Gagal membuat member organisasi - ${insertError.message}`,
+            .select("id, user_id, organization_id, biodata_nik")
+            .eq("organization_id", orgId)
+            .in("biodata_nik", niksToCheck)
+          
+          // Update cache dengan hasil query
+          if (existingByNik && existingByNik.length > 0) {
+            existingByNik.forEach((member: any) => {
+              if (member.user_id) {
+                membersByUserId.set(member.user_id, { 
+                  id: member.id, 
+                  biodata_nik: member.biodata_nik, 
+                  organization_id: member.organization_id 
+                })
+              }
+              if (member.biodata_nik) {
+                membersByBiodataNik.set(member.biodata_nik, { 
+                  id: member.id, 
+                  user_id: member.user_id, 
+                  organization_id: member.organization_id 
                 })
               }
             })
+            console.log(`[MEMBERS IMPORT] Found ${existingByNik.length} existing members via batch query, moving to update list`)
+          }
+          
+          // Pindahkan yang sudah ada dari insert ke update
+          const membersToInsertFiltered: Array<{ rowNumber: number; payload: any }> = []
+          const membersToUpdateFromCheck: Array<{ id: number; data: any; rowNumber: number }> = []
+          
+          for (const item of membersToInsert) {
+            if (!item.payload.biodata_nik) {
+              // Tidak ada NIK, tetap di insert (tidak mungkin terjadi karena NIK wajib)
+              membersToInsertFiltered.push(item)
+              continue
+            }
+            
+            const existingMember = membersByBiodataNik.get(item.payload.biodata_nik)
+            
+            if (existingMember && existingMember.organization_id === orgId) {
+              // Member ditemukan, pindahkan ke update
+              const updateData: any = { is_active: true }
+              if (groupIdParam && groupIdParam.trim() !== "") {
+                updateData.department_id = item.payload.department_id
+              } else if (item.payload.department_id) {
+                updateData.department_id = item.payload.department_id
+              }
+              if (item.payload.biodata_nik) updateData.biodata_nik = item.payload.biodata_nik
+              if (item.payload.user_id) updateData.user_id = item.payload.user_id
+              
+              membersToUpdateFromCheck.push({ 
+                id: existingMember.id, 
+                data: updateData, 
+                rowNumber: item.rowNumber 
+              })
+              console.log(`[MEMBERS IMPORT] Moving member NIK ${item.payload.biodata_nik} from INSERT to UPDATE (ID: ${existingMember.id}, row ${item.rowNumber})`)
+            } else {
+              // Benar-benar baru, tetap di insert list
+              membersToInsertFiltered.push(item)
+            }
+          }
+          
+          // Tambahkan ke membersToUpdate
+          membersToUpdate.push(...membersToUpdateFromCheck)
+          
+          // Update membersToInsert dengan yang sudah di-filter
+          membersToInsert.length = 0
+          membersToInsert.push(...membersToInsertFiltered)
+          
+          console.log(`[MEMBERS IMPORT] After batch check: ${membersToUpdateFromCheck.length} moved to update, ${membersToInsert.length} will be inserted as new`)
+        }
+      }
+
+      // Batch insert new members (setelah batch check)
+      // Gunakan upsert untuk menghindari duplicate key error jika ada duplicate dalam batch
+      // Split into smaller batches to avoid timeout and improve performance
+      if (membersToInsert.length > 0) {
+        const MEMBER_UPSERT_BATCH_SIZE = 500 // Upsert 500 members at a time
+        console.log(`[MEMBERS IMPORT] Batch upserting ${membersToInsert.length} new members in batches of ${MEMBER_UPSERT_BATCH_SIZE}...`)
+        
+        for (let i = 0; i < membersToInsert.length; i += MEMBER_UPSERT_BATCH_SIZE) {
+          const batch = membersToInsert.slice(i, i + MEMBER_UPSERT_BATCH_SIZE)
+          const upsertPayloads = batch.map(item => item.payload)
+
+          // Gunakan upsert dengan onConflict pada constraint unique
+          // Constraint idx_org_members_org_user_unique adalah unique pada (organization_id, user_id)
+          // Tapi karena Supabase tidak support onConflict dengan multiple columns secara langsung,
+          // kita perlu handle duplicate dengan cara lain
+          
+          // Untuk menghindari duplicate dalam batch yang sama, deduplicate dulu
+          const uniquePayloads = new Map<string, { payload: any; rowNumber: number }>()
+          
+          upsertPayloads.forEach((payload, idx) => {
+            const batchItem = batch[idx]
+            if (!batchItem) return // Safety check
+            
+            // Buat key unik berdasarkan organization_id + user_id (atau biodata_nik jika user_id null)
+            const uniqueKey = payload.user_id 
+              ? `${payload.organization_id}_${payload.user_id}`
+              : `${payload.organization_id}_nik_${payload.biodata_nik}`
+            
+            // Jika sudah ada, skip (ambil yang pertama)
+            if (!uniquePayloads.has(uniqueKey)) {
+              uniquePayloads.set(uniqueKey, { payload, rowNumber: batchItem.rowNumber })
+            } else {
+              // Duplicate dalam batch yang sama, log warning
+              console.warn(`[MEMBERS IMPORT] Duplicate member in batch: ${uniqueKey}, skipping row ${batchItem.rowNumber}`)
+            }
+          })
+
+          const deduplicatedItems = Array.from(uniquePayloads.values())
+          const deduplicatedPayloads = deduplicatedItems.map(item => item.payload)
+
+          // Insert dengan handling duplicate key error
+          // Karena Supabase tidak support onConflict dengan multiple columns, kita perlu insert satu per satu
+          // atau handle error duplicate key
+          const { data: newMembers, error: insertError } = await adminClient
+            .from("organization_members")
+            .insert(deduplicatedPayloads)
+            .select("id, user_id, biodata_nik")
+
+          if (insertError) {
+            console.error(`[MEMBERS IMPORT] Batch member insert error (batch ${Math.floor(i / MEMBER_UPSERT_BATCH_SIZE) + 1}):`, insertError)
+            
+            // Jika insert gagal karena duplicate key constraint, coba insert satu per satu
+            // dan handle duplicate dengan update jika sudah ada
+            if (insertError.message?.includes("duplicate key") || insertError.message?.includes("unique constraint") || insertError.message?.includes("idx_org_members_org_user_unique")) {
+              console.log(`[MEMBERS IMPORT] Duplicate key detected, trying individual inserts with update fallback...`)
+              
+              for (const item of deduplicatedItems) {
+                // Cek apakah member sudah ada berdasarkan user_id atau biodata_nik
+                let existingMemberId: number | null = null
+                
+                if (item.payload.user_id) {
+                  const existing = membersByUserId.get(item.payload.user_id)
+                  if (existing && existing.organization_id === orgId) {
+                    existingMemberId = existing.id
+                  }
+                } else if (item.payload.biodata_nik) {
+                  const existing = membersByBiodataNik.get(item.payload.biodata_nik)
+                  if (existing && existing.organization_id === orgId) {
+                    existingMemberId = existing.id
+                  }
+                }
+                
+                if (existingMemberId) {
+                  // Member sudah ada, update saja
+                  const updateData: any = { is_active: true }
+                  if (item.payload.department_id) updateData.department_id = item.payload.department_id
+                  if (item.payload.biodata_nik) updateData.biodata_nik = item.payload.biodata_nik
+                  
+                  const { error: updateError } = await adminClient
+                    .from("organization_members")
+                    .update(updateData)
+                    .eq("id", existingMemberId)
+                  
+                  if (updateError) {
+                    if (!failedAfterValidation.has(item.rowNumber)) {
+                      failed++
+                      failedAfterValidation.add(item.rowNumber)
+                      errors.push({
+                        row: item.rowNumber,
+                        message: `Baris ${item.rowNumber}: Gagal memperbarui member organisasi - ${updateError.message}`,
+                      })
+                    }
+                  } else {
+                    console.log(`[MEMBERS IMPORT] Updated existing member ${existingMemberId} for row ${item.rowNumber}`)
+                  }
+                } else {
+                  // Coba insert satu per satu
+                  const { data: singleMember, error: singleError } = await adminClient
+                    .from("organization_members")
+                    .insert(item.payload)
+                    .select("id, user_id, biodata_nik")
+                    .maybeSingle()
+                  
+                  if (singleError) {
+                    // Jika masih duplicate, berarti ada race condition atau cache tidak lengkap
+                    // Query untuk mendapatkan member yang sudah ada
+                    if (singleError.message?.includes("duplicate key") || singleError.message?.includes("unique constraint") || singleError.message?.includes("idx_org_members_org_user_unique")) {
+                      // Query berdasarkan organization_id dan user_id (atau biodata_nik jika user_id null)
+                      let query = adminClient
+                        .from("organization_members")
+                        .select("id, user_id, biodata_nik")
+                        .eq("organization_id", item.payload.organization_id)
+                      
+                      if (item.payload.user_id) {
+                        query = query.eq("user_id", item.payload.user_id)
+                      } else if (item.payload.biodata_nik) {
+                        query = query.eq("biodata_nik", item.payload.biodata_nik).is("user_id", null)
+                      }
+                      
+                      const { data: existingMember } = await query.maybeSingle()
+                      
+                      if (existingMember) {
+                        // Update member yang sudah ada
+                        const updateData: any = { is_active: true }
+                        if (item.payload.department_id) updateData.department_id = item.payload.department_id
+                        if (item.payload.biodata_nik) updateData.biodata_nik = item.payload.biodata_nik
+                        
+                        const { error: updateError } = await adminClient
+                          .from("organization_members")
+                          .update(updateData)
+                          .eq("id", existingMember.id)
+                        
+                        if (updateError) {
+                          if (!failedAfterValidation.has(item.rowNumber)) {
+                            failed++
+                            failedAfterValidation.add(item.rowNumber)
+                            errors.push({
+                              row: item.rowNumber,
+                              message: `Baris ${item.rowNumber}: Gagal memperbarui member organisasi - ${updateError.message}`,
+                            })
+                          }
+                        } else {
+                          // Update cache
+                          if (existingMember.user_id && orgId) {
+                            membersByUserId.set(existingMember.user_id, { id: existingMember.id, biodata_nik: existingMember.biodata_nik, organization_id: orgId })
+                          }
+                          if (existingMember.biodata_nik && orgId) {
+                            membersByBiodataNik.set(existingMember.biodata_nik, { id: existingMember.id, user_id: existingMember.user_id, organization_id: orgId })
+                          }
+                          console.log(`[MEMBERS IMPORT] Updated existing member ${existingMember.id} for row ${item.rowNumber} (found via query)`)
+                        }
+                      } else {
+                        if (!failedAfterValidation.has(item.rowNumber)) {
+                          failed++
+                          failedAfterValidation.add(item.rowNumber)
+                          errors.push({
+                            row: item.rowNumber,
+                            message: `Baris ${item.rowNumber}: Gagal membuat member organisasi - ${singleError.message}`,
+                          })
+                        }
+                      }
+                    } else {
+                      if (!failedAfterValidation.has(item.rowNumber)) {
+                        failed++
+                        failedAfterValidation.add(item.rowNumber)
+                        errors.push({
+                          row: item.rowNumber,
+                          message: `Baris ${item.rowNumber}: Gagal membuat member organisasi - ${singleError.message}`,
+                        })
+                      }
+                    }
+                  } else if (singleMember) {
+                    // Update cache
+                    if (singleMember.user_id && orgId) {
+                      membersByUserId.set(singleMember.user_id, { id: singleMember.id, biodata_nik: singleMember.biodata_nik, organization_id: orgId })
+                    }
+                    if (singleMember.biodata_nik && orgId) {
+                      membersByBiodataNik.set(singleMember.biodata_nik, { id: singleMember.id, user_id: singleMember.user_id, organization_id: orgId })
+                    }
+                  }
+                }
+              }
+            } else {
+              // Error lain, tandai semua sebagai failed
+              deduplicatedItems.forEach(item => {
+                if (!failedAfterValidation.has(item.rowNumber)) {
+                  failed++
+                  failedAfterValidation.add(item.rowNumber)
+                  errors.push({
+                    row: item.rowNumber,
+                    message: `Baris ${item.rowNumber}: Gagal membuat member organisasi - ${insertError.message}`,
+                  })
+                }
+              })
+            }
           } else if (newMembers) {
             newMembers.forEach((member: any) => {
               if (member.user_id && orgId) {
@@ -853,7 +1196,7 @@ export async function POST(request: NextRequest) {
                 membersByBiodataNik.set(member.biodata_nik, { id: member.id, user_id: member.user_id, organization_id: orgId })
               }
             })
-            console.log(`[MEMBERS IMPORT] Successfully inserted batch ${Math.floor(i / MEMBER_INSERT_BATCH_SIZE) + 1} (${batch.length} members)`)
+            console.log(`[MEMBERS IMPORT] Successfully inserted batch ${Math.floor(i / MEMBER_UPSERT_BATCH_SIZE) + 1} (${deduplicatedPayloads.length} members, ${upsertPayloads.length - deduplicatedPayloads.length} duplicates skipped)`)
           }
         }
       }
@@ -1101,6 +1444,7 @@ export async function POST(request: NextRequest) {
           }
 
           // Validasi: Cek apakah NIK sudah ada di organization yang sama (untuk update vs insert)
+          // Jika NIK sudah ada, berarti akan di-update (bukan insert baru), jadi ini SUCCESS
           let existingMember: { id: number; biodata_nik?: string | null; user_id?: string | null; organization_id: number } | null = null
           if (userId) {
             existingMember = membersByUserId.get(userId) || null
@@ -1112,28 +1456,29 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Validasi tambahan untuk mengecek kemungkinan error saat import:
-          // 1. Jika akan update existing member, pastikan department_id valid
+          // Jika existing member ditemukan berdasarkan NIK, berarti akan di-update
+          // Ini adalah SUCCESS, bukan error
           if (existingMember) {
-            // Jika groupIdParam dipilih tapi departmentId null/invalid, ini akan jadi masalah saat update
+            // Log untuk debugging
+            console.log(`[MEMBERS IMPORT TEST] Row ${rowNumber}: NIK ${nik} sudah ada, akan di-update (member ID: ${existingMember.id})`)
+            
+            // Validasi tambahan: Jika groupIdParam dipilih, pastikan departmentId valid
             if (groupIdParam && groupIdParam.trim() !== "") {
               if (!departmentId) {
-                failed++
-                errors.push({
-                  row: rowNumber,
-                  message: `Department ID tidak valid untuk group yang dipilih (akan update member yang sudah ada)`,
-                })
-                continue
+                // Ini bukan error fatal, hanya warning - tetap bisa di-update
+                console.warn(`[MEMBERS IMPORT TEST] Row ${rowNumber}: Department ID tidak valid untuk group yang dipilih, tapi tetap akan di-update`)
               }
             }
+            
+            // Jika semua validasi passed, hitung sebagai success (akan di-update)
+            success++
           } else {
-            // Jika akan insert member baru, pastikan tidak ada constraint violation
+            // Jika tidak ada existing member, berarti akan insert baru
+            // Pastikan tidak ada constraint violation
             // Validasi: Pastikan NIK tidak null (sudah divalidasi di atas)
-            // Validasi: Pastikan tidak ada duplicate (sudah dicek dengan existingMember)
+            // Jika semua validasi passed, hitung sebagai success
+            success++
           }
-
-          // Jika semua validasi passed, hitung sebagai success
-          success++
           
           // Kumpulkan data untuk preview halaman finger (hanya yang punya email)
           let departmentName: string | undefined = undefined
@@ -1200,6 +1545,7 @@ export async function POST(request: NextRequest) {
               continue
             }
           } else {
+            // Email tidak ada di cache, coba buat user baru
             const randomPassword = `MB${orgId}${Date.now()}${Math.random().toString(36).substring(2, 15)}`
 
             const nameParts = nama.trim().split(" ")
@@ -1216,28 +1562,115 @@ export async function POST(request: NextRequest) {
               },
             })
 
-            if (createUserError) {
-              failed++
-              errors.push({
-                row: rowNumber,
-                message: `Baris ${rowNumber}: Gagal membuat user - ${createUserError.message}`,
-              })
-              continue
-            }
-
-            if (!newUser?.user) {
+              if (createUserError) {
+                // Jika error karena email sudah terdaftar, cari user yang sudah ada
+                if (createUserError.message?.toLowerCase().includes("already been registered") || 
+                    createUserError.message?.toLowerCase().includes("email already exists")) {
+                  console.log(`[MEMBERS IMPORT] Email ${email} sudah terdaftar, mencari user yang sudah ada...`)
+                  
+                  // Cek cache dulu (mungkin ada race condition)
+                  const cachedUser = usersByEmail.get(email.toLowerCase())
+                  if (cachedUser) {
+                    userId = cachedUser.id
+                    console.log(`[MEMBERS IMPORT] Found cached user for email ${email}, using userId: ${userId}`)
+                  } else {
+                    // Jika tidak ada di cache, cari dengan listUsers dengan pagination
+                    let found = false
+                    let page = 1
+                    const perPage = 1000
+                    
+                    while (!found && page <= 10) { // Max 10 pages untuk safety
+                      const { data: existingUsers, error: listError } = await adminClient.auth.admin.listUsers({
+                        page,
+                        perPage,
+                      })
+                      
+                      if (listError) {
+                        console.error(`[MEMBERS IMPORT] Failed to list users (page ${page}) to find existing user for ${email}:`, listError)
+                        break
+                      }
+                      
+                      if (existingUsers?.users) {
+                        const existingUser = existingUsers.users.find(
+                          (u: any) => u.email?.toLowerCase() === email.toLowerCase()
+                        )
+                        
+                        if (existingUser) {
+                          userId = existingUser.id
+                          // Update cache
+                          usersByEmail.set(email.toLowerCase(), { id: userId, email: email })
+                          console.log(`[MEMBERS IMPORT] Found existing user for email ${email} on page ${page}, using userId: ${userId}`)
+                          found = true
+                          break
+                        }
+                        
+                        // Jika tidak ada lagi users di page ini, stop
+                        if (existingUsers.users.length < perPage) {
+                          break
+                        }
+                      } else {
+                        break
+                      }
+                      
+                      page++
+                    }
+                    
+                    // Jika masih tidak ditemukan, coba refresh cache dengan listUsers sekali lagi
+                    if (!found && !userId) {
+                      console.log(`[MEMBERS IMPORT] Email ${email} tidak ditemukan di paginated search, refreshing cache...`)
+                      const { data: allUsers, error: refreshError } = await adminClient.auth.admin.listUsers()
+                      if (!refreshError && allUsers?.users) {
+                        // Update cache dengan semua users
+                        allUsers.users.forEach((u: any) => {
+                          if (u.email) {
+                            usersByEmail.set(u.email.toLowerCase(), { id: u.id, email: u.email })
+                          }
+                        })
+                        
+                        const existingUser = allUsers.users.find(
+                          (u: any) => u.email?.toLowerCase() === email.toLowerCase()
+                        )
+                        
+                        if (existingUser) {
+                          userId = existingUser.id
+                          console.log(`[MEMBERS IMPORT] Found existing user for email ${email} after cache refresh, using userId: ${userId}`)
+                        }
+                      }
+                    }
+                  }
+                  
+                  // Jika userId masih null setelah semua pencarian, anggap sebagai error
+                  if (!userId) {
+                    console.error(`[MEMBERS IMPORT] Email ${email} dikatakan sudah terdaftar tapi tidak dapat menemukan user yang sudah ada setelah semua pencarian`)
+                    failed++
+                    errors.push({
+                      row: rowNumber,
+                      message: `Baris ${rowNumber}: Email sudah terdaftar tapi tidak dapat menemukan user yang sudah ada`,
+                    })
+                    continue
+                  }
+                } else {
+                  // Error lain selain email sudah terdaftar
+                  failed++
+                  errors.push({
+                    row: rowNumber,
+                    message: `Baris ${rowNumber}: Gagal membuat user - ${createUserError.message}`,
+                  })
+                  continue
+                }
+            } else if (!newUser?.user) {
               failed++
               errors.push({
                 row: rowNumber,
                 message: `Baris ${rowNumber}: Gagal membuat user - Tidak ada user yang dikembalikan`,
               })
               continue
+            } else {
+              // User berhasil dibuat
+              userId = newUser.user.id
+              // Update cache untuk user baru
+              usersByEmail.set(email.toLowerCase(), { id: userId, email: email })
             }
-              
-            userId = newUser.user.id
-
-            // Update cache untuk user baru
-            usersByEmail.set(email.toLowerCase(), { id: userId, email: email })
 
             const { error: profileError } = await adminClient
               .from("user_profiles")
