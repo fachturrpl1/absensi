@@ -218,18 +218,44 @@ export async function POST(request: NextRequest) {
       .select("id, code, name, organization_id")
       .eq("organization_id", orgId)
 
-    // Helper to check for duplicates
-    const isDuplicate = (code: string | null, name: string): boolean => {
+    // Helper to check for duplicates and generate unique code if needed
+    const generateUniqueCode = (code: string | null, name: string, existingCodes: Set<string>, batchCodes: Set<string>): string => {
+      // If code is provided and unique, use it
+      if (code && !existingCodes.has(code.toLowerCase()) && !batchCodes.has(code.toLowerCase())) {
+        return code
+      }
+      
+      // Generate code from name if code is empty or duplicate
+      let baseCode = code || name
+      if (!baseCode) {
+        baseCode = `GROUP_${Date.now()}`
+      }
+      
+      // Convert to uppercase, replace spaces with underscore, remove special chars
+      let finalCode = baseCode
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^A-Z0-9_]/g, '')
+        .substring(0, 50) // Limit length
+      
+      // Ensure uniqueness
+      let uniqueCode = finalCode
+      let suffix = 1
+      while (existingCodes.has(uniqueCode.toLowerCase()) || batchCodes.has(uniqueCode.toLowerCase())) {
+        uniqueCode = `${finalCode}_${suffix}`
+        suffix++
+        if (suffix > 1000) break // Safety limit
+      }
+      
+      return uniqueCode
+    }
+    
+    // Helper to check for duplicate names (name must be unique)
+    const isDuplicateName = (name: string): boolean => {
       if (!existingGroups || existingGroups.length === 0) return false
-
       return existingGroups.some((group: any) => {
-        if (code && group.code && group.code.toLowerCase() === code.toLowerCase()) {
-          return true
-        }
-        if (group.name && group.name.toLowerCase() === name.toLowerCase()) {
-          return true
-        }
-        return false
+        return group.name && group.name.toLowerCase() === name.toLowerCase()
       })
     }
 
@@ -270,53 +296,32 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Check for duplicates
-        if (isDuplicate(code, name)) {
+        // Check for duplicate names (name must be unique)
+        if (isDuplicateName(name)) {
           failed++
           errors.push({
             row: rowNumber,
-            message: `Duplicate group: ${code ? `Code "${code}"` : ""} ${name ? `Name "${name}"` : ""} already exists`,
+            message: `Duplicate group name: "${name}" already exists`,
           })
           continue
         }
 
-        // Auto-generate code from name if code is empty
-        let finalCode = code
-        if (!finalCode && name) {
-          // Generate code from name: convert to uppercase, replace spaces with underscore, remove special chars
-          finalCode = name
-            .trim()
-            .toUpperCase()
-            .replace(/\s+/g, '_')
-            .replace(/[^A-Z0-9_]/g, '')
-            .substring(0, 50) // Limit length
-          
-          // Ensure uniqueness within this batch and existing groups
-          let uniqueCode = finalCode
-          let suffix = 1
-          const isCodeDuplicate = (testCode: string) => {
-            // Check in existing groups
-            if (existingGroups?.some((g: any) => g.code && g.code.toLowerCase() === testCode.toLowerCase())) {
-              return true
-            }
-            // Check in current batch
-            if (validRows.some(vr => vr.code && vr.code.toLowerCase() === testCode.toLowerCase())) {
-              return true
-            }
-            return false
-          }
-          
-          while (isCodeDuplicate(uniqueCode)) {
-            uniqueCode = `${finalCode}_${suffix}`
-            suffix++
-            if (suffix > 1000) break // Safety limit
-          }
-          finalCode = uniqueCode
-        }
+        // Auto-generate unique code (even if code is provided but duplicate)
+        const existingCodes = new Set(
+          (existingGroups || []).map((g: any) => g.code?.toLowerCase()).filter(Boolean)
+        )
+        const batchCodes = new Set(
+          validRows.map(vr => vr.code?.toLowerCase()).filter((code): code is string => !!code)
+        )
+        
+        const finalCode = generateUniqueCode(code, name, existingCodes, batchCodes)
+        
+        // Add to batch codes for next iterations
+        batchCodes.add(finalCode.toLowerCase())
 
         validRows.push({
           rowNumber,
-          code: finalCode || name || "", // Fallback to name if still empty
+          code: finalCode, // Use generated unique code
           name: name || code || "",
           description,
           isActive,
@@ -405,15 +410,17 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Check for duplicates
-        if (isDuplicate(code, name)) {
+        // Check for duplicate names (name must be unique)
+        if (isDuplicateName(name)) {
           failed++
           errors.push({
             row: rowNumber,
-            message: `Duplicate group: ${code ? `Code "${code}"` : ""} ${name ? `Name "${name}"` : ""} already exists`,
+            message: `Duplicate group name: "${name}" already exists`,
           })
           continue
         }
+        
+        // Note: Code will be auto-generated if duplicate, so we don't fail here
 
         success++
       }

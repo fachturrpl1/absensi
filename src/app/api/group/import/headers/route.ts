@@ -2,9 +2,52 @@ import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 
 /**
+ * Auto-detect header row by finding row that contains "name" or "nama" column
+ * @param rows Array of rows from Excel
+ * @param maxSearchRows Maximum number of rows to search (default: 20)
+ * @returns Object with detected headerRow and headerRowCount, or null if not found
+ */
+function autoDetectHeaderRow(
+  rows: (string | number)[][],
+  maxSearchRows: number = 20
+): { headerRow: number; headerRowCount: number } | null {
+  // Search for row that contains "name" or "nama" column (case-insensitive)
+  const namePatterns = ['name', 'nama']
+  
+  for (let rowIdx = 0; rowIdx < Math.min(rows.length, maxSearchRows); rowIdx++) {
+    const row = rows[rowIdx]
+    if (!row || row.length === 0) continue
+
+    const rowValues = row.map((cell) => String(cell || '').toLowerCase().trim())
+    
+    // Check if this row contains "name" or "nama"
+    const hasNameColumn = namePatterns.some(pattern => {
+      return rowValues.some(cell => {
+        if (!cell || cell.length === 0) return false
+        // Exact match or word boundary match
+        const cellLower = cell.toLowerCase().trim()
+        return cellLower === pattern || 
+               new RegExp(`\\b${pattern}\\b`, 'i').test(cellLower)
+      })
+    })
+    
+    if (hasNameColumn) {
+      console.log(`[AUTO-DETECT] Found header at row ${rowIdx + 1} (contains "name" or "nama" column)`)
+      return {
+        headerRow: rowIdx + 1, // Convert to 1-based index
+        headerRowCount: 1,
+      }
+    }
+  }
+
+  console.log(`[AUTO-DETECT] No header row found (no row contains "name" or "nama" column)`)
+  return null
+}
+
+/**
  * API Route: POST /api/group/import/headers
  * 
- * Purpose: Read Excel file and extract headers (supports custom header row)
+ * Purpose: Read Excel file and extract headers (supports custom header row and auto-detect)
  * 
  * Request Body: FormData with 'file' field
  * Response: { success: boolean, headers: string[], preview: Record<string, any>[] }
@@ -16,8 +59,11 @@ export async function POST(request: NextRequest) {
     const headerRowInput = formData.get('headerRow')
     const headerRowCountInput = formData.get('headerRowCount')
     const requestedSheet = (formData.get('sheetName') || '') as string
-    const headerRow = Math.max(1, Number(headerRowInput) || 1)
-    const headerRowCount = Math.max(1, Number(headerRowCountInput) || 1)
+    
+    // Parse headerRow - if 0 or not provided, use auto-detect
+    let headerRow = Number(headerRowInput) || 0
+    let headerRowCount = Math.max(1, Number(headerRowCountInput) || 1)
+    let autoDetected = false
 
     if (!file) {
       return NextResponse.json(
@@ -44,7 +90,7 @@ export async function POST(request: NextRequest) {
     const buffer = await file.arrayBuffer()
     const workbook = XLSX.read(buffer, { type: 'array' })
     
-    // Get first sheet
+    // Get sheet
     const sheetNames = workbook.SheetNames || []
     const sheetName = requestedSheet && sheetNames.includes(requestedSheet)
       ? requestedSheet
@@ -78,6 +124,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Auto-detect header row if headerRow is 0
+    // Find row that contains "name" or "nama" column
+    if (headerRow === 0) {
+      const detected = autoDetectHeaderRow(rows)
+      if (detected) {
+        headerRow = detected.headerRow
+        headerRowCount = detected.headerRowCount
+        autoDetected = true
+        console.log(`[AUTO-DETECT] Auto-detected header at row ${headerRow} with ${headerRowCount} row(s)`)
+      } else {
+        // Fallback to row 1 if auto-detect fails
+        headerRow = 1
+        headerRowCount = 1
+        console.log(`[AUTO-DETECT] Failed to detect header row (no "name" or "nama" column found), using row 1 as fallback`)
+      }
+    }
+
     if (headerRow > rows.length) {
       return NextResponse.json(
         { success: false, message: `Header row ${headerRow} is outside the data range (total rows: ${rows.length})` },
@@ -89,7 +152,6 @@ export async function POST(request: NextRequest) {
     const maxCols = headerRows.reduce((max, row) => Math.max(max, row.length), 0)
 
     // Build headers, combining multi-row headers if provided.
-    // For merged/parent headers, we forward-fill the top row value.
     const headers: string[] = []
     let carryParent = ""
     for (let col = 0; col < maxCols; col++) {
@@ -120,6 +182,23 @@ export async function POST(request: NextRequest) {
     
     const dataRows = rows.slice(headerRow - 1 + headerRowCount) // rows after header rows
     
+    // Check if there are any data rows
+    if (dataRows.length === 0) {
+      return NextResponse.json(
+        { success: false, message: `Sheet "${sheetName}" tidak memiliki data. Pastikan ada data setelah header row.` },
+        { status: 400 }
+      )
+    }
+    
+    // Check if headers are empty or all empty
+    const nonEmptyHeaders = headers.filter(h => h && !h.startsWith('__EMPTY_'))
+    if (nonEmptyHeaders.length === 0) {
+      return NextResponse.json(
+        { success: false, message: `Sheet "${sheetName}" tidak memiliki kolom header yang valid. Pastikan ada kolom seperti "Name", "Code", atau "Description".` },
+        { status: 400 }
+      )
+    }
+    
     // Get preview (first 5 rows for user to see)
     const preview = dataRows.slice(0, 5).map(row => {
       const previewRow: Record<string, string> = {}
@@ -138,6 +217,9 @@ export async function POST(request: NextRequest) {
       totalRows: dataRows.length,
       sheetName,
       sheetNames,
+      headerRow,
+      headerRowCount,
+      autoDetected,
     })
   } catch (error) {
     console.error('Error reading Excel headers:', error)
@@ -150,5 +232,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-
-
