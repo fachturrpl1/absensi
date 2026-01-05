@@ -10,7 +10,7 @@ type ActivityItem = {
   department?: string
 }
 
-export function useRecentActivity(limit: number = 15) {
+export function useRecentActivity(limit: number = 15, options?: { enabled?: boolean; refetchIntervalMs?: number }) {
   const { data: organizationId } = useOrganizationId()
 
   return useQuery({
@@ -26,10 +26,10 @@ export function useRecentActivity(limit: number = 15) {
       }
       return json.data as ActivityItem[]
     },
-    enabled: !!organizationId,
+    enabled: !!organizationId && (options?.enabled ?? true),
     staleTime: 1000 * 60 * 2, // 2 minutes - data is fresh for longer
     gcTime: 1000 * 60 * 10, // 10 minutes
-    refetchInterval: 1000 * 60 * 3, // Auto-refresh every 3 minutes (reduced frequency)
+    refetchInterval: options?.refetchIntervalMs,
     refetchOnWindowFocus: false, // Disable refetch on window focus to reduce requests
     refetchOnMount: false, // Disable refetch on mount, rely on cache
     refetchOnReconnect: true, // Only refetch when reconnecting

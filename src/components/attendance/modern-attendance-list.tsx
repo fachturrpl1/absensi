@@ -67,9 +67,10 @@ type PgChange<T> = { new: T | null; old: T | null };
 interface ModernAttendanceListProps {
   initialData?: any[];
   initialStats?: any;
+  initialMeta?: { total?: number; totalPages?: number; tz?: string };
 }
 
-export default function ModernAttendanceList({ initialData: _initialData, initialStats: _initialStats }: ModernAttendanceListProps) {
+export default function ModernAttendanceList({ initialData: _initialData, initialStats: _initialStats, initialMeta }: ModernAttendanceListProps) {
   const orgStore = useOrgStore();
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
@@ -102,6 +103,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       setSelectedOrgId(orgStore.organizationId);
     }
   }, [orgStore.organizationId]);
+  
   
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -177,6 +179,20 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       }
     } catch {}
   }, [cacheKeyBase, isMounted]);
+
+  // Seed from SSR initialData if cache empty
+  useEffect(() => {
+    if (!isMounted) return;
+    if (attendanceData.length === 0 && Array.isArray(_initialData) && _initialData.length > 0) {
+      setAttendanceData(_initialData);
+      setTotalItems(initialMeta?.total || _initialData.length || 0);
+      if (initialMeta?.tz) setUserTimezone(initialMeta.tz);
+      setLoading(false);
+      try {
+        localStorage.setItem(cacheKeyBase, JSON.stringify({ data: _initialData, total: initialMeta?.total || _initialData.length || 0, tz: initialMeta?.tz, ts: Date.now() }));
+      } catch {}
+    }
+  }, [isMounted, _initialData, initialMeta, cacheKeyBase]);
 
   // Edit form schema
   const editFormSchema = z.object({
@@ -313,13 +329,14 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     latestRequestRef.current = reqId;
     try {
       const orgId = selectedOrgId || orgStore.organizationId || undefined;
+      const searchParam = (searchQuery || '').trim();
       const [listResult] = await Promise.all([
         getAllAttendance({
           page: currentPage,
           limit: itemsPerPage,
           dateFrom: dateRange.from.toISOString().split('T')[0],
           dateTo: dateRange.to.toISOString().split('T')[0],
-          search: searchQuery || undefined,
+          search: searchParam.length >= 2 ? searchParam : undefined,
           status: statusFilter === 'all' ? undefined : statusFilter,
           department: departmentFilter === 'all' ? undefined : departmentFilter,
           organizationId: orgId,
@@ -367,18 +384,18 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           const totalPages = (
             typeof result.meta?.totalPages === 'number' && !Number.isNaN(result.meta.totalPages)
           ) ? result.meta.totalPages : Math.ceil(((result.meta?.total || 0) / itemsPerPage));
-          if (totalPages > currentPage) {
+          if (data.length === itemsPerPage && totalPages > currentPage) {
             const nextPage = currentPage + 1;
             const orgIdForKey = selectedOrgId || orgStore.organizationId || 'no-org';
             const fromStr = dateRange.from.toISOString().split('T')[0];
             const toStr = dateRange.to.toISOString().split('T')[0];
             const statusVal = statusFilter || 'all';
             const deptVal = departmentFilter || 'all';
-            const qVal = searchQuery || '';
+            const qVal = searchParam.length >= 2 ? searchParam : '';
             const nextKey = `attendance:list:${orgIdForKey}:p=${nextPage}:l=${itemsPerPage}:from=${fromStr}:to=${toStr}:status=${statusVal}:dept=${deptVal}:q=${qVal}`;
 
             // Do not await; fire-and-forget
-            (async () => {
+            window.setTimeout(() => { (async () => {
               try {
                 const res = await getAllAttendance({
                   page: nextPage,
@@ -396,7 +413,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                   localStorage.setItem(nextKey, JSON.stringify({ data: d, total: res.meta?.total || 0, tz: tzPref, ts: Date.now() }));
                 }
               } catch {}
-            })();
+            })(); }, 800);
           }
         } catch {}
       } else {
