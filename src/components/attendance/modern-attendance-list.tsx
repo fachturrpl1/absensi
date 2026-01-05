@@ -120,6 +120,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [realtimeActive, setRealtimeActive] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const realtimeDebounceRef = useRef<number | null>(null);
+  const latestRequestRef = useRef(0);
 
   useEffect(() => {
     setIsMounted(true);
@@ -156,6 +157,25 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       localStorage.setItem(`${cacheKeyBase}:loading`, JSON.stringify({ loading }));
     } catch {}
   }, [loading, cacheKeyBase, isMounted]);
+
+  // Hydrate data from cache for perceived-fast load
+  useEffect(() => {
+    if (!isMounted) return;
+    try {
+      const raw = localStorage.getItem(cacheKeyBase);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { data?: any[]; total?: number; tz?: string; ts?: number };
+        const TTL = 60_000; // 60s cache TTL
+        if (!parsed.ts || Date.now() - parsed.ts < TTL) {
+          if (Array.isArray(parsed.data)) {
+            setAttendanceData(parsed.data);
+            setTotalItems(parsed.total || 0);
+            if (parsed.tz) setUserTimezone(parsed.tz);
+          }
+        }
+      }
+    } catch {}
+  }, [cacheKeyBase, isMounted]);
 
   // Edit form schema
   const editFormSchema = z.object({
@@ -288,6 +308,8 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   // Fetch data using Server Action with pagination
   const fetchData = useCallback(async () => {
     setLoading(true);
+    const reqId = latestRequestRef.current + 1;
+    latestRequestRef.current = reqId;
     try {
       const orgId = selectedOrgId || orgStore.organizationId || undefined;
       const [listResult] = await Promise.all([
@@ -315,7 +337,9 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           firstItem: data[0],
           allData: data
         });
-        
+        if (reqId !== latestRequestRef.current) {
+          return; // stale response
+        }
         setAttendanceData(data);
         setTotalItems(result.meta?.total || 0);
         
@@ -334,6 +358,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           setDepartments(uniqueDepts);
           }
         }
+        try {
+          const tz = (data.length > 0 ? (data[0].timezone || 'UTC') : undefined);
+          localStorage.setItem(cacheKeyBase, JSON.stringify({ data, total: result.meta?.total || 0, tz, ts: Date.now() }));
+        } catch {}
       } else {
         console.error('Failed to load attendance:', result?.message ?? result);
         setAttendanceData([]);
