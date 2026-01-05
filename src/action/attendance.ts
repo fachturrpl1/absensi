@@ -139,7 +139,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
           name
         )
       )
-    `, { count: 'exact' })
+    `, { count: 'planned' })
     .eq("organization_members.organization_id", userMember.organization_id);
 
   // Apply filters

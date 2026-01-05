@@ -53,7 +53,7 @@ import {
 } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import z from 'zod';
+import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import { formatLocalTime } from '@/utils/timezone';
 import { getAllAttendance, deleteAttendanceRecord, deleteMultipleAttendanceRecords } from '@/action/attendance';
@@ -327,8 +327,8 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       ]);
 
       const result = (listResult && typeof listResult === 'object' && 'success' in listResult)
-        ? listResult as { success: boolean; data?: any[]; meta?: { total?: number }; message?: string }
-        : { success: false, data: [], meta: { total: 0 }, message: 'Invalid response from server' };
+        ? listResult as { success: boolean; data?: any[]; meta?: { total?: number; totalPages?: number }; message?: string }
+        : { success: false, data: [], meta: { total: 0, totalPages: 0 }, message: 'Invalid response from server' };
 
       if (result.success) {
         const data = result.data || [];
@@ -362,6 +362,42 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         try {
           const tz = (data.length > 0 ? (data[0].timezone || 'UTC') : undefined);
           localStorage.setItem(cacheKeyBase, JSON.stringify({ data, total: result.meta?.total || 0, tz, ts: Date.now() }));
+
+          // Background prefetch next page to warm cache
+          const totalPages = (
+            typeof result.meta?.totalPages === 'number' && !Number.isNaN(result.meta.totalPages)
+          ) ? result.meta.totalPages : Math.ceil(((result.meta?.total || 0) / itemsPerPage));
+          if (totalPages > currentPage) {
+            const nextPage = currentPage + 1;
+            const orgIdForKey = selectedOrgId || orgStore.organizationId || 'no-org';
+            const fromStr = dateRange.from.toISOString().split('T')[0];
+            const toStr = dateRange.to.toISOString().split('T')[0];
+            const statusVal = statusFilter || 'all';
+            const deptVal = departmentFilter || 'all';
+            const qVal = searchQuery || '';
+            const nextKey = `attendance:list:${orgIdForKey}:p=${nextPage}:l=${itemsPerPage}:from=${fromStr}:to=${toStr}:status=${statusVal}:dept=${deptVal}:q=${qVal}`;
+
+            // Do not await; fire-and-forget
+            (async () => {
+              try {
+                const res = await getAllAttendance({
+                  page: nextPage,
+                  limit: itemsPerPage,
+                  dateFrom: fromStr,
+                  dateTo: toStr,
+                  search: qVal || undefined,
+                  status: statusVal === 'all' ? undefined : statusVal,
+                  department: deptVal === 'all' ? undefined : deptVal,
+                  organizationId: selectedOrgId || orgStore.organizationId || undefined,
+                });
+                if (res?.success) {
+                  const d = res.data || [];
+                  const tzPref = (d.length > 0 ? (d[0].timezone || 'UTC') : tz);
+                  localStorage.setItem(nextKey, JSON.stringify({ data: d, total: res.meta?.total || 0, tz: tzPref, ts: Date.now() }));
+                }
+              } catch {}
+            })();
+          }
         } catch {}
       } else {
         console.error('Failed to load attendance:', result?.message ?? result);
