@@ -66,7 +66,7 @@ export async function delByPrefix(prefix: string): Promise<void> {
   const client = await ensureRedis()
   if (client) {
     const iter = client.scanIterator({ MATCH: `${prefix}*`, COUNT: 100 })
-    // eslint-disable-next-line @typescript-eslint/await-thenable
+     
     for await (const k of iter as any) {
       await client.del(k as string)
     }

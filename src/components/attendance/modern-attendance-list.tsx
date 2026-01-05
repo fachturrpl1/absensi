@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Select,
@@ -60,7 +61,7 @@ import { toast } from 'sonner';
 import { useOrgStore } from '@/store/org-store';
 import { createClient } from '@/utils/supabase/client';
 
-type AttendanceChangeRow = { attendance_date?: string | null; organization_member_id?: number | null };
+type AttendanceChangeRow = { attendance_date?: string | null; organization_member_id?: number | null; organization_id?: number | null };
 type PgChange<T> = { new: T | null; old: T | null };
 
 interface ModernAttendanceListProps {
@@ -118,6 +119,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
   const [realtimeActive, setRealtimeActive] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const realtimeDebounceRef = useRef<number | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -372,10 +374,15 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           event: '*',
           schema: 'public',
           table: 'attendance_records',
+          filter: `organization_id=eq.${orgId}`
         },
         (payload: PgChange<AttendanceChangeRow>) => {
           const newRow = payload.new;
           const oldRow = payload.old;
+          const payloadOrgId = (newRow as any)?.organization_id ?? (oldRow as any)?.organization_id;
+          if (payloadOrgId && orgId && Number(payloadOrgId) !== Number(orgId)) {
+            return;
+          }
           const dateStr = (newRow?.attendance_date as string | undefined) || (oldRow?.attendance_date as string | undefined);
           if (dateStr) {
             const ts = new Date(dateStr).getTime();
@@ -385,8 +392,12 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
               return; // outside current filter window, skip
             }
           }
-          // Refetch on any relevant change (INSERT/UPDATE/DELETE)
-          fetchData();
+          if (realtimeDebounceRef.current) {
+            window.clearTimeout(realtimeDebounceRef.current);
+          }
+          realtimeDebounceRef.current = window.setTimeout(() => {
+            fetchData();
+          }, 700);
         }
       )
       .subscribe((status) => {
@@ -396,6 +407,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
     return () => {
       setRealtimeActive(false);
+      if (realtimeDebounceRef.current) {
+        window.clearTimeout(realtimeDebounceRef.current);
+        realtimeDebounceRef.current = null;
+      }
       supabase.removeChannel(channel);
     };
   }, [selectedOrgId, orgStore.organizationId, dateRange.from, dateRange.to, fetchData]);
@@ -668,11 +683,24 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             {/* Mobile Card View - Only show on small screens */}
             <div className="block lg:hidden divide-y">
               {loading ? (
-                <div className="p-8 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    <span className="text-muted-foreground">Loading attendance data...</span>
-                  </div>
+                <div className="divide-y">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={`mobile-skel-${i}`} className="p-4 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-10 w-10 rounded-full" />
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <Skeleton className="h-4 w-40" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-6 w-20" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : attendanceData.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
@@ -815,14 +843,35 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={8} className="text-center py-8">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                          <span className="text-muted-foreground">Loading attendance data...</span>
-                        </div>
-                      </td>
-                    </tr>
+                    <>
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <tr key={`table-skel-${i}`} className="border-b">
+                          <td className="p-4">
+                            <Skeleton className="h-4 w-4 rounded" />
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <Skeleton className="h-10 w-10 rounded-full" />
+                              <div className="space-y-2">
+                                <Skeleton className="h-4 w-40" />
+                                <Skeleton className="h-3 w-24" />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4"><Skeleton className="h-4 w-16" /></td>
+                          <td className="p-4"><Skeleton className="h-4 w-16" /></td>
+                          <td className="p-4"><Skeleton className="h-4 w-20" /></td>
+                          <td className="p-4"><Skeleton className="h-6 w-20 rounded-full" /></td>
+                          <td className="p-4"><Skeleton className="h-4 w-28" /></td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-1">
+                              <Skeleton className="h-8 w-8 rounded" />
+                              <Skeleton className="h-8 w-8 rounded" />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </>
                   ) : attendanceData.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="text-center py-8 text-muted-foreground">
