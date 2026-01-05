@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 
 import { attendanceLogger } from '@/lib/logger';
+import { getJSON, setJSON, delByPrefix } from '@/lib/cache';
 async function getSupabase() {
   return await createClient();
 }
@@ -81,6 +82,25 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
   attendanceLogger.info("✅ User organization found:", userMember.organization_id);
   attendanceLogger.info("📍 Total organizations:", userMembers?.length || 0);
 
+  // Cache key per organisasi + filter
+  const cacheKey = [
+    'attendance:list',
+    String(userMember.organization_id),
+    `p=${page}`,
+    `l=${limit}`,
+    `from=${dateFrom || ''}`,
+    `to=${dateTo || ''}`,
+    `status=${status || 'all'}`,
+    `q=${(search || '').trim().toLowerCase()}`,
+  ].join(':');
+
+  // Try cache first
+  const cached = await getJSON<GetAttendanceResult>(cacheKey);
+  if (cached && cached.success) {
+    attendanceLogger.debug(`🗄️ Cache hit: ${cacheKey}`);
+    return cached;
+  }
+
   // Start building the query
   let query = supabase
     .from("attendance_records")
@@ -101,25 +121,12 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
         user_id,
         organization_id,
         department_id,
-        user_profiles (
+        user_profiles!inner (
           first_name,
           last_name,
           display_name,
           email,
           profile_photo_url
-        ),
-        user:user_id (
-          first_name,
-          last_name,
-          display_name,
-          email,
-          profile_photo_url
-        ),
-        biodata:biodata_nik (
-          nik,
-          nama,
-          nickname,
-          email
         ),
         organizations (
           id,
@@ -127,7 +134,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
           timezone,
           time_format
         ),
-        departments!organization_members_department_id_fkey (
+        departments (
           id,
           name
         )
@@ -183,39 +190,24 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
 
   // Transform format
   const mapped = (data || []).map((item: any) => {
-    // Supabase can return relation as an array or an object depending on FK naming
-    const rawMemberRel = item.organization_members as any;
-    const rawMember = Array.isArray(rawMemberRel) ? rawMemberRel[0] : rawMemberRel;
-    // Support both object and array shapes returned by Supabase
-    const rawProfile = rawMember?.user_profiles as any;
-    const profile = Array.isArray(rawProfile) ? rawProfile[0] : rawProfile;
-    const rawUser = rawMember?.user as any;
-    const user = Array.isArray(rawUser) ? rawUser[0] : rawUser;
-    const rawDept = rawMember?.departments as any;
-    const dept = Array.isArray(rawDept) ? rawDept[0] : rawDept;
-    const biodata = rawMember?.biodata as any;
-
-    // Prefer user/profile fields; fallback to biodata
-    const biodataNama = typeof biodata?.nama === 'string' ? biodata.nama : '';
-    const displayName = (profile?.display_name || user?.display_name || biodata?.nickname || '').trim();
-    const firstName = (profile?.first_name || user?.first_name || (biodataNama ? biodataNama.split(' ')[0] : '')).trim();
-    const lastName = (profile?.last_name || user?.last_name || (biodataNama ? biodataNama.split(' ').slice(1).join(' ') : '')).trim();
-    const email = (profile?.email || user?.email || biodata?.email || '').trim();
+    const profile = item.organization_members?.user_profiles;
+    const displayName = (profile?.display_name || '').trim();
+    const firstName = profile?.first_name || '';
+    const lastName = profile?.last_name || '';
+    const email = (profile?.email || '').trim();
     const fullName = `${firstName} ${lastName}`.trim();
     const effectiveName = displayName || fullName || email;
-    const departmentName = (dept?.name || '');
+    const departmentName = item.organization_members?.departments?.name;
     
     // Debug: Log items dengan nama kosong atau user_profiles null
     if (!effectiveName || !profile) {
       attendanceLogger.warn("⚠️ Member dengan nama kosong atau user_profiles null:", {
         id: item.id,
         organization_member_id: item.organization_member_id,
-        user_id: rawMember?.user_id,
+        user_id: item.organization_members?.user_id,
         user_profiles: profile,
-        user,
-        biodata,
         department: departmentName,
-        rawData: rawMember
+        rawData: item.organization_members
       });
     }
     
@@ -223,7 +215,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
       id: item.id,
       member: {
         name: effectiveName || `Member #${item.organization_member_id}`,
-        avatar: (profile?.profile_photo_url || user?.profile_photo_url) || null,
+        avatar: profile?.profile_photo_url,
         position: '', // Position not fetched in query above, add if needed
         department: departmentName || '', // Empty string jika tidak ada department
       },
@@ -254,16 +246,21 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     attendanceLogger.warn(`⚠️ ${emptyNameCount} member(s) dengan nama kosong atau tidak ter-fetch`);
   }
 
-  return { 
-    success: true, 
+  const result: GetAttendanceResult = {
+    success: true,
     data: mapped,
     meta: {
       total: count || 0,
       page,
       limit,
-      totalPages: Math.ceil((count || 0) / limit)
-    }
+      totalPages: Math.ceil((count || 0) / limit),
+    },
   };
+
+  // Save to cache (TTL 60s)
+  await setJSON(cacheKey, result, 60);
+  attendanceLogger.debug(`🗄️ Cache set: ${cacheKey}`);
+  return result;
 };
 
 export async function updateAttendanceStatus(id: string, status: string) {
@@ -445,6 +442,23 @@ export async function createManualAttendance(payload: ManualAttendancePayload) {
     }
 
     attendanceLogger.debug("✓ Attendance created successfully");
+    // Invalidate list cache for the organization of this member
+    try {
+      const memberId = Number(payload.organization_member_id);
+      if (!isNaN(memberId)) {
+        const { data: orgRow } = await supabase
+          .from('organization_members')
+          .select('organization_id')
+          .eq('id', memberId)
+          .maybeSingle();
+        const orgId = orgRow?.organization_id;
+        if (orgId) {
+          await delByPrefix(`attendance:list:${orgId}:`);
+        } else {
+          await delByPrefix('attendance:list:');
+        }
+      }
+    } catch (_) {}
     revalidatePath("/attendance");
 
     return { success: true };
@@ -463,6 +477,19 @@ export async function deleteAttendanceRecord(id: string) {
     
     attendanceLogger.info("🗑️ Deleting attendance record:", id);
 
+    // Fetch orgId before deletion for targeted cache invalidation
+    let orgId: number | null = null;
+    try {
+      const { data: recOrg } = await supabase
+        .from('attendance_records')
+        .select('organization_members!inner(organization_id)')
+        .eq('id', id)
+        .maybeSingle();
+      const orgRel: any = (recOrg as any)?.organization_members;
+      const orgObj = Array.isArray(orgRel) ? orgRel[0] : orgRel;
+      orgId = orgObj?.organization_id ?? null;
+    } catch (_) {}
+
     const { error } = await supabase
       .from("attendance_records")
       .delete()
@@ -474,6 +501,11 @@ export async function deleteAttendanceRecord(id: string) {
     }
 
     attendanceLogger.info("✓ Attendance record deleted successfully");
+    // Invalidate caches
+    try {
+      if (orgId) await delByPrefix(`attendance:list:${orgId}:`);
+      else await delByPrefix('attendance:list:');
+    } catch (_) {}
     revalidatePath("/attendance");
 
     return { success: true };
@@ -492,6 +524,25 @@ export async function deleteMultipleAttendanceRecords(ids: string[]) {
     
     attendanceLogger.info("🗑️ Deleting multiple attendance records:", ids);
 
+    // Collect affected orgIds first
+    let affectedOrgIds: number[] = [];
+    try {
+      const { data: recs } = await supabase
+        .from('attendance_records')
+        .select('id, organization_members!inner(organization_id)')
+        .in('id', ids);
+      if (recs && Array.isArray(recs)) {
+        const set = new Set<number>();
+        for (const r of recs as any[]) {
+          const rel = r.organization_members;
+          const obj = Array.isArray(rel) ? rel[0] : rel;
+          const oid = obj?.organization_id;
+          if (typeof oid === 'number') set.add(oid);
+        }
+        affectedOrgIds = Array.from(set);
+      }
+    } catch (_) {}
+
     const { error } = await supabase
       .from("attendance_records")
       .delete()
@@ -503,6 +554,14 @@ export async function deleteMultipleAttendanceRecords(ids: string[]) {
     }
 
     attendanceLogger.info("✓ Attendance records deleted successfully");
+    // Invalidate caches for affected orgs
+    try {
+      if (affectedOrgIds.length > 0) {
+        await Promise.all(affectedOrgIds.map((oid) => delByPrefix(`attendance:list:${oid}:`)));
+      } else {
+        await delByPrefix('attendance:list:');
+      }
+    } catch (_) {}
     revalidatePath("/attendance");
 
     return { success: true };

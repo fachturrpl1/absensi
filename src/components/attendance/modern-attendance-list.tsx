@@ -68,6 +68,10 @@ import { formatLocalTime } from '@/utils/timezone';
 import { getAllAttendance, deleteAttendanceRecord, deleteMultipleAttendanceRecords } from '@/action/attendance';
 import { toast } from 'sonner';
 import { useOrgStore } from '@/store/org-store';
+import { createClient } from '@/utils/supabase/client';
+
+type AttendanceChangeRow = { attendance_date?: string | null; organization_member_id?: number | null };
+type PgChange<T> = { new: T | null; old: T | null };
 
 interface ModernAttendanceListProps {
   initialData?: any[];
@@ -122,6 +126,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
+  const [realtimeActive, setRealtimeActive] = useState(false);
 
   // Edit form schema
   const editFormSchema = z.object({
@@ -245,6 +250,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      const orgId = selectedOrgId || orgStore.organizationId || undefined;
       const [listResult] = await Promise.all([
         getAllAttendance({
           page: currentPage,
@@ -254,6 +260,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           search: searchQuery || undefined,
           status: statusFilter === 'all' ? undefined : statusFilter,
           department: departmentFilter === 'all' ? undefined : departmentFilter,
+          organizationId: orgId,
         })
       ]);
 
@@ -309,6 +316,57 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     console.log('🔄 Fetch triggered:', { currentPage, dateRange, searchQuery, statusFilter, departmentFilter });
     fetchData();
   }, [fetchData]);
+
+  // Realtime subscription to attendance_records (similar to finger page)
+  useEffect(() => {
+    const orgId = selectedOrgId || orgStore.organizationId;
+    if (!orgId) return;
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`attendance-records-${orgId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'attendance_records',
+        },
+        (payload: PgChange<AttendanceChangeRow>) => {
+          const newRow = payload.new;
+          const oldRow = payload.old;
+          const dateStr = (newRow?.attendance_date as string | undefined) || (oldRow?.attendance_date as string | undefined);
+          if (dateStr) {
+            const ts = new Date(dateStr).getTime();
+            const from = new Date(dateRange.from).getTime();
+            const to = new Date(dateRange.to).getTime();
+            if (ts < from || ts > to) {
+              return; // outside current filter window, skip
+            }
+          }
+          // Refetch on any relevant change (INSERT/UPDATE/DELETE)
+          fetchData();
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') setRealtimeActive(true);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setRealtimeActive(false);
+      });
+
+    return () => {
+      setRealtimeActive(false);
+      supabase.removeChannel(channel);
+    };
+  }, [selectedOrgId, orgStore.organizationId, dateRange.from, dateRange.to, fetchData]);
+
+  // Fallback polling if realtime not active
+  useEffect(() => {
+    if (realtimeActive) return;
+    const id = window.setInterval(() => {
+      fetchData();
+    }, 30000); // 30s fallback
+    return () => window.clearInterval(id);
+  }, [realtimeActive, fetchData]);
   
   // Log attendanceData changes
   useEffect(() => {
