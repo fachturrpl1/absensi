@@ -43,13 +43,26 @@ export default function OfflinePage() {
   }, []);
 
   const handleRetry = () => {
-    if (isOnline) {
-      // If online, navigate to home to force new request
-      router.push("/");
-      router.refresh();
-    } else {
-      // If still offline, just reload (will show offline page again)
-      window.location.reload();
+    // Go back 1 step; fallback to home if no history
+    if (typeof window !== 'undefined') {
+      if (window.history.length > 1) {
+        window.history.go(-1);
+      } else {
+        router.replace("/");
+      }
+    }
+  };
+
+  const handleGoBackTwo = () => {
+    // Go back 2 steps; fallback to home if history stack too short
+    if (typeof window !== 'undefined') {
+      if (window.history.length > 2) {
+        window.history.go(-2);
+      } else if (window.history.length > 1) {
+        window.history.go(-1);
+      } else {
+        router.replace("/");
+      }
     }
   };
 
@@ -116,7 +129,7 @@ export default function OfflinePage() {
             variant="outline"
             size="lg"
             className="flex-1 border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
-            onClick={() => window.history.back()}
+            onClick={handleGoBackTwo}
           >
             Go Back
           </Button>
