@@ -363,12 +363,17 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     latestRequestRef.current = reqId;
     try {
       const searchParam = (searchQuery || '').trim();
+      // Use local date (not UTC) to avoid day-shift in production
+      const toLocalYMD = (d: Date) => {
+        const dt = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+        return dt.toISOString().slice(0, 10);
+      };
       const [listResult] = await Promise.all([
         getAllAttendance({
           page: currentPage,
           limit: itemsPerPage,
-          // dateFrom: dateRange.from.toISOString().split('T')[0],
-          // dateTo: dateRange.to.toISOString().split('T')[0],
+          dateFrom: toLocalYMD(dateRange.from),
+          dateTo: toLocalYMD(dateRange.to),
           search: searchParam.length >= 2 ? searchParam : undefined,
           status: statusFilter === 'all' ? undefined : statusFilter,
           department: departmentFilter === 'all' ? undefined : departmentFilter,
