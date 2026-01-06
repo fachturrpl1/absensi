@@ -103,6 +103,18 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       setSelectedOrgId(orgStore.organizationId);
     }
   }, [orgStore.organizationId]);
+
+  // Fallback: resolve organizationId from cookie in production if store not ready yet
+  useEffect(() => {
+    if (selectedOrgId || orgStore.organizationId) return;
+    try {
+      const m = document.cookie.match(/(?:^|; )org_id=(\d+)/);
+      if (m && m[1]) {
+        const oid = Number(m[1]);
+        if (!Number.isNaN(oid)) setSelectedOrgId(oid);
+      }
+    } catch {}
+  }, [selectedOrgId, orgStore.organizationId]);
   
   
   const [searchInput, setSearchInput] = useState('');
@@ -329,21 +341,27 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   // Fetch data using Server Action with pagination
   const fetchData = useCallback(async () => {
+  const orgId = selectedOrgId || orgStore.organizationId;
   console.log('🔄 Fetch triggered:', {
     page: currentPage,
     itemsPerPage,
-    orgId: selectedOrgId || orgStore.organizationId,
+    orgId,
     hasDateFilter: false, // sementara non-aktif
     statusFilter,
     departmentFilter,
     searchQuery
   });
+    // Require orgId to avoid relying on server-side auth cookies in production
+    if (!orgId) {
+      console.warn('[fetchData] Skipped: organizationId not ready yet');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const reqId = latestRequestRef.current + 1;
 
     latestRequestRef.current = reqId;
     try {
-      const orgId = selectedOrgId || orgStore.organizationId || undefined;
       const searchParam = (searchQuery || '').trim();
       const [listResult] = await Promise.all([
         getAllAttendance({

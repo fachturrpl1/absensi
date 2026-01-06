@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 
 import { createClient } from "@/utils/supabase/server";
 
@@ -71,7 +72,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     organizationId  // Get organization ID from params
   } = params;
 
-// Resolve effective organization id: prefer param, else fallback to user's active membership
+// Resolve effective organization id: prefer param, else cookie, else fallback to user's active membership
 let effectiveOrgId: number | null = null;
 let memberIdForLog: number | null = null;
 
@@ -79,11 +80,24 @@ if (organizationId) {
   effectiveOrgId = organizationId;
   attendanceLogger.info("🔑 Using organizationId from params:", organizationId);
 } else {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    attendanceLogger.error("❌ User not authenticated");
-    return { success: false, data: [], message: "User not authenticated" };
-  }
+  // Try resolve from cookie first (works well on Vercel)
+  try {
+    const cookieStore = await cookies();
+    const raw = cookieStore.get('org_id')?.value;
+    const fromCookie = raw ? Number(raw) : NaN;
+    if (!Number.isNaN(fromCookie)) {
+      effectiveOrgId = fromCookie;
+      attendanceLogger.info("🍪 Using organizationId from cookie:", fromCookie);
+    }
+  } catch {}
+
+  // Fallback: resolve via authenticated user's active membership
+  if (!effectiveOrgId) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      attendanceLogger.error("❌ User not authenticated and no org cookie");
+      return { success: false, data: [], message: "User not authenticated" };
+    }
 
   const { data: userMembers, error: memberError } = await supabase
     .from("organization_members")
@@ -105,6 +119,7 @@ if (organizationId) {
 
   effectiveOrgId = userMember.organization_id;
   memberIdForLog = userMember.id;
+  }
 }
 
 if (!effectiveOrgId) {
