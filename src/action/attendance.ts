@@ -72,6 +72,11 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     organizationId  // Get organization ID from params
   } = params;
 
+  // Default date range to today in production to avoid full table scans
+  const todayStr = new Date().toISOString().split('T')[0];
+  const effDateFrom = dateFrom || todayStr;
+  const effDateTo = dateTo || todayStr;
+
 // Resolve effective organization id: prefer param, else cookie, else fallback to user's active membership
 let effectiveOrgId: number | null = null;
 let memberIdForLog: number | null = null;
@@ -201,8 +206,8 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
       .select(`id, ${countRel}`, { count: 'planned', head: true })
       .eq('organization_members.organization_id', effectiveOrgId)
       .eq('organization_members.is_active', true);
-    // if (dateFrom) countQuery = countQuery.gte('attendance_date', dateFrom);
-    // if (dateTo) countQuery = countQuery.lte('attendance_date', dateTo);
+    if (effDateFrom) countQuery = countQuery.gte('attendance_date', effDateFrom);
+    if (effDateTo) countQuery = countQuery.lte('attendance_date', effDateTo);
     if (status && status !== 'all') countQuery = countQuery.eq('status', status);
     if (hasSearch) countQuery = countQuery.ilike('organization_members.user_profiles.search_name', pattern);
     const countResp = await countQuery;
@@ -222,8 +227,8 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
     .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, ${listRel}`)
     .eq('organization_members.organization_id', effectiveOrgId)
     .eq('organization_members.is_active', true);
-  if (dateFrom) listQuery = listQuery.gte('attendance_date', dateFrom);
-  if (dateTo) listQuery = listQuery.lte('attendance_date', dateTo);
+  if (effDateFrom) listQuery = listQuery.gte('attendance_date', effDateFrom);
+  if (effDateTo) listQuery = listQuery.lte('attendance_date', effDateTo);
   if (status && status !== 'all') listQuery = listQuery.eq('status', status);
   if (hasSearch) listQuery = listQuery.ilike('organization_members.user_profiles.search_name', pattern);
   listQuery = listQuery
@@ -238,9 +243,11 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
     return { success: false, data: [], message: dataError.message };
   }
 
-  // Fallback: if single-join returns no rows, try IN(memberIds)
+  // Fallback: if single-join returns no rows, try IN(memberIds) —
+  // Guarded to avoid heavy scans on serverless. Enable only when searching.
+  const FALLBACK_ON = process.env.ATTENDANCE_LIST_FALLBACK === '1';
   let effectiveRows = rows;
-  if (!effectiveRows || effectiveRows.length === 0) {
+  if ((!effectiveRows || effectiveRows.length === 0) && FALLBACK_ON && hasSearch) {
     attendanceLogger.warn("⚠️ Single-join returned 0 rows. Trying fallback IN(memberIds)...");
     const { data: members, error: membersErr } = await supabase
       .from('organization_members')
@@ -262,6 +269,9 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
       }
 
       if (memberIds.length > 0) {
+        // Limit IN size to avoid timeouts
+        const MAX_IDS = 500;
+        if (memberIds.length > MAX_IDS) memberIds = memberIds.slice(0, MAX_IDS);
         let fbQuery = supabase
           .from('attendance_records')
           .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, ${listRel}`)
@@ -454,7 +464,7 @@ export const getAttendanceStats = async (params: GetAttendanceParams = {}): Prom
     // We use a single query construction to avoid type mismatches from reassignment
     let q = supabase
       .from("attendance_records")
-      .select("id, organization_members!inner(organization_id)", { count: 'exact', head: true })
+      .select("id, organization_members!inner(organization_id)", { count: 'planned', head: true })
       .eq("organization_members.organization_id", userMember.organization_id);
 
     if (dateFrom) q = q.gte("attendance_date", dateFrom);
