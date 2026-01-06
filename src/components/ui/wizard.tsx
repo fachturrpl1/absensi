@@ -63,9 +63,9 @@ export function Wizard({
                   </div>
                   {/* Step Label */}
                   <div className="mt-2 text-center">
-                    <p className="text-xs font-medium">{step.title}</p>
+                    <p className="text-xs font-medium" suppressHydrationWarning>{step.title}</p>
                     {step.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5" suppressHydrationWarning>
                         {step.description}
                       </p>
                     )}
