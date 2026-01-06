@@ -21,6 +21,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import {
+  Card,
+  CardContent,
+} from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -107,17 +112,16 @@ export default function ScheduleClient({
   })
 
   const handleSubmit = async (values: ScheduleForm) => {
-    console.log('🚀 handleSubmit called with:', values);
-    console.log('📝 editingDetail:', editingDetail);
-    
+
+
     try {
       let res: { success: boolean; message?: string; data?: any }
-      
+
       if (editingDetail) {
-        console.log('🔄 Updating schedule:', { id: editingDetail.id, values });
+
         res = await updateWorkSchedule(editingDetail.id, values as Partial<IWorkSchedule>)
-        console.log('📥 Update response:', res);
-        
+
+
         if (res.success && res.data) {
           toast.success(res.message || "Schedule updated successfully")
           // Optimistic update with correct data
@@ -128,10 +132,10 @@ export default function ScheduleClient({
           throw new Error(res.message || "Failed to update schedule")
         }
       } else {
-        console.log('➕ Creating schedule:', values);
+
         res = await createWorkSchedule(values as Partial<IWorkSchedule>)
-        console.log('📥 Create response:', res);
-        
+
+
         if (res.success && res.data) {
           toast.success("Schedule created successfully")
           // Optimistic update
@@ -140,12 +144,12 @@ export default function ScheduleClient({
           throw new Error(res.message || "Failed to create schedule")
         }
       }
-      
-      console.log('✅ Operation completed successfully');
+
+
       handleCloseDialog()
-      
+
     } catch (err: unknown) {
-      console.error('❌ Schedule operation error:', err);
+      // console.error('❌ Schedule operation error:', err);
       toast.error(err instanceof Error ? err.message : "Unknown error")
     }
   }
@@ -164,8 +168,8 @@ export default function ScheduleClient({
   }
 
   const handleOpenDialog = (schedule?: IWorkSchedule) => {
-    console.log('🔓 Opening dialog:', { schedule, organizationId });
-    
+
+
     if (schedule) {
       setEditingDetail(schedule)
       const formValues = {
@@ -176,7 +180,7 @@ export default function ScheduleClient({
         schedule_type: schedule.schedule_type || "",
         is_active: schedule.is_active ?? true,
       }
-      console.log('📝 Form reset with edit values:', formValues);
+
       form.reset(formValues)
     } else {
       setEditingDetail(null)
@@ -188,7 +192,7 @@ export default function ScheduleClient({
         schedule_type: "",
         is_active: true,
       }
-      console.log('📝 Form reset with new values:', formValues);
+
       form.reset(formValues)
     }
     setOpen(true)
@@ -213,7 +217,28 @@ export default function ScheduleClient({
     { accessorKey: "code", header: "Code" },
     { accessorKey: "name", header: "Name" },
     { accessorKey: "description", header: "Description" },
-    { accessorKey: "schedule_type", header: "Type" },
+    {
+      accessorKey: "schedule_type",
+      header: "Type",
+      cell: ({ row }) => {
+        const type = row.getValue("schedule_type") as string
+        return (
+          <div className="capitalize font-medium">{type?.replace("_", " ")}</div>
+        )
+      }
+    },
+    {
+      accessorKey: "is_active",
+      header: "Status",
+      cell: ({ row }) => {
+        const isActive = row.getValue("is_active") as boolean
+        return (
+          <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-green-500 hover:bg-green-600" : ""}>
+            {isActive ? "Active" : "Inactive"}
+          </Badge>
+        )
+      }
+    },
     {
       id: "actions",
       header: "Actions",
@@ -266,161 +291,153 @@ export default function ScheduleClient({
   ]
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
-      <div className="items-center my-7">
-        <Dialog
-          open={open}
-          onOpenChange={(isOpen) => {
-            if (!isOpen) {
-              handleCloseDialog()
-            }
-          }}
-        >
-          <DialogTrigger asChild className="float-end ml-5">
-            <Button onClick={() => handleOpenDialog()}>
-              Add  <Plus className="ml-2" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingDetail ? "Edit Schedule" : "Add Schedule"}</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form 
-                onSubmit={(e) => {
-                  console.log('📤 Form submit event triggered');
-                  e.preventDefault();
-                  form.handleSubmit((values) => {
-                    console.log('✅ Form validation passed');
-                    handleSubmit(values);
-                  }, (errors) => {
-                    console.error('❌ Form validation errors:', errors);
-                  })(e);
-                }} 
-                className="space-y-4"
-              >
-                <FormField
-                  control={form.control}
-                  name="organization_id"
-                  render={({ field }) => <input type="hidden" {...field} />}
-                />
-                <FormItem>
-                  <FormLabel>Organization</FormLabel>
-                  <div className="text-sm text-muted-foreground">
-                    {organizationName || "(Organization name not loaded)"}
-                  </div>
-                </FormItem>
-
-                <FormField
-                  control={form.control}
-                  name="code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Code</FormLabel>
-                      <FormControl>
-                        <Input type="text" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl>
-                        <Input type="text" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input type="text" {...field ?? ""} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="schedule_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select schedule type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {SCHEDULE_TYPES.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Active</FormLabel>
-                      <FormControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <Button 
-                  type="submit" 
-                  className="w-full"
-                  onClick={() => {
-                    console.log('🖱️ Button clicked');
-                    console.log('📋 Current form values:', form.getValues());
-                    console.log('⚠️ Form errors:', form.formState.errors);
+    <div className="w-full h-full">
+      <Card className="h-full border-0 shadow-none">
+        <CardContent className="p-0">
+          <Card className={`mb-4 ${schedules.length === 0 ? "hidden" : ""}`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-end">
+                <Dialog
+                  open={open}
+                  onOpenChange={(isOpen) => {
+                    if (!isOpen) {
+                      handleCloseDialog()
+                    }
                   }}
                 >
-                  {editingDetail ? "Update" : "Create"}
-                </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </div>
-      {schedules.length === 0 ? (
-        <div className="mt-20">
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Calendar className="h-14 w-14 text-muted-foreground mx-auto" />
-              </EmptyMedia>
-              <EmptyTitle>No schedules yet</EmptyTitle>
-              <EmptyDescription>
-                There are no schedules for this organization. Use the "Add Schedule" button to
-                create one.
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button onClick={() => setOpen(true)}>Add Schedule</Button>
-            </EmptyContent>
-          </Empty>
-        </div>
-      ) : (
-        <DataTable columns={columns} data={schedules} />
-      )}
-    </div>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => handleOpenDialog()} variant="outline" className="gap-2 whitespace-nowrap">
+                      <Plus className="h-4 w-4" />
+                      New
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{editingDetail ? "Edit Schedule" : "Add Schedule"}</DialogTitle>
+                    </DialogHeader>
+                    <Form {...form}>
+                      <form
+                        onSubmit={form.handleSubmit(handleSubmit)}
+                        className="space-y-4"
+                      >
+                        <FormField
+                          control={form.control}
+                          name="organization_id"
+                          render={({ field }) => <input type="hidden" {...field} />}
+                        />
+                        <FormItem>
+                          <FormLabel>Organization</FormLabel>
+                          <div className="text-sm text-muted-foreground">
+                            {organizationName || "(Organization name not loaded)"}
+                          </div>
+                        </FormItem>
+
+                        <FormField
+                          control={form.control}
+                          name="code"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Code</FormLabel>
+                              <FormControl>
+                                <Input type="text" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Name</FormLabel>
+                              <FormControl>
+                                <Input type="text" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description</FormLabel>
+                              <FormControl>
+                                <Input type="text" {...field ?? ""} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="schedule_type"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Type</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select schedule type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {SCHEDULE_TYPES.map((type) => (
+                                    <SelectItem key={type.value} value={type.value}>
+                                      {type.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="is_active"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Active</FormLabel>
+                              <FormControl>
+                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="submit" className="w-full">
+                          {editingDetail ? "Update" : "Create"}
+                        </Button>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardContent>
+          </Card>
+          {schedules.length === 0 ? (
+            <div className="mt-20">
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Calendar className="h-14 w-14 text-muted-foreground mx-auto" />
+                  </EmptyMedia>
+                  <EmptyTitle>No schedules yet</EmptyTitle>
+                  <EmptyDescription>
+                    There are no schedules for this organization. Use the "Add Schedule" button to
+                    create one.
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Button onClick={() => handleOpenDialog()}>Add Schedule</Button>
+                </EmptyContent>
+              </Empty>
+            </div>
+          ) : (
+            <DataTable columns={columns} data={schedules} showFilters={true} showColumnToggle={false} />
+          )}
+        </CardContent>
+      </Card>
+    </div >
   )
 }

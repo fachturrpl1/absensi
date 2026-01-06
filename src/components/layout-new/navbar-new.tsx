@@ -6,7 +6,6 @@ import {
   Sun,
   Moon,
   Monitor,
-  Plus,
   UserPlus,
   Clock,
   MapPin,
@@ -26,8 +25,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
-import { SearchDialog } from './search-dialog';
 import { OrgBreadcrumb } from './org-breadcrumb';
+import { useOrgStore } from '@/store/org-store';
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown';
 
 export function NavbarNew() {
@@ -37,6 +36,7 @@ export function NavbarNew() {
   // We want to hide search and new buttons on the organization selection page
   const showActions = pathname !== '/organization';
   const { theme, setTheme } = useTheme();
+  const { organizationName, organizationId, setOrganizationId } = useOrgStore();
 
   // Keyboard shortcuts - Only for Quick Actions
   useEffect(() => {
@@ -64,7 +64,20 @@ export function NavbarNew() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [router]);
 
-
+  // Hydrate org store from localStorage so OrgBreadcrumb can immediately show org name
+  useEffect(() => {
+    if (organizationName && organizationId) return;
+    try {
+      const raw = localStorage.getItem('org-store');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      const storedId = parsed?.state?.organizationId;
+      const storedName = parsed?.state?.organizationName;
+      if (storedId && storedName) {
+        setOrganizationId(storedId, storedName);
+      }
+    } catch {}
+  }, [organizationName, organizationId, setOrganizationId]);
 
   const quickActions = [
     { icon: UserPlus, label: 'Invite Member', href: '/members?action=invite', kbd: '⌘N' },
@@ -85,16 +98,9 @@ export function NavbarNew() {
         {showActions && (
           <>
             {/* Search */}
-            <SearchDialog />
             
             {/* Quick Actions */}
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden md:inline">New</span>
-                </Button>
-              </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />

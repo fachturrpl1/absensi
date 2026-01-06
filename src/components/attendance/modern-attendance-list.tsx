@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
@@ -11,15 +11,13 @@ import {
   XCircle,
   AlertCircle,
   Timer,
-  Eye,
   Edit,
   Trash2,
-  MoreVertical,
-  Mail,
   Grid3x3,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal,
+  ChevronsLeft,
+  ChevronsRight,
   RotateCcw,
   Plus,
 } from 'lucide-react';
@@ -27,6 +25,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Select,
@@ -35,14 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
@@ -62,26 +53,27 @@ import {
 } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import z from 'zod';
+import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import { formatLocalTime } from '@/utils/timezone';
-import { getAllAttendance, deleteAttendanceRecord, deleteMultipleAttendanceRecords } from '@/action/attendance';
+import { getAllAttendance, deleteAttendanceRecord, deleteMultipleAttendanceRecords, AttendanceListItem, GetAttendanceResult } from '@/action/attendance';
 import { toast } from 'sonner';
 import { useOrgStore } from '@/store/org-store';
 import { createClient } from '@/utils/supabase/client';
 
-type AttendanceChangeRow = { attendance_date?: string | null; organization_member_id?: number | null };
+type AttendanceChangeRow = { attendance_date?: string | null; organization_member_id?: number | null; organization_id?: number | null };
 type PgChange<T> = { new: T | null; old: T | null };
 
 interface ModernAttendanceListProps {
-  initialData?: any[];
-  initialStats?: any;
+  initialData?: AttendanceListItem[];
+  initialStats?: unknown;
+  initialMeta?: { total?: number; totalPages?: number; tz?: string };
 }
 
-export default function ModernAttendanceList({ initialData: _initialData, initialStats: _initialStats }: ModernAttendanceListProps) {
+export default function ModernAttendanceList({ initialData: _initialData, initialStats: _initialStats, initialMeta }: ModernAttendanceListProps) {
   const orgStore = useOrgStore();
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
+  const [attendanceData, setAttendanceData] = useState<AttendanceListItem[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [userTimezone, setUserTimezone] = useState('UTC');
   const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
@@ -111,6 +103,19 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       setSelectedOrgId(orgStore.organizationId);
     }
   }, [orgStore.organizationId]);
+
+  // Fallback: resolve organizationId from cookie in production if store not ready yet
+  useEffect(() => {
+    if (selectedOrgId || orgStore.organizationId) return;
+    try {
+      const m = document.cookie.match(/(?:^|; )org_id=(\d+)/);
+      if (m && m[1]) {
+        const oid = Number(m[1]);
+        if (!Number.isNaN(oid)) setSelectedOrgId(oid);
+      }
+    } catch {}
+  }, [selectedOrgId, orgStore.organizationId]);
+  
   
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -119,14 +124,92 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [totalItems, setTotalItems] = useState(0);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingRecords, setEditingRecords] = useState<any[]>([]);
+  const [editingRecords, setEditingRecords] = useState<AttendanceListItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
   const [realtimeActive, setRealtimeActive] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const realtimeDebounceRef = useRef<number | null>(null);
+  const latestRequestRef = useRef(0);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const cacheKeyBase = React.useMemo(() => {
+    const orgId = selectedOrgId || orgStore.organizationId || 'no-org';
+    const fromStr = dateRange.from.toISOString().split('T')[0];
+    const toStr = dateRange.to.toISOString().split('T')[0];
+    const status = statusFilter || 'all';
+    const dept = departmentFilter || 'all';
+    const q = searchQuery || '';
+    return `attendance:list:${orgId}:p=${currentPage}:l=${itemsPerPage}:from=${fromStr}:to=${toStr}:status=${status}:dept=${dept}:q=${q}`;
+  }, [selectedOrgId, orgStore.organizationId, currentPage, itemsPerPage, dateRange.from, dateRange.to, statusFilter, departmentFilter, searchQuery]);
+
+  // Hydrate loading state from localStorage for current key (ignore stale >15s)
+  useEffect(() => {
+  if (!isMounted) return;
+    try {
+      const raw = localStorage.getItem(`${cacheKeyBase}:loading`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { loading?: boolean; ts?: number };
+        const tooOld = parsed.ts ? (Date.now() - parsed.ts > 15_000) : true;
+        // Hanya matikan loading jika tersimpan false dan masih fresh
+        if (!tooOld && parsed.loading === false) setLoading(false);
+      }
+    } catch {}
+  }, [cacheKeyBase, isMounted]);
+
+  // Persist loading state on change
+  useEffect(() => {
+  if (!isMounted) return;
+    try {
+      if (loading) {
+        localStorage.setItem(`${cacheKeyBase}:loading`, JSON.stringify({ loading: true, ts: Date.now() }));
+      } else {
+        localStorage.removeItem(`${cacheKeyBase}:loading`);
+      }
+    } catch {}
+  }, [loading, cacheKeyBase, isMounted]);
+
+  // Hydrate data from cache for perceived-fast load
+  useEffect(() => {
+    if (!isMounted) return;
+    try {
+      const raw = localStorage.getItem(cacheKeyBase);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { data?: AttendanceListItem[]; total?: number; tz?: string; ts?: number };
+        const TTL = 60_000; // 60s cache TTL
+        if (!parsed.ts || Date.now() - parsed.ts < TTL) {
+          if (Array.isArray(parsed.data)) {
+            setAttendanceData(parsed.data);
+            setTotalItems(parsed.total || 0);
+            if (parsed.tz) setUserTimezone(parsed.tz);
+            // If we successfully hydrated data, ensure loading UI doesn't block
+            setLoading(false);
+          }
+        }
+      }
+    } catch {}
+  }, [cacheKeyBase, isMounted]);
+
+  // Seed from SSR initialData if cache empty
+  useEffect(() => {
+    if (!isMounted) return;
+    if (attendanceData.length === 0 && Array.isArray(_initialData) && _initialData.length > 0) {
+      setAttendanceData(_initialData as AttendanceListItem[]);
+      setTotalItems(initialMeta?.total || _initialData.length || 0);
+      if (initialMeta?.tz) setUserTimezone(initialMeta.tz);
+      setLoading(false);
+      try {
+        localStorage.setItem(cacheKeyBase, JSON.stringify({ data: _initialData, total: initialMeta?.total || _initialData.length || 0, tz: initialMeta?.tz, ts: Date.now() }));
+      } catch {}
+    }
+  }, [isMounted, _initialData, initialMeta, cacheKeyBase]);
 
   // Edit form schema
   const editFormSchema = z.object({
@@ -220,6 +303,16 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     setEditDialogOpen(true);
   };
 
+  const handleEditSingle = (rec: AttendanceListItem) => {
+    setEditingRecords([rec]);
+    setSelectedRecords([rec.id]);
+    editForm.reset({
+      status: rec?.status || 'present',
+      remarks: '',
+    });
+    setEditDialogOpen(true);
+  };
+
   // Handle edit form submit
   const onEditSubmit = async (_values: EditFormValues) => {
     try {
@@ -248,53 +341,85 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   // Fetch data using Server Action with pagination
   const fetchData = useCallback(async () => {
+  const orgId = selectedOrgId || orgStore.organizationId;
+  console.log('🔄 Fetch triggered:', {
+    page: currentPage,
+    itemsPerPage,
+    orgId,
+    hasDateFilter: false, // sementara non-aktif
+    statusFilter,
+    departmentFilter,
+    searchQuery
+  });
+    // Require orgId to avoid relying on server-side auth cookies in production
+    if (!orgId) {
+      console.warn('[fetchData] Skipped: organizationId not ready yet');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
+    const reqId = latestRequestRef.current + 1;
+
+    latestRequestRef.current = reqId;
     try {
-      const orgId = selectedOrgId || orgStore.organizationId || undefined;
+      const searchParam = (searchQuery || '').trim();
+      // Use local date (not UTC) to avoid day-shift in production
+      const toLocalYMD = (d: Date) => {
+        const dt = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+        return dt.toISOString().slice(0, 10);
+      };
       const [listResult] = await Promise.all([
         getAllAttendance({
           page: currentPage,
           limit: itemsPerPage,
-          dateFrom: dateRange.from.toISOString().split('T')[0],
-          dateTo: dateRange.to.toISOString().split('T')[0],
-          search: searchQuery || undefined,
+          dateFrom: toLocalYMD(dateRange.from),
+          dateTo: toLocalYMD(dateRange.to),
+          search: searchParam.length >= 2 ? searchParam : undefined,
           status: statusFilter === 'all' ? undefined : statusFilter,
           department: departmentFilter === 'all' ? undefined : departmentFilter,
           organizationId: orgId,
         })
       ]);
 
-      const result = (listResult && typeof listResult === 'object' && 'success' in listResult)
-        ? listResult as { success: boolean; data?: any[]; meta?: { total?: number }; message?: string }
-        : { success: false, data: [], meta: { total: 0 }, message: 'Invalid response from server' };
+      const result: GetAttendanceResult = (listResult && typeof listResult === 'object' && 'success' in listResult)
+        ? (listResult as GetAttendanceResult)
+        : { success: false, data: [], meta: { total: 0, page: 1, limit: itemsPerPage, totalPages: 0, nextCursor: undefined }, message: 'Invalid response from server' };
 
       if (result.success) {
-        const data = result.data || [];
+        const data = (result.data || []) as AttendanceListItem[];
         console.log('📊 Attendance data received:', {
           count: data.length,
           total: result.meta?.total,
           firstItem: data[0],
           allData: data
         });
-        
+        if (reqId !== latestRequestRef.current) {
+          return; // stale response
+        }
         setAttendanceData(data);
         setTotalItems(result.meta?.total || 0);
         
         // Set timezone from first record if available (fallback to UTC)
         if (data.length > 0) {
-          setUserTimezone(data[0].timezone || 'UTC');
+          const first = data[0];
+          setUserTimezone(first?.timezone || 'UTC');
         }
 
         // Extract unique departments from current page (simple solution for now)
         if (data.length > 0) {
         const uniqueDepts = Array.from(new Set(
-            data.map((r: any) => r.member?.department)
-        )).filter(dept => dept && dept !== 'No Department').sort();
+            data.map((r) => r.member?.department)
+        )).filter((dept): dept is string => Boolean(dept && dept !== 'No Department')).sort();
         
         if (departments.length === 0 && uniqueDepts.length > 0) {
           setDepartments(uniqueDepts);
           }
         }
+        try {
+          const tz = data.length > 0 ? (data[0]?.timezone ?? 'UTC') : undefined;
+          localStorage.setItem(cacheKeyBase, JSON.stringify({ data, total: result.meta?.total || 0, tz, ts: Date.now() }));
+          // Jika keyset aktif (nextCursor ada), hindari offset prefetch page berikutnya
+        } catch {}
       } else {
         console.error('Failed to load attendance:', result?.message ?? result);
         setAttendanceData([]);
@@ -315,6 +440,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     }
   }, [currentPage, itemsPerPage, dateRange, searchQuery, statusFilter, departmentFilter, selectedOrgId, orgStore.organizationId]);
 
+
   // Trigger fetch when filters change (and initial load)
   useEffect(() => {
     console.log('🔄 Fetch triggered:', { currentPage, dateRange, searchQuery, statusFilter, departmentFilter });
@@ -334,11 +460,15 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         {
           event: '*',
           schema: 'public',
-          table: 'attendance_records',
+          table: 'attendance_records'
         },
         (payload: PgChange<AttendanceChangeRow>) => {
           const newRow = payload.new;
           const oldRow = payload.old;
+          const payloadOrgId = newRow?.organization_id ?? oldRow?.organization_id;
+          if (payloadOrgId && orgId && Number(payloadOrgId) !== Number(orgId)) {
+            return;
+          }
           const dateStr = (newRow?.attendance_date as string | undefined) || (oldRow?.attendance_date as string | undefined);
           if (dateStr) {
             const ts = new Date(dateStr).getTime();
@@ -348,8 +478,12 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
               return; // outside current filter window, skip
             }
           }
-          // Refetch on any relevant change (INSERT/UPDATE/DELETE)
-          fetchData();
+          if (realtimeDebounceRef.current) {
+            window.clearTimeout(realtimeDebounceRef.current);
+          }
+          realtimeDebounceRef.current = window.setTimeout(() => {
+            fetchData();
+          }, 700);
         }
       )
       .subscribe((status) => {
@@ -359,6 +493,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
     return () => {
       setRealtimeActive(false);
+      if (realtimeDebounceRef.current) {
+        window.clearTimeout(realtimeDebounceRef.current);
+        realtimeDebounceRef.current = null;
+      }
       supabase.removeChannel(channel);
     };
   }, [selectedOrgId, orgStore.organizationId, dateRange.from, dateRange.to, fetchData]);
@@ -400,7 +538,11 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   // }, [loading, isAutoRefreshPaused, fetchData]);
 
   // Helper component to display device location
-  const LocationDisplay = ({ checkInLocationName, checkOutLocationName }: any) => {
+  interface LocationDisplayProps {
+    checkInLocationName?: string | null;
+    checkOutLocationName?: string | null;
+  }
+  const LocationDisplay = ({ checkInLocationName, checkOutLocationName }: LocationDisplayProps) => {
     if (!checkInLocationName && !checkOutLocationName) {
       return <span className="text-muted-foreground text-xs">No Location</span>;
     }
@@ -436,45 +578,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   // Pagination Logic
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  
-  const getPageNumbers = () => {
-    const pages: (number | string)[] = [];
-    
-    if (totalPages <= 7) {
-      // Show all pages if total pages <= 7
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      // Always show first page
-      pages.push(1);
-      
-      if (currentPage <= 4) {
-        // Show: 1 2 3 4 5 ... n
-        for (let i = 2; i <= 5; i++) {
-          pages.push(i);
-        }
-        pages.push('ellipsis');
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 3) {
-        // Show: 1 ... n-4 n-3 n-2 n-1 n
-        pages.push('ellipsis');
-        for (let i = totalPages - 4; i <= totalPages; i++) {
-          pages.push(i);
-        }
-      } else {
-        // Show: 1 ... n-1 n n+1 ... last
-        pages.push('ellipsis');
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
-          pages.push(i);
-        }
-        pages.push('ellipsis');
-        pages.push(totalPages);
-      }
-    }
-    
-    return pages;
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -508,7 +611,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     if (selectedRecords.length === attendanceData.length) {
       setSelectedRecords([]);
     } else {
-      setSelectedRecords(attendanceData.map((r: any) => r.id));
+      setSelectedRecords(attendanceData.map((r: AttendanceListItem) => r.id));
     }
   };
 
@@ -517,98 +620,99 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       {/* Filters & Actions */}
       <Card className="border border-gray-200 shadow-sm">
         <CardContent className="p-4 md:p-6">
-          <div className="flex flex-col gap-4">
-            {/* Search Bar with Icon Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <Input
-                  placeholder="Search by name or department..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  className="pl-10 border-gray-300"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => {
-                    // Refresh data
-                    fetchData();
-                  }}
-                  title="Refresh"
-                  className="border-gray-300"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </Button>
-                <Button 
-                  variant={viewMode === 'grid' ? 'default' : 'outline'}
-                  size="icon"
-                  onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
-                  title={viewMode === 'list' ? 'Switch to grid view' : 'Switch to list view'}
-                  className={viewMode === 'grid' ? '' : 'border-gray-300'}
-                >
-                  <Grid3x3 className="w-4 h-4" />
-                </Button>
-              </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Search */}
+            <div className="flex-1 min-w-[260px] relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                placeholder="Search by name or department..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-10 border-gray-300"
+              />
             </div>
 
-            {/* Filters Row */}
-            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center sm:justify-between sm:flex-nowrap">
-              <div className="flex flex-col sm:flex-row gap-3 flex-wrap items-start sm:items-center flex-1 min-w-0">
-                {/* Date Filter */}
-                <div className="w-full sm:w-auto">
-                  <DateFilterBar 
-                    dateRange={dateRange} 
-                    onDateRangeChange={setDateRange}
-                  />
-                </div>
+            {/* Refresh */}
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => {
+                fetchData();
+              }}
+              title="Refresh"
+              className="border-gray-300 shrink-0"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </Button>
 
-                {/* Status Filter */}
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Status:</span>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full sm:w-40 border-gray-300">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="present">Present</SelectItem>
-                      <SelectItem value="late">Late</SelectItem>
-                      <SelectItem value="absent">Absent</SelectItem>
-                      <SelectItem value="leave">On Leave</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            {/* View toggle */}
+            <Button 
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+              title={viewMode === 'list' ? 'Switch to grid view' : 'Switch to list view'}
+              className={viewMode === 'grid' ? 'shrink-0' : 'border-gray-300 shrink-0'}
+            >
+              <Grid3x3 className="w-4 h-4" />
+            </Button>
 
-                {/* Department Filter */}
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Groups:</span>
-                  <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                    <SelectTrigger className="w-full sm:w-[180px] border-gray-300">
-                      <SelectValue placeholder="Department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Groups</SelectItem>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept} value={dept}>
-                          {dept}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Manual Entry Button */}
-              <Link href="/attendance/add" className="w-full sm:w-auto shrink-0">
-                <Button className="w-full sm:w-auto bg-black text-white hover:bg-black/90 whitespace-nowrap">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Manual Entry
-                </Button>
-              </Link>
+            {/* Date Filter */}
+            <div className="shrink-0">
+              <DateFilterBar 
+                dateRange={dateRange} 
+                onDateRangeChange={setDateRange}
+              />
             </div>
+
+            {/* Status Filter */}
+            <div className="flex items-center gap-2 shrink-0">
+              {isMounted ? (
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-40 border-gray-300">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="present">Present</SelectItem>
+                    <SelectItem value="late">Late</SelectItem>
+                    <SelectItem value="absent">Absent</SelectItem>
+                    <SelectItem value="leave">On Leave</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="w-40 h-9 border border-gray-300 rounded bg-muted/50" aria-hidden />
+              )}
+            </div>
+
+            {/* Department Filter */}
+            <div className="flex items-center gap-2 shrink-0">
+              {isMounted ? (
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                  <SelectTrigger className="w-[180px] border-gray-300">
+                    <SelectValue placeholder="Department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Groups</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="w-[180px] h-9 border border-gray-300 rounded bg-muted/50" aria-hidden />
+              )}
+            </div>
+
+            {/* Manual Entry Button */}
+            <Link href="/attendance/add" className="shrink-0">
+              <Button className="bg-black text-white hover:bg-black/90 whitespace-nowrap">
+                <Plus className="mr-2 h-4 w-4" />
+                Manual Entry
+              </Button>
+            </Link>
+          </div>
 
             {/* Selected Actions */}
             <AnimatePresence>
@@ -623,10 +727,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     {selectedRecords.length} selected
                   </span>
                   <Separator orientation="vertical" className="h-6" />
-                  <Button variant="ghost" size="sm">
+                  {/* <Button variant="ghost" size="sm">
                     <Mail className="mr-2 h-4 w-4" />
                     Send Email
-                  </Button>
+                  </Button> */}
                   <Button 
                     variant="ghost" 
                     size="sm"
@@ -655,7 +759,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
         </CardContent>
       </Card>
 
@@ -670,11 +773,24 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             {/* Mobile Card View - Only show on small screens */}
             <div className="block lg:hidden divide-y">
               {loading ? (
-                <div className="p-8 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    <span className="text-muted-foreground">Loading attendance data...</span>
-                  </div>
+                <div className="divide-y">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={`mobile-skel-${i}`} className="p-4 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-10 w-10 rounded-full" />
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <Skeleton className="h-4 w-40" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-6 w-20" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : attendanceData.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
@@ -686,7 +802,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                   )}
                 </div>
               ) : (
-                attendanceData.map((record: any, index: number) => {
+                attendanceData.map((record, index: number) => {
                   if (!record || !record.id) {
                     console.warn('Invalid record at index', index, record);
                     return null;
@@ -713,40 +829,38 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       <Avatar className="h-10 w-10 shrink-0">
                         <AvatarImage src={record.member.avatar} />
                         <AvatarFallback>
-                          {record.member.name.split(' ').map((n: string) => n[0]).join('')}
+                          {record.member.name.split(' ').map((n) => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium truncate">{record.member.name}</p>
+                        <p className="font-medium truncate">
+                          <Link href={`/members/${record.member.id ?? ''}`} className="hover:underline">
+                            {record.member.name}
+                          </Link>
+                        </p>
                         <p className="text-sm text-muted-foreground truncate">{record.member.department}</p>
                       </div>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="text-destructive"
-                          onClick={() => handleDeleteClick(record.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title="Edit"
+                        onClick={() => handleEditSingle(record)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        title="Delete"
+                        onClick={() => handleDeleteClick(record.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 text-sm">
@@ -766,11 +880,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       <p className="text-xs text-muted-foreground mb-1">Work Hours</p>
                       <div className="flex flex-col gap-1">
                         <span className="font-medium text-sm">{record.workHours}</span>
-                        {record.overtime && (
-                          <Badge variant="secondary" className="w-fit text-xs">
-                            +{record.overtime} OT
-                          </Badge>
-                        )}
                       </div>
                     </div>
                     <div>
@@ -819,14 +928,35 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={8} className="text-center py-8">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                          <span className="text-muted-foreground">Loading attendance data...</span>
-                        </div>
-                      </td>
-                    </tr>
+                    <>
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <tr key={`table-skel-${i}`} className="border-b">
+                          <td className="p-4">
+                            <Skeleton className="h-4 w-4 rounded" />
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <Skeleton className="h-10 w-10 rounded-full" />
+                              <div className="space-y-2">
+                                <Skeleton className="h-4 w-40" />
+                                <Skeleton className="h-3 w-24" />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4"><Skeleton className="h-4 w-16" /></td>
+                          <td className="p-4"><Skeleton className="h-4 w-16" /></td>
+                          <td className="p-4"><Skeleton className="h-4 w-20" /></td>
+                          <td className="p-4"><Skeleton className="h-6 w-20 rounded-full" /></td>
+                          <td className="p-4"><Skeleton className="h-4 w-28" /></td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-1">
+                              <Skeleton className="h-8 w-8 rounded" />
+                              <Skeleton className="h-8 w-8 rounded" />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </>
                   ) : attendanceData.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="text-center py-8 text-muted-foreground">
@@ -839,7 +969,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       </td>
                     </tr>
                   ) : (
-                    attendanceData.map((record: any, index: number) => {
+                    attendanceData.map((record: AttendanceListItem, index: number) => {
                       if (!record || !record.id) {
                         console.warn('Invalid record at index', index, record);
                         return null;
@@ -873,7 +1003,11 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium">{record.member.name}</p>
+                            <p className="font-medium">
+                              <Link href={`/members/${record.member.id ?? ''}`} className="hover:underline">
+                                {record.member.name}
+                              </Link>
+                            </p>
                             <p className="text-sm text-muted-foreground">{record.member.department}</p>
                           </div>
                         </div>
@@ -891,11 +1025,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       <td className="p-4">
                         <div className="flex flex-col gap-1">
                           <span className="font-medium text-sm">{record.workHours}</span>
-                          {record.overtime && (
-                            <Badge variant="secondary" className="w-fit text-xs">
-                              +{record.overtime} OT
-                            </Badge>
-                          )}
                         </div>
                       </td>
                       <td className="p-4">
@@ -911,32 +1040,25 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                         />
                       </td>
                       <td className="p-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-destructive"
-                              onClick={() => handleDeleteClick(record.id)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Edit"
+                            onClick={() => handleEditSingle(record)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Delete"
+                            onClick={() => handleDeleteClick(record.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                       );
@@ -946,60 +1068,94 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
               </table>
             </div>
 
-            {/* Pagination */}
-            {!loading && totalItems > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t px-4 py-4">
-                <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
-                  Page {currentPage} of {totalPages} ({totalItems} total)
-                </div>
-                <div className="flex items-center gap-1">
-                  {/* Previous Button */}
+            {/* Pagination Footer (aligned with Members) */}
+            {!loading && (
+              <div className="flex items-center justify-between py-4 px-4 bg-muted/50 rounded-md border">
+                <div className="flex items-center gap-2">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      if (currentPage > 1) setCurrentPage(currentPage - 1);
-                    }}
+                    onClick={() => setCurrentPage(1)}
                     disabled={currentPage === 1}
-                    className="gap-1 px-3"
+                    className="h-8 w-8 p-0"
+                    title="First page"
                   >
-                    <ChevronLeft className="h-4 w-4" />
-                    Previous
+                    <ChevronsLeft className="h-4 w-4" />
                   </Button>
-                  
-                  {/* Page Numbers */}
-                  {getPageNumbers().map((page, index) => (
-                    <React.Fragment key={index}>
-                      {typeof page === 'number' ? (
-                        <Button
-                          variant={currentPage === page ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setCurrentPage(page)}
-                          className="w-9 h-9 p-0"
-                        >
-                          {page}
-                        </Button>
-                      ) : (
-                        <span className="flex h-9 w-9 items-center justify-center text-muted-foreground">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </span>
-                      )}
-                    </React.Fragment>
-                  ))}
-
-                  {/* Next Button */}
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                    }}
-                    disabled={currentPage === totalPages}
-                    className="gap-1 px-3"
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="h-8 w-8 p-0"
+                    title="Previous page"
                   >
-                    Next
+                    <ChevronLeft className="  h-4 w-4" />
+                  </Button>
+
+                  <span className="text-sm text-muted-foreground">Page</span>
+
+                  <input
+                    type="number"
+                    min={1}
+                    max={Math.max(1, totalPages)}
+                    value={currentPage}
+                    onChange={(e) => {
+                      const page = e.target.value ? Number(e.target.value) : 1;
+                      const safe = Math.max(1, Math.min(page, Math.max(1, totalPages)));
+                      setCurrentPage(safe);
+                    }}
+                    className="w-12 h-8 px-2 border rounded text-sm text-center bg-background"
+                    disabled={totalItems === 0}
+                  />
+
+                  <span className="text-sm text-muted-foreground">/ {Math.max(1, totalPages)}</span>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.min(totalPages || 1, currentPage + 1))}
+                    disabled={currentPage >= (totalPages || 1)}
+                    className="h-8 w-8 p-0"
+                    title="Next page"
+                  >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.max(1, totalPages))}
+                    disabled={currentPage >= (totalPages || 1)}
+                    className="h-8 w-8 p-0"
+                    title="Last page"
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-muted-foreground">
+                    {totalItems > 0
+                      ? (
+                        <>Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} total records</>
+                        )
+                      : (<>Showing 0 to 0 of 0 total records</>)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        const size = parseInt(e.target.value, 10) || 10;
+                        setItemsPerPage(size);
+                        setCurrentPage(1);
+                      }}
+                      className="px-2 py-1 border rounded text-sm bg-background"
+                    >
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             )}
@@ -1027,7 +1183,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             </Card>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {attendanceData.map((record: any, index: number) => {
+              {attendanceData.map((record: AttendanceListItem, index: number) => {
                 if (!record || !record.id) {
                   return null;
                 }
@@ -1063,7 +1219,11 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-semibold">{record.member.name}</p>
+                        <p className="font-semibold">
+                          <Link href={`/members/${record.member.id ?? ''}`} className="hover:underline">
+                            {record.member.name}
+                          </Link>
+                        </p>
                         <p className="text-sm text-muted-foreground">{record.member.department}</p>
                       </div>
                     </div>

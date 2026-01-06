@@ -1,4 +1,9 @@
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 
 import { dashboardLogger } from '@/lib/logger';
@@ -21,7 +26,15 @@ async function getUserOrganizationId() {
 
 export async function GET(request: Request) {
   try {
-    const organizationId = await getUserOrganizationId()
+    let organizationId = await getUserOrganizationId()
+    if (!organizationId) {
+      try {
+        const cookieStore = await cookies()
+        const raw = cookieStore.get('org_id')?.value
+        const fromCookie = raw ? Number(raw) : NaN
+        if (!Number.isNaN(fromCookie)) organizationId = fromCookie
+      } catch {}
+    }
     if (!organizationId) {
       return NextResponse.json(
         { success: false, message: 'Organization not found' },

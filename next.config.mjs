@@ -1,11 +1,11 @@
-import withPWAInit from '@ducanh2912/next-pwa';
+import withPWAInit from '@ducanh2912/next-pwa'; //disable terlebih dahulu
 
 const isDev = process.env.NODE_ENV === 'development';
 
 // Configure PWA
 const withPWA = withPWAInit({
   dest: 'public',
-  disable: isDev,
+  disable: true, // aktifkan = isDev
   register: true,
   skipWaiting: true,
   reloadOnOnline: true,
@@ -424,4 +424,4 @@ const nextConfig = {
   }),
 };
 
-export default withPWA(nextConfig);
+export default nextConfig;

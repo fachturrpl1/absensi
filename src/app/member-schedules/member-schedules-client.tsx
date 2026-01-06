@@ -22,6 +22,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import {
+  Card,
+  CardContent,
+} from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import {
   Form,
   FormControl,
   FormField,
@@ -56,10 +61,10 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
 
 import { IMemberSchedule, IOrganization_member, IWorkSchedule } from "@/interface"
-import { 
+import {
   createMemberSchedule,
   updateMemberSchedule,
-  deleteMemberSchedule 
+  deleteMemberSchedule
 } from "@/action/members_schedule"
 
 const memberScheduleSchema = z.object({
@@ -208,12 +213,26 @@ export default function MemberSchedulesClient({
     {
       header: "Member",
       accessorFn: (row) => getMemberName(row),
-      cell: ({ row }) => (
-        <div className="flex gap-2 items-center">
-          <Calendar className="w-4 h-4" />
-          {getMemberName(row.original)}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const schedule = row.original
+        const member = schedule.organization_member as any
+        const user = member?.user
+        const name = getMemberName(schedule)
+        const email = user?.email || ""
+
+        return (
+          <div className="flex gap-3 items-center">
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={user?.profile_photo_url} alt={name} />
+              <AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium leading-none">{name}</span>
+              {email && <span className="text-xs text-muted-foreground">{email}</span>}
+            </div>
+          </div>
+        )
+      },
     },
     {
       header: "Work Schedule",
@@ -237,14 +256,10 @@ export default function MemberSchedulesClient({
       accessorKey: "is_active",
       cell: ({ row }) => {
         const active = row.getValue("is_active") as boolean
-        return active ? (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white">
-            Active
-          </span>
-        ) : (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 text-black">
-            Inactive
-          </span>
+        return (
+          <Badge variant={active ? "default" : "secondary"} className={active ? "bg-green-500 hover:bg-green-600" : ""}>
+            {active ? "Active" : "Inactive"}
+          </Badge>
         )
       },
     },
@@ -295,201 +310,205 @@ export default function MemberSchedulesClient({
   ]
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
-      <div className="items-center my-7">
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild className="float-end ml-5">
-            <Button onClick={() => setEditingSchedule(null)}>
-              Assign  <Plus className="ml-2 h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>
-                {editingSchedule ? "Edit Schedule" : "Assign Schedule"}
-              </DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                {editingSchedule ? (
-                  <div className="rounded-lg bg-secondary/50 px-4 py-3 space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Member</p>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-10 h-10 border-2 border-primary/20">
-                        <AvatarImage 
-                          src={
-                            (editingSchedule.organization_member as { user?: { profile_photo_url?: string | null } })?.user?.profile_photo_url || undefined
-                          } 
-                          alt={getMemberName(editingSchedule)} 
-                        />
-                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                          {getMemberName(editingSchedule).charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <p className="text-sm font-semibold text-foreground">
-                          {getMemberName(editingSchedule)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {(editingSchedule.organization_member as { user?: { email?: string } })?.user?.email || 'No email'}
+    <div className="w-full h-full">
+      <Card className="h-full border-0 shadow-none">
+        <CardContent className="p-0">
+          <div className={`flex justify-end mb-4 ${schedules.length === 0 ? "hidden" : ""}`}>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setEditingSchedule(null)} variant="outline" size="icon">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingSchedule ? "Edit Schedule" : "Assign Schedule"}
+                  </DialogTitle>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    {editingSchedule ? (
+                      <div className="rounded-lg bg-secondary/50 px-4 py-3 space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Member</p>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-10 h-10 border-2 border-primary/20">
+                            <AvatarImage
+                              src={
+                                (editingSchedule.organization_member as { user?: { profile_photo_url?: string | null } })?.user?.profile_photo_url || undefined
+                              }
+                              alt={getMemberName(editingSchedule)}
+                            />
+                            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                              {getMemberName(editingSchedule).charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <p className="text-sm font-semibold text-foreground">
+                              {getMemberName(editingSchedule)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {(editingSchedule.organization_member as { user?: { email?: string } })?.user?.email || 'No email'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <FormField
+                        control={form.control}
+                        name="organization_member_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Member</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select member" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {initialMembers.map((member) => {
+                                  const user = member.user as { first_name?: string; middle_name?: string; last_name?: string; email?: string } | undefined
+                                  const name = user
+                                    ? [user.first_name, user.middle_name, user.last_name]
+                                      .filter(Boolean)
+                                      .join(" ") || user.email
+                                    : "Unknown"
+                                  const hasActiveSchedule = membersWithActiveSchedule.has(String(member.id))
+
+                                  return (
+                                    <SelectItem
+                                      key={member.id}
+                                      value={String(member.id)}
+                                      disabled={hasActiveSchedule}
+                                    >
+                                      {name} {hasActiveSchedule ? "(Has active schedule)" : ""}
+                                    </SelectItem>
+                                  )
+                                })}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    {editingSchedule ? (
+                      <div className="rounded-lg bg-secondary/50 px-4 py-3 space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Effective Date</p>
+                        <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-primary" />
+                          {new Date(editingSchedule.effective_date).toLocaleDateString("id-ID", {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
                         </p>
                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  <FormField
-                    control={form.control}
-                    name="organization_member_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Member</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select member" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {initialMembers.map((member) => {
-                              const user = member.user as { first_name?: string; middle_name?: string; last_name?: string; email?: string } | undefined
-                              const name = user
-                                ? [user.first_name, user.middle_name, user.last_name]
-                                    .filter(Boolean)
-                                    .join(" ") || user.email
-                                : "Unknown"
-                              const hasActiveSchedule = membersWithActiveSchedule.has(String(member.id))
-                              
-                              return (
-                                <SelectItem 
-                                  key={member.id} 
-                                  value={String(member.id)}
-                                  disabled={hasActiveSchedule}
-                                >
-                                  {name} {hasActiveSchedule ? "(Has active schedule)" : ""}
+                    ) : (
+                      <FormField
+                        control={form.control}
+                        name="effective_date"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Effective Date</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    <FormField
+                      control={form.control}
+                      name="work_schedule_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Work Schedule</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select work schedule" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {initialWorkSchedules.map((schedule) => (
+                                <SelectItem key={schedule.id} value={String(schedule.id)}>
+                                  {schedule.name}
                                 </SelectItem>
-                              )
-                            })}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                {editingSchedule ? (
-                  <div className="rounded-lg bg-secondary/50 px-4 py-3 space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Effective Date</p>
-                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-primary" />
-                      {new Date(editingSchedule.effective_date).toLocaleDateString("id-ID", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </p>
-                  </div>
-                ) : (
-                  <FormField
-                    control={form.control}
-                    name="effective_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Effective Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                    <FormField
+                      control={form.control}
+                      name="is_active"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>Active Status</FormLabel>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="work_schedule_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Work Schedule</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select work schedule" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {initialWorkSchedules.map((schedule) => (
-                            <SelectItem key={schedule.id} value={String(schedule.id)}>
-                              {schedule.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <div className="flex gap-2 justify-end">
+                      <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                        Cancel
+                      </Button>
+                      <Button type="submit">
+                        {editingSchedule ? "Update" : "Assign"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </div>
 
-                <FormField
-                  control={form.control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel>Active Status</FormLabel>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex gap-2 justify-end">
-                  <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">
-                    {editingSchedule ? "Update" : "Assign"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {schedules.length === 0 ? (
-        <Empty>
-          <EmptyMedia>
-            <Calendar className="w-16 h-16 text-muted-foreground" />
-          </EmptyMedia>
-          <EmptyHeader>
-            <EmptyTitle>No member schedules</EmptyTitle>
-            <EmptyDescription>
-              Get started by assigning a work schedule to a member
-            </EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
-            <Button onClick={() => setOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Assign 
-            </Button>
-          </EmptyContent>
-        </Empty>
-      ) : (
-        <DataTable columns={columns} data={schedules} />
-      )}
+          {schedules.length === 0 ? (
+            <Empty>
+              <EmptyMedia>
+                <Calendar className="w-16 h-16 text-muted-foreground" />
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle>No member schedules</EmptyTitle>
+                <EmptyDescription>
+                  Get started by assigning a work schedule to a member
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button onClick={() => setOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Assign
+                </Button>
+              </EmptyContent>
+            </Empty>
+          ) : (
+            <DataTable columns={columns} data={schedules} showFilters={true} showColumnToggle={false} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
