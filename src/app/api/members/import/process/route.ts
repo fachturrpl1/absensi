@@ -334,7 +334,7 @@ export async function POST(request: NextRequest) {
     
     // Fetch semua users dengan pagination
     let page = 1
-    const perPage = 1000
+    const perPage = 2000 // Optimized: increased from 1000 to reduce pagination calls
     let hasMore = true
     
     while (hasMore) {
@@ -559,7 +559,7 @@ export async function POST(request: NextRequest) {
       const failedAfterValidation = new Set<number>()
 
       // Batch process: Buat user untuk yang belum ada dan memiliki email (parallel dengan concurrency limit)
-      const CONCURRENCY_LIMIT = 20 // Process 20 users at a time (increased for faster import)
+      const CONCURRENCY_LIMIT = 50 // Process 50 users at a time (optimized for faster import)
       const usersToCreate = validRows.filter(vr => {
         // Hanya buat user jika ada email dan belum ada di cache
         return vr.email && vr.email.trim() !== "" && !usersByEmail.has(vr.email.toLowerCase())
@@ -666,7 +666,7 @@ export async function POST(request: NextRequest) {
       // Split into batches to avoid timeout
       const rowsWithEmail = validRows.filter(vr => vr.email && vr.email.trim() !== "")
       console.log(`[MEMBERS IMPORT] Batch upserting ${rowsWithEmail.length} user profiles (${validRows.length - rowsWithEmail.length} rows without email will skip user profile)...`)
-      const PROFILE_BATCH_SIZE = 200 // Process 200 profiles at a time
+      const PROFILE_BATCH_SIZE = 500 // Process 500 profiles at a time (optimized for faster import)
       
       for (let i = 0; i < rowsWithEmail.length; i += PROFILE_BATCH_SIZE) {
         const batch = rowsWithEmail.slice(i, i + PROFILE_BATCH_SIZE)
@@ -873,7 +873,7 @@ export async function POST(request: NextRequest) {
         }))
 
       // Upsert dalam batch (Supabase mendukung batch upsert)
-      const BIODATA_BATCH_SIZE = 200 // Increased from 100 to 200 for better performance
+      const BIODATA_BATCH_SIZE = 500 // Optimized for faster import (increased from 200)
       for (let i = 0; i < biodataPayloads.length; i += BIODATA_BATCH_SIZE) {
         const batch = biodataPayloads.slice(i, i + BIODATA_BATCH_SIZE)
         const batchPayloads = batch.map(item => item.payload)
@@ -996,7 +996,7 @@ export async function POST(request: NextRequest) {
       // Gunakan upsert untuk menghindari duplicate key error jika ada duplicate dalam batch
       // Split into smaller batches to avoid timeout and improve performance
       if (membersToInsert.length > 0) {
-        const MEMBER_UPSERT_BATCH_SIZE = 500 // Upsert 500 members at a time
+        const MEMBER_UPSERT_BATCH_SIZE = 1000 // Upsert 1000 members at a time (optimized for faster import)
         console.log(`[MEMBERS IMPORT] Batch upserting ${membersToInsert.length} new members in batches of ${MEMBER_UPSERT_BATCH_SIZE}...`)
         
         for (let i = 0; i < membersToInsert.length; i += MEMBER_UPSERT_BATCH_SIZE) {
@@ -1201,27 +1201,34 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Batch update existing members (dalam batch kecil untuk menghindari query terlalu besar)
-      const UPDATE_BATCH_SIZE = 100 // Increased from 50 to 100 for better performance
+      // Batch update existing members (optimized with higher concurrency)
+      const UPDATE_BATCH_SIZE = 300 // Optimized for faster import (increased from 100)
+      const UPDATE_CONCURRENCY = 50 // Process 50 updates in parallel per batch
+      
       for (let i = 0; i < membersToUpdate.length; i += UPDATE_BATCH_SIZE) {
         const batch = membersToUpdate.slice(i, i + UPDATE_BATCH_SIZE)
-        await Promise.all(
-          batch.map(async ({ id, data, rowNumber }) => {
-            const { error: updateError } = await adminClient
-              .from("organization_members")
-              .update(data)
-              .eq("id", id)
-            
-            if (updateError && !failedAfterValidation.has(rowNumber)) {
-              failed++
-              failedAfterValidation.add(rowNumber)
-              errors.push({
-                row: rowNumber,
-                message: `Baris ${rowNumber}: Gagal memperbarui member organisasi - ${updateError.message}`,
-              })
-            }
-          })
-        )
+        
+        // Process batch dengan concurrency limit untuk menghindari overwhelming database
+        for (let j = 0; j < batch.length; j += UPDATE_CONCURRENCY) {
+          const concurrentBatch = batch.slice(j, j + UPDATE_CONCURRENCY)
+          await Promise.all(
+            concurrentBatch.map(async ({ id, data, rowNumber }) => {
+              const { error: updateError } = await adminClient
+                .from("organization_members")
+                .update(data)
+                .eq("id", id)
+              
+              if (updateError && !failedAfterValidation.has(rowNumber)) {
+                failed++
+                failedAfterValidation.add(rowNumber)
+                errors.push({
+                  row: rowNumber,
+                  message: `Baris ${rowNumber}: Gagal memperbarui member organisasi - ${updateError.message}`,
+                })
+              }
+            })
+          )
+        }
       }
 
       // Audit logs (optional, bisa di-skip jika terlalu lambat)
@@ -1249,7 +1256,7 @@ export async function POST(request: NextRequest) {
         }))
 
         // Batch insert audit logs dalam batch kecil
-        const AUDIT_BATCH_SIZE = 50
+        const AUDIT_BATCH_SIZE = 200 // Optimized for faster import (increased from 50)
         for (let i = 0; i < auditLogs.length; i += AUDIT_BATCH_SIZE) {
           const batch = auditLogs.slice(i, i + AUDIT_BATCH_SIZE)
           try {
