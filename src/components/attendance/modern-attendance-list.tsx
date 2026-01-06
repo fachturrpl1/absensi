@@ -397,7 +397,8 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           return; // stale response
         }
         setAttendanceData(data);
-        setTotalItems(result.meta?.total || 0);
+        const correctedTotal = Math.max(result.meta?.total || 0, data.length);
+        setTotalItems(correctedTotal);
         
         // Set timezone from first record if available (fallback to UTC)
         if (data.length > 0) {
@@ -417,7 +418,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         }
         try {
           const tz = data.length > 0 ? (data[0]?.timezone ?? 'UTC') : undefined;
-          localStorage.setItem(cacheKeyBase, JSON.stringify({ data, total: result.meta?.total || 0, tz, ts: Date.now() }));
+          localStorage.setItem(cacheKeyBase, JSON.stringify({ data, total: correctedTotal, tz, ts: Date.now() }));
           // Jika keyset aktif (nextCursor ada), hindari offset prefetch page berikutnya
         } catch {}
       } else {
@@ -795,11 +796,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
               ) : attendanceData.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
                   No attendance records found
-                  {totalItems > 0 && (
-                    <div className="mt-2 text-xs">
-                      (Total: {totalItems} but no data in current page)
-                    </div>
-                  )}
                 </div>
               ) : (
                 attendanceData.map((record, index: number) => {
@@ -961,11 +957,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     <tr>
                       <td colSpan={8} className="text-center py-8 text-muted-foreground">
                         No attendance records found
-                        {totalItems > 0 && (
-                          <div className="mt-2 text-xs">
-                            (Total: {totalItems} but no data in current page)
-                          </div>
-                        )}
                       </td>
                     </tr>
                   ) : (
@@ -1135,11 +1126,13 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
                 <div className="flex items-center gap-4">
                   <div className="text-sm text-muted-foreground">
-                    {totalItems > 0
-                      ? (
-                        <>Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} total records</>
-                        )
-                      : (<>Showing 0 to 0 of 0 total records</>)}
+                    {(() => {
+                      const displayTotal = Math.max(totalItems, attendanceData.length)
+                      if (displayTotal === 0) return <>Showing 0 to 0 of 0 total records</>
+                      const start = attendanceData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0
+                      const end = attendanceData.length > 0 ? (currentPage - 1) * itemsPerPage + attendanceData.length : 0
+                      return <>Showing {start} to {end} of {displayTotal} total records</>
+                    })()}
                   </div>
                   <div className="flex items-center gap-2">
                     <select
