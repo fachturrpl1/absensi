@@ -19,16 +19,41 @@ export type GetAttendanceParams = {
   status?: string;
   department?: string;
   organizationId?: number;  // Add organization ID parameter
+  cursor?: string; // base64 cursor for keyset pagination
+};
+
+export type AttendanceListItem = {
+  id: string;
+  member: {
+    id: number;
+    name: string;
+    avatar?: string;
+    position: string;
+    department: string;
+  };
+  date: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  workHours: string;
+  status: string;
+  checkInDeviceId: string | null;
+  checkOutDeviceId: string | null;
+  checkInLocationName: string | null;
+  checkOutLocationName: string | null;
+  notes: string;
+  timezone: string;
+  time_format: string;
 };
 
 export type GetAttendanceResult = {
   success: boolean;
-  data: any[];
+  data: AttendanceListItem[];
   meta?: {
     total: number;
     page: number;
     limit: number;
     totalPages: number;
+    nextCursor?: string;
   };
   message?: string;
 };
@@ -46,46 +71,50 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     organizationId  // Get organization ID from params
   } = params;
 
-  // Get current user's organization
+// Resolve effective organization id: prefer param, else fallback to user's active membership
+let effectiveOrgId: number | null = null;
+let memberIdForLog: number | null = null;
+
+if (organizationId) {
+  effectiveOrgId = organizationId;
+  attendanceLogger.info("🔑 Using organizationId from params:", organizationId);
+} else {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
     attendanceLogger.error("❌ User not authenticated");
     return { success: false, data: [], message: "User not authenticated" };
   }
 
-  // Get user's organization membership
-  // Note: User might be registered in multiple organizations
-  let query_org = supabase
+  const { data: userMembers, error: memberError } = await supabase
     .from("organization_members")
     .select("organization_id, id")
     .eq("user_id", user.id)
-    .eq("is_active", true);
-
-  // If organizationId is provided, filter by it
-  if (organizationId) {
-    query_org = query_org.eq("organization_id", organizationId);
-  }
-
-  const { data: userMembers, error: memberError } = await query_org.limit(1);
-  const userMember = userMembers?.[0];
+    .eq("is_active", true)
+    .limit(1);
 
   if (memberError) {
     attendanceLogger.error("❌ Member query error:", memberError);
     return { success: false, data: [], message: memberError.message || "Member query error" };
   }
 
-  if (!userMember || !userMembers || userMembers.length === 0) {
+  const userMember = userMembers?.[0];
+  if (!userMember) {
     attendanceLogger.error("❌ User not in any active organization");
     return { success: false, data: [], message: "User not registered in any active organization" };
   }
 
-  attendanceLogger.info("✅ User organization found:", userMember.organization_id);
-  attendanceLogger.info("📍 Total organizations:", userMembers?.length || 0);
+  effectiveOrgId = userMember.organization_id;
+  memberIdForLog = userMember.id;
+}
 
+if (!effectiveOrgId) {
+  return { success: false, data: [], message: "Organization not resolved" };
+}
+attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", memberIdForLog);
   // Cache key per organisasi + filter
   const cacheKey = [
     'attendance:list',
-    String(userMember.organization_id),
+    String(effectiveOrgId),
     `p=${page}`,
     `l=${limit}`,
     `from=${dateFrom || ''}`,
@@ -94,150 +123,230 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     `q=${(search || '').trim().toLowerCase()}`,
   ].join(':');
 
-  // Try cache first
-  const cached = await getJSON<GetAttendanceResult>(cacheKey);
+  // Try cache first (safe if Redis down)
+  let cached: GetAttendanceResult | null = null;
+  try {
+    cached = await getJSON<GetAttendanceResult>(cacheKey);
+  } catch (_) {
+    attendanceLogger.warn(`⚠️ Cache read failed for key ${cacheKey}, proceeding without cache`);
+  }
   if (cached && cached.success) {
     attendanceLogger.debug(`🗄️ Cache hit: ${cacheKey}`);
     return cached;
   }
 
-  // Helper to apply filters to a query (no heavy joins)
-  const applyFilters = (q: any) => {
-    let query = q.eq("organization_id", userMember.organization_id);
-    if (dateFrom) query = query.gte("attendance_date", dateFrom);
-    if (dateTo) query = query.lte("attendance_date", dateTo);
-    if (status && status !== 'all') query = query.eq("status", status);
-    return query;
+  type AttendanceRow = {
+    id: number;
+    organization_member_id: number;
+    attendance_date: string;
+    actual_check_in: string | null;
+    actual_check_out: string | null;
+    status: string;
+    created_at: string;
+    work_duration_minutes: number | null;
+    remarks: string | null;
+    check_in_device_id: string | null;
+    check_out_device_id: string | null;
   };
+  type MemberProfile = {
+    first_name: string | null;
+    last_name: string | null;
+    display_name: string | null;
+    email: string | null;
+    profile_photo_url: string | null;
+  };
+  type MemberData = {
+    id: number;
+    user_profiles: MemberProfile | MemberProfile[] | null;
+    departments: { name: string | null } | { name: string | null }[] | null;
+  };
+  
+  // Inline filters below to avoid deep generic instantiation on Supabase types
+  const hasSearch = Boolean(search && search.trim() !== '');
+  const term = hasSearch ? search!.trim().toLowerCase() : '';
+  const pattern = hasSearch ? `%${term}%` : '';
 
-  // Compute count with a lightweight head count (planned)
-  const { count: totalCount, error: countError } = await applyFilters(
-    supabase.from("attendance_records").select("id", { count: 'planned', head: true })
-  );
-  if (countError) {
-    attendanceLogger.error("❌ Count error:", countError);
+  // Offset variables are no longer needed when using keyset pagination
+
+  // Keyset pagination disabled for now (using offset pagination for stability)
+  // Use single-join filtering (no prefetch of memberIds)
+  // This keeps queries simple and allows PostgREST to optimize joins
+
+  // COUNT (lazy, page 1 saja)
+  // Prepare relation selection for count join (only include user_profiles when searching)
+  const countRel = hasSearch
+    ? 'organization_members!inner(id, user_profiles!inner(search_name))'
+    : 'organization_members!inner(id)';
+
+  const countCacheKey = `${cacheKey}:count`;
+  let totalCount: number | undefined = undefined;
+  if (page === 1) {
+    let countQuery = supabase
+      .from('attendance_records')
+      .select(`id, ${countRel}`, { count: 'planned', head: true })
+      .eq('organization_members.organization_id', effectiveOrgId)
+      .eq('organization_members.is_active', true);
+    // if (dateFrom) countQuery = countQuery.gte('attendance_date', dateFrom);
+    // if (dateTo) countQuery = countQuery.lte('attendance_date', dateTo);
+    if (status && status !== 'all') countQuery = countQuery.eq('status', status);
+    if (hasSearch) countQuery = countQuery.ilike('organization_members.user_profiles.search_name', pattern);
+    const countResp = await countQuery;
+    totalCount = (countResp as unknown as { count: number | null }).count ?? 0;
+    try { await setJSON(countCacheKey, totalCount, 60); } catch {}
+  } else {
+    try { const cachedCount = await getJSON<number>(countCacheKey); if (typeof cachedCount === 'number') totalCount = cachedCount; } catch {}
   }
 
-  // Fetch page data without joins
-  const from = (page - 1) * limit;
-  const to = from + limit - 1;
-  const { data: rows, error: dataError } = await applyFilters(
-    supabase
-      .from("attendance_records")
-      .select(`
-        id,
-        organization_member_id,
-        organization_id,
-        attendance_date,
-        actual_check_in,
-        actual_check_out,
-        status,
-        created_at,
-        work_duration_minutes,
-        remarks,
-        check_in_device_id,
-        check_out_device_id
-      `)
-      .order("attendance_date", { ascending: false })
-      .order("actual_check_in", { ascending: false, nullsFirst: true })
-      .order("created_at", { ascending: false })
-      .range(from, to)
-  );
-
+  // LIST dengan join untuk mengambil profil/departemen
+  // Specify exact FK for departments to avoid PostgREST ambiguous embed error
+  const listRel = 'organization_members!inner(id, is_active, user_profiles(first_name,last_name,display_name,email,profile_photo_url), departments!organization_members_department_id_fkey(name))';
+  const fromIdx = (page - 1) * limit;
+  const toIdx = fromIdx + limit - 1;
+  let listQuery = supabase
+    .from('attendance_records')
+    .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, ${listRel}`)
+    .eq('organization_members.organization_id', effectiveOrgId)
+    .eq('organization_members.is_active', true);
+  if (dateFrom) listQuery = listQuery.gte('attendance_date', dateFrom);
+  if (dateTo) listQuery = listQuery.lte('attendance_date', dateTo);
+  if (status && status !== 'all') listQuery = listQuery.eq('status', status);
+  if (hasSearch) listQuery = listQuery.ilike('organization_members.user_profiles.search_name', pattern);
+  listQuery = listQuery
+    .order('attendance_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .range(fromIdx, toIdx);
+  const listResp = await listQuery;
+  type AttendanceRowWithRel = AttendanceRow & { organization_members: MemberData | MemberData[] | null };
+  const rows = (listResp as unknown as { data: AttendanceRowWithRel[] | null }).data;
+  const dataError = (listResp as unknown as { error: { message: string } | null }).error;
   if (dataError) {
-    attendanceLogger.error("❌ Error fetching attendance:", dataError);
-    attendanceLogger.error("Organization ID:", userMember.organization_id);
-    return { success: false, data: [], message: `Query error: ${dataError.message}` };
+    return { success: false, data: [], message: dataError.message };
   }
 
-  attendanceLogger.info("✅ Attendance records fetched:", rows?.length || 0);
-
-  // Fetch organization info (timezone, time_format) once
-  const { data: orgInfo } = await supabase
-    .from('organizations')
-    .select('id, timezone, time_format')
-    .eq('id', userMember.organization_id)
-    .maybeSingle();
-
-  // Fetch member details in bulk for current page
-  const memberIds = Array.from(new Set((rows || []).map((r: any) => r.organization_member_id).filter(Boolean)));
-  const memberMap = new Map<number, any>();
-  if (memberIds.length > 0) {
-    const { data: membersData } = await supabase
+  // Fallback: if single-join returns no rows, try IN(memberIds)
+  let effectiveRows = rows;
+  if (!effectiveRows || effectiveRows.length === 0) {
+    attendanceLogger.warn("⚠️ Single-join returned 0 rows. Trying fallback IN(memberIds)...");
+    const { data: members, error: membersErr } = await supabase
       .from('organization_members')
-      .select(`
-        id,
-        user_profiles(
-          first_name,
-          last_name,
-          display_name,
-          email,
-          profile_photo_url
-        ),
-        departments(name)
-      `)
-      .in('id', memberIds);
-    for (const m of (membersData || []) as any[]) {
-      memberMap.set(m.id, m);
+      .select('id, user_profiles(search_name)')
+      .eq('organization_id', effectiveOrgId)
+      .eq('is_active', true);
+
+    if (!membersErr && Array.isArray(members) && members.length > 0) {
+      type MemberRow = { id: number; user_profiles: { search_name: string | null } | { search_name: string | null }[] | null };
+      let memberIds = (members as MemberRow[]).map(m => m.id);
+
+      if (hasSearch) {
+        const match = (m: MemberRow) => {
+          const up = m.user_profiles;
+          const sn = Array.isArray(up) ? up[0]?.search_name : up?.search_name;
+          return (sn || '').toLowerCase().includes(term);
+        };
+        memberIds = (members as MemberRow[]).filter(match).map(m => m.id);
+      }
+
+      if (memberIds.length > 0) {
+        let fbQuery = supabase
+          .from('attendance_records')
+          .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, ${listRel}`)
+          .in('organization_member_id', memberIds);
+
+        if (status && status !== 'all') fbQuery = fbQuery.eq('status', status);
+
+        const fbResp = await fbQuery
+          .order('attendance_date', { ascending: false })
+          .order('created_at', { ascending: false })
+          .range(fromIdx, toIdx);
+
+        const fbRows = (fbResp as unknown as { data: AttendanceRowWithRel[] | null }).data;
+        if (fbRows && fbRows.length > 0) {
+          attendanceLogger.info("✅ Fallback IN(memberIds) returned rows:", fbRows.length);
+          effectiveRows = fbRows;
+        }
+      }
     }
   }
 
-  // Transform format
-  const mapped = (rows || []).map((item: any) => {
-    const member = memberMap.get(item.organization_member_id) || {};
-    const profile = member?.user_profiles || {};
-    const displayName = (profile?.display_name || '').trim();
-    const firstName = profile?.first_name || '';
-    const lastName = profile?.last_name || '';
-    const email = (profile?.email || '').trim();
+  // Small cache for org info to avoid repeated fetch on each page load
+  const orgInfoCacheKey = `org:info:${effectiveOrgId}`;
+  let orgInfo: { id: number; timezone: string | null; time_format: string | null } | null = null;
+  try {
+    orgInfo = await getJSON<{ id: number; timezone: string | null; time_format: string | null }>(orgInfoCacheKey);
+  } catch (_) {
+    attendanceLogger.warn(`⚠️ Org info cache read failed for key ${orgInfoCacheKey}, using DB fallback`);
+  }
+  if (!orgInfo) {
+    const { data: orgInfoRaw } = await supabase
+      .from('organizations')
+      .select('id, timezone, time_format')
+      .eq('id', effectiveOrgId)
+      .maybeSingle();
+    const fallbackInfo = { id: effectiveOrgId, timezone: 'Asia/Jakarta', time_format: '24h' }
+    orgInfo = orgInfoRaw || fallbackInfo;
+    try { await setJSON(orgInfoCacheKey, orgInfo, 600); } catch {}
+  }
+
+  const mapped = (effectiveRows || []).map((item: AttendanceRowWithRel) => {
+    const m = item.organization_members as MemberData | MemberData[] | null;
+    const mObj: MemberData | null = Array.isArray(m) ? (m[0] as MemberData) : (m as MemberData);
+    const profileObj = mObj?.user_profiles;
+    const profile: MemberProfile | null = Array.isArray(profileObj) ? (profileObj[0] ?? null) : (profileObj ?? null);
+    const displayName = (profile?.display_name ?? '').trim();
+    const firstName = profile?.first_name ?? '';
+    const lastName = profile?.last_name ?? '';
+    const email = (profile?.email ?? '').trim();
     const fullName = `${firstName} ${lastName}`.trim();
     const effectiveName = displayName || fullName || email;
-    const departmentName = member?.departments?.name || '';
+    const deptObj = mObj?.departments;
+    const departmentName = Array.isArray(deptObj) ? (deptObj[0]?.name ?? '') : (deptObj?.name ?? '');
 
     return {
-      id: item.id,
+      id: String(item.id),
       member: {
         id: item.organization_member_id,
         name: effectiveName || `Member #${item.organization_member_id}`,
-        avatar: profile?.profile_photo_url,
+        avatar: profile?.profile_photo_url || undefined,
         position: '',
         department: departmentName,
       },
       date: item.attendance_date,
       checkIn: item.actual_check_in,
       checkOut: item.actual_check_out,
-      workHours: item.work_duration_minutes
-        ? `${Math.floor(item.work_duration_minutes / 60)}h ${item.work_duration_minutes % 60}m`
-        : (item.actual_check_in ? '-' : '-'),
+      workHours: item.work_duration_minutes ? `${Math.floor(item.work_duration_minutes / 60)}h ${item.work_duration_minutes % 60}m` : (item.actual_check_in ? '-' : '-'),
       status: item.status,
-      checkInDeviceId: item.check_in_device_id || null,
-      checkOutDeviceId: item.check_out_device_id || null,
+      checkInDeviceId: null,
+      checkOutDeviceId: null,
       checkInLocationName: null,
       checkOutLocationName: null,
-      notes: item.remarks || '',
-      timezone: orgInfo?.timezone || "Asia/Jakarta",
-      time_format: orgInfo?.time_format || "24h",
+      notes: '',
+      timezone: orgInfo?.timezone || 'Asia/Jakarta',
+      time_format: orgInfo?.time_format || '24h',
     };
   });
 
-  attendanceLogger.info("✅ Attendance data transformed:", mapped.length);
-  attendanceLogger.debug("📊 Sample mapped data:", mapped[0]);
-
-  const total = typeof totalCount === 'number' ? totalCount : 0;
+  const total = typeof totalCount === 'number' ? totalCount : (effectiveRows?.length || 0);
+  let nextCursor: string | undefined = undefined;
+  if ((effectiveRows?.length || 0) === limit && effectiveRows && effectiveRows.length > 0) {
+    const last = effectiveRows[effectiveRows.length - 1] as AttendanceRow | undefined;
+    if (last) {
+      const payload = { ad: last.attendance_date, cr: last.created_at, id: last.id };
+      try { nextCursor = Buffer.from(JSON.stringify(payload)).toString('base64'); } catch {}
+    }
+  }
   const result: GetAttendanceResult = {
     success: true,
     data: mapped,
-    meta: {
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    },
+    meta: { total, page, limit, totalPages: Math.ceil(total / limit), nextCursor }
   };
 
   // Save to cache (TTL 60s)
-  await setJSON(cacheKey, result, 60);
-  attendanceLogger.debug(`🗄️ Cache set: ${cacheKey}`);
+  try {
+    await setJSON(cacheKey, result, 120);
+    attendanceLogger.debug(`🗄️ Cache set: ${cacheKey}`);
+  } catch (_) {
+    attendanceLogger.warn(`⚠️ Cache write failed for key ${cacheKey}, returning result without cache`);
+  }
   return result;
 };
 
@@ -509,10 +618,12 @@ export async function deleteMultipleAttendanceRecords(ids: string[]) {
         .from('attendance_records')
         .select('id, organization_members!inner(organization_id)')
         .in('id', ids);
-      if (recs && Array.isArray(recs)) {
+
+      if (Array.isArray(recs)) {
+        type RecRow = { organization_members: { organization_id: number } | { organization_id: number }[] | null };
         const set = new Set<number>();
-        for (const r of recs as any[]) {
-          const rel = r.organization_members;
+        for (const r of recs as RecRow[]) {
+          const rel = r.organization_members ?? null;
           const obj = Array.isArray(rel) ? rel[0] : rel;
           const oid = obj?.organization_id;
           if (typeof oid === 'number') set.add(oid);

@@ -56,7 +56,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import { formatLocalTime } from '@/utils/timezone';
-import { getAllAttendance, deleteAttendanceRecord, deleteMultipleAttendanceRecords } from '@/action/attendance';
+import { getAllAttendance, deleteAttendanceRecord, deleteMultipleAttendanceRecords, AttendanceListItem, GetAttendanceResult } from '@/action/attendance';
 import { toast } from 'sonner';
 import { useOrgStore } from '@/store/org-store';
 import { createClient } from '@/utils/supabase/client';
@@ -65,15 +65,15 @@ type AttendanceChangeRow = { attendance_date?: string | null; organization_membe
 type PgChange<T> = { new: T | null; old: T | null };
 
 interface ModernAttendanceListProps {
-  initialData?: any[];
-  initialStats?: any;
+  initialData?: AttendanceListItem[];
+  initialStats?: unknown;
   initialMeta?: { total?: number; totalPages?: number; tz?: string };
 }
 
 export default function ModernAttendanceList({ initialData: _initialData, initialStats: _initialStats, initialMeta }: ModernAttendanceListProps) {
   const orgStore = useOrgStore();
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
+  const [attendanceData, setAttendanceData] = useState<AttendanceListItem[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [userTimezone, setUserTimezone] = useState('UTC');
   const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
@@ -115,7 +115,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [totalItems, setTotalItems] = useState(0);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingRecords, setEditingRecords] = useState<any[]>([]);
+  const [editingRecords, setEditingRecords] = useState<AttendanceListItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
@@ -140,22 +140,27 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   // Hydrate loading state from localStorage for current key (ignore stale >15s)
   useEffect(() => {
-    if (!isMounted) return;
+  if (!isMounted) return;
     try {
       const raw = localStorage.getItem(`${cacheKeyBase}:loading`);
       if (raw) {
         const parsed = JSON.parse(raw) as { loading?: boolean; ts?: number };
         const tooOld = parsed.ts ? (Date.now() - parsed.ts > 15_000) : true;
-        if (typeof parsed.loading === 'boolean' && !tooOld) setLoading(parsed.loading);
+        // Hanya matikan loading jika tersimpan false dan masih fresh
+        if (!tooOld && parsed.loading === false) setLoading(false);
       }
     } catch {}
   }, [cacheKeyBase, isMounted]);
 
   // Persist loading state on change
   useEffect(() => {
-    if (!isMounted) return;
+  if (!isMounted) return;
     try {
-      localStorage.setItem(`${cacheKeyBase}:loading`, JSON.stringify({ loading, ts: Date.now() }));
+      if (loading) {
+        localStorage.setItem(`${cacheKeyBase}:loading`, JSON.stringify({ loading: true, ts: Date.now() }));
+      } else {
+        localStorage.removeItem(`${cacheKeyBase}:loading`);
+      }
     } catch {}
   }, [loading, cacheKeyBase, isMounted]);
 
@@ -165,7 +170,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     try {
       const raw = localStorage.getItem(cacheKeyBase);
       if (raw) {
-        const parsed = JSON.parse(raw) as { data?: any[]; total?: number; tz?: string; ts?: number };
+        const parsed = JSON.parse(raw) as { data?: AttendanceListItem[]; total?: number; tz?: string; ts?: number };
         const TTL = 60_000; // 60s cache TTL
         if (!parsed.ts || Date.now() - parsed.ts < TTL) {
           if (Array.isArray(parsed.data)) {
@@ -184,7 +189,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   useEffect(() => {
     if (!isMounted) return;
     if (attendanceData.length === 0 && Array.isArray(_initialData) && _initialData.length > 0) {
-      setAttendanceData(_initialData);
+      setAttendanceData(_initialData as AttendanceListItem[]);
       setTotalItems(initialMeta?.total || _initialData.length || 0);
       if (initialMeta?.tz) setUserTimezone(initialMeta.tz);
       setLoading(false);
@@ -286,7 +291,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     setEditDialogOpen(true);
   };
 
-  const handleEditSingle = (rec: any) => {
+  const handleEditSingle = (rec: AttendanceListItem) => {
     setEditingRecords([rec]);
     setSelectedRecords([rec.id]);
     editForm.reset({
@@ -324,8 +329,18 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   // Fetch data using Server Action with pagination
   const fetchData = useCallback(async () => {
+  console.log('🔄 Fetch triggered:', {
+    page: currentPage,
+    itemsPerPage,
+    orgId: selectedOrgId || orgStore.organizationId,
+    hasDateFilter: false, // sementara non-aktif
+    statusFilter,
+    departmentFilter,
+    searchQuery
+  });
     setLoading(true);
     const reqId = latestRequestRef.current + 1;
+
     latestRequestRef.current = reqId;
     try {
       const orgId = selectedOrgId || orgStore.organizationId || undefined;
@@ -334,8 +349,8 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         getAllAttendance({
           page: currentPage,
           limit: itemsPerPage,
-          dateFrom: dateRange.from.toISOString().split('T')[0],
-          dateTo: dateRange.to.toISOString().split('T')[0],
+          // dateFrom: dateRange.from.toISOString().split('T')[0],
+          // dateTo: dateRange.to.toISOString().split('T')[0],
           search: searchParam.length >= 2 ? searchParam : undefined,
           status: statusFilter === 'all' ? undefined : statusFilter,
           department: departmentFilter === 'all' ? undefined : departmentFilter,
@@ -343,12 +358,12 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         })
       ]);
 
-      const result = (listResult && typeof listResult === 'object' && 'success' in listResult)
-        ? listResult as { success: boolean; data?: any[]; meta?: { total?: number; totalPages?: number }; message?: string }
-        : { success: false, data: [], meta: { total: 0, totalPages: 0 }, message: 'Invalid response from server' };
+      const result: GetAttendanceResult = (listResult && typeof listResult === 'object' && 'success' in listResult)
+        ? (listResult as GetAttendanceResult)
+        : { success: false, data: [], meta: { total: 0, page: 1, limit: itemsPerPage, totalPages: 0, nextCursor: undefined }, message: 'Invalid response from server' };
 
       if (result.success) {
-        const data = result.data || [];
+        const data = (result.data || []) as AttendanceListItem[];
         console.log('📊 Attendance data received:', {
           count: data.length,
           total: result.meta?.total,
@@ -363,58 +378,24 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         
         // Set timezone from first record if available (fallback to UTC)
         if (data.length > 0) {
-          setUserTimezone(data[0].timezone || 'UTC');
+          const first = data[0];
+          setUserTimezone(first?.timezone || 'UTC');
         }
 
         // Extract unique departments from current page (simple solution for now)
         if (data.length > 0) {
         const uniqueDepts = Array.from(new Set(
-            data.map((r: any) => r.member?.department)
-        )).filter(dept => dept && dept !== 'No Department').sort();
+            data.map((r) => r.member?.department)
+        )).filter((dept): dept is string => Boolean(dept && dept !== 'No Department')).sort();
         
         if (departments.length === 0 && uniqueDepts.length > 0) {
           setDepartments(uniqueDepts);
           }
         }
         try {
-          const tz = (data.length > 0 ? (data[0].timezone || 'UTC') : undefined);
+          const tz = data.length > 0 ? (data[0]?.timezone ?? 'UTC') : undefined;
           localStorage.setItem(cacheKeyBase, JSON.stringify({ data, total: result.meta?.total || 0, tz, ts: Date.now() }));
-
-          // Background prefetch next page to warm cache
-          const totalPages = (
-            typeof result.meta?.totalPages === 'number' && !Number.isNaN(result.meta.totalPages)
-          ) ? result.meta.totalPages : Math.ceil(((result.meta?.total || 0) / itemsPerPage));
-          if (data.length === itemsPerPage && totalPages > currentPage) {
-            const nextPage = currentPage + 1;
-            const orgIdForKey = selectedOrgId || orgStore.organizationId || 'no-org';
-            const fromStr = dateRange.from.toISOString().split('T')[0];
-            const toStr = dateRange.to.toISOString().split('T')[0];
-            const statusVal = statusFilter || 'all';
-            const deptVal = departmentFilter || 'all';
-            const qVal = searchParam.length >= 2 ? searchParam : '';
-            const nextKey = `attendance:list:${orgIdForKey}:p=${nextPage}:l=${itemsPerPage}:from=${fromStr}:to=${toStr}:status=${statusVal}:dept=${deptVal}:q=${qVal}`;
-
-            // Do not await; fire-and-forget
-            window.setTimeout(() => { (async () => {
-              try {
-                const res = await getAllAttendance({
-                  page: nextPage,
-                  limit: itemsPerPage,
-                  dateFrom: fromStr,
-                  dateTo: toStr,
-                  search: qVal || undefined,
-                  status: statusVal === 'all' ? undefined : statusVal,
-                  department: deptVal === 'all' ? undefined : deptVal,
-                  organizationId: selectedOrgId || orgStore.organizationId || undefined,
-                });
-                if (res?.success) {
-                  const d = res.data || [];
-                  const tzPref = (d.length > 0 ? (d[0].timezone || 'UTC') : tz);
-                  localStorage.setItem(nextKey, JSON.stringify({ data: d, total: res.meta?.total || 0, tz: tzPref, ts: Date.now() }));
-                }
-              } catch {}
-            })(); }, 800);
-          }
+          // Jika keyset aktif (nextCursor ada), hindari offset prefetch page berikutnya
         } catch {}
       } else {
         console.error('Failed to load attendance:', result?.message ?? result);
@@ -436,6 +417,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     }
   }, [currentPage, itemsPerPage, dateRange, searchQuery, statusFilter, departmentFilter, selectedOrgId, orgStore.organizationId]);
 
+
   // Trigger fetch when filters change (and initial load)
   useEffect(() => {
     console.log('🔄 Fetch triggered:', { currentPage, dateRange, searchQuery, statusFilter, departmentFilter });
@@ -455,13 +437,12 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         {
           event: '*',
           schema: 'public',
-          table: 'attendance_records',
-          filter: `organization_id=eq.${orgId}`
+          table: 'attendance_records'
         },
         (payload: PgChange<AttendanceChangeRow>) => {
           const newRow = payload.new;
           const oldRow = payload.old;
-          const payloadOrgId = (newRow as any)?.organization_id ?? (oldRow as any)?.organization_id;
+          const payloadOrgId = newRow?.organization_id ?? oldRow?.organization_id;
           if (payloadOrgId && orgId && Number(payloadOrgId) !== Number(orgId)) {
             return;
           }
@@ -534,7 +515,11 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   // }, [loading, isAutoRefreshPaused, fetchData]);
 
   // Helper component to display device location
-  const LocationDisplay = ({ checkInLocationName, checkOutLocationName }: any) => {
+  interface LocationDisplayProps {
+    checkInLocationName?: string | null;
+    checkOutLocationName?: string | null;
+  }
+  const LocationDisplay = ({ checkInLocationName, checkOutLocationName }: LocationDisplayProps) => {
     if (!checkInLocationName && !checkOutLocationName) {
       return <span className="text-muted-foreground text-xs">No Location</span>;
     }
@@ -603,7 +588,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     if (selectedRecords.length === attendanceData.length) {
       setSelectedRecords([]);
     } else {
-      setSelectedRecords(attendanceData.map((r: any) => r.id));
+      setSelectedRecords(attendanceData.map((r: AttendanceListItem) => r.id));
     }
   };
 
@@ -794,7 +779,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                   )}
                 </div>
               ) : (
-                attendanceData.map((record: any, index: number) => {
+                attendanceData.map((record, index: number) => {
                   if (!record || !record.id) {
                     console.warn('Invalid record at index', index, record);
                     return null;
@@ -821,7 +806,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       <Avatar className="h-10 w-10 shrink-0">
                         <AvatarImage src={record.member.avatar} />
                         <AvatarFallback>
-                          {record.member.name.split(' ').map((n: string) => n[0]).join('')}
+                          {record.member.name.split(' ').map((n) => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
@@ -872,11 +857,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       <p className="text-xs text-muted-foreground mb-1">Work Hours</p>
                       <div className="flex flex-col gap-1">
                         <span className="font-medium text-sm">{record.workHours}</span>
-                        {record.overtime && (
-                          <Badge variant="secondary" className="w-fit text-xs">
-                            +{record.overtime} OT
-                          </Badge>
-                        )}
                       </div>
                     </div>
                     <div>
@@ -966,7 +946,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       </td>
                     </tr>
                   ) : (
-                    attendanceData.map((record: any, index: number) => {
+                    attendanceData.map((record: AttendanceListItem, index: number) => {
                       if (!record || !record.id) {
                         console.warn('Invalid record at index', index, record);
                         return null;
@@ -1022,11 +1002,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       <td className="p-4">
                         <div className="flex flex-col gap-1">
                           <span className="font-medium text-sm">{record.workHours}</span>
-                          {record.overtime && (
-                            <Badge variant="secondary" className="w-fit text-xs">
-                              +{record.overtime} OT
-                            </Badge>
-                          )}
                         </div>
                       </td>
                       <td className="p-4">
@@ -1185,7 +1160,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             </Card>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {attendanceData.map((record: any, index: number) => {
+              {attendanceData.map((record: AttendanceListItem, index: number) => {
                 if (!record || !record.id) {
                   return null;
                 }
