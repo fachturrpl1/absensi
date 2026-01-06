@@ -15,20 +15,17 @@ import { Badge } from "@/components/ui/badge"
 import { 
   FileSpreadsheet, 
   FileText, 
-  Download, 
   Loader2, 
   CheckCircle2, 
   AlertCircle,
   ArrowLeft,
   Users,
-  FileDown,
   Search,
   Filter,
   X,
   GripVertical
 } from "lucide-react"
 import { toast } from "sonner"
-import { useOrgStore } from "@/store/org-store"
 import { useHydration } from "@/hooks/useHydration"
 import { useGroups } from "@/hooks/use-groups"
 import Link from "next/link"
@@ -73,24 +70,6 @@ type ExportConfig = {
   dateFormat: string
 }
 
-interface MemberData {
-  id: number
-  nik?: string
-  nama?: string
-  email?: string
-  no_telepon?: string
-  employee_id?: string
-  department?: string
-  position?: string
-  hire_date?: string
-  status: string
-  jenis_kelamin?: string
-  tanggal_lahir?: string
-  tempat_lahir?: string
-  agama?: string
-  alamat?: string
-}
-
 export default function MembersExportPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -104,7 +83,6 @@ export default function MembersExportPage() {
     includeHeader: true,
     dateFormat: "YYYY-MM-DD",
   })
-  const [memberData, setMemberData] = useState<MemberData[]>([])
   const [previewData, setPreviewData] = useState<Record<string, any>[]>([])
   const [memberRows, setMemberRows] = useState<Record<string, any>[]>([]) // Data untuk tabel di Step 1
   const [totalCount, setTotalCount] = useState(0)
@@ -136,7 +114,7 @@ export default function MembersExportPage() {
   const [tempNewFilterValues, setTempNewFilterValues] = useState<string[]>([])
   
   // Load groups
-  const { data: groups = [], isLoading: loadingGroups } = useGroups({
+  const { data: groups = [] } = useGroups({
     enabled: isHydrated && !!organizationId
   })
 

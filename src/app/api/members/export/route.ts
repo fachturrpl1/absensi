@@ -16,7 +16,6 @@ export async function GET(request: NextRequest) {
     const fieldsParam = searchParams.get("fields") || ""
     const selectedNiksParam = searchParams.get("selectedNiks") || ""
     const includeHeader = searchParams.get("includeHeader") === "true"
-    const dateFormat = searchParams.get("dateFormat") || "YYYY-MM-DD"
     const selectedFields = fieldsParam ? fieldsParam.split(",") : []
     const selectedGroups = groupsParam ? groupsParam.split(",").filter(Boolean) : []
     const selectedGenders = gendersParam ? gendersParam.split(",").filter(Boolean) : []
@@ -192,59 +191,60 @@ export async function GET(request: NextRequest) {
     const exportData = filteredMembers.map((member: any) => {
       const biodata = member.biodata || {}
 
-      const row: Record<string, any> = {}
+      // Gunakan any di sini untuk menyederhanakan pemetaan dinamis
+      const row: any = {}
 
-      // Only include fields from biodata table
+      // Only include fields from biodata table (gunakan label langsung agar aman untuk tipe)
       if (selectedFields.includes("nik")) {
-        row[fieldLabels.nik] = member.biodata_nik || biodata.nik || ""
+        row["NIK"] = member.biodata_nik || biodata.nik || ""
       }
       if (selectedFields.includes("nama")) {
-        row[fieldLabels.nama] = biodata.nama || ""
+        row["Nama Lengkap"] = biodata.nama || ""
       }
       if (selectedFields.includes("nickname")) {
-        row[fieldLabels.nickname] = biodata.nickname || ""
+        row["Nickname"] = biodata.nickname || ""
       }
       if (selectedFields.includes("nisn")) {
-        row[fieldLabels.nisn] = biodata.nisn || ""
+        row["NISN"] = biodata.nisn || ""
       }
       if (selectedFields.includes("jenis_kelamin")) {
-        row[fieldLabels.jenis_kelamin] = biodata.jenis_kelamin || ""
+        row["Jenis Kelamin"] = biodata.jenis_kelamin || ""
       }
       if (selectedFields.includes("tempat_lahir")) {
-        row[fieldLabels.tempat_lahir] = biodata.tempat_lahir || ""
+        row["Tempat Lahir"] = biodata.tempat_lahir || ""
       }
       if (selectedFields.includes("tanggal_lahir")) {
-        row[fieldLabels.tanggal_lahir] = biodata.tanggal_lahir || ""
+        row["Tanggal Lahir"] = biodata.tanggal_lahir || ""
       }
       if (selectedFields.includes("agama")) {
-        row[fieldLabels.agama] = biodata.agama || ""
+        row["Agama"] = biodata.agama || ""
       }
       if (selectedFields.includes("jalan")) {
-        row[fieldLabels.jalan] = biodata.jalan || ""
+        row["Jalan"] = biodata.jalan || ""
       }
       if (selectedFields.includes("rt")) {
-        row[fieldLabels.rt] = biodata.rt || ""
+        row["RT"] = biodata.rt || ""
       }
       if (selectedFields.includes("rw")) {
-        row[fieldLabels.rw] = biodata.rw || ""
+        row["RW"] = biodata.rw || ""
       }
       if (selectedFields.includes("dusun")) {
-        row[fieldLabels.dusun] = biodata.dusun || ""
+        row["Dusun"] = biodata.dusun || ""
       }
       if (selectedFields.includes("kelurahan")) {
-        row[fieldLabels.kelurahan] = biodata.kelurahan || ""
+        row["Kelurahan"] = biodata.kelurahan || ""
       }
       if (selectedFields.includes("kecamatan")) {
-        row[fieldLabels.kecamatan] = biodata.kecamatan || ""
+        row["Kecamatan"] = biodata.kecamatan || ""
       }
       if (selectedFields.includes("no_telepon")) {
-        row[fieldLabels.no_telepon] = biodata.no_telepon || ""
+        row["No. Telepon"] = biodata.no_telepon || ""
       }
       if (selectedFields.includes("email")) {
-        row[fieldLabels.email] = biodata.email || ""
+        row["Email"] = biodata.email || ""
       }
       if (selectedFields.includes("department_id")) {
-        row[fieldLabels.department_id] = biodata.department_id || ""
+        row["Group"] = biodata.department_id || ""
       }
 
       return row
@@ -253,7 +253,7 @@ export async function GET(request: NextRequest) {
     // Create workbook
     const workbook = XLSX.utils.book_new()
     const worksheet = XLSX.utils.json_to_sheet(exportData, {
-      header: includeHeader ? selectedFields.map(f => fieldLabels[f] || f) : undefined,
+      header: includeHeader ? selectedFields.map((f: string) => fieldLabels[f] ?? f) : undefined,
     })
 
     // Add worksheet to workbook
@@ -277,15 +277,18 @@ export async function GET(request: NextRequest) {
       fileExtension = "xlsx"
     }
 
+    // Konversi ke Uint8Array agar kompatibel dengan NextResponse typings
+    const uint8Buffer = new Uint8Array(buffer)
+
     // Return file as response
     const fileName = `members-export-${new Date().toISOString().split("T")[0]}.${fileExtension}`
 
-    return new NextResponse(buffer, {
+    return new NextResponse(uint8Buffer, {
       status: 200,
       headers: {
         "Content-Type": mimeType,
         "Content-Disposition": `attachment; filename="${fileName}"`,
-        "Content-Length": buffer.length.toString(),
+        "Content-Length": uint8Buffer.byteLength.toString(),
       },
     })
   } catch (error: any) {

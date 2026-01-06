@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get unique values from biodata table for the specified column
-    const query = adminClient
+    let query = adminClient
       .from("organization_members")
       .select(`
         biodata:biodata_nik (
