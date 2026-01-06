@@ -80,14 +80,14 @@ export function DataTable<TData, TValue>({
   // Filter and sort data
   const filteredData = React.useMemo(() => {
     let filtered = [...data]
-    
+
     // Apply global search filter
     if (globalFilter) {
       const searchTerm = globalFilter.toLowerCase()
       filtered = filtered.filter((row) => {
         return columns.some((col) => {
           let value = ""
-          
+
           // Try accessorFn first
           if ("accessorFn" in col && typeof (col as any).accessorFn === "function") {
             try {
@@ -95,18 +95,18 @@ export function DataTable<TData, TValue>({
             } catch {
               value = ""
             }
-          } 
+          }
           // Try accessorKey
           else if ("accessorKey" in col && typeof (col as any).accessorKey === "string") {
             const key = (col as any).accessorKey as string
             value = String((row as any)[key] ?? "")
           }
-          
+
           return value.toLowerCase().includes(searchTerm)
         })
       })
     }
-    
+
     // Apply status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter((row) => {
@@ -116,7 +116,7 @@ export function DataTable<TData, TValue>({
         return true
       })
     }
-    
+
     // Apply sorting
     if (sortOrder === "newest") {
       filtered.sort((a, b) => {
@@ -145,7 +145,7 @@ export function DataTable<TData, TValue>({
         return nameB.toLowerCase().localeCompare(nameA.toLowerCase())
       })
     }
-    
+
     return filtered
   }, [globalFilter, statusFilter, sortOrder, data, columns])
 
@@ -180,7 +180,7 @@ export function DataTable<TData, TValue>({
       },
     },
   })
-  
+
   // Sync pageSize -> pagination state and reset to first page
   React.useEffect(() => {
     const newPageSize = parseInt(pageSize, 10) || 10
@@ -198,7 +198,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      
+
       {/* Filters and Controls - Compact Grid */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
         <div className="flex flex-wrap items-center gap-2 w-full">
@@ -217,7 +217,7 @@ export function DataTable<TData, TValue>({
                   <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               {/* Sort Order */}
               <Select value={sortOrder} onValueChange={setSortOrder}>
                 <SelectTrigger className="w-[110px]">
@@ -230,7 +230,7 @@ export function DataTable<TData, TValue>({
                   <SelectItem value="z-a">Z-A</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               {/* Show Items */}
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground whitespace-nowrap">Show:</span>
@@ -268,7 +268,7 @@ export function DataTable<TData, TValue>({
                     checked={column.getIsVisible()}
                     onCheckedChange={(value) => column.toggleVisibility(!!value)}
                   >
-{(() => {
+                    {(() => {
                       const columnLabels: Record<string, string> = {
                         'is_active': 'Active',
                         'user_full_name': 'Full Name',
@@ -305,10 +305,10 @@ export function DataTable<TData, TValue>({
 
                     // Get column width based on header content
                     const getColumnWidth = () => {
-                      const headerText = typeof header.column.columnDef.header === 'string' 
-                        ? header.column.columnDef.header 
+                      const headerText = typeof header.column.columnDef.header === 'string'
+                        ? header.column.columnDef.header
                         : header.id;
-                      
+
                       switch (headerText) {
                         case 'Device Name': return 'min-w-[150px]';
                         case 'Serial Number': return 'min-w-[140px]';
@@ -404,9 +404,9 @@ export function DataTable<TData, TValue>({
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            
+
             <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap ml-1 sm:ml-2">Page</span>
-            
+
             <input
               type="number"
               min="1"
@@ -443,7 +443,7 @@ export function DataTable<TData, TValue>({
               <ChevronsRight className="h-4 w-4" />
             </Button>
           </div>
-          
+
           <div className="flex flex-row items-center justify-center md:justify-end gap-2 md:gap-4 w-full md:w-auto">
             <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
               {(() => {
