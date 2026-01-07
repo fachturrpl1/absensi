@@ -153,16 +153,30 @@ export async function GET(request: NextRequest) {
       department_id: "Group",
     }
 
-    // Filter by search, gender, and agama in memory (since they require biodata join)
+    // Helper function to extract biodata from Supabase relation
+    const getBiodata = (member: any) => {
+      if (Array.isArray(member.biodata)) {
+        return member.biodata[0] || {}
+      } else if (member.biodata && typeof member.biodata === 'object') {
+        return member.biodata
+      }
+      return {}
+    }
+
+    // Filter out members without biodata (admin yang dibuat langsung tanpa biodata)
     // Jika ada selectedNiks, skip filter ini karena sudah difilter di query
-    let filteredMembers = members || []
+    let filteredMembers = (members || []).filter((member: any) => {
+      const biodata = getBiodata(member)
+      // Exclude members yang tidak punya biodata_nik dan tidak punya biodata data
+      return member.biodata_nik || (biodata && Object.keys(biodata).length > 0)
+    })
 
     if (selectedNiks.length === 0) {
       // Hanya apply filter ini jika tidak ada selectedNiks
       if (search) {
         const searchLower = search.toLowerCase()
         filteredMembers = filteredMembers.filter((member: any) => {
-          const biodata = member.biodata || {}
+          const biodata = getBiodata(member)
           return (
             member.biodata_nik?.toLowerCase().includes(searchLower) ||
             member.employee_id?.toLowerCase().includes(searchLower) ||
@@ -174,14 +188,14 @@ export async function GET(request: NextRequest) {
 
       if (selectedGenders.length > 0) {
         filteredMembers = filteredMembers.filter((member: any) => {
-          const biodata = member.biodata || {}
+          const biodata = getBiodata(member)
           return selectedGenders.includes(biodata.jenis_kelamin)
         })
       }
 
       if (selectedAgamas.length > 0) {
         filteredMembers = filteredMembers.filter((member: any) => {
-          const biodata = member.biodata || {}
+          const biodata = getBiodata(member)
           return selectedAgamas.includes(biodata.agama)
         })
       }
@@ -189,7 +203,7 @@ export async function GET(request: NextRequest) {
 
     // Transform data - ONLY biodata columns
     const exportData = filteredMembers.map((member: any) => {
-      const biodata = member.biodata || {}
+      const biodata = getBiodata(member)
 
       // Gunakan any di sini untuk menyederhanakan pemetaan dinamis
       const row: any = {}

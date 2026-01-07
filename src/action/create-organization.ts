@@ -353,7 +353,8 @@ export async function createOrganization(
       };
     }
 
-    // Add user as organization member
+    // Add user as organization member (without biodata, so they won't appear in export)
+    // This is needed so creator can access the organization
     const { data: member, error: memberError } = await adminClient
       .from("organization_members")
       .insert([
@@ -362,6 +363,7 @@ export async function createOrganization(
           organization_id: organization.id,
           hire_date: new Date().toISOString().split("T")[0],
           is_active: true,
+          // No biodata_nik - creator won't appear in export (filtered out)
         },
       ])
       .select()
@@ -439,7 +441,7 @@ export async function createOrganization(
 
     return {
       success: true,
-      message: `Organization "${organization.name}" created successfully with role ${input.defaultRoleId}`,
+      message: `Organization "${organization.name}" created successfully`,
       data: {
         organizationId: organization.id,
         organizationName: organization.name,

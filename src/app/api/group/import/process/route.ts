@@ -232,7 +232,7 @@ export async function POST(request: NextRequest) {
       }
       
       // Convert to uppercase, replace spaces with underscore, remove special chars
-      let finalCode = baseCode
+      const finalCode = baseCode
         .trim()
         .toUpperCase()
         .replace(/\s+/g, '_')

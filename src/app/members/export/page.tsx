@@ -530,9 +530,19 @@ export default function MembersExportPage() {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto">
         <div className="mb-6 flex items-center gap-4">
-          <Link href="/members">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
+          <Link 
+            href="/members"
+            prefetch={true}
+            onMouseEnter={(e) => {
+              // Prefetch saat hover untuk navigasi lebih cepat
+              const href = e.currentTarget.getAttribute('href')
+              if (href && router) {
+                router.prefetch(href)
+              }
+            }}
+          >
+            <Button variant="ghost" size="icon" aria-label="Kembali ke halaman members">
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
           </Link>
           <div>
@@ -577,16 +587,31 @@ export default function MembersExportPage() {
                       }}
                     >
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start">
-                          <Filter className="mr-2 h-4 w-4" />
+                        <Button 
+                          variant="outline" 
+                          className="w-full justify-start"
+                          aria-label="Tambahkan filter baru"
+                          aria-expanded={showAddFilterPopover}
+                          aria-haspopup="dialog"
+                        >
+                          <Filter className="mr-2 h-4 w-4" aria-hidden="true" />
                           {filters.length === 0 ? "Pick a column to filter by" : "Add filter"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[320px] p-0" align="start">
+                      <PopoverContent 
+                        className="w-[320px] p-0" 
+                        align="start"
+                        role="dialog"
+                        aria-label="Dialog pilih filter"
+                        aria-describedby="filter-description"
+                      >
+                        <div id="filter-description" className="sr-only">
+                          Pilih kolom untuk difilter, kemudian pilih nilai yang diinginkan
+                        </div>
                         {!selectedColumnForFilter ? (
                           // Step 1: Pilih kolom
-                          <Command>
-                            <CommandInput placeholder="Cari kolom..." />
+                          <Command role="combobox" aria-label="Pilih kolom filter">
+                            <CommandInput placeholder="Cari kolom..." aria-label="Cari kolom untuk filter" />
                             <CommandList>
                               <CommandEmpty>Kolom tidak ditemukan</CommandEmpty>
                               <CommandGroup>
@@ -596,6 +621,7 @@ export default function MembersExportPage() {
                                     onSelect={() => {
                                       selectColumnForFilter(column.key)
                                     }}
+                                    aria-label={`Pilih kolom ${column.label} untuk filter`}
                                   >
                                     {column.label}
                                   </CommandItem>
@@ -621,8 +647,9 @@ export default function MembersExportPage() {
                                     setSelectedColumnForFilter(null)
                                     setTempNewFilterValues([])
                                   }}
+                                  aria-label="Kembali ke pilihan kolom"
                                 >
-                                  <ArrowLeft className="h-4 w-4" />
+                                  <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                                 </Button>
                                 <span className="text-sm font-medium">
                                   {getFilterColumnConfig(selectedColumnForFilter)?.label || "Nilai"}
@@ -633,6 +660,8 @@ export default function MembersExportPage() {
                                 className="h-7 px-3 text-xs"
                                 onClick={applyNewFilter}
                                 disabled={tempNewFilterValues.length === 0}
+                                aria-label={`Terapkan filter dengan ${tempNewFilterValues.length} nilai yang dipilih`}
+                                aria-disabled={tempNewFilterValues.length === 0}
                               >
                                 Apply filter
                               </Button>
@@ -642,18 +671,16 @@ export default function MembersExportPage() {
                               <CommandInput 
                                 placeholder={`Cari ${getFilterColumnConfig(selectedColumnForFilter)?.label.toLowerCase()}...`} 
                                 className="h-9"
+                                aria-label={`Cari ${getFilterColumnConfig(selectedColumnForFilter)?.label.toLowerCase()}`}
                               />
                             )}
                             <CommandList className="max-h-[280px]">
-                              <CommandEmpty>
-                                {loadingFilterOptions[selectedColumnForFilter] 
-                                  ? "Memuat opsi..." 
-                                  : "Tidak ada pilihan"}
-                              </CommandEmpty>
+                              <CommandEmpty role="status">Tidak ada pilihan</CommandEmpty>
                               <CommandGroup>
                                 {loadingFilterOptions[selectedColumnForFilter] ? (
-                                  <div className="flex items-center justify-center py-6">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  <div className="flex items-center justify-center py-6" role="status" aria-live="polite" aria-busy="true">
+                                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                                    <span className="sr-only">Memuat opsi...</span>
                                   </div>
                                 ) : (
                                   getFilterColumnConfig(selectedColumnForFilter)?.options.map((option) => {
@@ -669,6 +696,7 @@ export default function MembersExportPage() {
                                           setTempNewFilterValues(newValues)
                                         }}
                                         className="flex items-center gap-2 py-2"
+                                        aria-label={`${checked ? 'Hapus' : 'Pilih'} ${option.label}`}
                                       >
                                         <Checkbox
                                           checked={checked}
@@ -678,6 +706,7 @@ export default function MembersExportPage() {
                                               : tempNewFilterValues.filter(v => v !== option.value)
                                             setTempNewFilterValues(newValues)
                                           }}
+                                          aria-label={`${checked ? 'Hapus' : 'Pilih'} ${option.label}`}
                                         />
                                         <span className="text-sm">{option.label}</span>
                                       </CommandItem>
@@ -726,12 +755,24 @@ export default function MembersExportPage() {
                                 }
                               }}>
                                 <PopoverTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-6 px-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-6 px-2"
+                                    aria-label={`Edit filter ${columnConfig?.label}`}
+                                    aria-expanded={editingFilterId === filter.id}
+                                    aria-haspopup="dialog"
+                                  >
                                     Edit
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-[300px] p-0" align="start">
-                                  <Command>
+                                <PopoverContent 
+                                  className="w-[300px] p-0" 
+                                  align="start"
+                                  role="dialog"
+                                  aria-label={`Edit filter ${columnConfig?.label}`}
+                                >
+                                  <Command role="combobox" aria-label={`Pilih nilai untuk ${columnConfig?.label}`}>
                                     <div className="px-3 py-2 border-b">
                                       <span className="text-sm font-medium">
                                         {columnConfig?.label || "Nilai"}
@@ -739,18 +780,18 @@ export default function MembersExportPage() {
                                     </div>
 
                                     {columnConfig && columnConfig.options.length > 5 && (
-                                      <CommandInput placeholder={`Cari ${columnConfig.label.toLowerCase()}...`} />
+                                      <CommandInput 
+                                        placeholder={`Cari ${columnConfig.label.toLowerCase()}...`}
+                                        aria-label={`Cari ${columnConfig.label.toLowerCase()}`}
+                                      />
                                     )}
                                     <CommandList>
-                                      <CommandEmpty>
-                                        {loadingFilterOptions[filter.column] 
-                                          ? "Memuat opsi..." 
-                                          : "Tidak ada pilihan"}
-                                      </CommandEmpty>
+                                      <CommandEmpty role="status">Tidak ada pilihan</CommandEmpty>
                                       <CommandGroup>
                                         {loadingFilterOptions[filter.column] ? (
-                                          <div className="flex items-center justify-center py-4">
-                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                          <div className="flex items-center justify-center py-4" role="status" aria-live="polite" aria-busy="true">
+                                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                                            <span className="sr-only">Memuat opsi...</span>
                                           </div>
                                         ) : (
                                           columnConfig?.options.map((option) => {
@@ -767,6 +808,7 @@ export default function MembersExportPage() {
                                                   updateFilterValues(filter.id, newValues)
                                                 }}
                                                 className="flex items-center gap-2"
+                                                aria-label={`${checked ? 'Hapus' : 'Pilih'} ${option.label} untuk filter ${columnConfig?.label}`}
                                               >
                                                 <Checkbox
                                                   checked={checked}
@@ -776,6 +818,7 @@ export default function MembersExportPage() {
                                                       : filter.values.filter(v => v !== option.value)
                                                     updateFilterValues(filter.id, newValues)
                                                   }}
+                                                  aria-label={`${checked ? 'Hapus' : 'Pilih'} ${option.label}`}
                                                 />
                                                 {option.label}
                                               </CommandItem>
@@ -792,8 +835,9 @@ export default function MembersExportPage() {
                                 size="sm"
                                 className="h-6 w-6 p-0"
                                 onClick={() => removeFilter(filter.id)}
+                                aria-label={`Hapus filter ${columnConfig?.label}`}
                               >
-                                <X className="h-3 w-3" />
+                                <X className="h-3 w-3" aria-hidden="true" />
                               </Button>
                             </div>
                           )
@@ -811,37 +855,40 @@ export default function MembersExportPage() {
                     Data Member
                   </CardTitle>
                   <CardDescription>
-                    Menampilkan {totalCount.toLocaleString()} row member berdasarkan filter aktif
+                    Menampilkan {totalCount.toLocaleString()} row member berdasarkan filter
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {loading || loadingMembers ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin" />
+                    <div className="flex items-center justify-center py-8" role="status" aria-live="polite" aria-busy="true">
+                      <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
+                      <span className="sr-only">Memuat data member...</span>
                     </div>
                   ) : (
                     <div className="space-y-4">
                       {/* Search - affects Data Member table */}
                       <div className="space-y-2">
-                        <Label>Search Member</Label>
+                        <Label htmlFor="search-member">Search Member</Label>
                         <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                           <Input
+                            id="search-member"
                             placeholder="Cari nama, NIK, email..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-9"
+                            aria-label="Cari member berdasarkan nama, NIK, atau email"
                           />
                         </div>
                       </div>
 
                       {(searchQuery || filters.length > 0) && (
-                        <Alert>
-                          <AlertCircle className="h-4 w-4" />
+                        <Alert role="status" aria-live="polite">
+                          <AlertCircle className="h-4 w-4" aria-hidden="true" />
                           <AlertDescription>
                             <strong>Filter Aktif:</strong>
                             <ul className="list-disc list-inside mt-2 space-y-1">
-                              {searchQuery && <li>Search: "{searchQuery}"</li>}
+                              {searchQuery && <li>Search: &quot;{searchQuery}&quot;</li>}
                               {filters.map(filter => {
                                 const columnConfig = getFilterColumnConfig(filter.column)
                                 return (
@@ -856,8 +903,8 @@ export default function MembersExportPage() {
                       )}
 
                       {totalCount === 0 ? (
-                        <Alert variant="destructive">
-                          <AlertCircle className="h-4 w-4" />
+                        <Alert variant="destructive" role="alert">
+                          <AlertCircle className="h-4 w-4" aria-hidden="true" />
                           <AlertDescription>
                             Tidak ada data member yang sesuai dengan filter. Silakan ubah filter atau kembali ke halaman member.
                           </AlertDescription>
@@ -865,20 +912,29 @@ export default function MembersExportPage() {
                       ) : (
                          <div className="space-y-2">
                            <div className="flex items-center justify-between">
-                             <Label>Data Member ({totalCount.toLocaleString()} rows total, halaman {currentPage} dari {totalPages})</Label>
+                             <Label id="data-member-label">Data Member ({totalCount.toLocaleString()} rows total, halaman {currentPage} dari {totalPages})</Label>
                              <div className="flex items-center gap-2">
                                <Button
                                  variant="outline"
                                  size="sm"
                                  onClick={toggleSelectAll}
                                  disabled={memberRows.length === 0}
+                                 aria-label={selectedRows.size === memberRows.length && memberRows.length > 0
+                                   ? "Hapus semua pilihan baris di tabel"
+                                   : "Pilih semua baris di tabel"}
+                                 aria-pressed={selectedRows.size === memberRows.length && memberRows.length > 0}
                                >
                                  {selectedRows.size === memberRows.length && memberRows.length > 0
                                    ? "Hapus Semua"
                                    : "Pilih Semua"}
                                </Button>
                                {selectedRows.size > 0 && (
-                                 <Badge variant="secondary">
+                                 <Badge 
+                                   variant="secondary"
+                                   role="status"
+                                   aria-live="polite"
+                                   aria-atomic="true"
+                                 >
                                    {selectedRows.size} dipilih
                                  </Badge>
                                )}
@@ -889,68 +945,79 @@ export default function MembersExportPage() {
                              style={{ 
                                maxHeight: '500px'
                              }}
+                             role="region"
+                             aria-labelledby="data-member-label"
+                             aria-label="Tabel data member untuk export"
                            >
-                             <Table>
+                             <Table
+                               role="table"
+                               aria-label="Tabel data member untuk export"
+                               aria-rowcount={memberRows.length}
+                               aria-colcount={17}
+                             >
                                <TableHeader className="sticky top-0 bg-background z-10">
-                                 <TableRow>
-                                   <TableHead className="w-12">
+                                 <TableRow role="row">
+                                   <TableHead className="w-12" role="columnheader" scope="col">
+                                     <span className="sr-only">Pilih baris</span>
                                      <Checkbox
                                        checked={selectedRows.size === memberRows.length && memberRows.length > 0}
                                        onCheckedChange={toggleSelectAll}
+                                       aria-label="Pilih semua baris di tabel"
                                      />
                                    </TableHead>
-                                   <TableHead className="whitespace-nowrap">NIK</TableHead>
-                                   <TableHead className="whitespace-nowrap">Nama</TableHead>
-                                   <TableHead className="whitespace-nowrap">Nickname</TableHead>
-                                   <TableHead className="whitespace-nowrap">NISN</TableHead>
-                                   <TableHead className="whitespace-nowrap">Jenis Kelamin</TableHead>
-                                   <TableHead className="whitespace-nowrap">Tempat Lahir</TableHead>
-                                   <TableHead className="whitespace-nowrap">Tanggal Lahir</TableHead>
-                                   <TableHead className="whitespace-nowrap">Agama</TableHead>
-                                   <TableHead className="whitespace-nowrap">Jalan</TableHead>
-                                   <TableHead className="whitespace-nowrap">RT</TableHead>
-                                   <TableHead className="whitespace-nowrap">RW</TableHead>
-                                   <TableHead className="whitespace-nowrap">Dusun</TableHead>
-                                   <TableHead className="whitespace-nowrap">Kelurahan</TableHead>
-                                   <TableHead className="whitespace-nowrap">Kecamatan</TableHead>
-                                   <TableHead className="whitespace-nowrap">No. Telepon</TableHead>
-                                   <TableHead className="whitespace-nowrap">Email</TableHead>
-                                   <TableHead className="whitespace-nowrap">Group</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">NIK</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Nama</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Nickname</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">NISN</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Jenis Kelamin</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Tempat Lahir</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Tanggal Lahir</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Agama</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Jalan</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">RT</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">RW</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Dusun</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Kelurahan</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Kecamatan</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">No. Telepon</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Email</TableHead>
+                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Group</TableHead>
                                  </TableRow>
                                </TableHeader>
                                <TableBody>
                                  {memberRows.length === 0 ? (
-                                   <TableRow>
-                                     <TableCell colSpan={17} className="text-center py-8 text-muted-foreground">
+                                   <TableRow role="row">
+                                     <TableCell colSpan={17} className="text-center py-8 text-muted-foreground" role="gridcell">
                                        Tidak ada data
                                      </TableCell>
                                    </TableRow>
                                  ) : (
                                    memberRows.map((row, idx) => (
-                                     <TableRow key={idx}>
-                                       <TableCell>
+                                     <TableRow key={idx} role="row" aria-rowindex={idx + 1}>
+                                       <TableCell role="gridcell">
                                          <Checkbox
                                            checked={selectedRows.has(idx)}
                                            onCheckedChange={() => toggleRowSelection(idx)}
+                                           aria-label={`Pilih baris ${idx + 1}, NIK: ${row.nik || 'tidak ada'}, Nama: ${row.nama || 'tidak ada'}`}
                                          />
                                        </TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.nik || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.nama || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.nickname || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.nisn || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.jenis_kelamin || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.tempat_lahir || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.tanggal_lahir || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.agama || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.jalan || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.rt || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.rw || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.dusun || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.kelurahan || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.kecamatan || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.no_telepon || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.email || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap">{row.department_id || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.nik || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.nama || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.nickname || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.nisn || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.jenis_kelamin || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.tempat_lahir || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.tanggal_lahir || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.agama || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.jalan || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.rt || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.rw || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.dusun || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.kelurahan || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.kecamatan || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.no_telepon || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.email || "-"}</TableCell>
+                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.department_id || "-"}</TableCell>
                                      </TableRow>
                                    ))
                                  )}
@@ -959,8 +1026,8 @@ export default function MembersExportPage() {
                            </div>
                            {/* Pagination */}
                            {totalPages > 1 && (
-                             <div className="flex items-center justify-between mt-4">
-                               <div className="text-sm text-muted-foreground">
+                             <nav aria-label="Pagination untuk tabel data member" className="flex items-center justify-between mt-4">
+                               <div className="text-sm text-muted-foreground" role="status" aria-live="polite">
                                  Menampilkan {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)} dari {totalCount.toLocaleString()} data
                                </div>
                                <div className="flex items-center gap-2">
@@ -969,10 +1036,12 @@ export default function MembersExportPage() {
                                    size="sm"
                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                    disabled={currentPage === 1 || loadingMembers}
+                                   aria-label={`Ke halaman ${currentPage - 1}`}
+                                   aria-disabled={currentPage === 1 || loadingMembers}
                                  >
                                    Sebelumnya
                                  </Button>
-                                 <div className="flex items-center gap-1">
+                                 <div className="flex items-center gap-1" role="list">
                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                                      let pageNum: number
                                      if (totalPages <= 5) {
@@ -991,6 +1060,9 @@ export default function MembersExportPage() {
                                          size="sm"
                                          onClick={() => setCurrentPage(pageNum)}
                                          disabled={loadingMembers}
+                                         aria-label={`Ke halaman ${pageNum}`}
+                                         aria-current={currentPage === pageNum ? "page" : undefined}
+                                         role="listitem"
                                        >
                                          {pageNum}
                                        </Button>
@@ -1002,11 +1074,13 @@ export default function MembersExportPage() {
                                    size="sm"
                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                                    disabled={currentPage === totalPages || loadingMembers}
+                                   aria-label={`Ke halaman ${currentPage + 1}`}
+                                   aria-disabled={currentPage === totalPages || loadingMembers}
                                  >
                                    Selanjutnya
                                  </Button>
                                </div>
-                             </div>
+                             </nav>
                            )}
                          </div>
                        )}
@@ -1029,11 +1103,12 @@ export default function MembersExportPage() {
                   <RadioGroup
                     value={exportConfig.format}
                     onValueChange={(value) => setExportConfig(prev => ({ ...prev, format: value as ExportFormat }))}
+                    aria-label="Pilih format file export"
                   >
                     <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
-                      <RadioGroupItem value="xlsx" id="xlsx" />
+                      <RadioGroupItem value="xlsx" id="xlsx" aria-label="Format Excel" />
                       <Label htmlFor="xlsx" className="flex-1 cursor-pointer flex items-center gap-2">
-                        <FileSpreadsheet className="h-5 w-5" />
+                        <FileSpreadsheet className="h-5 w-5" aria-hidden="true" />
                         <div>
                           <p className="font-medium">Excel (.xlsx)</p>
                           <p className="text-sm text-muted-foreground">Format Excel dengan multiple sheets</p>
@@ -1041,9 +1116,9 @@ export default function MembersExportPage() {
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
-                      <RadioGroupItem value="csv" id="csv" />
+                      <RadioGroupItem value="csv" id="csv" aria-label="Format CSV" />
                       <Label htmlFor="csv" className="flex-1 cursor-pointer flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
+                        <FileText className="h-5 w-5" aria-hidden="true" />
                         <div>
                           <p className="font-medium">CSV (.csv)</p>
                           <p className="text-sm text-muted-foreground">Format CSV untuk kompatibilitas luas</p>
@@ -1081,6 +1156,7 @@ export default function MembersExportPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setExportConfig(prev => ({ ...prev, selectedFields: EXPORT_FIELDS.map(f => f.key) }))}
+                      aria-label="Pilih semua kolom untuk export"
                     >
                       Pilih Semua
                     </Button>
@@ -1088,6 +1164,7 @@ export default function MembersExportPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setExportConfig(prev => ({ ...prev, selectedFields: [] }))}
+                      aria-label="Hapus semua pilihan kolom"
                     >
                       Hapus Semua
                     </Button>
@@ -1127,34 +1204,40 @@ export default function MembersExportPage() {
                 </CardHeader>
                 <CardContent>
                   {loading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin" />
+                    <div className="flex items-center justify-center py-8" role="status" aria-live="polite" aria-busy="true">
+                      <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
+                      <span className="sr-only">Memuat preview data...</span>
                     </div>
                   ) : (
                     <ScrollArea className="w-full">
-                      <Table>
+                      <Table
+                        role="table"
+                        aria-label="Preview data yang akan diexport"
+                        aria-rowcount={previewData.length}
+                        aria-colcount={exportConfig.selectedFields.length}
+                      >
                         <TableHeader>
-                          <TableRow>
+                          <TableRow role="row">
                             {exportConfig.selectedFields.map((fieldKey) => {
                               const field = EXPORT_FIELDS.find(f => f.key === fieldKey)
                               return (
-                                <TableHead key={fieldKey}>{field?.label || fieldKey}</TableHead>
+                                <TableHead key={fieldKey} role="columnheader" scope="col">{field?.label || fieldKey}</TableHead>
                               )
                             })}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {previewData.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={exportConfig.selectedFields.length} className="text-center py-8">
+                            <TableRow role="row">
+                              <TableCell colSpan={exportConfig.selectedFields.length} className="text-center py-8" role="gridcell">
                                 Tidak ada data untuk ditampilkan
                               </TableCell>
                             </TableRow>
                           ) : (
                             previewData.map((row, idx) => (
-                              <TableRow key={idx}>
+                              <TableRow key={idx} role="row" aria-rowindex={idx + 1}>
                                 {exportConfig.selectedFields.map((fieldKey) => (
-                                  <TableCell key={fieldKey}>
+                                  <TableCell key={fieldKey} role="gridcell">
                                     {row[fieldKey] ?? "-"}
                                   </TableCell>
                                 ))}
@@ -1176,31 +1259,31 @@ export default function MembersExportPage() {
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   {exporting ? (
-                    <>
-                      <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                    <div role="status" aria-live="polite" aria-busy="true">
+                      <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" aria-hidden="true" />
                       <p className="text-lg font-medium">Sedang memproses export...</p>
                       <p className="text-sm text-muted-foreground mt-2">
                         Mohon tunggu, jangan tutup halaman ini
                       </p>
-                    </>
+                    </div>
                   ) : exportResult ? (
                     <>
                       {exportResult.success ? (
-                        <>
-                          <CheckCircle2 className="h-12 w-12 text-green-500 mb-4" />
+                        <div role="status" aria-live="polite">
+                          <CheckCircle2 className="h-12 w-12 text-green-500 mb-4" aria-hidden="true" />
                           <p className="text-lg font-medium">Export berhasil!</p>
                           <p className="text-sm text-muted-foreground mt-2">
                             {exportResult.exportedCount?.toLocaleString()} data berhasil diexport
                           </p>
-                        </>
+                        </div>
                       ) : (
-                        <>
-                          <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+                        <div role="alert" aria-live="assertive">
+                          <AlertCircle className="h-12 w-12 text-red-500 mb-4" aria-hidden="true" />
                           <p className="text-lg font-medium">Export gagal</p>
                           <p className="text-sm text-muted-foreground mt-2">
                             {exportResult.message}
                           </p>
-                        </>
+                        </div>
                       )}
                     </>
                   ) : null}
@@ -1216,9 +1299,9 @@ export default function MembersExportPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     {exportResult.success ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      <CheckCircle2 className="h-5 w-5 text-green-500" aria-hidden="true" />
                     ) : (
-                      <AlertCircle className="h-5 w-5 text-red-500" />
+                      <AlertCircle className="h-5 w-5 text-red-500" aria-hidden="true" />
                     )}
                     {exportResult.success ? "Export Berhasil" : "Export Gagal"}
                   </CardTitle>
@@ -1236,27 +1319,52 @@ export default function MembersExportPage() {
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <Button onClick={() => router.push("/members")}>
+                        <Button 
+                          onClick={() => router.push("/members")}
+                          aria-label="Kembali ke halaman members"
+                        >
                           Kembali ke Member
                         </Button>
-                        <Button variant="outline" onClick={() => setCurrentStep(1)}>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setCurrentStep(1)}
+                          aria-label="Mulai export baru"
+                        >
                           Export Lagi
                         </Button>
                       </div>
                     </>
                   ) : (
                     <>
-                      <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
+                      <Alert variant="destructive" role="alert">
+                        <AlertCircle className="h-4 w-4" aria-hidden="true" />
                         <AlertDescription>
                           {exportResult.message || "Terjadi kesalahan saat melakukan export"}
                         </AlertDescription>
                       </Alert>
                       <div className="flex gap-2">
-                        <Button onClick={() => router.push("/members")}>
-                          Kembali ke Member
+                        <Button 
+                          asChild
+                          aria-label="Kembali ke halaman members"
+                        >
+                          <Link 
+                            href="/members"
+                            prefetch={true}
+                            onMouseEnter={(e) => {
+                              const href = e.currentTarget.getAttribute('href')
+                              if (href && router) {
+                                router.prefetch(href)
+                              }
+                            }}
+                          >
+                            Kembali ke Member
+                          </Link>
                         </Button>
-                        <Button variant="outline" onClick={() => setCurrentStep(1)}>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setCurrentStep(1)}
+                          aria-label="Coba export lagi"
+                        >
                           Coba Lagi
                         </Button>
                       </div>

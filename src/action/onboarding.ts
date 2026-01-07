@@ -275,18 +275,18 @@ export async function createOrganization(organizationData: OrganizationData): Pr
       return { success: false, message: "Failed to create organization. Please try again." };
     }
 
-    // Create organization member record for the creator as admin
-    // But don't make them active until organization is approved
+    // Add user as organization member (without biodata, so they won't appear in export)
+    // This is needed so creator can access the organization
     const { error: memberError } = await supabase
       .from("organization_members")
       .insert({
         organization_id: newOrganization.id,
         user_id: user.id,
-        employee_id: `ADMIN-${Date.now()}`, // Admin employee ID
         hire_date: new Date().toISOString().split('T')[0],
         employment_status: 'active',
         contract_type: 'permanent',
         is_active: false, // Will be activated when organization is approved
+        // No biodata_nik - creator won't appear in export (filtered out)
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
