@@ -81,12 +81,28 @@ interface MemberSchedulesClientProps {
   initialSchedules: IMemberSchedule[]
   initialMembers: IOrganization_member[]
   initialWorkSchedules: IWorkSchedule[]
+  activeMemberIds?: string[]
+  isLoading?: boolean
+  pageIndex?: number
+  pageSize?: number
+  totalRecords?: number
+  onPageIndexChange?: (pageIndex: number) => void
+  onPageSizeChange?: (pageSize: number) => void
+  onRefresh?: () => void
 }
 
 export default function MemberSchedulesClient({
   initialSchedules,
   initialMembers,
   initialWorkSchedules,
+  activeMemberIds,
+  isLoading = false,
+  pageIndex,
+  pageSize,
+  totalRecords,
+  onPageIndexChange,
+  onPageSizeChange,
+  onRefresh,
 }: MemberSchedulesClientProps) {
   const [schedules, setSchedules] = React.useState(initialSchedules)
   const [open, setOpen] = React.useState(false)
@@ -97,16 +113,9 @@ export default function MemberSchedulesClient({
     setSchedules(initialSchedules)
   }, [initialSchedules])
 
-  // Memoized - prevent unnecessary recalculations
   const membersWithActiveSchedule = React.useMemo(() => {
-    const activeIds = new Set<string>()
-    schedules.forEach((schedule) => {
-      if (schedule.is_active) {
-        activeIds.add(schedule.organization_member_id)
-      }
-    })
-    return activeIds
-  }, [schedules])
+    return new Set<string>((activeMemberIds || []).map((id) => String(id)))
+  }, [activeMemberIds])
 
   const form = useForm<MemberScheduleForm>({
     resolver: zodResolver(memberScheduleSchema),
@@ -138,6 +147,7 @@ export default function MemberSchedulesClient({
           setSchedules((prev) =>
             prev.map((s) => (s.id === editingSchedule.id ? { ...s, ...payload } : s))
           )
+          onRefresh?.()
         } else {
           toast.error(result.message)
         }
@@ -147,6 +157,7 @@ export default function MemberSchedulesClient({
           toast.success("Schedule assigned successfully")
           // Optimistic update
           setSchedules((prev) => [result.data as IMemberSchedule, ...prev])
+          onRefresh?.()
         } else {
           toast.error(result.message)
         }
@@ -176,6 +187,7 @@ export default function MemberSchedulesClient({
         toast.success("Schedule deleted successfully")
         // Optimistic update
         setSchedules((prev) => prev.filter((s) => s.id !== id))
+        onRefresh?.()
       } else {
         toast.error(result.message)
       }
@@ -218,7 +230,6 @@ export default function MemberSchedulesClient({
         const member = schedule.organization_member as any
         const user = member?.user
         const name = getMemberName(schedule)
-        const email = user?.email || ""
 
         return (
           <div className="flex gap-3 items-center">
@@ -228,7 +239,6 @@ export default function MemberSchedulesClient({
             </Avatar>
             <div className="flex flex-col">
               <span className="text-sm font-medium leading-none">{name}</span>
-              {email && <span className="text-xs text-muted-foreground">{email}</span>}
             </div>
           </div>
         )
@@ -274,18 +284,18 @@ export default function MemberSchedulesClient({
               variant="outline"
               size="icon"
               onClick={() => handleEdit(schedule)}
-              className="cursor-pointer bg-secondary border-0 shadow-0 p-0 m-0"
+              className="h-9 w-9 cursor-pointer bg-secondary border-0 p-0"
             >
-              <Pencil />
+              <Pencil className="h-4 w-4" />
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="outline"
                   size="icon"
-                  className="text-red-500 cursor-pointer bg-secondary border-0 p-0 m-0"
+                  className="h-9 w-9 text-red-500 cursor-pointer bg-secondary border-0 p-0"
                 >
-                  <Trash />
+                  <Trash className="h-4 w-4" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -313,46 +323,75 @@ export default function MemberSchedulesClient({
     <div className="w-full h-full">
       <Card className="h-full border-0 shadow-none">
         <CardContent className="p-0">
-          <div className={`flex justify-end mb-4 ${schedules.length === 0 ? "hidden" : ""}`}>
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => setEditingSchedule(null)} variant="outline" size="icon">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingSchedule ? "Edit Schedule" : "Assign Schedule"}
-                  </DialogTitle>
-                </DialogHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    {editingSchedule ? (
-                      <div className="rounded-lg bg-secondary/50 px-4 py-3 space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Member</p>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="w-10 h-10 border-2 border-primary/20">
-                            <AvatarImage
-                              src={
-                                (editingSchedule.organization_member as { user?: { profile_photo_url?: string | null } })?.user?.profile_photo_url || undefined
-                              }
-                              alt={getMemberName(editingSchedule)}
-                            />
-                            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                              {getMemberName(editingSchedule).charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex flex-col">
-                            <p className="text-sm font-semibold text-foreground">
-                              {getMemberName(editingSchedule)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {(editingSchedule.organization_member as { user?: { email?: string } })?.user?.email || 'No email'}
-                            </p>
+          <DataTable
+            columns={columns}
+            data={schedules}
+            isLoading={isLoading}
+            showGlobalFilter={true}
+            showFilters={true}
+            showColumnToggle={false}
+            layout="card"
+            globalFilterPlaceholder="Search member schedules..."
+            manualPagination={typeof pageIndex === "number" && typeof pageSize === "number"}
+            pageIndex={pageIndex}
+            pageSize={pageSize}
+            totalRecords={totalRecords}
+            onPageIndexChange={onPageIndexChange}
+            onPageSizeChange={onPageSizeChange}
+            toolbarRight={
+              <Dialog
+                open={open}
+                onOpenChange={(isOpen) => {
+                  if (isOpen) {
+                    setOpen(true)
+                    return
+                  }
+
+                  handleCloseDialog()
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button
+                    onClick={() => {
+                      handleCloseDialog()
+                      setOpen(true)
+                    }}
+                    className="gap-2 whitespace-nowrap"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Assign
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingSchedule ? "Edit Schedule" : "Assign Schedule"}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      {editingSchedule ? (
+                        <div className="rounded-lg bg-secondary/50 px-4 py-3 space-y-1">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Member</p>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="w-10 h-10 border-2 border-primary/20">
+                              <AvatarImage
+                                src={
+                                  (editingSchedule.organization_member as { user?: { profile_photo_url?: string | null } })?.user?.profile_photo_url || undefined
+                                }
+                                alt={getMemberName(editingSchedule)}
+                              />
+                              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                {getMemberName(editingSchedule).charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col">
+                              <p className="text-sm font-semibold text-foreground">
+                                {getMemberName(editingSchedule)}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
                     ) : (
                       <FormField
                         control={form.control}
@@ -480,33 +519,37 @@ export default function MemberSchedulesClient({
                         {editingSchedule ? "Update" : "Assign"}
                       </Button>
                     </div>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {schedules.length === 0 ? (
-            <Empty>
-              <EmptyMedia>
-                <Calendar className="w-16 h-16 text-muted-foreground" />
-              </EmptyMedia>
-              <EmptyHeader>
-                <EmptyTitle>No member schedules</EmptyTitle>
-                <EmptyDescription>
-                  Get started by assigning a work schedule to a member
-                </EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <Button onClick={() => setOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Assign
-                </Button>
-              </EmptyContent>
-            </Empty>
-          ) : (
-            <DataTable columns={columns} data={schedules} showFilters={true} showColumnToggle={false} />
-          )}
+                      </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            }
+            emptyState={
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Calendar className="h-14 w-14 text-muted-foreground mx-auto" />
+                  </EmptyMedia>
+                  <EmptyTitle>No member schedules</EmptyTitle>
+                  <EmptyDescription>
+                    Get started by assigning a work schedule to a member.
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Button
+                    onClick={() => {
+                      handleCloseDialog()
+                      setOpen(true)
+                    }}
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Assign
+                  </Button>
+                </EmptyContent>
+              </Empty>
+            }
+          />
         </CardContent>
       </Card>
     </div>

@@ -4,7 +4,7 @@ import React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
-import { Trash, Pencil, ChevronRight, Plus, Calendar } from "lucide-react"
+import { Trash, Pencil, Clock, Plus, Calendar } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -70,7 +70,6 @@ import { SCHEDULE_TYPES } from "@/constants/attendance-status"
 
 const scheduleSchema = z.object({
   organization_id: z.string().min(1, "Organization is required"),
-  code: z.string().min(2, "min 2 characters"),
   name: z.string().min(2, "min 2 characters"),
   description: z.string().optional(),
   schedule_type: z.string().optional(),
@@ -83,12 +82,26 @@ interface ScheduleClientProps {
   initialSchedules: IWorkSchedule[]
   organizationId: string
   organizationName: string
+  isLoading?: boolean
+  pageIndex?: number
+  pageSize?: number
+  totalRecords?: number
+  onPageIndexChange?: (pageIndex: number) => void
+  onPageSizeChange?: (pageSize: number) => void
+  onRefresh?: () => void
 }
 
 export default function ScheduleClient({
   initialSchedules,
   organizationId,
   organizationName,
+  isLoading = false,
+  pageIndex,
+  pageSize,
+  totalRecords,
+  onPageIndexChange,
+  onPageSizeChange,
+  onRefresh,
 }: ScheduleClientProps) {
   const [schedules, setSchedules] = React.useState(initialSchedules)
   const [open, setOpen] = React.useState(false)
@@ -103,7 +116,6 @@ export default function ScheduleClient({
     resolver: zodResolver(scheduleSchema),
     defaultValues: {
       organization_id: organizationId,
-      code: "",
       name: "",
       description: "",
       schedule_type: "",
@@ -128,6 +140,7 @@ export default function ScheduleClient({
           setSchedules((prev) =>
             prev.map((s) => (s.id === editingDetail.id ? { ...s, ...res.data } : s))
           )
+          onRefresh?.()
         } else {
           throw new Error(res.message || "Failed to update schedule")
         }
@@ -140,6 +153,7 @@ export default function ScheduleClient({
           toast.success("Schedule created successfully")
           // Optimistic update
           setSchedules((prev) => [res.data as IWorkSchedule, ...prev])
+          onRefresh?.()
         } else {
           throw new Error(res.message || "Failed to create schedule")
         }
@@ -159,7 +173,6 @@ export default function ScheduleClient({
     setEditingDetail(null)
     form.reset({
       organization_id: organizationId,
-      code: "",
       name: "",
       description: "",
       schedule_type: "",
@@ -174,7 +187,6 @@ export default function ScheduleClient({
       setEditingDetail(schedule)
       const formValues = {
         organization_id: String(schedule.organization_id || organizationId),
-        code: schedule.code || "",
         name: schedule.name || "",
         description: schedule.description || "",
         schedule_type: schedule.schedule_type || "",
@@ -186,7 +198,6 @@ export default function ScheduleClient({
       setEditingDetail(null)
       const formValues = {
         organization_id: organizationId,
-        code: "",
         name: "",
         description: "",
         schedule_type: "",
@@ -205,6 +216,7 @@ export default function ScheduleClient({
         toast.success("Schedule deleted successfully")
         // Optimistic update
         setSchedules((prev) => prev.filter((s) => s.id !== scheduleId))
+        onRefresh?.()
       } else {
         throw new Error(response.message)
       }
@@ -214,7 +226,6 @@ export default function ScheduleClient({
   }
 
   const columns: ColumnDef<IWorkSchedule>[] = [
-    { accessorKey: "code", header: "Code" },
     { accessorKey: "name", header: "Name" },
     { accessorKey: "description", header: "Description" },
     {
@@ -249,19 +260,19 @@ export default function ScheduleClient({
             <Button
               variant="outline"
               size="icon"
-              className="border-0 cursor-pointer"
+              className="h-9 w-9 cursor-pointer bg-secondary border-0 p-0"
               onClick={() => handleOpenDialog(ws)}
             >
-              <Pencil />
+              <Pencil className="h-4 w-4" />
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="outline"
                   size="icon"
-                  className="text-red-500 border-0 cursor-pointer"
+                  className="h-9 w-9 text-red-500 cursor-pointer bg-secondary border-0 p-0"
                 >
-                  <Trash />
+                  <Trash className="h-4 w-4" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -280,8 +291,14 @@ export default function ScheduleClient({
               </AlertDialogContent>
             </AlertDialog>
             <Link href={`/schedule/detail/${ws.id}`}>
-              <Button variant="outline" className="border-0 cursor-pointer">
-                <ChevronRight />
+              <Button
+                variant="outline"
+                size="icon"
+                title="Atur jam kerja"
+                aria-label="Atur jam kerja"
+                className="h-9 w-9 cursor-pointer bg-secondary border-0 p-0"
+              >
+                <Clock className="h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -294,129 +311,123 @@ export default function ScheduleClient({
     <div className="w-full h-full">
       <Card className="h-full border-0 shadow-none">
         <CardContent className="p-0">
-          <Card className={`mb-4 ${schedules.length === 0 ? "hidden" : ""}`}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-end">
-                <Dialog
-                  open={open}
-                  onOpenChange={(isOpen) => {
-                    if (!isOpen) {
-                      handleCloseDialog()
-                    }
-                  }}
-                >
-                  <DialogTrigger asChild>
-                    <Button onClick={() => handleOpenDialog()} variant="outline" className="gap-2 whitespace-nowrap">
-                      <Plus className="h-4 w-4" />
-                      New
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>{editingDetail ? "Edit Schedule" : "Add Schedule"}</DialogTitle>
-                    </DialogHeader>
-                    <Form {...form}>
-                      <form
-                        onSubmit={form.handleSubmit(handleSubmit)}
-                        className="space-y-4"
-                      >
-                        <FormField
-                          control={form.control}
-                          name="organization_id"
-                          render={({ field }) => <input type="hidden" {...field} />}
-                        />
-                        <FormItem>
-                          <FormLabel>Organization</FormLabel>
-                          <div className="text-sm text-muted-foreground">
-                            {organizationName || "(Organization name not loaded)"}
-                          </div>
-                        </FormItem>
+          <DataTable
+            columns={columns}
+            data={schedules}
+            isLoading={isLoading}
+            showGlobalFilter={true}
+            showFilters={true}
+            showColumnToggle={false}
+            layout="card"
+            globalFilterPlaceholder="Search schedules..."
+            manualPagination={typeof pageIndex === "number" && typeof pageSize === "number"}
+            pageIndex={pageIndex}
+            pageSize={pageSize}
+            totalRecords={totalRecords}
+            onPageIndexChange={onPageIndexChange}
+            onPageSizeChange={onPageSizeChange}
+            toolbarRight={
+              <Dialog
+                open={open}
+                onOpenChange={(isOpen) => {
+                  if (!isOpen) {
+                    handleCloseDialog()
+                  }
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button onClick={() => handleOpenDialog()} className="gap-2 whitespace-nowrap">
+                    <Plus className="h-4 w-4" />
+                    New
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingDetail ? "Edit Schedule" : "Add Schedule"}</DialogTitle>
+                  </DialogHeader>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="organization_id"
+                        render={({ field }) => <input type="hidden" {...field} />}
+                      />
+                      <FormItem>
+                        <FormLabel>Organization</FormLabel>
+                        <div className="text-sm text-muted-foreground">
+                          {organizationName || "(Organization name not loaded)"}
+                        </div>
+                      </FormItem>
 
-                        <FormField
-                          control={form.control}
-                          name="code"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Code</FormLabel>
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Name</FormLabel>
+                            <FormControl>
+                              <Input type="text" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Input type="text" {...field ?? ""} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="schedule_type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <Input type="text" {...field} />
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select schedule type" />
+                                </SelectTrigger>
                               </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Name</FormLabel>
-                              <FormControl>
-                                <Input type="text" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="description"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Description</FormLabel>
-                              <FormControl>
-                                <Input type="text" {...field ?? ""} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="schedule_type"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Type</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select schedule type" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {SCHEDULE_TYPES.map((type) => (
-                                    <SelectItem key={type.value} value={type.value}>
-                                      {type.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="is_active"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Active</FormLabel>
-                              <FormControl>
-                                <Switch checked={field.value} onCheckedChange={field.onChange} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <Button type="submit" className="w-full">
-                          {editingDetail ? "Update" : "Create"}
-                        </Button>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardContent>
-          </Card>
-          {schedules.length === 0 ? (
-            <div className="mt-20">
+                              <SelectContent>
+                                {SCHEDULE_TYPES.map((type) => (
+                                  <SelectItem key={type.value} value={type.value}>
+                                    {type.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="is_active"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Active</FormLabel>
+                            <FormControl>
+                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <Button type="submit" className="w-full">
+                        {editingDetail ? "Update" : "Create"}
+                      </Button>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            }
+            emptyState={
               <Empty>
                 <EmptyHeader>
                   <EmptyMedia variant="icon">
@@ -429,13 +440,14 @@ export default function ScheduleClient({
                   </EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent>
-                  <Button onClick={() => handleOpenDialog()}>Add Schedule</Button>
+                  <Button onClick={() => handleOpenDialog()} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    New
+                  </Button>
                 </EmptyContent>
               </Empty>
-            </div>
-          ) : (
-            <DataTable columns={columns} data={schedules} showFilters={true} showColumnToggle={false} />
-          )}
+            }
+          />
         </CardContent>
       </Card>
     </div >

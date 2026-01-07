@@ -12,6 +12,8 @@ import {
   VisibilityState,
 } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -27,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { Columns3Cog, Loader2, Filter, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
+import { Columns3Cog, Loader2, Filter, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Search } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -46,6 +48,17 @@ type DataTableProps<TData, TValue> = {
   showFilters?: boolean
   initialSorting?: SortingState
   getRowKey?: (row: TData, index: number) => string
+  layout?: "default" | "card"
+  toolbarRight?: React.ReactNode
+  globalFilterPlaceholder?: string
+  emptyState?: React.ReactNode
+  manualPagination?: boolean
+  pageIndex?: number
+  pageSize?: number
+  pageCount?: number
+  totalRecords?: number
+  onPageIndexChange?: (pageIndex: number) => void
+  onPageSizeChange?: (pageSize: number) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -54,24 +67,53 @@ export function DataTable<TData, TValue>({
   isLoading = false,
   showPagination = true,
   showColumnToggle = true,
+  showGlobalFilter = false,
   showFilters = false,
   getRowKey,
+  layout = "default",
+  toolbarRight,
+  globalFilterPlaceholder,
+  emptyState,
+  manualPagination = false,
+  pageIndex: controlledPageIndex,
+  pageSize: controlledPageSize,
+  pageCount: controlledPageCount,
+  totalRecords,
+  onPageIndexChange: onPageIndexChangeProp,
+  onPageSizeChange: onPageSizeChangeProp,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({})
   const [sortOrder, setSortOrder] = React.useState("newest")
-  const [pageSize, setPageSize] = React.useState("10")
-  const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 10 })
-  const [globalFilter] = React.useState("")
+  const [pageSize, setPageSize] = React.useState(String(controlledPageSize ?? 10))
+  const [pagination, setPagination] = React.useState({
+    pageIndex: controlledPageIndex ?? 0,
+    pageSize: controlledPageSize ?? 10,
+  })
+  const [globalFilter, setGlobalFilter] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState("all")
 
   // Handler functions
   const handlePageSizeChange = (value: string) => {
     setPageSize(value)
+
+    if (manualPagination) {
+      const next = Math.max(1, parseInt(value, 10) || 10)
+      onPageSizeChangeProp?.(next)
+      onPageIndexChangeProp?.(0)
+      setPagination({ pageIndex: 0, pageSize: next })
+    }
   }
 
   const handlePageIndexChange = (pageIndex: number) => {
+    if (manualPagination) {
+      const next = Math.max(0, Number(pageIndex) || 0)
+      onPageIndexChangeProp?.(next)
+      setPagination((prev) => ({ ...prev, pageIndex: next }))
+      return
+    }
+
     setPagination((prev) => ({ ...prev, pageIndex }))
   }
 
@@ -154,7 +196,7 @@ export function DataTable<TData, TValue>({
     columns,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    getPaginationRowModel: manualPagination ? undefined : getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
@@ -168,6 +210,10 @@ export function DataTable<TData, TValue>({
         handlePageSizeChange(String(updater.pageSize))
       }
     },
+    manualPagination,
+    pageCount: manualPagination
+      ? (controlledPageCount ?? Math.max(1, Math.ceil((totalRecords ?? 0) / (parseInt(pageSize, 10) || 10))))
+      : undefined,
     state: {
       sorting,
       columnVisibility,
@@ -183,12 +229,29 @@ export function DataTable<TData, TValue>({
 
   // Sync pageSize -> pagination state and reset to first page
   React.useEffect(() => {
+    if (manualPagination) return
     const newPageSize = parseInt(pageSize, 10) || 10
     setPagination((prev) => ({ ...prev, pageSize: newPageSize, pageIndex: 0 }))
   }, [pageSize])
 
+  React.useEffect(() => {
+    if (!manualPagination) return
+    if (typeof controlledPageIndex === "number") {
+      setPagination((prev) => ({ ...prev, pageIndex: controlledPageIndex }))
+    }
+  }, [manualPagination, controlledPageIndex])
+
+  React.useEffect(() => {
+    if (!manualPagination) return
+    if (typeof controlledPageSize === "number") {
+      setPageSize(String(controlledPageSize))
+      setPagination((prev) => ({ ...prev, pageSize: controlledPageSize }))
+    }
+  }, [manualPagination, controlledPageSize])
+
   // Clamp pageIndex when filtered data or pageSize changes
   React.useEffect(() => {
+    if (manualPagination) return
     const newPageSize = parseInt(pageSize, 10) || 10
     const totalPages = Math.max(1, Math.ceil(filteredData.length / newPageSize))
     if (pageIndex > totalPages - 1) {
@@ -196,64 +259,75 @@ export function DataTable<TData, TValue>({
     }
   }, [filteredData.length, pageSize, pageIndex])
 
-  return (
-    <div className="space-y-4">
+  const effectivePageCount = manualPagination
+    ? (controlledPageCount ?? Math.max(1, Math.ceil((totalRecords ?? 0) / (parseInt(pageSize, 10) || 10))))
+    : table.getPageCount()
 
-      {/* Filters and Controls - Compact Grid */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
-        <div className="flex flex-wrap items-center gap-2 w-full">
-          {/* Filters */}
-          {showFilters && (
-            <>
-              {/* Status Filter */}
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+  const controls = (
+    <div className="flex flex-col gap-3 w-full md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-2 w-full sm:flex-row sm:flex-wrap sm:items-center md:flex-nowrap md:flex-1 md:gap-2">
+        {showGlobalFilter && (
+          <div className="relative w-full md:flex-1 md:min-w-[320px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={globalFilter}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              placeholder={globalFilterPlaceholder || "Search..."}
+              className="pl-9"
+            />
+          </div>
+        )}
 
-              {/* Sort Order */}
-              <Select value={sortOrder} onValueChange={setSortOrder}>
-                <SelectTrigger className="w-[110px]">
+        {showFilters && (
+          <>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-[140px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={sortOrder} onValueChange={setSortOrder}>
+              <SelectTrigger className="w-full sm:w-[110px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="oldest">Oldest</SelectItem>
+                <SelectItem value="a-z">A-Z</SelectItem>
+                <SelectItem value="z-a">Z-A</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Show:</span>
+              <Select value={pageSize} onValueChange={setPageSize}>
+                <SelectTrigger className="w-[70px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="newest">Newest</SelectItem>
-                  <SelectItem value="oldest">Oldest</SelectItem>
-                  <SelectItem value="a-z">A-Z</SelectItem>
-                  <SelectItem value="z-a">Z-A</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </>
+        )}
+      </div>
 
-              {/* Show Items */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground whitespace-nowrap">Show:</span>
-                <Select value={pageSize} onValueChange={setPageSize}>
-                  <SelectTrigger className="w-[70px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          )}
-        </div>
+      <div className="flex items-center gap-2 w-full justify-end md:w-auto md:flex-nowrap">
+        {toolbarRight}
 
-        {/* Toggle Columns */}
         {showColumnToggle && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 w-full sm:w-auto">
+              <Button variant="outline" className="gap-2 w-full md:w-auto">
                 <Columns3Cog className="h-4 w-4" /> Columns
               </Button>
             </DropdownMenuTrigger>
@@ -282,15 +356,18 @@ export function DataTable<TData, TValue>({
           </DropdownMenu>
         )}
       </div>
+    </div>
+  )
 
-      {/* Table */}
-      <div className="relative w-full rounded-md border overflow-hidden">
-        {isLoading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        )}
+  const tableContent = (
+    <div className="relative w-full rounded-md border overflow-hidden">
+      {isLoading && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      )}
 
+      {table.getRowModel().rows?.length ? (
         <div className="overflow-x-auto">
           <Table className="w-full">
             <TableHeader>
@@ -303,7 +380,6 @@ export function DataTable<TData, TValue>({
                       return <TableHead key={header.id} />
                     }
 
-                    // Get column width based on header content
                     const getColumnWidth = () => {
                       const headerText = typeof header.column.columnDef.header === 'string'
                         ? header.column.columnDef.header
@@ -352,121 +428,151 @@ export function DataTable<TData, TValue>({
               ))}
             </TableHeader>
             <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row, index) => (
-                  <TableRow
-                    key={getRowKey ? getRowKey(row.original, index) : row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        className="px-2 py-3 text-left whitespace-nowrap"
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
-                    {isLoading ? "Loading..." : "No results."}
-                  </TableCell>
+              {table.getRowModel().rows.map((row, index) => (
+                <TableRow
+                  key={getRowKey ? getRowKey(row.original, index) : row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell
+                      key={cell.id}
+                      className="px-2 py-3 text-left whitespace-nowrap"
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
                 </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
         </div>
+      ) : (
+        emptyState ? (
+          <div className="py-12 px-4">
+            {emptyState}
+          </div>
+        ) : (
+          <div className="py-10 px-4 text-center text-sm text-muted-foreground">
+            {isLoading ? "Loading..." : "No results."}
+          </div>
+        )
+      )}
+    </div>
+  )
+
+  const paginationFooter = showPagination ? (
+    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-muted/50 rounded-md border">
+      <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-nowrap justify-center w-full md:w-auto">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handlePageIndexChange(0)}
+          disabled={pageIndex === 0 || isLoading}
+          className="h-8 w-8 p-0"
+          title="First page"
+        >
+          <ChevronsLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handlePageIndexChange(pageIndex - 1)}
+          disabled={pageIndex === 0 || isLoading}
+          className="h-8 w-8 p-0"
+          title="Previous page"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap ml-1 sm:ml-2">Page</span>
+
+        <input
+          type="number"
+          min="1"
+          max={effectivePageCount}
+          value={pageIndex + 1}
+          onChange={(e) => {
+            const page = e.target.value ? Number(e.target.value) - 1 : 0;
+            handlePageIndexChange(page);
+          }}
+          className="w-10 sm:w-12 h-8 px-2 border rounded text-xs sm:text-sm text-center mx-1 sm:mx-2 bg-background"
+          disabled={isLoading || effectivePageCount === 0}
+        />
+
+        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/ {effectivePageCount}</span>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handlePageIndexChange(pageIndex + 1)}
+          disabled={pageIndex >= effectivePageCount - 1 || isLoading}
+          className="h-8 w-8 p-0"
+          title="Next page"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handlePageIndexChange(effectivePageCount - 1)}
+          disabled={pageIndex >= effectivePageCount - 1 || isLoading}
+          className="h-8 w-8 p-0"
+          title="Last page"
+        >
+          <ChevronsRight className="h-4 w-4" />
+        </Button>
       </div>
 
-      {/* Pagination Footer */}
-      {showPagination && (
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-muted/50 rounded-md border">
-          <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-nowrap justify-center w-full md:w-auto">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handlePageIndexChange(0)}
-              disabled={pageIndex === 0 || isLoading}
-              className="h-8 w-8 p-0"
-              title="First page"
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handlePageIndexChange(pageIndex - 1)}
-              disabled={pageIndex === 0 || isLoading}
-              className="h-8 w-8 p-0"
-              title="Previous page"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+      <div className="flex flex-row items-center justify-center md:justify-end gap-2 md:gap-4 w-full md:w-auto">
+        <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+          {(() => {
+            const ps = parseInt(pageSize, 10) || 10;
+            if (manualPagination) {
+              const total = totalRecords ?? 0
+              const start = total > 0 ? pageIndex * ps + 1 : 0
+              const end = Math.min((pageIndex + 1) * ps, total)
+              return `Showing ${start} to ${end} of ${total} total records`
+            }
 
-            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap ml-1 sm:ml-2">Page</span>
-
-            <input
-              type="number"
-              min="1"
-              max={table.getPageCount()}
-              value={pageIndex + 1}
-              onChange={(e) => {
-                const page = e.target.value ? Number(e.target.value) - 1 : 0;
-                handlePageIndexChange(page);
-              }}
-              className="w-10 sm:w-12 h-8 px-2 border rounded text-xs sm:text-sm text-center mx-1 sm:mx-2 bg-background"
-              disabled={isLoading || table.getPageCount() === 0}
-            />
-
-            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/ {table.getPageCount()}</span>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handlePageIndexChange(pageIndex + 1)}
-              disabled={pageIndex >= table.getPageCount() - 1 || isLoading}
-              className="h-8 w-8 p-0"
-              title="Next page"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handlePageIndexChange(table.getPageCount() - 1)}
-              disabled={pageIndex >= table.getPageCount() - 1 || isLoading}
-              className="h-8 w-8 p-0"
-              title="Last page"
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="flex flex-row items-center justify-center md:justify-end gap-2 md:gap-4 w-full md:w-auto">
-            <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-              {(() => {
-                const ps = parseInt(pageSize, 10) || 10;
-                return `Showing ${table.getRowModel().rows.length > 0 ? pageIndex * ps + 1 : 0} to ${Math.min((pageIndex + 1) * ps, table.getFilteredRowModel().rows.length)} of ${table.getFilteredRowModel().rows.length} total records`;
-              })()}
-            </div>
-            <div className="flex items-center gap-2">
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  handlePageSizeChange(e.target.value);
-                  handlePageIndexChange(0);
-                }}
-                className="px-2 py-1 border rounded text-xs sm:text-sm bg-background"
-              >
-                <option value="10">10</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-              </select>
-            </div>
-          </div>
+            return `Showing ${table.getRowModel().rows.length > 0 ? pageIndex * ps + 1 : 0} to ${Math.min((pageIndex + 1) * ps, table.getFilteredRowModel().rows.length)} of ${table.getFilteredRowModel().rows.length} total records`;
+          })()}
         </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              handlePageSizeChange(e.target.value);
+              handlePageIndexChange(0);
+            }}
+            className="px-2 py-1 border rounded text-xs sm:text-sm bg-background"
+          >
+            <option value="10">10</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  ) : null
+
+  return (
+    <div className="space-y-4">
+      {layout === "card" ? (
+        <>
+          <Card>
+            <CardContent className="p-4">{controls}</CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-0">{tableContent}</CardContent>
+          </Card>
+          {paginationFooter}
+        </>
+      ) : (
+        <>
+          {controls}
+          {tableContent}
+          {paginationFooter}
+        </>
       )}
     </div>
   )

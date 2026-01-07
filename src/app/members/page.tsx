@@ -702,30 +702,27 @@ export default function MembersPage() {
                 </Dialog>
 
                 <Button
+                  asChild
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    // Navigate to export page with current filters
-                    const params = new URLSearchParams()
-                    if (searchQuery) params.set("search", searchQuery)
-                    
-                    const exportUrl = `/members/export?${params.toString()}`
-                    
-                    // Use router if available, otherwise use window.location
-                    if (typeof window !== "undefined") {
-                      if (router && typeof router.push === "function") {
-                        router.push(exportUrl)
-                      } else {
-                        window.location.href = exportUrl
-                      }
-                    }
-                  }}
                   disabled={loading || exporting}
                   className="whitespace-nowrap"
                 >
-                  <FileDown className="mr-2 h-4 w-4" />
-                  Export
+                  <Link 
+                    href={`/members/export${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`}
+                    prefetch={true}
+                    onMouseEnter={(e) => {
+                      // Prefetch saat hover untuk navigasi lebih cepat
+                      const href = e.currentTarget.getAttribute('href')
+                      if (href && router) {
+                        router.prefetch(href)
+                      }
+                    }}
+                  >
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Export
+                  </Link>
                 </Button>
                 <Button
                   type="button"
@@ -746,7 +743,17 @@ export default function MembersPage() {
                   disabled={isLoadingInviteData}
                   className="whitespace-nowrap"
                 >
-                  <Link href="/members/import-simple">
+                  <Link 
+                    href="/members/import-simple"
+                    prefetch={true}
+                    onMouseEnter={(e) => {
+                      // Prefetch saat hover untuk navigasi lebih cepat
+                      const href = e.currentTarget.getAttribute('href')
+                      if (href && router) {
+                        router.prefetch(href)
+                      }
+                    }}
+                  >
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
                     Import
                   </Link>

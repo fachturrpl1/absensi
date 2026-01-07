@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getAllMemberSchedule } from "@/action/members_schedule"
+import { getActiveMemberScheduleMemberIds, getMemberSchedulesPage } from "@/action/members_schedule"
 import { getAllOrganization_member } from "@/action/members"
 import { getAllWorkSchedules } from "@/action/schedule"
 import MemberSchedulesClient from "./member-schedules-client"
@@ -15,7 +15,12 @@ export default function MemberSchedulesPage() {
   const [schedules, setSchedules] = useState<IMemberSchedule[]>([])
   const [members, setMembers] = useState<IOrganization_member[]>([])
   const [workSchedules, setWorkSchedules] = useState<IWorkSchedule[]>([])
+  const [activeMemberIds, setActiveMemberIds] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
+  const [totalRecords, setTotalRecords] = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     if (!organizationId) {
@@ -25,62 +30,81 @@ export default function MemberSchedulesPage() {
     
     console.log('[MEMBER-SCHEDULES] Starting fetch with organizationId:', organizationId)
 
-    const fetchData = async () => {
-
+    const fetchLookups = async () => {
       try {
-        setIsLoading(true)
-        const [schedulesRes, membersRes, workSchedulesRes] = await Promise.all([
-          getAllMemberSchedule(organizationId),
+        const [membersRes, workSchedulesRes] = await Promise.all([
           getAllOrganization_member(organizationId),
           getAllWorkSchedules(organizationId),
         ])
 
-        // Validate and safely extract data
-        if (!schedulesRes || typeof schedulesRes !== 'object') {
-          console.error('[MEMBER-SCHEDULES] Invalid schedules response:', schedulesRes)
-          setSchedules([])
-        } else if (schedulesRes.success && Array.isArray(schedulesRes.data)) {
-          console.log('[MEMBER-SCHEDULES] ✅ Fetched', schedulesRes.data.length, 'schedules for org', organizationId)
-          setSchedules(schedulesRes.data as IMemberSchedule[])
-        } else {
-          console.warn('[MEMBER-SCHEDULES] ❌ Schedules fetch failed:', schedulesRes.message)
-          setSchedules([])
-        }
-
-        if (!membersRes || typeof membersRes !== 'object') {
-          console.error('[MEMBER-SCHEDULES] Invalid members response:', membersRes)
-          setMembers([])
-        } else if (membersRes.success && Array.isArray(membersRes.data)) {
-          console.log('[MEMBER-SCHEDULES] ✅ Fetched', membersRes.data.length, 'members for org', organizationId)
+        if (membersRes?.success && Array.isArray(membersRes.data)) {
           setMembers(membersRes.data as IOrganization_member[])
         } else {
-          console.warn('[MEMBER-SCHEDULES] ❌ Members fetch failed:', membersRes.message)
           setMembers([])
         }
 
-        if (!workSchedulesRes || typeof workSchedulesRes !== 'object') {
-          console.error('[MEMBER-SCHEDULES] Invalid work schedules response:', workSchedulesRes)
-          setWorkSchedules([])
-        } else if (workSchedulesRes.success && Array.isArray(workSchedulesRes.data)) {
-          console.log('[MEMBER-SCHEDULES] ✅ Fetched', workSchedulesRes.data.length, 'work schedules for org', organizationId)
+        if (workSchedulesRes?.success && Array.isArray(workSchedulesRes.data)) {
           setWorkSchedules(workSchedulesRes.data as IWorkSchedule[])
         } else {
-          console.warn('[MEMBER-SCHEDULES] ❌ Work schedules fetch failed:', workSchedulesRes.message)
           setWorkSchedules([])
         }
+
       } catch (error) {
-        console.error('[MEMBER-SCHEDULES] Error fetching data:', error)
         toast.error('Failed to load member schedules')
-        setSchedules([])
         setMembers([])
         setWorkSchedules([])
+      }
+    }
+
+    fetchLookups()
+  }, [organizationId])
+
+  useEffect(() => {
+    if (!organizationId) return
+
+    const fetchActiveIds = async () => {
+      try {
+        const activeIdsRes = await getActiveMemberScheduleMemberIds(organizationId)
+
+        if (activeIdsRes?.success && Array.isArray(activeIdsRes.data)) {
+          setActiveMemberIds(activeIdsRes.data)
+        } else {
+          setActiveMemberIds([])
+        }
+      } catch (error) {
+        setActiveMemberIds([])
+      }
+    }
+
+    fetchActiveIds()
+  }, [organizationId, refreshKey])
+
+  useEffect(() => {
+    if (!organizationId) return
+
+    const fetchSchedules = async () => {
+      try {
+        setIsLoading(true)
+        const schedulesRes = await getMemberSchedulesPage(organizationId, pageIndex, pageSize)
+
+        if (schedulesRes?.success && Array.isArray(schedulesRes.data)) {
+          setSchedules(schedulesRes.data as IMemberSchedule[])
+          setTotalRecords(typeof schedulesRes.total === "number" ? schedulesRes.total : 0)
+        } else {
+          setSchedules([])
+          setTotalRecords(0)
+        }
+      } catch (error) {
+        toast.error('Failed to load member schedules')
+        setSchedules([])
+        setTotalRecords(0)
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchData()
-  }, [organizationId])
+    fetchSchedules()
+  }, [organizationId, pageIndex, pageSize, refreshKey])
 
   if (!organizationId) {
     return (
@@ -98,25 +122,20 @@ export default function MemberSchedulesPage() {
     )
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-1 flex-col gap-4 w-full">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center space-y-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="text-muted-foreground">Loading member schedules...</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-1 flex-col gap-4 w-full">
       <MemberSchedulesClient
         initialSchedules={schedules}
         initialMembers={members}
         initialWorkSchedules={workSchedules}
+        activeMemberIds={activeMemberIds}
+        isLoading={isLoading}
+        pageIndex={pageIndex}
+        pageSize={pageSize}
+        totalRecords={totalRecords}
+        onPageIndexChange={setPageIndex}
+        onPageSizeChange={setPageSize}
+        onRefresh={() => setRefreshKey((k) => k + 1)}
       />
     </div>
   )

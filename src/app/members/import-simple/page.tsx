@@ -2,6 +2,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useOrgStore } from "@/store/org-store"
 import { FileText, Upload, X, Download, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -646,6 +647,8 @@ export default function MembersImportSimplePage() {
     } else if (currentStep === 4) {
       // tombol Import yang menjalankan proses
     } else if (currentStep === 5) {
+      // Prefetch sebelum navigasi untuk navigasi lebih cepat
+      router.prefetch("/members")
       router.push("/members")
     }
   }
@@ -1447,8 +1450,22 @@ export default function MembersImportSimplePage() {
                       )}
 
                       <div className="flex gap-2">
-                        <Button onClick={() => router.push("/members")} className="flex-1">
-                          Back to Members Page
+                        <Button 
+                          asChild
+                          className="flex-1"
+                        >
+                          <Link 
+                            href="/members"
+                            prefetch={true}
+                            onMouseEnter={(e) => {
+                              const href = e.currentTarget.getAttribute('href')
+                              if (href && router) {
+                                router.prefetch(href)
+                              }
+                            }}
+                          >
+                            Back to Members Page
+                          </Link>
                         </Button>
                         <Button
                           variant="outline"
