@@ -84,15 +84,95 @@ import {
 import { formatTime } from "@/utils/format-time"
 import { useTimeFormat } from "@/store/time-format-store"
 
-const detailSchema = z.object({
-  day_of_week: z.number().min(0).max(6),
-  is_working_day: z.boolean(),
-  flexible_hours: z.boolean(),
-  start_time: z.string().optional(),
-  end_time: z.string().optional(),
-  break_start: z.string().optional(),
-  break_end: z.string().optional(),
-})
+const timeStringToMinutes = (value?: string) => {
+  if (!value) return null
+  const [hh, mm] = value.split(":")
+  const hours = Number(hh)
+  const minutes = Number(mm)
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null
+  return hours * 60 + minutes
+}
+
+const detailSchema = z
+  .object({
+    day_of_week: z.number().min(0).max(6),
+    is_working_day: z.boolean(),
+    flexible_hours: z.boolean(),
+    start_time: z.string().optional(),
+    end_time: z.string().optional(),
+    break_start: z.string().optional(),
+    break_end: z.string().optional(),
+  })
+  .superRefine((values, ctx) => {
+    if (!values.is_working_day) return
+
+    const startMin = timeStringToMinutes(values.start_time)
+    const endMin = timeStringToMinutes(values.end_time)
+    const breakStartMin = timeStringToMinutes(values.break_start)
+    const breakEndMin = timeStringToMinutes(values.break_end)
+
+    if (startMin == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Start time is required",
+        path: ["start_time"],
+      })
+    }
+
+    if (endMin == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "End time is required",
+        path: ["end_time"],
+      })
+    }
+
+    if (startMin != null && endMin != null && endMin <= startMin) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "End time must be later than start time",
+        path: ["end_time"],
+      })
+    }
+
+    const hasBreakStart = breakStartMin != null
+    const hasBreakEnd = breakEndMin != null
+
+    if (hasBreakStart !== hasBreakEnd) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Break start and break end must both be filled",
+        path: [hasBreakStart ? "break_end" : "break_start"],
+      })
+      return
+    }
+
+    if (!hasBreakStart || !hasBreakEnd) return
+
+    if (breakEndMin! <= breakStartMin!) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Break end must be later than break start",
+        path: ["break_end"],
+      })
+    }
+
+    if (startMin != null && breakStartMin! <= startMin) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Break start must be after start time",
+        path: ["break_start"],
+      })
+    }
+
+    if (endMin != null && breakEndMin! >= endMin) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Break end must be before end time",
+        path: ["break_end"],
+      })
+    }
+  })
 
 type DetailForm = z.infer<typeof detailSchema>
 
@@ -193,7 +273,7 @@ function DataTableWithBack<TData, TValue>({
                   checked={column.getIsVisible()}
                   onCheckedChange={(value) => column.toggleVisibility(!!value)}
                 >
-{(() => {
+                  {(() => {
                     const columnLabels: Record<string, string> = {
                       'is_active': 'Active',
                       'user_full_name': 'Full Name',
@@ -329,14 +409,69 @@ export default function WorkScheduleDetailsPage() {
       day_of_week: 1,
       is_working_day: true,
       flexible_hours: false,
-      start_time: "",
-      end_time: "",
-      break_start: "",
-      break_end: "",
+      start_time: undefined,
+      end_time: undefined,
+      break_start: undefined,
+      break_end: undefined,
     },
   })
 
   const handleSubmit = async (values: DetailForm) => {
+    form.clearErrors(["start_time", "end_time", "break_start", "break_end"])
+
+    if (values.is_working_day) {
+      const startMin = timeStringToMinutes(values.start_time)
+      const endMin = timeStringToMinutes(values.end_time)
+      const breakStartMin = timeStringToMinutes(values.break_start)
+      const breakEndMin = timeStringToMinutes(values.break_end)
+
+      let hasError = false
+
+      if (startMin == null) {
+        form.setError("start_time", { message: "Start time is required" })
+        hasError = true
+      }
+
+      if (endMin == null) {
+        form.setError("end_time", { message: "End time is required" })
+        hasError = true
+      }
+
+      if (startMin != null && endMin != null && endMin <= startMin) {
+        form.setError("end_time", { message: "End time must be later than start time" })
+        hasError = true
+      }
+
+      const hasBreakStart = breakStartMin != null
+      const hasBreakEnd = breakEndMin != null
+
+      if (hasBreakStart !== hasBreakEnd) {
+        form.setError(hasBreakStart ? "break_end" : "break_start", {
+          message: "Break start and break end must both be filled",
+        })
+        hasError = true
+      }
+
+      if (hasBreakStart && hasBreakEnd) {
+        if (breakEndMin! <= breakStartMin!) {
+          form.setError("break_end", { message: "Break end must be later than break start" })
+          hasError = true
+        }
+
+        if (startMin != null && breakStartMin! <= startMin) {
+          form.setError("break_start", { message: "Break start must be after start time" })
+          hasError = true
+        }
+
+        if (endMin != null && breakEndMin! >= endMin) {
+          form.setError("break_end", { message: "Break end must be before end time" })
+          hasError = true
+        }
+      }
+
+      if (hasError) return
+    }
+
     try {
       let res
       if (editingDetail) {
@@ -360,10 +495,10 @@ export default function WorkScheduleDetailsPage() {
       day_of_week: 1,
       is_working_day: true,
       flexible_hours: false,
-      start_time: "",
-      end_time: "",
-      break_start: "",
-      break_end: "",
+      start_time: undefined,
+      end_time: undefined,
+      break_start: undefined,
+      break_end: undefined,
     })
   }
 
@@ -377,10 +512,10 @@ export default function WorkScheduleDetailsPage() {
         day_of_week: 1,
         is_working_day: true,
         flexible_hours: false,
-        start_time: "",
-        end_time: "",
-        break_start: "",
-        break_end: "",
+        start_time: undefined,
+        end_time: undefined,
+        break_start: undefined,
+        break_end: undefined,
       })
     }
     setOpen(true)
@@ -643,11 +778,14 @@ export default function WorkScheduleDetailsPage() {
         )}
 
         <div className="">
-          <Dialog open={open} onOpenChange={(isOpen) => {
-            if (!isOpen) {
-              handleCloseDialog()
-            }
-          }}>
+          <Dialog
+            open={open}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) {
+                handleCloseDialog()
+              }
+            }}
+          >
             <DialogTrigger asChild className="float-end ml-5">
               <Button onClick={() => handleOpenDialog()}>
                 Add <Plus className="ml-2" />
@@ -660,10 +798,7 @@ export default function WorkScheduleDetailsPage() {
                 </DialogTitle>
               </DialogHeader>
               <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(handleSubmit)}
-                  className="space-y-4"
-                >
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
                   <FormField
                     control={form.control}
                     name="day_of_week"
@@ -691,16 +826,14 @@ export default function WorkScheduleDetailsPage() {
                       </FormItem>
                     )}
                   />
+
                   <FormField
                     control={form.control}
                     name="is_working_day"
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                         <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
+                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel>Working Day</FormLabel>
@@ -708,16 +841,14 @@ export default function WorkScheduleDetailsPage() {
                       </FormItem>
                     )}
                   />
+
                   <FormField
                     control={form.control}
                     name="flexible_hours"
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                         <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
+                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel>Flexible Hours</FormLabel>
@@ -728,6 +859,7 @@ export default function WorkScheduleDetailsPage() {
                       </FormItem>
                     )}
                   />
+
                   <FormField
                     control={form.control}
                     name="start_time"
@@ -735,11 +867,17 @@ export default function WorkScheduleDetailsPage() {
                       <FormItem>
                         <FormLabel>Start Time</FormLabel>
                         <FormControl>
-                          <Input type="time" {...field} />
+                          <Input
+                            type="time"
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value || undefined)}
+                          />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
+
                   <FormField
                     control={form.control}
                     name="end_time"
@@ -747,11 +885,17 @@ export default function WorkScheduleDetailsPage() {
                       <FormItem>
                         <FormLabel>End Time</FormLabel>
                         <FormControl>
-                          <Input type="time" {...field} />
+                          <Input
+                            type="time"
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value || undefined)}
+                          />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
+
                   <FormField
                     control={form.control}
                     name="break_start"
@@ -759,11 +903,17 @@ export default function WorkScheduleDetailsPage() {
                       <FormItem>
                         <FormLabel>Break Start</FormLabel>
                         <FormControl>
-                          <Input type="time" {...field} />
+                          <Input
+                            type="time"
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value || undefined)}
+                          />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
+
                   <FormField
                     control={form.control}
                     name="break_end"
@@ -771,11 +921,17 @@ export default function WorkScheduleDetailsPage() {
                       <FormItem>
                         <FormLabel>Break End</FormLabel>
                         <FormControl>
-                          <Input type="time" {...field} />
+                          <Input
+                            type="time"
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value || undefined)}
+                          />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
+
                   <Button type="submit" className="w-full">
                     {editingDetail ? "Update" : "Create"}
                   </Button>
@@ -784,7 +940,6 @@ export default function WorkScheduleDetailsPage() {
             </DialogContent>
           </Dialog>
         </div>
-
         {loading ? (
           <TableSkeleton rows={10} columns={7} />
         ) : (

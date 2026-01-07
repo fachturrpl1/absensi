@@ -81,12 +81,28 @@ interface MemberSchedulesClientProps {
   initialSchedules: IMemberSchedule[]
   initialMembers: IOrganization_member[]
   initialWorkSchedules: IWorkSchedule[]
+  activeMemberIds?: string[]
+  isLoading?: boolean
+  pageIndex?: number
+  pageSize?: number
+  totalRecords?: number
+  onPageIndexChange?: (pageIndex: number) => void
+  onPageSizeChange?: (pageSize: number) => void
+  onRefresh?: () => void
 }
 
 export default function MemberSchedulesClient({
   initialSchedules,
   initialMembers,
   initialWorkSchedules,
+  activeMemberIds,
+  isLoading = false,
+  pageIndex,
+  pageSize,
+  totalRecords,
+  onPageIndexChange,
+  onPageSizeChange,
+  onRefresh,
 }: MemberSchedulesClientProps) {
   const [schedules, setSchedules] = React.useState(initialSchedules)
   const [open, setOpen] = React.useState(false)
@@ -97,16 +113,9 @@ export default function MemberSchedulesClient({
     setSchedules(initialSchedules)
   }, [initialSchedules])
 
-  // Memoized - prevent unnecessary recalculations
   const membersWithActiveSchedule = React.useMemo(() => {
-    const activeIds = new Set<string>()
-    schedules.forEach((schedule) => {
-      if (schedule.is_active) {
-        activeIds.add(schedule.organization_member_id)
-      }
-    })
-    return activeIds
-  }, [schedules])
+    return new Set<string>((activeMemberIds || []).map((id) => String(id)))
+  }, [activeMemberIds])
 
   const form = useForm<MemberScheduleForm>({
     resolver: zodResolver(memberScheduleSchema),
@@ -138,6 +147,7 @@ export default function MemberSchedulesClient({
           setSchedules((prev) =>
             prev.map((s) => (s.id === editingSchedule.id ? { ...s, ...payload } : s))
           )
+          onRefresh?.()
         } else {
           toast.error(result.message)
         }
@@ -147,6 +157,7 @@ export default function MemberSchedulesClient({
           toast.success("Schedule assigned successfully")
           // Optimistic update
           setSchedules((prev) => [result.data as IMemberSchedule, ...prev])
+          onRefresh?.()
         } else {
           toast.error(result.message)
         }
@@ -176,6 +187,7 @@ export default function MemberSchedulesClient({
         toast.success("Schedule deleted successfully")
         // Optimistic update
         setSchedules((prev) => prev.filter((s) => s.id !== id))
+        onRefresh?.()
       } else {
         toast.error(result.message)
       }
@@ -218,7 +230,6 @@ export default function MemberSchedulesClient({
         const member = schedule.organization_member as any
         const user = member?.user
         const name = getMemberName(schedule)
-        const email = user?.email || ""
 
         return (
           <div className="flex gap-3 items-center">
@@ -228,7 +239,6 @@ export default function MemberSchedulesClient({
             </Avatar>
             <div className="flex flex-col">
               <span className="text-sm font-medium leading-none">{name}</span>
-              {email && <span className="text-xs text-muted-foreground">{email}</span>}
             </div>
           </div>
         )
@@ -316,11 +326,18 @@ export default function MemberSchedulesClient({
           <DataTable
             columns={columns}
             data={schedules}
+            isLoading={isLoading}
             showGlobalFilter={true}
             showFilters={true}
             showColumnToggle={false}
             layout="card"
             globalFilterPlaceholder="Search member schedules..."
+            manualPagination={typeof pageIndex === "number" && typeof pageSize === "number"}
+            pageIndex={pageIndex}
+            pageSize={pageSize}
+            totalRecords={totalRecords}
+            onPageIndexChange={onPageIndexChange}
+            onPageSizeChange={onPageSizeChange}
             toolbarRight={
               <Dialog
                 open={open}
@@ -371,9 +388,6 @@ export default function MemberSchedulesClient({
                             <div className="flex flex-col">
                               <p className="text-sm font-semibold text-foreground">
                                 {getMemberName(editingSchedule)}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {(editingSchedule.organization_member as { user?: { email?: string } })?.user?.email || 'No email'}
                               </p>
                             </div>
                           </div>

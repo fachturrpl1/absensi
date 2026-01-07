@@ -4,6 +4,22 @@ import { createClient } from "@/utils/supabase/server";
 import { IWorkSchedule, IWorkScheduleDetail } from "@/interface"
 
 
+const toScheduleCode = (name?: string, code?: string) => {
+    const existing = typeof code === "string" ? code.trim() : "";
+    if (existing) return existing;
+
+    const base = typeof name === "string" ? name.trim() : "";
+    const slug = base
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+
+    const safe = slug || "schedule";
+    const suffix = Date.now().toString(36).slice(-6);
+    return `${safe}-${suffix}`;
+}
+
+
 
 export const getAllWorkSchedules = async (organizationId?: number | string) => {
     const supabase = await createClient();
@@ -44,6 +60,67 @@ export const getAllWorkSchedules = async (organizationId?: number | string) => {
 
     return { success: true, data: data as IWorkSchedule[] };
 };
+
+export const getWorkSchedulesPage = async (
+    organizationId: number | string | undefined,
+    pageIndex = 0,
+    pageSize = 10,
+) => {
+    try {
+        const supabase = await createClient();
+
+        let finalOrgId = organizationId;
+
+        if (!finalOrgId) {
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (userError || !user) {
+                return { success: false, message: "User not authenticated", data: [], total: 0 };
+            }
+
+            const { data: member, error: memberError } = await supabase
+                .from("organization_members")
+                .select("organization_id")
+                .eq("user_id", user.id)
+                .maybeSingle();
+
+            if (memberError || !member) {
+                return { success: false, message: "User not in any organization", data: [], total: 0 };
+            }
+
+            finalOrgId = member.organization_id;
+        }
+
+        const safePageIndex = Math.max(0, Number(pageIndex) || 0);
+        const safePageSize = Math.max(1, Number(pageSize) || 10);
+        const from = safePageIndex * safePageSize;
+        const to = from + safePageSize - 1;
+
+        const { data, error, count } = await supabase
+            .from("work_schedules")
+            .select("*, work_schedule_details(*)", { count: "exact" })
+            .eq("organization_id", finalOrgId)
+            .order("created_at", { ascending: false })
+            .range(from, to);
+
+        if (error) {
+            return { success: false, message: error.message, data: [], total: 0 };
+        }
+
+        return {
+            success: true,
+            data: (data || []) as IWorkSchedule[],
+            total: typeof count === "number" ? count : (data?.length || 0),
+        };
+    } catch (error) {
+        console.error("[getWorkSchedulesPage] Unexpected error:", error);
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : "Unknown server error",
+            data: [],
+            total: 0,
+        };
+    }
+};
 export async function getWorkScheduleById(id: string) {
     const supabase = await createClient();
     const { data, error } = await supabase
@@ -71,9 +148,15 @@ export async function getWorkScheduleDetails(workScheduleId: number) {
 
 export async function createWorkSchedule(payload: Partial<IWorkSchedule>) {
     const supabase = await createClient();
+
+    const insertPayload: Partial<IWorkSchedule> = {
+        ...payload,
+        code: toScheduleCode(payload.name, payload.code),
+    }
+
     const { data, error } = await supabase
         .from("work_schedules")
-        .insert(payload)
+        .insert(insertPayload)
         .select()
         .single()
 

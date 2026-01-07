@@ -52,6 +52,13 @@ type DataTableProps<TData, TValue> = {
   toolbarRight?: React.ReactNode
   globalFilterPlaceholder?: string
   emptyState?: React.ReactNode
+  manualPagination?: boolean
+  pageIndex?: number
+  pageSize?: number
+  pageCount?: number
+  totalRecords?: number
+  onPageIndexChange?: (pageIndex: number) => void
+  onPageSizeChange?: (pageSize: number) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -67,22 +74,46 @@ export function DataTable<TData, TValue>({
   toolbarRight,
   globalFilterPlaceholder,
   emptyState,
+  manualPagination = false,
+  pageIndex: controlledPageIndex,
+  pageSize: controlledPageSize,
+  pageCount: controlledPageCount,
+  totalRecords,
+  onPageIndexChange: onPageIndexChangeProp,
+  onPageSizeChange: onPageSizeChangeProp,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({})
   const [sortOrder, setSortOrder] = React.useState("newest")
-  const [pageSize, setPageSize] = React.useState("10")
-  const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 10 })
+  const [pageSize, setPageSize] = React.useState(String(controlledPageSize ?? 10))
+  const [pagination, setPagination] = React.useState({
+    pageIndex: controlledPageIndex ?? 0,
+    pageSize: controlledPageSize ?? 10,
+  })
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState("all")
 
   // Handler functions
   const handlePageSizeChange = (value: string) => {
     setPageSize(value)
+
+    if (manualPagination) {
+      const next = Math.max(1, parseInt(value, 10) || 10)
+      onPageSizeChangeProp?.(next)
+      onPageIndexChangeProp?.(0)
+      setPagination({ pageIndex: 0, pageSize: next })
+    }
   }
 
   const handlePageIndexChange = (pageIndex: number) => {
+    if (manualPagination) {
+      const next = Math.max(0, Number(pageIndex) || 0)
+      onPageIndexChangeProp?.(next)
+      setPagination((prev) => ({ ...prev, pageIndex: next }))
+      return
+    }
+
     setPagination((prev) => ({ ...prev, pageIndex }))
   }
 
@@ -165,7 +196,7 @@ export function DataTable<TData, TValue>({
     columns,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    getPaginationRowModel: manualPagination ? undefined : getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
@@ -179,6 +210,10 @@ export function DataTable<TData, TValue>({
         handlePageSizeChange(String(updater.pageSize))
       }
     },
+    manualPagination,
+    pageCount: manualPagination
+      ? (controlledPageCount ?? Math.max(1, Math.ceil((totalRecords ?? 0) / (parseInt(pageSize, 10) || 10))))
+      : undefined,
     state: {
       sorting,
       columnVisibility,
@@ -194,18 +229,39 @@ export function DataTable<TData, TValue>({
 
   // Sync pageSize -> pagination state and reset to first page
   React.useEffect(() => {
+    if (manualPagination) return
     const newPageSize = parseInt(pageSize, 10) || 10
     setPagination((prev) => ({ ...prev, pageSize: newPageSize, pageIndex: 0 }))
   }, [pageSize])
 
+  React.useEffect(() => {
+    if (!manualPagination) return
+    if (typeof controlledPageIndex === "number") {
+      setPagination((prev) => ({ ...prev, pageIndex: controlledPageIndex }))
+    }
+  }, [manualPagination, controlledPageIndex])
+
+  React.useEffect(() => {
+    if (!manualPagination) return
+    if (typeof controlledPageSize === "number") {
+      setPageSize(String(controlledPageSize))
+      setPagination((prev) => ({ ...prev, pageSize: controlledPageSize }))
+    }
+  }, [manualPagination, controlledPageSize])
+
   // Clamp pageIndex when filtered data or pageSize changes
   React.useEffect(() => {
+    if (manualPagination) return
     const newPageSize = parseInt(pageSize, 10) || 10
     const totalPages = Math.max(1, Math.ceil(filteredData.length / newPageSize))
     if (pageIndex > totalPages - 1) {
       handlePageIndexChange(Math.max(0, totalPages - 1))
     }
   }, [filteredData.length, pageSize, pageIndex])
+
+  const effectivePageCount = manualPagination
+    ? (controlledPageCount ?? Math.max(1, Math.ceil((totalRecords ?? 0) / (parseInt(pageSize, 10) || 10))))
+    : table.getPageCount()
 
   const controls = (
     <div className="flex flex-col gap-3 w-full md:flex-row md:items-center md:justify-between">
@@ -433,23 +489,23 @@ export function DataTable<TData, TValue>({
         <input
           type="number"
           min="1"
-          max={table.getPageCount()}
+          max={effectivePageCount}
           value={pageIndex + 1}
           onChange={(e) => {
             const page = e.target.value ? Number(e.target.value) - 1 : 0;
             handlePageIndexChange(page);
           }}
           className="w-10 sm:w-12 h-8 px-2 border rounded text-xs sm:text-sm text-center mx-1 sm:mx-2 bg-background"
-          disabled={isLoading || table.getPageCount() === 0}
+          disabled={isLoading || effectivePageCount === 0}
         />
 
-        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/ {table.getPageCount()}</span>
+        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/ {effectivePageCount}</span>
 
         <Button
           variant="ghost"
           size="sm"
           onClick={() => handlePageIndexChange(pageIndex + 1)}
-          disabled={pageIndex >= table.getPageCount() - 1 || isLoading}
+          disabled={pageIndex >= effectivePageCount - 1 || isLoading}
           className="h-8 w-8 p-0"
           title="Next page"
         >
@@ -458,8 +514,8 @@ export function DataTable<TData, TValue>({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => handlePageIndexChange(table.getPageCount() - 1)}
-          disabled={pageIndex >= table.getPageCount() - 1 || isLoading}
+          onClick={() => handlePageIndexChange(effectivePageCount - 1)}
+          disabled={pageIndex >= effectivePageCount - 1 || isLoading}
           className="h-8 w-8 p-0"
           title="Last page"
         >
@@ -471,6 +527,13 @@ export function DataTable<TData, TValue>({
         <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
           {(() => {
             const ps = parseInt(pageSize, 10) || 10;
+            if (manualPagination) {
+              const total = totalRecords ?? 0
+              const start = total > 0 ? pageIndex * ps + 1 : 0
+              const end = Math.min((pageIndex + 1) * ps, total)
+              return `Showing ${start} to ${end} of ${total} total records`
+            }
+
             return `Showing ${table.getRowModel().rows.length > 0 ? pageIndex * ps + 1 : 0} to ${Math.min((pageIndex + 1) * ps, table.getFilteredRowModel().rows.length)} of ${table.getFilteredRowModel().rows.length} total records`;
           })()}
         </div>

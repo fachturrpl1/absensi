@@ -4,7 +4,7 @@ import React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
-import { Trash, Pencil, ChevronRight, Plus, Calendar } from "lucide-react"
+import { Trash, Pencil, Clock, Plus, Calendar } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -70,7 +70,6 @@ import { SCHEDULE_TYPES } from "@/constants/attendance-status"
 
 const scheduleSchema = z.object({
   organization_id: z.string().min(1, "Organization is required"),
-  code: z.string().min(2, "min 2 characters"),
   name: z.string().min(2, "min 2 characters"),
   description: z.string().optional(),
   schedule_type: z.string().optional(),
@@ -83,12 +82,26 @@ interface ScheduleClientProps {
   initialSchedules: IWorkSchedule[]
   organizationId: string
   organizationName: string
+  isLoading?: boolean
+  pageIndex?: number
+  pageSize?: number
+  totalRecords?: number
+  onPageIndexChange?: (pageIndex: number) => void
+  onPageSizeChange?: (pageSize: number) => void
+  onRefresh?: () => void
 }
 
 export default function ScheduleClient({
   initialSchedules,
   organizationId,
   organizationName,
+  isLoading = false,
+  pageIndex,
+  pageSize,
+  totalRecords,
+  onPageIndexChange,
+  onPageSizeChange,
+  onRefresh,
 }: ScheduleClientProps) {
   const [schedules, setSchedules] = React.useState(initialSchedules)
   const [open, setOpen] = React.useState(false)
@@ -103,7 +116,6 @@ export default function ScheduleClient({
     resolver: zodResolver(scheduleSchema),
     defaultValues: {
       organization_id: organizationId,
-      code: "",
       name: "",
       description: "",
       schedule_type: "",
@@ -128,6 +140,7 @@ export default function ScheduleClient({
           setSchedules((prev) =>
             prev.map((s) => (s.id === editingDetail.id ? { ...s, ...res.data } : s))
           )
+          onRefresh?.()
         } else {
           throw new Error(res.message || "Failed to update schedule")
         }
@@ -140,6 +153,7 @@ export default function ScheduleClient({
           toast.success("Schedule created successfully")
           // Optimistic update
           setSchedules((prev) => [res.data as IWorkSchedule, ...prev])
+          onRefresh?.()
         } else {
           throw new Error(res.message || "Failed to create schedule")
         }
@@ -159,7 +173,6 @@ export default function ScheduleClient({
     setEditingDetail(null)
     form.reset({
       organization_id: organizationId,
-      code: "",
       name: "",
       description: "",
       schedule_type: "",
@@ -174,7 +187,6 @@ export default function ScheduleClient({
       setEditingDetail(schedule)
       const formValues = {
         organization_id: String(schedule.organization_id || organizationId),
-        code: schedule.code || "",
         name: schedule.name || "",
         description: schedule.description || "",
         schedule_type: schedule.schedule_type || "",
@@ -186,7 +198,6 @@ export default function ScheduleClient({
       setEditingDetail(null)
       const formValues = {
         organization_id: organizationId,
-        code: "",
         name: "",
         description: "",
         schedule_type: "",
@@ -205,6 +216,7 @@ export default function ScheduleClient({
         toast.success("Schedule deleted successfully")
         // Optimistic update
         setSchedules((prev) => prev.filter((s) => s.id !== scheduleId))
+        onRefresh?.()
       } else {
         throw new Error(response.message)
       }
@@ -214,7 +226,6 @@ export default function ScheduleClient({
   }
 
   const columns: ColumnDef<IWorkSchedule>[] = [
-    { accessorKey: "code", header: "Code" },
     { accessorKey: "name", header: "Name" },
     { accessorKey: "description", header: "Description" },
     {
@@ -280,8 +291,14 @@ export default function ScheduleClient({
               </AlertDialogContent>
             </AlertDialog>
             <Link href={`/schedule/detail/${ws.id}`}>
-              <Button variant="outline" size="icon" className="h-9 w-9 cursor-pointer bg-secondary border-0 p-0">
-                <ChevronRight className="h-4 w-4" />
+              <Button
+                variant="outline"
+                size="icon"
+                title="Atur jam kerja"
+                aria-label="Atur jam kerja"
+                className="h-9 w-9 cursor-pointer bg-secondary border-0 p-0"
+              >
+                <Clock className="h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -297,11 +314,18 @@ export default function ScheduleClient({
           <DataTable
             columns={columns}
             data={schedules}
+            isLoading={isLoading}
             showGlobalFilter={true}
             showFilters={true}
             showColumnToggle={false}
             layout="card"
             globalFilterPlaceholder="Search schedules..."
+            manualPagination={typeof pageIndex === "number" && typeof pageSize === "number"}
+            pageIndex={pageIndex}
+            pageSize={pageSize}
+            totalRecords={totalRecords}
+            onPageIndexChange={onPageIndexChange}
+            onPageSizeChange={onPageSizeChange}
             toolbarRight={
               <Dialog
                 open={open}
@@ -335,19 +359,6 @@ export default function ScheduleClient({
                         </div>
                       </FormItem>
 
-                      <FormField
-                        control={form.control}
-                        name="code"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Code</FormLabel>
-                            <FormControl>
-                              <Input type="text" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                       <FormField
                         control={form.control}
                         name="name"
