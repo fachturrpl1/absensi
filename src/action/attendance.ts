@@ -11,6 +11,58 @@ async function getSupabase() {
   return await createClient();
 }
 
+// Update check-in/check-out times and remarks for a single attendance record
+export async function updateAttendanceRecord(payload: {
+  id: string;
+  actual_check_in?: string | null;
+  actual_check_out?: string | null;
+  remarks?: string | null;
+}) {
+  try {
+    const supabase = await getSupabase();
+
+    // Resolve organization id for cache invalidation
+    let orgId: number | null = null;
+    try {
+      const { data: recOrg } = await supabase
+        .from('attendance_records')
+        .select('organization_members!inner(organization_id)')
+        .eq('id', payload.id)
+        .maybeSingle();
+      const orgRel: any = (recOrg as any)?.organization_members;
+      const orgObj = Array.isArray(orgRel) ? orgRel[0] : orgRel;
+      orgId = orgObj?.organization_id ?? null;
+    } catch (_) {}
+
+    const updateData: Record<string, any> = {};
+    if (payload.actual_check_in !== undefined) updateData.actual_check_in = payload.actual_check_in;
+    if (payload.actual_check_out !== undefined) updateData.actual_check_out = payload.actual_check_out;
+    if (payload.remarks !== undefined) updateData.remarks = payload.remarks;
+
+    const { error } = await supabase
+      .from('attendance_records')
+      .update(updateData)
+      .eq('id', payload.id);
+
+    if (error) {
+      attendanceLogger.error('❌ Error updating attendance record:', error);
+      return { success: false, message: error.message } as const;
+    }
+
+    // Invalidate caches
+    try {
+      if (orgId) await delByPrefix(`attendance:list:${orgId}:`);
+      else await delByPrefix('attendance:list:');
+    } catch (_) {}
+    revalidatePath('/attendance');
+
+    return { success: true } as const;
+  } catch (err) {
+    attendanceLogger.error('❌ Exception updating attendance record:', err);
+    return { success: false, message: err instanceof Error ? err.message : 'An error occurred' } as const;
+  }
+}
+
 export type GetAttendanceParams = {
   page?: number;
   limit?: number;
@@ -187,6 +239,7 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
     display_name: string | null;
     email: string | null;
     profile_photo_url: string | null;
+    search_name: string | null;
   };
   type MemberData = {
     id: number;
@@ -208,7 +261,7 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
   // COUNT (lazy, page 1 saja)
   // Prepare relation selection for count join (include only needed relations)
   const innerParts: string[] = ['id'];
-  if (hasSearch) innerParts.push('user_profiles!inner(search_name)');
+  if (hasSearch) innerParts.push('user_profiles!organization_members_user_id_fkey!inner(search_name)');
   if (department && department !== 'all') innerParts.push('departments!organization_members_department_id_fkey(name)');
   const countRel = `organization_members!inner(${innerParts.join(',')})`;
 
@@ -255,7 +308,9 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
 
   // LIST dengan join untuk mengambil profil/departemen
   // Specify exact FK for departments to avoid PostgREST ambiguous embed error
-  const listRel = 'organization_members!inner(id, is_active, user_profiles(first_name,last_name,display_name,email,profile_photo_url), departments!organization_members_department_id_fkey(name))';
+  const listRel = hasSearch
+    ? 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey!inner(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))'
+    : 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))';
   const fromIdx = (page - 1) * limit;
   const toIdx = fromIdx + limit - 1;
   let listQuery = supabase
@@ -380,8 +435,9 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
     const firstName = profile?.first_name ?? '';
     const lastName = profile?.last_name ?? '';
     const email = (profile?.email ?? '').trim();
+    const searchName = (profile?.search_name ?? '').trim();
     const fullName = `${firstName} ${lastName}`.trim();
-    const effectiveName = displayName || fullName || email;
+    const effectiveName = displayName || fullName || email || searchName;
     const deptObj = mObj?.departments;
     const departmentName = Array.isArray(deptObj) ? (deptObj[0]?.name ?? '') : (deptObj?.name ?? '');
 

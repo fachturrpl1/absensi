@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, X, Plus, Trash2 } from "lucide-react"
+import { Loader2, X, Plus, Trash2, Search } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -11,7 +11,8 @@ import { format } from "date-fns"
 
 import { createManualAttendance, checkExistingAttendance } from "@/action/attendance"
 import { getAllOrganization_member } from "@/action/members"
-import { getAllGroups } from "@/action/group"
+// groups in UI = departments in backend; we derive names from member.departments
+import { useOrgStore } from "@/store/org-store"
 import { toTimestampWithTimezone } from "@/lib/timezone"
 import { Button } from "@/components/ui/button"
 import {
@@ -30,11 +31,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { IOrganization_member } from "@/interface"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { toast } from "sonner"
 
 type AttendanceEntry = {
@@ -86,20 +92,24 @@ type SingleFormValues = z.infer<typeof singleFormSchema>
 export function AttendanceFormBatch() {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const orgStore = useOrgStore()
   const [members, setMembers] = useState<MemberOption[]>([])
-  const [originalMembersData, setOriginalMembersData] = useState<IOrganization_member[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("single")
   const [batchEntries, setBatchEntries] = useState<BatchEntry[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [selectedGroup, setSelectedGroup] = useState<string>("all")
-  const [availableGroups, setAvailableGroups] = useState<Array<{id: string, name: string}>>([])
-  // const [currentDate, setCurrentDate] = useState<string>("")
-  // const [currentTime, setCurrentTime] = useState<string>("")
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all")
+  const [departments, setDepartments] = useState<string[]>([])
+  const [memberDialogOpen, setMemberDialogOpen] = useState(false)
+  const [activeBatchEntryId, setActiveBatchEntryId] = useState<string | null>(null)
+  const [memberSearch, setMemberSearch] = useState("")
 
   const form = useForm<SingleFormValues>({
     resolver: zodResolver(singleFormSchema),
+    mode: "onChange",
+    reValidateMode: "onChange",
     defaultValues: {
+      memberId: "",
       checkInDate: "",
       checkInTime: "",
       checkOutDate: "",
@@ -114,11 +124,8 @@ export function AttendanceFormBatch() {
     const now = new Date();
     const date = format(now, 'yyyy-MM-dd');
     const time = format(now, 'HH:mm');
-    // setCurrentDate(date);
-    // setCurrentTime(time);
-    
-    // Update form default values
     form.reset({
+      memberId: "",
       checkInDate: date,
       checkInTime: time,
       checkOutDate: date,
@@ -128,76 +135,114 @@ export function AttendanceFormBatch() {
     });
   }, [])
 
-  // Load members once on mount
+  // Load members and derive groups(departments) on mount and when org changes
   useEffect(() => {
     const loadMembers = async () => {
       try {
         setLoading(true)
-        const [membersRes, groupsRes] = await Promise.all([
-          getAllOrganization_member(),
-          getAllGroups()
-        ])
 
+        // Fetch members and departments with proper organization scoping
+        const rawOrgId = orgStore.organizationId
+        let safeOrgId: number | undefined = undefined
+        if (typeof rawOrgId === 'number' && Number.isFinite(rawOrgId)) {
+          safeOrgId = rawOrgId
+        } else if (typeof rawOrgId === 'string') {
+          const parsed = Number(rawOrgId)
+          if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+            safeOrgId = parsed
+          }
+        }
+
+        // When safeOrgId undefined, server action will fallback to user's organization
+        const membersRes = await getAllOrganization_member(safeOrgId)
+
+        // Check if members fetch succeeded
         if (!membersRes.success) {
-          throw new Error(membersRes.message || "Failed to load members")
+          const errorMessage = membersRes.message || "Failed to load members"
+          console.error("Failed to load members:", errorMessage)
+          toast.error(errorMessage)
+          // Still set empty arrays to prevent UI issues
+          setMembers([])
+          return
         }
 
-        const membersData = (membersRes.data || []) as IOrganization_member[]
-        
-        // Store original data for filtering
-        setOriginalMembersData(membersData)
-        
-        // Get all groups from database
-        if (groupsRes.success && groupsRes.data) {
-          const groups = groupsRes.data.map((group: any) => ({ 
-            id: String(group.id), 
-            name: group.name 
-          }))
-          setAvailableGroups(groups)
-        } else {
-          // Fallback: Extract unique groups from members if groups API fails
-          const groupsMap = new Map<string, string>()
-          membersData.forEach((member) => {
-            if (member.department_id && member.departments?.name) {
-              groupsMap.set(String(member.department_id), member.departments.name)
+        // Ensure we have valid data
+        const membersData = Array.isArray(membersRes.data) ? membersRes.data : []
+
+        if (membersData.length === 0) {
+          toast.info("No members found in your organization")
+          setMembers([])
+          return
+        }
+
+        // Normalize department structure for all members (departments = groups in UI)
+        const normalizedMembers = membersData.map((member: any) => {
+          // Handle departments that might be an array or object
+          if (member.departments) {
+            if (Array.isArray(member.departments) && member.departments.length > 0) {
+              member.departments = member.departments[0]
+            } else if (Array.isArray(member.departments) && member.departments.length === 0) {
+              member.departments = null
             }
+          }
+          return member
+        })
+
+        // Build member options similar to attendance-form.tsx
+        const options: MemberOption[] = normalizedMembers
+          .filter((member: any) => {
+            // valid if it has numeric id
+            if (!member.id) return false
+            const memberIdNum = Number(member.id)
+            return !isNaN(memberIdNum) && memberIdNum > 0
           })
-          const groups = Array.from(groupsMap.entries()).map(([id, name]) => ({ id, name }))
-          setAvailableGroups(groups)
-        }
-
-        const options: MemberOption[] = membersData
-          .filter((member) => member.id && member.user?.id)
-          .map((member) => {
-            // Build full name from first, middle, last name
-            const nameParts = [
-              member.user?.first_name?.trim(),
-              member.user?.middle_name?.trim(),
-              member.user?.last_name?.trim()
-            ].filter(Boolean)
-            
-            const fullName = nameParts.length > 0 
-              ? nameParts.join(" ") 
-              : member.user?.email || "Unknown"
-
+          .map((member: any) => {
+            const user = member.user
+            const biodata = (member as any).biodata
+            let resolvedLabel = "No Name"
+            if (user) {
+              const displayName = user.display_name?.trim()
+              const concatenated = [user.first_name, user.middle_name, user.last_name]
+                .filter(Boolean)
+                .join(" ")
+              const fullName = concatenated.trim()
+              resolvedLabel = displayName || fullName || user.email || "No Name"
+            } else if (biodata) {
+              resolvedLabel = biodata.nickname || biodata.nama || "No Name"
+            }
             return {
-              id: String(member.id),
-              label: fullName,
-              department: member.departments?.name || "No Department",
-            }
+              id: String(Number(member.id)),
+              label: resolvedLabel,
+              department: member.departments?.name || member.groups?.name || "",
+            } as MemberOption
           })
+
+        // Derive departments (groups) from options
+        const deptNames = Array.from(new Set(options.map((m) => m.department).filter(Boolean))).sort() as string[]
+        setDepartments(deptNames)
+
+        if (options.length === 0) {
+          toast.warning("No valid members found. Please check member data.")
+        } else {
+          toast.success(`Loaded ${options.length} members successfully`)
+        }
 
         setMembers(options)
       } catch (error) {
-        const message = error instanceof Error ? error.message : "An error occurred"
+        const message = error instanceof Error ? error.message : "An error occurred while loading data"
+        console.error("Error loading members:", error)
         toast.error(message)
+        // Set empty arrays to prevent UI issues
+        setMembers([])
+        setDepartments([])
       } finally {
         setLoading(false)
       }
     }
 
+    // Always attempt load; server will fallback org when not provided
     loadMembers()
-  }, [])
+  }, [orgStore.organizationId])
 
   // Parse date and time to DateTime
   const parseDateTime = (dateStr: string, timeStr: string): Date => {
@@ -218,7 +263,7 @@ export function AttendanceFormBatch() {
   const onSubmitSingle = async (values: SingleFormValues) => {
     try {
       const checkInDateTime = parseDateTime(values.checkInDate, values.checkInTime)
-      const checkOutDateTime = values.checkOutDate && values.checkOutTime 
+      const checkOutDateTime = values.checkOutDate && values.checkOutTime
         ? parseDateTime(values.checkOutDate, values.checkOutTime)
         : null
 
@@ -283,17 +328,25 @@ export function AttendanceFormBatch() {
     }
 
     // Validate all entries
-    for (const entry of batchEntries) {
+    const invalidEntries: string[] = []
+    for (const [i, entry] of batchEntries.entries()) {
       if (!entry.memberId || !entry.checkInDate || !entry.checkInTime) {
-        toast.error(`Incomplete entry - please fill all required fields`)
-        return
+        const selectedMember = members.find((m) => m.id === entry.memberId)
+        const memberName = selectedMember?.label || `Entry ${i + 1}`
+        invalidEntries.push(memberName)
       }
+    }
+
+    if (invalidEntries.length > 0) {
+      toast.error(`Incomplete entries: ${invalidEntries.slice(0, 3).join(", ")}${invalidEntries.length > 3 ? ` and ${invalidEntries.length - 3} more` : ""}`)
+      return
     }
 
     // Check for duplicates within batch itself
     const duplicateCheck = new Map<string, string[]>()
     for (const entry of batchEntries) {
-      const key = `${entry.memberId}-${entry.checkInDate}`
+      // use a safe delimiter that won't appear in IDs or date
+      const key = `${entry.memberId}::${entry.checkInDate}`
       if (!duplicateCheck.has(key)) {
         duplicateCheck.set(key, [])
       }
@@ -302,7 +355,7 @@ export function AttendanceFormBatch() {
 
     for (const [key, memberIds] of duplicateCheck.entries()) {
       if (memberIds.length > 1) {
-        const [memberId, date] = key.split("-")
+        const [memberId, date] = key.split("::")
         const selectedMember = members.find((m) => m.id === memberId)
         const memberName = selectedMember?.label || `Member ${memberId}`
         toast.error(`${memberName} has duplicate entries for ${date}`)
@@ -320,13 +373,25 @@ export function AttendanceFormBatch() {
         const selectedMember = members.find((m) => m.id === entry.memberId)
         const memberName = selectedMember?.label || `Member ${entry.memberId}`
 
+        // Validate member ID is a valid number
+        const memberIdNum = Number(entry.memberId)
+        if (isNaN(memberIdNum)) {
+          skipCount++
+          errors.push(`${memberName}: Invalid member ID format`)
+          continue
+        }
+
         // Check if attendance already exists for this member and date
-        // Convert memberId to ensure it's a proper number
-        const checkRes = await checkExistingAttendance(String(Number(entry.memberId)), entry.checkInDate)
+        const checkRes = await checkExistingAttendance(String(memberIdNum), entry.checkInDate)
+
+        // Only skip if check was successful AND exists is true
         if (checkRes.success && checkRes.exists) {
           skipCount++
           errors.push(`${memberName} already has attendance recorded for ${entry.checkInDate}`)
           continue
+        } else if (!checkRes.success) {
+          // Log warning but continue - we'll let the insert fail if duplicate
+          console.warn(`Could not check existing attendance for ${memberName}:`, checkRes)
         }
 
         const checkInDateTime = parseDateTime(entry.checkInDate, entry.checkInTime)
@@ -393,21 +458,20 @@ export function AttendanceFormBatch() {
               <Card>
                 <CardHeader>
                   <CardTitle>Add Single Attendance</CardTitle>
-                  <CardDescription>Record attendance for one team member</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Group Filter */}
                   <div className="space-y-2">
-                    <FormLabel>Filter by Group</FormLabel>
-                    <Select value={selectedGroup} onValueChange={setSelectedGroup} disabled={loading}>
+                    <FormLabel>Filter by Department</FormLabel>
+                    <Select value={departmentFilter} onValueChange={setDepartmentFilter} disabled={loading}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="All Groups" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Groups</SelectItem>
-                        {availableGroups.map((group) => (
-                          <SelectItem key={group.id} value={group.id}>
-                            {group.name}
+                        {departments.map((name) => (
+                          <SelectItem key={name} value={name}>
+                            {name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -419,72 +483,32 @@ export function AttendanceFormBatch() {
                     control={form.control}
                     name="memberId"
                     render={({ field }) => {
-                      const filteredMembers = selectedGroup === "all"
-                        ? members
-                        : members.filter((m) => {
-                            const member = originalMembersData.find((om) => String(om.id) === m.id)
-                            return member && String(member.department_id) === selectedGroup
-                          })
+                      const selectedMember = members.find(m => m.id === field.value);
 
                       return (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
+                          <FormControl>
+                            {/* Hidden input to properly register the field with RHF and keep it a string */}
+                            <input type="hidden" {...field} value={field.value ?? ""} />
+                          </FormControl>
                           <FormLabel>Select Member *</FormLabel>
-                          <Select disabled={loading} value={field.value} onValueChange={field.onChange}>
-                            <FormControl>
-                              <SelectTrigger className="w-full">
-                                <SelectValue
-                                  placeholder={loading ? "Loading members..." : "Choose a member"}
-                                />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="max-h-72">
-                              {filteredMembers.length > 0 ? (
-                                filteredMembers.map((member) => (
-                                  <SelectItem key={member.id} value={member.id}>
-                                    <div className="flex items-center gap-3">
-                                      <span>{member.label}</span>
-                                      <span className="text-xs text-muted-foreground">
-                                        ({member.department})
-                                      </span>
-                                    </div>
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <div className="px-2 py-3 text-sm text-muted-foreground text-center">
-                                  {loading ? "Loading..." : selectedGroup === "all" ? "No members found" : "No members in this group"}
-                                </div>
-                              )}
-                            </SelectContent>
-                          </Select>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={`w-full justify-between font-normal ${!field.value && "text-muted-foreground"}`}
+                            disabled={loading}
+                            onClick={() => {
+                              setActiveBatchEntryId(null);
+                              setMemberDialogOpen(true);
+                            }}
+                          >
+                            {selectedMember ? `${selectedMember.label} (${selectedMember.department})` : "Choose a member..."}
+                            <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
                           <FormMessage />
                         </FormItem>
                       )
                     }}
-                  />
-
-                  {/* Status */}
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status *</FormLabel>
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                          {STATUSES.map((status) => (
-                            <Button
-                              key={status.value}
-                              type="button"
-                              variant={field.value === status.value ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => field.onChange(status.value)}
-                            >
-                              {status.label}
-                            </Button>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
                   />
 
                   {/* Check-in */}
@@ -522,7 +546,7 @@ export function AttendanceFormBatch() {
 
                   {/* Check-out */}
                   <div className="space-y-3">
-                    <FormLabel>Check-out Date & Time (Optional)</FormLabel>
+                    <FormLabel>Check-out Date & Time</FormLabel>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <FormField
                         control={form.control}
@@ -594,21 +618,19 @@ export function AttendanceFormBatch() {
           <Card>
             <CardHeader>
               <CardTitle>Add Batch Attendance</CardTitle>
-              <CardDescription>Record attendance for multiple team members at once</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Group Filter for Batch Mode */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Filter by Group</label>
-                <Select value={selectedGroup} onValueChange={setSelectedGroup} disabled={loading}>
+                <label className="text-sm font-medium">Filter by Department</label>
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter} disabled={loading}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="All Groups" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Groups</SelectItem>
-                    {availableGroups.map((group) => (
-                      <SelectItem key={group.id} value={group.id}>
-                        {group.name}
+                    {departments.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -629,35 +651,46 @@ export function AttendanceFormBatch() {
                     <Plus className="mr-1 h-4 w-4" /> Add Empty Entry
                   </Button>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-48 overflow-y-auto">
-                  {(selectedGroup === "all"
-                    ? members
-                    : members.filter((m) => {
-                        const member = originalMembersData.find((om) => String(om.id) === m.id)
-                        return member && String(member.department_id) === selectedGroup
-                      })
-                  ).map((member) => (
-                    <Button
-                      key={member.id}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const exists = batchEntries.some((e) => e.memberId === member.id)
-                        if (!exists) {
-                          addBatchEntry(member.id)
-                          toast.success(`${member.label} added`)
-                        } else {
-                          toast.info(`${member.label} already in batch`)
-                        }
-                      }}
-                      disabled={isSubmitting}
-                      className="text-left truncate"
-                    >
-                      <Plus className="mr-1 h-3 w-3" />
-                      <span className="truncate text-xs">{member.label}</span>
-                    </Button>
-                  ))}
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search member to add..."
+                      value={memberSearch}
+                      onChange={(e) => setMemberSearch(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-48 overflow-y-auto pt-2">
+                    {(departmentFilter === "all"
+                      ? members
+                      : members.filter((m) => m.department === departmentFilter)
+                    ).filter(m =>
+                      m.label.toLowerCase().includes(memberSearch.toLowerCase()) ||
+                      m.department.toLowerCase().includes(memberSearch.toLowerCase())
+                    ).map((member) => (
+                      <Button
+                        key={member.id}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const exists = batchEntries.some((e) => e.memberId === member.id)
+                          if (!exists) {
+                            addBatchEntry(member.id)
+                            toast.success(`${member.label} added`)
+                          } else {
+                            toast.info(`${member.label} already in batch`)
+                          }
+                        }}
+                        disabled={isSubmitting}
+                        className="text-left truncate"
+                      >
+                        <Plus className="mr-1 h-3 w-3" />
+                        <span className="truncate text-xs">{member.label}</span>
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -704,34 +737,18 @@ export function AttendanceFormBatch() {
                             </div>
 
                             {/* Member Select */}
-                            <Select
-                              value={entry.memberId}
-                              onValueChange={(value) =>
-                                updateBatchEntry(entry.id, "memberId", value)
-                              }
+                            <Button
+                              variant="outline"
+                              className="w-full justify-between font-normal"
+                              onClick={() => {
+                                setActiveBatchEntryId(entry.id);
+                                setMemberDialogOpen(true);
+                              }}
+                              disabled={isSubmitting}
                             >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select member" />
-                              </SelectTrigger>
-                              <SelectContent className="max-h-48">
-                                {(selectedGroup === "all"
-                                  ? members
-                                  : members.filter((m) => {
-                                      const member = originalMembersData.find((om) => String(om.id) === m.id)
-                                      return member && String(member.department_id) === selectedGroup
-                                    })
-                                ).map((member) => (
-                                  <SelectItem key={member.id} value={member.id}>
-                                    <div className="flex items-center gap-2">
-                                      <span>{member.label}</span>
-                                      <span className="text-xs text-muted-foreground">
-                                        ({member.department})
-                                      </span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              {selectedMember ? `${selectedMember.label} (${selectedMember.department})` : "Select member..."}
+                              <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
 
                             {/* Status */}
                             <Select
@@ -830,6 +847,78 @@ export function AttendanceFormBatch() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Shared Member Selection Dialog */}
+      <Dialog open={memberDialogOpen} onOpenChange={(open) => {
+        setMemberDialogOpen(open);
+        if (!open) {
+          setMemberSearch("");
+          setActiveBatchEntryId(null);
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Member</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search member name or department..."
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            <div className="max-h-72 overflow-y-auto space-y-1">
+              {(departmentFilter === "all"
+                ? members
+                : members.filter((m) => m.department === departmentFilter)
+              ).filter(m =>
+                m.label.toLowerCase().includes(memberSearch.toLowerCase()) ||
+                m.department.toLowerCase().includes(memberSearch.toLowerCase())
+              ).length > 0 ? (
+                (departmentFilter === "all"
+                  ? members
+                  : members.filter((m) => m.department === departmentFilter)
+                ).filter(m =>
+                  m.label.toLowerCase().includes(memberSearch.toLowerCase()) ||
+                  m.department.toLowerCase().includes(memberSearch.toLowerCase())
+                ).map((member) => (
+                  <Button
+                    key={member.id}
+                    variant="ghost"
+                    className="w-full justify-start text-left font-normal h-auto py-2"
+                    onClick={() => {
+                      if (activeBatchEntryId) {
+                        updateBatchEntry(activeBatchEntryId, "memberId", member.id);
+                      } else {
+                        form.setValue("memberId", member.id, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+                        form.clearErrors("memberId");
+                        form.trigger("memberId");
+                      }
+                      setMemberDialogOpen(false);
+                      setMemberSearch("");
+                      setActiveBatchEntryId(null);
+                    }}
+                  >
+                    <div className="flex flex-col">
+                      <span>{member.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {member.department}
+                      </span>
+                    </div>
+                  </Button>
+                ))
+              ) : (
+                <div className="px-2 py-4 text-sm text-center text-muted-foreground">
+                  {loading ? "Loading..." : "No members found"}
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
