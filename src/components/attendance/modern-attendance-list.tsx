@@ -20,6 +20,7 @@ import {
   ChevronsRight,
   RotateCcw,
   Plus,
+  Download,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,10 +57,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import { formatLocalTime } from '@/utils/timezone';
-import { getAllAttendance, deleteAttendanceRecord, deleteMultipleAttendanceRecords, AttendanceListItem, GetAttendanceResult } from '@/action/attendance';
+import { getAllAttendance, deleteAttendanceRecord, deleteMultipleAttendanceRecords, updateAttendanceRecord, AttendanceListItem, GetAttendanceResult } from '@/action/attendance';
 import { toast } from 'sonner';
 import { useOrgStore } from '@/store/org-store';
 import { createClient } from '@/utils/supabase/client';
+import { toTimestampWithTimezone } from '@/lib/timezone';
 
 type AttendanceChangeRow = { attendance_date?: string | null; organization_member_id?: number | null; organization_id?: number | null };
 type PgChange<T> = { new: T | null; old: T | null };
@@ -77,27 +79,27 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [departments, setDepartments] = useState<string[]>([]);
   const [userTimezone, setUserTimezone] = useState('UTC');
   const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
-  
+
   // Date filter state (same as Dashboard)
   const [dateRange, setDateRange] = useState<DateFilterState>({
     from: new Date(),
     to: new Date(),
     preset: 'today',
   });
-  
+
   // Initialize date range after hydration
   useEffect(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const endOfToday = new Date(today);
     endOfToday.setHours(23, 59, 59, 999);
-    
+
     setDateRange({
       from: today,
       to: endOfToday,
       preset: 'today',
     });
-    
+
     // Set selected org from store
     if (orgStore.organizationId) {
       setSelectedOrgId(orgStore.organizationId);
@@ -113,10 +115,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         const oid = Number(m[1]);
         if (!Number.isNaN(oid)) setSelectedOrgId(oid);
       }
-    } catch {}
+    } catch { }
   }, [selectedOrgId, orgStore.organizationId]);
-  
-  
+
+
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -133,11 +135,127 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
   const [realtimeActive, setRealtimeActive] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   const realtimeDebounceRef = useRef<number | null>(null);
   const latestRequestRef = useRef(0);
+  const pendingIdsRef = useRef<Set<number>>(new Set());
+  const flushTimerRef = useRef<number | null>(null);
+  const fetchDataRef = useRef<() => void>(() => {});
+
+  // Helper to map a joined row into AttendanceListItem
+  const mapRowToItem = useCallback((data: any): AttendanceListItem => {
+    type MemberProfile = { first_name: string | null; last_name: string | null; display_name: string | null; email: string | null; profile_photo_url: string | null; search_name: string | null };
+    type MemberData = { id: number; user_profiles: MemberProfile | MemberProfile[] | null; departments: { name: string | null } | { name: string | null }[] | null };
+    const mRel = (data as any).organization_members as MemberData | MemberData[] | null;
+    const mObj: MemberData | null = Array.isArray(mRel) ? (mRel[0] as MemberData) : (mRel as MemberData);
+    const profileObj = mObj?.user_profiles;
+    const profile: MemberProfile | null = Array.isArray(profileObj) ? (profileObj[0] ?? null) : (profileObj ?? null);
+    const displayName = (profile?.display_name ?? '').trim();
+    const firstName = profile?.first_name ?? '';
+    const lastName = profile?.last_name ?? '';
+    const email = (profile?.email ?? '').trim();
+    const fullName = `${firstName} ${lastName}`.trim();
+    const effectiveName = displayName || fullName || email || (profile?.search_name ?? '');
+    const deptObj = mObj?.departments;
+    const departmentName = Array.isArray(deptObj) ? (deptObj[0]?.name ?? '') : (deptObj?.name ?? '');
+
+    return {
+      id: String(data.id),
+      member: {
+        id: data.organization_member_id,
+        name: effectiveName || `Member #${data.organization_member_id}`,
+        avatar: profile?.profile_photo_url || undefined,
+        position: '',
+        department: departmentName,
+      },
+      date: data.attendance_date,
+      checkIn: data.actual_check_in,
+      checkOut: data.actual_check_out,
+      workHours: data.work_duration_minutes ? `${Math.floor((data.work_duration_minutes as number) / 60)}h ${(data.work_duration_minutes as number) % 60}m` : (data.actual_check_in ? '-' : '-'),
+      status: data.status,
+      checkInDeviceId: null,
+      checkOutDeviceId: null,
+      checkInLocationName: null,
+      checkOutLocationName: null,
+      notes: '',
+      timezone: userTimezone || 'Asia/Jakarta',
+      time_format: '24h',
+    };
+  }, [userTimezone]);
+
+  // Fetch a single record by id (client-side) and merge into state
+  const fetchAndMergeRecord = useCallback(async (recId: number) => {
+    try {
+      const supabase = createClient();
+      const listRel = 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))';
+      const { data } = await supabase
+        .from('attendance_records')
+        .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, ${listRel}`)
+        .eq('id', recId)
+        .maybeSingle();
+      if (!data) return;
+      const mapped: AttendanceListItem = mapRowToItem(data);
+
+      setAttendanceData((prev) => {
+        const without = prev.filter((r) => r.id !== mapped.id);
+        const next = [mapped, ...without];
+        return next;
+      });
+      setTotalItems((t) => Math.max(t, 1));
+    } catch {
+      // fallback to full fetch on any error
+      fetchDataRef.current();
+    }
+  }, [mapRowToItem]);
+
+  // Fetch and merge multiple records by ids (batch)
+  const fetchAndMergeMany = useCallback(async (recIds: number[]) => {
+    if (!recIds || recIds.length === 0) return;
+    try {
+      const supabase = createClient();
+      const listRel = 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))';
+      const { data } = await supabase
+        .from('attendance_records')
+        .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, ${listRel}`)
+        .in('id', recIds);
+      if (!Array.isArray(data) || data.length === 0) return;
+
+      const mapped = data.map(mapRowToItem);
+      setAttendanceData((prev) => {
+        const map = new Map(prev.map((r) => [r.id, r] as const));
+        for (const m of mapped) map.set(m.id, m);
+        const next = Array.from(map.values());
+        return next;
+      });
+      setTotalItems((t) => Math.max(t, mapped.length));
+    } catch {
+      fetchDataRef.current();
+    }
+  }, [mapRowToItem]);
 
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  // Helper to convert Date to local YYYY-MM-DD string
+  const toLocalYMD = useCallback((d: Date) => {
+    const dt = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return dt.toISOString().slice(0, 10);
+  }, []);
+
+  // Local helpers for building/formatting date/time
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+  const toLocalHM = useCallback((d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`, []);
+  const buildDateTime = useCallback((dateStr: string, timeStr: string): Date => {
+    const [yStr = '', mStr = '', dStr = ''] = (dateStr ?? '').split('-');
+    const [hhStr = '', mmStr = ''] = (timeStr ?? '').split(':');
+    const now = new Date();
+    const y = Number.isFinite(Number(yStr)) && yStr !== '' ? Number(yStr) : now.getFullYear();
+    const m = Number.isFinite(Number(mStr)) && mStr !== '' ? Number(mStr) : 1;
+    const d = Number.isFinite(Number(dStr)) && dStr !== '' ? Number(dStr) : 1;
+    const hh = Number.isFinite(Number(hhStr)) && hhStr !== '' ? Number(hhStr) : 0;
+    const mm = Number.isFinite(Number(mmStr)) && mmStr !== '' ? Number(mmStr) : 0;
+    return new Date(y, m - 1, d, hh, mm, 0, 0);
   }, []);
 
   const cacheKeyBase = React.useMemo(() => {
@@ -152,28 +270,30 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   // Hydrate loading state from localStorage for current key (ignore stale >15s)
   useEffect(() => {
-  if (!isMounted) return;
+    if (!isMounted) return;
     try {
       const raw = localStorage.getItem(`${cacheKeyBase}:loading`);
+      const cachedDataRaw = localStorage.getItem(cacheKeyBase);
       if (raw) {
         const parsed = JSON.parse(raw) as { loading?: boolean; ts?: number };
         const tooOld = parsed.ts ? (Date.now() - parsed.ts > 15_000) : true;
-        // Hanya matikan loading jika tersimpan false dan masih fresh
-        if (!tooOld && parsed.loading === false) setLoading(false);
+        if (!tooOld && parsed.loading === false && cachedDataRaw) {
+          setLoading(false);
+        }
       }
-    } catch {}
+    } catch { }
   }, [cacheKeyBase, isMounted]);
 
   // Persist loading state on change
   useEffect(() => {
-  if (!isMounted) return;
+    if (!isMounted) return;
     try {
       if (loading) {
         localStorage.setItem(`${cacheKeyBase}:loading`, JSON.stringify({ loading: true, ts: Date.now() }));
       } else {
         localStorage.removeItem(`${cacheKeyBase}:loading`);
       }
-    } catch {}
+    } catch { }
   }, [loading, cacheKeyBase, isMounted]);
 
   // Hydrate data from cache for perceived-fast load
@@ -191,10 +311,11 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             if (parsed.tz) setUserTimezone(parsed.tz);
             // If we successfully hydrated data, ensure loading UI doesn't block
             setLoading(false);
+            setInitialized(true);
           }
         }
       }
-    } catch {}
+    } catch { }
   }, [cacheKeyBase, isMounted]);
 
   // Seed from SSR initialData if cache empty
@@ -205,15 +326,19 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       setTotalItems(initialMeta?.total || _initialData.length || 0);
       if (initialMeta?.tz) setUserTimezone(initialMeta.tz);
       setLoading(false);
+      setInitialized(true);
       try {
         localStorage.setItem(cacheKeyBase, JSON.stringify({ data: _initialData, total: initialMeta?.total || _initialData.length || 0, tz: initialMeta?.tz, ts: Date.now() }));
-      } catch {}
+      } catch { }
     }
   }, [isMounted, _initialData, initialMeta, cacheKeyBase]);
 
-  // Edit form schema
+  // Edit form schema (edit check-in/out time and remarks)
   const editFormSchema = z.object({
-    status: z.string().min(1, 'Status is required'),
+    checkInDate: z.string().min(1, 'Check-in date is required'),
+    checkInTime: z.string().min(1, 'Check-in time is required'),
+    checkOutDate: z.string().optional(),
+    checkOutTime: z.string().optional(),
     remarks: z.string().optional(),
   });
 
@@ -222,11 +347,14 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const editForm = useForm<EditFormValues>({
     resolver: zodResolver(editFormSchema),
     defaultValues: {
-      status: 'present',
+      checkInDate: '',
+      checkInTime: '',
+      checkOutDate: '',
+      checkOutTime: '',
       remarks: '',
     },
   });
-  
+
   const handleDeleteClick = async (recordId: string) => {
     setRecordToDelete(recordId);
     setDeleteDialogOpen(true);
@@ -234,11 +362,11 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   const handleConfirmDelete = async () => {
     if (!recordToDelete) return;
-    
+
     try {
       setIsSubmitting(true);
       const result = await deleteAttendanceRecord(recordToDelete);
-      
+
       if (result.success) {
         toast.success('Attendance record deleted successfully');
         setDeleteDialogOpen(false);
@@ -265,11 +393,11 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   const handleDeleteMultiple = async () => {
     if (selectedRecords.length === 0) return;
-    
+
     try {
       setIsSubmitting(true);
       const result = await deleteMultipleAttendanceRecords(selectedRecords);
-      
+
       if (result.success) {
         toast.success(`${selectedRecords.length} record(s) deleted successfully`);
         setSelectedRecords([]);
@@ -296,8 +424,14 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const handleEditClick = () => {
     const recordsToEdit = attendanceData.filter(r => selectedRecords.includes(r.id));
     setEditingRecords(recordsToEdit);
+    const first = recordsToEdit[0];
+    const ci = first?.checkIn ? new Date(first.checkIn) : null;
+    const co = first?.checkOut ? new Date(first.checkOut) : null;
     editForm.reset({
-      status: recordsToEdit[0]?.status || 'present',
+      checkInDate: ci ? `${ci.getFullYear()}-${pad2(ci.getMonth()+1)}-${pad2(ci.getDate())}` : toLocalYMD(new Date()),
+      checkInTime: ci ? toLocalHM(ci) : '08:00',
+      checkOutDate: co ? `${co.getFullYear()}-${pad2(co.getMonth()+1)}-${pad2(co.getDate())}` : '',
+      checkOutTime: co ? toLocalHM(co) : '',
       remarks: '',
     });
     setEditDialogOpen(true);
@@ -306,24 +440,41 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const handleEditSingle = (rec: AttendanceListItem) => {
     setEditingRecords([rec]);
     setSelectedRecords([rec.id]);
+    const ci = rec?.checkIn ? new Date(rec.checkIn) : null;
+    const co = rec?.checkOut ? new Date(rec.checkOut) : null;
     editForm.reset({
-      status: rec?.status || 'present',
+      checkInDate: ci ? `${ci.getFullYear()}-${pad2(ci.getMonth()+1)}-${pad2(ci.getDate())}` : toLocalYMD(new Date()),
+      checkInTime: ci ? toLocalHM(ci) : '08:00',
+      checkOutDate: co ? `${co.getFullYear()}-${pad2(co.getMonth()+1)}-${pad2(co.getDate())}` : '',
+      checkOutTime: co ? toLocalHM(co) : '',
       remarks: '',
     });
     setEditDialogOpen(true);
   };
 
   // Handle edit form submit
-  const onEditSubmit = async (_values: EditFormValues) => {
+  const onEditSubmit = async (values: EditFormValues) => {
     try {
       setIsSubmitting(true);
-      // TODO: Implement API call to update attendance records
-      // For now, just show success message
+      const ciDate = buildDateTime(values.checkInDate, values.checkInTime);
+      const payloads = selectedRecords.map((id) => ({
+        id,
+        actual_check_in: toTimestampWithTimezone(ciDate),
+        actual_check_out: values.checkOutDate && values.checkOutTime
+          ? toTimestampWithTimezone(buildDateTime(values.checkOutDate, values.checkOutTime))
+          : null,
+        remarks: values.remarks && values.remarks.trim() !== '' ? values.remarks.trim() : null,
+      }));
+      for (const p of payloads) {
+        const res = await updateAttendanceRecord(p);
+        if (!res.success) {
+          throw new Error(res.message || 'Failed to update record');
+        }
+      }
       toast.success(`Updated ${selectedRecords.length} record(s)`);
       setEditDialogOpen(false);
       setSelectedRecords([]);
-      // Refresh data
-      await fetchData();
+      fetchDataRef.current();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update records');
     } finally {
@@ -335,26 +486,26 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchQuery(searchInput);
-    }, 500);
+    }, 10);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
   // Fetch data using Server Action with pagination
   const fetchData = useCallback(async () => {
-  const orgId = selectedOrgId || orgStore.organizationId;
-  console.log('🔄 Fetch triggered:', {
-    page: currentPage,
-    itemsPerPage,
-    orgId,
-    hasDateFilter: false, // sementara non-aktif
-    statusFilter,
-    departmentFilter,
-    searchQuery
-  });
+    const orgId = selectedOrgId || orgStore.organizationId;
+    console.log('🔄 Fetch triggered:', {
+      page: currentPage,
+      itemsPerPage,
+      orgId,
+      hasDateFilter: false, // sementara non-aktif
+      statusFilter,
+      departmentFilter,
+      searchQuery
+    });
     // Require orgId to avoid relying on server-side auth cookies in production
     if (!orgId) {
       console.warn('[fetchData] Skipped: organizationId not ready yet');
-      setLoading(false);
+      // keep loading until orgId resolved to avoid empty flash
       return;
     }
     setLoading(true);
@@ -364,10 +515,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     try {
       const searchParam = (searchQuery || '').trim();
       // Use local date (not UTC) to avoid day-shift in production
-      const toLocalYMD = (d: Date) => {
-        const dt = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-        return dt.toISOString().slice(0, 10);
-      };
+
       const [listResult] = await Promise.all([
         getAllAttendance({
           page: currentPage,
@@ -399,7 +547,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         setAttendanceData(data);
         const correctedTotal = Math.max(result.meta?.total || 0, data.length);
         setTotalItems(correctedTotal);
-        
+
         // Set timezone from first record if available (fallback to UTC)
         if (data.length > 0) {
           const first = data[0];
@@ -408,19 +556,19 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
         // Extract unique departments from current page (simple solution for now)
         if (data.length > 0) {
-        const uniqueDepts = Array.from(new Set(
+          const uniqueDepts = Array.from(new Set(
             data.map((r) => r.member?.department)
-        )).filter((dept): dept is string => Boolean(dept && dept !== 'No Department')).sort();
-        
-        if (departments.length === 0 && uniqueDepts.length > 0) {
-          setDepartments(uniqueDepts);
+          )).filter((dept): dept is string => Boolean(dept && dept !== 'No Department')).sort();
+
+          if (departments.length === 0 && uniqueDepts.length > 0) {
+            setDepartments(uniqueDepts);
           }
         }
         try {
           const tz = data.length > 0 ? (data[0]?.timezone ?? 'UTC') : undefined;
           localStorage.setItem(cacheKeyBase, JSON.stringify({ data, total: correctedTotal, tz, ts: Date.now() }));
           // Jika keyset aktif (nextCursor ada), hindari offset prefetch page berikutnya
-        } catch {}
+        } catch { }
       } else {
         console.error('Failed to load attendance:', result?.message ?? result);
         setAttendanceData([]);
@@ -434,12 +582,18 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       // setTotalItems(0);
       // Only show error if we don't have any data
       if (attendanceData.length === 0) {
-      toast.error('An error occurred while fetching data');
+        toast.error('An error occurred while fetching data');
       }
     } finally {
       setLoading(false);
+      setInitialized(true);
     }
   }, [currentPage, itemsPerPage, dateRange, searchQuery, statusFilter, departmentFilter, selectedOrgId, orgStore.organizationId]);
+
+  // Keep latest fetchData in a ref for callbacks declared earlier
+  useEffect(() => {
+    fetchDataRef.current = fetchData;
+  }, [fetchData]);
 
 
   // Trigger fetch when filters change (and initial load)
@@ -470,21 +624,40 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           if (payloadOrgId && orgId && Number(payloadOrgId) !== Number(orgId)) {
             return;
           }
-          const dateStr = (newRow?.attendance_date as string | undefined) || (oldRow?.attendance_date as string | undefined);
-          if (dateStr) {
-            const ts = new Date(dateStr).getTime();
-            const from = new Date(dateRange.from).getTime();
-            const to = new Date(dateRange.to).getTime();
-            if (ts < from || ts > to) {
-              return; // outside current filter window, skip
+          const rawDate = (newRow?.attendance_date as string | undefined) || (oldRow?.attendance_date as string | undefined);
+
+          if (rawDate) {
+            const match = /^\d{4}-\d{2}-\d{2}/.exec(String(rawDate));
+            const recordYMD = match ? match[0] : toLocalYMD(new Date(String(rawDate)));
+            const fromStr = toLocalYMD(dateRange.from);
+            const toStr = toLocalYMD(dateRange.to);
+
+            if (recordYMD < fromStr || recordYMD > toStr) {
+              return;
             }
           }
-          if (realtimeDebounceRef.current) {
-            window.clearTimeout(realtimeDebounceRef.current);
+          const changedId = (newRow as any)?.id ?? (oldRow as any)?.id;
+          if (typeof changedId === 'number') {
+            pendingIdsRef.current.add(Number(changedId));
           }
-          realtimeDebounceRef.current = window.setTimeout(() => {
-            fetchData();
-          }, 700);
+          if (flushTimerRef.current) {
+            window.clearTimeout(flushTimerRef.current);
+          }
+          flushTimerRef.current = window.setTimeout(() => {
+            const ids = Array.from(pendingIdsRef.current);
+            pendingIdsRef.current.clear();
+            try {
+              localStorage.removeItem(cacheKeyBase);
+              localStorage.removeItem(`${cacheKeyBase}:loading`);
+            } catch { }
+            if (ids.length === 1) {
+              fetchAndMergeRecord(ids[0]!);
+            } else if (ids.length > 1) {
+              fetchAndMergeMany(ids);
+            } else {
+              fetchData();
+            }
+          }, 500);
         }
       )
       .subscribe((status) => {
@@ -498,6 +671,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         window.clearTimeout(realtimeDebounceRef.current);
         realtimeDebounceRef.current = null;
       }
+      if (flushTimerRef.current) {
+        window.clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
       supabase.removeChannel(channel);
     };
   }, [selectedOrgId, orgStore.organizationId, dateRange.from, dateRange.to, fetchData]);
@@ -510,7 +687,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     }, 30000); // 30s fallback
     return () => window.clearInterval(id);
   }, [realtimeActive, fetchData]);
-  
+
   // Log attendanceData changes
   useEffect(() => {
     console.log('📊 Attendance data state updated:', {
@@ -629,15 +806,24 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 placeholder="Search by name or department..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setSearchQuery(searchInput);
+                  }
+                }}
                 className="pl-10 border-gray-300"
               />
             </div>
 
             {/* Refresh */}
-            <Button 
-              variant="outline" 
-              size="icon" 
+            <Button
+              variant="outline"
+              size="icon"
               onClick={() => {
+                try {
+                  localStorage.removeItem(cacheKeyBase);
+                  localStorage.removeItem(`${cacheKeyBase}:loading`);
+                } catch { }
                 fetchData();
               }}
               title="Refresh"
@@ -647,7 +833,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             </Button>
 
             {/* View toggle */}
-            <Button 
+            <Button
               variant={viewMode === 'grid' ? 'default' : 'outline'}
               size="icon"
               onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
@@ -659,8 +845,8 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
             {/* Date Filter */}
             <div className="shrink-0">
-              <DateFilterBar 
-                dateRange={dateRange} 
+              <DateFilterBar
+                dateRange={dateRange}
                 onDateRangeChange={setDateRange}
               />
             </div>
@@ -713,58 +899,64 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 Manual Entry
               </Button>
             </Link>
+            <Link href="/attendance/import" className="shrink-0">
+              <Button variant="outline" className="whitespace-nowrap">
+                <Download className="mr-2 h-4 w-4" />
+                Import
+              </Button>
+            </Link>
           </div>
 
-            {/* Selected Actions */}
-            <AnimatePresence>
-              {selectedRecords.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="flex items-center gap-2 rounded-lg bg-muted px-4 py-2"
-                >
-                  <span className="text-sm font-medium">
-                    {selectedRecords.length} selected
-                  </span>
-                  <Separator orientation="vertical" className="h-6" />
-                  {/* <Button variant="ghost" size="sm">
+          {/* Selected Actions */}
+          <AnimatePresence>
+            {selectedRecords.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="flex items-center gap-2 rounded-lg bg-muted px-4 py-2"
+              >
+                <span className="text-sm font-medium">
+                  {selectedRecords.length} selected
+                </span>
+                <Separator orientation="vertical" className="h-6" />
+                {/* <Button variant="ghost" size="sm">
                     <Mail className="mr-2 h-4 w-4" />
                     Send Email
                   </Button> */}
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={handleEditClick}
-                  >
-                    <Edit className="mr-2 h-4 w-4" />
-                    {selectedRecords.length === 1 ? 'Edit' : 'Bulk Edit'}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDeleteMultiple}
-                    disabled={isSubmitting}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Selected
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedRecords([])}
-                    className="ml-auto"
-                  >
-                    Clear Selection
-                  </Button>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleEditClick}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  {selectedRecords.length === 1 ? 'Edit' : 'Bulk Edit'}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteMultiple}
+                  disabled={isSubmitting}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Selected
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedRecords([])}
+                  className="ml-auto"
+                >
+                  Clear Selection
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </CardContent>
       </Card>
 
       {/* Summary Stats - Interactive Cards - REMOVED as requested */}
-      
+
       {/* Charts Section - REMOVED as requested */}
 
       {/* Attendance List */}
@@ -773,7 +965,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           <CardContent className="p-0">
             {/* Mobile Card View - Only show on small screens */}
             <div className="block lg:hidden divide-y">
-              {loading ? (
+              {(loading || !initialized) ? (
                 <div className="divide-y">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <div key={`mobile-skel-${i}`} className="p-4 space-y-3">
@@ -804,97 +996,97 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     return null;
                   }
                   return (
-                  <div
-                    key={`mobile-${record.id}-${index}`}
-                    className="p-4 space-y-3 border-b last:border-b-0"
-                  >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <input
-                        type="checkbox"
-                        checked={selectedRecords.includes(record.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedRecords([...selectedRecords, record.id]);
-                          } else {
-                            setSelectedRecords(selectedRecords.filter(id => id !== record.id));
-                          }
-                        }}
-                        className="rounded border-gray-300 mt-1"
-                      />
-                      <Avatar className="h-10 w-10 shrink-0">
-                        <AvatarImage src={record.member.avatar} />
-                        <AvatarFallback>
-                          {record.member.name.split(' ').map((n) => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium truncate">
-                          <Link href={`/members/${record.member.id ?? ''}`} className="hover:underline">
-                            {record.member.name}
-                          </Link>
-                        </p>
-                        <p className="text-sm text-muted-foreground truncate">{record.member.department}</p>
+                    <div
+                      key={`mobile-${record.id}-${index}`}
+                      className="p-4 space-y-3 border-b last:border-b-0"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={selectedRecords.includes(record.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedRecords([...selectedRecords, record.id]);
+                              } else {
+                                setSelectedRecords(selectedRecords.filter(id => id !== record.id));
+                              }
+                            }}
+                            className="rounded border-gray-300 mt-1"
+                          />
+                          <Avatar className="h-10 w-10 shrink-0">
+                            <AvatarImage src={record.member.avatar} />
+                            <AvatarFallback>
+                              {record.member.name.split(' ').map((n) => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium truncate">
+                              <Link href={`/members/${record.member.id ?? ''}`} className="hover:underline">
+                                {record.member.name}
+                              </Link>
+                            </p>
+                            <p className="text-sm text-muted-foreground truncate">{record.member.department}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Edit"
+                            onClick={() => handleEditSingle(record)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            title="Delete"
+                            onClick={() => handleDeleteClick(record.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Check In</p>
+                          <p className="font-mono text-sm">
+                            {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, '24h', true) : '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Check Out</p>
+                          <p className="font-mono text-sm">
+                            {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, '24h', true) : '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Work Hours</p>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium text-sm">{record.workHours}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Status</p>
+                          <Badge className={cn('gap-1', getStatusColor(record.status))}>
+                            {getStatusIcon(record.status)}
+                            {record.status}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Location</p>
+                        <LocationDisplay
+                          checkInLocationName={record.checkInLocationName}
+                          checkOutLocationName={record.checkOutLocationName}
+                        />
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        title="Edit"
-                        onClick={() => handleEditSingle(record)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        title="Delete"
-                        onClick={() => handleDeleteClick(record.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Check In</p>
-                      <p className="font-mono text-sm">
-                        {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, '24h', true) : '-'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Check Out</p>
-                      <p className="font-mono text-sm">
-                        {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, '24h', true) : '-'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Work Hours</p>
-                      <div className="flex flex-col gap-1">
-                        <span className="font-medium text-sm">{record.workHours}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Status</p>
-                      <Badge className={cn('gap-1', getStatusColor(record.status))}>
-                        {getStatusIcon(record.status)}
-                        {record.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Location</p>
-                    <LocationDisplay 
-                      checkInLocationName={record.checkInLocationName}
-                      checkOutLocationName={record.checkOutLocationName}
-                    />
-                  </div>
-                </div>
                   );
                 }).filter(Boolean)
               )}
@@ -923,7 +1115,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                   </tr>
                 </thead>
                 <tbody>
-                  {loading ? (
+                  {(loading || !initialized) ? (
                     <>
                       {Array.from({ length: 6 }).map((_, i) => (
                         <tr key={`table-skel-${i}`} className="border-b">
@@ -967,91 +1159,91 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       }
                       console.log(`📋 Rendering table row ${index + 1}/${attendanceData.length}:`, record.id, record.member.name);
                       return (
-                    <tr
-                      key={`table-${record.id}-${index}`}
-                      className="border-b hover:bg-muted/50 transition-colors"
-                    >
-                      <td className="p-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedRecords.includes(record.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedRecords([...selectedRecords, record.id]);
-                            } else {
-                              setSelectedRecords(selectedRecords.filter(id => id !== record.id));
-                            }
-                          }}
-                          className="rounded border-gray-300"
-                        />
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={record.member.avatar} />
-                            <AvatarFallback>
-                              {record.member.name.split(' ').map((n: string) => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">
-                              <Link href={`/members/${record.member.id ?? ''}`} className="hover:underline">
-                                {record.member.name}
-                              </Link>
-                            </p>
-                            <p className="text-sm text-muted-foreground">{record.member.department}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span className="font-mono text-sm">
-                          {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, '24h', true) : '-'}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <span className="font-mono text-sm">
-                          {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, '24h', true) : '-'}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex flex-col gap-1">
-                          <span className="font-medium text-sm">{record.workHours}</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <Badge className={cn('gap-1', getStatusColor(record.status))}>
-                          {getStatusIcon(record.status)}
-                          {record.status}
-                        </Badge>
-                      </td>
-                      <td className="p-4">
-                        <LocationDisplay 
-                          checkInLocationName={record.checkInLocationName}
-                          checkOutLocationName={record.checkOutLocationName}
-                        />
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Edit"
-                            onClick={() => handleEditSingle(record)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Delete"
-                            onClick={() => handleDeleteClick(record.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
+                        <tr
+                          key={`table-${record.id}-${index}`}
+                          className="border-b hover:bg-muted/50 transition-colors"
+                        >
+                          <td className="p-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedRecords.includes(record.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedRecords([...selectedRecords, record.id]);
+                                } else {
+                                  setSelectedRecords(selectedRecords.filter(id => id !== record.id));
+                                }
+                              }}
+                              className="rounded border-gray-300"
+                            />
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage src={record.member.avatar} />
+                                <AvatarFallback>
+                                  {record.member.name.split(' ').map((n: string) => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">
+                                  <Link href={`/members/${record.member.id ?? ''}`} className="hover:underline">
+                                    {record.member.name}
+                                  </Link>
+                                </p>
+                                <p className="text-sm text-muted-foreground">{record.member.department}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <span className="font-mono text-sm">
+                              {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, '24h', true) : '-'}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <span className="font-mono text-sm">
+                              {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, '24h', true) : '-'}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex flex-col gap-1">
+                              <span className="font-medium text-sm">{record.workHours}</span>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <Badge className={cn('gap-1', getStatusColor(record.status))}>
+                              {getStatusIcon(record.status)}
+                              {record.status}
+                            </Badge>
+                          </td>
+                          <td className="p-4">
+                            <LocationDisplay
+                              checkInLocationName={record.checkInLocationName}
+                              checkOutLocationName={record.checkOutLocationName}
+                            />
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Edit"
+                                onClick={() => handleEditSingle(record)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Delete"
+                                onClick={() => handleDeleteClick(record.id)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
                       );
                     }).filter(Boolean)
                   )}
@@ -1182,78 +1374,78 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 }
                 console.log(`🎴 Rendering grid card ${index + 1}/${attendanceData.length}:`, record.id, record.member.name);
                 return (
-            <div
-              key={`grid-${record.id}-${index}`}
-              className="relative"
-            >
-              {/* Checkbox - Top Left */}
-              <div className="absolute top-3 left-3 z-10">
-                <input
-                  type="checkbox"
-                  checked={selectedRecords.includes(record.id)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedRecords([...selectedRecords, record.id]);
-                    } else {
-                      setSelectedRecords(selectedRecords.filter(id => id !== record.id));
-                    }
-                  }}
-                  className="rounded border-gray-300 w-5 h-5 cursor-pointer"
-                />
-              </div>
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={record.member.avatar} />
-                        <AvatarFallback>
-                          {record.member.name.split(' ').map((n: string) => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-semibold">
-                          <Link href={`/members/${record.member.id ?? ''}`} className="hover:underline">
-                            {record.member.name}
-                          </Link>
-                        </p>
-                        <p className="text-sm text-muted-foreground">{record.member.department}</p>
-                      </div>
+                  <div
+                    key={`grid-${record.id}-${index}`}
+                    className="relative"
+                  >
+                    {/* Checkbox - Top Left */}
+                    <div className="absolute top-3 left-3 z-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedRecords.includes(record.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedRecords([...selectedRecords, record.id]);
+                          } else {
+                            setSelectedRecords(selectedRecords.filter(id => id !== record.id));
+                          }
+                        }}
+                        className="rounded border-gray-300 w-5 h-5 cursor-pointer"
+                      />
                     </div>
-                    <Badge className={cn('gap-1', getStatusColor(record.status))}>
-                      {getStatusIcon(record.status)}
-                      {record.status}
-                    </Badge>
+                    <Card className="hover:shadow-lg transition-shadow">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-12 w-12">
+                              <AvatarImage src={record.member.avatar} />
+                              <AvatarFallback>
+                                {record.member.name.split(' ').map((n: string) => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold">
+                                <Link href={`/members/${record.member.id ?? ''}`} className="hover:underline">
+                                  {record.member.name}
+                                </Link>
+                              </p>
+                              <p className="text-sm text-muted-foreground">{record.member.department}</p>
+                            </div>
+                          </div>
+                          <Badge className={cn('gap-1', getStatusColor(record.status))}>
+                            {getStatusIcon(record.status)}
+                            {record.status}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Check In</p>
+                            <p className="font-mono font-medium">
+                              {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, '24h', true) : '-'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Check Out</p>
+                            <p className="font-mono font-medium">
+                              {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, '24h', true) : '-'}
+                            </p>
+                          </div>
+                        </div>
+                        <Separator />
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Work Hours</span>
+                          <span className="font-semibold">{record.workHours}</span>
+                        </div>
+                        <LocationDisplay
+                          checkInLocationName={record.checkInLocationName}
+                          checkOutLocationName={record.checkOutLocationName}
+                        />
+                      </CardContent>
+                    </Card>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Check In</p>
-                      <p className="font-mono font-medium">
-                        {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, '24h', true) : '-'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Check Out</p>
-                      <p className="font-mono font-medium">
-                        {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, '24h', true) : '-'}
-                      </p>
-                    </div>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Work Hours</span>
-                    <span className="font-semibold">{record.workHours}</span>
-                  </div>
-                  <LocationDisplay 
-                    checkInLocationName={record.checkInLocationName}
-                    checkOutLocationName={record.checkOutLocationName}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-              );
+                );
               }).filter(Boolean)}
             </div>
           )}
@@ -1268,7 +1460,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
               {selectedRecords.length === 1 ? 'Edit Attendance' : `Bulk Edit (${selectedRecords.length} records)`}
             </DialogTitle>
             <DialogDescription>
-              {selectedRecords.length === 1 
+              {selectedRecords.length === 1
                 ? `Edit attendance record for ${editingRecords[0]?.member?.name || 'member'}`
                 : `Update status and remarks for ${selectedRecords.length} selected records`
               }
@@ -1277,31 +1469,67 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
           <Form {...editForm}>
             <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
-              {/* Status Field */}
-              <FormField
-                control={editForm.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="present">Present</SelectItem>
-                        <SelectItem value="late">Late</SelectItem>
-                        <SelectItem value="absent">Absent</SelectItem>
-                        <SelectItem value="excused">Excused</SelectItem>
-                        <SelectItem value="early_leave">Early Leave</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Check-in */}
+              <div className="space-y-2">
+                <FormLabel>Check-in</FormLabel>
+                <div className="grid grid-cols-2 gap-2">
+                  <FormField
+                    control={editForm.control}
+                    name="checkInDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editForm.control}
+                    name="checkInTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input type="time" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Check-out (Optional) */}
+              <div className="space-y-2">
+                <FormLabel>Check-out (Optional)</FormLabel>
+                <div className="grid grid-cols-2 gap-2">
+                  <FormField
+                    control={editForm.control}
+                    name="checkOutDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editForm.control}
+                    name="checkOutTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input type="time" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
 
               {/* Remarks Field */}
               <FormField
@@ -1311,8 +1539,8 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                   <FormItem>
                     <FormLabel>Remarks (Optional)</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="Add remarks..." 
+                      <Input
+                        placeholder="Add remarks..."
                         {...field}
                       />
                     </FormControl>
@@ -1347,7 +1575,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   type="submit"
                   disabled={isSubmitting}
                 >
@@ -1385,7 +1613,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               type="button"
               variant="destructive"
               onClick={handleConfirmDelete}

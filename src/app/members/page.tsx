@@ -229,11 +229,7 @@ const MembersPageSkeleton = () => (
 export default function MembersPage() {
   const router = useRouter()
   const { isHydrated, organizationId } = useHydration()
-
-  // Use queryClient - it should be available after QueryProvider mounts
-  // If there's an error, it means QueryProvider is not set up correctly
   const queryClient = useQueryClient()
-
   const [exporting, setExporting] = React.useState(false)
   const [inviteDialogOpen, setInviteDialogOpen] = React.useState(false)
   const [submittingInvite, setSubmittingInvite] = React.useState(false)
@@ -482,7 +478,6 @@ export default function MembersPage() {
 
   const handleRefresh = async () => {
     try {
-      // Clear all members cache
       if (typeof window !== 'undefined') {
         const keys = Object.keys(localStorage)
         keys.forEach(key => {

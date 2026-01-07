@@ -11,16 +11,10 @@
  * @returns ISO string with timezone preserved
  */
 export function toTimestampWithTimezone(date: Date): string {
-  // Get timezone offset in minutes and convert to milliseconds
-  const timezoneOffsetMs = date.getTimezoneOffset() * 60 * 1000
-  
-  // Create a new date adjusted for the timezone offset
-  // This ensures the ISO string represents the actual local time
-  const localDate = new Date(date.getTime() - timezoneOffsetMs)
-  
-  // Return ISO string (this will be in UTC but represents local time)
-  // Supabase timestamptz will handle this correctly
-  return localDate.toISOString()
+  // Return UTC ISO string directly. Postgres timestamptz stores an absolute
+  // moment in time; the display conversion should be handled at read time.
+  // Avoid manually shifting by timezone offset which caused +7h drift.
+  return date.toISOString()
 }
 
 /**
