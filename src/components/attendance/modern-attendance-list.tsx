@@ -363,12 +363,17 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     latestRequestRef.current = reqId;
     try {
       const searchParam = (searchQuery || '').trim();
+      // Use local date (not UTC) to avoid day-shift in production
+      const toLocalYMD = (d: Date) => {
+        const dt = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+        return dt.toISOString().slice(0, 10);
+      };
       const [listResult] = await Promise.all([
         getAllAttendance({
           page: currentPage,
           limit: itemsPerPage,
-          // dateFrom: dateRange.from.toISOString().split('T')[0],
-          // dateTo: dateRange.to.toISOString().split('T')[0],
+          dateFrom: toLocalYMD(dateRange.from),
+          dateTo: toLocalYMD(dateRange.to),
           search: searchParam.length >= 2 ? searchParam : undefined,
           status: statusFilter === 'all' ? undefined : statusFilter,
           department: departmentFilter === 'all' ? undefined : departmentFilter,
@@ -392,7 +397,8 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           return; // stale response
         }
         setAttendanceData(data);
-        setTotalItems(result.meta?.total || 0);
+        const correctedTotal = Math.max(result.meta?.total || 0, data.length);
+        setTotalItems(correctedTotal);
         
         // Set timezone from first record if available (fallback to UTC)
         if (data.length > 0) {
@@ -412,7 +418,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         }
         try {
           const tz = data.length > 0 ? (data[0]?.timezone ?? 'UTC') : undefined;
-          localStorage.setItem(cacheKeyBase, JSON.stringify({ data, total: result.meta?.total || 0, tz, ts: Date.now() }));
+          localStorage.setItem(cacheKeyBase, JSON.stringify({ data, total: correctedTotal, tz, ts: Date.now() }));
           // Jika keyset aktif (nextCursor ada), hindari offset prefetch page berikutnya
         } catch {}
       } else {
@@ -790,11 +796,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
               ) : attendanceData.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
                   No attendance records found
-                  {totalItems > 0 && (
-                    <div className="mt-2 text-xs">
-                      (Total: {totalItems} but no data in current page)
-                    </div>
-                  )}
                 </div>
               ) : (
                 attendanceData.map((record, index: number) => {
@@ -956,11 +957,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     <tr>
                       <td colSpan={8} className="text-center py-8 text-muted-foreground">
                         No attendance records found
-                        {totalItems > 0 && (
-                          <div className="mt-2 text-xs">
-                            (Total: {totalItems} but no data in current page)
-                          </div>
-                        )}
                       </td>
                     </tr>
                   ) : (
@@ -1130,11 +1126,13 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
                 <div className="flex items-center gap-4">
                   <div className="text-sm text-muted-foreground">
-                    {totalItems > 0
-                      ? (
-                        <>Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} total records</>
-                        )
-                      : (<>Showing 0 to 0 of 0 total records</>)}
+                    {(() => {
+                      const displayTotal = Math.max(totalItems, attendanceData.length)
+                      if (displayTotal === 0) return <>Showing 0 to 0 of 0 total records</>
+                      const start = attendanceData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0
+                      const end = attendanceData.length > 0 ? (currentPage - 1) * itemsPerPage + attendanceData.length : 0
+                      return <>Showing {start} to {end} of {displayTotal} total records</>
+                    })()}
                   </div>
                   <div className="flex items-center gap-2">
                     <select

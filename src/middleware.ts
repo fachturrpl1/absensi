@@ -40,6 +40,22 @@ const hasSupabaseSessionCookie = (req: NextRequest) =>
   getAuthCookieNames().some((name) => Boolean(req.cookies.get(name)))
 
 export async function middleware(req: NextRequest) {
+  // Early CORS handling for preflight requests to avoid 400 and heavy work
+  if (req.method === 'OPTIONS') {
+    const origin = req.headers.get('origin') || '*'
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Accept, Origin',
+        'Vary': 'Origin',
+        'Cache-Control': 'no-store',
+      },
+    })
+  }
+
   let response = NextResponse.next({
     request: {
       headers: req.headers,

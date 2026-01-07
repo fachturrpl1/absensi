@@ -69,8 +69,14 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     dateTo,
     search,
     status,
+    department,
     organizationId  // Get organization ID from params
   } = params;
+
+  // Default date range to today in production to avoid full table scans
+  const todayStr = new Date().toISOString().split('T')[0];
+  const effDateFrom = dateFrom || todayStr;
+  const effDateTo = dateTo || todayStr;
 
 // Resolve effective organization id: prefer param, else cookie, else fallback to user's active membership
 let effectiveOrgId: number | null = null;
@@ -135,6 +141,7 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
     `from=${dateFrom || ''}`,
     `to=${dateTo || ''}`,
     `status=${status || 'all'}`,
+    `dept=${department || 'all'}`,
     `q=${(search || '').trim().toLowerCase()}`,
   ].join(':');
 
@@ -147,6 +154,17 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
   }
   if (cached && cached.success) {
     attendanceLogger.debug(`🗄️ Cache hit: ${cacheKey}`);
+    try {
+      if (cached.meta && Array.isArray(cached.data)) {
+        const rowsLen = cached.data.length;
+        const currentLimit = cached.meta.limit || limit;
+        if ((cached.meta.total ?? 0) < rowsLen) {
+          cached.meta.total = rowsLen;
+          cached.meta.totalPages = Math.ceil(rowsLen / currentLimit);
+          try { await setJSON(cacheKey, cached, 60); } catch {}
+        }
+      }
+    } catch {}
     return cached;
   }
 
@@ -188,28 +206,51 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
   // This keeps queries simple and allows PostgREST to optimize joins
 
   // COUNT (lazy, page 1 saja)
-  // Prepare relation selection for count join (only include user_profiles when searching)
-  const countRel = hasSearch
-    ? 'organization_members!inner(id, user_profiles!inner(search_name))'
-    : 'organization_members!inner(id)';
+  // Prepare relation selection for count join (include only needed relations)
+  const innerParts: string[] = ['id'];
+  if (hasSearch) innerParts.push('user_profiles!inner(search_name)');
+  if (department && department !== 'all') innerParts.push('departments!organization_members_department_id_fkey(name)');
+  const countRel = `organization_members!inner(${innerParts.join(',')})`;
 
-  const countCacheKey = `${cacheKey}:count`;
+  // Cache key for COUNT should be independent of page/limit
+  const countCacheKey = [
+    'attendance:list',
+    String(effectiveOrgId),
+    `from=${effDateFrom || ''}`,
+    `to=${effDateTo || ''}`,
+    `status=${status || 'all'}`,
+    `dept=${department || 'all'}`,
+    `q=${(search || '').trim().toLowerCase()}`,
+    'count'
+  ].join(':');
   let totalCount: number | undefined = undefined;
-  if (page === 1) {
+  let needCount = page === 1;
+  if (!needCount) {
+    try {
+      const cachedCount = await getJSON<number>(countCacheKey);
+      if (typeof cachedCount === 'number') {
+        totalCount = cachedCount;
+      } else {
+        needCount = true;
+      }
+    } catch {
+      needCount = true;
+    }
+  }
+  if (needCount) {
     let countQuery = supabase
       .from('attendance_records')
-      .select(`id, ${countRel}`, { count: 'planned', head: true })
+      .select(`id, ${countRel}`, { count: 'exact', head: true })
       .eq('organization_members.organization_id', effectiveOrgId)
       .eq('organization_members.is_active', true);
-    // if (dateFrom) countQuery = countQuery.gte('attendance_date', dateFrom);
-    // if (dateTo) countQuery = countQuery.lte('attendance_date', dateTo);
+    if (effDateFrom) countQuery = countQuery.gte('attendance_date', effDateFrom);
+    if (effDateTo) countQuery = countQuery.lte('attendance_date', effDateTo);
     if (status && status !== 'all') countQuery = countQuery.eq('status', status);
+    if (department && department !== 'all') countQuery = countQuery.eq('organization_members.departments.name', department);
     if (hasSearch) countQuery = countQuery.ilike('organization_members.user_profiles.search_name', pattern);
     const countResp = await countQuery;
     totalCount = (countResp as unknown as { count: number | null }).count ?? 0;
     try { await setJSON(countCacheKey, totalCount, 60); } catch {}
-  } else {
-    try { const cachedCount = await getJSON<number>(countCacheKey); if (typeof cachedCount === 'number') totalCount = cachedCount; } catch {}
   }
 
   // LIST dengan join untuk mengambil profil/departemen
@@ -222,9 +263,10 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
     .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, ${listRel}`)
     .eq('organization_members.organization_id', effectiveOrgId)
     .eq('organization_members.is_active', true);
-  if (dateFrom) listQuery = listQuery.gte('attendance_date', dateFrom);
-  if (dateTo) listQuery = listQuery.lte('attendance_date', dateTo);
+  if (effDateFrom) listQuery = listQuery.gte('attendance_date', effDateFrom);
+  if (effDateTo) listQuery = listQuery.lte('attendance_date', effDateTo);
   if (status && status !== 'all') listQuery = listQuery.eq('status', status);
+  if (department && department !== 'all') listQuery = listQuery.eq('organization_members.departments.name', department);
   if (hasSearch) listQuery = listQuery.ilike('organization_members.user_profiles.search_name', pattern);
   listQuery = listQuery
     .order('attendance_date', { ascending: false })
@@ -238,9 +280,33 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
     return { success: false, data: [], message: dataError.message };
   }
 
-  // Fallback: if single-join returns no rows, try IN(memberIds)
+  // Defensive: if rows are empty but cached totalCount > 0, recompute count fresh
+  if ((!rows || rows.length === 0) && typeof totalCount === 'number' && totalCount > 0) {
+    let freshCount = supabase
+      .from('attendance_records')
+      .select(`id, ${countRel}`, { count: 'exact', head: true })
+      .eq('organization_members.organization_id', effectiveOrgId)
+      .eq('organization_members.is_active', true);
+    if (effDateFrom) freshCount = freshCount.gte('attendance_date', effDateFrom);
+    if (effDateTo) freshCount = freshCount.lte('attendance_date', effDateTo);
+    if (status && status !== 'all') freshCount = freshCount.eq('status', status);
+    if (department && department !== 'all') freshCount = freshCount.eq('organization_members.departments.name', department);
+    if (hasSearch) freshCount = freshCount.ilike('organization_members.user_profiles.search_name', pattern);
+    const freshResp = await freshCount;
+    totalCount = (freshResp as unknown as { count: number | null }).count ?? 0;
+    try { await setJSON(countCacheKey, totalCount, 60); } catch {}
+  }
+
+  // If count somehow less than current page size, adjust to at least rows length
+  if (typeof totalCount === 'number' && rows && totalCount < rows.length) {
+    totalCount = rows.length;
+  }
+
+  // Fallback: if single-join returns no rows, try IN(memberIds) —
+  // Guarded to avoid heavy scans on serverless. Enable only when searching.
+  const FALLBACK_ON = process.env.ATTENDANCE_LIST_FALLBACK === '1';
   let effectiveRows = rows;
-  if (!effectiveRows || effectiveRows.length === 0) {
+  if ((!effectiveRows || effectiveRows.length === 0) && FALLBACK_ON && hasSearch) {
     attendanceLogger.warn("⚠️ Single-join returned 0 rows. Trying fallback IN(memberIds)...");
     const { data: members, error: membersErr } = await supabase
       .from('organization_members')
@@ -262,6 +328,9 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
       }
 
       if (memberIds.length > 0) {
+        // Limit IN size to avoid timeouts
+        const MAX_IDS = 500;
+        if (memberIds.length > MAX_IDS) memberIds = memberIds.slice(0, MAX_IDS);
         let fbQuery = supabase
           .from('attendance_records')
           .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, ${listRel}`)
@@ -454,7 +523,7 @@ export const getAttendanceStats = async (params: GetAttendanceParams = {}): Prom
     // We use a single query construction to avoid type mismatches from reassignment
     let q = supabase
       .from("attendance_records")
-      .select("id, organization_members!inner(organization_id)", { count: 'exact', head: true })
+      .select("id, organization_members!inner(organization_id)", { count: 'planned', head: true })
       .eq("organization_members.organization_id", userMember.organization_id);
 
     if (dateFrom) q = q.gte("attendance_date", dateFrom);

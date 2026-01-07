@@ -53,6 +53,7 @@ import { getOrgRoles } from "@/lib/rbac"
 import { useGroups } from "@/hooks/use-groups"
 import { usePositions } from "@/hooks/use-positions"
 import { useHydration } from "@/hooks/useHydration"
+import { useRouter } from "next/navigation"
 //tes
 
 const inviteSchema = z.object({
@@ -226,6 +227,7 @@ const MembersPageSkeleton = () => (
 )
 
 export default function MembersPage() {
+  const router = useRouter()
   const { isHydrated, organizationId } = useHydration()
 
   // Use queryClient - it should be available after QueryProvider mounts
@@ -708,7 +710,22 @@ export default function MembersPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setExportDialogOpen(true)}
+                  onClick={() => {
+                    // Navigate to export page with current filters
+                    const params = new URLSearchParams()
+                    if (searchQuery) params.set("search", searchQuery)
+                    
+                    const exportUrl = `/members/export?${params.toString()}`
+                    
+                    // Use router if available, otherwise use window.location
+                    if (typeof window !== "undefined") {
+                      if (router && typeof router.push === "function") {
+                        router.push(exportUrl)
+                      } else {
+                        window.location.href = exportUrl
+                      }
+                    }
+                  }}
                   disabled={loading || exporting}
                   className="whitespace-nowrap"
                 >

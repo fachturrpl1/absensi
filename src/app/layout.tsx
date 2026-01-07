@@ -25,6 +25,8 @@ import { InstallPrompt } from "@/components/install-prompt";
 import { OfflineDetector } from "@/components/offline-detector";
 import { GlobalTitleManager } from "@/components/global-title-manager";
 import { AuthErrorHandler } from "@/components/auth-error-handler";
+import PWACleanup from "@/components/pwa-cleanup";
+
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -47,6 +49,8 @@ const geistMono = Geist_Mono({
   ],
   display: "swap",
 });
+
+ 
 
 // Base metadata will be generated dynamically
 export async function generateMetadata(): Promise<Metadata> {
@@ -162,6 +166,7 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-title" content={dynamicShortTitle} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
+        <PWACleanup/>
         <GlobalTitleManager />
         <InstallPrompt />
         <OfflineDetector />
