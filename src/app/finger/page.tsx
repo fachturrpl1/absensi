@@ -1054,8 +1054,8 @@ export default function FingerPage() {
 
         {/* Pagination Footer */}
         {filteredMembers.length > 0 && (
-          <div className="flex items-center justify-between py-4 px-4 bg-muted/50 rounded-md border">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 py-4 px-4 bg-muted/50 rounded-md border">
+            <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
               <Button
                 variant="ghost"
                 size="sm"
@@ -1116,8 +1116,8 @@ export default function FingerPage() {
               </Button>
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="text-sm text-muted-foreground">
+            <div className="flex items-center w-full sm:w-auto justify-between sm:justify-end gap-2 sm:gap-4">
+              <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                 Showing {filteredMembers.length > 0 ? pageIndex * parseInt(pageSize) + 1 : 0} to {Math.min((pageIndex + 1) * parseInt(pageSize), filteredMembers.length)} of {filteredMembers.length} total records
               </div>
               <div className="flex items-center gap-2">

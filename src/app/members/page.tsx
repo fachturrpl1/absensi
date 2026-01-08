@@ -43,6 +43,8 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useQuery } from "@tanstack/react-query"
+import { useDebounce } from "@/utils/debounce"
+import { PaginationFooter } from "@/components/pagination-footer"
 
 import { IOrganization_member } from "@/interface"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
@@ -240,6 +242,7 @@ export default function MembersPage() {
 
   const [page, setPage] = React.useState<number>(1)
   const [pageSize, setPageSize] = React.useState<number>(10)
+  const debouncedSearch = useDebounce(searchQuery, 400)
 
   interface MembersApiPage {
     success: boolean
@@ -248,16 +251,16 @@ export default function MembersPage() {
   }
 
   const { data: pageData, isLoading: loading, isFetching, refetch } = useQuery<MembersApiPage>({
-    queryKey: ["members", "paged", organizationId, searchQuery, page, pageSize],
-    queryFn: async () => {
+    queryKey: ["members", "paged", organizationId, debouncedSearch, page, pageSize],
+    queryFn: async ({ signal }) => {
       const url = new URL('/api/members', window.location.origin)
       url.searchParams.set('limit', String(pageSize))
       url.searchParams.set('active', 'all')
       url.searchParams.set('countMode', 'planned')
       url.searchParams.set('page', String(page))
       if (organizationId) url.searchParams.set('organizationId', String(organizationId))
-      if (searchQuery) url.searchParams.set('search', searchQuery)
-      const res = await fetch(url.toString(), { credentials: 'same-origin' })
+      if (debouncedSearch) url.searchParams.set('search', debouncedSearch)
+      const res = await fetch(url.toString(), { credentials: 'same-origin', signal })
       const json = await res.json()
       if (!json?.success) throw new Error(json?.message || 'Failed to fetch members')
       return json as MembersApiPage
@@ -949,86 +952,19 @@ export default function MembersPage() {
                     showPagination={false}
                   />
 
-                  {/* Footer Pagination (page-based) */}
-                  <div className="flex items-center justify-between py-4 px-4 bg-muted/50 rounded-md border mt-4">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost" size="sm" className="h-8 w-8 p-0"
-                        onClick={() => setPage(1)}
-                        disabled={page <= 1 || loading || isFetching}
-                        title="First page"
-                      >
-                        «
-                      </Button>
-                      <Button
-                        variant="ghost" size="sm" className="h-8 w-8 p-0"
-                        onClick={() => setPage(Math.max(1, page - 1))}
-                        disabled={page <= 1 || loading || isFetching}
-                        title="Previous page"
-                      >
-                        ‹
-                      </Button>
-
-                      <span className="text-sm text-muted-foreground">Page</span>
-
-                      <input
-                        type="number"
-                        min={1}
-                        max={totalPages}
-                        value={page}
-                        onChange={(e) => {
-                          const p = e.target.value ? Number(e.target.value) : 1
-                          setPage(Math.max(1, Math.min(p, totalPages)))
-                        }}
-                        className="w-14 h-8 px-2 border rounded text-sm text-center bg-background"
-                        disabled={loading || isFetching}
-                      />
-
-                      <span className="text-sm text-muted-foreground">/ {totalPages}</span>
-
-                      <Button
-                        variant="ghost" size="sm" className="h-8 w-8 p-0"
-                        onClick={() => setPage(Math.min(totalPages, page + 1))}
-                        disabled={page >= totalPages || loading || isFetching}
-                        title="Next page"
-                      >
-                        ›
-                      </Button>
-                      <Button
-                        variant="ghost" size="sm" className="h-8 w-8 p-0"
-                        onClick={() => setPage(totalPages)}
-                        disabled={page >= totalPages || loading || isFetching}
-                        title="Last page"
-                      >
-                        »
-                      </Button>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <div className="text-sm text-muted-foreground">
-                        {total > 0
-                          ? <>Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, total)} of {total} total records</>
-                          : <>Showing 0 to 0 of 0 total records</>
-                        }
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={pageSize}
-                          onChange={(e) => {
-                            const next = Number(e.target.value)
-                            setPageSize(next)
-                            setPage(1) // reset ke halaman 1
-                          }}
-                          className="px-2 py-1 border rounded text-sm bg-background"
-                          disabled={loading || isFetching}
-                        >
-                          <option value={10}>10</option>
-                          <option value={50}>50</option>
-                          <option value={100}>100</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
+                  {/* Footer Pagination (server-based) */}
+                  <PaginationFooter
+                    page={page}
+                    totalPages={totalPages || 1}
+                    onPageChange={(p) => setPage(Math.max(1, Math.min(p, Math.max(1, totalPages))))}
+                    isLoading={loading || isFetching}
+                    from={total > 0 ? (page - 1) * pageSize + 1 : 0}
+                    to={Math.min(page * pageSize, total)}
+                    total={total}
+                    pageSize={pageSize}
+                    onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+                    pageSizeOptions={[10, 50, 100]}
+                  />
                 </div>
               )}
             </div>

@@ -14,10 +14,6 @@ import {
   Edit,
   Trash2,
   Grid3x3,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   RotateCcw,
   Plus,
   Download,
@@ -63,6 +59,7 @@ import { toast } from 'sonner';
 import { useOrgStore } from '@/store/org-store';
 import { createClient } from '@/utils/supabase/client';
 import { toTimestampWithTimezone } from '@/lib/timezone';
+import { PaginationFooter } from '@/components/pagination-footer';
 
 type AttendanceChangeRow = { attendance_date?: string | null; organization_member_id?: number | null; organization_id?: number | null };
 type PgChange<T> = { new: T | null; old: T | null };
@@ -829,9 +826,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     );
   };
 
-  // Pagination Logic
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'present':
@@ -1328,96 +1322,18 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
             {/* Pagination Footer (aligned with Members) */}
             {!loading && (
-              <div className="flex items-center justify-between py-4 px-4 bg-muted/50 rounded-md border">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1}
-                    className="h-8 w-8 p-0"
-                    title="First page"
-                  >
-                    <ChevronsLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="h-8 w-8 p-0"
-                    title="Previous page"
-                  >
-                    <ChevronLeft className="  h-4 w-4" />
-                  </Button>
-
-                  <span className="text-sm text-muted-foreground">Page</span>
-
-                  <input
-                    type="number"
-                    min={1}
-                    max={Math.max(1, totalPages)}
-                    value={currentPage}
-                    onChange={(e) => {
-                      const page = e.target.value ? Number(e.target.value) : 1;
-                      const safe = Math.max(1, Math.min(page, Math.max(1, totalPages)));
-                      setCurrentPage(safe);
-                    }}
-                    className="w-12 h-8 px-2 border rounded text-sm text-center bg-background"
-                    disabled={totalItems === 0}
-                  />
-
-                  <span className="text-sm text-muted-foreground">/ {Math.max(1, totalPages)}</span>
-
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCurrentPage(Math.min(totalPages || 1, currentPage + 1))}
-                    disabled={currentPage >= (totalPages || 1)}
-                    className="h-8 w-8 p-0"
-                    title="Next page"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCurrentPage(Math.max(1, totalPages))}
-                    disabled={currentPage >= (totalPages || 1)}
-                    className="h-8 w-8 p-0"
-                    title="Last page"
-                  >
-                    <ChevronsRight className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="text-sm text-muted-foreground">
-                    {(() => {
-                      const displayTotal = Math.max(totalItems, attendanceData.length)
-                      if (displayTotal === 0) return <>Showing 0 to 0 of 0 total records</>
-                      const start = attendanceData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0
-                      const end = attendanceData.length > 0 ? (currentPage - 1) * itemsPerPage + attendanceData.length : 0
-                      return <>Showing {start} to {end} of {displayTotal} total records</>
-                    })()}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={itemsPerPage}
-                      onChange={(e) => {
-                        const size = parseInt(e.target.value, 10) || 10;
-                        setItemsPerPage(size);
-                        setCurrentPage(1);
-                      }}
-                      className="px-2 py-1 border rounded text-sm bg-background"
-                    >
-                      <option value={10}>10</option>
-                      <option value={20}>20</option>
-                      <option value={50}>50</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
+              <PaginationFooter
+                page={currentPage}
+                totalPages={Math.max(1, Math.ceil((Math.max(totalItems, attendanceData.length) || 0) / itemsPerPage))}
+                onPageChange={(p) => setCurrentPage(Math.max(1, p))}
+                isLoading={loading}
+                from={(Math.max(totalItems, attendanceData.length) > 0) ? (currentPage - 1) * itemsPerPage + 1 : 0}
+                to={(Math.max(totalItems, attendanceData.length) > 0) ? Math.min(currentPage * itemsPerPage, Math.max(totalItems, attendanceData.length)) : 0}
+                total={Math.max(totalItems, attendanceData.length)}
+                pageSize={itemsPerPage}
+                onPageSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
+                pageSizeOptions={[10, 20, 50]}
+              />
             )}
           </CardContent>
         </Card>

@@ -116,9 +116,9 @@ export default function OfflinePage() {
           </div>
         </CardContent>
 
-        <CardFooter className="flex w-full flex-col gap-3 sm:flex-row">
+        <CardFooter className="grid w-full grid-cols-1 sm:grid-cols-2 gap-3">
           <Button 
-            className="flex-1 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200" 
+            className="w-full bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200" 
             size="lg" 
             onClick={handleRetry}
           >
@@ -128,7 +128,7 @@ export default function OfflinePage() {
           <Button
             variant="outline"
             size="lg"
-            className="flex-1 border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            className="w-full border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
             onClick={handleGoBackTwo}
           >
             Go Back
