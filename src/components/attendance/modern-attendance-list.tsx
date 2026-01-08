@@ -188,13 +188,29 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const fetchAndMergeRecord = useCallback(async (recId: number) => {
     try {
       const supabase = createClient();
-      const listRel = 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))';
+      const listRel = 'organization_members!inner(id, organization_id, is_active, user_profiles!organization_members_user_id_fkey(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))';
       const { data } = await supabase
         .from('attendance_records')
         .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, ${listRel}`)
         .eq('id', recId)
         .maybeSingle();
       if (!data) return;
+      // Guard: skip if record org doesn't match current org or date outside current range
+      try {
+        const mRel = (data as any).organization_members as any;
+        const mObj = Array.isArray(mRel) ? mRel[0] : mRel;
+        const recOrgId = mObj?.organization_id;
+        const currentOrgId = selectedOrgId || orgStore.organizationId;
+        if (currentOrgId && recOrgId && Number(recOrgId) !== Number(currentOrgId)) {
+          return;
+        }
+        const recDateStr = String((data as any).attendance_date || '').slice(0, 10);
+        const fromStr = toLocalYMD(dateRange.from);
+        const toStr = toLocalYMD(dateRange.to);
+        if (recDateStr && (recDateStr < fromStr || recDateStr > toStr)) {
+          return;
+        }
+      } catch {}
       const mapped: AttendanceListItem = mapRowToItem(data);
 
       setAttendanceData((prev) => {
@@ -214,14 +230,31 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     if (!recIds || recIds.length === 0) return;
     try {
       const supabase = createClient();
-      const listRel = 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))';
+      const listRel = 'organization_members!inner(id, organization_id, is_active, user_profiles!organization_members_user_id_fkey(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))';
       const { data } = await supabase
         .from('attendance_records')
         .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, ${listRel}`)
         .in('id', recIds);
       if (!Array.isArray(data) || data.length === 0) return;
 
-      const mapped = data.map(mapRowToItem);
+      // Filter only rows belonging to current org and within date range
+      const currentOrgId = selectedOrgId || orgStore.organizationId;
+      const fromStr = toLocalYMD(dateRange.from);
+      const toStr = toLocalYMD(dateRange.to);
+      const safeRows = (data as any[]).filter((row) => {
+        try {
+          const mRel = (row as any).organization_members as any;
+          const mObj = Array.isArray(mRel) ? mRel[0] : mRel;
+          const recOrgId = mObj?.organization_id;
+          if (currentOrgId && recOrgId && Number(recOrgId) !== Number(currentOrgId)) return false;
+          const recDateStr = String((row as any).attendance_date || '').slice(0, 10);
+          if (recDateStr && (recDateStr < fromStr || recDateStr > toStr)) return false;
+          return true;
+        } catch { return false; }
+      });
+      if (safeRows.length === 0) return;
+
+      const mapped = safeRows.map(mapRowToItem);
       setAttendanceData((prev) => {
         const map = new Map(prev.map((r) => [r.id, r] as const));
         for (const m of mapped) map.set(m.id, m);
@@ -996,7 +1029,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         <Card>
           <CardContent className="p-0">
             {/* Mobile Card View - Only show on small screens */}
-            <div className="block lg:hidden divide-y">
+            <div className="hidden">
               {(loading || !initialized) ? (
                 <div className="divide-y">
                   {Array.from({ length: 6 }).map((_, i) => (
@@ -1125,8 +1158,8 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             </div>
 
             {/* Desktop Table View - Show on larger screens */}
-            <div className="hidden lg:block overflow-x-auto w-full">
-              <table className="w-full min-w-full">
+            <div className="overflow-x-auto w-full">
+              <table className="w-full min-w-[960px]">
                 <thead className="border-b bg-muted/50">
                   <tr>
                     <th className="p-4 text-left">
