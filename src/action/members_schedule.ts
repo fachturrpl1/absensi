@@ -116,20 +116,6 @@ export const getMemberSchedulesPage = async (
       finalOrgId = userMember.organization_id;
     }
 
-    const { data: orgMembers, error: orgMembersError } = await supabase
-      .from("organization_members")
-      .select("id")
-      .eq("organization_id", finalOrgId);
-
-    if (orgMembersError) {
-      return { success: false, message: orgMembersError.message, data: [], total: 0 };
-    }
-
-    const memberIds = orgMembers?.map((m) => m.id) || [];
-    if (memberIds.length === 0) {
-      return { success: true, data: [], total: 0 };
-    }
-
     const safePageIndex = Math.max(0, Number(pageIndex) || 0);
     const safePageSize = Math.max(1, Number(pageSize) || 10);
     const from = safePageIndex * safePageSize;
@@ -148,9 +134,10 @@ export const getMemberSchedulesPage = async (
         is_active,
         created_at,
         updated_at,
-        organization_member:organization_member_id (
+        organization_member:organization_member_id!inner (
           id,
           employee_id,
+          organization_id,
           user:user_id (
             id,
             first_name,
@@ -167,9 +154,9 @@ export const getMemberSchedulesPage = async (
           organization_id
         )
       `,
-        { count: "exact" },
+        { count: "estimated" },
       )
-      .in("organization_member_id", memberIds)
+      .eq("organization_member.organization_id", finalOrgId)
       .order("created_at", { ascending: false })
       .range(from, to);
 
@@ -219,24 +206,17 @@ export const getActiveMemberScheduleMemberIds = async (organizationId?: number |
       finalOrgId = userMember.organization_id;
     }
 
-    const { data: orgMembers, error: orgMembersError } = await supabase
-      .from("organization_members")
-      .select("id")
-      .eq("organization_id", finalOrgId);
-
-    if (orgMembersError) {
-      return { success: false, message: orgMembersError.message, data: [] as string[] };
-    }
-
-    const memberIds = orgMembers?.map((m) => String(m.id)) || [];
-    if (memberIds.length === 0) {
-      return { success: true, data: [] as string[] };
-    }
-
     const { data, error } = await supabase
       .from("member_schedules")
-      .select("organization_member_id")
-      .in("organization_member_id", memberIds)
+      .select(
+        `
+        organization_member_id,
+        organization_member:organization_member_id!inner (
+          organization_id
+        )
+      `,
+      )
+      .eq("organization_member.organization_id", finalOrgId)
       .eq("is_active", true);
 
     if (error) {

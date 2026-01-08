@@ -50,7 +50,9 @@ export const getAllWorkSchedules = async (organizationId?: number | string) => {
     // Fetch work schedules ONLY for user's organization
     const { data, error } = await supabase
         .from("work_schedules")
-        .select("*, work_schedule_details(*)")
+        .select(
+            "id, organization_id, code, name, description, schedule_type, is_default, is_active, created_at, updated_at",
+        )
         .eq("organization_id", finalOrgId)
         .order("created_at", { ascending: false });
 
@@ -97,7 +99,10 @@ export const getWorkSchedulesPage = async (
 
         const { data, error, count } = await supabase
             .from("work_schedules")
-            .select("*, work_schedule_details(*)", { count: "exact" })
+            .select(
+                "id, organization_id, code, name, description, schedule_type, is_default, is_active, created_at, updated_at",
+                { count: "estimated" },
+            )
             .eq("organization_id", finalOrgId)
             .order("created_at", { ascending: false })
             .range(from, to);
