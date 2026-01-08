@@ -50,6 +50,8 @@ type AttendanceEntry = {
   actual_check_out: string | null
   status: string
   remarks?: string
+  check_in_method?: string
+  check_out_method?: string
 }
 
 type MemberOption = {
@@ -103,6 +105,14 @@ export function AttendanceFormBatch() {
   const [memberDialogOpen, setMemberDialogOpen] = useState(false)
   const [activeBatchEntryId, setActiveBatchEntryId] = useState<string | null>(null)
   const [memberSearch, setMemberSearch] = useState("")
+  // Master date/time for Batch mode (applies to all selected members)
+  const [batchCheckInDate, setBatchCheckInDate] = useState<string>("")
+  const [batchCheckInTime, setBatchCheckInTime] = useState<string>("08:00")
+  const [batchCheckOutDate, setBatchCheckOutDate] = useState<string>("")
+  const [batchCheckOutTime, setBatchCheckOutTime] = useState<string>("")
+  // Master status & notes for Batch mode
+  const [batchStatus, setBatchStatus] = useState<string>("present")
+  const [batchRemarks, setBatchRemarks] = useState<string>("")
 
   const form = useForm<SingleFormValues>({
     resolver: zodResolver(singleFormSchema),
@@ -134,6 +144,37 @@ export function AttendanceFormBatch() {
       remarks: "",
     });
   }, [])
+
+  // Initialize master batch date/time once
+  useEffect(() => {
+    const now = new Date();
+    const date = format(now, 'yyyy-MM-dd');
+    const time = format(now, 'HH:mm');
+    setBatchCheckInDate(date)
+    setBatchCheckInTime(time)
+    setBatchCheckOutDate("")
+    setBatchCheckOutTime("")
+  }, [])
+
+  // Keep all batch entries in sync with master date/time
+  useEffect(() => {
+    setBatchEntries(prev => prev.map(e => ({
+      ...e,
+      checkInDate: batchCheckInDate || e.checkInDate,
+      checkInTime: batchCheckInTime || e.checkInTime,
+      checkOutDate: batchCheckOutDate || "",
+      checkOutTime: batchCheckOutTime || "",
+    })))
+  }, [batchCheckInDate, batchCheckInTime, batchCheckOutDate, batchCheckOutTime])
+
+  // Keep all batch entries in sync with master status & notes
+  useEffect(() => {
+    setBatchEntries(prev => prev.map(e => ({
+      ...e,
+      status: batchStatus || e.status,
+      remarks: batchRemarks,
+    })))
+  }, [batchStatus, batchRemarks])
 
   // Load members and derive groups(departments) on mount and when org changes
   useEffect(() => {
@@ -274,6 +315,8 @@ export function AttendanceFormBatch() {
         actual_check_out: checkOutDateTime ? toTimestampWithTimezone(checkOutDateTime) : null,
         status: values.status,
         remarks: values.remarks?.trim() || undefined,
+        check_in_method: "MANUAL",
+        check_out_method: checkOutDateTime ? "MANUAL" : undefined,
       }
 
       const res = await createManualAttendance(payload)
@@ -282,7 +325,7 @@ export function AttendanceFormBatch() {
         // Invalidate all dashboard-related queries to refresh data
         await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
         toast.success("Attendance recorded successfully")
-        router.push("/attendance")
+        router.push("/attendance/list")
       } else {
         toast.error(res.message || "Failed to save attendance")
       }
@@ -297,11 +340,12 @@ export function AttendanceFormBatch() {
     const newEntry: BatchEntry = {
       id: Date.now().toString(),
       memberId: memberId || "",
-      checkInDate: new Date().toISOString().split("T")[0] || "",
-      checkInTime: "08:00",
-      checkOutTime: "17:00",
-      status: "present",
-      remarks: "",
+      checkInDate: batchCheckInDate || new Date().toISOString().slice(0, 10),
+      checkInTime: batchCheckInTime || "08:00",
+      checkOutDate: batchCheckOutDate || "",
+      checkOutTime: batchCheckOutTime || "",
+      status: batchStatus || "present",
+      remarks: batchRemarks || "",
     }
     setBatchEntries([...batchEntries, newEntry])
   }
@@ -406,6 +450,8 @@ export function AttendanceFormBatch() {
           actual_check_out: checkOutDateTime ? toTimestampWithTimezone(checkOutDateTime) : null,
           status: entry.status,
           remarks: entry.remarks?.trim() || undefined,
+          check_in_method: "MANUAL",
+          check_out_method: checkOutDateTime ? "MANUAL" : undefined,
         }
 
         const res = await createManualAttendance(payload)
@@ -637,6 +683,64 @@ export function AttendanceFormBatch() {
                 </Select>
               </div>
 
+              {/* Master Date & Time for Batch Entries */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Batch Date & Time</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-muted-foreground">Check-in Date</label>
+                      <Input type="date" value={batchCheckInDate} onChange={(e) => setBatchCheckInDate(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Check-in Time</label>
+                      <Input type="time" value={batchCheckInTime} onChange={(e) => setBatchCheckInTime(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-muted-foreground">Check-out Date (opsional)</label>
+                      <Input type="date" value={batchCheckOutDate} onChange={(e) => setBatchCheckOutDate(e.target.value)} placeholder="Optional" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Check-out Time (opsional)</label>
+                      <Input type="time" value={batchCheckOutTime} onChange={(e) => setBatchCheckOutTime(e.target.value)} placeholder="Optional" />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Tanggal & waktu di atas akan diterapkan ke semua anggota yang Anda pilih di bawah.</p>
+              </div>
+
+              {/* Master Status & Notes for Batch Entries */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Batch Status & Notes</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground">Status</label>
+                    <Select value={batchStatus} onValueChange={setBatchStatus}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUSES.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Notes</label>
+                    <Textarea
+                      placeholder="Add notes for all selected members..."
+                      rows={2}
+                      value={batchRemarks}
+                      onChange={(e) => setBatchRemarks(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Status dan catatan di atas akan diterapkan ke semua anggota yang Anda pilih.</p>
+              </div>
+
               {/* Quick Add Buttons */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -750,78 +854,25 @@ export function AttendanceFormBatch() {
                               <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
 
-                            {/* Status */}
-                            <Select
-                              value={entry.status}
-                              onValueChange={(value) =>
-                                updateBatchEntry(entry.id, "status", value)
-                              }
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {STATUSES.map((status) => (
-                                  <SelectItem key={status.value} value={status.value}>
-                                    {status.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-
-                            {/* Check-in */}
-                            <div className="grid grid-cols-2 gap-2">
-                              <Input
-                                type="date"
-                                value={entry.checkInDate}
-                                onChange={(e) =>
-                                  updateBatchEntry(entry.id, "checkInDate", e.target.value)
-                                }
-                                disabled={isSubmitting}
-                              />
-                              <Input
-                                type="time"
-                                value={entry.checkInTime}
-                                onChange={(e) =>
-                                  updateBatchEntry(entry.id, "checkInTime", e.target.value)
-                                }
-                                disabled={isSubmitting}
-                              />
+                            {/* Status derived from Batch settings (read-only display) */}
+                            <div className="text-xs text-muted-foreground">
+                              <div>Status: {entry.status}</div>
                             </div>
 
-                            {/* Check-out */}
-                            <div className="grid grid-cols-2 gap-2">
-                              <Input
-                                type="date"
-                                value={entry.checkOutDate || ""}
-                                onChange={(e) =>
-                                  updateBatchEntry(entry.id, "checkOutDate", e.target.value)
-                                }
-                                disabled={isSubmitting}
-                                placeholder="Optional"
-                              />
-                              <Input
-                                type="time"
-                                value={entry.checkOutTime || ""}
-                                onChange={(e) =>
-                                  updateBatchEntry(entry.id, "checkOutTime", e.target.value)
-                                }
-                                disabled={isSubmitting}
-                                placeholder="Optional"
-                              />
+                            {/* Date & time derived from Batch settings (read-only display) */}
+                            <div className="text-xs text-muted-foreground">
+                              <div>Check-in: {entry.checkInDate} {entry.checkInTime}</div>
+                              {(entry.checkOutDate && entry.checkOutTime) ? (
+                                <div>Check-out: {entry.checkOutDate} {entry.checkOutTime}</div>
+                              ) : (
+                                <div>Check-out: -</div>
+                              )}
                             </div>
 
-                            {/* Remarks */}
-                            <Input
-                              type="text"
-                              value={entry.remarks || ""}
-                              onChange={(e) =>
-                                updateBatchEntry(entry.id, "remarks", e.target.value)
-                              }
-                              disabled={isSubmitting}
-                              placeholder="Notes (optional)"
-                              maxLength={500}
-                            />
+                            {/* Remarks derived from Batch settings (read-only display) */}
+                            <div className="text-xs text-muted-foreground">
+                              <div>Notes: {entry.remarks ? entry.remarks : '-'}</div>
+                            </div>
                           </CardContent>
                         </Card>
                       )
