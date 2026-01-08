@@ -623,7 +623,6 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     }
   }, [currentPage, itemsPerPage, dateRange, searchQuery, statusFilter, departmentFilter, selectedOrgId, orgStore.organizationId, userTimezone]);
 
-  // Keep latest fetchData in a ref for callbacks declared earlier
   useEffect(() => {
     fetchDataRef.current = fetchData;
   }, [fetchData]);
