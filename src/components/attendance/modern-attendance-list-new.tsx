@@ -318,7 +318,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       const raw = localStorage.getItem(cacheKeyBase);
       if (raw) {
         const parsed = JSON.parse(raw) as { data?: AttendanceListItem[]; total?: number; tz?: string; ts?: number };
-        const TTL = 180_000; // 3 minutes cache TTL (align with members page staleTime)
+        const TTL = 60_000; // 60s cache TTL
         if (!parsed.ts || Date.now() - parsed.ts < TTL) {
           if (Array.isArray(parsed.data)) {
             setAttendanceData(parsed.data);

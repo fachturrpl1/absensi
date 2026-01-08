@@ -46,15 +46,13 @@ import { useQuery } from "@tanstack/react-query"
 
 import { IOrganization_member } from "@/interface"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
-import { Skeleton } from "@/components/ui/skeleton"
-// ContentLayout removed - using new layout system
+import { Skeleton } from "@/components/ui/skeleton" 
 import { createInvitation } from "@/action/invitations"
 import { getOrgRoles } from "@/lib/rbac"
 import { useGroups } from "@/hooks/use-groups"
 import { usePositions } from "@/hooks/use-positions"
 import { useHydration } from "@/hooks/useHydration"
-import { useRouter } from "next/navigation"
-//tes
+// import { useRouter } from "next/navigation"
 
 const inviteSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -227,7 +225,7 @@ const MembersPageSkeleton = () => (
 )
 
 export default function MembersPage() {
-  const router = useRouter()
+  // const router = useRouter()
   const { isHydrated, organizationId } = useHydration()
   const queryClient = useQueryClient()
   const [exporting, setExporting] = React.useState(false)
@@ -711,14 +709,13 @@ export default function MembersPage() {
                 >
                   <Link 
                     href={`/members/export${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`}
-                    prefetch={true}
-                    onMouseEnter={(e) => {
-                      // Prefetch saat hover untuk navigasi lebih cepat
-                      const href = e.currentTarget.getAttribute('href')
-                      if (href && router) {
-                        router.prefetch(href)
-                      }
-                    }}
+                    prefetch={false}
+                    // onMouseEnter={(e) => {
+                    //   const href = e.currentTarget.getAttribute('href')
+                    //   if (href && router) {
+                    //     router.prefetch(href)
+                    //   }
+                    // }}
                   >
                     <FileDown className="mr-2 h-4 w-4" />
                     Export
@@ -745,14 +742,13 @@ export default function MembersPage() {
                 >
                   <Link 
                     href="/members/import-simple"
-                    prefetch={true}
-                    onMouseEnter={(e) => {
-                      // Prefetch saat hover untuk navigasi lebih cepat
-                      const href = e.currentTarget.getAttribute('href')
-                      if (href && router) {
-                        router.prefetch(href)
-                      }
-                    }}
+                    prefetch={false}
+                    // onMouseEnter={(e) => {
+                    //   const href = e.currentTarget.getAttribute('href')
+                    //   if (href && router) {
+                    //     router.prefetch(href)
+                    //   }
+                    // }}
                   >
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
                     Import
