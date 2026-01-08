@@ -536,14 +536,13 @@ export default function MembersExportPage() {
         <div className="mb-6 flex items-center gap-4">
           <Link 
             href="/members"
-            prefetch={true}
-            onMouseEnter={(e) => {
-              // Prefetch saat hover untuk navigasi lebih cepat
-              const href = e.currentTarget.getAttribute('href')
-              if (href && router) {
-                router.prefetch(href)
-              }
-            }}
+            prefetch={false}
+            // onMouseEnter={(e) => {
+            //   const href = e.currentTarget.getAttribute('href')
+            //   if (href && router) {
+            //     router.prefetch(href)
+            //   }
+            // }}
           >
             <Button variant="ghost" size="icon" aria-label="Kembali ke halaman members">
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
@@ -1387,13 +1386,13 @@ export default function MembersExportPage() {
                         >
                           <Link 
                             href="/members"
-                            prefetch={true}
-                            onMouseEnter={(e) => {
-                              const href = e.currentTarget.getAttribute('href')
-                              if (href && router) {
-                                router.prefetch(href)
-                              }
-                            }}
+                            prefetch={false}
+                            // onMouseEnter={(e) => {
+                            //   const href = e.currentTarget.getAttribute('href')
+                            //   if (href && router) {
+                            //     router.prefetch(href)
+                            //   }
+                            // }}
                           >
                             Kembali ke Member
                           </Link>

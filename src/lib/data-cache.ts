@@ -126,10 +126,7 @@ export const getCachedWorkSchedules = cache(async (organizationId: string) => {
   
   const { data, error } = await supabase
     .from("work_schedules")
-    .select(`
-      *,
-      work_schedule_details(*)
-    `)
+    .select("id, organization_id, code, name, description, schedule_type, is_default, is_active, created_at, updated_at")
     .eq("organization_id", organizationId)
     .eq("is_active", true)
     .order("name", { ascending: true })

@@ -3,8 +3,9 @@
 import React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Trash, Pencil, Plus, Calendar } from "lucide-react"
+import { Trash, Pencil, Plus, Calendar, Check } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Empty,
@@ -54,6 +55,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 
 import { toast } from "sonner"
 import { useForm } from "react-hook-form"
@@ -61,7 +70,11 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
 
 import { IMemberSchedule, IOrganization_member, IWorkSchedule } from "@/interface"
+import { useHydration } from "@/hooks/useHydration"
+import { getAllOrganization_member } from "@/action/members"
+import { getAllWorkSchedules } from "@/action/schedule"
 import {
+  getActiveMemberScheduleMemberIds,
   createMemberSchedule,
   updateMemberSchedule,
   deleteMemberSchedule
@@ -95,7 +108,7 @@ export default function MemberSchedulesClient({
   initialSchedules,
   initialMembers,
   initialWorkSchedules,
-  activeMemberIds,
+  activeMemberIds: initialActiveMemberIds,
   isLoading = false,
   pageIndex,
   pageSize,
@@ -104,18 +117,116 @@ export default function MemberSchedulesClient({
   onPageSizeChange,
   onRefresh,
 }: MemberSchedulesClientProps) {
+  const router = useRouter()
+  const { organizationId } = useHydration()
   const [schedules, setSchedules] = React.useState(initialSchedules)
   const [open, setOpen] = React.useState(false)
   const [editingSchedule, setEditingSchedule] = React.useState<IMemberSchedule | null>(null)
+  const [members, setMembers] = React.useState<IOrganization_member[]>(initialMembers)
+  const [workSchedules, setWorkSchedules] = React.useState<IWorkSchedule[]>(initialWorkSchedules)
+  const [activeMemberIds, setActiveMemberIds] = React.useState<string[]>(initialActiveMemberIds || [])
+  const [lookupsLoading, setLookupsLoading] = React.useState(false)
+  const [memberQuery, setMemberQuery] = React.useState("")
+  const [memberDropdownOpen, setMemberDropdownOpen] = React.useState(false)
+  const [membersFetched, setMembersFetched] = React.useState(initialMembers.length > 0)
+  const [workSchedulesFetched, setWorkSchedulesFetched] = React.useState(initialWorkSchedules.length > 0)
+  const [activeIdsFetched, setActiveIdsFetched] = React.useState((initialActiveMemberIds || []).length > 0)
+  const lookupsInFlightRef = React.useRef(false)
 
   // Sync state when props change (user login/logout/switch org)
   React.useEffect(() => {
     setSchedules(initialSchedules)
   }, [initialSchedules])
 
+  React.useEffect(() => {
+    if (initialMembers.length === 0) return
+    setMembers(initialMembers)
+    setMembersFetched(true)
+  }, [initialMembers])
+
+  React.useEffect(() => {
+    if (initialWorkSchedules.length === 0) return
+    setWorkSchedules(initialWorkSchedules)
+    setWorkSchedulesFetched(true)
+  }, [initialWorkSchedules])
+
+  React.useEffect(() => {
+    if (!initialActiveMemberIds || initialActiveMemberIds.length === 0) return
+    setActiveMemberIds(initialActiveMemberIds)
+    setActiveIdsFetched(true)
+  }, [initialActiveMemberIds])
+
+  React.useEffect(() => {
+    if (!organizationId) return
+    setMembers([])
+    setWorkSchedules([])
+    setActiveMemberIds([])
+    setMembersFetched(false)
+    setWorkSchedulesFetched(false)
+    setActiveIdsFetched(false)
+  }, [organizationId])
+
+  React.useEffect(() => {
+    if (!open) return
+    if (!organizationId) return
+    if (lookupsInFlightRef.current) return
+
+    const shouldFetchMembers = !membersFetched
+    const shouldFetchWorkSchedules = !workSchedulesFetched
+    const shouldFetchActiveIds = !activeIdsFetched
+    if (!shouldFetchMembers && !shouldFetchWorkSchedules && !shouldFetchActiveIds) return
+
+    const fetchLookups = async () => {
+      try {
+        lookupsInFlightRef.current = true
+        setLookupsLoading(true)
+        const [membersRes, workSchedulesRes, activeIdsRes] = await Promise.all([
+          shouldFetchMembers ? getAllOrganization_member(organizationId) : Promise.resolve(null),
+          shouldFetchWorkSchedules ? getAllWorkSchedules(organizationId) : Promise.resolve(null),
+          shouldFetchActiveIds ? getActiveMemberScheduleMemberIds(organizationId) : Promise.resolve(null),
+        ])
+
+        if (membersRes && (membersRes as any)?.success && Array.isArray((membersRes as any).data)) {
+          setMembers((membersRes as any).data as IOrganization_member[])
+        }
+        if (shouldFetchMembers) setMembersFetched(true)
+
+        if (workSchedulesRes && (workSchedulesRes as any)?.success && Array.isArray((workSchedulesRes as any).data)) {
+          setWorkSchedules((workSchedulesRes as any).data as IWorkSchedule[])
+        }
+        if (shouldFetchWorkSchedules) setWorkSchedulesFetched(true)
+
+        if (activeIdsRes && (activeIdsRes as any)?.success && Array.isArray((activeIdsRes as any).data)) {
+          setActiveMemberIds((activeIdsRes as any).data as string[])
+        }
+        if (shouldFetchActiveIds) setActiveIdsFetched(true)
+      } catch {
+        if (shouldFetchMembers) setMembersFetched(true)
+        if (shouldFetchWorkSchedules) setWorkSchedulesFetched(true)
+        if (shouldFetchActiveIds) setActiveIdsFetched(true)
+        // ignore; dialog can still render with limited options
+      } finally {
+        setLookupsLoading(false)
+        lookupsInFlightRef.current = false
+      }
+    }
+
+    fetchLookups()
+  }, [open, organizationId, membersFetched, workSchedulesFetched, activeIdsFetched])
+
   const membersWithActiveSchedule = React.useMemo(() => {
     return new Set<string>((activeMemberIds || []).map((id) => String(id)))
   }, [activeMemberIds])
+
+  const getMemberDisplayName = React.useCallback((member: IOrganization_member) => {
+    const user = member.user as
+      | { first_name?: string; middle_name?: string; last_name?: string; email?: string }
+      | undefined
+    const name = user
+      ? [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(" ") || user.email
+      : "Unknown"
+    return name || "Unknown"
+  }, [])
 
   const form = useForm<MemberScheduleForm>({
     resolver: zodResolver(memberScheduleSchema),
@@ -147,6 +258,7 @@ export default function MemberSchedulesClient({
           setSchedules((prev) =>
             prev.map((s) => (s.id === editingSchedule.id ? { ...s, ...payload } : s))
           )
+          setActiveIdsFetched(false)
           onRefresh?.()
         } else {
           toast.error(result.message)
@@ -157,6 +269,7 @@ export default function MemberSchedulesClient({
           toast.success("Schedule assigned successfully")
           // Optimistic update
           setSchedules((prev) => [result.data as IMemberSchedule, ...prev])
+          setActiveIdsFetched(false)
           onRefresh?.()
         } else {
           toast.error(result.message)
@@ -166,6 +279,19 @@ export default function MemberSchedulesClient({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "An error occurred")
     }
+  }
+
+  const resetForCreate = () => {
+    setEditingSchedule(null)
+    setMemberQuery("")
+    setMemberDropdownOpen(false)
+    form.reset({
+      organization_member_id: "",
+      work_schedule_id: "",
+      shift_id: "",
+      effective_date: new Date().toISOString().split('T')[0],
+      is_active: true,
+    })
   }
 
   const handleEdit = (schedule: IMemberSchedule) => {
@@ -187,6 +313,7 @@ export default function MemberSchedulesClient({
         toast.success("Schedule deleted successfully")
         // Optimistic update
         setSchedules((prev) => prev.filter((s) => s.id !== id))
+        setActiveIdsFetched(false)
         onRefresh?.()
       } else {
         toast.error(result.message)
@@ -198,6 +325,8 @@ export default function MemberSchedulesClient({
 
   const handleCloseDialog = () => {
     setOpen(false)
+    setMemberQuery("")
+    setMemberDropdownOpen(false)
     form.reset({
       organization_member_id: "",
       work_schedule_id: "",
@@ -230,6 +359,7 @@ export default function MemberSchedulesClient({
         const member = schedule.organization_member as any
         const user = member?.user
         const name = getMemberName(schedule)
+        const memberId = String(schedule.organization_member_id || member?.id || "")
 
         return (
           <div className="flex gap-3 items-center">
@@ -238,7 +368,18 @@ export default function MemberSchedulesClient({
               <AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <span className="text-sm font-medium leading-none">{name}</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (!memberId) return
+                  router.push(`/members/${memberId}`)
+                }}
+                disabled={!memberId}
+                className="text-left text-sm font-medium leading-none hover:underline disabled:no-underline disabled:cursor-default"
+              >
+                {name}
+              </button>
             </div>
           </div>
         )
@@ -342,18 +483,19 @@ export default function MemberSchedulesClient({
               <Dialog
                 open={open}
                 onOpenChange={(isOpen) => {
-                  if (isOpen) {
-                    setOpen(true)
+                  if (!isOpen) {
+                    handleCloseDialog()
                     return
                   }
 
-                  handleCloseDialog()
+                  resetForCreate()
+                  setOpen(true)
                 }}
               >
                 <DialogTrigger asChild>
                   <Button
                     onClick={() => {
-                      handleCloseDialog()
+                      resetForCreate()
                       setOpen(true)
                     }}
                     className="gap-2 whitespace-nowrap"
@@ -392,49 +534,102 @@ export default function MemberSchedulesClient({
                             </div>
                           </div>
                         </div>
-                    ) : (
-                      <FormField
-                        control={form.control}
-                        name="organization_member_id"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Member</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
+                      ) : (
+                        <FormField
+                          control={form.control}
+                          name="organization_member_id"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Member</FormLabel>
                               <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select member" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {initialMembers.map((member) => {
-                                  const user = member.user as { first_name?: string; middle_name?: string; last_name?: string; email?: string } | undefined
-                                  const name = user
-                                    ? [user.first_name, user.middle_name, user.last_name]
-                                      .filter(Boolean)
-                                      .join(" ") || user.email
-                                    : "Unknown"
-                                  const hasActiveSchedule = membersWithActiveSchedule.has(String(member.id))
+                                <div className="relative">
+                                  <div className="rounded-md border overflow-hidden">
+                                    <Command shouldFilter={false}>
+                                      <CommandInput
+                                        placeholder="Search member..."
+                                        value={memberQuery}
+                                        onValueChange={(value) => {
+                                          setMemberQuery(value)
+                                          const q = value.trim()
+                                          if (q.length === 0) {
+                                            setMemberDropdownOpen(false)
+                                            field.onChange("")
+                                            return
+                                          }
+                                          setMemberDropdownOpen(true)
+                                        }}
+                                        onBlur={() => {
+                                          window.setTimeout(() => setMemberDropdownOpen(false), 120)
+                                        }}
+                                      />
+                                      {(() => {
+                                        const q = memberQuery.trim().toLowerCase()
+                                        if (!memberDropdownOpen || q.length === 0) return null
 
-                                  return (
-                                    <SelectItem
-                                      key={member.id}
-                                      value={String(member.id)}
-                                      disabled={hasActiveSchedule}
-                                    >
-                                      {name} {hasActiveSchedule ? "(Has active schedule)" : ""}
-                                    </SelectItem>
-                                  )
-                                })}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
+                                        const filtered = members.filter((member) => {
+                                          const name = getMemberDisplayName(member)
+                                          const nameLower = name.toLowerCase()
+                                          const user = member.user as { email?: string } | undefined
+                                          const emailLower = (user?.email ?? "").toLowerCase()
+
+                                          if (nameLower.startsWith(q)) return true
+                                          if (emailLower.startsWith(q)) return true
+                                          const tokens = nameLower.split(/\s+/).filter(Boolean)
+                                          return tokens.some((t) => t.startsWith(q))
+                                        })
+
+                                        return (
+                                          <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border bg-popover shadow-md">
+                                            <CommandList className="max-h-[180px] overflow-y-auto">
+                                              {lookupsLoading && members.length === 0 ? (
+                                                <CommandEmpty>Loading...</CommandEmpty>
+                                              ) : filtered.length === 0 ? (
+                                                <CommandEmpty>No results.</CommandEmpty>
+                                              ) : null}
+                                              <CommandGroup>
+                                                {filtered.map((member) => {
+                                                  const name = getMemberDisplayName(member)
+                                                  const hasActiveSchedule = membersWithActiveSchedule.has(String(member.id))
+                                                  const isSelected = String(field.value) === String(member.id)
+
+                                                  return (
+                                                    <CommandItem
+                                                      key={member.id}
+                                                      value={name}
+                                                      disabled={hasActiveSchedule}
+                                                      onSelect={() => {
+                                                        field.onChange(String(member.id))
+                                                        setMemberQuery(name)
+                                                        setMemberDropdownOpen(false)
+                                                      }}
+                                                    >
+                                                      <Check
+                                                        className={
+                                                          isSelected
+                                                            ? "mr-2 h-4 w-4 opacity-100"
+                                                            : "mr-2 h-4 w-4 opacity-0"
+                                                        }
+                                                      />
+                                                      <span className="truncate">
+                                                        {name} {hasActiveSchedule ? "(Has active schedule)" : ""}
+                                                      </span>
+                                                    </CommandItem>
+                                                  )
+                                                })}
+                                              </CommandGroup>
+                                            </CommandList>
+                                          </div>
+                                        )
+                                      })()}
+                                    </Command>
+                                  </div>
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
 
                     {editingSchedule ? (
                       <div className="rounded-lg bg-secondary/50 px-4 py-3 space-y-1">
@@ -481,7 +676,7 @@ export default function MemberSchedulesClient({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {initialWorkSchedules.map((schedule) => (
+                              {workSchedules.map((schedule) => (
                                 <SelectItem key={schedule.id} value={String(schedule.id)}>
                                   {schedule.name}
                                 </SelectItem>
@@ -538,7 +733,7 @@ export default function MemberSchedulesClient({
                 <EmptyContent>
                   <Button
                     onClick={() => {
-                      handleCloseDialog()
+                      resetForCreate()
                       setOpen(true)
                     }}
                     className="gap-2"

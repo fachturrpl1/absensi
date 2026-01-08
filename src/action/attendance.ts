@@ -32,7 +32,7 @@ export async function updateAttendanceRecord(payload: {
       const orgRel: any = (recOrg as any)?.organization_members;
       const orgObj = Array.isArray(orgRel) ? orgRel[0] : orgRel;
       orgId = orgObj?.organization_id ?? null;
-    } catch (_) {}
+    } catch (_) { }
 
     const updateData: Record<string, any> = {};
     if (payload.actual_check_in !== undefined) updateData.actual_check_in = payload.actual_check_in;
@@ -53,7 +53,7 @@ export async function updateAttendanceRecord(payload: {
     try {
       if (orgId) await delByPrefix(`attendance:list:${orgId}:`);
       else await delByPrefix('attendance:list:');
-    } catch (_) {}
+    } catch (_) { }
     revalidatePath('/attendance');
 
     return { success: true } as const;
@@ -113,7 +113,7 @@ export type GetAttendanceResult = {
 
 export const getAllAttendance = async (params: GetAttendanceParams = {}): Promise<GetAttendanceResult> => {
   const supabase = await getSupabase();
-  
+
   const {
     page = 1,
     limit = 10,
@@ -130,60 +130,60 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
   const effDateFrom = dateFrom || todayStr;
   const effDateTo = dateTo || todayStr;
 
-// Resolve effective organization id: prefer param, else cookie, else fallback to user's active membership
-let effectiveOrgId: number | null = null;
-let memberIdForLog: number | null = null;
+  // Resolve effective organization id: prefer param, else cookie, else fallback to user's active membership
+  let effectiveOrgId: number | null = null;
+  let memberIdForLog: number | null = null;
 
-if (organizationId) {
-  effectiveOrgId = organizationId;
-  attendanceLogger.info("🔑 Using organizationId from params:", organizationId);
-} else {
-  // Try resolve from cookie first (works well on Vercel)
-  try {
-    const cookieStore = await cookies();
-    const raw = cookieStore.get('org_id')?.value;
-    const fromCookie = raw ? Number(raw) : NaN;
-    if (!Number.isNaN(fromCookie)) {
-      effectiveOrgId = fromCookie;
-      attendanceLogger.info("🍪 Using organizationId from cookie:", fromCookie);
+  if (organizationId) {
+    effectiveOrgId = organizationId;
+    attendanceLogger.info("🔑 Using organizationId from params:", organizationId);
+  } else {
+    // Try resolve from cookie first (works well on Vercel)
+    try {
+      const cookieStore = await cookies();
+      const raw = cookieStore.get('org_id')?.value;
+      const fromCookie = raw ? Number(raw) : NaN;
+      if (!Number.isNaN(fromCookie)) {
+        effectiveOrgId = fromCookie;
+        attendanceLogger.info("🍪 Using organizationId from cookie:", fromCookie);
+      }
+    } catch { }
+
+    // Fallback: resolve via authenticated user's active membership
+    if (!effectiveOrgId) {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        attendanceLogger.error("❌ User not authenticated and no org cookie");
+        return { success: false, data: [], message: "User not authenticated" };
+      }
+
+      const { data: userMembers, error: memberError } = await supabase
+        .from("organization_members")
+        .select("organization_id, id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .limit(1);
+
+      if (memberError) {
+        attendanceLogger.error("❌ Member query error:", memberError);
+        return { success: false, data: [], message: memberError.message || "Member query error" };
+      }
+
+      const userMember = userMembers?.[0];
+      if (!userMember) {
+        attendanceLogger.error("❌ User not in any active organization");
+        return { success: false, data: [], message: "User not registered in any active organization" };
+      }
+
+      effectiveOrgId = userMember.organization_id;
+      memberIdForLog = userMember.id;
     }
-  } catch {}
+  }
 
-  // Fallback: resolve via authenticated user's active membership
   if (!effectiveOrgId) {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      attendanceLogger.error("❌ User not authenticated and no org cookie");
-      return { success: false, data: [], message: "User not authenticated" };
-    }
-
-  const { data: userMembers, error: memberError } = await supabase
-    .from("organization_members")
-    .select("organization_id, id")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .limit(1);
-
-  if (memberError) {
-    attendanceLogger.error("❌ Member query error:", memberError);
-    return { success: false, data: [], message: memberError.message || "Member query error" };
+    return { success: false, data: [], message: "Organization not resolved" };
   }
-
-  const userMember = userMembers?.[0];
-  if (!userMember) {
-    attendanceLogger.error("❌ User not in any active organization");
-    return { success: false, data: [], message: "User not registered in any active organization" };
-  }
-
-  effectiveOrgId = userMember.organization_id;
-  memberIdForLog = userMember.id;
-  }
-}
-
-if (!effectiveOrgId) {
-  return { success: false, data: [], message: "Organization not resolved" };
-}
-attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", memberIdForLog);
+  attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", memberIdForLog);
   // Cache key per organisasi + filter
   const cacheKey = [
     'attendance:list',
@@ -213,10 +213,10 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
         if ((cached.meta.total ?? 0) < rowsLen) {
           cached.meta.total = rowsLen;
           cached.meta.totalPages = Math.ceil(rowsLen / currentLimit);
-          try { await setJSON(cacheKey, cached, 60); } catch {}
+          try { await setJSON(cacheKey, cached, 60); } catch { }
         }
       }
-    } catch {}
+    } catch { }
     return cached;
   }
 
@@ -251,7 +251,7 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
     biodata: Biodata | Biodata[] | null;
     departments: { name: string | null } | { name: string | null }[] | null;
   };
-  
+
   // Inline filters below to avoid deep generic instantiation on Supabase types
   const hasSearch = Boolean(search && search.trim() !== '');
   const term = hasSearch ? search!.trim().toLowerCase() : '';
@@ -308,7 +308,7 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
     if (hasSearch) countQuery = countQuery.ilike('organization_members.user_profiles.search_name', pattern);
     const countResp = await countQuery;
     totalCount = (countResp as unknown as { count: number | null }).count ?? 0;
-    try { await setJSON(countCacheKey, totalCount, 60); } catch {}
+    try { await setJSON(countCacheKey, totalCount, 60); } catch { }
   }
 
   // LIST dengan join untuk mengambil profil/departemen/biodata
@@ -354,7 +354,7 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
     if (hasSearch) freshCount = freshCount.ilike('organization_members.user_profiles.search_name', pattern);
     const freshResp = await freshCount;
     totalCount = (freshResp as unknown as { count: number | null }).count ?? 0;
-    try { await setJSON(countCacheKey, totalCount, 60); } catch {}
+    try { await setJSON(countCacheKey, totalCount, 60); } catch { }
   }
 
   // If count somehow less than current page size, adjust to at least rows length
@@ -428,7 +428,7 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
       .maybeSingle();
     const fallbackInfo = { id: effectiveOrgId, timezone: 'Asia/Jakarta', time_format: '24h' }
     orgInfo = orgInfoRaw || fallbackInfo;
-    try { await setJSON(orgInfoCacheKey, orgInfo, 600); } catch {}
+    try { await setJSON(orgInfoCacheKey, orgInfo, 600); } catch { }
   }
 
   const mapped = (effectiveRows || []).map((item: AttendanceRowWithRel) => {
@@ -485,7 +485,7 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
     const last = effectiveRows[effectiveRows.length - 1] as AttendanceRow | undefined;
     if (last) {
       const payload = { ad: last.attendance_date, cr: last.created_at, id: last.id };
-      try { nextCursor = Buffer.from(JSON.stringify(payload)).toString('base64'); } catch {}
+      try { nextCursor = Buffer.from(JSON.stringify(payload)).toString('base64'); } catch { }
     }
   }
   const result: GetAttendanceResult = {
@@ -521,6 +521,8 @@ type ManualAttendancePayload = {
   actual_check_out: string | null;
   status: string;
   remarks?: string;
+  check_in_method?: string;
+  check_out_method?: string;
 };
 
 export async function checkExistingAttendance(
@@ -529,7 +531,7 @@ export async function checkExistingAttendance(
 ) {
   try {
     const supabase = await getSupabase();
-    
+
     // Ensure organization_member_id is a number
     const memberId = Number(organization_member_id);
     if (isNaN(memberId)) {
@@ -599,7 +601,7 @@ export const getAttendanceStats = async (params: GetAttendanceParams = {}): Prom
     if (dateFrom) q = q.gte("attendance_date", dateFrom);
     if (dateTo) q = q.lte("attendance_date", dateTo);
     if (statusFilter) q = q.eq("status", statusFilter);
-    
+
     return q;
   };
 
@@ -622,7 +624,7 @@ export const getAttendanceStats = async (params: GetAttendanceParams = {}): Prom
         .eq("organization_members.organization_id", userMember.organization_id)
         .gte("attendance_date", dateFrom)
         .lte("attendance_date", dateTo);
-      
+
       if (trend) {
         // Group by date
         const grouped = trend.reduce((acc: any, curr: any) => {
@@ -658,7 +660,7 @@ export const getAttendanceStats = async (params: GetAttendanceParams = {}): Prom
 export async function createManualAttendance(payload: ManualAttendancePayload) {
   try {
     const supabase = await getSupabase();
-    
+
     // Log for debugging
     attendanceLogger.debug("📝 Creating attendance for:", {
       member_id: payload.organization_member_id,
@@ -670,15 +672,15 @@ export async function createManualAttendance(payload: ManualAttendancePayload) {
 
     if (error) {
       attendanceLogger.error("❌ Error creating attendance:", error);
-      
+
       // Check if duplicate key error
       if (error.code === "23505") {
-        return { 
-          success: false, 
-          message: `Attendance already exists for this date. Please check existing records.` 
+        return {
+          success: false,
+          message: `Attendance already exists for this date. Please check existing records.`
         };
       }
-      
+
       return { success: false, message: error.message };
     }
 
@@ -699,15 +701,15 @@ export async function createManualAttendance(payload: ManualAttendancePayload) {
           await delByPrefix('attendance:list:');
         }
       }
-    } catch (_) {}
+    } catch (_) { }
     revalidatePath("/attendance");
 
     return { success: true };
   } catch (err) {
     attendanceLogger.error("❌ Exception creating attendance:", err);
-    return { 
-      success: false, 
-      message: err instanceof Error ? err.message : "An error occurred" 
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "An error occurred"
     };
   }
 }
@@ -715,7 +717,7 @@ export async function createManualAttendance(payload: ManualAttendancePayload) {
 export async function deleteAttendanceRecord(id: string) {
   try {
     const supabase = await getSupabase();
-    
+
     attendanceLogger.info("🗑️ Deleting attendance record:", id);
 
     // Fetch orgId before deletion for targeted cache invalidation
@@ -729,7 +731,7 @@ export async function deleteAttendanceRecord(id: string) {
       const orgRel: any = (recOrg as any)?.organization_members;
       const orgObj = Array.isArray(orgRel) ? orgRel[0] : orgRel;
       orgId = orgObj?.organization_id ?? null;
-    } catch (_) {}
+    } catch (_) { }
 
     const { error } = await supabase
       .from("attendance_records")
@@ -746,15 +748,15 @@ export async function deleteAttendanceRecord(id: string) {
     try {
       if (orgId) await delByPrefix(`attendance:list:${orgId}:`);
       else await delByPrefix('attendance:list:');
-    } catch (_) {}
+    } catch (_) { }
     revalidatePath("/attendance");
 
     return { success: true };
   } catch (err) {
     attendanceLogger.error("❌ Exception deleting attendance:", err);
-    return { 
-      success: false, 
-      message: err instanceof Error ? err.message : "An error occurred" 
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "An error occurred"
     };
   }
 }
@@ -762,7 +764,7 @@ export async function deleteAttendanceRecord(id: string) {
 export async function deleteMultipleAttendanceRecords(ids: string[]) {
   try {
     const supabase = await getSupabase();
-    
+
     attendanceLogger.info("🗑️ Deleting multiple attendance records:", ids);
 
     // Collect affected orgIds first
@@ -784,7 +786,7 @@ export async function deleteMultipleAttendanceRecords(ids: string[]) {
         }
         affectedOrgIds = Array.from(set);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const { error } = await supabase
       .from("attendance_records")
@@ -804,15 +806,15 @@ export async function deleteMultipleAttendanceRecords(ids: string[]) {
       } else {
         await delByPrefix('attendance:list:');
       }
-    } catch (_) {}
+    } catch (_) { }
     revalidatePath("/attendance");
 
     return { success: true };
   } catch (err) {
     attendanceLogger.error("❌ Exception deleting attendance records:", err);
-    return { 
-      success: false, 
-      message: err instanceof Error ? err.message : "An error occurred" 
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "An error occurred"
     };
   }
 }

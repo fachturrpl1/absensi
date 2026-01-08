@@ -1,11 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getActiveMemberScheduleMemberIds, getMemberSchedulesPage } from "@/action/members_schedule"
-import { getAllOrganization_member } from "@/action/members"
-import { getAllWorkSchedules } from "@/action/schedule"
+import { getMemberSchedulesPage } from "@/action/members_schedule"
 import MemberSchedulesClient from "./member-schedules-client"
-import { IMemberSchedule, IOrganization_member, IWorkSchedule } from "@/interface"
+import { IMemberSchedule } from "@/interface"
 import { useHydration } from "@/hooks/useHydration"
 import { toast } from "sonner"
 
@@ -13,71 +11,11 @@ import { toast } from "sonner"
 export default function MemberSchedulesPage() {
   const { organizationId } = useHydration()
   const [schedules, setSchedules] = useState<IMemberSchedule[]>([])
-  const [members, setMembers] = useState<IOrganization_member[]>([])
-  const [workSchedules, setWorkSchedules] = useState<IWorkSchedule[]>([])
-  const [activeMemberIds, setActiveMemberIds] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(10)
   const [totalRecords, setTotalRecords] = useState(0)
   const [refreshKey, setRefreshKey] = useState(0)
-
-  useEffect(() => {
-    if (!organizationId) {
-      console.log('[MEMBER-SCHEDULES] Waiting for organizationId - orgId:', organizationId)
-      return
-    }
-    
-    console.log('[MEMBER-SCHEDULES] Starting fetch with organizationId:', organizationId)
-
-    const fetchLookups = async () => {
-      try {
-        const [membersRes, workSchedulesRes] = await Promise.all([
-          getAllOrganization_member(organizationId),
-          getAllWorkSchedules(organizationId),
-        ])
-
-        if (membersRes?.success && Array.isArray(membersRes.data)) {
-          setMembers(membersRes.data as IOrganization_member[])
-        } else {
-          setMembers([])
-        }
-
-        if (workSchedulesRes?.success && Array.isArray(workSchedulesRes.data)) {
-          setWorkSchedules(workSchedulesRes.data as IWorkSchedule[])
-        } else {
-          setWorkSchedules([])
-        }
-
-      } catch (error) {
-        toast.error('Failed to load member schedules')
-        setMembers([])
-        setWorkSchedules([])
-      }
-    }
-
-    fetchLookups()
-  }, [organizationId])
-
-  useEffect(() => {
-    if (!organizationId) return
-
-    const fetchActiveIds = async () => {
-      try {
-        const activeIdsRes = await getActiveMemberScheduleMemberIds(organizationId)
-
-        if (activeIdsRes?.success && Array.isArray(activeIdsRes.data)) {
-          setActiveMemberIds(activeIdsRes.data)
-        } else {
-          setActiveMemberIds([])
-        }
-      } catch (error) {
-        setActiveMemberIds([])
-      }
-    }
-
-    fetchActiveIds()
-  }, [organizationId, refreshKey])
 
   useEffect(() => {
     if (!organizationId) return
@@ -126,9 +64,8 @@ export default function MemberSchedulesPage() {
     <div className="flex flex-1 flex-col gap-4 w-full">
       <MemberSchedulesClient
         initialSchedules={schedules}
-        initialMembers={members}
-        initialWorkSchedules={workSchedules}
-        activeMemberIds={activeMemberIds}
+        initialMembers={[]}
+        initialWorkSchedules={[]}
         isLoading={isLoading}
         pageIndex={pageIndex}
         pageSize={pageSize}
