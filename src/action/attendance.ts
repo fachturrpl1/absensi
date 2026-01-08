@@ -241,9 +241,14 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
     profile_photo_url: string | null;
     search_name: string | null;
   };
+  type Biodata = {
+    nama: string | null;
+    nickname: string | null;
+  };
   type MemberData = {
     id: number;
     user_profiles: MemberProfile | MemberProfile[] | null;
+    biodata: Biodata | Biodata[] | null;
     departments: { name: string | null } | { name: string | null }[] | null;
   };
   
@@ -306,11 +311,11 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
     try { await setJSON(countCacheKey, totalCount, 60); } catch {}
   }
 
-  // LIST dengan join untuk mengambil profil/departemen
+  // LIST dengan join untuk mengambil profil/departemen/biodata
   // Specify exact FK for departments to avoid PostgREST ambiguous embed error
   const listRel = hasSearch
-    ? 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey!inner(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))'
-    : 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))';
+    ? 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey!inner(first_name,last_name,display_name,email,profile_photo_url,search_name), biodata:biodata_nik(nama,nickname), departments!organization_members_department_id_fkey(name))'
+    : 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey(first_name,last_name,display_name,email,profile_photo_url,search_name), biodata:biodata_nik(nama,nickname), departments!organization_members_department_id_fkey(name))';
   const fromIdx = (page - 1) * limit;
   const toIdx = fromIdx + limit - 1;
   let listQuery = supabase
@@ -431,13 +436,22 @@ attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", 
     const mObj: MemberData | null = Array.isArray(m) ? (m[0] as MemberData) : (m as MemberData);
     const profileObj = mObj?.user_profiles;
     const profile: MemberProfile | null = Array.isArray(profileObj) ? (profileObj[0] ?? null) : (profileObj ?? null);
+    const biodataObj = mObj?.biodata;
+    const biodata: Biodata | null = Array.isArray(biodataObj) ? (biodataObj[0] ?? null) : (biodataObj ?? null);
+    
+    // Try user_profiles first
     const displayName = (profile?.display_name ?? '').trim();
     const firstName = profile?.first_name ?? '';
     const lastName = profile?.last_name ?? '';
     const email = (profile?.email ?? '').trim();
     const searchName = (profile?.search_name ?? '').trim();
     const fullName = `${firstName} ${lastName}`.trim();
-    const effectiveName = displayName || fullName || email || searchName;
+    
+    // Fallback to biodata if user_profiles has no name
+    const biodataNama = (biodata?.nama ?? '').trim();
+    const biodataNickname = (biodata?.nickname ?? '').trim();
+    
+    const effectiveName = displayName || fullName || email || searchName || biodataNama || biodataNickname;
     const deptObj = mObj?.departments;
     const departmentName = Array.isArray(deptObj) ? (deptObj[0]?.name ?? '') : (deptObj?.name ?? '');
 

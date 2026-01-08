@@ -23,7 +23,11 @@ import {
   Search,
   Filter,
   X,
-  GripVertical
+  GripVertical,
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react"
 import { toast } from "sonner"
 import { useHydration } from "@/hooks/useHydration"
@@ -89,7 +93,7 @@ export default function MembersExportPage() {
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set()) // Indeks row yang dipilih
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize] = useState(1000) // Maksimal 1000 data per halaman
+  const [pageSize, setPageSize] = useState(1000) // Maksimal 1000 data per halaman
   const [exportResult, setExportResult] = useState<{
     success: boolean
     fileUrl?: string
@@ -255,7 +259,7 @@ export default function MembersExportPage() {
       loadMemberRows()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep, isHydrated, organizationId, searchQuery, filters, currentPage])
+  }, [currentStep, isHydrated, organizationId, searchQuery, filters, currentPage, pageSize])
 
   const loadMemberSummary = async () => {
     setLoading(true)
@@ -1026,59 +1030,93 @@ export default function MembersExportPage() {
                            </div>
                            {/* Pagination */}
                            {totalPages > 1 && (
-                             <nav aria-label="Pagination untuk tabel data member" className="flex items-center justify-between mt-4">
-                               <div className="text-sm text-muted-foreground" role="status" aria-live="polite">
-                                 Menampilkan {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)} dari {totalCount.toLocaleString()} data
-                               </div>
+                             <nav aria-label="Pagination untuk tabel data member" className="flex items-center justify-between mt-4 py-4 px-4 bg-muted/50 rounded-md border">
                                <div className="flex items-center gap-2">
                                  <Button
-                                   variant="outline"
+                                   variant="ghost"
+                                   size="sm"
+                                   onClick={() => setCurrentPage(1)}
+                                   disabled={currentPage === 1 || loadingMembers}
+                                   className="h-8 w-8 p-0"
+                                   title="First page"
+                                   aria-label="Ke halaman pertama"
+                                 >
+                                   <ChevronsLeft className="h-4 w-4" />
+                                 </Button>
+                                 <Button
+                                   variant="ghost"
                                    size="sm"
                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                    disabled={currentPage === 1 || loadingMembers}
-                                   aria-label={`Ke halaman ${currentPage - 1}`}
-                                   aria-disabled={currentPage === 1 || loadingMembers}
+                                   className="h-8 w-8 p-0"
+                                   title="Previous page"
+                                   aria-label="Ke halaman sebelumnya"
                                  >
-                                   Sebelumnya
+                                   <ChevronLeft className="h-4 w-4" />
                                  </Button>
-                                 <div className="flex items-center gap-1" role="list">
-                                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                     let pageNum: number
-                                     if (totalPages <= 5) {
-                                       pageNum = i + 1
-                                     } else if (currentPage <= 3) {
-                                       pageNum = i + 1
-                                     } else if (currentPage >= totalPages - 2) {
-                                       pageNum = totalPages - 4 + i
-                                     } else {
-                                       pageNum = currentPage - 2 + i
-                                     }
-                                     return (
-                                       <Button
-                                         key={pageNum}
-                                         variant={currentPage === pageNum ? "default" : "outline"}
-                                         size="sm"
-                                         onClick={() => setCurrentPage(pageNum)}
-                                         disabled={loadingMembers}
-                                         aria-label={`Ke halaman ${pageNum}`}
-                                         aria-current={currentPage === pageNum ? "page" : undefined}
-                                         role="listitem"
-                                       >
-                                         {pageNum}
-                                       </Button>
-                                     )
-                                   })}
-                                 </div>
+                                 
+                                 <span className="text-sm text-muted-foreground">Page</span>
+                                 
+                                 <input
+                                   type="number"
+                                   min="1"
+                                   max={totalPages}
+                                   value={currentPage}
+                                   onChange={(e) => {
+                                     const page = e.target.value ? Number(e.target.value) : 1
+                                     const safe = Math.max(1, Math.min(page, totalPages))
+                                     setCurrentPage(safe)
+                                   }}
+                                   className="w-12 h-8 px-2 border rounded text-sm text-center bg-background"
+                                   disabled={loadingMembers || totalCount === 0}
+                                 />
+                                 
+                                 <span className="text-sm text-muted-foreground">/ {totalPages}</span>
+                                 
                                  <Button
-                                   variant="outline"
+                                   variant="ghost"
                                    size="sm"
                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                                    disabled={currentPage === totalPages || loadingMembers}
-                                   aria-label={`Ke halaman ${currentPage + 1}`}
-                                   aria-disabled={currentPage === totalPages || loadingMembers}
+                                   className="h-8 w-8 p-0"
+                                   title="Next page"
+                                   aria-label="Ke halaman berikutnya"
                                  >
-                                   Selanjutnya
+                                   <ChevronRight className="h-4 w-4" />
                                  </Button>
+                                 <Button
+                                   variant="ghost"
+                                   size="sm"
+                                   onClick={() => setCurrentPage(totalPages)}
+                                   disabled={currentPage === totalPages || loadingMembers}
+                                   className="h-8 w-8 p-0"
+                                   title="Last page"
+                                   aria-label="Ke halaman terakhir"
+                                 >
+                                   <ChevronsRight className="h-4 w-4" />
+                                 </Button>
+                               </div>
+                               
+                               <div className="flex items-center gap-4">
+                                 <div className="text-sm text-muted-foreground">
+                                   Showing {totalCount > 0 ? ((currentPage - 1) * pageSize) + 1 : 0} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount.toLocaleString()} total records
+                                 </div>
+                                 <div className="flex items-center gap-2">
+                                   <select
+                                     value={pageSize}
+                                     onChange={(e) => {
+                                       const newPageSize = Number(e.target.value)
+                                       setPageSize(newPageSize)
+                                       setCurrentPage(1) // Reset to first page when changing page size
+                                     }}
+                                     className="px-2 py-1 border rounded text-sm bg-background"
+                                     disabled={loadingMembers}
+                                   >
+                                     <option value="100">100</option>
+                                     <option value="500">500</option>
+                                     <option value="1000">1000</option>
+                                   </select>
+                                 </div>
                                </div>
                              </nav>
                            )}
