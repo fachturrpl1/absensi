@@ -61,6 +61,11 @@ export default function FingerImportSimplePage() {
   const [totalRows, setTotalRows] = useState(0)
   const [mapping, setMapping] = useState<ColumnMapping>({})
   const [processing, setProcessing] = useState(false)
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number }>({
+    current: 0,
+    total: 0,
+  })
+  const importProgressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [headerRow, setHeaderRow] = useState<number>(1)
   const [headerRowCount, setHeaderRowCount] = useState<number>(1)
   const [sheetNames, setSheetNames] = useState<string[]>([])
@@ -263,6 +268,36 @@ export default function FingerImportSimplePage() {
   const handleImport = async () => {
     if (!file || !validateMapping()) return
 
+    // Siapkan progres import berbasis totalRows (fallback ke hasil test jika ada)
+    const estimatedTotal =
+      totalRows || (testSummary ? testSummary.success + testSummary.failed : 0) || 0
+
+    if (importProgressTimerRef.current) {
+      clearInterval(importProgressTimerRef.current)
+    }
+
+    if (estimatedTotal > 0) {
+      setImportProgress({ current: 0, total: estimatedTotal })
+
+      // Fake incremental progress selama proses import berjalan
+      // Akan diset ke nilai sebenarnya ketika server selesai memproses
+      importProgressTimerRef.current = setInterval(() => {
+        setImportProgress((prev) => {
+          if (!prev.total) return prev
+          // Batasi maksimum sebelum selesai agar masih ada ruang untuk loncat ke nilai akhir
+          const maxDuringProcessing = Math.max(prev.total - 1, 1)
+          if (prev.current >= maxDuringProcessing) return prev
+
+          const increment = Math.max(1, Math.floor(prev.total / 50)) // ~50 langkah
+          const nextCurrent = Math.min(prev.current + increment, maxDuringProcessing)
+          return { ...prev, current: nextCurrent }
+        })
+      }, 300)
+    } else {
+      // Jika tidak tahu totalnya, tetap reset progres
+      setImportProgress({ current: 0, total: 0 })
+    }
+
     setProcessing(true)
     try {
       const formData = new FormData()
@@ -298,6 +333,14 @@ export default function FingerImportSimplePage() {
       const summary = data.summary || { success: 0, failed: 0, errors: [] }
       setImportSummary(summary)
 
+      // Set progres ke nilai sebenarnya setelah server selesai memproses
+      if (estimatedTotal > 0) {
+        setImportProgress({
+          current: summary.success + summary.failed,
+          total: estimatedTotal,
+        })
+      }
+
       // Create results array from preview data and errors
       const results = preview.map((rowData, index) => {
         const rowNumber = index + 2 // Excel row number (1 for header + 1-based index)
@@ -326,6 +369,11 @@ export default function FingerImportSimplePage() {
       toast.error("Failed to import data")
     } finally {
       setProcessing(false)
+      // Clear progress timer
+      if (importProgressTimerRef.current) {
+        clearInterval(importProgressTimerRef.current)
+        importProgressTimerRef.current = null
+      }
     }
   }
 
@@ -767,6 +815,33 @@ export default function FingerImportSimplePage() {
                         Test Results: {testSummary.success} valid, {testSummary.failed} errors
                       </AlertDescription>
                     </Alert>
+                  )}
+
+                  {/* Progress bar saat proses import berjalan */}
+                  {processing && importProgress.total > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Mengimport{" "}
+                        <span className="font-semibold">
+                          {importProgress.current.toLocaleString()} /{" "}
+                          {importProgress.total.toLocaleString()}
+                        </span>{" "}
+                        baris...
+                      </p>
+                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-2 bg-primary transition-all"
+                          style={{
+                            width: `${
+                              Math.min(
+                                100,
+                                (importProgress.current / importProgress.total) * 100 || 0
+                              )
+                            }%`,
+                          }}
+                        />
+                      </div>
+                    </div>
                   )}
 
                   <div className="flex gap-2 pt-2">
