@@ -32,13 +32,16 @@ export function PaginationFooter({
   className = "",
 }: PaginationFooterProps) {
   const safeTotalPages = Math.max(1, totalPages || 1)
-
   const clamp = (n: number) => Math.max(1, Math.min(n, safeTotalPages))
-
   const goto = (p: number) => {
     const next = clamp(p)
     if (next !== page) onPageChange(next)
   }
+
+  const [inputValue, setInputValue] = React.useState<string>(String(page))
+  React.useEffect(() => {
+    setInputValue(String(page))
+  }, [page])
 
   return (
     <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 py-4 px-4 bg-muted/50 rounded-md border ${className}`}>
@@ -70,12 +73,18 @@ export function PaginationFooter({
           type="number"
           min={1}
           max={safeTotalPages}
-          value={page}
+          value={inputValue}
           onChange={(e) => {
-            const raw = Number(e.target.value || 1)
-            goto(Number.isFinite(raw) ? raw : 1)
+            setInputValue(e.target.value)
           }}
-          className="w-12 h-8 px-2 border rounded text-sm text-center bg-background"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              const num = Number((inputValue || '1').trim())
+              const next = Number.isFinite(num) ? num : 1
+              goto(next)
+            }
+          }}
+          className="w-14 h-8 px-2 border rounded text-sm text-center bg-background"
           disabled={isLoading}
         />
 

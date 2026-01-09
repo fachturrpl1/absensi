@@ -34,7 +34,6 @@ import {
     EmptyHeader,
     EmptyTitle,
     EmptyDescription,
-    EmptyContent,
     EmptyMedia,
 } from "@/components/ui/empty"
 import { createClient } from "@/utils/supabase/client"
@@ -292,9 +291,6 @@ export default function AttendanceDevicesPage() {
                                                 You haven&apos;t activated any attendance devices yet. Click &quot;Activate &quot; to get started.
                                             </EmptyDescription>
                                         </EmptyHeader>
-                                        <EmptyContent>
-                                            <Button onClick={() => setActivateDialogOpen(true)}>Activate </Button>
-                                        </EmptyContent>
                                     </Empty>
                                 </div>
                             ) : devices.length === 0 ? (

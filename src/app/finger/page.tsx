@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Fingerprint, Users, RefreshCw, Search, Check, Loader2, Monitor, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
+import { Fingerprint, Users, RefreshCw, Search, Check, Loader2, Monitor } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/utils/supabase/client"
@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { getCache, setCache } from "@/lib/local-cache"
+import { PaginationFooter } from "@/components/pagination-footer"
 
 interface Device {
   device_code: string
@@ -1052,90 +1053,20 @@ export default function FingerPage() {
           </Table>
         </div>
 
-        {/* Pagination Footer */}
+        {/* Pagination Footer (shared) */}
         {filteredMembers.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 py-4 px-4 bg-muted/50 rounded-md border">
-            <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setPageIndex(0)}
-                disabled={pageIndex === 0 || isLoading}
-                className="h-8 w-8 p-0"
-                title="First page"
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setPageIndex(Math.max(0, pageIndex - 1))}
-                disabled={pageIndex === 0 || isLoading}
-                className="h-8 w-8 p-0"
-                title="Previous page"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              
-              <span className="text-sm text-muted-foreground">Page</span>
-              
-              <input
-                type="number"
-                min="1"
-                max={totalPages}
-                value={pageIndex + 1}
-                onChange={(e) => {
-                  const page = e.target.value ? Number(e.target.value) - 1 : 0
-                  setPageIndex(Math.max(0, Math.min(page, totalPages - 1)))
-                }}
-                className="w-12 h-8 px-2 border rounded text-sm text-center bg-background"
-                disabled={isLoading}
-              />
-              
-              <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setPageIndex(Math.min(totalPages - 1, pageIndex + 1))}
-                disabled={pageIndex >= totalPages - 1 || isLoading}
-                className="h-8 w-8 p-0"
-                title="Next page"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setPageIndex(totalPages - 1)}
-                disabled={pageIndex >= totalPages - 1 || isLoading}
-                className="h-8 w-8 p-0"
-                title="Last page"
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            <div className="flex items-center w-full sm:w-auto justify-between sm:justify-end gap-2 sm:gap-4">
-              <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                Showing {filteredMembers.length > 0 ? pageIndex * parseInt(pageSize) + 1 : 0} to {Math.min((pageIndex + 1) * parseInt(pageSize), filteredMembers.length)} of {filteredMembers.length} total records
-              </div>
-              <div className="flex items-center gap-2">
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(e.target.value)
-                    setPageIndex(0)
-                  }}
-                  className="px-2 py-1 border rounded text-sm bg-background"
-                >
-                  <option value="10">10</option>
-                  <option value="50">50</option>
-                  <option value="100">100</option>
-                </select>
-              </div>
-            </div>
-          </div>
+          <PaginationFooter
+            page={pageIndex + 1}
+            totalPages={totalPages || 1}
+            onPageChange={(p) => setPageIndex(Math.max(0, Math.min((p - 1), Math.max(0, totalPages - 1))))}
+            isLoading={isLoading}
+            from={totalItems > 0 ? pageIndex * pageSizeNum + 1 : 0}
+            to={Math.min((pageIndex + 1) * pageSizeNum, totalItems)}
+            total={totalItems}
+            pageSize={pageSizeNum}
+            onPageSizeChange={(size) => { setPageSize(String(size)); setPageIndex(0); }}
+            pageSizeOptions={[10, 50, 100]}
+          />
         )}
 
         <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>

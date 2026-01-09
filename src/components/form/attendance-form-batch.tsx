@@ -105,12 +105,12 @@ export function AttendanceFormBatch() {
   const [memberDialogOpen, setMemberDialogOpen] = useState(false)
   const [activeBatchEntryId, setActiveBatchEntryId] = useState<string | null>(null)
   const [memberSearch, setMemberSearch] = useState("")
-  // Master date/time for Batch mode (applies to all selected members)
+
   const [batchCheckInDate, setBatchCheckInDate] = useState<string>("")
   const [batchCheckInTime, setBatchCheckInTime] = useState<string>("08:00")
   const [batchCheckOutDate, setBatchCheckOutDate] = useState<string>("")
   const [batchCheckOutTime, setBatchCheckOutTime] = useState<string>("")
-  // Master status & notes for Batch mode
+
   const [batchStatus, setBatchStatus] = useState<string>("present")
   const [batchRemarks, setBatchRemarks] = useState<string>("")
 

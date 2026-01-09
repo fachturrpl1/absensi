@@ -14,6 +14,10 @@ export function useMembers() {
       const url = new URL('/api/members', window.location.origin)
       if (organizationId) {
         url.searchParams.append('organizationId', organizationId.toString())
+        url.searchParams.set('limit', '10')
+        url.searchParams.set('page', '1')
+        url.searchParams.set('active', 'all')
+        url.searchParams.set('countMode', 'planned')
       }
       const response = await fetch(url.toString(), { credentials: 'same-origin' })
       const json = await response.json()
