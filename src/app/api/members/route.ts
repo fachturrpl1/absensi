@@ -183,8 +183,10 @@ export async function GET(req: Request) {
     if (pageParam) {
       // PAGE-BASED: hitung offset (range)
       const pageNum = Math.max(1, parseInt(pageParam, 10) || 1)
+
       const from = (pageNum - 1) * limit
       const to = from + limit - 1
+      
       const exec = await dataQuery
         .order('id', { ascending: true })
         .range(from, to)
