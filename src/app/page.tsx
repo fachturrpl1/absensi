@@ -430,7 +430,7 @@ export default function ImprovedDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="ml-5 mt-5 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center   md:justify-between gap-4">
         <div>

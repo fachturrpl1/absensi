@@ -89,8 +89,8 @@ export type AttendanceListItem = {
   checkOut: string | null;
   workHours: string;
   status: string;
-  checkInDeviceId: string | null;
-  checkOutDeviceId: string | null;
+  checkInMethod: string | null;
+  checkOutMethod: string | null;
   checkInLocationName: string | null;
   checkOutLocationName: string | null;
   notes: string;
@@ -230,8 +230,8 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     created_at: string;
     work_duration_minutes: number | null;
     remarks: string | null;
-    check_in_device_id: string | null;
-    check_out_device_id: string | null;
+    check_in_method: string | null;
+    check_out_method: string | null;
   };
   type MemberProfile = {
     first_name: string | null;
@@ -314,13 +314,13 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
   // LIST dengan join untuk mengambil profil/departemen/biodata
   // Specify exact FK for departments to avoid PostgREST ambiguous embed error
   const listRel = hasSearch
-    ? 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey!inner(first_name,last_name,display_name,email,profile_photo_url,search_name), biodata:biodata_nik(nama,nickname), departments!organization_members_department_id_fkey(name))'
-    : 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey(first_name,last_name,display_name,email,profile_photo_url,search_name), biodata:biodata_nik(nama,nickname), departments!organization_members_department_id_fkey(name))';
+    ? 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey!inner(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))'
+    : 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))';
   const fromIdx = (page - 1) * limit;
   const toIdx = fromIdx + limit - 1;
   let listQuery = supabase
     .from('attendance_records')
-    .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, ${listRel}`)
+    .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, check_in_method, check_out_method, ${listRel}`)
     .eq('organization_members.organization_id', effectiveOrgId)
     .eq('organization_members.is_active', true);
   if (effDateFrom) listQuery = listQuery.gte('attendance_date', effDateFrom);
@@ -393,7 +393,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
         if (memberIds.length > MAX_IDS) memberIds = memberIds.slice(0, MAX_IDS);
         let fbQuery = supabase
           .from('attendance_records')
-          .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, ${listRel}`)
+          .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, check_in_method, check_out_method, ${listRel}`)
           .in('organization_member_id', memberIds);
 
         if (status && status !== 'all') fbQuery = fbQuery.eq('status', status);
@@ -455,6 +455,8 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     const deptObj = mObj?.departments;
     const departmentName = Array.isArray(deptObj) ? (deptObj[0]?.name ?? '') : (deptObj?.name ?? '');
 
+    const inMethod = item.check_in_method ?? (item.actual_check_in ? 'manual' : null);
+    const outMethod = item.check_out_method ?? (item.actual_check_out ? 'manual' : null);
     return {
       id: String(item.id),
       member: {
@@ -469,8 +471,8 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
       checkOut: item.actual_check_out,
       workHours: item.work_duration_minutes ? `${Math.floor(item.work_duration_minutes / 60)}h ${item.work_duration_minutes % 60}m` : (item.actual_check_in ? '-' : '-'),
       status: item.status,
-      checkInDeviceId: null,
-      checkOutDeviceId: null,
+      checkInMethod: inMethod ? String(inMethod) : null,
+      checkOutMethod: outMethod ? String(outMethod) : null,
       checkInLocationName: null,
       checkOutLocationName: null,
       notes: '',

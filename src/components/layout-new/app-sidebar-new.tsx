@@ -15,8 +15,8 @@ import {
   Settings,
   Command,
   ChevronRight,
-  CalendarDays,
-  Plus,
+  // CalendarDays,
+  // Plus,
   ListChecks,
   Cpu,
   Fingerprint,
@@ -99,7 +99,7 @@ const getSidebarGroups = (): NavGroup[] => [
           { title: 'Attendance List', url: '/attendance/list', icon: ListChecks },
           { title: 'Locations', url: '/attendance/locations', icon: MapPin },
           { title: 'Devices', url: '/attendance-devices', icon: Cpu },
-          { title: 'Analytics', url: '/analytics', icon: BarChart3 },
+          // { title: 'Analytics', url: '/analytics', icon: BarChart3 },
         ],
       },
       {
@@ -110,15 +110,15 @@ const getSidebarGroups = (): NavGroup[] => [
           { title: 'Member Schedules', url: '/member-schedules', icon: Users },
         ],
       },
-      {
-        title: 'Leaves',
-        icon: CalendarDays,
-        subItems: [
-          { title: 'Dashboard', url: '/leaves', icon: BarChart3 },
-          { title: 'New Request', url: '/leaves/new', icon: Plus },
-          { title: 'Manage Types', url: '/leaves/types', icon: ListChecks, requiresAdmin: true },
-        ],
-      },
+      // {
+      //   title: 'Leaves',
+      //   icon: CalendarDays,
+      //   subItems: [
+      //     { title: 'Dashboard', url: '/leaves', icon: BarChart3 },
+      //     { title: 'New Request', url: '/leaves/new', icon: Plus },
+      //     { title: 'Manage Types', url: '/leaves/types', icon: ListChecks, requiresAdmin: true },
+      //   ],
+      // },
       {
         title: 'All Organizations',
         url: '/organization',
