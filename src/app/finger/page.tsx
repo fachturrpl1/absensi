@@ -168,7 +168,6 @@ export default function FingerPage() {
         .from('attendance_devices')
         .select('device_code, device_name, location, organization_id')
         .eq('is_active', true)
-        .eq('device_type_id', 8)
         .eq('organization_id', orgId)
         .order('device_name')
 

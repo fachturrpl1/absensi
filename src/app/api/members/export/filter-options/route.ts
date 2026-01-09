@@ -46,18 +46,20 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    if (!["jenis_kelamin", "agama"].includes(column)) {
+      return NextResponse.json({ success: true, options: [] })
+    }
+
+
     // Get unique values from biodata table for the specified column
-    const query = adminClient
+    const { data: members, error } = await adminClient
       .from("organization_members")
       .select(`
-        biodata:biodata_nik (
+        user:user_id (
           ${column}
         )
       `)
       .eq("organization_id", organizationId)
-      .not("biodata_nik", "is", null)
-
-    const { data: members, error } = await query
 
     if (error) {
       console.error("Error fetching filter options:", error)
@@ -69,11 +71,9 @@ export async function GET(request: NextRequest) {
 
     // Extract unique values
     const uniqueValues = new Set<string>()
-    members?.forEach((member: any) => {
-      const biodata = member.biodata
-      if (biodata && biodata[column] && biodata[column].trim() !== "") {
-        uniqueValues.add(biodata[column])
-      }
+    members?.forEach((m: any) => {
+      const v = m.user?.[column]
+      if (v && String(v).trim() !== "") uniqueValues.add(v)
     })
 
     // Convert to array and sort

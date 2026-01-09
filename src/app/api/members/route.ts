@@ -81,6 +81,8 @@ export async function GET(req: Request) {
           .from('organization_members')
           .select('organization_id')
           .eq('user_id', user.id)
+          .order('created_at', { ascending: true})
+          .limit(1)
           .maybeSingle()
         
         if (member?.organization_id) {
@@ -137,14 +139,21 @@ export async function GET(req: Request) {
       .from('organization_members')
       .select(`
         *,
-        biodata:biodata_nik (*),
         user:user_id (
           id,
           email,
           first_name,
           middle_name,
           last_name,
-          display_name
+          display_name,
+          nik,
+          phone,
+          mobile,
+          profile_photo_url,
+          search_name,
+          jenis_kelamin,
+          agama,
+          is_active
         ),
         departments:department_id (
           id,
@@ -351,6 +360,50 @@ export async function GET(req: Request) {
       next: null,
       first: `/api/members?${baseParams.toString()}`
     }
+
+// Normalize/augment items for consistent client mapping using user_profiles schema
+{
+  type UserProfile = {
+    display_name?: string
+    first_name?: string
+    middle_name?: string
+    last_name?: string
+    email?: string
+    search_name?: string
+  }
+  type DepartmentObj = { name?: string }
+  type BiodataObj = { nama?: string; nickname?: string; nik?: string }
+  type MemberRow = IOrganization_member & {
+    user?: UserProfile
+    biodata?: BiodataObj
+    departments?: DepartmentObj | DepartmentObj[]
+    groupName?: string
+    biodata_nik?: string
+  }
+
+  const normalizeName = (m: MemberRow) => {
+    const displayName = (m.user?.display_name ?? '').trim()
+    const firstName = (m.user?.first_name ?? '').trim()
+    const middleName = (m.user?.middle_name ?? '').trim()
+    const lastName = (m.user?.last_name ?? '').trim()
+    const email = (m.user?.email ?? '').trim()
+    const searchName = (m.user?.search_name ?? '').trim()
+    const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ').trim()
+    const biodataNama = (m.biodata?.nama ?? '').trim()
+    const biodataNickname = (m.biodata?.nickname ?? '').trim()
+    return displayName || fullName || email || searchName || biodataNama || biodataNickname || null
+  }
+  const firstDept = (d?: DepartmentObj | DepartmentObj[] | null) =>
+    Array.isArray(d) ? (d[0] ?? undefined) : (d ?? undefined)
+
+  items = (items as unknown as MemberRow[]).map((m) => {
+    const computed_name = normalizeName(m)
+    const deptObj = firstDept(m.departments)
+    const groupName = deptObj?.name ?? m.groupName ?? null
+    const biodata_nik = m.biodata_nik ?? m.biodata?.nik ?? null
+    return { ...(m as object), computed_name, groupName, biodata_nik } as unknown as IOrganization_member
+  })
+}
 
     if (pageParam) {
       const pageNum = Math.max(1, parseInt(pageParam, 10) || 1)

@@ -61,26 +61,18 @@ export async function GET(request: NextRequest) {
       .from("organization_members")
       .select(`
         id,
-        biodata_nik,
-        employee_id,
         is_active,
         hire_date,
-        biodata:biodata_nik (
+        user:user_id (
           nik,
-          nama,
-          nickname,
+          display_name,
+          first_name,
+          middle_name,
+          last_name,
           email,
-          no_telepon,
           jenis_kelamin,
-          tanggal_lahir,
-          tempat_lahir,
           agama,
-          jalan,
-          rt,
-          rw,
-          dusun,
-          kelurahan,
-          kecamatan
+          profile_photo_url
         ),
         departments:department_id (
           id,
@@ -165,62 +157,27 @@ export async function GET(request: NextRequest) {
     filteredMembers = filteredMembers.slice(0, limit)
 
     // Transform data based on selected fields - ONLY biodata columns
-    const transformedData = filteredMembers.map((member: any) => {
-      const biodata = getBiodata(member)
+    type ExportRow = Record<string, string>
 
-      const row: Record<string, any> = {}
+    const transformedData = filteredMembers.map((m: unknown) => {
+      const u = (m as { user?: any, departments?: any }).user
+      const dep = (m as { departments?: any }).departments
+      const fullName = [u?.first_name, u?.middle_name, u?.last_name].filter(Boolean).join(" ").trim()
+      const row: ExportRow = {}
 
-      // Only include fields from biodata table
-      if (selectedFields.includes("nik")) {
-        row.nik = member.biodata_nik || biodata.nik || "-"
-      }
-      if (selectedFields.includes("nama")) {
-        row.nama = biodata.nama || "-"
-      }
-      if (selectedFields.includes("nickname")) {
-        row.nickname = biodata.nickname || "-"
-      }
-      if (selectedFields.includes("nisn")) {
-        row.nisn = biodata.nisn || "-"
-      }
-      if (selectedFields.includes("jenis_kelamin")) {
-        row.jenis_kelamin = biodata.jenis_kelamin || "-"
-      }
-      if (selectedFields.includes("tempat_lahir")) {
-        row.tempat_lahir = biodata.tempat_lahir || "-"
-      }
-      if (selectedFields.includes("tanggal_lahir")) {
-        row.tanggal_lahir = biodata.tanggal_lahir || "-"
-      }
-      if (selectedFields.includes("agama")) {
-        row.agama = biodata.agama || "-"
-      }
-      if (selectedFields.includes("jalan")) {
-        row.jalan = biodata.jalan || "-"
-      }
-      if (selectedFields.includes("rt")) {
-        row.rt = biodata.rt || "-"
-      }
-      if (selectedFields.includes("rw")) {
-        row.rw = biodata.rw || "-"
-      }
-      if (selectedFields.includes("dusun")) {
-        row.dusun = biodata.dusun || "-"
-      }
-      if (selectedFields.includes("kelurahan")) {
-        row.kelurahan = biodata.kelurahan || "-"
-      }
-      if (selectedFields.includes("kecamatan")) {
-        row.kecamatan = biodata.kecamatan || "-"
-      }
-      if (selectedFields.includes("no_telepon")) {
-        row.no_telepon = biodata.no_telepon || "-"
-      }
-      if (selectedFields.includes("email")) {
-        row.email = biodata.email || "-"
-      }
+      if (selectedFields.includes("nik")) row.nik = String(u?.nik || "-")
+      if (selectedFields.includes("nama")) row.nama = String(u?.display_name || fullName || "-")
+      if (selectedFields.includes("jenis_kelamin")) row.jenis_kelamin = String(u?.jenis_kelamin || "-")
+      if (selectedFields.includes("agama")) row.agama = String(u?.agama || "-")
+      if (selectedFields.includes("email")) row.email = String(u?.email || "-")
       if (selectedFields.includes("department_id")) {
-        row.department_id = biodata.department_id || "-"
+        const depId = Array.isArray(dep) ? (dep[0]?.id ?? "-") : (dep?.id ?? "-")
+        row.department_id = String(depId)
+      }
+
+      // Kolom alamat/telepon (yang dulu dari biodata) tidak ada di user_profiles → isi "-"
+      for (const f of ["jalan","rt","rw","dusun","kelurahan","kecamatan","nisn","tempat_lahir","tanggal_lahir","no_telepon","nickname"]) {
+        if (selectedFields.includes(f)) row[f] = "-"
       }
 
       return row

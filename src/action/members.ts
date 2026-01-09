@@ -66,14 +66,21 @@ export const getAllOrganization_member = async (organizationId?: number) => {
     .from("organization_members")
     .select(`
       *,
-      biodata:biodata_nik (*),
       user:user_id (
         id,
         email,
         first_name,
         middle_name,
         last_name,
-        display_name
+        display_name,
+        nik,
+        phone,
+        mobile,
+        profile_photo_url,
+        search_name,
+        jenis_kelamin,
+        agama,
+        is_active
       ),
       departments:department_id (
         id,
@@ -83,7 +90,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
       ),
       positions:position_id (
         id,
-          title,
+        title,
         code
       ),
       role:role_id (

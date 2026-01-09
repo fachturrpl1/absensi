@@ -61,37 +61,20 @@ export async function GET(request: NextRequest) {
       .from("organization_members")
       .select(`
         id,
-        biodata_nik,
-        employee_id,
         is_active,
         hire_date,
-        biodata:biodata_nik (
+        user:user_id (
           nik,
-          nama,
-          nickname,
-          nisn,
-          jenis_kelamin,
-          tempat_lahir,
-          tanggal_lahir,
-          agama,
-          jalan,
-          rt,
-          rw,
-          dusun,
-          kelurahan,
-          kecamatan,
-          no_telepon,
+          display_name,
+          first_name,
+          middle_name,
+          last_name,
           email,
-          department_id
+          jenis_kelamin,
+          agama
         ),
-        departments:department_id (
-          id,
-          name
-        ),
-        positions:position_id (
-          id,
-          title
-        )
+        departments:department_id ( id, name ),
+        positions:position_id ( id, title )
       `)
       .eq("organization_id", organizationId)
 

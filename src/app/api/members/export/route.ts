@@ -71,38 +71,23 @@ export async function GET(request: NextRequest) {
     let query = adminClient
       .from("organization_members")
       .select(`
-        id,
-        biodata_nik,
-        employee_id,
-        is_active,
-        hire_date,
-        biodata:biodata_nik (
-          nik,
-          nama,
-          nickname,
-          email,
-          no_telepon,
-          jenis_kelamin,
-          tanggal_lahir,
-          tempat_lahir,
-          agama,
-          jalan,
-          rt,
-          rw,
-          dusun,
-          kelurahan,
-          kecamatan,
-          department_id
-        ),
-        departments:department_id (
-          id,
-          name
-        ),
-        positions:position_id (
-          id,
-          title
-        )
-      `)
+      id,
+      is_active,
+      hire_date,
+      user:user_id (
+        nik,
+        display_name,
+        first_name,
+        middle_name,
+        last_name,
+        email,
+        jenis_kelamin,
+        agama,
+        profile_photo_url
+      ),
+      departments:department_id ( id, name ),
+      positions:position_id ( id, title )
+    `)
       .eq("organization_id", organizationId)
 
     // Jika ada selectedNiks, hanya filter berdasarkan NIK tersebut (abaikan filter lain)
@@ -202,67 +187,43 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform data - ONLY biodata columns
-    const exportData = filteredMembers.map((member: any) => {
-      const biodata = getBiodata(member)
+   type ExportRow = Record<string, string>
 
-      // Gunakan any di sini untuk menyederhanakan pemetaan dinamis
-      const row: any = {}
+  const exportData = filteredMembers.map((m: unknown) => {
+    const u = (m as { user?: any, departments?: any }).user
+    const dep = (m as { departments?: any }).departments
+    const fullName = [u?.first_name, u?.middle_name, u?.last_name].filter(Boolean).join(" ").trim()
 
-      // Only include fields from biodata table (gunakan label langsung agar aman untuk tipe)
-      if (selectedFields.includes("nik")) {
-        row["NIK"] = member.biodata_nik || biodata.nik || ""
-      }
-      if (selectedFields.includes("nama")) {
-        row["Nama Lengkap"] = biodata.nama || ""
-      }
-      if (selectedFields.includes("nickname")) {
-        row["Nickname"] = biodata.nickname || ""
-      }
-      if (selectedFields.includes("nisn")) {
-        row["NISN"] = biodata.nisn || ""
-      }
-      if (selectedFields.includes("jenis_kelamin")) {
-        row["Jenis Kelamin"] = biodata.jenis_kelamin || ""
-      }
-      if (selectedFields.includes("tempat_lahir")) {
-        row["Tempat Lahir"] = biodata.tempat_lahir || ""
-      }
-      if (selectedFields.includes("tanggal_lahir")) {
-        row["Tanggal Lahir"] = biodata.tanggal_lahir || ""
-      }
-      if (selectedFields.includes("agama")) {
-        row["Agama"] = biodata.agama || ""
-      }
-      if (selectedFields.includes("jalan")) {
-        row["Jalan"] = biodata.jalan || ""
-      }
-      if (selectedFields.includes("rt")) {
-        row["RT"] = biodata.rt || ""
-      }
-      if (selectedFields.includes("rw")) {
-        row["RW"] = biodata.rw || ""
-      }
-      if (selectedFields.includes("dusun")) {
-        row["Dusun"] = biodata.dusun || ""
-      }
-      if (selectedFields.includes("kelurahan")) {
-        row["Kelurahan"] = biodata.kelurahan || ""
-      }
-      if (selectedFields.includes("kecamatan")) {
-        row["Kecamatan"] = biodata.kecamatan || ""
-      }
-      if (selectedFields.includes("no_telepon")) {
-        row["No. Telepon"] = biodata.no_telepon || ""
-      }
-      if (selectedFields.includes("email")) {
-        row["Email"] = biodata.email || ""
-      }
-      if (selectedFields.includes("department_id")) {
-        row["Group"] = biodata.department_id || ""
-      }
+    const row: ExportRow = {}
+    if (selectedFields.includes("nik")) row["NIK"] = String(u?.nik || "")
+    if (selectedFields.includes("nama")) row["Nama Lengkap"] = String(u?.display_name || fullName || "")
+    if (selectedFields.includes("jenis_kelamin")) row["Jenis Kelamin"] = String(u?.jenis_kelamin || "")
+    if (selectedFields.includes("agama")) row["Agama"] = String(u?.agama || "")
+    if (selectedFields.includes("email")) row["Email"] = String(u?.email || "")
+    if (selectedFields.includes("department_id")) {
+      const depName = Array.isArray(dep) ? (dep[0]?.name ?? "") : (dep?.name ?? "")
+      row["Group"] = String(depName)
+    }
 
-      return row
-    })
+    // Kolom yang tidak tersedia di user_profiles → kosongkan
+    for (const [key, label] of Object.entries({
+      nickname: "Nickname",
+      nisn: "NISN",
+      tempat_lahir: "Tempat Lahir",
+      tanggal_lahir: "Tanggal Lahir",
+      jalan: "Jalan",
+      rt: "RT",
+      rw: "RW",
+      dusun: "Dusun",
+      kelurahan: "Kelurahan",
+      kecamatan: "Kecamatan",
+      no_telepon: "No. Telepon"
+    })) {
+      if (selectedFields.includes(key)) row[label] = ""
+    }
+
+    return row
+  })
 
     // Create workbook
     const workbook = XLSX.utils.book_new()

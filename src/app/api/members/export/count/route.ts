@@ -80,8 +80,12 @@ export async function GET(request: NextRequest) {
         .from("organization_members")
         .select(`
           id,
-          biodata:biodata_nik (
-            nama,
+          user:user_id (
+            nik,
+            display_name,
+            first_name,
+            middle_name,
+            last_name,
             email,
             jenis_kelamin,
             agama
@@ -109,53 +113,29 @@ export async function GET(request: NextRequest) {
         )
       }
 
-      // Helper function to extract biodata from Supabase relation
-      const getBiodata = (member: any) => {
-        if (Array.isArray(member.biodata)) {
-          return member.biodata[0] || {}
-        } else if (member.biodata && typeof member.biodata === 'object') {
-          return member.biodata
-        }
-        return {}
-      }
-
-      // Filter out members without biodata (admin yang dibuat langsung tanpa biodata)
-      let filtered = (members || []).filter((member: any) => {
-        const biodata = getBiodata(member)
-        // Exclude members yang tidak punya biodata_nik dan tidak punya biodata data
-        return member.biodata_nik || (biodata && Object.keys(biodata).length > 0)
-      })
+      let filtered = ( members || []).filter((m: any) => Boolean(m.user))
 
       if (search) {
-        const searchLower = search.toLowerCase()
-        filtered = filtered.filter((member: any) => {
-          const biodata = getBiodata(member)
+        const s = search.toLowerCase()
+        filtered = filtered.filter((m: any) => {
+          const full = [m.user?.first_name, m.user?.middle_name, m.user?.last_name].filter(Boolean).join(' ')
           return (
-            member.biodata_nik?.toLowerCase().includes(searchLower) ||
-            biodata.nama?.toLowerCase().includes(searchLower) ||
-            biodata.email?.toLowerCase().includes(searchLower)
+            (m.user?.nik || '').toLowerCase().includes(s) ||
+            (m.user?.email || '').toLowerCase().includes(s) ||
+            (m.user?.display_name || '').toLowerCase().includes(s) ||
+            full.toLowerCase().includes(s)
           )
         })
       }
-
       if (selectedGenders.length > 0) {
-        filtered = filtered.filter((member: any) => {
-          const biodata = getBiodata(member)
-          return selectedGenders.includes(biodata.jenis_kelamin)
-        })
+        filtered = filtered.filter((m: any) => selectedGenders.includes(m.user?.jenis_kelamin))
       }
-
       if (selectedAgamas.length > 0) {
-        filtered = filtered.filter((member: any) => {
-          const biodata = getBiodata(member)
-          return selectedAgamas.includes(biodata.agama)
-        })
+        filtered = filtered.filter((m: any) => selectedAgamas.includes(m.user?.agama))
       }
 
-      return NextResponse.json({
-        success: true,
-        count: filtered.length,
-      })
+      return NextResponse.json({ success: true, count: filtered.length })
+
     } else {
       // Simple count query without joins
       const { count, error } = await query

@@ -45,6 +45,7 @@ import * as z from "zod"
 import { useQuery } from "@tanstack/react-query"
 import { useDebounce } from "@/utils/debounce"
 import { PaginationFooter } from "@/components/pagination-footer"
+import { computeName, computeGroupName, computeGender, computeNik, MemberLike } from "@/lib/members-mapping"
 
 import { IOrganization_member } from "@/interface"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
@@ -81,23 +82,7 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
   {
     key: "full_name",
     label: "Full Name",
-    getValue: (member: any) => {
-
-      if (member.biodata?.nama) return member.biodata.nama
-      
-      const user = member.user
-      if (user) {
-        const fullname =
-          [user.first_name, user.middle_name, user.last_name]
-            .filter((part: string | undefined) => part && part.trim() !== "")
-            .join(" ") ||
-          user.display_name ||
-          user.email
-        if (fullname) return fullname
-      }
-      
-      return "-"
-    },
+    getValue: (member: any) => computeName(member as MemberLike),
   },
   {
     key: "nickname",
@@ -112,7 +97,7 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
   {
     key: "gender",
     label: "Gender",
-    getValue: (member: any) => member.biodata?.jenis_kelamin || "-",
+    getValue: (member: any) => computeGender(member as MemberLike),
   },
   {
     key: "email",
@@ -127,60 +112,7 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
   {
     key: "group",
     label: "Department / Group",
-    getValue: (member: any) => {
-      // Debug: log first few calls to see what's happening
-      if (member.id === 3328 || member.id === 3321) {
-        console.log(`[MEMBERS UI getValue] Called for member ${member.id}:`, {
-          hasGroupName: !!member.groupName,
-          hasDepartments: !!member.departments,
-          departmentsType: typeof member.departments,
-          isArray: Array.isArray(member.departments),
-          departments: member.departments,
-          department_id: member.department_id
-        });
-      }
-      
-      // Handle groupName (legacy)
-      if (member.groupName) {
-        return member.groupName;
-      }
-      
-      // Handle departments - could be object or array
-      if (member.departments) {
-        if (Array.isArray(member.departments) && member.departments.length > 0) {
-          const deptName = member.departments[0]?.name;
-          if (deptName) {
-            if (member.id === 3328 || member.id === 3321) {
-              console.log(`[MEMBERS UI getValue] Returning name from array:`, deptName);
-            }
-            return deptName;
-          } else {
-            console.warn(`[MEMBERS UI getValue] Member ${member.id} has departments array but no name:`, member.departments[0]);
-          }
-        } else if (typeof member.departments === 'object' && !Array.isArray(member.departments)) {
-          const deptName = member.departments.name;
-          if (deptName) {
-            if (member.id === 3328 || member.id === 3321) {
-              console.log(`[MEMBERS UI getValue] Returning name from object:`, deptName);
-            }
-            return deptName;
-          } else {
-            console.warn(`[MEMBERS UI getValue] Member ${member.id} has departments object but no name:`, member.departments);
-            console.warn(`[MEMBERS UI getValue] Departments keys:`, Object.keys(member.departments || {}));
-            console.warn(`[MEMBERS UI getValue] Departments full object:`, JSON.stringify(member.departments, null, 2));
-          }
-        } else {
-          console.warn(`[MEMBERS UI getValue] Member ${member.id} has departments but unexpected type:`, typeof member.departments, member.departments);
-        }
-      }
-      
-      // Fallback: check department_id and log for debugging
-      if (member.department_id) {
-        console.warn(`[MEMBERS UI getValue] Member ${member.id} has department_id ${member.department_id} but no valid departments object`);
-      }
-      
-      return "-";
-    },
+    getValue: (member: any) => computeGroupName(member as MemberLike),
   },
   {
     key: "position",
@@ -258,6 +190,7 @@ export default function MembersPage() {
       url.searchParams.set('active', 'all')
       url.searchParams.set('countMode', 'planned')
       url.searchParams.set('page', String(page))
+      // Hanya pass organizationId jika ada; jika belum ada, biarkan API fallback ke org user
       if (organizationId) url.searchParams.set('organizationId', String(organizationId))
       if (debouncedSearch) url.searchParams.set('search', debouncedSearch)
       const res = await fetch(url.toString(), { credentials: 'same-origin', signal })
@@ -265,7 +198,8 @@ export default function MembersPage() {
       if (!json?.success) throw new Error(json?.message || 'Failed to fetch members')
       return json as MembersApiPage
     },
-    enabled: isHydrated && !!organizationId,
+    // RELAX: query jalan setelah hydration selesai
+    enabled: isHydrated,
     staleTime: 60_000,
     gcTime: 300_000,
   })
@@ -278,51 +212,18 @@ export default function MembersPage() {
     
     const searchTerm = searchQuery.toLowerCase().trim()
     return rawMembers.filter((member: any) => {
-      // Search di semua field yang relevan
-      
-      // 1. Nama dari biodata atau user
-      const biodataName = (member.biodata?.nama || '').toLowerCase()
-      const userFirstName = (member.user?.first_name || '').toLowerCase()
-      const userMiddleName = (member.user?.middle_name || '').toLowerCase()
-      const userLastName = (member.user?.last_name || '').toLowerCase()
-      const userDisplayName = (member.user?.display_name || '').toLowerCase()
-      const fullName = (
-        biodataName ||
-        [userFirstName, userMiddleName, userLastName].filter(Boolean).join(' ') ||
-        userDisplayName ||
-        ''
-      )
-      
-      // 2. Email
+      const fullName = computeName(member as MemberLike).toLowerCase()
       const email = (member.email || member.user?.email || '').toLowerCase()
-      
-      // 3. NIK
-      const nik = ((member.biodata?.nik || member.biodata_nik || '') as string).toLowerCase()
-      
-      // 4. Employee ID
+      const nik = (computeNik(member as MemberLike) || '').toLowerCase()
       const employeeId = ((member.employee_id || '') as string).toLowerCase()
-      
-      // 5. Department/Group name
-      const departmentName = (
-        member.departments?.name ||
-        (Array.isArray(member.departments) && member.departments[0]?.name) ||
-        ''
-      ).toLowerCase()
-      
-      // 6. Position name
+      const departmentName = computeGroupName(member as MemberLike).toLowerCase()
       const positionName = (
         member.positions?.title ||
         (Array.isArray(member.positions) && member.positions[0]?.title) ||
         ''
       ).toLowerCase()
-      
-      // 7. Role name
-      const roleName = (
-        member.role?.name ||
-        ''
-      ).toLowerCase()
-      
-      // Check if search term matches any field
+      const roleName = (member.role?.name || '').toLowerCase()
+
       return (
         fullName.includes(searchTerm) ||
         email.includes(searchTerm) ||
@@ -330,12 +231,7 @@ export default function MembersPage() {
         employeeId.includes(searchTerm) ||
         departmentName.includes(searchTerm) ||
         positionName.includes(searchTerm) ||
-        roleName.includes(searchTerm) ||
-        // Also check individual name parts
-        userFirstName.includes(searchTerm) ||
-        userLastName.includes(searchTerm) ||
-        userDisplayName.includes(searchTerm) ||
-        biodataName.includes(searchTerm)
+        roleName.includes(searchTerm)
       )
     })
   }, [pageData?.data, searchQuery])
