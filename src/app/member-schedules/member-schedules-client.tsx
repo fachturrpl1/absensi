@@ -5,7 +5,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Trash, Pencil, Plus, Calendar, Check } from "lucide-react"
+import { Trash, Pencil, Plus, Calendar, Check, ChevronsUpDown } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Empty,
@@ -55,6 +55,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Command,
   CommandEmpty,
@@ -68,6 +69,8 @@ import { toast } from "sonner"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
+
+import { cn } from "@/lib/utils"
 
 import { IMemberSchedule, IOrganization_member, IWorkSchedule } from "@/interface"
 import { useHydration } from "@/hooks/useHydration"
@@ -118,7 +121,7 @@ export default function MemberSchedulesClient({
   onRefresh,
 }: MemberSchedulesClientProps) {
   const router = useRouter()
-  const { organizationId } = useHydration()
+  const { organizationId, isReady } = useHydration()
   const [schedules, setSchedules] = React.useState(initialSchedules)
   const [open, setOpen] = React.useState(false)
   const [editingSchedule, setEditingSchedule] = React.useState<IMemberSchedule | null>(null)
@@ -127,11 +130,12 @@ export default function MemberSchedulesClient({
   const [activeMemberIds, setActiveMemberIds] = React.useState<string[]>(initialActiveMemberIds || [])
   const [lookupsLoading, setLookupsLoading] = React.useState(false)
   const [memberQuery, setMemberQuery] = React.useState("")
-  const [memberDropdownOpen, setMemberDropdownOpen] = React.useState(false)
+  const [memberPopoverOpen, setMemberPopoverOpen] = React.useState(false)
   const [membersFetched, setMembersFetched] = React.useState(initialMembers.length > 0)
   const [workSchedulesFetched, setWorkSchedulesFetched] = React.useState(initialWorkSchedules.length > 0)
   const [activeIdsFetched, setActiveIdsFetched] = React.useState((initialActiveMemberIds || []).length > 0)
   const lookupsInFlightRef = React.useRef(false)
+  const prevOrgIdRef = React.useRef<number | null>(null)
 
   // Sync state when props change (user login/logout/switch org)
   React.useEffect(() => {
@@ -157,18 +161,24 @@ export default function MemberSchedulesClient({
   }, [initialActiveMemberIds])
 
   React.useEffect(() => {
-    if (!organizationId) return
+    if (!isReady) return
+    if (organizationId === null) return
+
+    const prev = prevOrgIdRef.current
+    if (prev !== null && prev === organizationId) return
+
+    prevOrgIdRef.current = organizationId
     setMembers([])
     setWorkSchedules([])
     setActiveMemberIds([])
     setMembersFetched(false)
     setWorkSchedulesFetched(false)
     setActiveIdsFetched(false)
-  }, [organizationId])
+  }, [isReady, organizationId])
 
   React.useEffect(() => {
-    if (!open) return
-    if (!organizationId) return
+    if (!isReady) return
+    if (organizationId === null) return
     if (lookupsInFlightRef.current) return
 
     const shouldFetchMembers = !membersFetched
@@ -212,7 +222,7 @@ export default function MemberSchedulesClient({
     }
 
     fetchLookups()
-  }, [open, organizationId, membersFetched, workSchedulesFetched, activeIdsFetched])
+  }, [isReady, organizationId, membersFetched, workSchedulesFetched, activeIdsFetched])
 
   const membersWithActiveSchedule = React.useMemo(() => {
     return new Set<string>((activeMemberIds || []).map((id) => String(id)))
@@ -227,6 +237,14 @@ export default function MemberSchedulesClient({
       : "Unknown"
     return name || "Unknown"
   }, [])
+
+  const membersSorted = React.useMemo(() => {
+    return [...members].sort((a, b) => {
+      const nameA = getMemberDisplayName(a).toLowerCase()
+      const nameB = getMemberDisplayName(b).toLowerCase()
+      return nameA.localeCompare(nameB, "id")
+    })
+  }, [members, getMemberDisplayName])
 
   const form = useForm<MemberScheduleForm>({
     resolver: zodResolver(memberScheduleSchema),
@@ -284,7 +302,7 @@ export default function MemberSchedulesClient({
   const resetForCreate = () => {
     setEditingSchedule(null)
     setMemberQuery("")
-    setMemberDropdownOpen(false)
+    setMemberPopoverOpen(false)
     form.reset({
       organization_member_id: "",
       work_schedule_id: "",
@@ -326,7 +344,7 @@ export default function MemberSchedulesClient({
   const handleCloseDialog = () => {
     setOpen(false)
     setMemberQuery("")
-    setMemberDropdownOpen(false)
+    setMemberPopoverOpen(false)
     form.reset({
       organization_member_id: "",
       work_schedule_id: "",
@@ -542,88 +560,112 @@ export default function MemberSchedulesClient({
                             <FormItem>
                               <FormLabel>Member</FormLabel>
                               <FormControl>
-                                <div className="relative">
-                                  <div className="rounded-md border overflow-hidden">
+                                <Popover
+                                  open={memberPopoverOpen}
+                                  onOpenChange={(next) => {
+                                    setMemberPopoverOpen(next)
+                                    if (next) {
+                                      setMemberQuery("")
+                                    }
+                                  }}
+                                >
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      role="combobox"
+                                      aria-expanded={memberPopoverOpen}
+                                      className={cn(
+                                        "w-full justify-between",
+                                        !field.value && "text-muted-foreground"
+                                      )}
+                                      type="button"
+                                    >
+                                      {field.value
+                                        ? getMemberDisplayName(
+                                            members.find((m) => String(m.id) === String(field.value)) ||
+                                              ({ id: field.value, user: undefined } as any)
+                                          )
+                                        : "Select member..."}
+                                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                                     <Command shouldFilter={false}>
                                       <CommandInput
                                         placeholder="Search member..."
                                         value={memberQuery}
                                         onValueChange={(value) => {
                                           setMemberQuery(value)
-                                          const q = value.trim()
-                                          if (q.length === 0) {
-                                            setMemberDropdownOpen(false)
-                                            field.onChange("")
-                                            return
-                                          }
-                                          setMemberDropdownOpen(true)
-                                        }}
-                                        onBlur={() => {
-                                          window.setTimeout(() => setMemberDropdownOpen(false), 120)
                                         }}
                                       />
-                                      {(() => {
-                                        const q = memberQuery.trim().toLowerCase()
-                                        if (!memberDropdownOpen || q.length === 0) return null
+                                      <CommandList className="max-h-[220px] overflow-y-auto">
+                                        {(() => {
+                                          const q = memberQuery.trim().toLowerCase()
+                                          const filtered = q.length === 0
+                                            ? membersSorted
+                                            : membersSorted.filter((member) => {
+                                                const name = getMemberDisplayName(member)
+                                                const nameLower = name.toLowerCase()
+                                                const user = member.user as { email?: string } | undefined
+                                                const emailLower = (user?.email ?? "").toLowerCase()
 
-                                        const filtered = members.filter((member) => {
-                                          const name = getMemberDisplayName(member)
-                                          const nameLower = name.toLowerCase()
-                                          const user = member.user as { email?: string } | undefined
-                                          const emailLower = (user?.email ?? "").toLowerCase()
+                                                if (nameLower.includes(q)) return true
+                                                if (emailLower.includes(q)) return true
+                                                return false
+                                              })
 
-                                          if (nameLower.startsWith(q)) return true
-                                          if (emailLower.startsWith(q)) return true
-                                          const tokens = nameLower.split(/\s+/).filter(Boolean)
-                                          return tokens.some((t) => t.startsWith(q))
-                                        })
-
-                                        return (
-                                          <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border bg-popover shadow-md">
-                                            <CommandList className="max-h-[180px] overflow-y-auto">
-                                              {lookupsLoading && members.length === 0 ? (
-                                                <CommandEmpty>Loading...</CommandEmpty>
-                                              ) : filtered.length === 0 ? (
-                                                <CommandEmpty>No results.</CommandEmpty>
-                                              ) : null}
+                                          if (lookupsLoading && members.length === 0) {
+                                            return (
                                               <CommandGroup>
-                                                {filtered.map((member) => {
-                                                  const name = getMemberDisplayName(member)
-                                                  const hasActiveSchedule = membersWithActiveSchedule.has(String(member.id))
-                                                  const isSelected = String(field.value) === String(member.id)
-
-                                                  return (
-                                                    <CommandItem
-                                                      key={member.id}
-                                                      value={name}
-                                                      disabled={hasActiveSchedule}
-                                                      onSelect={() => {
-                                                        field.onChange(String(member.id))
-                                                        setMemberQuery(name)
-                                                        setMemberDropdownOpen(false)
-                                                      }}
-                                                    >
-                                                      <Check
-                                                        className={
-                                                          isSelected
-                                                            ? "mr-2 h-4 w-4 opacity-100"
-                                                            : "mr-2 h-4 w-4 opacity-0"
-                                                        }
-                                                      />
-                                                      <span className="truncate">
-                                                        {name} {hasActiveSchedule ? "(Has active schedule)" : ""}
-                                                      </span>
-                                                    </CommandItem>
-                                                  )
-                                                })}
+                                                <CommandItem value="loading" disabled>
+                                                  Loading...
+                                                </CommandItem>
                                               </CommandGroup>
-                                            </CommandList>
-                                          </div>
-                                        )
-                                      })()}
+                                            )
+                                          }
+
+                                          if (!lookupsLoading && filtered.length === 0) {
+                                            return <CommandEmpty>No results.</CommandEmpty>
+                                          }
+
+                                          return (
+                                            <CommandGroup>
+                                              {filtered.map((member) => {
+                                                const name = getMemberDisplayName(member)
+                                                const hasActiveSchedule = membersWithActiveSchedule.has(String(member.id))
+                                                const isSelected = String(field.value) === String(member.id)
+
+                                                return (
+                                                  <CommandItem
+                                                    key={member.id}
+                                                    value={name}
+                                                    disabled={hasActiveSchedule}
+                                                    onSelect={() => {
+                                                      field.onChange(String(member.id))
+                                                      setMemberPopoverOpen(false)
+                                                      setMemberQuery("")
+                                                    }}
+                                                  >
+                                                    <Check
+                                                      className={
+                                                        isSelected
+                                                          ? "mr-2 h-4 w-4 opacity-100"
+                                                          : "mr-2 h-4 w-4 opacity-0"
+                                                      }
+                                                    />
+                                                    <span className="truncate">
+                                                      {name} {hasActiveSchedule ? "(Has active schedule)" : ""}
+                                                    </span>
+                                                  </CommandItem>
+                                                )
+                                              })}
+                                            </CommandGroup>
+                                          )
+                                        })()}
+                                      </CommandList>
                                     </Command>
-                                  </div>
-                                </div>
+                                  </PopoverContent>
+                                </Popover>
                               </FormControl>
                               <FormMessage />
                             </FormItem>

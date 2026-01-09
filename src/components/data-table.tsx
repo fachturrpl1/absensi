@@ -304,20 +304,6 @@ export function DataTable<TData, TValue>({
                 <SelectItem value="z-a">Z-A</SelectItem>
               </SelectContent>
             </Select>
-
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">Show:</span>
-              <Select value={pageSize} onValueChange={setPageSize}>
-                <SelectTrigger className="w-[70px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </>
         )}
       </div>
