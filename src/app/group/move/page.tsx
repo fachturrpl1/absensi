@@ -30,8 +30,9 @@ import { Badge } from "@/components/ui/badge"
 import { useSearchParams, useRouter } from 'next/navigation'
 import { getGroupById, getAllGroups, createGroup } from '@/action/group'
 import { createClient } from '@/utils/supabase/client'
-import { getMembersByGroupId, moveMembersToGroup } from '@/action/members'
-import { IGroup, IOrganization_member } from '@/interface'
+import { moveMembersToGroup } from '@/action/members'
+import { getCache, setCache } from '@/lib/local-cache'
+import { IGroup, IOrganization_member, IUser } from '@/interface'
 import { toast } from 'sonner'
 
 type MemberRow = {
@@ -50,6 +51,8 @@ type MemberRow = {
     phone?: string
     mobile?: string
     profile_photo_url?: string | null
+    jenis_kelamin?: string | null
+    agama?: string | null
   } | {
     id: string
     first_name?: string
@@ -60,8 +63,12 @@ type MemberRow = {
     phone?: string
     mobile?: string
     profile_photo_url?: string | null
+    jenis_kelamin?: string | null
+    agama?: string | null
   }[] | null
 }
+
+type MemberWithExtras = IOrganization_member & { religionStr?: string | null }
 
 const createGroupSchema = z.object({
   name: z.string().min(2, "Group name must be at least 2 characters"),
@@ -82,7 +89,7 @@ export default function MoveGroupPage() {
   }
 
   const [group, setGroup] = useState<IGroup | null>(null)
-  const [members, setMembers] = useState<IOrganization_member[]>([])   
+  const [members, setMembers] = useState<MemberWithExtras[]>([])   
   const [loading, setLoading] = useState(true)
   const [allGroups, setAllGroups] = useState<IGroup[]>([])
   const [targetGroupId, setTargetGroupId] = useState<string>("")
@@ -91,6 +98,7 @@ export default function MoveGroupPage() {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
   const [searchQuery, setSearchQuery] = useState("")
   const [sortOrder, setSortOrder] = useState("newest")
+  const [totalItems, setTotalItems] = useState(0)
 
   const form = useForm<z.infer<typeof createGroupSchema>>({
     resolver: zodResolver(createGroupSchema),
@@ -131,9 +139,20 @@ export default function MoveGroupPage() {
         if (!groupRes.success || !groupRes.data) throw new Error(groupRes.message)
         setGroup(groupRes.data)
 
-        // Ambil data member seperti pola page finger
+        const currentPage = pagination.pageIndex + 1
+        const pageSize = pagination.pageSize
+        const cacheKey = `group:move:members:${groupId}:p=${currentPage}:l=${pageSize}:sort=${sortOrder}`
+        const cached = getCache<{ items: MemberWithExtras[]; total: number }>(cacheKey)
+        if (cached) {
+          setMembers(cached.items)
+          setTotalItems(cached.total)
+        }
+
         const supabase = createClient()
-        const { data: membersData, error: membersError } = await supabase
+        const from = pagination.pageIndex * pagination.pageSize
+        const to = from + pagination.pageSize - 1
+
+        let query = supabase
           .from('organization_members')
           .select(`
             id,
@@ -155,36 +174,52 @@ export default function MoveGroupPage() {
               jenis_kelamin,
               agama
             )
-          `)
+          `, { count: 'exact' })
           .eq('is_active', true)
           .eq('department_id', groupId)
+
+        query = query.order('created_at', { ascending: sortOrder === 'oldest' })
+
+        const { data: membersData, error: membersError, count } = await query.range(from, to)
 
         if (membersError) throw new Error(membersError.message)
         if (!membersData) throw new Error('Members not found')
 
+        const mapGender = (raw?: string | null): IUser['gender'] | null => {
+          if (!raw) return null
+          const s = String(raw).trim().toLowerCase()
+          if (["l","m","male","pria","lk","laki-laki"].includes(s)) return "male"
+          if (["p","f","female","wanita","perempuan"].includes(s)) return "female"
+          return "other"
+        }
+
         // Transform ke struktur IOrganization_member dengan field user
         const transformed = (membersData as unknown as MemberRow[]).map((m: MemberRow) => {
           const up = Array.isArray(m.user_profiles) ? (m.user_profiles[0] || undefined) : (m.user_profiles || undefined)
+          const gender: IUser['gender'] | null = up ? mapGender(up.jenis_kelamin ?? null) : null
           return{
-          ...(m as unknown as object),
-          user: up ? {
-            id: up.id,
-            first_name: up.first_name,
-            middle_name: up.middle_name,
-            last_name: up.last_name,
-            display_name: up.display_name,
-            email: up.email,
-            phone: up.phone,
-            mobile: up.mobile,
-            profile_photo_url: up.profile_photo_url,
-            // nik: up.nik,
-            // jenis_kelamin: up.jenis_kelamin,
-            // agama: up.agama,
-          } : undefined,
-        }
-      })
+            ...(m as unknown as object),
+            user: up ? {
+              id: up.id,
+              first_name: up.first_name,
+              middle_name: up.middle_name,
+              last_name: up.last_name,
+              display_name: up.display_name,
+              email: up.email,
+              phone: up.phone,
+              mobile: up.mobile,
+              profile_photo_url: up.profile_photo_url,
+              gender: gender,
+            } : undefined,
+            religionStr: up?.agama ?? null,
+          }
+        })
 
-      setMembers(transformed as IOrganization_member[])
+        const finalItems = transformed as MemberWithExtras[]
+        setMembers(finalItems)
+        setTotalItems(count || 0)
+
+        try { setCache(cacheKey, { items: finalItems, total: count || 0 }, 1000 * 180) } catch {}
 
         // Get organization_id from the source group
         const organizationId = groupRes.data.organization_id;
@@ -206,7 +241,11 @@ export default function MoveGroupPage() {
     fetchData();
   }, [fetchData]);
 
-  const columns = useMemo<ColumnDef<IOrganization_member>[]>(
+  useEffect(() => {
+    fetchData();
+  }, [pagination.pageIndex, pagination.pageSize, sortOrder, groupId])
+
+  const columns = useMemo<ColumnDef<MemberWithExtras>[]>(
     () => [
       {
         id: "select",
@@ -269,7 +308,10 @@ export default function MoveGroupPage() {
       {
         id: "religion",
         header: "Religion",
-        cell: () => <div>-</div>,
+        cell: ({ row }) => {
+          const member = row.original;
+          return <div>{member.religionStr || '-'}</div>
+        },
       }
     ],
     [handleMemberClick]
@@ -278,41 +320,8 @@ export default function MoveGroupPage() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
   const filteredAndSortedMembers = useMemo(() => {
-    let result = [...members];
-
-    if (searchQuery) {
-      const lowercasedQuery = searchQuery.toLowerCase();
-      result = result.filter(
-        (member) => {
-          const displayName = member.user?.display_name || 
-                             `${member.user?.first_name || ''} ${member.user?.last_name || ''}`.trim();
-          return (
-            displayName.toLowerCase().includes(lowercasedQuery) ||
-            (member.user?.email?.toLowerCase() || "").includes(lowercasedQuery)
-          );
-        }
-      );
-    }
-
-    switch (sortOrder) {
-      case "oldest":
-        result.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        break;
-      case "z-a":
-        result.sort((a, b) => {
-          const nameA = a.user?.display_name || `${a.user?.first_name || ''} ${a.user?.last_name || ''}`.trim();
-          const nameB = b.user?.display_name || `${b.user?.first_name || ''} ${b.user?.last_name || ''}`.trim();
-          return nameB.localeCompare(nameA);
-        });
-        break;
-      case "newest":
-      default:
-        result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        break;
-    }
-
-    return result;
-  }, [members, searchQuery, sortOrder]);
+    return members;
+  }, [members]);
 
   const table = useReactTable({
     data: filteredAndSortedMembers,
@@ -390,13 +399,8 @@ export default function MoveGroupPage() {
       toast.success(result.message);
       setRowSelection({}); // Reset selection
       
-      // Refresh data
-      const membersRes = await getMembersByGroupId(groupId!);
-      if (membersRes.success) {
-        setMembers(membersRes.data);
-      } else {
-        throw new Error(membersRes.message);
-      }
+      // Refresh data with current pagination
+      await fetchData();
 
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to move members');
@@ -488,7 +492,19 @@ export default function MoveGroupPage() {
           {loading ? (
             <TableSkeleton rows={5} columns={5} />
           ) : (
-            <DataTable table={table} />
+            <DataTable 
+              table={table}
+              server={{
+                isLoading: loading,
+                page: pagination.pageIndex + 1,
+                totalPages: Math.max(1, Math.ceil(totalItems / pagination.pageSize)),
+                from: totalItems > 0 ? (pagination.pageIndex * pagination.pageSize) + 1 : 0,
+                to: Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalItems),
+                total: totalItems,
+                pageSize: pagination.pageSize,
+                onPageSizeChange: (size) => setPagination({ pageIndex: 0, pageSize: size }),
+              }}
+            />
           )}
         </div>
       </div>

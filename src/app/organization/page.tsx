@@ -6,7 +6,6 @@ import { useOrgStore } from "@/store/org-store"
 import { useAuthStore } from "@/store/user-store"
 import { Organization } from "@/lib/types/organization"
 import { getUserOrganizations } from "@/action/auth-multi-org"
-import { getOrganizationCount } from "@/action/organization"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -34,24 +33,7 @@ export default function OrganizationPage() {
   const [isHydrated, setIsHydrated] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [orgCount, setOrgCount] = useState(3); // Default to 3, will be updated
-
-  // Fetch organization count for skeleton loading
-  useEffect(() => {
-    const fetchOrgCount = async () => {
-      const result = await getOrganizationCount();
-      if (result.success && result.count > 0) {
-        setOrgCount(result.count);
-      } else {
-        // Fallback to a default number if the count fails or is zero
-        setOrgCount(1);
-      }
-    };
-
-    if (isHydrated) {
-      fetchOrgCount();
-    }
-  }, [isHydrated]);
+  const [orgCount] = useState(3); // Default to 3, will be updated
 
   // Load organizations
   useEffect(() => {

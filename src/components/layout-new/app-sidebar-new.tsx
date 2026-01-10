@@ -17,8 +17,6 @@ import {
   Settings,
   Command,
   ChevronRight,
-  CalendarDays,
-  Plus,
   ListChecks,
   Cpu,
   Fingerprint,
@@ -127,15 +125,6 @@ const getSidebarGroups = (): NavGroup[] => [
         subItems: [
           { title: 'Shift Management', url: '/shift/management', icon: Clock },
           { title: 'Shift Assignment', url: '/shift/assignment', icon: Users },
-        ],
-      },
-      {
-        title: 'Leaves',
-        icon: CalendarDays,
-        subItems: [
-          { title: 'Dashboard', url: '/leaves', icon: BarChart3 },
-          { title: 'New Request', url: '/leaves/new', icon: Plus },
-          { title: 'Manage Types', url: '/leaves/types', icon: ListChecks, requiresAdmin: true },
         ],
       },
       {

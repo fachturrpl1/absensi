@@ -16,7 +16,17 @@ export function OrgBreadcrumb() {
   const pathname = usePathname()
   const { organizationName } = useOrgStore()
   const [isHydrated, setIsHydrated] = useState(false)
-  const [displayName, setDisplayName] = useState<string | null>(null)
+  const [displayName, setDisplayName] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    try {
+      const raw = localStorage.getItem('org-store')
+      if (!raw) return null
+      const parsed = JSON.parse(raw)
+      return parsed?.state?.organizationName ?? null
+    } catch {
+      return null
+    }
+  })
 
   useEffect(() => {
     // Set hydrated flag
@@ -24,7 +34,7 @@ export function OrgBreadcrumb() {
     
     // Try to get organizationName from localStorage as fallback
     // This handles the case where Zustand hasn't hydrated yet
-    if (!organizationName) {
+    if (!organizationName && !displayName) {
       try {
         const storedState = localStorage.getItem('org-store')
         if (storedState) {
@@ -68,6 +78,7 @@ export function OrgBreadcrumb() {
     // Organization
     '/members': 'Members',
     '/group': 'Groups',
+    '/group/move': 'Move',
     '/position': 'Positions',
     '/organization': 'Organization',
     '/organization/new': 'New',
@@ -88,6 +99,7 @@ export function OrgBreadcrumb() {
     '/attendance/locations': '/attendance',
     '/attendance-devices': '/attendance',
     '/analytics': '/attendance',
+    '/group/move': '/group',
     '/member-schedules': '/schedule',
     '/leaves/new': '/leaves',
     '/leaves/types': '/leaves',
@@ -171,9 +183,8 @@ export function OrgBreadcrumb() {
 
   // Jangan render sampai client-side hydration selesai
   // Tapi jika ada displayName dari localStorage atau organizationName dari store, boleh render
-  if (!isHydrated && !displayName && !organizationName) {
-    return null
-  }
+  // Removed hydration guard to avoid hiding breadcrumb on '/'
+
 
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground" suppressHydrationWarning>
