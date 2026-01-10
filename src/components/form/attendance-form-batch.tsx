@@ -239,7 +239,6 @@ export function AttendanceFormBatch() {
           })
           .map((member: any) => {
             const user = member.user
-            const biodata = (member as any).biodata
             let resolvedLabel = "No Name"
             if (user) {
               const displayName = user.display_name?.trim()
@@ -248,8 +247,6 @@ export function AttendanceFormBatch() {
                 .join(" ")
               const fullName = concatenated.trim()
               resolvedLabel = displayName || fullName || user.email || "No Name"
-            } else if (biodata) {
-              resolvedLabel = biodata.nickname || biodata.nama || "No Name"
             }
             return {
               id: String(Number(member.id)),

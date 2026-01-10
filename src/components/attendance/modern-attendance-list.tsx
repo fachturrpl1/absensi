@@ -146,27 +146,20 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   // Helper to map a joined row into AttendanceListItem
   const mapRowToItem = useCallback((data: any): AttendanceListItem => {
     type MemberProfile = { first_name: string | null; last_name: string | null; display_name: string | null; email: string | null; profile_photo_url: string | null; search_name: string | null };
-    type Biodata = { nama: string | null; nickname: string | null };
-    type MemberData = { id: number; user_profiles: MemberProfile | MemberProfile[] | null; biodata: Biodata | Biodata[] | null; departments: { name: string | null } | { name: string | null }[] | null };
+    type MemberData = { id: number; user_profiles: MemberProfile | MemberProfile[] | null; departments: { name: string | null } | { name: string | null }[] | null };
     const mRel = (data as any).organization_members as MemberData | MemberData[] | null;
     const mObj: MemberData | null = Array.isArray(mRel) ? (mRel[0] as MemberData) : (mRel as MemberData);
     const profileObj = mObj?.user_profiles;
     const profile: MemberProfile | null = Array.isArray(profileObj) ? (profileObj[0] ?? null) : (profileObj ?? null);
-    const biodataObj = mObj?.biodata;
-    const biodata: Biodata | null = Array.isArray(biodataObj) ? (biodataObj[0] ?? null) : (biodataObj ?? null);
     
-    // Try user_profiles first
+    // Get name from user_profiles
     const displayName = (profile?.display_name ?? '').trim();
     const firstName = profile?.first_name ?? '';
     const lastName = profile?.last_name ?? '';
     const email = (profile?.email ?? '').trim();
     const fullName = `${firstName} ${lastName}`.trim();
     
-    // Fallback to biodata if user_profiles has no name
-    const biodataNama = (biodata?.nama ?? '').trim();
-    const biodataNickname = (biodata?.nickname ?? '').trim();
-    
-    const effectiveName = displayName || fullName || email || (profile?.search_name ?? '') || biodataNama || biodataNickname;
+    const effectiveName = displayName || fullName || email || (profile?.search_name ?? '');
     const deptObj = mObj?.departments;
     const departmentName = Array.isArray(deptObj) ? (deptObj[0]?.name ?? '') : (deptObj?.name ?? '');
 

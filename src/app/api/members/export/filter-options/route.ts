@@ -46,16 +46,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get unique values from biodata table for the specified column
+    // Get unique values from user_profiles for the specified column
     const query = adminClient
       .from("organization_members")
       .select(`
-        biodata:biodata_nik (
+        user:user_id (
           ${column}
         )
       `)
       .eq("organization_id", organizationId)
-      .not("biodata_nik", "is", null)
+      .not("user_id", "is", null)
 
     const { data: members, error } = await query
 
@@ -70,9 +70,17 @@ export async function GET(request: NextRequest) {
     // Extract unique values
     const uniqueValues = new Set<string>()
     members?.forEach((member: any) => {
-      const biodata = member.biodata
-      if (biodata && biodata[column] && biodata[column].trim() !== "") {
-        uniqueValues.add(biodata[column])
+      const userProfile = Array.isArray(member.user) ? member.user[0] : member.user
+      if (userProfile && userProfile[column]) {
+        let value = userProfile[column]
+        // Convert jenis_kelamin from user_profiles format (male/female) to biodata format (L/P)
+        if (column === "jenis_kelamin") {
+          if (value === "male") value = "L"
+          else if (value === "female") value = "P"
+        }
+        if (value && String(value).trim() !== "") {
+          uniqueValues.add(String(value))
+        }
       }
     })
 

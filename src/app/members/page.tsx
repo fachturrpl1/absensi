@@ -74,15 +74,12 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
   {
     key: "nik",
     label: "NIK",
-    getValue: (member: any) => member.biodata?.nik || member.biodata_nik || "-",
+    getValue: (member: any) => member.user?.nik || member.biodata_nik || "-",
   },
   {
     key: "full_name",
     label: "Full Name",
     getValue: (member: any) => {
-
-      if (member.biodata?.nama) return member.biodata.nama
-      
       const user = member.user
       if (user) {
         const fullname =
@@ -100,17 +97,22 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
   {
     key: "nickname",
     label: "Nickname",
-    getValue: (member: any) => member.biodata?.nickname || "-",
+    getValue: (_member: any) => "-", // nickname tidak ada di user_profiles
   },
   {
     key: "nisn",
     label: "NISN",
-    getValue: (member: any) => member.biodata?.nisn || "-",
+    getValue: (member: any) => member.user?.nisn || "-",
   },
   {
     key: "gender",
     label: "Gender",
-    getValue: (member: any) => member.biodata?.jenis_kelamin || "-",
+    getValue: (member: any) => {
+      const gender = member.user?.jenis_kelamin
+      if (gender === 'male') return 'L'
+      if (gender === 'female') return 'P'
+      return gender || "-"
+    },
   },
   {
     key: "email",
@@ -120,7 +122,7 @@ const EXPORT_FIELDS: ExportFieldConfig[] = [
   {
     key: "phone",
     label: "Phone Number",
-    getValue: (member: any) => member.biodata?.no_telepon || member.user?.phone || "-",
+    getValue: (member: any) => member.user?.phone || member.user?.mobile || "-",
   },
   {
     key: "group",
@@ -277,14 +279,12 @@ export default function MembersPage() {
     return rawMembers.filter((member: any) => {
       // Search di semua field yang relevan
       
-      // 1. Nama dari biodata atau user
-      const biodataName = (member.biodata?.nama || '').toLowerCase()
+      // 1. Nama dari user_profiles
       const userFirstName = (member.user?.first_name || '').toLowerCase()
       const userMiddleName = (member.user?.middle_name || '').toLowerCase()
       const userLastName = (member.user?.last_name || '').toLowerCase()
       const userDisplayName = (member.user?.display_name || '').toLowerCase()
       const fullName = (
-        biodataName ||
         [userFirstName, userMiddleName, userLastName].filter(Boolean).join(' ') ||
         userDisplayName ||
         ''
@@ -294,7 +294,7 @@ export default function MembersPage() {
       const email = (member.email || member.user?.email || '').toLowerCase()
       
       // 3. NIK
-      const nik = ((member.biodata?.nik || member.biodata_nik || '') as string).toLowerCase()
+      const nik = ((member.user?.nik || member.biodata_nik || '') as string).toLowerCase()
       
       // 4. Employee ID
       const employeeId = ((member.employee_id || '') as string).toLowerCase()
@@ -331,8 +331,7 @@ export default function MembersPage() {
         // Also check individual name parts
         userFirstName.includes(searchTerm) ||
         userLastName.includes(searchTerm) ||
-        userDisplayName.includes(searchTerm) ||
-        biodataName.includes(searchTerm)
+        userDisplayName.includes(searchTerm)
       )
     })
   }, [pageData?.data, searchQuery])

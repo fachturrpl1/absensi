@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       }
 
     //komentar
-    // Minimal required field untuk biodata: nik & nama
+    // Minimal required field untuk user_profiles: nik & nama
     if (!mapping.nik) {
       return NextResponse.json(
         { success: false, message: "NIK mapping is required" },
@@ -242,6 +242,16 @@ export async function POST(request: NextRequest) {
         .replace(/[^\w]/g, "")
     }
 
+    // Helper convert jenis_kelamin from format (L/P) to user_profiles format (male/female)
+    const convertJenisKelamin = (jenisKelamin: string | null | undefined): string | null => {
+      if (!jenisKelamin) return null
+      const normalized = jenisKelamin.trim().toUpperCase()
+      if (normalized === "L") return "male"
+      if (normalized === "P") return "female"
+      // Jika format tidak sesuai, return null (akan di-handle oleh constraint)
+      return null
+    }
+
     const findDepartmentId = (
       value: string,
       departments: any[]
@@ -382,7 +392,7 @@ export async function POST(request: NextRequest) {
     
     // Map untuk lookup berdasarkan user_id
     const membersByUserId = new Map<string, { id: number; biodata_nik: string | null; organization_id: number }>()
-    // Map untuk lookup berdasarkan biodata_nik (untuk member tanpa email)
+    // Map untuk lookup berdasarkan NIK (untuk member tanpa email)
     const membersByBiodataNik = new Map<string, { id: number; user_id: string | null; organization_id: number }>()
     
     existingMembersData?.forEach((member) => {
@@ -413,7 +423,6 @@ export async function POST(request: NextRequest) {
         row: Record<string, any>
         nik: string
         nama: string
-        nickname: string
         nisn: string
         jenisKelamin: string
         tempatLahir: string
@@ -446,7 +455,6 @@ export async function POST(request: NextRequest) {
 
         const nik = getMappedValue(row, "nik")
         const nama = getMappedValue(row, "nama")
-        const nickname = getMappedValue(row, "nickname")
         const nisn = getMappedValue(row, "nisn")
         const jenisKelamin = getMappedValue(row, "jenis_kelamin").toUpperCase()
         const tempatLahir = getMappedValue(row, "tempat_lahir")
@@ -534,7 +542,6 @@ export async function POST(request: NextRequest) {
           row,
           nik,
           nama,
-          nickname,
           nisn,
           jenisKelamin,
           tempatLahir,
@@ -558,14 +565,16 @@ export async function POST(request: NextRequest) {
       // Track row yang gagal setelah validasi untuk menghitung success dengan benar
       const failedAfterValidation = new Set<number>()
 
-      // Batch process: Buat user untuk yang belum ada dan memiliki email (parallel dengan concurrency limit)
+      // Batch process: Buat user untuk yang belum ada (termasuk yang tidak punya email akan dibuat email dummy)
       const CONCURRENCY_LIMIT = 50 // Process 50 users at a time (optimized for faster import)
       const usersToCreate = validRows.filter(vr => {
-        // Hanya buat user jika ada email dan belum ada di cache
-        return vr.email && vr.email.trim() !== "" && !usersByEmail.has(vr.email.toLowerCase())
+        // Generate email (asli atau dummy)
+        const emailToUse = (vr.email && vr.email.trim() !== "") ? vr.email : `${vr.nik}@dummy.local`
+        // Buat user jika belum ada di cache
+        return !usersByEmail.has(emailToUse.toLowerCase())
       })
       
-      console.log(`[MEMBERS IMPORT] Creating ${usersToCreate.length} new users (${validRows.length - usersToCreate.length} rows without email will skip user creation)...`)
+      console.log(`[MEMBERS IMPORT] Creating ${usersToCreate.length} new users (${validRows.length - usersToCreate.length} rows already have users, rows without email will use dummy email: nik@dummy.local)...`)
       
       for (let i = 0; i < usersToCreate.length; i += CONCURRENCY_LIMIT) {
         const batch = usersToCreate.slice(i, i + CONCURRENCY_LIMIT)
@@ -575,10 +584,13 @@ export async function POST(request: NextRequest) {
               const nameParts = vr.nama.trim().split(" ")
               const firstName = nameParts[0] || vr.nama
               const lastName = nameParts.slice(1).join(" ") || null
-              const randomPassword = `MB${orgId}${Date.now()}${Math.random().toString(36).substring(2, 15)}`
+              const randomPassword = `password`
+              
+              // Generate email dummy jika tidak ada email
+              const emailToUse = (vr.email && vr.email.trim() !== "") ? vr.email : `${vr.nik}@dummy.local`
 
               const { data: newUser, error: createUserError } = await adminClient.auth.admin.createUser({
-                email: vr.email,
+                email: emailToUse,
                 password: randomPassword,
                 email_confirm: true,
                 user_metadata: {
@@ -591,33 +603,33 @@ export async function POST(request: NextRequest) {
                 // Jika error karena email sudah terdaftar, cari user yang sudah ada
                 if (createUserError.message?.toLowerCase().includes("already been registered") || 
                     createUserError.message?.toLowerCase().includes("email already exists")) {
-                  console.log(`[MEMBERS IMPORT] Email ${vr.email} sudah terdaftar, mencari user yang sudah ada...`)
+                  console.log(`[MEMBERS IMPORT] Email ${emailToUse} sudah terdaftar, mencari user yang sudah ada...`)
                   
                   // Cari user berdasarkan email dari cache atau list users
                   // Pertama cek cache lagi (mungkin ada race condition)
-                  const cachedUser = usersByEmail.get(vr.email.toLowerCase())
+                  const cachedUser = usersByEmail.get(emailToUse.toLowerCase())
                   if (cachedUser) {
-                    console.log(`[MEMBERS IMPORT] Found cached user for email ${vr.email}, using userId: ${cachedUser.id}`)
-                    return { email: vr.email.toLowerCase(), userId: cachedUser.id, rowData: vr }
+                    console.log(`[MEMBERS IMPORT] Found cached user for email ${emailToUse}, using userId: ${cachedUser.id}`)
+                    return { email: emailToUse.toLowerCase(), userId: cachedUser.id, rowData: vr }
                   }
                   
                   // Jika tidak ada di cache, cari dari list users
                   const { data: existingUsers, error: listError } = await adminClient.auth.admin.listUsers()
                   if (!listError && existingUsers?.users) {
                     const existingUser = existingUsers.users.find(
-                      (u: any) => u.email?.toLowerCase() === vr.email.toLowerCase()
+                      (u: any) => u.email?.toLowerCase() === emailToUse.toLowerCase()
                     )
                     
                     if (existingUser) {
                       // Update cache
-                      usersByEmail.set(vr.email.toLowerCase(), { id: existingUser.id, email: vr.email })
-                      console.log(`[MEMBERS IMPORT] Found existing user for email ${vr.email}, using userId: ${existingUser.id}`)
-                      return { email: vr.email.toLowerCase(), userId: existingUser.id, rowData: vr }
+                      usersByEmail.set(emailToUse.toLowerCase(), { id: existingUser.id, email: emailToUse })
+                      console.log(`[MEMBERS IMPORT] Found existing user for email ${emailToUse}, using userId: ${existingUser.id}`)
+                      return { email: emailToUse.toLowerCase(), userId: existingUser.id, rowData: vr }
                     }
                   }
                   
                   // Jika tidak ditemukan, anggap sebagai error
-                  console.warn(`[MEMBERS IMPORT] Email ${vr.email} dikatakan sudah terdaftar tapi tidak ditemukan`)
+                  console.warn(`[MEMBERS IMPORT] Email ${emailToUse} dikatakan sudah terdaftar tapi tidak ditemukan`)
                   failed++
                   failedAfterValidation.add(vr.rowNumber)
                   errors.push({
@@ -647,8 +659,8 @@ export async function POST(request: NextRequest) {
                 return null
               }
 
-              usersByEmail.set(vr.email.toLowerCase(), { id: newUser.user.id, email: vr.email })
-              return { email: vr.email.toLowerCase(), userId: newUser.user.id, rowData: vr }
+              usersByEmail.set(emailToUse.toLowerCase(), { id: newUser.user.id, email: emailToUse })
+              return { email: emailToUse.toLowerCase(), userId: newUser.user.id, rowData: vr }
             } catch (error: any) {
               failed++
               failedAfterValidation.add(vr.rowNumber)
@@ -662,10 +674,14 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Batch upsert user_profiles (hanya untuk yang punya email)
+      // Batch upsert user_profiles (semua rows, termasuk yang tidak punya email akan menggunakan email dummy)
       // Split into batches to avoid timeout
-      const rowsWithEmail = validRows.filter(vr => vr.email && vr.email.trim() !== "")
-      console.log(`[MEMBERS IMPORT] Batch upserting ${rowsWithEmail.length} user profiles (${validRows.length - rowsWithEmail.length} rows without email will skip user profile)...`)
+      const rowsWithEmail = validRows.filter(vr => {
+        // Include semua rows yang sudah punya user (baik dengan email asli atau email dummy)
+        const emailToUse = (vr.email && vr.email.trim() !== "") ? vr.email : `${vr.nik}@dummy.local`
+        return usersByEmail.has(emailToUse.toLowerCase())
+      })
+      console.log(`[MEMBERS IMPORT] Batch upserting ${rowsWithEmail.length} user profiles (rows without email will use dummy email: nik@dummy.local)...`)
       const PROFILE_BATCH_SIZE = 500 // Process 500 profiles at a time (optimized for faster import)
       
       for (let i = 0; i < rowsWithEmail.length; i += PROFILE_BATCH_SIZE) {
@@ -673,7 +689,9 @@ export async function POST(request: NextRequest) {
         const profilePayloads = batch
           .filter(vr => !failedAfterValidation.has(vr.rowNumber))
           .map((vr) => {
-            const userId = usersByEmail.get(vr.email.toLowerCase())?.id
+            // Generate email (asli atau dummy) untuk lookup user
+            const emailToUse = (vr.email && vr.email.trim() !== "") ? vr.email : `${vr.nik}@dummy.local`
+            const userId = usersByEmail.get(emailToUse.toLowerCase())?.id
             if (!userId) {
               // Jika tidak ada userId, berarti row ini gagal
               if (!failedAfterValidation.has(vr.rowNumber)) {
@@ -690,12 +708,24 @@ export async function POST(request: NextRequest) {
             const nameParts = vr.nama.trim().split(" ")
             return {
               id: userId,
-              email: vr.email,
+              email: emailToUse,
               first_name: nameParts[0] || vr.nama,
               last_name: nameParts.slice(1).join(" ") || null,
               phone: vr.noTelepon || null,
-              display_name: vr.nickname || vr.nama,
+              display_name: vr.nama,
               is_active: true,
+              // Fields from import data
+              nik: vr.nik || null,
+              nisn: vr.nisn || null,
+              jenis_kelamin: convertJenisKelamin(vr.jenisKelamin),
+              tempat_lahir: vr.tempatLahir || null,
+              agama: vr.agama || null,
+              jalan: vr.jalan || null,
+              rt: vr.rt || null,
+              rw: vr.rw || null,
+              dusun: vr.dusun || null,
+              kelurahan: vr.kelurahan || null,
+              kecamatan: vr.kecamatan || null,
             }
           }).filter(Boolean) as any[]
 
@@ -709,19 +739,32 @@ export async function POST(request: NextRequest) {
             // Fallback: upsert satu per satu untuk batch yang error
             for (const vr of batch) {
               if (failedAfterValidation.has(vr.rowNumber)) continue
-              const userId = usersByEmail.get(vr.email.toLowerCase())?.id
+              const emailToUse = (vr.email && vr.email.trim() !== "") ? vr.email : `${vr.nik}@dummy.local`
+              const userId = usersByEmail.get(emailToUse.toLowerCase())?.id
               if (!userId) continue
               const nameParts = vr.nama.trim().split(" ")
               const { error: singleProfileError } = await adminClient
                 .from("user_profiles")
                 .upsert({
                   id: userId,
-                  email: vr.email,
+                  email: emailToUse,
                   first_name: nameParts[0] || vr.nama,
                   last_name: nameParts.slice(1).join(" ") || null,
                   phone: vr.noTelepon || null,
-                  display_name: vr.nickname || vr.nama,
+                  display_name: vr.nama,
                   is_active: true,
+                  // Fields from import data
+                  nik: vr.nik || null,
+                  nisn: vr.nisn || null,
+                  jenis_kelamin: convertJenisKelamin(vr.jenisKelamin),
+                  tempat_lahir: vr.tempatLahir || null,
+                  agama: vr.agama || null,
+                  jalan: vr.jalan || null,
+                  rt: vr.rt || null,
+                  rw: vr.rw || null,
+                  dusun: vr.dusun || null,
+                  kelurahan: vr.kelurahan || null,
+                  kecamatan: vr.kecamatan || null,
                 }, { onConflict: "id" })
               
               if (singleProfileError && !failedAfterValidation.has(vr.rowNumber)) {
@@ -762,24 +805,27 @@ export async function POST(request: NextRequest) {
         }
 
         // Untuk member dengan email, gunakan userId
-        // Untuk member tanpa email, user_id akan NULL (tetap dibuat sebagai organization_members dengan biodata_nik)
+        // Untuk member tanpa email, gunakan email dummy (nik@dummy.local) yang sudah dibuat di batch user creation
         const hasEmail = vr.email && vr.email.trim() !== ""
+        const emailToUse = hasEmail ? vr.email : `${vr.nik}@dummy.local`
         let userId: string | null = null
         
-        if (hasEmail) {
-          userId = usersByEmail.get(vr.email.toLowerCase())?.id || null
-          if (!userId) {
-            if (!failedAfterValidation.has(vr.rowNumber)) {
-              failed++
-              failedAfterValidation.add(vr.rowNumber)
-              errors.push({
-                row: vr.rowNumber,
-                message: `Baris ${vr.rowNumber}: Gagal memproses - user tidak ditemukan`,
-              })
-            }
-            continue
+        // Cari userId dari cache (baik untuk email asli atau email dummy)
+        userId = usersByEmail.get(emailToUse.toLowerCase())?.id || null
+        
+        if (!userId) {
+          if (!failedAfterValidation.has(vr.rowNumber)) {
+            failed++
+            failedAfterValidation.add(vr.rowNumber)
+            errors.push({
+              row: vr.rowNumber,
+              message: `Baris ${vr.rowNumber}: Gagal memproses - user tidak ditemukan`,
+            })
           }
-        } else {
+          continue
+        }
+        
+        if (!hasEmail) {
           // Member tanpa email: hitung untuk reporting
           withoutEmailCount++
         }
@@ -788,7 +834,7 @@ export async function POST(request: NextRequest) {
         // Karena user minta: jika data sudah ada (berdasarkan NIK), update saja, jangan buat baru
         let existingMember = null
         
-        // Prioritas 1: Cek berdasarkan NIK (biodata_nik) - ini yang utama
+        // Prioritas 1: Cek berdasarkan NIK - ini yang utama
         if (vr.nik) {
           existingMember = membersByBiodataNik.get(vr.nik)
           // Pastikan organization_id sama
@@ -818,7 +864,29 @@ export async function POST(request: NextRequest) {
             updateData.department_id = vr.departmentId
           }
           if (vr.nik) updateData.biodata_nik = vr.nik
-          if (userId) updateData.user_id = userId // Update user_id jika ada
+          
+          // OPSI 3: Update user_id jika existing member punya user_id NULL
+          // Cari user account untuk member yang sebelumnya tidak punya user_id
+          let finalUserId = userId
+          if ('user_id' in existingMember && !existingMember.user_id && vr.nik) {
+            // Cari user berdasarkan email dummy di cache
+            const dummyEmail = `${vr.nik}@dummy.local`
+            const existingUserByDummyEmail = usersByEmail.get(dummyEmail.toLowerCase())
+            
+            if (existingUserByDummyEmail) {
+              finalUserId = existingUserByDummyEmail.id
+              console.log(`[MEMBERS IMPORT] Found existing user for dummy email ${dummyEmail}, will update user_id for member ${existingMember.id}`)
+            }
+            // Note: Jika user belum ada di cache, user akan dibuat nanti di batch user creation
+            // dan akan ter-update di import berikutnya atau di single row processing
+          }
+          
+          if (finalUserId) {
+            updateData.user_id = finalUserId
+          } else if (userId) {
+            updateData.user_id = userId // Fallback ke userId dari import baru
+          }
+          
           membersToUpdate.push({ id: existingMember.id, data: updateData, rowNumber: vr.rowNumber })
           console.log(`[MEMBERS IMPORT] Will UPDATE existing member ID ${existingMember.id} for NIK ${vr.nik} (row ${vr.rowNumber})`)
         } else {
@@ -843,68 +911,6 @@ export async function POST(request: NextRequest) {
           })
         }
       }
-
-      // Batch upsert biodata (HARUS DILAKUKAN TERLEBIH DAHULU sebelum insert organization_members)
-      console.log(`[MEMBERS IMPORT] Batch upserting biodata records...`)
-      console.log(`[MEMBERS IMPORT] Total valid rows to upsert: ${validRows.length}`)
-      const biodataPayloads = validRows
-        .filter(vr => !failedAfterValidation.has(vr.rowNumber))
-        .map((vr) => ({
-          rowNumber: vr.rowNumber,
-          payload: {
-            nik: vr.nik,
-            nama: vr.nama,
-            nickname: vr.nickname || null,
-            nisn: vr.nisn || null,
-            jenis_kelamin: vr.jenisKelamin || null,
-            tempat_lahir: vr.tempatLahir || null,
-            tanggal_lahir: vr.tanggalLahir,
-            agama: vr.agama || null,
-            jalan: vr.jalan || null,
-            rt: vr.rt || null,
-            rw: vr.rw || null,
-            dusun: vr.dusun || null,
-            kelurahan: vr.kelurahan || null,
-            kecamatan: vr.kecamatan || null,
-            no_telepon: vr.noTelepon || null,
-            email: vr.email || null,
-            department_id: vr.departmentId || null,
-          }
-        }))
-
-      // Upsert dalam batch (Supabase mendukung batch upsert)
-      const BIODATA_BATCH_SIZE = 500 // Optimized for faster import (increased from 200)
-      for (let i = 0; i < biodataPayloads.length; i += BIODATA_BATCH_SIZE) {
-        const batch = biodataPayloads.slice(i, i + BIODATA_BATCH_SIZE)
-        const batchPayloads = batch.map(item => item.payload)
-        const { error: biodataError } = await adminClient
-          .from("biodata")
-          .upsert(batchPayloads, { onConflict: "nik" })
-
-        if (biodataError) {
-          console.error(`[MEMBERS IMPORT] Batch biodata upsert error (batch ${i / BIODATA_BATCH_SIZE + 1}):`, biodataError)
-          // Fallback: upsert satu per satu untuk batch yang error
-          for (const item of batch) {
-            const { error: singleBiodataError } = await adminClient
-              .from("biodata")
-              .upsert(item.payload, { onConflict: "nik" })
-            
-            if (singleBiodataError && !failedAfterValidation.has(item.rowNumber)) {
-              failed++
-              failedAfterValidation.add(item.rowNumber)
-              errors.push({
-                row: item.rowNumber,
-                message: `Baris ${item.rowNumber}: Gagal menyimpan biodata - ${singleBiodataError.message}`,
-              })
-            } else {
-              console.log(`[MEMBERS IMPORT] Successfully upserted biodata for NIK: ${item.payload.nik}`)
-            }
-          }
-        } else {
-          console.log(`[MEMBERS IMPORT] Successfully upserted biodata batch ${i / BIODATA_BATCH_SIZE + 1} (${batch.length} records)`)
-        }
-      }
-      console.log(`[MEMBERS IMPORT] Completed biodata upsert for ${biodataPayloads.length} records`)
 
       // PENTING: Batch check semua NIK yang akan di-insert untuk memastikan tidak ada yang sudah ada
       // Ini untuk memastikan hanya update, bukan insert baru (sesuai permintaan user)
@@ -1301,7 +1307,6 @@ export async function POST(request: NextRequest) {
 
       const nik = getMappedValue(row, "nik")
       const nama = getMappedValue(row, "nama")
-      const nickname = getMappedValue(row, "nickname")
       const nisn = getMappedValue(row, "nisn")
       const jenisKelamin = getMappedValue(row, "jenis_kelamin").toUpperCase()
       const tempatLahir = getMappedValue(row, "tempat_lahir")
@@ -1514,14 +1519,16 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        // Email tidak wajib, jadi userId bisa NULL untuk member tanpa email
+        // Email tidak wajib, jika tidak ada email akan dibuat email dummy: nik@dummy.local
         let userId: string | null = null
         const hasEmail = email && email.trim() !== ""
+        
+        // Generate email dummy jika tidak ada email
+        const finalEmail = hasEmail ? email : `${nik}@dummy.local`
 
-        // Hanya buat user account jika ada email
-        if (hasEmail) {
-          // OPTIMASI: Gunakan cached usersByEmail map
-          const existingUserData = usersByEmail.get(email.toLowerCase())
+        // Selalu buat user account (baik dengan email asli atau email dummy)
+        // OPTIMASI: Gunakan cached usersByEmail map
+        const existingUserData = usersByEmail.get(finalEmail.toLowerCase())
 
           if (existingUserData) {
             userId = existingUserData.id
@@ -1531,12 +1538,24 @@ export async function POST(request: NextRequest) {
               .upsert(
                 {
                   id: userId,
-                  email: email,
+                  email: finalEmail,
                   first_name: nama.split(" ")[0] || nama,
                   last_name: nama.split(" ").slice(1).join(" ") || null,
                   phone: noTelepon || null,
-                  display_name: nickname || nama,
+                  display_name: nama,
                   is_active: true,
+                  // Fields from import data
+                  nik: nik || null,
+                  nisn: nisn || null,
+                  jenis_kelamin: convertJenisKelamin(jenisKelamin),
+                  tempat_lahir: tempatLahir || null,
+                  agama: agama || null,
+                  jalan: jalan || null,
+                  rt: rt || null,
+                  rw: rw || null,
+                  dusun: dusun || null,
+                  kelurahan: kelurahan || null,
+                  kecamatan: kecamatan || null,
                 },
                 {
                   onConflict: "id",
@@ -1560,7 +1579,7 @@ export async function POST(request: NextRequest) {
             const lastName = nameParts.slice(1).join(" ") || null
 
             const { data: newUser, error: createUserError } = await adminClient.auth.admin.createUser({
-              email: email,
+              email: finalEmail,
               password: randomPassword,
               email_confirm: true,
               user_metadata: {
@@ -1573,13 +1592,13 @@ export async function POST(request: NextRequest) {
                 // Jika error karena email sudah terdaftar, cari user yang sudah ada
                 if (createUserError.message?.toLowerCase().includes("already been registered") || 
                     createUserError.message?.toLowerCase().includes("email already exists")) {
-                  console.log(`[MEMBERS IMPORT] Email ${email} sudah terdaftar, mencari user yang sudah ada...`)
+                  console.log(`[MEMBERS IMPORT] Email ${finalEmail} sudah terdaftar, mencari user yang sudah ada...`)
                   
                   // Cek cache dulu (mungkin ada race condition)
-                  const cachedUser = usersByEmail.get(email.toLowerCase())
+                  const cachedUser = usersByEmail.get(finalEmail.toLowerCase())
                   if (cachedUser) {
                     userId = cachedUser.id
-                    console.log(`[MEMBERS IMPORT] Found cached user for email ${email}, using userId: ${userId}`)
+                    console.log(`[MEMBERS IMPORT] Found cached user for email ${finalEmail}, using userId: ${userId}`)
                   } else {
                     // Jika tidak ada di cache, cari dengan listUsers dengan pagination
                     let found = false
@@ -1593,20 +1612,20 @@ export async function POST(request: NextRequest) {
                       })
                       
                       if (listError) {
-                        console.error(`[MEMBERS IMPORT] Failed to list users (page ${page}) to find existing user for ${email}:`, listError)
+                        console.error(`[MEMBERS IMPORT] Failed to list users (page ${page}) to find existing user for ${finalEmail}:`, listError)
                         break
                       }
                       
                       if (existingUsers?.users) {
                         const existingUser = existingUsers.users.find(
-                          (u: any) => u.email?.toLowerCase() === email.toLowerCase()
+                          (u: any) => u.email?.toLowerCase() === finalEmail.toLowerCase()
                         )
                         
                         if (existingUser) {
                           userId = existingUser.id
                           // Update cache
-                          usersByEmail.set(email.toLowerCase(), { id: userId, email: email })
-                          console.log(`[MEMBERS IMPORT] Found existing user for email ${email} on page ${page}, using userId: ${userId}`)
+                          usersByEmail.set(finalEmail.toLowerCase(), { id: userId, email: finalEmail })
+                          console.log(`[MEMBERS IMPORT] Found existing user for email ${finalEmail} on page ${page}, using userId: ${userId}`)
                           found = true
                           break
                         }
@@ -1624,7 +1643,7 @@ export async function POST(request: NextRequest) {
                     
                     // Jika masih tidak ditemukan, coba refresh cache dengan listUsers sekali lagi
                     if (!found && !userId) {
-                      console.log(`[MEMBERS IMPORT] Email ${email} tidak ditemukan di paginated search, refreshing cache...`)
+                      console.log(`[MEMBERS IMPORT] Email ${finalEmail} tidak ditemukan di paginated search, refreshing cache...`)
                       const { data: allUsers, error: refreshError } = await adminClient.auth.admin.listUsers()
                       if (!refreshError && allUsers?.users) {
                         // Update cache dengan semua users
@@ -1635,12 +1654,12 @@ export async function POST(request: NextRequest) {
                         })
                         
                         const existingUser = allUsers.users.find(
-                          (u: any) => u.email?.toLowerCase() === email.toLowerCase()
+                          (u: any) => u.email?.toLowerCase() === finalEmail.toLowerCase()
                         )
                         
                         if (existingUser) {
                           userId = existingUser.id
-                          console.log(`[MEMBERS IMPORT] Found existing user for email ${email} after cache refresh, using userId: ${userId}`)
+                          console.log(`[MEMBERS IMPORT] Found existing user for email ${finalEmail} after cache refresh, using userId: ${userId}`)
                         }
                       }
                     }
@@ -1648,7 +1667,7 @@ export async function POST(request: NextRequest) {
                   
                   // Jika userId masih null setelah semua pencarian, anggap sebagai error
                   if (!userId) {
-                    console.error(`[MEMBERS IMPORT] Email ${email} dikatakan sudah terdaftar tapi tidak dapat menemukan user yang sudah ada setelah semua pencarian`)
+                    console.error(`[MEMBERS IMPORT] Email ${finalEmail} dikatakan sudah terdaftar tapi tidak dapat menemukan user yang sudah ada setelah semua pencarian`)
                     failed++
                     errors.push({
                       row: rowNumber,
@@ -1675,8 +1694,8 @@ export async function POST(request: NextRequest) {
             } else {
               // User berhasil dibuat
               userId = newUser.user.id
-              // Update cache untuk user baru
-              usersByEmail.set(email.toLowerCase(), { id: userId, email: email })
+              // Update cache untuk user baru (termasuk email dummy)
+              usersByEmail.set(finalEmail.toLowerCase(), { id: userId, email: finalEmail })
             }
 
             const { error: profileError } = await adminClient
@@ -1684,12 +1703,24 @@ export async function POST(request: NextRequest) {
               .upsert(
                 {
                   id: userId,
-                  email: email,
+                  email: finalEmail,
                   first_name: firstName,
                   last_name: lastName,
                   phone: noTelepon || null,
-                  display_name: nickname || nama,
+                  display_name: nama,
                   is_active: true,
+                  // Fields from import data
+                  nik: nik || null,
+                  nisn: nisn || null,
+                  jenis_kelamin: convertJenisKelamin(jenisKelamin),
+                  tempat_lahir: tempatLahir || null,
+                  agama: agama || null,
+                  jalan: jalan || null,
+                  rt: rt || null,
+                  rw: rw || null,
+                  dusun: dusun || null,
+                  kelurahan: kelurahan || null,
+                  kecamatan: kecamatan || null,
                 },
                 {
                   onConflict: "id",
@@ -1710,54 +1741,13 @@ export async function POST(request: NextRequest) {
               continue
             }
           }
-        }
 
-        // PENTING: Upsert biodata TERLEBIH DAHULU sebelum insert/update organization_members
-        // karena organization_members memiliki foreign key constraint ke biodata(nik)
-        const biodataPayload: any = {
-          nik,
-          nama,
-          nickname: nickname || null,
-          nisn: nisn || null,
-          jenis_kelamin: jenisKelamin || null,
-          tempat_lahir: tempatLahir || null,
-          tanggal_lahir: tanggalLahir,
-          agama: agama || null,
-          jalan: jalan || null,
-          rt: rt || null,
-          rw: rw || null,
-          dusun: dusun || null,
-          kelurahan: kelurahan || null,
-          kecamatan: kecamatan || null,
-          no_telepon: noTelepon || null,
-          email: email || null,
-          department_id: departmentId || null,
-        }
-
-        const { error: upsertError } = await adminClient
-          .from("biodata")
-          .upsert(biodataPayload, {
-            onConflict: "nik",
-          })
-
-        if (upsertError) {
-          console.error(`[MEMBERS IMPORT] Failed to upsert biodata for NIK ${nik}:`, upsertError)
-          failed++
-          errors.push({
-            row: rowNumber,
-            message: `Baris ${rowNumber}: Gagal menyimpan biodata - ${upsertError.message}`,
-          })
-          continue
-        } else {
-          console.log(`[MEMBERS IMPORT] Successfully upserted biodata for NIK: ${nik}`)
-        }
-
-        // Buat/update organization_members SETELAH biodata di-upsert
+        // Buat/update organization_members
         // Bisa dibuat dengan user_id NULL untuk member tanpa email
         if (orgId) {
           const today = new Date().toISOString().split("T")[0]
 
-          // Cari existing member: berdasarkan userId jika ada, atau berdasarkan biodata_nik jika tidak ada email
+          // Cari existing member: berdasarkan userId jika ada, atau berdasarkan NIK jika tidak ada email
           let existingMember: { id: number; biodata_nik?: string | null; user_id?: string | null; organization_id: number } | null = null
           if (userId) {
             existingMember = membersByUserId.get(userId) || null
@@ -1800,8 +1790,78 @@ export async function POST(request: NextRequest) {
             if (nik && 'biodata_nik' in existingMember && existingMember.biodata_nik !== nik) {
               updateData.biodata_nik = nik
             }
-            // Update user_id jika ada (untuk member yang sebelumnya tanpa email, sekarang punya email)
-            if (userId && 'user_id' in existingMember && !existingMember.user_id) {
+            
+            // OPSI 3: Update user_id jika existing member punya user_id NULL
+            // Cari atau buat user account untuk member yang sebelumnya tidak punya user_id
+            if (!existingMember.user_id && nik) {
+              // Jika userId dari import baru tidak ada, cari user berdasarkan email dummy
+              if (!userId) {
+                const dummyEmail = `${nik}@dummy.local`
+                const { data: existingUser } = await adminClient
+                  .from("user_profiles")
+                  .select("id")
+                  .eq("email", dummyEmail)
+                  .maybeSingle()
+                
+                if (existingUser) {
+                  userId = existingUser.id
+                  console.log(`[MEMBERS IMPORT] Found existing user for dummy email ${dummyEmail}, will update user_id for member ${existingMember.id}`)
+                } else {
+                  // User belum ada, buat user account baru dengan email dummy
+                  const randomPassword = `password`
+                  const { data: newUser, error: createUserError } = await adminClient.auth.admin.createUser({
+                    email: dummyEmail,
+                    password: randomPassword,
+                    email_confirm: true,
+                  })
+                  
+                  if (createUserError) {
+                    console.error(`[MEMBERS IMPORT] Failed to create user for dummy email ${dummyEmail}:`, createUserError)
+                    // Continue tanpa user_id, tetap update field lain
+                  } else if (newUser?.user) {
+                    userId = newUser.user.id
+                    
+                    // Buat user profile
+                    const nameParts = nama.trim().split(" ")
+                    const { error: profileError } = await adminClient
+                      .from("user_profiles")
+                      .upsert({
+                        id: userId,
+                        email: dummyEmail,
+                        first_name: nameParts[0] || nama,
+                        last_name: nameParts.slice(1).join(" ") || null,
+                        phone: noTelepon || null,
+                        display_name: nama,
+                        is_active: true,
+                        // Fields from import data
+                        nik: nik || null,
+                        nisn: nisn || null,
+                        jenis_kelamin: convertJenisKelamin(jenisKelamin),
+                        tempat_lahir: tempatLahir || null,
+                        agama: agama || null,
+                        jalan: jalan || null,
+                        rt: rt || null,
+                        rw: rw || null,
+                        dusun: dusun || null,
+                        kelurahan: kelurahan || null,
+                        kecamatan: kecamatan || null,
+                      }, { onConflict: "id" })
+                    
+                    if (profileError) {
+                      console.error(`[MEMBERS IMPORT] Failed to create user profile for ${dummyEmail}:`, profileError)
+                    } else {
+                      console.log(`[MEMBERS IMPORT] Created new user account with dummy email ${dummyEmail} for member ${existingMember.id}`)
+                    }
+                  }
+                }
+              }
+              
+              // Update user_id jika sudah ditemukan atau dibuat
+              if (userId) {
+                updateData.user_id = userId
+              }
+            } else if (userId && 'user_id' in existingMember && !existingMember.user_id) {
+              // Update user_id jika ada dari import baru (untuk member yang sebelumnya tanpa email, sekarang punya email)
               updateData.user_id = userId
             }
 

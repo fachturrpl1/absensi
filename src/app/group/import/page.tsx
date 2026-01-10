@@ -424,10 +424,10 @@ export default function GroupImportPage() {
         <Wizard
           steps={WIZARD_STEPS}
           currentStep={currentStep}
-          onNext={currentStep === 3 ? undefined : handleNext}
+          onNext={currentStep === 4 ? undefined : handleNext}
           onPrevious={handlePrevious}
           canGoNext={canGoNext()}
-          showNavigation={currentStep !== 3}
+          showNavigation={currentStep !== 4}
         >
           {/* Step 1: Upload */}
           {currentStep === 1 && (
@@ -834,7 +834,7 @@ export default function GroupImportPage() {
                   )}
 
                   {/* Progress bar saat proses import berjalan */}
-                  {processing && importProgress.total > 0 && (
+                  {importProgress.total > 0 && (
                     <div className="space-y-2">
                       <p className="text-sm text-muted-foreground">
                         Mengimport{" "}

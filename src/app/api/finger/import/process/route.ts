@@ -613,6 +613,7 @@ export async function POST(request: NextRequest) {
           no_telepon: noTelepon || null,
           email: email || null,
           department_id: departmentId,
+          organization_id: orgId || null,
         }
 
         // Jika ada userId dan ada relasi biodata ke organization_members, link mereka

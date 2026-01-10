@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useOrgStore } from "@/store/org-store"
-import { FileText, X, Download, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
+import { FileText, X, Download, Loader2, CheckCircle2, AlertCircle, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { Wizard, WizardStep } from "@/components/ui/wizard"
@@ -14,7 +14,6 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -438,7 +437,7 @@ export default function AttendanceImportPage() {
         toast.error("Silakan lakukan test terlebih dahulu")
         return
       }
-      handleImport()
+      setCurrentStep(4)
     } else if (currentStep === 5) {
       router.prefetch("/attendance/list")
       router.push("/attendance/list")
@@ -640,10 +639,11 @@ export default function AttendanceImportPage() {
                             <SelectTrigger id="check-in-method-select" className="w-full">
                               <SelectValue placeholder="Pilih check in method" />
                             </SelectTrigger>
-                            <SelectContent>
+                          <SelectContent>
                               <SelectItem value="none">-- Tidak Dipilih --</SelectItem>
                               <SelectItem value="face_recognition_kiosk">Face Recognition Kiosk</SelectItem>
                               <SelectItem value="FINGERPRINT">Fingerprint</SelectItem>
+                              <SelectItem value="MANUAL">Manual</SelectItem>
                             </SelectContent>
                           </Select>
                           <p className="text-xs text-muted-foreground">
@@ -869,36 +869,93 @@ export default function AttendanceImportPage() {
           {/* Step 4: Import */}
           {currentStep === 4 && (
             <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Mengimpor Data</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Mohon tunggu, data sedang diimpor...
-                </p>
-              </div>
-
-              {importProgress.total > 0 && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Memproses...</span>
-                    <span>
-                      {importProgress.current} / {importProgress.total} baris
-                    </span>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ready to Import</CardTitle>
+                  <CardDescription>
+                    Review your mapping and click Import to start the process
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-sm">
+                      <span className="font-medium">File:</span> {file?.name}
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">Total Rows:</span> {totalRows}
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">Mapped Fields:</span>{" "}
+                      {Object.keys(mapping).filter((key) => mapping[key]).length} of {DATABASE_FIELDS.length}
+                    </p>
                   </div>
-                  <Progress
-                    value={(importProgress.current / importProgress.total) * 100}
-                    className="h-2"
-                  />
-                  <p className="text-sm text-muted-foreground text-center">
-                    Importing {importProgress.current} / {importProgress.total} rows...
-                  </p>
-                </div>
-              )}
 
-              {processing && (
-                <div className="flex justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              )}
+                  {testSummary && (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Test Results: {testSummary.success} valid, {testSummary.failed} errors
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* Progress bar saat proses import berjalan */}
+                  {processing && importProgress.total > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Mengimport{" "}
+                        <span className="font-semibold">
+                          {importProgress.current.toLocaleString()} /{" "}
+                          {importProgress.total.toLocaleString()}
+                        </span>{" "}
+                        baris...
+                      </p>
+                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-2 bg-primary transition-all"
+                          style={{
+                            width: `${
+                              Math.min(
+                                100,
+                                (importProgress.current / importProgress.total) * 100 || 0
+                              )
+                            }%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      onClick={handlePrevious}
+                      disabled={processing}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      onClick={handleImport}
+                      disabled={processing || !mapping.nik || !mapping.attendance_date}
+                      className="flex-1"
+                      size="lg"
+                    >
+                      {processing ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Importing...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Start Import
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
 

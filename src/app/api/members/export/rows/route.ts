@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Build query - fetch ALL biodata columns
+    // Build query - fetch ALL user_profiles columns
     let query = adminClient
       .from("organization_members")
       .select(`
@@ -65,24 +65,27 @@ export async function GET(request: NextRequest) {
         employee_id,
         is_active,
         hire_date,
-        biodata:biodata_nik (
-          nik,
-          nama,
-          nickname,
-          nisn,
+        user:user_id (
+          id,
+          email,
+          first_name,
+          middle_name,
+          last_name,
+          display_name,
+          phone,
+          mobile,
+          date_of_birth,
           jenis_kelamin,
+          nik,
+          nisn,
           tempat_lahir,
-          tanggal_lahir,
           agama,
           jalan,
           rt,
           rw,
           dusun,
           kelurahan,
-          kecamatan,
-          no_telepon,
-          email,
-          department_id
+          kecamatan
         ),
         departments:department_id (
           id,
@@ -117,48 +120,52 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Helper function to extract biodata from Supabase relation
-    const getBiodata = (member: any) => {
-      if (Array.isArray(member.biodata)) {
-        return member.biodata[0] || {}
-      } else if (member.biodata && typeof member.biodata === 'object') {
-        return member.biodata
+    // Helper function to extract user profile from Supabase relation
+    const getUserProfile = (member: any) => {
+      if (Array.isArray(member.user)) {
+        return member.user[0] || {}
+      } else if (member.user && typeof member.user === 'object') {
+        return member.user
       }
       return {}
     }
 
-    // Filter out members without biodata (admin yang dibuat langsung tanpa biodata)
+    // Filter out members without user profile
     let filteredMembers = (members || []).filter((member: any) => {
-      const biodata = getBiodata(member)
-      // Exclude members yang tidak punya biodata_nik dan tidak punya biodata data
-      return member.biodata_nik || (biodata && Object.keys(biodata).length > 0)
+      const userProfile = getUserProfile(member)
+      // Exclude members yang tidak punya user_id dan tidak punya user profile data
+      return member.user_id || (userProfile && Object.keys(userProfile).length > 0)
     })
 
     if (search) {
       const searchLower = search.toLowerCase()
       filteredMembers = filteredMembers.filter((member: any) => {
-        const biodata = getBiodata(member)
+        const userProfile = getUserProfile(member)
+        const displayName = userProfile.display_name || `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim()
         return (
           member.biodata_nik?.toLowerCase().includes(searchLower) ||
           member.employee_id?.toLowerCase().includes(searchLower) ||
-          biodata.nama?.toLowerCase().includes(searchLower) ||
-          biodata.email?.toLowerCase().includes(searchLower) ||
-          biodata.nik?.toLowerCase().includes(searchLower)
+          displayName.toLowerCase().includes(searchLower) ||
+          userProfile.email?.toLowerCase().includes(searchLower) ||
+          userProfile.nik?.toLowerCase().includes(searchLower)
         )
       })
     }
 
     if (selectedGenders.length > 0) {
       filteredMembers = filteredMembers.filter((member: any) => {
-        const biodata = getBiodata(member)
-        return selectedGenders.includes(biodata.jenis_kelamin)
+        const userProfile = getUserProfile(member)
+        // Convert user_profiles jenis_kelamin (male/female) to biodata format (L/P) for comparison
+        const genderMap: Record<string, string> = { 'male': 'L', 'female': 'P' }
+        const gender = genderMap[userProfile.jenis_kelamin || ''] || userProfile.jenis_kelamin
+        return selectedGenders.includes(gender)
       })
     }
 
     if (selectedAgamas.length > 0) {
       filteredMembers = filteredMembers.filter((member: any) => {
-        const biodata = getBiodata(member)
-        return selectedAgamas.includes(biodata.agama)
+        const userProfile = getUserProfile(member)
+        return selectedAgamas.includes(userProfile.agama)
       })
     }
 
@@ -167,29 +174,34 @@ export async function GET(request: NextRequest) {
     const endIndex = startIndex + pageSize
     const paginatedMembers = filteredMembers.slice(startIndex, endIndex)
 
-    // Transform to flat structure with ONLY biodata columns
+    // Transform to flat structure with user_profiles columns
     const transformedData = paginatedMembers.map((member: any) => {
-      const biodata = getBiodata(member)
+      const userProfile = getUserProfile(member)
+      const displayName = userProfile.display_name || `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim()
+      
+      // Convert user_profiles jenis_kelamin (male/female) to biodata format (L/P)
+      const genderMap: Record<string, string> = { 'male': 'L', 'female': 'P' }
+      const jenisKelamin = genderMap[userProfile.jenis_kelamin || ''] || userProfile.jenis_kelamin || ""
 
-      // Return ONLY biodata columns (all columns from biodata table)
+      // Return columns from user_profiles (mapped to biodata format for compatibility)
       return {
-        nik: member.biodata_nik || biodata.nik || "",
-        nama: biodata.nama || "",
-        nickname: biodata.nickname || "",
-        nisn: biodata.nisn || "",
-        jenis_kelamin: biodata.jenis_kelamin || "",
-        tempat_lahir: biodata.tempat_lahir || "",
-        tanggal_lahir: biodata.tanggal_lahir || "",
-        agama: biodata.agama || "",
-        jalan: biodata.jalan || "",
-        rt: biodata.rt || "",
-        rw: biodata.rw || "",
-        dusun: biodata.dusun || "",
-        kelurahan: biodata.kelurahan || "",
-        kecamatan: biodata.kecamatan || "",
-        no_telepon: biodata.no_telepon || "",
-        email: biodata.email || "",
-        department_id: biodata.department_id || "",
+        nik: member.biodata_nik || userProfile.nik || "",
+        nama: displayName || "",
+        nickname: "", // nickname tidak ada di user_profiles
+        nisn: userProfile.nisn || "",
+        jenis_kelamin: jenisKelamin,
+        tempat_lahir: userProfile.tempat_lahir || "",
+        tanggal_lahir: userProfile.date_of_birth || "",
+        agama: userProfile.agama || "",
+        jalan: userProfile.jalan || "",
+        rt: userProfile.rt || "",
+        rw: userProfile.rw || "",
+        dusun: userProfile.dusun || "",
+        kelurahan: userProfile.kelurahan || "",
+        kecamatan: userProfile.kecamatan || "",
+        no_telepon: userProfile.phone || userProfile.mobile || "",
+        email: userProfile.email || "",
+        department_id: member.department_id || "",
       }
     })
 

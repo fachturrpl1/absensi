@@ -69,9 +69,8 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
 
   const getFullName = (member: IOrganization_member) => {
     const user = (member as any).user
-    const biodata = (member as any).biodata
     
-    // Try to get name from user first
+    // Get name from user_profiles
     if (user) {
       const fullName = [user.first_name, user.middle_name, user.last_name]
         .filter((part: any) => part && part.trim() !== "")
@@ -79,12 +78,6 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
       if (fullName) return fullName
       if (user.display_name) return user.display_name
       if (user.email) return user.email
-    }
-    
-    // Fallback to biodata if user is null or has no name
-    if (biodata) {
-      if (biodata.nama) return biodata.nama
-      if (biodata.nickname) return biodata.nickname
     }
     
     return "No Name"
@@ -106,7 +99,7 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
           (Array.isArray((member as any).departments) && (member as any).departments[0]?.name) || 
           ""
         ).toLowerCase()
-        const nik = (((member as any).biodata?.nik || (member as any).biodata_nik || "") as string).toLowerCase()
+        const nik = (((member as any).user?.nik || (member as any).biodata_nik || "") as string).toLowerCase()
         return (
           fullName.includes(searchTerm) ||
           phone.includes(searchTerm) ||
@@ -323,7 +316,7 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
                   )}
                   {visibleColumns.nik && (
                     <td className="px-4 py-3 text-sm">
-                      {(member as any).biodata?.nik || "-"}
+                      {(member as any).user?.nik || (member as any).biodata_nik || "-"}
                     </td>
                   )}
                   {/* {visibleColumns.phone && (
@@ -343,13 +336,18 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
 
                   {visibleColumns.gender && (
                     <td className="px-4 py-3 text-sm">
-                      {(member as any).biodata?.jenis_kelamin || "-"}
+                      {(() => {
+                        const gender = (member as any).user?.jenis_kelamin
+                        if (gender === 'male') return 'L'
+                        if (gender === 'female') return 'P'
+                        return gender || "-"
+                      })()}
                     </td>
                   )}
 
                   {visibleColumns.religion && (
                     <td className="px-4 py-3 text-sm">
-                      {(member as any).biodata?.agama || "-"}
+                      {(member as any).user?.agama || "-"}
                     </td>
                   )}
 

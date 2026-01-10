@@ -144,9 +144,8 @@ export function AttendanceForm() {
           })
           .map((member) => {
             const user = member.user
-            const biodata = (member as any).biodata
             
-            // Get name from user or biodata
+            // Get name from user_profiles
             let resolvedLabel = "No Name"
             if (user) {
               const displayName = user.display_name?.trim()
@@ -155,8 +154,6 @@ export function AttendanceForm() {
                 .join(" ")
               const fullName = concatenated.trim()
               resolvedLabel = displayName || fullName || user.email || "No Name"
-            } else if (biodata) {
-              resolvedLabel = biodata.nickname || biodata.nama || "No Name"
             }
 
             const memberId = String(Number(member.id))

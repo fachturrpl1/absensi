@@ -138,7 +138,7 @@ export default function MoveGroupPage() {
             email: m.user_profiles.email,
             phone: m.user_profiles.phone,
           } : undefined,
-          biodata: m.biodata,
+          // biodata removed - using user_profiles instead
         }))
         setMembers(transformed)
 
@@ -219,7 +219,12 @@ export default function MoveGroupPage() {
         header: "Gender",
         cell: ({ row }) => {
           const member = row.original as any;
-          return <div>{member.biodata?.jenis_kelamin || '-'}</div>
+          return <div>{(() => {
+            const gender = member.user?.jenis_kelamin
+            if (gender === 'male') return 'L'
+            if (gender === 'female') return 'P'
+            return gender || '-'
+          })()}</div>
         },
       },
       {
@@ -227,7 +232,7 @@ export default function MoveGroupPage() {
         header: "Religion",
         cell: ({ row }) => {
           const member = row.original as any;
-          return <div>{member.biodata?.agama || '-'}</div>
+          return <div>{member.user?.agama || '-'}</div>
         },
       }
     ],

@@ -25,11 +25,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-// Mapping kolom Excel ke kolom tabel biodata member
+// Mapping kolom Excel ke kolom tabel user_profiles
 const DATABASE_FIELDS = [
   { key: "nik",           label: "NIK",            required: true },
   { key: "nama",          label: "Nama Lengkap",   required: true },
-  { key: "nickname",      label: "Nickname",       required: false },
   { key: "nisn",          label: "NISN",           required: false },
   { key: "jenis_kelamin", label: "Jenis Kelamin",  required: true }, // L / P
   { key: "tempat_lahir",  label: "Tempat Lahir",   required: false },
@@ -261,7 +260,7 @@ export default function MembersImportSimplePage() {
         toast.success(`Excel file loaded. Found ${data.totalRows} rows and ${data.headers.length} columns`)
       }
 
-      // Auto-map kolom umum ke field biodata (dengan matching yang lebih ketat)
+      // Auto-map kolom umum ke field user_profiles (dengan matching yang lebih ketat)
       // IMPORTANT: One header can only map to one field (prevent duplicate mapping)
       const autoMapping: ColumnMapping = {}
       const usedHeaders = new Set<string>() // Track which headers have been mapped

@@ -137,14 +137,27 @@ export async function GET(req: Request) {
       .from('organization_members')
       .select(`
         *,
-        biodata:biodata_nik (*),
         user:user_id (
           id,
           email,
           first_name,
           middle_name,
           last_name,
-          display_name
+          display_name,
+          phone,
+          mobile,
+          date_of_birth,
+          jenis_kelamin,
+          nik,
+          nisn,
+          tempat_lahir,
+          agama,
+          jalan,
+          rt,
+          rw,
+          dusun,
+          kelurahan,
+          kecamatan
         ),
         departments:department_id (
           id,
@@ -173,7 +186,7 @@ export async function GET(req: Request) {
     }
 
     // Note: Search dihapus dari API query karena akan dilakukan di client-side
-    // untuk mencakup semua field termasuk joined fields (nama dari biodata/user, department name)
+    // untuk mencakup semua field termasuk joined fields (nama dari user_profiles, department name)
     // Ini memastikan search bekerja untuk semua field yang ditampilkan di UI
 
     // Branch: page-based (offset) vs cursor-based (legacy)
