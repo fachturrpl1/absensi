@@ -28,7 +28,6 @@ import {
   ChevronsRight,
   ChevronLeft,
   ChevronRight,
-  Upload,
   Download
 } from "lucide-react"
 import { toast } from "sonner"
