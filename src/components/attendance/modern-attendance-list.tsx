@@ -310,6 +310,13 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     setIsMounted(true);
   }, []);
 
+  const initialsFromName = useCallback((name: string): string => {
+    const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    const first = parts[0]?.[0] ?? '';
+    const second = parts[1]?.[0] ?? '';
+    return (first + second).toUpperCase();
+  }, []);
+
   // Helper to convert Date to local YYYY-MM-DD string
   const toLocalYMD = useCallback((d: Date) => {
     const dt = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
@@ -1135,7 +1142,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                           <Avatar className="h-10 w-10 shrink-0">
                             <AvatarImage src={record.member.avatar} />
                             <AvatarFallback>
-                              {record.member.name.split(' ').map((n) => n[0]).join('')}
+                              {initialsFromName(record.member.name)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0 flex-1">
@@ -1302,7 +1309,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                               <Avatar className="h-8 w-8">
                                 <AvatarImage src={record.member.avatar} />
                                 <AvatarFallback>
-                                  {record.member.name.split(' ').map((n: string) => n[0]).join('')}
+                                  {initialsFromName(record.member.name)}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
@@ -1448,7 +1455,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                             <Avatar className="h-12 w-12">
                               <AvatarImage src={record.member.avatar} />
                               <AvatarFallback>
-                                {record.member.name.split(' ').map((n: string) => n[0]).join('')}
+                                {initialsFromName(record.member.name)}
                               </AvatarFallback>
                             </Avatar>
                             <div>

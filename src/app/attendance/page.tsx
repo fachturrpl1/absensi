@@ -566,7 +566,7 @@ export default function AnalyticsPage() {
         </div>
         <Card className="border-border">
           <CardHeader>
-            <CardTitle className="text-base">Top 5 Groups by Attendance Rate</CardTitle>
+            <CardTitle className="text-base">Top {departmentData.length} Groups by Attendance Rate</CardTitle>
             <CardDescription>Ranked by percentage of attendance</CardDescription>
           </CardHeader>
           <CardContent>
@@ -583,8 +583,6 @@ export default function AnalyticsPage() {
                       </div>
                       <div className="flex items-center gap-4 text-sm">
                         <span className="text-green-600 dark:text-green-400">{dept.present}✓</span>
-                        <span className="text-orange-600 dark:text-orange-400">{dept.late}⚠</span>
-                        <span className="text-red-600 dark:text-red-400">{dept.absent}✗</span>
                         <span className="font-bold min-w-[60px] text-right">{dept.rate.toFixed(1)}%</span>
                       </div>
                     </div>

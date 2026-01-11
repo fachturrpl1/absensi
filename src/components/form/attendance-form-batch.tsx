@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, X, Plus, Trash2, Search } from "lucide-react"
+import { Loader2, X, Plus, Search, Minus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -71,14 +71,6 @@ type BatchEntry = {
   remarks?: string
 }
 
-const STATUSES = [
-  { value: "present", label: "Present" },
-  { value: "absent", label: "Absent" },
-  { value: "late", label: "Late" },
-  { value: "excused", label: "Excused" },
-  { value: "early_leave", label: "Early Leave" },
-]
-
 const singleFormSchema = z.object({
   memberId: z.string().min(1, "Member is required"),
   checkInDate: z.string().min(1, "Check-in date is required"),
@@ -111,7 +103,7 @@ export function AttendanceFormBatch() {
   const [batchCheckOutDate, setBatchCheckOutDate] = useState<string>("")
   const [batchCheckOutTime, setBatchCheckOutTime] = useState<string>("")
   // Master status & notes for Batch mode
-  const [batchStatus, setBatchStatus] = useState<string>("present")
+  const [batchStatus] = useState<string>("present")
   const [batchRemarks, setBatchRemarks] = useState<string>("")
 
   const form = useForm<SingleFormValues>({
@@ -304,6 +296,12 @@ export function AttendanceFormBatch() {
         ? parseDateTime(values.checkOutDate, values.checkOutTime)
         : null
 
+      // Validate: check-out must not be earlier than check-in
+      if (checkOutDateTime && checkOutDateTime < checkInDateTime) {
+        toast.error("Check-out cannot be earlier than check-in")
+        return
+      }
+
       const payload: AttendanceEntry = {
         organization_member_id: values.memberId,
         attendance_date: values.checkInDate,
@@ -346,11 +344,6 @@ export function AttendanceFormBatch() {
     setBatchEntries([...batchEntries, newEntry])
   }
 
-  // Batch Mode: Remove Entry
-  const removeBatchEntry = (id: string) => {
-    setBatchEntries(batchEntries.filter((entry) => entry.id !== id))
-  }
-
   // Batch Mode: Update Entry
   const updateBatchEntry = (id: string, field: string, value: string) => {
     setBatchEntries(
@@ -369,16 +362,34 @@ export function AttendanceFormBatch() {
 
     // Validate all entries
     const invalidEntries: string[] = []
+    const invalidTimeEntries: string[] = []
     for (const [i, entry] of batchEntries.entries()) {
       if (!entry.memberId || !entry.checkInDate || !entry.checkInTime) {
         const selectedMember = members.find((m) => m.id === entry.memberId)
         const memberName = selectedMember?.label || `Entry ${i + 1}`
         invalidEntries.push(memberName)
       }
+
+      // Validate time ordering per entry when check-out provided
+      const hasOut = Boolean(entry.checkOutDate && entry.checkOutTime)
+      if (hasOut) {
+        const inDT = parseDateTime(entry.checkInDate, entry.checkInTime)
+        const outDT = parseDateTime(entry.checkOutDate!, entry.checkOutTime!)
+        if (outDT < inDT) {
+          const selectedMember = members.find((m) => m.id === entry.memberId)
+          const memberName = selectedMember?.label || `Entry ${i + 1}`
+          invalidTimeEntries.push(memberName)
+        }
+      }
     }
 
     if (invalidEntries.length > 0) {
       toast.error(`Incomplete entries: ${invalidEntries.slice(0, 3).join(", ")}${invalidEntries.length > 3 ? ` and ${invalidEntries.length - 3} more` : ""}`)
+      return
+    }
+
+    if (invalidTimeEntries.length > 0) {
+      toast.error(`Time is not valid: ${invalidTimeEntries.slice(0, 3).join(", ")}${invalidTimeEntries.length > 3 ? ` and ${invalidTimeEntries.length - 3} more` : ""}`)
       return
     }
 
@@ -663,37 +674,22 @@ export function AttendanceFormBatch() {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-xs text-muted-foreground">Check-out Date (opsional)</label>
+                      <label className="text-xs text-muted-foreground">Check-out Date</label>
                       <Input type="date" value={batchCheckOutDate} onChange={(e) => setBatchCheckOutDate(e.target.value)} placeholder="Optional" />
                     </div>
                     <div>
-                      <label className="text-xs text-muted-foreground">Check-out Time (opsional)</label>
+                      <label className="text-xs text-muted-foreground">Check-out Time </label>
                       <Input type="time" value={batchCheckOutTime} onChange={(e) => setBatchCheckOutTime(e.target.value)} placeholder="Optional" />
                     </div>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Tanggal & waktu di atas akan diterapkan ke semua anggota yang Anda pilih di bawah.</p>
               </div>
 
               {/* Master Status & Notes for Batch Entries */}
               <div className="space-y-3">
-                <label className="text-sm font-medium">Batch Status & Notes</label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label className="text-sm font-medium">Batch Notes</label>
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-3">
                   <div>
-                    <label className="text-xs text-muted-foreground">Status</label>
-                    <Select value={batchStatus} onValueChange={setBatchStatus}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUSES.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground">Notes</label>
                     <Textarea
                       placeholder="Add notes for all selected members..."
                       rows={2}
@@ -702,7 +698,6 @@ export function AttendanceFormBatch() {
                     />
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Status dan catatan di atas akan diterapkan ke semua anggota yang Anda pilih.</p>
               </div>
 
               {/* Quick Add Buttons */}
@@ -720,13 +715,13 @@ export function AttendanceFormBatch() {
                   </Button>
                 </div>
                 <div className="space-y-2">
-                  <div className="relative">
+                  <div className="relative pb-1">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search member to add..."
                       value={memberSearch}
                       onChange={(e) => setMemberSearch(e.target.value)}
-                      className="pl-8"
+                      className="pl-8 pb-2"
                     />
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-48 overflow-y-auto pt-2">
@@ -743,7 +738,7 @@ export function AttendanceFormBatch() {
                           const exists = batchEntries.some((e) => e.memberId === member.id)
                           if (!exists) {
                             addBatchEntry(member.id)
-                            toast.success(`${member.label} added`)
+
                           } else {
                             toast.info(`${member.label} already in batch`)
                           }
@@ -770,72 +765,24 @@ export function AttendanceFormBatch() {
                     No entries yet. Click "Add Empty Entry" or quick add a member above.
                   </div>
                 ) : (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-48 overflow-y-auto pt-2">
                     {batchEntries.map((entry) => {
                       const selectedMember = members.find((m) => m.id === entry.memberId)
                       return (
-                        <Card key={entry.id} className="bg-muted/50">
-                          <CardContent className="pt-6 space-y-4">
-                            {/* Member & Remove */}
-                            <div className="flex items-center justify-between">
-                              <div className="text-sm">
-                                {selectedMember ? (
-                                  <>
-                                    <div className="font-semibold">{selectedMember.label}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {selectedMember.department}
-                                    </div>
-                                  </>
-                                ) : (
-                                  <div className="text-muted-foreground">No member selected</div>
-                                )}
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeBatchEntry(entry.id)}
-                                disabled={isSubmitting}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </div>
-
-                            {/* Member Select */}
-                            <Button
-                              variant="outline"
-                              className="w-full justify-between font-normal"
-                              onClick={() => {
-                                setActiveBatchEntryId(entry.id);
-                                setMemberDialogOpen(true);
-                              }}
-                              disabled={isSubmitting}
-                            >
-                              {selectedMember ? `${selectedMember.label} (${selectedMember.department})` : "Select member..."}
-                              <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-
-                            {/* Status derived from Batch settings (read-only display) */}
-                            <div className="text-xs text-muted-foreground">
-                              <div>Status: {entry.status}</div>
-                            </div>
-
-                            {/* Date & time derived from Batch settings (read-only display) */}
-                            <div className="text-xs text-muted-foreground">
-                              <div>Check-in: {entry.checkInDate} {entry.checkInTime}</div>
-                              {(entry.checkOutDate && entry.checkOutTime) ? (
-                                <div>Check-out: {entry.checkOutDate} {entry.checkOutTime}</div>
-                              ) : (
-                                <div>Check-out: -</div>
-                              )}
-                            </div>
-
-                            {/* Remarks derived from Batch settings (read-only display) */}
-                            <div className="text-xs text-muted-foreground">
-                              <div>Notes: {entry.remarks ? entry.remarks : '-'}</div>
-                            </div>
-                          </CardContent>
-                        </Card>
+                        <Button
+                          key={entry.id}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setBatchEntries((prev) => prev.filter((e) => e.id !== entry.id));
+                          }}
+                          disabled={isSubmitting}
+                          className="text-left truncate"
+                        >
+                          <Minus className="mr-1 h-3 w-3" />
+                          <span className="truncate text-xs">{selectedMember ? selectedMember.label : 'Select member...'}</span>
+                        </Button>
                       )
                     })}
                   </div>
@@ -874,9 +821,9 @@ export function AttendanceFormBatch() {
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Filter by Department</label>
+              <label className="text-sm font-medium gap-2">Filter by Department</label>
               <Select value={departmentFilter} onValueChange={setDepartmentFilter} disabled={loading}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full pt-2">
                   <SelectValue placeholder="All Groups" />
                 </SelectTrigger>
                 <SelectContent>

@@ -44,7 +44,7 @@ export function PaginationFooter({
   }, [page])
 
   return (
-    <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 py-4 px-4 bg-muted/50 rounded-md border ${className}`}>
+    <div className={`mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 py-4 px-4 bg-muted/50 rounded-md border shadow-sm ${className}`}>
       <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
         <Button
           variant="ghost"

@@ -1012,10 +1012,10 @@ export default function FingerPage() {
           </div>
         </div>
 
-        <div className="bg-card rounded-xl shadow-sm border overflow-hidden">
+        <div className="bg-card/90 rounded-xl shadow-sm border overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableRow className="bg-muted/30 hover:bg-muted/40">
                 <TableHead className="font-semibold w-16">No</TableHead>
                 <TableHead className="font-semibold w-32">Nick Name</TableHead>
                 <TableHead className="font-semibold">Full Name</TableHead>
@@ -1024,7 +1024,7 @@ export default function FingerPage() {
                 <TableHead className="font-semibold text-center">Finger 2</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
+            <TableBody className="[&>tr:nth-child(even)]:bg-muted/30">
               {(isLoading && members.length === 0) ? (
                 <>
                   {Array.from({ length: Math.max(5, pageSizeNum) }).map((_, i) => (
@@ -1055,7 +1055,7 @@ export default function FingerPage() {
                     key={member.id}
                     className={cn(
                       "transition-colors",
-                      "hover:bg-muted/50"
+                      "hover:bg-muted/40"
                     )}
                   >
                     <TableCell className="font-medium text-muted-foreground">

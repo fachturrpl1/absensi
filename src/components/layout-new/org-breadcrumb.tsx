@@ -57,6 +57,7 @@ export function OrgBreadcrumb() {
 
   // Mapping pathname ke breadcrumb labels
   const pathMapping: Record<string, string> = {
+
     // Attendance
     '/attendance': 'Attendance',
     '/attendance/list': 'List',
@@ -64,44 +65,41 @@ export function OrgBreadcrumb() {
     '/attendance/locations': 'Locations',
     '/attendance-devices': 'Devices',
     '/analytics': 'Analytics',
+    '/attendance/list/add':'Add',
 
     // Schedules
     '/schedule': 'Schedules',
     '/member-schedules': 'Member Schedules',
-
-    // Leaves
-    '/leaves': 'Leaves',
-    '/leaves/new': 'New',
-    '/leaves/types': 'Types',
 
     // Organization
     '/members': 'Members',
     '/group': 'Groups',
     '/group/move': 'Move',
     '/position': 'Positions',
-    '/organization': 'Organization',
     '/organization/new': 'New',
     '/organization/settings': 'Settings',
     '/organization/finger': 'Fingerprint',
-
+    
     // Fingerprint
     '/finger': 'Fingerprint',
 
     // Home
     '/': 'Home',
+
+    // Settings
+    '/settings':'Settings',
   }
 
   // Parent mapping untuk nested pages
   const parentMapping: Record<string, string> = {
     '/attendance/list': '/attendance',
+    '/attendance/list/add': '/attendance/list',
     '/attendance/add': '/attendance',
     '/attendance/locations': '/attendance',
     '/attendance-devices': '/attendance',
     '/analytics': '/attendance',
     '/group/move': '/group',
     '/member-schedules': '/schedule',
-    '/leaves/new': '/leaves',
-    '/leaves/types': '/leaves',
   }
 
   const buildBreadcrumbs = (): BreadcrumbItem[] => {
@@ -113,7 +111,7 @@ export function OrgBreadcrumb() {
     if (pathname === '/organization') {
       if (nameToDisplay) {
         items.push({
-          label: nameToDisplay,
+          label: 'Organization',
           href: '/organization',
         })
       }
