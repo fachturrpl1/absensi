@@ -14,7 +14,7 @@ export const getAllGroups = async (organizationId?: number, includeInactive: boo
 
   // 2. Determine which organization to fetch
   let targetOrgId = organizationId;
-  
+
   if (!targetOrgId) {
     // If no organizationId provided, get user's first organization
     const { data: member } = await supabase
@@ -34,12 +34,12 @@ export const getAllGroups = async (organizationId?: number, includeInactive: boo
     .from("departments")
     .select("id, code, name, description, is_active, created_at, organization_id")
     .eq("organization_id", targetOrgId);
-  
+
   // Only filter by is_active if includeInactive is false
   if (!includeInactive) {
     query = query.eq("is_active", true);
   }
-  
+
   const { data, error } = await query.order("created_at", { ascending: true });
 
   if (error) {
@@ -64,8 +64,8 @@ export async function createGroup(payload: Partial<IGroup>) {
   }
 
   // Convert organization_id to number if it's a string
-  const orgId = typeof payload.organization_id === 'string' 
-    ? parseInt(payload.organization_id, 10) 
+  const orgId = typeof payload.organization_id === 'string'
+    ? parseInt(payload.organization_id, 10)
     : payload.organization_id;
 
   // 3. Verify user is a member of the organization
@@ -108,70 +108,80 @@ export async function createGroup(payload: Partial<IGroup>) {
 
 
 export async function updateGroup(id: string, payload: Partial<IGroup>) {
-    const supabase = await createClient();
-    
-    // 1. Retrieve logged-in user for authorization
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-        return { success: false, message: "User not logged in", data: null };
-    }
+  const supabase = await createClient();
 
-    // 2. Convert organization_id if it's a string
-    const updateData: Record<string, unknown> = {
-        code: payload.code,
-        name: payload.name,
-        description: payload.description || null,
-        is_active: payload.is_active,
-        updated_at: new Date().toISOString(),
-    };
+  // 1. Retrieve logged-in user for authorization
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return { success: false, message: "User not logged in", data: null };
+  }
 
-    // Only include organization_id if it's being updated
-    if (payload.organization_id) {
-        const orgId = typeof payload.organization_id === 'string' 
-            ? parseInt(payload.organization_id, 10) 
-            : payload.organization_id;
-        updateData.organization_id = orgId;
-    }
+  if (id === 'no-group') {
+    return { success: false, message: "Cannot update virtual 'No Group'", data: null };
+  }
 
-    // 3. Update the group
-    const { data, error } = await supabase
-        .from("departments")
-        .update(updateData)
-        .eq("id", id)
-        .select()
-        .single();
+  // 2. Convert organization_id if it's a string
+  const updateData: Record<string, unknown> = {
+    code: payload.code,
+    name: payload.name,
+    description: payload.description || null,
+    is_active: payload.is_active,
+    updated_at: new Date().toISOString(),
+  };
 
-    if (error) {
-        return { success: false, message: error.message, data: null };
-    }
+  // Only include organization_id if it's being updated
+  if (payload.organization_id) {
+    const orgId = typeof payload.organization_id === 'string'
+      ? parseInt(payload.organization_id, 10)
+      : payload.organization_id;
+    updateData.organization_id = orgId;
+  }
 
-    return { success: true, data: data as IGroup };
+  // 3. Update the group
+  const { data, error } = await supabase
+    .from("departments")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    return { success: false, message: error.message, data: null };
+  }
+
+  return { success: true, data: data as IGroup };
 }
 
 export const getGroupById = async (groupId: string) => {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-        .from("departments")
-        .select("*")
-        .eq("id", groupId)
-        .single();
+  if (groupId === 'no-group') {
+    return { success: false, message: "Invalid group ID: 'no-group'", data: null };
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("departments")
+    .select("*")
+    .eq("id", groupId)
+    .single();
 
-    if (error) {
-        return { success: false, message: error.message, data: null };
-    }
-    return { success: true, data: data as IGroup };
+  if (error) {
+    return { success: false, message: error.message, data: null };
+  }
+  return { success: true, data: data as IGroup };
 };
 
-export const deleteGroup = async ( groupId: string | number) => {
-    const supabase = await createClient();
-    const id = String(groupId)
-    const { data, error } = await supabase
-        .from("departments").delete().eq("id", id)
-        .select()
-        .single();
+export const deleteGroup = async (groupId: string | number) => {
+  const id = String(groupId)
+  if (id === 'no-group') {
+    return { success: false, message: "Cannot delete virtual 'No Group'", data: null };
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("departments").delete().eq("id", id)
+    .select()
+    .single();
 
-    if (error) {
-        return { success: false, message: error.message, data: null };
-    }
-    return { success: true, message: "Deleted successfully", data: data as IGroup };
+  if (error) {
+    return { success: false, message: error.message, data: null };
+  }
+  return { success: true, message: "Deleted successfully", data: data as IGroup };
 };

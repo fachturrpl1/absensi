@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
-import { 
-  AlertCircle, 
+import {
+  AlertCircle,
   ChevronRight,
   Plus,
   Grid3x3,
@@ -25,7 +25,7 @@ export default function OrganizationPage() {
   const router = useRouter()
   const orgStore = useOrgStore()
   const authStore = useAuthStore()
-  
+
   // State untuk data dan UI
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [loading, setLoading] = useState(true)
@@ -42,7 +42,7 @@ export default function OrganizationPage() {
         setLoading(true)
         setError(null)
         const result = await getUserOrganizations()
-        
+
         if (result.success && result.organizations && result.organizations.length > 0) {
           orgStore.setOrganizations(result.organizations)
           setOrganizations(result.organizations)
@@ -61,7 +61,7 @@ export default function OrganizationPage() {
       loadOrganizations()
     }
   }, [isHydrated])
-  
+
   // Track hydration
   useEffect(() => {
     setIsHydrated(true)
@@ -79,18 +79,18 @@ export default function OrganizationPage() {
   const handleSelectOrganization = async (org: Organization) => {
     try {
       console.log("[ORG-PAGE] Selecting organization:", org)
-      
+
       // Set organization in store
       console.log("[ORG-PAGE] Setting org ID:", org.id, org.name)
       orgStore.setOrganizationId(org.id, org.name)
-      
+
       console.log("[ORG-PAGE] Setting timezone:", org.timezone)
       orgStore.setTimezone(org.timezone)
-      
+
       // Set user role
       console.log("[ORG-PAGE] Setting role")
       authStore.setRole("admin", 1)
-      
+
       // Set cookie via API route (server-side) to ensure middleware can read it
       console.log("[ORG-PAGE] Setting cookie via API...")
       const cookieResponse = await fetch("/api/organization/select", {
@@ -100,21 +100,21 @@ export default function OrganizationPage() {
         },
         body: JSON.stringify({ organizationId: org.id }),
       })
-      
+
       if (!cookieResponse.ok) {
         throw new Error("Failed to set organization cookie")
       }
-      
+
       const cookieData = await cookieResponse.json()
       console.log("[ORG-PAGE] Cookie set via API:", cookieData)
-      
+
       console.log("[ORG-PAGE] Organization selected, navigating to home...")
-      
+
       // Add small delay to ensure cookie is properly set before navigation
       await new Promise(resolve => setTimeout(resolve, 300))
-      
+
       console.log("[ORG-PAGE] Attempting to navigate to /")
-      
+
       // Use window.location.href for hard redirect to ensure middleware processes new request with cookie
       // This is more reliable than router.push() for cookie-dependent redirects
       window.location.href = "/"
@@ -148,7 +148,7 @@ export default function OrganizationPage() {
           Add
         </Button>
       </div>
-      
+
       <div className="flex items-center gap-2 mb-6 px-4 md:px-6">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -178,7 +178,7 @@ export default function OrganizationPage() {
           </Button>
         </div>
       </div>
-      
+
       <div className="space-y-6 px-4 md:px-6 pb-6">
         {loading ? (
           <div className="space-y-6">
@@ -212,7 +212,7 @@ export default function OrganizationPage() {
         ) : viewMode === "grid" ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredOrganizations.map((org) => (
-              <Card 
+              <Card
                 key={org.id}
                 className="transition-all"
               >
@@ -227,8 +227,8 @@ export default function OrganizationPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">{org.timezone}</p>
-                  <Button 
-                    className="w-full cursor-pointer hover:shadow-lg" 
+                  <Button
+                    className="w-full cursor-pointer hover:shadow-lg"
                     variant="outline"
                     onClick={(e) => {
                       e.preventDefault()
@@ -255,7 +255,7 @@ export default function OrganizationPage() {
                     <th className="px-6 py-3 text-left text-sm font-semibold">TIMEZONE</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
                   {filteredOrganizations.map((org) => (
                     <tr
                       key={org.id}

@@ -414,7 +414,7 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               ))}
             </TableHeader>
-            <TableBody>
+            <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
               {table.getRowModel().rows.map((row, index) => (
                 <TableRow
                   key={getRowKey ? getRowKey(row.original, index) : row.id}

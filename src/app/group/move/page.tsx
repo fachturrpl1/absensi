@@ -82,6 +82,8 @@ export default function MoveGroupPage() {
   const searchParams = useSearchParams()
   const groupId = searchParams.get('id')
 
+  const orgIdParam = searchParams.get('orgId')
+
   const handleMemberClick = (memberId: string) => {
     if (memberId) {
       router.push(`/members/${memberId}`)
@@ -89,7 +91,7 @@ export default function MoveGroupPage() {
   }
 
   const [group, setGroup] = useState<IGroup | null>(null)
-  const [members, setMembers] = useState<MemberWithExtras[]>([])   
+  const [members, setMembers] = useState<MemberWithExtras[]>([])
   const [loading, setLoading] = useState(true)
   const [allGroups, setAllGroups] = useState<IGroup[]>([])
   const [targetGroupId, setTargetGroupId] = useState<string>("")
@@ -127,34 +129,58 @@ export default function MoveGroupPage() {
   }, [groupId]);
 
   const fetchData = React.useCallback(async () => {
-      if (!groupId) {
-        toast.error('Group ID is missing')
-        setLoading(false)
-        return
-      }
+    if (!groupId) {
+      toast.error('Group ID is missing')
+      setLoading(false)
+      return
+    }
 
-      try {
-        setLoading(true)
+    try {
+      setLoading(true)
+      let currentGroup: IGroup | null = null;
+      let effectiveOrgId: number | null = null;
+
+      if (groupId === 'no-group') {
+        if (!orgIdParam) {
+          throw new Error("Organization ID is required for 'No Group' view");
+        }
+        effectiveOrgId = Number(orgIdParam);
+        currentGroup = {
+          id: 'no-group',
+          organization_id: String(effectiveOrgId ?? ''),
+          code: 'NO_GROUP',
+          name: 'No Group',
+          description: 'Members without a group',
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+        setGroup(currentGroup)
+      } else {
         const groupRes = await getGroupById(groupId)
         if (!groupRes.success || !groupRes.data) throw new Error(groupRes.message)
+        currentGroup = groupRes.data
+        effectiveOrgId = currentGroup.organization_id ? Number(currentGroup.organization_id) : null
         setGroup(groupRes.data)
+      }
 
-        const currentPage = pagination.pageIndex + 1
-        const pageSize = pagination.pageSize
-        const cacheKey = `group:move:members:${groupId}:p=${currentPage}:l=${pageSize}:sort=${sortOrder}`
-        const cached = getCache<{ items: MemberWithExtras[]; total: number }>(cacheKey)
-        if (cached) {
-          setMembers(cached.items)
-          setTotalItems(cached.total)
-        }
 
-        const supabase = createClient()
-        const from = pagination.pageIndex * pagination.pageSize
-        const to = from + pagination.pageSize - 1
+      const currentPage = pagination.pageIndex + 1
+      const pageSize = pagination.pageSize
+      const cacheKey = `group:move:members:${groupId}:p=${currentPage}:l=${pageSize}:sort=${sortOrder}`
+      const cached = getCache<{ items: MemberWithExtras[]; total: number }>(cacheKey)
+      if (cached) {
+        setMembers(cached.items)
+        setTotalItems(cached.total)
+      }
 
-        let query = supabase
-          .from('organization_members')
-          .select(`
+      const supabase = createClient()
+      const from = pagination.pageIndex * pagination.pageSize
+      const to = from + pagination.pageSize - 1
+
+      let query = supabase
+        .from('organization_members')
+        .select(`
             id,
             user_id,
             department_id,
@@ -175,67 +201,74 @@ export default function MoveGroupPage() {
               agama
             )
           `, { count: 'exact' })
-          .eq('is_active', true)
-          .eq('department_id', groupId)
+        .eq('is_active', true)
 
-        query = query.order('created_at', { ascending: sortOrder === 'oldest' })
-
-        const { data: membersData, error: membersError, count } = await query.range(from, to)
-
-        if (membersError) throw new Error(membersError.message)
-        if (!membersData) throw new Error('Members not found')
-
-        const mapGender = (raw?: string | null): IUser['gender'] | null => {
-          if (!raw) return null
-          const s = String(raw).trim().toLowerCase()
-          if (["l","m","male","pria","lk","laki-laki"].includes(s)) return "male"
-          if (["p","f","female","wanita","perempuan"].includes(s)) return "female"
-          return "other"
+      if (groupId === 'no-group') {
+        query = query.is('department_id', null)
+        if (effectiveOrgId) {
+          query = query.eq('organization_id', effectiveOrgId)
         }
-
-        // Transform ke struktur IOrganization_member dengan field user
-        const transformed = (membersData as unknown as MemberRow[]).map((m: MemberRow) => {
-          const up = Array.isArray(m.user_profiles) ? (m.user_profiles[0] || undefined) : (m.user_profiles || undefined)
-          const gender: IUser['gender'] | null = up ? mapGender(up.jenis_kelamin ?? null) : null
-          return{
-            ...(m as unknown as object),
-            user: up ? {
-              id: up.id,
-              first_name: up.first_name,
-              middle_name: up.middle_name,
-              last_name: up.last_name,
-              display_name: up.display_name,
-              email: up.email,
-              phone: up.phone,
-              mobile: up.mobile,
-              profile_photo_url: up.profile_photo_url,
-              gender: gender,
-            } : undefined,
-            religionStr: up?.agama ?? null,
-          }
-        })
-
-        const finalItems = transformed as MemberWithExtras[]
-        setMembers(finalItems)
-        setTotalItems(count || 0)
-
-        try { setCache(cacheKey, { items: finalItems, total: count || 0 }, 1000 * 180) } catch {}
-
-        // Get organization_id from the source group
-        const organizationId = groupRes.data.organization_id;
-        if (!organizationId) {
-          throw new Error('Organization ID not found in source group.');
-        }
-
-        // Refresh group list
-        await refreshGroupList(organizationId);
-
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to fetch data')
-      } finally {
-        setLoading(false)
+      } else {
+        query = query.eq('department_id', groupId)
       }
-    }, [groupId, refreshGroupList]);
+
+      query = query.order('created_at', { ascending: sortOrder === 'oldest' })
+
+      const { data: membersData, error: membersError, count } = await query.range(from, to)
+
+      if (membersError) throw new Error(membersError.message)
+      if (!membersData) throw new Error('Members not found')
+
+      const mapGender = (raw?: string | null): IUser['gender'] | null => {
+        if (!raw) return null
+        const s = String(raw).trim().toLowerCase()
+        if (["l", "m", "male", "pria", "lk", "laki-laki"].includes(s)) return "male"
+        if (["p", "f", "female", "wanita", "perempuan"].includes(s)) return "female"
+        return "other"
+      }
+
+      // Transform ke struktur IOrganization_member dengan field user
+      const transformed = (membersData as unknown as MemberRow[]).map((m: MemberRow) => {
+        const up = Array.isArray(m.user_profiles) ? (m.user_profiles[0] || undefined) : (m.user_profiles || undefined)
+        const gender: IUser['gender'] | null = up ? mapGender(up.jenis_kelamin ?? null) : null
+        return {
+          ...(m as unknown as object),
+          user: up ? {
+            id: up.id,
+            first_name: up.first_name,
+            middle_name: up.middle_name,
+            last_name: up.last_name,
+            display_name: up.display_name,
+            email: up.email,
+            phone: up.phone,
+            mobile: up.mobile,
+            profile_photo_url: up.profile_photo_url,
+            gender: gender,
+          } : undefined,
+          religionStr: up?.agama ?? null,
+        }
+      })
+
+      const finalItems = transformed as MemberWithExtras[]
+      setMembers(finalItems)
+      setTotalItems(count || 0)
+
+      try { setCache(cacheKey, { items: finalItems, total: count || 0 }, 1000 * 180) } catch { }
+
+      // Get organization_id from the source group
+      if (!effectiveOrgId) {
+        throw new Error('Organization ID not found in source group.');
+      }
+
+      // Refresh group list
+      await refreshGroupList(effectiveOrgId);
+
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to fetch data')
+    } finally {
+      setLoading(false)
+    }
+  }, [groupId, refreshGroupList, orgIdParam]);
 
   useEffect(() => {
     fetchData();
@@ -272,7 +305,7 @@ export default function MoveGroupPage() {
         cell: ({ row }) => {
           const member = row.original;
           return (
-            <div 
+            <div
               onClick={() => handleMemberClick(member.id)}
               className="text-primary hover:underline cursor-pointer"
             >
@@ -288,7 +321,7 @@ export default function MoveGroupPage() {
           const member = row.original;
           const fullName = `${member.user?.first_name || ''} ${member.user?.last_name || ''}`.trim();
           return (
-            <div 
+            <div
               onClick={() => handleMemberClick(member.id)}
               className="text-primary hover:underline cursor-pointer"
             >
@@ -353,8 +386,8 @@ export default function MoveGroupPage() {
     }
 
     try {
-      const payload = { 
-        ...values, 
+      const payload = {
+        ...values,
         organization_id: group.organization_id
       }
       const result = await createGroup(payload)
@@ -376,7 +409,7 @@ export default function MoveGroupPage() {
   const handleMoveMembers = async () => {
     // rowSelection now contains member IDs as keys (not indexes)
     const selectedMemberIds = Object.keys(rowSelection);
-    
+
     console.log('[DEBUG] handleMoveMembers called');
     console.log('[DEBUG] rowSelection:', rowSelection);
     console.log('[DEBUG] selectedMemberIds:', selectedMemberIds);
@@ -398,7 +431,7 @@ export default function MoveGroupPage() {
 
       toast.success(result.message);
       setRowSelection({}); // Reset selection
-      
+
       // Refresh data with current pagination
       await fetchData();
 
@@ -407,7 +440,7 @@ export default function MoveGroupPage() {
     }
   };
 
-  
+
   return (
     <div className="flex flex-col gap-4">
       <div className="p-4 md:p-6 bg-white rounded-lg shadow-sm border border-gray-200 space-y-4">
@@ -422,7 +455,7 @@ export default function MoveGroupPage() {
               <SelectValue placeholder="Select destination group" />
             </SelectTrigger>
             <SelectContent>
-              <div 
+              <div
                 className="flex items-center p-2 cursor-pointer hover:bg-accent"
                 onMouseDown={(e) => {
                   e.preventDefault()
@@ -432,16 +465,16 @@ export default function MoveGroupPage() {
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Add New Group
               </div>
-                {allGroups.map((g) => (
-                  <SelectItem key={g.id} value={g.id}>
-                    {g.name}
-                  </SelectItem>
-                ))}
+              {allGroups.map((g) => (
+                <SelectItem key={g.id} value={g.id}>
+                  {g.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
             <AlertDialogTrigger asChild>
-              <Button 
+              <Button
                 disabled={!targetGroupId || Object.keys(rowSelection).length === 0}
               >
                 Move Selected ({Object.keys(rowSelection).length})
@@ -463,9 +496,9 @@ export default function MoveGroupPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between pt-4">
-            <Button variant="outline" size="sm" onClick={fetchData} className="whitespace-nowrap">
-              <RotateCcw className="h-4 w-4" />
-            </Button>
+          <Button variant="outline" size="sm" onClick={fetchData} className="whitespace-nowrap">
+            <RotateCcw className="h-4 w-4" />
+          </Button>
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
             <Input
@@ -492,7 +525,7 @@ export default function MoveGroupPage() {
           {loading ? (
             <TableSkeleton rows={5} columns={5} />
           ) : (
-            <DataTable 
+            <DataTable
               table={table}
               server={{
                 isLoading: loading,

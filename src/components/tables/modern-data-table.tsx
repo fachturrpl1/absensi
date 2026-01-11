@@ -313,15 +313,15 @@ export default function ModernDataTable<TData extends Employee, TValue>({
   // Filter data based on status and department
   const filteredData = useMemo(() => {
     let filtered = [...data];
-    
+
     if (statusFilter !== 'all') {
       filtered = filtered.filter((item) => (item as any).status === statusFilter);
     }
-    
+
     if (departmentFilter !== 'all') {
       filtered = filtered.filter((item) => (item as any).department === departmentFilter);
     }
-    
+
     return filtered;
   }, [data, statusFilter, departmentFilter]);
 
@@ -409,7 +409,7 @@ export default function ModernDataTable<TData extends Employee, TValue>({
                         checked={column.getIsVisible()}
                         onCheckedChange={(value) => column.toggleVisibility(!!value)}
                       >
-{(() => {
+                        {(() => {
                           const columnLabels: Record<string, string> = {
                             'is_active': 'Active',
                             'user_full_name': 'Full Name',
@@ -488,7 +488,7 @@ export default function ModernDataTable<TData extends Employee, TValue>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody>
+          <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow

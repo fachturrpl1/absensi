@@ -197,9 +197,9 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
   const totalPages = Math.ceil(filteredData.length / pageSizeNum)
   const paginatedData = showPagination
     ? filteredData.slice(
-        pageIndex * pageSizeNum,
-        (pageIndex + 1) * pageSizeNum
-      )
+      pageIndex * pageSizeNum,
+      (pageIndex + 1) * pageSizeNum
+    )
     : filteredData
 
   // Reset page index when filters change
@@ -298,169 +298,169 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
       {/* Table */}
       <div className="border rounded-lg overflow-x-auto">
         <table className="w-full min-w-[880px]">
-        {/* Header */}
-        <thead className="bg-muted/50 border-b">
-          <tr>
-            {visibleColumns.members && (
-              <th className="p-3 text-left text-xs font-medium text-foreground">Members</th>
-            )}
-            {visibleColumns.nik && (
-              <th className="p-3 text-left text-xs font-medium text-foreground">NIK</th>
-            )}
-            {/* {visibleColumns.phone && (
+          {/* Header */}
+          <thead className="bg-muted/50 border-b">
+            <tr>
+              {visibleColumns.members && (
+                <th className="p-3 text-left text-xs font-medium text-foreground">Members</th>
+              )}
+              {visibleColumns.nik && (
+                <th className="p-3 text-left text-xs font-medium text-foreground">NIK</th>
+              )}
+              {/* {visibleColumns.phone && (
               <th className="p-3 text-left text-xs font-medium text-foreground">Phone Number</th>
             )} */}
-            {visibleColumns.group && (
-              <th className="p-3 text-left text-xs font-medium text-foreground">Group</th>
-            )}
-            {visibleColumns.gender && (
-              <th className="p-3 text-left text-xs font-medium text-foreground">Gender</th>
-            )}
-            {visibleColumns.religion && (
-              <th className="p-3 text-left text-xs font-medium text-foreground">Religion</th>
-            )}
-            {visibleColumns.status && (
-              <th className="p-3 text-left text-xs font-medium text-foreground">Status</th>
-            )}
-            {visibleColumns.actions && (
-              <th className="p-3 text-left text-xs font-medium text-foreground">Actions</th>
-            )}
-          </tr>
-        </thead>
+              {visibleColumns.group && (
+                <th className="p-3 text-left text-xs font-medium text-foreground">Group</th>
+              )}
+              {visibleColumns.gender && (
+                <th className="p-3 text-left text-xs font-medium text-foreground">Gender</th>
+              )}
+              {visibleColumns.religion && (
+                <th className="p-3 text-left text-xs font-medium text-foreground">Religion</th>
+              )}
+              {visibleColumns.status && (
+                <th className="p-3 text-left text-xs font-medium text-foreground">Status</th>
+              )}
+              {visibleColumns.actions && (
+                <th className="p-3 text-left text-xs font-medium text-foreground">Actions</th>
+              )}
+            </tr>
+          </thead>
 
-        {/* Body */}
-        <tbody>
-          {isLoading ? (
-            <tr>
-              <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="px-3 py-6 text-center text-muted-foreground text-sm">
-                Loading...
-              </td>
-            </tr>
-          ) : paginatedData.length === 0 ? (
-            <tr>
-              <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="px-3 py-6 text-center text-muted-foreground text-sm">
-                No members found
-              </td>
-            </tr>
-          ) : (
-            paginatedData.map((member) => {
-              return (
-                <tr key={member.id} className="border-b hover:bg-muted/30 transition-colors">
-                  {visibleColumns.members && (
-                    <td className="p-3 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => router.push(`/members/${member.id}`)}
-                        className="truncate text-primary hover:underline cursor-pointer"
-                        title="View profile"
-                      >
-                        {getFullName(member)}
-                      </button>
-                    </td>
-                  )}
-                  {visibleColumns.nik && (
-                    <td className="p-3 text-xs">
-                      {getNik(member)}
-                    </td>
-                  )}
-                  {/* {visibleColumns.phone && (
+          {/* Body */}
+          <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
+            {isLoading ? (
+              <tr>
+                <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="px-3 py-6 text-center text-muted-foreground text-sm">
+                  Loading...
+                </td>
+              </tr>
+            ) : paginatedData.length === 0 ? (
+              <tr>
+                <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="px-3 py-6 text-center text-muted-foreground text-sm">
+                  No members found
+                </td>
+              </tr>
+            ) : (
+              paginatedData.map((member) => {
+                return (
+                  <tr key={member.id} className="border-b hover:bg-muted/30 transition-colors">
+                    {visibleColumns.members && (
+                      <td className="p-3 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/members/${member.id}`)}
+                          className="truncate text-primary hover:underline cursor-pointer"
+                          title="View profile"
+                        >
+                          {getFullName(member)}
+                        </button>
+                      </td>
+                    )}
+                    {visibleColumns.nik && (
+                      <td className="p-3 text-xs">
+                        {getNik(member)}
+                      </td>
+                    )}
+                    {/* {visibleColumns.phone && (
                     <td className="p-3 text-xs">
                       {user?.phone || "No Phone"}
                     </td>
                   )} */}
 
-                  {visibleColumns.group && (
-                    <td className="p-3 text-xs">
-                      {getGroupName(member)}
-                    </td>
-                  )}
+                    {visibleColumns.group && (
+                      <td className="p-3 text-xs">
+                        {getGroupName(member)}
+                      </td>
+                    )}
 
-                  {visibleColumns.gender && (
-                    <td className="p-3 text-xs">
-                      {getGender(member)}
-                    </td>
-                  )}
+                    {visibleColumns.gender && (
+                      <td className="p-3 text-xs">
+                        {getGender(member)}
+                      </td>
+                    )}
 
-                  {visibleColumns.religion && (
-                    <td className="p-3 text-xs">
-                      {getReligion(member)}
-                    </td>
-                  )}
+                    {visibleColumns.religion && (
+                      <td className="p-3 text-xs">
+                        {getReligion(member)}
+                      </td>
+                    )}
 
 
-                  {visibleColumns.status && (
-                    <td className="p-3 text-xs">
-                      {member.is_active ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-500 text-primary-foreground">
-                          <Check className="w-3 h-3 mr-1" /> Active
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
-                          <X className="w-3 h-3 mr-1" /> Inactive
-                        </span>
-                      )}
-                    </td>
-                  )}
+                    {visibleColumns.status && (
+                      <td className="p-3 text-xs">
+                        {member.is_active ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-500 text-primary-foreground">
+                            <Check className="w-3 h-3 mr-1" /> Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                            <X className="w-3 h-3 mr-1" /> Inactive
+                          </span>
+                        )}
+                      </td>
+                    )}
 
-                  {visibleColumns.actions && (
-                    <td className="p-3 text-xs">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => router.push(`/members/edit/${member.id}`)}
-                          title="Edit member"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => router.push(`/members/${member.id}`)}
-                          title="View member"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              title="Delete member"
-                            >
-                              <Trash className="w-4 h-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Member</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete {getFullName(member)}? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDelete(member.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    {visibleColumns.actions && (
+                      <td className="p-3 text-xs">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => router.push(`/members/edit/${member.id}`)}
+                            title="Edit member"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => router.push(`/members/${member.id}`)}
+                            title="View member"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                title="Delete member"
                               >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              )
-            })
-          )}
-        </tbody>
-      </table>
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Member</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete {getFullName(member)}? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(member.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* Pagination Footer */}

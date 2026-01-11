@@ -46,7 +46,7 @@ import {
     getAllPositions,
     updatePositions,
 } from "@/action/position"
- 
+
 import {
     Empty,
     EmptyHeader,
@@ -98,7 +98,7 @@ export default function PositionsPage() {
             const result = await deletePositions(id)
             if (result.success) {
                 toast.success("Position deleted successfully")
-                await queryClient.invalidateQueries({ queryKey: ['positions']})
+                await queryClient.invalidateQueries({ queryKey: ['positions'] })
                 fetchPositions()
             } else {
                 toast.error(result.message || "Failed to delete position")
@@ -164,18 +164,18 @@ export default function PositionsPage() {
     const fetchPositions = React.useCallback(async () => {
         try {
             setLoading(true)
-            
+
             if (!organizationId) {
                 toast.error('Please select an organization')
                 setLoading(false)
                 return
             }
-            
+
             const result = await getAllPositions(organizationId)
-            await queryClient.invalidateQueries({ queryKey: ['positions']})
+            await queryClient.invalidateQueries({ queryKey: ['positions'] })
             const typedResponse = result as { success: boolean; data: IPositions[]; message: string }
             if (!typedResponse.success) throw new Error(typedResponse.message)
-            
+
             setPositions(typedResponse.data)
             // cache 2 menit
             setCache<IPositions[]>(`positions:${organizationId}`, typedResponse.data, 1000 * 120)
@@ -189,7 +189,7 @@ export default function PositionsPage() {
     const fetchOrganizations = async () => {
         try {
             const response: unknown = await getAllOrganization()
-            await queryClient.invalidateQueries({ queryKey: ['organizations']})
+            await queryClient.invalidateQueries({ queryKey: ['organizations'] })
             const typedResponse = response as { success: boolean; data: { id: string; name: string }[]; message: string }
             if (!typedResponse.success) throw new Error(typedResponse.message)
             setOrganizations(typedResponse.data)
@@ -255,7 +255,7 @@ export default function PositionsPage() {
                 res = await createPositions(values)
             }
             if (!res.success) throw new Error(res.message)
-            await queryClient.invalidateQueries({ queryKey: ['positions']})
+            await queryClient.invalidateQueries({ queryKey: ['positions'] })
             toast.success(editingDetail ? 'Saved successfully' : 'Position created successfully')
             setOpen(false)
             setEditingDetail(null)
@@ -339,93 +339,93 @@ export default function PositionsPage() {
                                         </DialogHeader>
                                         <Form {...form}>
                                             <form
-                                    onSubmit={form.handleSubmit(handleSubmit)}
-                                    className="space-y-4"
-                                >
-                                    {/* Organization field */}
-                                    {organizationId ? (
-                                        <FormField
-                                            control={form.control}
-                                            name="organization_id"
-                                            render={({ field }) => (
-                                                <input
-                                                    type="hidden" 
-                                                    value={String(organizationId)}
-                                                    onChange={field.onChange}
-                                                />
-                                            )}
-                                        />
-                                    ) : (
-                                        <Can permission="view_positions">
-                                            <FormField
-                                                control={form.control}
-                                                name="organization_id"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Organization</FormLabel>
-                                                        <Select
-                                                            onValueChange={field.onChange}
-                                                            value={field.value}
-                                                        >
-                                                            <FormControl>
-                                                                <SelectTrigger>
-                                                                    <SelectValue placeholder="Select..." />
-                                                                </SelectTrigger>
-                                                            </FormControl>
-                                                            <SelectContent>
-                                                                {organizations.map((org) => (
-                                                                    <SelectItem key={org.id} value={String(org.id)}>
-                                                                        {org.name}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <FormMessage />
-                                                    </FormItem>
+                                                onSubmit={form.handleSubmit(handleSubmit)}
+                                                className="space-y-4"
+                                            >
+                                                {/* Organization field */}
+                                                {organizationId ? (
+                                                    <FormField
+                                                        control={form.control}
+                                                        name="organization_id"
+                                                        render={({ field }) => (
+                                                            <input
+                                                                type="hidden"
+                                                                value={String(organizationId)}
+                                                                onChange={field.onChange}
+                                                            />
+                                                        )}
+                                                    />
+                                                ) : (
+                                                    <Can permission="view_positions">
+                                                        <FormField
+                                                            control={form.control}
+                                                            name="organization_id"
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Organization</FormLabel>
+                                                                    <Select
+                                                                        onValueChange={field.onChange}
+                                                                        value={field.value}
+                                                                    >
+                                                                        <FormControl>
+                                                                            <SelectTrigger>
+                                                                                <SelectValue placeholder="Select..." />
+                                                                            </SelectTrigger>
+                                                                        </FormControl>
+                                                                        <SelectContent>
+                                                                            {organizations.map((org) => (
+                                                                                <SelectItem key={org.id} value={String(org.id)}>
+                                                                                    {org.name}
+                                                                                </SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    </Can>
                                                 )}
-                                            />
-                                        </Can>
-                                    )}
 
-                                    <FormField
-                                        control={form.control}
-                                        name="code"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Code</FormLabel>
-                                                <FormControl>
-                                                    <Input type="text" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="title"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Name</FormLabel>
-                                                <FormControl>
-                                                    <Input type="text" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="description"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Description</FormLabel>
-                                                <FormControl>
-                                                    <Input type="text" {...field ?? ""} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    {/* <FormField
+                                                <FormField
+                                                    control={form.control}
+                                                    name="code"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Code</FormLabel>
+                                                            <FormControl>
+                                                                <Input type="text" {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={form.control}
+                                                    name="title"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Name</FormLabel>
+                                                            <FormControl>
+                                                                <Input type="text" {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={form.control}
+                                                    name="description"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Description</FormLabel>
+                                                            <FormControl>
+                                                                <Input type="text" {...field ?? ""} />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                {/* <FormField
                                         control={form.control}
                                         name="level"
                                         render={({ field }) => (
@@ -437,32 +437,32 @@ export default function PositionsPage() {
                                             </FormItem>
                                         )}
                                     /> */}
-                                    <FormField
-                                        control={form.control}
-                                        name="is_active"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Active</FormLabel>
-                                                <FormControl>
-                                                    <Switch
-                                                        checked={field.value}
-                                                        onCheckedChange={field.onChange}
-                                                    />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <Button type="submit" className="w-full">
-                                        {editingDetail ? 'Update' : 'Create'}
-                                    </Button>
-                                </form>
-                            </Form>
-                        </DialogContent>
-                    </Dialog>
-                </div>
-            </div>
+                                                <FormField
+                                                    control={form.control}
+                                                    name="is_active"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Active</FormLabel>
+                                                            <FormControl>
+                                                                <Switch
+                                                                    checked={field.value}
+                                                                    onCheckedChange={field.onChange}
+                                                                />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <Button type="submit" className="w-full">
+                                                    {editingDetail ? 'Update' : 'Create'}
+                                                </Button>
+                                            </form>
+                                        </Form>
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
+                        </div>
 
-            <div className="mt-6">
+                        <div className="mt-6">
                             {loading && positions.length === 0 ? (
                                 <TableSkeleton rows={6} columns={5} />
                             ) : positions.length === 0 ? (
@@ -481,123 +481,123 @@ export default function PositionsPage() {
                                 </div>
                             ) : (
                                 <>
-                                <div className="border rounded-lg overflow-hidden">
-                                    <table className="w-full">
-                                        <thead className="bg-muted/50 border-b">
-                                            <tr>
-                                                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Code</th>
-                                                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Position Name</th>
-                                                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Description</th>
-                                                {/* <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Level</th> */}
-                                                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Status</th>
-                                                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {loading ? (
+                                    <div className="border rounded-lg overflow-hidden">
+                                        <table className="w-full">
+                                            <thead className="bg-muted/50 border-b">
                                                 <tr>
-                                                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Code</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Position Name</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Description</th>
+                                                    {/* <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Level</th> */}
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Status</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Actions</th>
                                                 </tr>
-                                            ) : paginatedData.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No positions found</td>
-                                                </tr>
-                                            ) : (
-                                                paginatedData.map((position) => (
-                                                    <tr key={position.id} className="border-b hover:bg-muted/30 transition-colors">
-                                                        <td className="px-4 py-3 text-sm">{position.code}</td>
-                                                        <td className="px-4 py-3 text-sm">{position.title}</td>
-                                                        <td className="px-4 py-3 text-sm">{position.description || "-"}</td>
-                                                        {/* <td className="px-4 py-3 text-sm">{position.level || "-"}</td> */}
-                                                        <td className="px-4 py-3 text-sm">
-                                                            {position.is_active ? (
-                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-primary-foreground">Active</span>
-                                                            ) : (
-                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">Inactive</span>
-                                                            )}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-sm">
-                                                            <div className="flex items-center gap-2">
-                                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingDetail(position); form.reset(position); setOpen(true); }} title="Edit position">
-                                                                    <Pencil className="w-4 h-4" />
-                                                                </Button>
-                                                                <AlertDialog>
-                                                                    <AlertDialogTrigger asChild>
-                                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="Delete position">
-                                                                            <Trash className="w-4 h-4" />
-                                                                        </Button>
-                                                                    </AlertDialogTrigger>
-                                                                    <AlertDialogContent>
-                                                                        <AlertDialogHeader>
-                                                                            <AlertDialogTitle>Delete Position</AlertDialogTitle>
-                                                                            <AlertDialogDescription>Are you sure you want to delete {position.title}? This action cannot be undone.</AlertDialogDescription>
-                                                                        </AlertDialogHeader>
-                                                                        <AlertDialogFooter>
-                                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                            <AlertDialogAction onClick={() => handleDelete(position.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-                                                                        </AlertDialogFooter>
-                                                                    </AlertDialogContent>
-                                                                <Link href={`/position/${position.id}`}>
-                                                                    <Button variant="ghost" size="icon" className="h-8 w-8" title="View Members">
-                                                                        <ChevronRight className="w-4 h-4" />
-                                                                    </Button>
-                                                                </Link>
-                                                                </AlertDialog>
-                                                            </div>
-                                                        </td>
+                                            </thead>
+                                            <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
+                                                {loading ? (
+                                                    <tr>
+                                                        <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
                                                     </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-muted/50 rounded-md border mt-10">
-                                    <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-nowrap justify-center w-full md:w-auto">
-                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(0)} disabled={pageIndex === 0 || loading} className="h-8 w-8 p-0" title="First page">
-                                            <ChevronsLeft className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(pageIndex - 1)} disabled={pageIndex === 0 || loading} className="h-8 w-8 p-0" title="Previous page">
-                                            <ChevronLeft className="h-4 w-4" />
-                                        </Button>
-                                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap ml-1 sm:ml-2">Page</span>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max={totalPages}
-                                            value={pageIndex + 1}
-                                            onChange={(e) => {
-                                                const page = e.target.value ? Number(e.target.value) - 1 : 0;
-                                                setPageIndex(page);
-                                            }}
-                                            className="w-10 sm:w-12 h-8 px-2 border rounded text-xs sm:text-sm text-center mx-1 sm:mx-2 bg-background"
-                                            disabled={loading || totalPages === 0}
-                                        />
-                                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/ {totalPages}</span>
-                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(pageIndex + 1)} disabled={pageIndex >= totalPages - 1 || loading} className="h-8 w-8 p-0" title="Next page">
-                                            <ChevronRight className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="sm" onClick={() => setPageIndex(totalPages - 1)} disabled={pageIndex >= totalPages - 1 || loading} className="h-8 w-8 p-0" title="Last page">
-                                            <ChevronsRight className="h-4 w-4" />
-                                        </Button>
+                                                ) : paginatedData.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No positions found</td>
+                                                    </tr>
+                                                ) : (
+                                                    paginatedData.map((position) => (
+                                                        <tr key={position.id} className="border-b hover:bg-muted/30 transition-colors">
+                                                            <td className="px-4 py-3 text-sm">{position.code}</td>
+                                                            <td className="px-4 py-3 text-sm">{position.title}</td>
+                                                            <td className="px-4 py-3 text-sm">{position.description || "-"}</td>
+                                                            {/* <td className="px-4 py-3 text-sm">{position.level || "-"}</td> */}
+                                                            <td className="px-4 py-3 text-sm">
+                                                                {position.is_active ? (
+                                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-primary-foreground">Active</span>
+                                                                ) : (
+                                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">Inactive</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingDetail(position); form.reset(position); setOpen(true); }} title="Edit position">
+                                                                        <Pencil className="w-4 h-4" />
+                                                                    </Button>
+                                                                    <AlertDialog>
+                                                                        <AlertDialogTrigger asChild>
+                                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="Delete position">
+                                                                                <Trash className="w-4 h-4" />
+                                                                            </Button>
+                                                                        </AlertDialogTrigger>
+                                                                        <AlertDialogContent>
+                                                                            <AlertDialogHeader>
+                                                                                <AlertDialogTitle>Delete Position</AlertDialogTitle>
+                                                                                <AlertDialogDescription>Are you sure you want to delete {position.title}? This action cannot be undone.</AlertDialogDescription>
+                                                                            </AlertDialogHeader>
+                                                                            <AlertDialogFooter>
+                                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                                <AlertDialogAction onClick={() => handleDelete(position.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                                                            </AlertDialogFooter>
+                                                                        </AlertDialogContent>
+                                                                        <Link href={`/position/${position.id}`}>
+                                                                            <Button variant="ghost" size="icon" className="h-8 w-8" title="View Members">
+                                                                                <ChevronRight className="w-4 h-4" />
+                                                                            </Button>
+                                                                        </Link>
+                                                                    </AlertDialog>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    <div className="flex flex-row items-center justify-center md:justify-end gap-2 md:gap-4 w-full md:w-auto">
-                                        <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                                            {`Showing ${paginatedData.length > 0 ? pageIndex * parseInt(pageSize) + 1 : 0} to ${Math.min((pageIndex + 1) * parseInt(pageSize), filteredData.length)} of ${filteredData.length} total records`}
+                                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-muted/50 rounded-md border mt-10">
+                                        <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-nowrap justify-center w-full md:w-auto">
+                                            <Button variant="ghost" size="sm" onClick={() => setPageIndex(0)} disabled={pageIndex === 0 || loading} className="h-8 w-8 p-0" title="First page">
+                                                <ChevronsLeft className="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="sm" onClick={() => setPageIndex(pageIndex - 1)} disabled={pageIndex === 0 || loading} className="h-8 w-8 p-0" title="Previous page">
+                                                <ChevronLeft className="h-4 w-4" />
+                                            </Button>
+                                            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap ml-1 sm:ml-2">Page</span>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max={totalPages}
+                                                value={pageIndex + 1}
+                                                onChange={(e) => {
+                                                    const page = e.target.value ? Number(e.target.value) - 1 : 0;
+                                                    setPageIndex(page);
+                                                }}
+                                                className="w-10 sm:w-12 h-8 px-2 border rounded text-xs sm:text-sm text-center mx-1 sm:mx-2 bg-background"
+                                                disabled={loading || totalPages === 0}
+                                            />
+                                            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/ {totalPages}</span>
+                                            <Button variant="ghost" size="sm" onClick={() => setPageIndex(pageIndex + 1)} disabled={pageIndex >= totalPages - 1 || loading} className="h-8 w-8 p-0" title="Next page">
+                                                <ChevronRight className="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="sm" onClick={() => setPageIndex(totalPages - 1)} disabled={pageIndex >= totalPages - 1 || loading} className="h-8 w-8 p-0" title="Last page">
+                                                <ChevronsRight className="h-4 w-4" />
+                                            </Button>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <Select value={pageSize} onValueChange={(value) => { setPageSize(value); setPageIndex(0); }}>
-                                                <SelectTrigger className="h-8 w-[70px]">
-                                                    <SelectValue placeholder={pageSize} />
-                                                </SelectTrigger>
-                                                <SelectContent side="top">
-                                                    <SelectItem value="10">10</SelectItem>
-                                                    <SelectItem value="50">50</SelectItem>
-                                                    <SelectItem value="100">100</SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                        <div className="flex flex-row items-center justify-center md:justify-end gap-2 md:gap-4 w-full md:w-auto">
+                                            <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                                                {`Showing ${paginatedData.length > 0 ? pageIndex * parseInt(pageSize) + 1 : 0} to ${Math.min((pageIndex + 1) * parseInt(pageSize), filteredData.length)} of ${filteredData.length} total records`}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Select value={pageSize} onValueChange={(value) => { setPageSize(value); setPageIndex(0); }}>
+                                                    <SelectTrigger className="h-8 w-[70px]">
+                                                        <SelectValue placeholder={pageSize} />
+                                                    </SelectTrigger>
+                                                    <SelectContent side="top">
+                                                        <SelectItem value="10">10</SelectItem>
+                                                        <SelectItem value="50">50</SelectItem>
+                                                        <SelectItem value="100">100</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
                                 </>
                             )}
                         </div>

@@ -110,7 +110,7 @@ export default function AttendanceDevicesPage() {
             const res = await fetch(`/api/devices?${params.toString()}`, { signal: controller.signal })
             if (!res.ok) {
                 let payload: unknown = null
-                try { payload = await res.json() } catch {}
+                try { payload = await res.json() } catch { }
                 const msg = (payload as { message?: string } | null)?.message || res.statusText
                 // Graceful handling for auth/org errors
                 if (res.status === 401) {
@@ -192,7 +192,7 @@ export default function AttendanceDevicesPage() {
                     location: data.location,
                 })
                 .eq('id', selectedDevice.id)
-            
+
             if (error) throw error
             toast.success('Device updated successfully')
             setEditDialogOpen(false)
@@ -210,7 +210,7 @@ export default function AttendanceDevicesPage() {
         <div className="flex flex-1 flex-col gap-4 w-full">
             <div className="w-full">
                 <div className="w-full bg-card rounded-lg shadow-sm border">
-                    
+
                     <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                             <div className="relative flex-1 min-w-[260px]">
@@ -223,16 +223,16 @@ export default function AttendanceDevicesPage() {
                                 />
                             </div>
 
-                            <Button 
-                                variant="outline" 
-                                size="icon" 
+                            <Button
+                                variant="outline"
+                                size="icon"
                                 onClick={() => fetchDevices()}
                                 title="Refresh table"
                                 className="ml-auto shrink-0"
                             >
                                 <RotateCcw className="w-4 h-4" />
                             </Button>
-                            <Button 
+                            <Button
                                 variant={viewMode === 'grid' ? 'default' : 'outline'}
                                 size="icon"
                                 onClick={() => {
@@ -276,7 +276,7 @@ export default function AttendanceDevicesPage() {
                             </Button>
                         </div>
 
-                        <div className="mt-6">  
+                        <div className="mt-6">
                             {loading ? (
                                 <TableSkeleton rows={6} columns={4} />
                             ) : total === 0 ? (
@@ -342,7 +342,7 @@ export default function AttendanceDevicesPage() {
                                         onPageSizeChange={(size) => { setCurrentPageSize(size); setCurrentPageIndex(0); }}
                                         pageSizeOptions={[4, 8, 10, 24]}
                                     />
-                                </div>  
+                                </div>
                             ) : (
                                 <div className="space-y-4 min-w-full">
                                     <div className="min-w-full overflow-x-auto">
@@ -358,7 +358,7 @@ export default function AttendanceDevicesPage() {
                                                     <th className="px-4 py-3 border-b">Actions</th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
+                                            <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
                                                 {devices.map((device: IAttendanceDevice) => (
                                                     <tr key={device.id} className="hover:bg-muted/30">
                                                         <td className="px-4 py-3 border-b">{device.device_name}</td>
@@ -424,9 +424,9 @@ export default function AttendanceDevicesPage() {
                             <form onSubmit={editForm.handleSubmit(handleEditDevice)} className="space-y-4">
                                 <FormItem>
                                     <FormControl>
-                                        <Input 
-                                            value={selectedDevice.device_types?.name || '-'} 
-                                            disabled 
+                                        <Input
+                                            value={selectedDevice.device_types?.name || '-'}
+                                            disabled
                                             className="bg-muted cursor-not-allowed"
                                         />
                                     </FormControl>
@@ -434,9 +434,9 @@ export default function AttendanceDevicesPage() {
                                 <FormItem>
                                     <FormLabel>Serial Number</FormLabel>
                                     <FormControl>
-                                        <Input 
-                                            value={selectedDevice.serial_number || '-'} 
-                                            disabled 
+                                        <Input
+                                            value={selectedDevice.serial_number || '-'}
+                                            disabled
                                             className="bg-muted cursor-not-allowed"
                                         />
                                     </FormControl>

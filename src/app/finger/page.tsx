@@ -90,6 +90,7 @@ export default function FingerPage() {
   const lastPolledStatusRef = React.useRef<string | null>(null)
   const [activeCommandId, setActiveCommandId] = React.useState<string | number | null>(null)
   const realtimeStatusRef = React.useRef<string | null>(null)
+  const [fingerStats, setFingerStats] = React.useState<{ total: number; registered: number; partial: number; unregistered: number }>({ total: 0, registered: 0, partial: 0, unregistered: 0 })
 
   // Throttled logger to avoid console spam on loops/polling
   const lastLogRef = React.useRef<Record<string, number>>({})
@@ -106,6 +107,20 @@ export default function FingerPage() {
       logger[level](...args)
       lastLogRef.current[key] = now
     }
+  }, [])
+
+  // Clear local cached members for current organization to avoid stale counts in cards
+  const clearMembersCacheForOrg = React.useCallback((orgId?: number | null) => {
+    if (!orgId || typeof window === 'undefined') return
+    try {
+      const prefix = `finger:members:${orgId}:`
+      const keys: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith(prefix)) keys.push(key)
+      }
+      keys.forEach((k) => localStorage.removeItem(k))
+    } catch {}
   }, [])
 
   // Handle click on member name to navigate to profile
@@ -131,7 +146,7 @@ export default function FingerPage() {
         setLoadingDevices(false)
         return
       }
-      
+
       if (!user) {
         console.log('No user logged in')
         setLoadingDevices(false)
@@ -139,7 +154,7 @@ export default function FingerPage() {
       }
 
       let orgId = organizationId
-      
+
       if (!orgId) {
         const { data: member, error: memberError } = await supabase
           .from("organization_members")
@@ -158,7 +173,7 @@ export default function FingerPage() {
           setLoadingDevices(false)
           return
         }
-        
+
         orgId = member.organization_id
       }
 
@@ -210,8 +225,8 @@ export default function FingerPage() {
         if (orgId) {
           setCache<Device[]>(`finger:devices:${orgId}`, validDevices, 1000 * 180)
         }
-      } catch {}
-      
+      } catch { }
+
       if (validDevices && validDevices.length > 0) {
         const firstDevice = validDevices[0]
         const firstDeviceCode = firstDevice?.device_code
@@ -239,6 +254,113 @@ export default function FingerPage() {
     }
   }, [organizationId])
 
+  // Fetch organization-wide fingerprint stats for cards
+  const fetchFingerStats = React.useCallback(async () => {
+    if (!organizationId) return
+    const supabase = createClient()
+    try {
+      // Count all active members in the organization
+      const { count } = await supabase
+        .from('organization_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+      const total: number = typeof count === 'number' ? count : 0
+
+      // Try to fetch biometric rows via relationship join (no need for organization_id column on biometric_data)
+      type BioRow = {
+        organization_member_id: number
+        finger_number: number | null
+        is_active: boolean
+      }
+
+      let bioRows: BioRow[] = []
+      const { data: joinedRows, error: joinErr } = await supabase
+        .from('biometric_data')
+        .select('organization_member_id, finger_number, is_active, organization_members!inner(organization_id)')
+        .eq('biometric_type', 'FINGERPRINT')
+        .eq('is_active', true)
+        .eq('organization_members.organization_id', organizationId)
+
+      // Helper to normalize unknown row into BioRow without using any
+      const normalizeBioRow = (r: unknown): BioRow | null => {
+        if (!r || typeof r !== 'object') return null
+        const o = r as Record<string, unknown>
+        const omid = o['organization_member_id']
+        const fn = o['finger_number']
+        const ia = o['is_active']
+        const organization_member_id =
+          typeof omid === 'number' ? omid : typeof omid === 'string' ? Number(omid) : NaN
+        const finger_number =
+          typeof fn === 'number' ? fn : typeof fn === 'string' && fn !== '' ? Number(fn) : null
+        const is_active = Boolean(ia)
+        if (!Number.isFinite(organization_member_id)) return null
+        return { organization_member_id: Number(organization_member_id), finger_number, is_active }
+      }
+
+      if (!joinErr && Array.isArray(joinedRows)) {
+        bioRows = (joinedRows as unknown[])
+          .map((r) => normalizeBioRow(r))
+          .filter((x): x is BioRow => x !== null)
+      } else {
+        // Fallback: fetch member IDs and then query biometric_data with IN chunks
+        const ids: number[] = []
+        const pageSize = 1000
+        for (let from = 0; ; from += pageSize) {
+          const { data: idRows } = await supabase
+            .from('organization_members')
+            .select('id')
+            .eq('organization_id', organizationId)
+            .eq('is_active', true)
+            .range(from, from + pageSize - 1)
+          if (!idRows || idRows.length === 0) break
+          ids.push(...idRows.map(r => r.id))
+          if (idRows.length < pageSize) break
+        }
+
+        const chunk = 300
+        const allRows: BioRow[] = []
+        for (let i = 0; i < ids.length; i += chunk) {
+          const slice = ids.slice(i, i + chunk)
+          const { data: rows } = await supabase
+            .from('biometric_data')
+            .select('organization_member_id, finger_number, is_active')
+            .eq('biometric_type', 'FINGERPRINT')
+            .eq('is_active', true)
+            .in('organization_member_id', slice)
+          if (Array.isArray(rows)) {
+            const normalized = (rows as unknown[])
+              .map((r) => normalizeBioRow(r))
+              .filter((x): x is BioRow => x !== null)
+            allRows.push(...normalized)
+          }
+        }
+        bioRows = allRows
+      }
+
+      // Aggregate counts per member
+      const map: Map<number, Set<number>> = new Map()
+      for (const r of bioRows || []) {
+        const mid = r.organization_member_id
+        const f = typeof r.finger_number === 'number' ? r.finger_number : null
+        if (!map.has(mid)) map.set(mid, new Set<number>())
+        if (f !== null) map.get(mid)!.add(f)
+      }
+
+      let registered = 0
+      let partial = 0
+      map.forEach((fingers) => {
+        if (fingers.size >= 2) registered += 1
+        else if (fingers.size === 1) partial += 1
+      })
+
+      const unregistered = Math.max(0, total - (registered + partial))
+      setFingerStats({ total: Number(total), registered, partial, unregistered })
+    } catch (e) {
+      console.error('[FINGER-PAGE] Fetch finger stats error:', e)
+    }
+  }, [organizationId])
+
   const fetchMembers = React.useCallback(async () => {
     setIsLoading(true)
     try {
@@ -248,6 +370,8 @@ export default function FingerPage() {
       if (organizationId) url.searchParams.set('organizationId', String(organizationId))
       url.searchParams.set('limit', String(pageSizeNum))
       url.searchParams.set('page', String(pageNum))
+      // cache-busting to avoid any intermediary caches affecting freshness
+      url.searchParams.set('t', String(Date.now()))
 
       const res = await fetch(url.toString(), { credentials: 'same-origin', cache: 'no-store' })
       const json = await res.json()
@@ -263,13 +387,15 @@ export default function FingerPage() {
           1000 * 180
         )
       }
+      // Update cards after members fetch
+      await fetchFingerStats()
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       console.error('❌ Fetch error:', message)
     } finally {
       setIsLoading(false)
     }
-  }, [organizationId, pageIndex, pageSize])
+  }, [organizationId, pageIndex, pageSize, fetchFingerStats])
 
   React.useEffect(() => {
     setMounted(true)
@@ -278,33 +404,33 @@ export default function FingerPage() {
   // Fetch data when hydration completes
   React.useEffect(() => {
     if (isHydrated && organizationId) {
-      const pageSizeNum = parseInt(pageSize)
       const cachedDevices = getCache<Device[]>(`finger:devices:${organizationId}`)
       if (cachedDevices && cachedDevices.length > 0) setDevices(cachedDevices)
-      const cached = getCache<Member[]>(`finger:members:${organizationId}:p=${pageIndex + 1}:l=${pageSizeNum}`)
-      if (cached && cached.length > 0) setMembers(cached)
+      // Do not hydrate members from cache to avoid stale counts in cards
+      clearMembersCacheForOrg(organizationId)
       console.log('[FINGER-PAGE] Hydration complete, organizationId available:', organizationId)
       fetchDevices()
       fetchMembers()
+      fetchFingerStats()
     }
-  }, [isHydrated, organizationId, fetchDevices, fetchMembers])
+  }, [isHydrated, organizationId, fetchDevices, fetchMembers, fetchFingerStats, clearMembersCacheForOrg])
 
   // Refetch when page index or page size changes
   React.useEffect(() => {
     if (isHydrated && organizationId) {
-      const pageSizeNumLocal = parseInt(pageSize)
-      const cached = getCache<Member[]>(`finger:members:${organizationId}:p=${pageIndex + 1}:l=${pageSizeNumLocal}`)
-      if (cached && cached.length > 0) setMembers(cached)
+      // Always fetch fresh when paging/pageSize changes
+      clearMembersCacheForOrg(organizationId)
       fetchMembers()
+      fetchFingerStats()
     }
-  }, [pageIndex, pageSize, isHydrated, organizationId, fetchMembers])
+  }, [pageIndex, pageSize, isHydrated, organizationId, fetchMembers, fetchFingerStats, clearMembersCacheForOrg])
 
   // Setup real-time subscription for biometric_data changes
   React.useEffect(() => {
     if (!mounted || !organizationId) return
 
     const supabase = createClient()
-    
+
     const channel = supabase
       .channel(`biometric-data-changes-${organizationId}`)
       .on(
@@ -323,8 +449,10 @@ export default function FingerPage() {
             if (DEBUG) console.log('🔄 Change from another organization, skipping refetch')
             return
           }
-          // Refetch all data to ensure consistency
+          // Refetch all data and clear cache to ensure consistency
+          clearMembersCacheForOrg(organizationId)
           fetchMembers()
+          fetchFingerStats()
         }
       )
       .subscribe((status) => {
@@ -391,14 +519,14 @@ export default function FingerPage() {
 
   const getFilteredMembers = (): Member[] => {
     return members.filter(member => {
-      const matchesSearch = 
+      const matchesSearch =
         member.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (member.phone && member.phone.toLowerCase().includes(searchQuery.toLowerCase()))
 
-      const matchesDepartment = 
+      const matchesDepartment =
         selectedDepartment === "all" || member.department_name === selectedDepartment
 
-      const matchesStatus = 
+      const matchesStatus =
         selectedStatus === "all" ||
         (selectedStatus === "complete" && member.finger1_registered && member.finger2_registered) ||
         (selectedStatus === "partial" && (member.finger1_registered || member.finger2_registered) && !(member.finger1_registered && member.finger2_registered)) ||
@@ -435,7 +563,7 @@ export default function FingerPage() {
     }
 
     const isRegistered = fingerNumber === 1 ? member.finger1_registered : member.finger2_registered
-    
+
     if (isRegistered) {
       setRegisteringMember({ member, fingerNumber })
       setShowConfirmDialog(true)
@@ -618,18 +746,20 @@ export default function FingerPage() {
         setMembers(prev => prev.map(m => (
           m.id === member.id
             ? {
-                ...m,
-                finger1_registered: fingerNumber === 1 ? true : m.finger1_registered,
-                finger2_registered: fingerNumber === 2 ? true : m.finger2_registered,
-              }
+              ...m,
+              finger1_registered: fingerNumber === 1 ? true : m.finger1_registered,
+              finger2_registered: fingerNumber === 2 ? true : m.finger2_registered,
+            }
             : m
         )))
 
         toast.success('Registration successful!')
         // Ensure UI shows latest data even if realtime is delayed
+        clearMembersCacheForOrg(organizationId)
         await fetchMembers()
+        await fetchFingerStats()
       }
-      
+
       // Auto-cancel on error only if not success
       if (!success && command?.id) {
         try {
@@ -665,7 +795,7 @@ export default function FingerPage() {
       registrationCompleteRef.current = true
       realtimeStatusRef.current = 'CANCELLED'
       const supabase = createClient()
-      
+
       // Find and cancel the pending command
       const { data: commands, error: fetchError } = await supabase
         .from('device_commands')
@@ -694,14 +824,14 @@ export default function FingerPage() {
       }
 
       toast.success('Registration cancelled')
-      
+
       // Reset states immediately
       setIsRegistering(false)
       setActiveMemberId(null)
       setActiveFingerNumber(null)
       setShowConfirmDialog(false)
       setRegisteringMember(null)
-      
+
       // Refresh data
       fetchMembers()
     } catch (error: unknown) {
@@ -711,9 +841,10 @@ export default function FingerPage() {
     }
   }
 
-  const registeredCount = members.filter(m => m.finger1_registered && m.finger2_registered).length
-  const partialCount = members.filter(m => (m.finger1_registered || m.finger2_registered) && !(m.finger1_registered && m.finger2_registered)).length
-  const unregisteredCount = members.filter(m => !m.finger1_registered && !m.finger2_registered).length
+  // Use organization-wide aggregated stats for accurate card numbers
+  const registeredCount = fingerStats.registered
+  const partialCount = fingerStats.partial
+  const unregisteredCount = fingerStats.unregistered
 
   if (false && isLoading) {
     // Hanya tampilkan skeleton khusus finger
@@ -731,7 +862,7 @@ export default function FingerPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Complete (2 Fingers)</p>
-                <p className="text-lg font-semibold">{registeredCount}/{members.length}</p>
+                <p className="text-lg font-semibold">{registeredCount}/{fingerStats.total}</p>
               </div>
             </div>
 
@@ -741,7 +872,7 @@ export default function FingerPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Partial (1 Finger)</p>
-                <p className="text-lg font-semibold">{partialCount}/{members.length}</p>
+                <p className="text-lg font-semibold">{partialCount}/{fingerStats.total}</p>
               </div>
             </div>
 
@@ -751,7 +882,7 @@ export default function FingerPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Not Registered</p>
-                <p className="text-lg font-semibold">{unregisteredCount}/{members.length}</p>
+                <p className="text-lg font-semibold">{unregisteredCount}/{fingerStats.total}</p>
               </div>
             </div>
           </div>
@@ -790,9 +921,9 @@ export default function FingerPage() {
                           devices.map((device, index) => {
                             const deviceKey = device.device_code || `device-${index}`
                             const deviceValue = device.device_code || ''
-                            
+
                             return (
-                              <SelectItem 
+                              <SelectItem
                                 key={deviceKey}
                                 value={deviceValue}
                                 className="cursor-pointer"
@@ -893,7 +1024,7 @@ export default function FingerPage() {
                 <TableHead className="font-semibold text-center">Finger 2</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
               {(isLoading && members.length === 0) ? (
                 <>
                   {Array.from({ length: Math.max(5, pageSizeNum) }).map((_, i) => (
@@ -913,8 +1044,8 @@ export default function FingerPage() {
               ) : paginatedMembers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                    {searchQuery || selectedDepartment !== "all" || selectedStatus !== "all" 
-                      ? "No data found" 
+                    {searchQuery || selectedDepartment !== "all" || selectedStatus !== "all"
+                      ? "No data found"
                       : "No members registered yet"}
                   </TableCell>
                 </TableRow>
@@ -930,13 +1061,13 @@ export default function FingerPage() {
                     <TableCell className="font-medium text-muted-foreground">
                       {pageIndex * pageSizeNum + index + 1}
                     </TableCell>
-                    <TableCell 
+                    <TableCell
                       className="font-medium text-foreground hover:underline cursor-pointer"
                       onClick={() => handleMemberClick(member.id)}
                     >
                       {member.first_name || 'N/A'}
                     </TableCell>
-                    <TableCell 
+                    <TableCell
                       className="text-foreground hover:underline cursor-pointer"
                       onClick={() => handleMemberClick(member.id)}
                     >

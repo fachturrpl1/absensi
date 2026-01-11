@@ -16,17 +16,8 @@ export function OrgBreadcrumb() {
   const pathname = usePathname()
   const { organizationName } = useOrgStore()
   const [isHydrated, setIsHydrated] = useState(false)
-  const [displayName, setDisplayName] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null
-    try {
-      const raw = localStorage.getItem('org-store')
-      if (!raw) return null
-      const parsed = JSON.parse(raw)
-      return parsed?.state?.organizationName ?? null
-    } catch {
-      return null
-    }
-  })
+  // Init to null to keep SSR and initial client render identical
+  const [displayName, setDisplayName] = useState<string | null>(null)
 
   useEffect(() => {
     // Set hydrated flag
@@ -39,8 +30,16 @@ export function OrgBreadcrumb() {
         const storedState = localStorage.getItem('org-store')
         if (storedState) {
           const parsed = JSON.parse(storedState)
-          if (parsed.state?.organizationName) {
-            setDisplayName(parsed.state.organizationName)
+          const state = (parsed?.state ?? parsed) as {
+            organizationName?: string | null
+            organizationId?: number | null
+            organizations?: Array<{ id?: number; name?: string }>
+          }
+          if (state?.organizationName) {
+            setDisplayName(state.organizationName)
+          } else if (state?.organizationId && Array.isArray(state?.organizations)) {
+            const found = state.organizations.find((o) => Number(o?.id) === Number(state.organizationId))
+            if (found?.name) setDisplayName(found.name)
           }
         }
       } catch (error) {
@@ -108,28 +107,21 @@ export function OrgBreadcrumb() {
   const buildBreadcrumbs = (): BreadcrumbItem[] => {
     const items: BreadcrumbItem[] = []
     
-    // Use displayName (which has fallback to localStorage) instead of organizationName
     const nameToDisplay = displayName || organizationName
 
-    // Jika di halaman /organization, tampilkan "Organizations"
+    // Jika di halaman /organization, tampilkan hanya nama organisasi
     if (pathname === '/organization') {
-      items.push({
-        label: 'Organizations',
-        href: '/organization',
-      })
+      if (nameToDisplay) {
+        items.push({
+          label: nameToDisplay,
+          href: '/organization',
+        })
+      }
       return items
     }
-
-    // Untuk halaman organization/*, tampilkan "Organizations" sebagai parent
-    if (pathname.startsWith('/organization/')) {
-      items.push({
-        label: 'Organizations',
-        href: '/organization',
-      })
-    }
     
-    // Tambahkan nama organisasi jika ada, tidak di halaman /organization, dan bukan halaman new organization
-    if (nameToDisplay && pathname !== '/organization' && !pathname.startsWith('/organization/new')) {
+    // Tambahkan nama organisasi jika ada (selalu tampil pertama)
+    if (nameToDisplay) {
       items.push({
         label: nameToDisplay,
         href: '/organization',
@@ -164,7 +156,7 @@ export function OrgBreadcrumb() {
 
   const breadcrumbs = buildBreadcrumbs()
 
-  // Debug logging
+  // Debug logging (declare hooks before any conditional return)
   React.useEffect(() => {
     console.log('[BREADCRUMB] Render state:', {
       pathname,
@@ -175,6 +167,11 @@ export function OrgBreadcrumb() {
       breadcrumbs: breadcrumbs.map(b => b.label),
     })
   }, [pathname, organizationName, displayName, isHydrated, breadcrumbs])
+
+  // Render guard to keep SSR and first client render identical
+  if (!isHydrated && !displayName && !organizationName) {
+    return null
+  }
 
   // Jika tidak ada breadcrumb, jangan render
   if (breadcrumbs.length === 0) {

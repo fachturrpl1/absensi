@@ -43,16 +43,16 @@ export function DataTable<TData>({ table, server }: DataTableProps<TData>) {
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   )
                 })}
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody>
+          <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow

@@ -281,7 +281,7 @@ export function GroupsTable({ groups, isLoading = false, onDelete, onEdit }: Gro
           </thead>
 
           {/* Body */}
-          <tbody>
+          <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
             {isLoading ? (
               <tr>
                 <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="px-4 py-8 text-center text-muted-foreground">

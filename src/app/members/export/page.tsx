@@ -12,11 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { 
-  FileSpreadsheet, 
-  FileText, 
-  Loader2, 
-  CheckCircle2, 
+import {
+  FileSpreadsheet,
+  FileText,
+  Loader2,
+  CheckCircle2,
   AlertCircle,
   ArrowLeft,
   Users,
@@ -116,7 +116,7 @@ export default function MembersExportPage() {
   // State untuk 2-step filter (pilih kolom → pilih nilai + Apply)
   const [selectedColumnForFilter, setSelectedColumnForFilter] = useState<string | null>(null)
   const [tempNewFilterValues, setTempNewFilterValues] = useState<string[]>([])
-  
+
   // Load groups
   const { data: groups = [] } = useGroups({
     enabled: isHydrated && !!organizationId
@@ -126,7 +126,7 @@ export default function MembersExportPage() {
   const loadFilterOptions = React.useCallback(async (columnKey: string) => {
     if (!organizationId || !columnKey) return
     if (filterOptions[columnKey] || loadingFilterOptions[columnKey]) return
-    
+
     setLoadingFilterOptions(prev => ({ ...prev, [columnKey]: true }))
     try {
       const url = new URL("/api/members/export/filter-options", window.location.origin)
@@ -135,7 +135,7 @@ export default function MembersExportPage() {
 
       const res = await fetch(url.toString(), { credentials: "same-origin" })
       const json = await res.json()
-      
+
       if (json.success) {
         setFilterOptions(prev => ({
           ...prev,
@@ -153,19 +153,19 @@ export default function MembersExportPage() {
   const getAvailableFilterColumns = () => {
     const usedColumns = new Set(filters.map(f => f.column))
     return [
-      { 
-        key: "group", 
-        label: "Group / Department", 
-        options: groups.map(g => ({ value: String(g.id), label: g.name })) 
+      {
+        key: "group",
+        label: "Group / Department",
+        options: groups.map(g => ({ value: String(g.id), label: g.name }))
       },
-      { 
-        key: "jenis_kelamin", 
-        label: "Jenis Kelamin", 
+      {
+        key: "jenis_kelamin",
+        label: "Jenis Kelamin",
         options: filterOptions.jenis_kelamin || []
       },
-      { 
-        key: "agama", 
-        label: "Agama", 
+      {
+        key: "agama",
+        label: "Agama",
         options: filterOptions.agama || []
       },
     ].filter(col => !usedColumns.has(col.key))
@@ -225,19 +225,19 @@ export default function MembersExportPage() {
   // Get filter column config
   const getFilterColumnConfig = (columnKey: string) => {
     const allColumns = [
-      { 
-        key: "group", 
-        label: "Group / Department", 
-        options: groups.map(g => ({ value: String(g.id), label: g.name })) 
+      {
+        key: "group",
+        label: "Group / Department",
+        options: groups.map(g => ({ value: String(g.id), label: g.name }))
       },
-      { 
-        key: "jenis_kelamin", 
-        label: "Jenis Kelamin", 
+      {
+        key: "jenis_kelamin",
+        label: "Jenis Kelamin",
         options: filterOptions.jenis_kelamin || []
       },
-      { 
-        key: "agama", 
-        label: "Agama", 
+      {
+        key: "agama",
+        label: "Agama",
         options: filterOptions.agama || []
       },
     ]
@@ -267,7 +267,7 @@ export default function MembersExportPage() {
       const url = new URL("/api/members/export/count", window.location.origin)
       if (organizationId) url.searchParams.set("organizationId", String(organizationId))
       if (searchQuery) url.searchParams.set("search", searchQuery)
-      
+
       const filterParams = getFilterParams()
       if (filterParams.groups?.length) url.searchParams.set("groups", filterParams.groups.join(","))
       if (filterParams.genders?.length) url.searchParams.set("genders", filterParams.genders.join(","))
@@ -281,7 +281,7 @@ export default function MembersExportPage() {
 
       const res = await fetch(url.toString(), { credentials: "same-origin" })
       const json = await res.json()
-      
+
       if (json.success) {
         setTotalCount(json.count || 0)
       } else {
@@ -303,7 +303,7 @@ export default function MembersExportPage() {
       if (searchQuery) url.searchParams.set("search", searchQuery)
       url.searchParams.set("page", String(currentPage))
       url.searchParams.set("pageSize", String(pageSize))
-      
+
       const filterParams = getFilterParams()
       if (filterParams.groups?.length) url.searchParams.set("groups", filterParams.groups.join(","))
       if (filterParams.genders?.length) url.searchParams.set("genders", filterParams.genders.join(","))
@@ -315,7 +315,7 @@ export default function MembersExportPage() {
 
       const res = await fetch(url.toString(), { credentials: "same-origin" })
       const json = await res.json()
-      
+
       if (json.success) {
         setMemberRows(json.data || [])
         // Reset selected rows saat ganti halaman
@@ -375,7 +375,7 @@ export default function MembersExportPage() {
       // Preview selalu ambil halaman pertama, maksimal 10 baris
       url.searchParams.set("page", "1")
       url.searchParams.set("pageSize", "10")
-      
+
       const filterParams = getFilterParams()
       if (filterParams.groups?.length) url.searchParams.set("groups", filterParams.groups.join(","))
       if (filterParams.genders?.length) url.searchParams.set("genders", filterParams.genders.join(","))
@@ -389,7 +389,7 @@ export default function MembersExportPage() {
 
       const res = await fetch(url.toString(), { credentials: "same-origin" })
       const json = await res.json()
-      
+
       if (json.success) {
         setPreviewData(json.data || [])
       } else {
@@ -411,7 +411,7 @@ export default function MembersExportPage() {
       const selectedNiks = Array.from(selectedRows)
         .map(idx => memberRows[idx]?.nik)
         .filter(nik => nik) // Filter NIK yang valid
-      
+
       if (selectedNiks.length === 0) {
         toast.error("Tidak ada data yang dipilih untuk diexport")
         setExporting(false)
@@ -423,14 +423,14 @@ export default function MembersExportPage() {
       url.searchParams.set("includeHeader", String(exportConfig.includeHeader))
       url.searchParams.set("dateFormat", exportConfig.dateFormat)
       if (organizationId) url.searchParams.set("organizationId", String(organizationId))
-      
+
       // Kirim NIK yang dipilih
       url.searchParams.set("selectedNiks", selectedNiks.join(","))
-      
+
       url.searchParams.set("fields", exportConfig.selectedFields.join(","))
 
       const res = await fetch(url.toString(), { credentials: "same-origin" })
-      
+
       if (!res.ok) {
         throw new Error("Export failed")
       }
@@ -439,7 +439,7 @@ export default function MembersExportPage() {
       const blob = await res.blob()
       const downloadUrl = window.URL.createObjectURL(blob)
       const fileName = `members-export-${new Date().toISOString().split("T")[0]}.${exportConfig.format}`
-      
+
       // Trigger download
       const link = document.createElement("a")
       link.href = downloadUrl
@@ -534,15 +534,15 @@ export default function MembersExportPage() {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto">
         <div className="mb-6 flex items-center gap-4">
-          <Link 
+          <Link
             href="/members"
             prefetch={false}
-            // onMouseEnter={(e) => {
-            //   const href = e.currentTarget.getAttribute('href')
-            //   if (href && router) {
-            //     router.prefetch(href)
-            //   }
-            // }}
+          // onMouseEnter={(e) => {
+          //   const href = e.currentTarget.getAttribute('href')
+          //   if (href && router) {
+          //     router.prefetch(href)
+          //   }
+          // }}
           >
             <Button variant="ghost" size="icon" aria-label="Kembali ke halaman members">
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
@@ -579,8 +579,8 @@ export default function MembersExportPage() {
                   {/* Add Filter Button - 2-step seperti Supabase */}
                   <div className="space-y-2">
                     <Label>Filter</Label>
-                    <Popover 
-                      open={showAddFilterPopover} 
+                    <Popover
+                      open={showAddFilterPopover}
                       onOpenChange={(open) => {
                         setShowAddFilterPopover(open)
                         if (!open) {
@@ -590,8 +590,8 @@ export default function MembersExportPage() {
                       }}
                     >
                       <PopoverTrigger asChild>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="w-full justify-start"
                           aria-label="Tambahkan filter baru"
                           aria-expanded={showAddFilterPopover}
@@ -601,8 +601,8 @@ export default function MembersExportPage() {
                           {filters.length === 0 ? "Pick a column to filter by" : "Add filter"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent 
-                        className="w-[320px] p-0" 
+                      <PopoverContent
+                        className="w-[320px] p-0"
                         align="start"
                         role="dialog"
                         aria-label="Dialog pilih filter"
@@ -669,14 +669,14 @@ export default function MembersExportPage() {
                                 Apply filter
                               </Button>
                             </div>
-                            {getFilterColumnConfig(selectedColumnForFilter)?.options.length && 
-                             getFilterColumnConfig(selectedColumnForFilter)!.options.length > 5 && (
-                              <CommandInput 
-                                placeholder={`Cari ${getFilterColumnConfig(selectedColumnForFilter)?.label.toLowerCase()}...`} 
-                                className="h-9"
-                                aria-label={`Cari ${getFilterColumnConfig(selectedColumnForFilter)?.label.toLowerCase()}`}
-                              />
-                            )}
+                            {getFilterColumnConfig(selectedColumnForFilter)?.options.length &&
+                              getFilterColumnConfig(selectedColumnForFilter)!.options.length > 5 && (
+                                <CommandInput
+                                  placeholder={`Cari ${getFilterColumnConfig(selectedColumnForFilter)?.label.toLowerCase()}...`}
+                                  className="h-9"
+                                  aria-label={`Cari ${getFilterColumnConfig(selectedColumnForFilter)?.label.toLowerCase()}`}
+                                />
+                              )}
                             <CommandList className="max-h-[280px]">
                               <CommandEmpty role="status">Tidak ada pilihan</CommandEmpty>
                               <CommandGroup>
@@ -758,9 +758,9 @@ export default function MembersExportPage() {
                                 }
                               }}>
                                 <PopoverTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="h-6 px-2"
                                     aria-label={`Edit filter ${columnConfig?.label}`}
                                     aria-expanded={editingFilterId === filter.id}
@@ -769,8 +769,8 @@ export default function MembersExportPage() {
                                     Edit
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent 
-                                  className="w-[300px] p-0" 
+                                <PopoverContent
+                                  className="w-[300px] p-0"
                                   align="start"
                                   role="dialog"
                                   aria-label={`Edit filter ${columnConfig?.label}`}
@@ -783,7 +783,7 @@ export default function MembersExportPage() {
                                     </div>
 
                                     {columnConfig && columnConfig.options.length > 5 && (
-                                      <CommandInput 
+                                      <CommandInput
                                         placeholder={`Cari ${columnConfig.label.toLowerCase()}...`}
                                         aria-label={`Cari ${columnConfig.label.toLowerCase()}`}
                                       />
@@ -913,220 +913,220 @@ export default function MembersExportPage() {
                           </AlertDescription>
                         </Alert>
                       ) : (
-                         <div className="space-y-2">
-                           <div className="flex items-center justify-between">
-                             <Label id="data-member-label">Data Member ({totalCount.toLocaleString()} rows total, halaman {currentPage} dari {totalPages})</Label>
-                             <div className="flex items-center gap-2">
-                               <Button
-                                 variant="outline"
-                                 size="sm"
-                                 onClick={toggleSelectAll}
-                                 disabled={memberRows.length === 0}
-                                 aria-label={selectedRows.size === memberRows.length && memberRows.length > 0
-                                   ? "Hapus semua pilihan baris di tabel"
-                                   : "Pilih semua baris di tabel"}
-                                 aria-pressed={selectedRows.size === memberRows.length && memberRows.length > 0}
-                               >
-                                 {selectedRows.size === memberRows.length && memberRows.length > 0
-                                   ? "Hapus Semua"
-                                   : "Pilih Semua"}
-                               </Button>
-                               {selectedRows.size > 0 && (
-                                 <Badge 
-                                   variant="secondary"
-                                   role="status"
-                                   aria-live="polite"
-                                   aria-atomic="true"
-                                 >
-                                   {selectedRows.size} dipilih
-                                 </Badge>
-                               )}
-                             </div>
-                           </div>
-                           <div 
-                             className="border rounded-lg overflow-auto custom-scrollbar" 
-                             style={{ 
-                               maxHeight: '500px'
-                             }}
-                             role="region"
-                             aria-labelledby="data-member-label"
-                             aria-label="Tabel data member untuk export"
-                           >
-                             <Table
-                               role="table"
-                               aria-label="Tabel data member untuk export"
-                               aria-rowcount={memberRows.length}
-                               aria-colcount={17}
-                             >
-                               <TableHeader className="sticky top-0 bg-background z-10">
-                                 <TableRow role="row">
-                                   <TableHead className="w-12" role="columnheader" scope="col">
-                                     <span className="sr-only">Pilih baris</span>
-                                     <Checkbox
-                                       checked={selectedRows.size === memberRows.length && memberRows.length > 0}
-                                       onCheckedChange={toggleSelectAll}
-                                       aria-label="Pilih semua baris di tabel"
-                                     />
-                                   </TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">NIK</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Nama</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Nickname</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">NISN</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Jenis Kelamin</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Tempat Lahir</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Tanggal Lahir</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Agama</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Jalan</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">RT</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">RW</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Dusun</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Kelurahan</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Kecamatan</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">No. Telepon</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Email</TableHead>
-                                   <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Group</TableHead>
-                                 </TableRow>
-                               </TableHeader>
-                               <TableBody>
-                                 {memberRows.length === 0 ? (
-                                   <TableRow role="row">
-                                     <TableCell colSpan={17} className="text-center py-8 text-muted-foreground" role="gridcell">
-                                       Tidak ada data
-                                     </TableCell>
-                                   </TableRow>
-                                 ) : (
-                                   memberRows.map((row, idx) => (
-                                     <TableRow key={idx} role="row" aria-rowindex={idx + 1}>
-                                       <TableCell role="gridcell">
-                                         <Checkbox
-                                           checked={selectedRows.has(idx)}
-                                           onCheckedChange={() => toggleRowSelection(idx)}
-                                           aria-label={`Pilih baris ${idx + 1}, NIK: ${row.nik || 'tidak ada'}, Nama: ${row.nama || 'tidak ada'}`}
-                                         />
-                                       </TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.nik || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.nama || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.nickname || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.nisn || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.jenis_kelamin || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.tempat_lahir || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.tanggal_lahir || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.agama || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.jalan || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.rt || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.rw || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.dusun || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.kelurahan || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.kecamatan || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.no_telepon || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.email || "-"}</TableCell>
-                                       <TableCell className="whitespace-nowrap" role="gridcell">{row.department_id || "-"}</TableCell>
-                                     </TableRow>
-                                   ))
-                                 )}
-                               </TableBody>
-                               </Table>
-                           </div>
-                           {/* Pagination */}
-                           {totalPages > 1 && (
-                             <nav aria-label="Pagination untuk tabel data member" className="flex items-center justify-between mt-4 py-4 px-4 bg-muted/50 rounded-md border">
-                               <div className="flex items-center gap-2">
-                                 <Button
-                                   variant="ghost"
-                                   size="sm"
-                                   onClick={() => setCurrentPage(1)}
-                                   disabled={currentPage === 1 || loadingMembers}
-                                   className="h-8 w-8 p-0"
-                                   title="First page"
-                                   aria-label="Ke halaman pertama"
-                                 >
-                                   <ChevronsLeft className="h-4 w-4" />
-                                 </Button>
-                                 <Button
-                                   variant="ghost"
-                                   size="sm"
-                                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                   disabled={currentPage === 1 || loadingMembers}
-                                   className="h-8 w-8 p-0"
-                                   title="Previous page"
-                                   aria-label="Ke halaman sebelumnya"
-                                 >
-                                   <ChevronLeft className="h-4 w-4" />
-                                 </Button>
-                                 
-                                 <span className="text-sm text-muted-foreground">Page</span>
-                                 
-                                 <input
-                                   type="number"
-                                   min="1"
-                                   max={totalPages}
-                                   value={currentPage}
-                                   onChange={(e) => {
-                                     const page = e.target.value ? Number(e.target.value) : 1
-                                     const safe = Math.max(1, Math.min(page, totalPages))
-                                     setCurrentPage(safe)
-                                   }}
-                                   className="w-12 h-8 px-2 border rounded text-sm text-center bg-background"
-                                   disabled={loadingMembers || totalCount === 0}
-                                 />
-                                 
-                                 <span className="text-sm text-muted-foreground">/ {totalPages}</span>
-                                 
-                                 <Button
-                                   variant="ghost"
-                                   size="sm"
-                                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                   disabled={currentPage === totalPages || loadingMembers}
-                                   className="h-8 w-8 p-0"
-                                   title="Next page"
-                                   aria-label="Ke halaman berikutnya"
-                                 >
-                                   <ChevronRight className="h-4 w-4" />
-                                 </Button>
-                                 <Button
-                                   variant="ghost"
-                                   size="sm"
-                                   onClick={() => setCurrentPage(totalPages)}
-                                   disabled={currentPage === totalPages || loadingMembers}
-                                   className="h-8 w-8 p-0"
-                                   title="Last page"
-                                   aria-label="Ke halaman terakhir"
-                                 >
-                                   <ChevronsRight className="h-4 w-4" />
-                                 </Button>
-                               </div>
-                               
-                               <div className="flex items-center gap-4">
-                                 <div className="text-sm text-muted-foreground">
-                                   Showing {totalCount > 0 ? ((currentPage - 1) * pageSize) + 1 : 0} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount.toLocaleString()} total records
-                                 </div>
-                                 <div className="flex items-center gap-2">
-                                   <select
-                                     value={pageSize}
-                                     onChange={(e) => {
-                                       const newPageSize = Number(e.target.value)
-                                       setPageSize(newPageSize)
-                                       setCurrentPage(1) // Reset to first page when changing page size
-                                     }}
-                                     className="px-2 py-1 border rounded text-sm bg-background"
-                                     disabled={loadingMembers}
-                                   >
-                                     <option value="100">100</option>
-                                     <option value="500">500</option>
-                                     <option value="1000">1000</option>
-                                   </select>
-                                 </div>
-                               </div>
-                             </nav>
-                           )}
-                         </div>
-                       )}
-                     </div>
-                   )}
-                 </CardContent>
-               </Card>
-             </div>
-           )}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Label id="data-member-label">Data Member ({totalCount.toLocaleString()} rows total, halaman {currentPage} dari {totalPages})</Label>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={toggleSelectAll}
+                                disabled={memberRows.length === 0}
+                                aria-label={selectedRows.size === memberRows.length && memberRows.length > 0
+                                  ? "Hapus semua pilihan baris di tabel"
+                                  : "Pilih semua baris di tabel"}
+                                aria-pressed={selectedRows.size === memberRows.length && memberRows.length > 0}
+                              >
+                                {selectedRows.size === memberRows.length && memberRows.length > 0
+                                  ? "Hapus Semua"
+                                  : "Pilih Semua"}
+                              </Button>
+                              {selectedRows.size > 0 && (
+                                <Badge
+                                  variant="secondary"
+                                  role="status"
+                                  aria-live="polite"
+                                  aria-atomic="true"
+                                >
+                                  {selectedRows.size} dipilih
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div
+                            className="border rounded-lg overflow-auto custom-scrollbar"
+                            style={{
+                              maxHeight: '500px'
+                            }}
+                            role="region"
+                            aria-labelledby="data-member-label"
+                            aria-label="Tabel data member untuk export"
+                          >
+                            <Table
+                              role="table"
+                              aria-label="Tabel data member untuk export"
+                              aria-rowcount={memberRows.length}
+                              aria-colcount={17}
+                            >
+                              <TableHeader className="sticky top-0 bg-background z-10">
+                                <TableRow role="row">
+                                  <TableHead className="w-12" role="columnheader" scope="col">
+                                    <span className="sr-only">Pilih baris</span>
+                                    <Checkbox
+                                      checked={selectedRows.size === memberRows.length && memberRows.length > 0}
+                                      onCheckedChange={toggleSelectAll}
+                                      aria-label="Pilih semua baris di tabel"
+                                    />
+                                  </TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">NIK</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Nama</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Nickname</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">NISN</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Jenis Kelamin</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Tempat Lahir</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Tanggal Lahir</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Agama</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Jalan</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">RT</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">RW</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Dusun</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Kelurahan</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Kecamatan</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">No. Telepon</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Email</TableHead>
+                                  <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Group</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
+                                {memberRows.length === 0 ? (
+                                  <TableRow role="row">
+                                    <TableCell colSpan={17} className="text-center py-8 text-muted-foreground" role="gridcell">
+                                      Tidak ada data
+                                    </TableCell>
+                                  </TableRow>
+                                ) : (
+                                  memberRows.map((row, idx) => (
+                                    <TableRow key={idx} role="row" aria-rowindex={idx + 1}>
+                                      <TableCell role="gridcell">
+                                        <Checkbox
+                                          checked={selectedRows.has(idx)}
+                                          onCheckedChange={() => toggleRowSelection(idx)}
+                                          aria-label={`Pilih baris ${idx + 1}, NIK: ${row.nik || 'tidak ada'}, Nama: ${row.nama || 'tidak ada'}`}
+                                        />
+                                      </TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.nik || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.nama || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.nickname || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.nisn || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.jenis_kelamin || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.tempat_lahir || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.tanggal_lahir || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.agama || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.jalan || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.rt || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.rw || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.dusun || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.kelurahan || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.kecamatan || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.no_telepon || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.email || "-"}</TableCell>
+                                      <TableCell className="whitespace-nowrap" role="gridcell">{row.department_id || "-"}</TableCell>
+                                    </TableRow>
+                                  ))
+                                )}
+                              </TableBody>
+                            </Table>
+                          </div>
+                          {/* Pagination */}
+                          {totalPages > 1 && (
+                            <nav aria-label="Pagination untuk tabel data member" className="flex items-center justify-between mt-4 py-4 px-4 bg-muted/50 rounded-md border">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setCurrentPage(1)}
+                                  disabled={currentPage === 1 || loadingMembers}
+                                  className="h-8 w-8 p-0"
+                                  title="First page"
+                                  aria-label="Ke halaman pertama"
+                                >
+                                  <ChevronsLeft className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                  disabled={currentPage === 1 || loadingMembers}
+                                  className="h-8 w-8 p-0"
+                                  title="Previous page"
+                                  aria-label="Ke halaman sebelumnya"
+                                >
+                                  <ChevronLeft className="h-4 w-4" />
+                                </Button>
+
+                                <span className="text-sm text-muted-foreground">Page</span>
+
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={totalPages}
+                                  value={currentPage}
+                                  onChange={(e) => {
+                                    const page = e.target.value ? Number(e.target.value) : 1
+                                    const safe = Math.max(1, Math.min(page, totalPages))
+                                    setCurrentPage(safe)
+                                  }}
+                                  className="w-12 h-8 px-2 border rounded text-sm text-center bg-background"
+                                  disabled={loadingMembers || totalCount === 0}
+                                />
+
+                                <span className="text-sm text-muted-foreground">/ {totalPages}</span>
+
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                  disabled={currentPage === totalPages || loadingMembers}
+                                  className="h-8 w-8 p-0"
+                                  title="Next page"
+                                  aria-label="Ke halaman berikutnya"
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setCurrentPage(totalPages)}
+                                  disabled={currentPage === totalPages || loadingMembers}
+                                  className="h-8 w-8 p-0"
+                                  title="Last page"
+                                  aria-label="Ke halaman terakhir"
+                                >
+                                  <ChevronsRight className="h-4 w-4" />
+                                </Button>
+                              </div>
+
+                              <div className="flex items-center gap-4">
+                                <div className="text-sm text-muted-foreground">
+                                  Showing {totalCount > 0 ? ((currentPage - 1) * pageSize) + 1 : 0} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount.toLocaleString()} total records
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <select
+                                    value={pageSize}
+                                    onChange={(e) => {
+                                      const newPageSize = Number(e.target.value)
+                                      setPageSize(newPageSize)
+                                      setCurrentPage(1) // Reset to first page when changing page size
+                                    }}
+                                    className="px-2 py-1 border rounded text-sm bg-background"
+                                    disabled={loadingMembers}
+                                  >
+                                    <option value="100">100</option>
+                                    <option value="500">500</option>
+                                    <option value="1000">1000</option>
+                                  </select>
+                                </div>
+                              </div>
+                            </nav>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Step 2: Configure Export */}
           {currentStep === 2 && (
@@ -1263,7 +1263,7 @@ export default function MembersExportPage() {
                             })}
                           </TableRow>
                         </TableHeader>
-                        <TableBody>
+                        <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
                           {previewData.length === 0 ? (
                             <TableRow role="row">
                               <TableCell colSpan={exportConfig.selectedFields.length} className="text-center py-8" role="gridcell">
@@ -1356,14 +1356,14 @@ export default function MembersExportPage() {
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <Button 
+                        <Button
                           onClick={() => router.push("/members")}
                           aria-label="Kembali ke halaman members"
                         >
                           Kembali ke Member
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           onClick={() => setCurrentStep(1)}
                           aria-label="Mulai export baru"
                         >
@@ -1380,25 +1380,25 @@ export default function MembersExportPage() {
                         </AlertDescription>
                       </Alert>
                       <div className="flex gap-2">
-                        <Button 
+                        <Button
                           asChild
                           aria-label="Kembali ke halaman members"
                         >
-                          <Link 
+                          <Link
                             href="/members"
                             prefetch={false}
-                            // onMouseEnter={(e) => {
-                            //   const href = e.currentTarget.getAttribute('href')
-                            //   if (href && router) {
-                            //     router.prefetch(href)
-                            //   }
-                            // }}
+                          // onMouseEnter={(e) => {
+                          //   const href = e.currentTarget.getAttribute('href')
+                          //   if (href && router) {
+                          //     router.prefetch(href)
+                          //   }
+                          // }}
                           >
                             Kembali ke Member
                           </Link>
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           onClick={() => setCurrentStep(1)}
                           aria-label="Coba export lagi"
                         >
