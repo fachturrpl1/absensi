@@ -131,7 +131,7 @@ export default function GroupsPage() {
       const result = await deleteGroup(id)
       if (result.success) {
         toast.success("Group deleted successfully")
-        await queryClient.invalidateQueries({ queryKey: ['groups']})
+        await queryClient.invalidateQueries({ queryKey: ['groups'] })
         fetchGroups()
       } else {
         toast.error(result.message || "Failed to delete group")
@@ -168,65 +168,71 @@ export default function GroupsPage() {
     {
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => {
-              setEditingDetail(row.original)
-              form.reset({
-                organization_id: String(row.original.organization_id),
-                code: row.original.code || "",
-                name: row.original.name,
-                description: row.original.description || "",
-                is_active: row.original.is_active ?? true,
-              })
-              setIsModalOpen(true)
-            }}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
-              >
-                <Trash className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <Link href={`/group/move?id=${row.original.id}`}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </Link>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Group</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete {row.original.name}? This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => handleDelete(row.original.id)}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+      cell: ({ row }) => {
+        const isNoGroup = row.original.id === 'no-group';
+        return (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              disabled={isNoGroup}
+              onClick={() => {
+                if (isNoGroup) return;
+                setEditingDetail(row.original)
+                form.reset({
+                  organization_id: String(row.original.organization_id),
+                  code: row.original.code || "",
+                  name: row.original.name,
+                  description: row.original.description || "",
+                  is_active: row.original.is_active ?? true,
+                })
+                setIsModalOpen(true)
+              }}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={isNoGroup}
+                  className="h-8 w-8 text-destructive hover:text-destructive"
                 >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      ),
+                  <Trash className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <Link href={`/group/move?id=${row.original.id}${isNoGroup ? `&orgId=${organizationId}` : ''}`}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Group</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete {row.original.name}? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => handleDelete(row.original.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )
+      },
     },
   ]
 
@@ -234,19 +240,32 @@ export default function GroupsPage() {
   const fetchGroups = React.useCallback(async () => {
     try {
       setLoading(true)
-      
+
       if (!organizationId) {
         toast.error('Please select an organization')
         setLoading(false)
         return
       }
-      
+
       const result = await getAllGroups(organizationId)
       if (!result.success) throw new Error(result.message)
-      await queryClient.invalidateQueries({ queryKey: ['groups']})
-      
-      setGroups(result.data)
-      setCache<IGroup[]>(`groups:${organizationId}`, result.data, 1000 * 300)
+      await queryClient.invalidateQueries({ queryKey: ['groups'] })
+
+      const virtualNoGroup: IGroup = {
+        id: 'no-group',
+        organization_id: String(organizationId),
+        code: '-',
+        name: 'No Group',
+        description: 'Members without a group',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+
+      const allGroups = [...result.data, virtualNoGroup];
+
+      setGroups(allGroups)
+      setCache<IGroup[]>(`groups:${organizationId}`, allGroups, 1000 * 300)
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'An error occurred')
     } finally {
@@ -267,7 +286,7 @@ export default function GroupsPage() {
       }
       // Force refresh data
       await fetchGroups()
-      await queryClient.invalidateQueries({ queryKey: ['groups']})
+      await queryClient.invalidateQueries({ queryKey: ['groups'] })
       toast.success("Data has been refreshed!!")
     } catch (error) {
       toast.error("Failed at refresh data")
@@ -277,7 +296,7 @@ export default function GroupsPage() {
   const fetchOrganizations = async () => {
     try {
       const response = await getAllOrganization()
-      await queryClient.invalidateQueries({ queryKey: ['organizations']})
+      await queryClient.invalidateQueries({ queryKey: ['organizations'] })
       if (!response.success) throw new Error(response.message)
       setOrganizations(response.data)
     } catch (error: unknown) {
@@ -338,7 +357,7 @@ export default function GroupsPage() {
         res = await createGroup(values)
       }
       if (!res.success) throw new Error(res.message)
-      await queryClient.invalidateQueries({ queryKey: ['groups']})
+      await queryClient.invalidateQueries({ queryKey: ['groups'] })
       toast.success(editingDetail ? 'Saved successfully' : 'Group created successfully')
       setIsModalOpen(false)
       setEditingDetail(null)
@@ -369,7 +388,7 @@ export default function GroupsPage() {
     <div className="flex flex-1 flex-col gap-4 w-full">
       <div className="w-full">
         <div className="w-full bg-card rounded-lg shadow-sm border">
-          
+
           <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
               <div className="flex-1 relative">
@@ -383,14 +402,14 @@ export default function GroupsPage() {
               </div>
               <div className="flex gap-3 sm:gap-2 flex-wrap">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                        <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
                 </Select>
                 <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading} className="whitespace-nowrap">
                   <RotateCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -565,7 +584,7 @@ export default function GroupsPage() {
                 </div>
               ) : (
                 <DataTable columns={columns} data={filteredAndSortedGroups} showColumnToggle={false} />
-            )}
+              )}
             </div>
           </div>
         </div>

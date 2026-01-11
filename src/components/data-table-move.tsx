@@ -17,9 +17,19 @@ import {
 
 interface DataTableProps<TData> {
   table: TanstackTable<TData>
+  server?: {
+    isLoading: boolean
+    page: number
+    totalPages: number
+    from: number
+    to: number
+    total: number
+    pageSize: number
+    onPageSizeChange: (size: number) => void
+  }
 }
 
-export function DataTable<TData>({ table }: DataTableProps<TData>) {
+export function DataTable<TData>({ table, server }: DataTableProps<TData>) {
   return (
     <div className="space-y-4">
       <div className="rounded-md border">
@@ -33,16 +43,16 @@ export function DataTable<TData>({ table }: DataTableProps<TData>) {
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   )
                 })}
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody>
+          <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
@@ -71,15 +81,21 @@ export function DataTable<TData>({ table }: DataTableProps<TData>) {
       </div>
 
       <PaginationFooter
-        page={table.getState().pagination.pageIndex + 1}
-        totalPages={Math.max(1, table.getPageCount())}
+        page={server ? server.page : table.getState().pagination.pageIndex + 1}
+        totalPages={server ? server.totalPages : Math.max(1, table.getPageCount())}
         onPageChange={(p) => table.setPageIndex(Math.max(0, p - 1))}
-        isLoading={false}
-        from={table.getFilteredRowModel().rows.length > 0 ? table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1 : 0}
-        to={Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)}
-        total={table.getFilteredRowModel().rows.length}
-        pageSize={table.getState().pagination.pageSize}
-        onPageSizeChange={(size) => { table.setPageSize(size); table.setPageIndex(0); }}
+        isLoading={server ? server.isLoading : false}
+        from={server ? server.from : (table.getFilteredRowModel().rows.length > 0 ? table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1 : 0)}
+        to={server ? server.to : Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)}
+        total={server ? server.total : table.getFilteredRowModel().rows.length}
+        pageSize={server ? server.pageSize : table.getState().pagination.pageSize}
+        onPageSizeChange={(size) => {
+          if (server) {
+            server.onPageSizeChange(size)
+          } else {
+            table.setPageSize(size); table.setPageIndex(0);
+          }
+        }}
         pageSizeOptions={[10, 20, 30, 40, 50]}
       />
     </div>

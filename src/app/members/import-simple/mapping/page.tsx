@@ -29,7 +29,7 @@ export default function MembersImportSimpleMappingPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
+
   const [file, setFile] = useState<File | null>(null)
   const [excelHeaders, setExcelHeaders] = useState<string[]>([])
   const [preview, setPreview] = useState<Record<string, string>[]>([])
@@ -332,14 +332,14 @@ export default function MembersImportSimpleMappingPage() {
             {/* Data to import */}
             <div className="space-y-4 pb-6 border-b">
               <h2 className="font-semibold text-lg">Data to import</h2>
-              
+
               {file ? (
                 <>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-1">File:</p>
                     <p className="text-sm">{file.name}</p>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="sheet" className="text-sm font-medium text-muted-foreground mb-2 block">
                       Sheet:
@@ -373,7 +373,7 @@ export default function MembersImportSimpleMappingPage() {
             {/* Advanced */}
             <div className="space-y-4 pt-6">
               <h2 className="font-semibold text-lg">Advanced</h2>
-              
+
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="allow-matching"
@@ -403,7 +403,7 @@ export default function MembersImportSimpleMappingPage() {
                         <TableHead>Database Field</TableHead>
                       </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
                       {excelHeaders.map((header) => {
                         const mappedField = Object.keys(mapping).find(
                           (key) => mapping[key] === header

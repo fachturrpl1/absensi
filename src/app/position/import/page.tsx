@@ -390,30 +390,29 @@ export default function PositionsImportPage() {
           {/* Step 1: Upload */}
           {currentStep === 1 && (
             <div className="space-y-6">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={(e) => {
-                const selectedFile = e.target.files?.[0]
-                if (selectedFile) handleFileSelect(selectedFile)
-              }}
-              disabled={loading}
-            />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={(e) => {
+                  const selectedFile = e.target.files?.[0]
+                  if (selectedFile) handleFileSelect(selectedFile)
+                }}
+                disabled={loading}
+              />
 
               {!file ? (
                 <div
-                  className={`w-full p-12 border-2 border-dashed rounded-lg transition-colors ${
-                    isDragActive ? "bg-primary/5 border-primary" : "border-muted"
-                  }`}
+                  className={`w-full p-12 border-2 border-dashed rounded-lg transition-colors ${isDragActive ? "bg-primary/5 border-primary" : "border-muted"
+                    }`}
                   onDragEnter={handleDragEnter}
                   onDragLeave={handleDragLeave}
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
                   onClick={() => !loading && fileInputRef.current?.click()}
                 >
-            <div className="text-center space-y-4">
+                  <div className="text-center space-y-4">
                     {loading ? (
                       <>
                         <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
@@ -430,34 +429,34 @@ export default function PositionsImportPage() {
                           </div>
                         </div>
                         <h2 className="text-xl font-semibold">Drop or upload a file to import</h2>
-              <p className="text-muted-foreground">
-                Excel files are recommended as formatting is automatic. But, you can also use .csv files
-              </p>
-              <div className="pt-2">
-                <a
-                  href="/templates/position-import-template.xlsx"
-                  download
-                  className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
-                >
-                  <Download className="h-4 w-4" />
-                  Download Template
-                </a>
-              </div>
+                        <p className="text-muted-foreground">
+                          Excel files are recommended as formatting is automatic. But, you can also use .csv files
+                        </p>
+                        <div className="pt-2">
+                          <a
+                            href="/templates/position-import-template.xlsx"
+                            download
+                            className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            <Download className="h-4 w-4" />
+                            Download Template
+                          </a>
+                        </div>
                       </>
                     )}
-            </div>
-          </div>
+                  </div>
+                </div>
               ) : (
                 <Card>
                   <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="font-medium">{file.name}</p>
-                      <p className="text-sm text-muted-foreground">{(file.size / 1024).toFixed(2)} KB</p>
-                    </div>
-                  </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="font-medium">{file.name}</p>
+                          <p className="text-sm text-muted-foreground">{(file.size / 1024).toFixed(2)} KB</p>
+                        </div>
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -470,9 +469,9 @@ export default function PositionsImportPage() {
                         }}
                         disabled={loading}
                       >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -563,13 +562,13 @@ export default function PositionsImportPage() {
                           <p className="text-xs text-muted-foreground leading-relaxed">
                             Contoh: jika judul kolom ada di baris 5-6, isi mulai=5 dan jumlah=2.
                           </p>
-              </div>
-            </div>
+                        </div>
+                      </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">No file selected</p>
-          )}
-        </div>
-      </div>
+                    )}
+                  </div>
+                </div>
 
                 <div className="space-y-4 pt-10 pb-6">
                   <h2 className="font-semibold text-lg">Advanced</h2>
@@ -585,7 +584,7 @@ export default function PositionsImportPage() {
                       <Label htmlFor="track-history" className="text-sm cursor-pointer leading-relaxed">
                         Track history during import
                       </Label>
-    </div>
+                    </div>
 
                     <div className="flex items-start space-x-3">
                       <Checkbox
@@ -685,7 +684,7 @@ export default function PositionsImportPage() {
                               <TableHead>Database Field</TableHead>
                             </TableRow>
                           </TableHeader>
-                          <TableBody>
+                          <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
                             {excelHeaders.map((header, idx) => {
                               const mappedField = Object.keys(mapping).find((key) => mapping[key] === header)
                               const previewValue = getPreviewValue(header)
@@ -804,12 +803,11 @@ export default function PositionsImportPage() {
                         <div
                           className="h-2 bg-primary transition-all"
                           style={{
-                            width: `${
-                              Math.min(
-                                100,
-                                (importProgress.current / importProgress.total) * 100 || 0
-                              )
-                            }%`,
+                            width: `${Math.min(
+                              100,
+                              (importProgress.current / importProgress.total) * 100 || 0
+                            )
+                              }%`,
                           }}
                         />
                       </div>

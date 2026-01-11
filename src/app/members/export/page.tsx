@@ -12,11 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { 
-  FileSpreadsheet, 
-  FileText, 
-  Loader2, 
-  CheckCircle2, 
+import {
+  FileSpreadsheet,
+  FileText,
+  Loader2,
+  CheckCircle2,
   AlertCircle,
   ArrowLeft,
   Users,
@@ -119,7 +119,7 @@ export default function MembersExportPage() {
   // State untuk 2-step filter (pilih kolom → pilih nilai + Apply)
   const [selectedColumnForFilter, setSelectedColumnForFilter] = useState<string | null>(null)
   const [tempNewFilterValues, setTempNewFilterValues] = useState<string[]>([])
-  
+
   // Load groups
   const { data: groups = [] } = useGroups({
     enabled: isHydrated && !!organizationId
@@ -129,7 +129,7 @@ export default function MembersExportPage() {
   const loadFilterOptions = React.useCallback(async (columnKey: string) => {
     if (!organizationId || !columnKey) return
     if (filterOptions[columnKey] || loadingFilterOptions[columnKey]) return
-    
+
     setLoadingFilterOptions(prev => ({ ...prev, [columnKey]: true }))
     try {
       const url = new URL("/api/members/export/filter-options", window.location.origin)
@@ -138,7 +138,7 @@ export default function MembersExportPage() {
 
       const res = await fetch(url.toString(), { credentials: "same-origin" })
       const json = await res.json()
-      
+
       if (json.success) {
         setFilterOptions(prev => ({
           ...prev,
@@ -156,19 +156,19 @@ export default function MembersExportPage() {
   const getAvailableFilterColumns = () => {
     const usedColumns = new Set(filters.map(f => f.column))
     return [
-      { 
-        key: "group", 
-        label: "Group / Department", 
-        options: groups.map(g => ({ value: String(g.id), label: g.name })) 
+      {
+        key: "group",
+        label: "Group / Department",
+        options: groups.map(g => ({ value: String(g.id), label: g.name }))
       },
-      { 
-        key: "jenis_kelamin", 
-        label: "Jenis Kelamin", 
+      {
+        key: "jenis_kelamin",
+        label: "Jenis Kelamin",
         options: filterOptions.jenis_kelamin || []
       },
-      { 
-        key: "agama", 
-        label: "Agama", 
+      {
+        key: "agama",
+        label: "Agama",
         options: filterOptions.agama || []
       },
     ].filter(col => !usedColumns.has(col.key))
@@ -228,19 +228,19 @@ export default function MembersExportPage() {
   // Get filter column config
   const getFilterColumnConfig = (columnKey: string) => {
     const allColumns = [
-      { 
-        key: "group", 
-        label: "Group / Department", 
-        options: groups.map(g => ({ value: String(g.id), label: g.name })) 
+      {
+        key: "group",
+        label: "Group / Department",
+        options: groups.map(g => ({ value: String(g.id), label: g.name }))
       },
-      { 
-        key: "jenis_kelamin", 
-        label: "Jenis Kelamin", 
+      {
+        key: "jenis_kelamin",
+        label: "Jenis Kelamin",
         options: filterOptions.jenis_kelamin || []
       },
-      { 
-        key: "agama", 
-        label: "Agama", 
+      {
+        key: "agama",
+        label: "Agama",
         options: filterOptions.agama || []
       },
     ]
@@ -276,7 +276,7 @@ export default function MembersExportPage() {
       const url = new URL("/api/members/export/count", window.location.origin)
       if (organizationId) url.searchParams.set("organizationId", String(organizationId))
       if (searchQuery) url.searchParams.set("search", searchQuery)
-      
+
       const filterParams = getFilterParams()
       if (filterParams.groups?.length) url.searchParams.set("groups", filterParams.groups.join(","))
       if (filterParams.genders?.length) url.searchParams.set("genders", filterParams.genders.join(","))
@@ -290,7 +290,7 @@ export default function MembersExportPage() {
 
       const res = await fetch(url.toString(), { credentials: "same-origin" })
       const json = await res.json()
-      
+
       if (json.success) {
         setTotalCount(json.count || 0)
       } else {
@@ -312,7 +312,7 @@ export default function MembersExportPage() {
       if (searchQuery) url.searchParams.set("search", searchQuery)
       url.searchParams.set("page", String(currentPage))
       url.searchParams.set("pageSize", String(pageSize))
-      
+
       const filterParams = getFilterParams()
       if (filterParams.groups?.length) url.searchParams.set("groups", filterParams.groups.join(","))
       if (filterParams.genders?.length) url.searchParams.set("genders", filterParams.genders.join(","))
@@ -324,7 +324,7 @@ export default function MembersExportPage() {
 
       const res = await fetch(url.toString(), { credentials: "same-origin" })
       const json = await res.json()
-      
+
       if (json.success) {
         setMemberRows(json.data || [])
         // Reset selected rows saat ganti halaman
@@ -396,7 +396,7 @@ export default function MembersExportPage() {
       // Preview selalu ambil halaman pertama, maksimal 10 baris
       url.searchParams.set("page", "1")
       url.searchParams.set("pageSize", "10")
-      
+
       const filterParams = getFilterParams()
       if (filterParams.groups?.length) url.searchParams.set("groups", filterParams.groups.join(","))
       if (filterParams.genders?.length) url.searchParams.set("genders", filterParams.genders.join(","))
@@ -410,7 +410,7 @@ export default function MembersExportPage() {
 
       const res = await fetch(url.toString(), { credentials: "same-origin" })
       const json = await res.json()
-      
+
       if (json.success) {
         setPreviewData(json.data || [])
       } else {
@@ -681,15 +681,15 @@ export default function MembersExportPage() {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto">
         <div className="mb-6 flex items-center gap-4">
-          <Link 
+          <Link
             href="/members"
             prefetch={false}
-            // onMouseEnter={(e) => {
-            //   const href = e.currentTarget.getAttribute('href')
-            //   if (href && router) {
-            //     router.prefetch(href)
-            //   }
-            // }}
+          // onMouseEnter={(e) => {
+          //   const href = e.currentTarget.getAttribute('href')
+          //   if (href && router) {
+          //     router.prefetch(href)
+          //   }
+          // }}
           >
             <Button variant="ghost" size="icon" aria-label="Kembali ke halaman members">
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
@@ -726,8 +726,8 @@ export default function MembersExportPage() {
                   {/* Add Filter Button - 2-step seperti Supabase */}
                   <div className="space-y-2">
                     <Label>Filter</Label>
-                    <Popover 
-                      open={showAddFilterPopover} 
+                    <Popover
+                      open={showAddFilterPopover}
                       onOpenChange={(open) => {
                         setShowAddFilterPopover(open)
                         if (!open) {
@@ -737,8 +737,8 @@ export default function MembersExportPage() {
                       }}
                     >
                       <PopoverTrigger asChild>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="w-full justify-start"
                           aria-label="Tambahkan filter baru"
                           aria-expanded={showAddFilterPopover}
@@ -748,8 +748,8 @@ export default function MembersExportPage() {
                           {filters.length === 0 ? "Pick a column to filter by" : "Add filter"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent 
-                        className="w-[320px] p-0" 
+                      <PopoverContent
+                        className="w-[320px] p-0"
                         align="start"
                         role="dialog"
                         aria-label="Dialog pilih filter"
@@ -816,14 +816,14 @@ export default function MembersExportPage() {
                                 Apply filter
                               </Button>
                             </div>
-                            {getFilterColumnConfig(selectedColumnForFilter)?.options.length && 
-                             getFilterColumnConfig(selectedColumnForFilter)!.options.length > 5 && (
-                              <CommandInput 
-                                placeholder={`Cari ${getFilterColumnConfig(selectedColumnForFilter)?.label.toLowerCase()}...`} 
-                                className="h-9"
-                                aria-label={`Cari ${getFilterColumnConfig(selectedColumnForFilter)?.label.toLowerCase()}`}
-                              />
-                            )}
+                            {getFilterColumnConfig(selectedColumnForFilter)?.options.length &&
+                              getFilterColumnConfig(selectedColumnForFilter)!.options.length > 5 && (
+                                <CommandInput
+                                  placeholder={`Cari ${getFilterColumnConfig(selectedColumnForFilter)?.label.toLowerCase()}...`}
+                                  className="h-9"
+                                  aria-label={`Cari ${getFilterColumnConfig(selectedColumnForFilter)?.label.toLowerCase()}`}
+                                />
+                              )}
                             <CommandList className="max-h-[280px]">
                               <CommandEmpty role="status">Tidak ada pilihan</CommandEmpty>
                               <CommandGroup>
@@ -905,9 +905,9 @@ export default function MembersExportPage() {
                                 }
                               }}>
                                 <PopoverTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="h-6 px-2"
                                     aria-label={`Edit filter ${columnConfig?.label}`}
                                     aria-expanded={editingFilterId === filter.id}
@@ -916,8 +916,8 @@ export default function MembersExportPage() {
                                     Edit
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent 
-                                  className="w-[300px] p-0" 
+                                <PopoverContent
+                                  className="w-[300px] p-0"
                                   align="start"
                                   role="dialog"
                                   aria-label={`Edit filter ${columnConfig?.label}`}
@@ -930,7 +930,7 @@ export default function MembersExportPage() {
                                     </div>
 
                                     {columnConfig && columnConfig.options.length > 5 && (
-                                      <CommandInput 
+                                      <CommandInput
                                         placeholder={`Cari ${columnConfig.label.toLowerCase()}...`}
                                         aria-label={`Cari ${columnConfig.label.toLowerCase()}`}
                                       />
@@ -1134,7 +1134,7 @@ export default function MembersExportPage() {
                                    <TableHead className="whitespace-nowrap" role="columnheader" scope="col">Group</TableHead>
                                  </TableRow>
                                </TableHeader>
-                               <TableBody>
+                               <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
                                  {memberRows.length === 0 ? (
                                    <TableRow role="row">
                                      <TableCell colSpan={17} className="text-center py-8 text-muted-foreground" role="gridcell">
@@ -1410,7 +1410,7 @@ export default function MembersExportPage() {
                             })}
                           </TableRow>
                         </TableHeader>
-                        <TableBody>
+                        <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
                           {previewData.length === 0 ? (
                             <TableRow role="row">
                               <TableCell colSpan={exportConfig.selectedFields.length} className="text-center py-8" role="gridcell">
@@ -1566,14 +1566,14 @@ export default function MembersExportPage() {
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <Button 
+                        <Button
                           onClick={() => router.push("/members")}
                           aria-label="Kembali ke halaman members"
                         >
                           Kembali ke Member
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           onClick={() => setCurrentStep(1)}
                           aria-label="Mulai export baru"
                         >
@@ -1590,25 +1590,25 @@ export default function MembersExportPage() {
                         </AlertDescription>
                       </Alert>
                       <div className="flex gap-2">
-                        <Button 
+                        <Button
                           asChild
                           aria-label="Kembali ke halaman members"
                         >
-                          <Link 
+                          <Link
                             href="/members"
                             prefetch={false}
-                            // onMouseEnter={(e) => {
-                            //   const href = e.currentTarget.getAttribute('href')
-                            //   if (href && router) {
-                            //     router.prefetch(href)
-                            //   }
-                            // }}
+                          // onMouseEnter={(e) => {
+                          //   const href = e.currentTarget.getAttribute('href')
+                          //   if (href && router) {
+                          //     router.prefetch(href)
+                          //   }
+                          // }}
                           >
                             Kembali ke Member
                           </Link>
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           onClick={() => setCurrentStep(1)}
                           aria-label="Coba export lagi"
                         >

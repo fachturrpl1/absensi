@@ -175,21 +175,21 @@ const dayNames = [
 
 const calculateWorkingHours = (start?: string, end?: string, breakStart?: string, breakEnd?: string) => {
   if (!start || !end) return "-"
-  
+
   const startTime = new Date(`2000-01-01T${start}`)
   const endTime = new Date(`2000-01-01T${end}`)
   let totalMinutes = (endTime.getTime() - startTime.getTime()) / 1000 / 60
-  
+
   if (breakStart && breakEnd) {
     const breakStartTime = new Date(`2000-01-01T${breakStart}`)
     const breakEndTime = new Date(`2000-01-01T${breakEnd}`)
     const breakMinutes = (breakEndTime.getTime() - breakStartTime.getTime()) / 1000 / 60
     totalMinutes -= breakMinutes
   }
-  
+
   const hours = Math.floor(totalMinutes / 60)
   const minutes = Math.round(totalMinutes % 60)
-  
+
   return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
 }
 
@@ -257,15 +257,15 @@ function DataTableWithBack<TData, TValue>({
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
                   </TableHead>
                 ))}
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody>
+          <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
@@ -488,14 +488,14 @@ export default function WorkScheduleDetailsPage() {
   const calculateSummary = () => {
     const workingDays = details.filter(d => d.is_working_day)
     const totalWorkingDays = workingDays.length
-    
+
     let totalMinutes = 0
     workingDays.forEach(day => {
       if (day.start_time && day.end_time) {
         const start = new Date(`2000-01-01T${day.start_time}`)
         const end = new Date(`2000-01-01T${day.end_time}`)
         let minutes = (end.getTime() - start.getTime()) / 1000 / 60
-        
+
         if (day.break_start && day.break_end) {
           const breakStart = new Date(`2000-01-01T${day.break_start}`)
           const breakEnd = new Date(`2000-01-01T${day.break_end}`)
@@ -504,10 +504,10 @@ export default function WorkScheduleDetailsPage() {
         totalMinutes += minutes
       }
     })
-    
+
     const totalHours = Math.floor(totalMinutes / 60)
     const avgHoursPerDay = totalWorkingDays > 0 ? (totalMinutes / 60 / totalWorkingDays).toFixed(1) : "0"
-    
+
     return {
       totalWorkingDays,
       totalHours,
@@ -518,8 +518,8 @@ export default function WorkScheduleDetailsPage() {
   const summary = calculateSummary()
 
   const columns: ColumnDef<IWorkScheduleDetail>[] = [
-    { 
-      accessorKey: "day_of_week", 
+    {
+      accessorKey: "day_of_week",
       header: "Day",
       cell: ({ row }) => {
         const dayNum = row.getValue("day_of_week") as number
@@ -546,7 +546,7 @@ export default function WorkScheduleDetailsPage() {
         )
       }
     },
-    { 
+    {
       id: "work_hours",
       header: "Work Hours",
       cell: ({ row }) => {
@@ -554,7 +554,7 @@ export default function WorkScheduleDetailsPage() {
         const end = row.original.end_time
         const isWorking = row.original.is_working_day
         const isFlexible = row.original.flexible_hours
-        
+
         if (!isWorking) {
           return (
             <span className="text-sm text-muted-foreground italic">
@@ -562,7 +562,7 @@ export default function WorkScheduleDetailsPage() {
             </span>
           )
         }
-        
+
         return (
           <div className="flex flex-col">
             <span className="font-mono text-sm font-medium">
@@ -577,18 +577,18 @@ export default function WorkScheduleDetailsPage() {
         )
       }
     },
-    { 
+    {
       id: "break_time",
       header: "Break Time",
       cell: ({ row }) => {
         const breakStart = row.original.break_start
         const breakEnd = row.original.break_end
         const isWorking = row.original.is_working_day
-        
+
         if (!isWorking) {
           return <span className="text-xs text-muted-foreground">-</span>
         }
-        
+
         const range = formatTimeRange(breakStart, breakEnd)
         return (
           <span className="font-mono text-xs text-muted-foreground">
@@ -602,18 +602,18 @@ export default function WorkScheduleDetailsPage() {
       header: "Total Hours",
       cell: ({ row }) => {
         const isWorking = row.original.is_working_day
-        
+
         if (!isWorking) {
           return <span className="text-sm text-muted-foreground">-</span>
         }
-        
+
         const hours = calculateWorkingHours(
           row.original.start_time,
           row.original.end_time,
           row.original.break_start,
           row.original.break_end
         )
-        
+
         return (
           <span className="font-bold text-sm">{hours}</span>
         )
@@ -863,7 +863,7 @@ export default function WorkScheduleDetailsPage() {
                 </p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -878,7 +878,7 @@ export default function WorkScheduleDetailsPage() {
                 </p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -899,9 +899,9 @@ export default function WorkScheduleDetailsPage() {
         {loading ? (
           <TableSkeleton rows={10} columns={7} />
         ) : (
-          <DataTableWithBack 
-            columns={columns} 
-            data={details} 
+          <DataTableWithBack
+            columns={columns}
+            data={details}
             filterColumn="day_of_week"
           />
         )}

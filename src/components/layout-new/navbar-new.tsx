@@ -11,6 +11,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { createClient } from '@/utils/supabase/client';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -64,19 +65,49 @@ export function NavbarNew() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [router]);
 
-  // Hydrate org store from localStorage so OrgBreadcrumb can immediately show org name
+  // Hydrate org store from localStorage (and Supabase if needed) so OrgBreadcrumb can immediately show org name
   useEffect(() => {
-    if (organizationName && organizationId) return;
-    try {
-      const raw = localStorage.getItem('org-store');
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      const storedId = parsed?.state?.organizationId;
-      const storedName = parsed?.state?.organizationName;
-      if (storedId && storedName) {
-        setOrganizationId(storedId, storedName);
-      }
-    } catch {}
+    const hydrate = async () => {
+      try {
+        const raw = localStorage.getItem('org-store');
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        const state = (parsed?.state ?? parsed) as {
+          organizationId?: number | null;
+          organizationName?: string | null;
+          organizations?: Array<{ id?: number; name?: string }>;
+        };
+        const storedId = state?.organizationId ?? null;
+        const derivedName = state?.organizationName
+          || (Array.isArray(state?.organizations)
+                ? state.organizations.find(o => Number(o?.id) === Number(storedId))?.name
+                : undefined);
+
+        if (storedId && derivedName) {
+          setOrganizationId(storedId, derivedName);
+          return;
+        }
+
+        // As a last resort, fetch the organization name by ID
+        if (storedId && !organizationName) {
+          try {
+            const supabase = createClient();
+            const { data, error } = await supabase
+              .from('organizations')
+              .select('id, name')
+              .eq('id', storedId)
+              .maybeSingle();
+            if (!error && data?.name) {
+              setOrganizationId(storedId, data.name);
+            }
+          } catch {}
+        }
+      } catch {}
+    };
+
+    if (!organizationId || !organizationName) {
+      void hydrate();
+    }
   }, [organizationName, organizationId, setOrganizationId]);
 
   const quickActions = [

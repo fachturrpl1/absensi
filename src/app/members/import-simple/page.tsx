@@ -27,21 +27,22 @@ import {
 
 // Mapping kolom Excel ke kolom tabel user_profiles
 const DATABASE_FIELDS = [
-  { key: "nik",           label: "NIK",            required: true },
-  { key: "nama",          label: "Nama Lengkap",   required: true },
-  { key: "nisn",          label: "NISN",           required: false },
-  { key: "jenis_kelamin", label: "Jenis Kelamin",  required: true }, // L / P
-  { key: "tempat_lahir",  label: "Tempat Lahir",   required: false },
-  { key: "tanggal_lahir", label: "Tanggal Lahir",  required: false },
-  { key: "agama",         label: "Agama",          required: false },
-  { key: "jalan",         label: "Jalan",          required: false },
-  { key: "rt",            label: "RT",             required: false },
-  { key: "rw",            label: "RW",             required: false },
-  { key: "dusun",         label: "Dusun",          required: false },
-  { key: "kelurahan",     label: "Kelurahan",      required: false },
-  { key: "kecamatan",     label: "Kecamatan",      required: false },
-  { key: "no_telepon",    label: "No Telepon",     required: false },
-  { key: "email",         label: "Email",          required: false },
+  { key: "nik", label: "NIK", required: true },
+  { key: "nama", label: "Nama Lengkap", required: true },
+  { key: "nickname", label: "Nickname", required: false },
+  { key: "nisn", label: "NISN", required: false },
+  { key: "jenis_kelamin", label: "Jenis Kelamin", required: true }, // L / P
+  { key: "tempat_lahir", label: "Tempat Lahir", required: false },
+  { key: "tanggal_lahir", label: "Tanggal Lahir", required: false },
+  { key: "agama", label: "Agama", required: false },
+  { key: "jalan", label: "Jalan", required: false },
+  { key: "rt", label: "RT", required: false },
+  { key: "rw", label: "RW", required: false },
+  { key: "dusun", label: "Dusun", required: false },
+  { key: "kelurahan", label: "Kelurahan", required: false },
+  { key: "kecamatan", label: "Kecamatan", required: false },
+  { key: "no_telepon", label: "No Telepon", required: false },
+  { key: "email", label: "Email", required: false },
   { key: "department_id", label: "Department/Group", required: false },
 ] as const
 
@@ -138,7 +139,7 @@ export default function MembersImportSimplePage() {
         const url = new URL("/api/groups", window.location.origin)
         url.searchParams.append('organizationId', String(orgId))
         url.searchParams.append('includeInactive', 'true')
-        
+
         console.log('[GROUPS] Fetching groups for organizationId:', orgId)
         const response = await fetch(url.toString())
         if (!response.ok) {
@@ -151,7 +152,7 @@ export default function MembersImportSimplePage() {
         }
         const data = await response.json()
         console.log('[GROUPS] API response:', data)
-        
+
         if (data.success && data.data && Array.isArray(data.data)) {
           console.log('[GROUPS] Raw groups data:', data.data)
           // Map data to ensure id is string and we have name
@@ -162,12 +163,12 @@ export default function MembersImportSimplePage() {
               name: String(group.name || '') // Ensure name is string
             }))
           console.log('[GROUPS] Mapped groups:', mappedGroups.length, 'groups', mappedGroups)
-          
+
           // Only update if groups actually changed (prevent unnecessary re-renders)
           setGroups((prevGroups) => {
             // Check if groups are the same by comparing IDs
             if (prevGroups.length === mappedGroups.length &&
-                prevGroups.every((prev, idx) => prev.id === mappedGroups[idx]?.id && prev.name === mappedGroups[idx]?.name)) {
+              prevGroups.every((prev, idx) => prev.id === mappedGroups[idx]?.id && prev.name === mappedGroups[idx]?.name)) {
               return prevGroups // Return previous array if unchanged
             }
             return mappedGroups
@@ -185,7 +186,7 @@ export default function MembersImportSimplePage() {
         setLoadingGroups(false)
       }
     }
-    
+
     // Only fetch if orgId exists and is valid
     if (orgId) {
       fetchGroups()
@@ -264,7 +265,7 @@ export default function MembersImportSimplePage() {
       // IMPORTANT: One header can only map to one field (prevent duplicate mapping)
       const autoMapping: ColumnMapping = {}
       const usedHeaders = new Set<string>() // Track which headers have been mapped
-      
+
       // Words that should NOT be matched (common document titles/metadata)
       const excludeWords = [
         'daftar', 'list', 'tabel', 'table', 'laporan', 'report',
@@ -273,7 +274,7 @@ export default function MembersImportSimplePage() {
         'kecamatan', 'kabupaten', 'provinsi', 'kota', 'kabupaten kota',
         'smk', 'sma', 'smp', 'sd', 'sekolah', 'school', 'malang'
       ]
-      
+
       // Field-specific matching with word boundaries to avoid false matches
       // IMPORTANT: Patterns must be very specific to avoid false matches
       const matchPatterns: Record<string, (h: string) => boolean> = {
@@ -299,55 +300,55 @@ export default function MembersImportSimplePage() {
         email: (h: string) => /^e-?mail$/i.test(h) || /^surel$/i.test(h) || /^e\s*mail$/i.test(h),
         department_id: (h: string) => /^department$/i.test(h) || /^departemen$/i.test(h) || /^divisi$/i.test(h) || /^group$/i.test(h) || /^kelompok$/i.test(h) || /^jurusan$/i.test(h),
       }
-      
+
       // First pass: Find exact matches (highest priority)
       // Normalize by removing common separators (dash, space) for comparison
       const normalizeForMatch = (text: string): string => {
         return text.toLowerCase().trim().replace(/[-_\s]/g, '')
       }
-      
+
       DATABASE_FIELDS.forEach((field) => {
         const fieldNormalized = normalizeForMatch(field.label)
         const exactMatch = data.headers.find((header: string) => {
           if (!header || header.trim().length === 0) return false
           if (usedHeaders.has(header)) return false // Already mapped
-          
+
           const headerNormalized = normalizeForMatch(header)
           return headerNormalized === fieldNormalized
         })
-        
+
         if (exactMatch) {
           autoMapping[field.key] = exactMatch
           usedHeaders.add(exactMatch)
           console.log(`[AUTO-MAP] Exact match: "${exactMatch}" -> "${field.key}"`)
         }
       })
-      
+
       // Second pass: Find pattern matches (for fields not yet mapped)
       DATABASE_FIELDS.forEach((field) => {
         if (autoMapping[field.key]) return // Already mapped
-        
+
         const matcher = matchPatterns[field.key]
         if (!matcher) return
-        
+
         const matchingHeader = data.headers.find((header: string) => {
           if (!header || header.trim().length === 0) return false
           if (usedHeaders.has(header)) return false // Already mapped to another field
-          
+
           const headerLower = header.toLowerCase().trim()
-          
+
           // Skip headers that contain exclude words
           const hasExcludeWord = excludeWords.some(word => {
-            return headerLower.startsWith(word + ' ') || 
-                   headerLower.includes(' ' + word + ' ') ||
-                   headerLower.endsWith(' ' + word) ||
-                   headerLower === word
+            return headerLower.startsWith(word + ' ') ||
+              headerLower.includes(' ' + word + ' ') ||
+              headerLower.endsWith(' ' + word) ||
+              headerLower === word
           })
           if (hasExcludeWord) return false
-          
+
           // Skip very long headers
           if (headerLower.length > 50) return false
-          
+
           // Try pattern matching
           return matcher(headerLower)
         })
@@ -420,7 +421,7 @@ export default function MembersImportSimplePage() {
     if (sheetName && sheetName !== previousSheetNameRef.current) {
       isProcessingSheetChangeRef.current = true
       previousSheetNameRef.current = sheetName
-      
+
       handleFileSelect(file, sheetName).finally(() => {
         isProcessingSheetChangeRef.current = false
       })
@@ -489,13 +490,13 @@ export default function MembersImportSimplePage() {
 
       if (!data.success) {
         toast.error(data.message || "Test failed")
-      return
-    }
+        return
+      }
 
       const summary = data.summary || { success: 0, failed: 0, errors: [] }
       setTestSummary(summary)
       setHasTested(true) // Mark bahwa test sudah dilakukan
-      
+
       // Set preview data untuk halaman finger
       if (data.fingerPagePreview) {
         setFingerPagePreview(data.fingerPagePreview)
@@ -606,7 +607,7 @@ export default function MembersImportSimplePage() {
       const headerRowNum = headerRow > 0 ? headerRow : 1
       const headerRowCountNum = headerRowCount || 1
       const startDataRow = headerRowNum + headerRowCountNum
-      
+
       const results = preview.map((rowData, index) => {
         // Row number = header row + header row count + index (1-based dari data rows)
         const rowNumber = startDataRow + index
@@ -644,22 +645,22 @@ export default function MembersImportSimplePage() {
   // Fungsi untuk check field yang belum ter-mapping
   const checkUnmappedFields = (): string[] => {
     const unmapped: string[] = []
-    
+
     DATABASE_FIELDS.forEach((field) => {
       // Skip NIK karena sudah wajib (di-validasi di canGoNext)
       if (field.key === "nik") return
-      
+
       // Skip department_id jika selectedGroupId sudah dipilih
       if (field.key === "department_id" && selectedGroupId && selectedGroupId.trim() !== "") {
         return
       }
-      
+
       // Check jika field belum ter-mapping
       if (!mapping[field.key] || mapping[field.key] === "" || mapping[field.key] === null) {
         unmapped.push(field.label)
       }
     })
-    
+
     return unmapped
   }
 
@@ -679,11 +680,11 @@ export default function MembersImportSimplePage() {
         toast.error("Silakan lakukan test terlebih dahulu")
         return
       }
-      
+
       // Check unmapped fields dan test summary
       const unmapped = checkUnmappedFields()
       const hasFailed = testSummary && testSummary.failed > 0
-      
+
       // Jika ada unmapped fields atau ada data yang gagal, tampilkan dialog konfirmasi gabungan
       if (unmapped.length > 0 || hasFailed) {
         setUnmappedFields(unmapped)
@@ -743,30 +744,29 @@ export default function MembersImportSimplePage() {
           {/* Step 1: Upload */}
           {currentStep === 1 && (
             <div className="space-y-6">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={(e) => {
-                const selectedFile = e.target.files?.[0]
-                if (selectedFile) handleFileSelect(selectedFile)
-              }}
-              disabled={loading}
-            />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={(e) => {
+                  const selectedFile = e.target.files?.[0]
+                  if (selectedFile) handleFileSelect(selectedFile)
+                }}
+                disabled={loading}
+              />
 
               {!file ? (
                 <div
-                  className={`w-full p-12 border-2 border-dashed rounded-lg transition-colors ${
-                    isDragActive ? "bg-primary/5 border-primary" : "border-muted"
-                  }`}
+                  className={`w-full p-12 border-2 border-dashed rounded-lg transition-colors ${isDragActive ? "bg-primary/5 border-primary" : "border-muted"
+                    }`}
                   onDragEnter={handleDragEnter}
                   onDragLeave={handleDragLeave}
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
                   onClick={() => !loading && fileInputRef.current?.click()}
                 >
-            <div className="text-center space-y-4">
+                  <div className="text-center space-y-4">
                     {loading ? (
                       <>
                         <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
@@ -783,34 +783,34 @@ export default function MembersImportSimplePage() {
                           </div>
                         </div>
                         <h2 className="text-xl font-semibold">Drop or upload a file to import</h2>
-              <p className="text-muted-foreground">
-                Excel files are recommended as formatting is automatic. But, you can also use .csv files
-              </p>
-              <div className="pt-2">
-                <a
-                  href="/templates/members-import-template.xlsx"
-                  download
-                  className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
-                >
-                  <Download className="h-4 w-4" />
-                  Download Template
-                </a>
-              </div>
+                        <p className="text-muted-foreground">
+                          Excel files are recommended as formatting is automatic. But, you can also use .csv files
+                        </p>
+                        <div className="pt-2">
+                          <a
+                            href="/templates/members-import-template.xlsx"
+                            download
+                            className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            <Download className="h-4 w-4" />
+                            Download Template
+                          </a>
+                        </div>
                       </>
                     )}
-            </div>
-          </div>
+                  </div>
+                </div>
               ) : (
                 <Card>
                   <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="font-medium">{file.name}</p>
-                      <p className="text-sm text-muted-foreground">{(file.size / 1024).toFixed(2)} KB</p>
-                    </div>
-                  </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="font-medium">{file.name}</p>
+                          <p className="text-sm text-muted-foreground">{(file.size / 1024).toFixed(2)} KB</p>
+                        </div>
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -823,9 +823,9 @@ export default function MembersImportSimplePage() {
                         }}
                         disabled={loading}
                       >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -880,51 +880,51 @@ export default function MembersImportSimplePage() {
 
                         <div className="space-y-2 pb-2">
                           <Label htmlFor="group-select" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Pilih Group (Opsional)
-                      </Label>
-                      <Select
-                        key={`group-select-${groups.length}-${selectedGroupId || 'none'}`}
-                        value={selectedGroupId || "none"}
-                        onValueChange={(value) => {
-                          // Prevent infinite loops by checking if value actually changed
-                          const newValue = value === "none" ? "" : value
-                          // Only update if value actually changed and not already processing
-                          if (newValue !== selectedGroupId) {
-                            setSelectedGroupId(newValue)
-                          }
-                        }}
-                        disabled={loadingGroups}
-                      >
-                        <SelectTrigger id="group-select" className="w-full">
-                          <SelectValue placeholder={loadingGroups ? "Loading groups..." : "Pilih group untuk semua member"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {groups.length > 0 ? (
-                            <>
-                              <SelectItem value="none">-- Tidak Ada Group --</SelectItem>
-                              {groups.map((group) => (
-                                <SelectItem key={group.id} value={String(group.id)}>
-                                  {group.name}
+                            Pilih Group (Opsional)
+                          </Label>
+                          <Select
+                            key={`group-select-${groups.length}-${selectedGroupId || 'none'}`}
+                            value={selectedGroupId || "none"}
+                            onValueChange={(value) => {
+                              // Prevent infinite loops by checking if value actually changed
+                              const newValue = value === "none" ? "" : value
+                              // Only update if value actually changed and not already processing
+                              if (newValue !== selectedGroupId) {
+                                setSelectedGroupId(newValue)
+                              }
+                            }}
+                            disabled={loadingGroups}
+                          >
+                            <SelectTrigger id="group-select" className="w-full">
+                              <SelectValue placeholder={loadingGroups ? "Loading groups..." : "Pilih group untuk semua member"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {groups.length > 0 ? (
+                                <>
+                                  <SelectItem value="none">-- Tidak Ada Group --</SelectItem>
+                                  {groups.map((group) => (
+                                    <SelectItem key={group.id} value={String(group.id)}>
+                                      {group.name}
+                                    </SelectItem>
+                                  ))}
+                                </>
+                              ) : (
+                                <SelectItem value="none" disabled={loadingGroups}>
+                                  {loadingGroups ? "Loading groups..." : "Tidak ada group tersedia"}
                                 </SelectItem>
-                              ))}
-                            </>
-                          ) : (
-                            <SelectItem value="none" disabled={loadingGroups}>
-                              {loadingGroups ? "Loading groups..." : "Tidak ada group tersedia"}
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Jika dipilih, semua member yang di-import akan otomatis dimasukkan ke group ini
-                      </p>
-                    </div>
-                    </div>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground">
+                            Jika dipilih, semua member yang di-import akan otomatis dimasukkan ke group ini
+                          </p>
+                        </div>
+                      </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">No file selected</p>
                     )}
                   </div>
-                    </div>
+                </div>
 
                 {/* Advanced Options */}
                 <div className="pt-6 pb-6 border-t space-y-4">
@@ -934,17 +934,17 @@ export default function MembersImportSimplePage() {
                     </Label>
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2">
-                      <Checkbox
+                        <Checkbox
                           id="allow-matching-subfields"
-                        checked={allowMatchingWithSubfields}
-                        onCheckedChange={(checked) => setAllowMatchingWithSubfields(checked === true)}
-                      />
+                          checked={allowMatchingWithSubfields}
+                          onCheckedChange={(checked) => setAllowMatchingWithSubfields(checked === true)}
+                        />
                         <Label
                           htmlFor="allow-matching-subfields"
                           className="text-sm font-normal cursor-pointer"
                         >
-                        Allow matching with subfields
-                      </Label>
+                          Allow matching with subfields
+                        </Label>
                       </div>
                     </div>
                   </div>
@@ -1057,7 +1057,7 @@ export default function MembersImportSimplePage() {
                                 {fingerPagePreview.message.split(" (")[0]}
                               </p>
                             </div>
-                            
+
                             {fingerPagePreview.sampleData.length > 0 && (
                               <div className="mt-3">
                                 <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-2">
@@ -1074,7 +1074,7 @@ export default function MembersImportSimplePage() {
                                         <TableHead className="text-xs">Department</TableHead>
                                       </TableRow>
                                     </TableHeader>
-                                    <TableBody>
+                                    <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
                                       {fingerPagePreview.sampleData.map((item, idx) => (
                                         <TableRow key={idx} className="text-xs">
                                           <TableCell className="font-medium">{item.row}</TableCell>
@@ -1245,9 +1245,9 @@ export default function MembersImportSimplePage() {
                                     const nikValue = row[mapping.nik || ""] || ""
                                     const namaValue = row[mapping.nama || ""] || ""
                                     const isValid = nikValue && namaValue
-                                    
+
                                     return (
-                                      <TableRow 
+                                      <TableRow
                                         key={idx}
                                         className={isValid ? "bg-green-50/50 dark:bg-green-950/20" : ""}
                                       >
@@ -1342,12 +1342,11 @@ export default function MembersImportSimplePage() {
                         <div
                           className="h-2 bg-primary transition-all"
                           style={{
-                            width: `${
-                              Math.min(
-                                100,
-                                (importProgress.current / importProgress.total) * 100 || 0
-                              )
-                            }%`,
+                            width: `${Math.min(
+                              100,
+                              (importProgress.current / importProgress.total) * 100 || 0
+                            )
+                              }%`,
                           }}
                         />
                       </div>
@@ -1415,6 +1414,46 @@ export default function MembersImportSimplePage() {
                         </div>
                       </div>
 
+                      {/* Error Summary */}
+                      {importSummary.failed > 0 && importSummary.errors.length > 0 && (
+                        <Alert className="border-destructive/50 bg-destructive/5">
+                          <AlertCircle className="h-4 w-4 text-destructive" />
+                          <AlertDescription>
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-destructive mb-2">
+                                Ringkasan Error ({importSummary.failed} data gagal):
+                              </p>
+                              <div className="max-h-40 overflow-auto space-y-1">
+                                {/* Group errors by message type */}
+                                {(() => {
+                                  const errorGroups = new Map<string, number>()
+                                  importSummary.errors.forEach((err: any) => {
+                                    const msg = err.message || "Unknown error"
+                                    errorGroups.set(msg, (errorGroups.get(msg) || 0) + 1)
+                                  })
+
+                                  return Array.from(errorGroups.entries())
+                                    .sort((a, b) => b[1] - a[1]) // Sort by count
+                                    .slice(0, 5) // Show top 5 error types
+                                    .map(([message, count], idx) => (
+                                      <div key={idx} className="text-xs flex items-start gap-2">
+                                        <span className="text-destructive font-medium min-w-[60px]">
+                                          {count}x:
+                                        </span>
+                                        <span className="text-destructive">{message}</span>
+                                      </div>
+                                    ))
+                                })()}
+                              </div>
+                              {importSummary.errors.length > 5 && (
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Lihat kolom "Error Message" di tabel untuk detail lengkap setiap baris.
+                                </p>
+                              )}
+                            </div>
+                          </AlertDescription>
+                        </Alert>
+                      )}
 
                       {importResults.length > 0 && (
                         <div>
@@ -1485,21 +1524,21 @@ export default function MembersImportSimplePage() {
                       )}
 
                       <div className="flex gap-2">
-                        <Button 
+                        <Button
                           asChild
                           className="flex-1"
                         >
-                          <Link 
+                          <Link
                             href="/members"
                             prefetch={false}
-                            // onMouseEnter={(e) => {
-                            //   const href = e.currentTarget.getAttribute('href')
-                            //   if (href && router) {
-                            //     router.prefetch(href)
-                            //   }
-                            // }}
+                          // onMouseEnter={(e) => {
+                          //   const href = e.currentTarget.getAttribute('href')
+                          //   if (href && router) {
+                          //     router.prefetch(href)
+                          //   }
+                          // }}
                           >
-                          Back to Members Page
+                            Back to Members Page
                           </Link>
                         </Button>
                         <Button

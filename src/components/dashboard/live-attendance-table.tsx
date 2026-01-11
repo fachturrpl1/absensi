@@ -14,11 +14,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 // Removed Collapsible - not compatible with table structure
-import { 
-  ChevronDown, 
-  ChevronRight, 
-  Clock, 
-  MapPin, 
+import {
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  MapPin,
   FileText,
   Users,
   RefreshCw,
@@ -102,7 +102,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
   const [currentPage, setCurrentPage] = useState(1);
   const orgStore = useOrgStore();
   const [activeOrgId, setActiveOrgId] = useState<number | null>(null);
-  
+
   console.log('[LiveAttendance] Initializing activeOrgId', { activeOrgId: orgStore.organizationId });
 
   useEffect(() => {
@@ -123,19 +123,19 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
     const now = Date.now();
     const storeOrgId = useOrgStore.getState().organizationId;
     const orgId = activeOrgId || storeOrgId;
-    
+
     console.log('[LiveAttendance] fetchAttendanceRecords called', {
       activeOrgId,
       storeOrgId,
       finalOrgId: orgId,
       force,
     });
-    
+
     if (!orgId) {
       console.log('[LiveAttendance] No active organization, skipping fetch');
       return;
     }
-    
+
     // Check cache first
     if (!force && attendanceCache.data && (now - attendanceCache.timestamp) < ATTENDANCE_CACHE_DURATION) {
       setRecords(attendanceCache.data);
@@ -183,7 +183,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
       // If not found by user_id, check if user has any active membership in this org
       // (handles cases where user might be member via different means)
       let finalOrgId = orgMember?.organization_id;
-      
+
       if (!finalOrgId) {
         // Try to find any active membership for this user in this organization
         const { data: anyMember } = await supabase
@@ -192,7 +192,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
           .eq('user_id', user.id)
           .eq('organization_id', orgId)
           .maybeSingle();
-        
+
         if (anyMember?.organization_id) {
           finalOrgId = anyMember.organization_id;
           console.log('[LiveAttendance] Found membership (without is_active check)', finalOrgId);
@@ -409,7 +409,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
                     <TableHead>Work Hours</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
                   {paginatedRecords.map((record) => {
                     const isExpanded = expandedRows.has(record.id);
                     const config = statusConfig[record.status as keyof typeof statusConfig] || statusConfig.present;
@@ -417,14 +417,14 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
 
                     return (
                       <React.Fragment key={record.id}>
-                        <TableRow 
+                        <TableRow
                           className="hover:bg-muted/50 cursor-pointer"
                           onClick={() => toggleRow(record.id)}
                         >
                           <TableCell>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="p-0 h-auto"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -457,7 +457,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
                             </Badge>
                           </TableCell>
                           <TableCell className="text-foreground">
-                            {record.actual_check_in 
+                            {record.actual_check_in
                               ? format(new Date(record.actual_check_in), 'HH:mm', { locale: idLocale })
                               : '-'
                             }
@@ -493,7 +493,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
                                         <div className="flex justify-between">
                                           <span className="text-muted-foreground">Check In:</span>
                                           <span className="font-medium text-foreground">
-                                            {record.actual_check_in 
+                                            {record.actual_check_in
                                               ? format(new Date(record.actual_check_in), 'HH:mm:ss', { locale: idLocale })
                                               : '-'
                                             }
@@ -502,7 +502,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
                                         <div className="flex justify-between">
                                           <span className="text-muted-foreground">Check Out:</span>
                                           <span className="font-medium text-foreground">
-                                            {record.actual_check_out 
+                                            {record.actual_check_out
                                               ? format(new Date(record.actual_check_out), 'HH:mm:ss', { locale: idLocale })
                                               : 'Not yet'
                                             }

@@ -16,6 +16,7 @@ export function OrgBreadcrumb() {
   const pathname = usePathname()
   const { organizationName } = useOrgStore()
   const [isHydrated, setIsHydrated] = useState(false)
+  // Init to null to keep SSR and initial client render identical
   const [displayName, setDisplayName] = useState<string | null>(null)
 
   useEffect(() => {
@@ -24,13 +25,21 @@ export function OrgBreadcrumb() {
     
     // Try to get organizationName from localStorage as fallback
     // This handles the case where Zustand hasn't hydrated yet
-    if (!organizationName) {
+    if (!organizationName && !displayName) {
       try {
         const storedState = localStorage.getItem('org-store')
         if (storedState) {
           const parsed = JSON.parse(storedState)
-          if (parsed.state?.organizationName) {
-            setDisplayName(parsed.state.organizationName)
+          const state = (parsed?.state ?? parsed) as {
+            organizationName?: string | null
+            organizationId?: number | null
+            organizations?: Array<{ id?: number; name?: string }>
+          }
+          if (state?.organizationName) {
+            setDisplayName(state.organizationName)
+          } else if (state?.organizationId && Array.isArray(state?.organizations)) {
+            const found = state.organizations.find((o) => Number(o?.id) === Number(state.organizationId))
+            if (found?.name) setDisplayName(found.name)
           }
         }
       } catch (error) {
@@ -68,6 +77,7 @@ export function OrgBreadcrumb() {
     // Organization
     '/members': 'Members',
     '/group': 'Groups',
+    '/group/move': 'Move',
     '/position': 'Positions',
     '/organization': 'Organization',
     '/organization/new': 'New',
@@ -88,6 +98,7 @@ export function OrgBreadcrumb() {
     '/attendance/locations': '/attendance',
     '/attendance-devices': '/attendance',
     '/analytics': '/attendance',
+    '/group/move': '/group',
     '/member-schedules': '/schedule',
     '/leaves/new': '/leaves',
     '/leaves/types': '/leaves',
@@ -96,28 +107,21 @@ export function OrgBreadcrumb() {
   const buildBreadcrumbs = (): BreadcrumbItem[] => {
     const items: BreadcrumbItem[] = []
     
-    // Use displayName (which has fallback to localStorage) instead of organizationName
     const nameToDisplay = displayName || organizationName
 
-    // Jika di halaman /organization, tampilkan "Organizations"
+    // Jika di halaman /organization, tampilkan hanya nama organisasi
     if (pathname === '/organization') {
-      items.push({
-        label: 'Organizations',
-        href: '/organization',
-      })
+      if (nameToDisplay) {
+        items.push({
+          label: nameToDisplay,
+          href: '/organization',
+        })
+      }
       return items
     }
-
-    // Untuk halaman organization/*, tampilkan "Organizations" sebagai parent
-    if (pathname.startsWith('/organization/')) {
-      items.push({
-        label: 'Organizations',
-        href: '/organization',
-      })
-    }
     
-    // Tambahkan nama organisasi jika ada, tidak di halaman /organization, dan bukan halaman new organization
-    if (nameToDisplay && pathname !== '/organization' && !pathname.startsWith('/organization/new')) {
+    // Tambahkan nama organisasi jika ada (selalu tampil pertama)
+    if (nameToDisplay) {
       items.push({
         label: nameToDisplay,
         href: '/organization',
@@ -152,7 +156,7 @@ export function OrgBreadcrumb() {
 
   const breadcrumbs = buildBreadcrumbs()
 
-  // Debug logging
+  // Debug logging (declare hooks before any conditional return)
   React.useEffect(() => {
     console.log('[BREADCRUMB] Render state:', {
       pathname,
@@ -164,6 +168,11 @@ export function OrgBreadcrumb() {
     })
   }, [pathname, organizationName, displayName, isHydrated, breadcrumbs])
 
+  // Render guard to keep SSR and first client render identical
+  if (!isHydrated && !displayName && !organizationName) {
+    return null
+  }
+
   // Jika tidak ada breadcrumb, jangan render
   if (breadcrumbs.length === 0) {
     return null
@@ -171,9 +180,8 @@ export function OrgBreadcrumb() {
 
   // Jangan render sampai client-side hydration selesai
   // Tapi jika ada displayName dari localStorage atau organizationName dari store, boleh render
-  if (!isHydrated && !displayName && !organizationName) {
-    return null
-  }
+  // Removed hydration guard to avoid hiding breadcrumb on '/'
+
 
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground" suppressHydrationWarning>

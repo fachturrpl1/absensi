@@ -138,7 +138,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const latestRequestRef = useRef(0);
   const pendingIdsRef = useRef<Set<number>>(new Set());
   const flushTimerRef = useRef<number | null>(null);
-  const fetchDataRef = useRef<() => void>(() => {});
+  const fetchDataRef = useRef<() => void>(() => { });
 
   // Helper to map a joined row into AttendanceListItem
   const mapRowToItem = useCallback((data: any): AttendanceListItem => {
@@ -148,15 +148,22 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     const mObj: MemberData | null = Array.isArray(mRel) ? (mRel[0] as MemberData) : (mRel as MemberData);
     const profileObj = mObj?.user_profiles;
     const profile: MemberProfile | null = Array.isArray(profileObj) ? (profileObj[0] ?? null) : (profileObj ?? null);
-    
-    // Get name from user_profiles
+    const biodataObj = mObj?.biodata;
+    type Biodata = { nama: string | null; nickname: string | null };
+    const biodata: Biodata | null = Array.isArray(biodataObj) ? (biodataObj[0] ?? null) : (biodataObj ?? null);
+
+    // Try user_profiles first
     const displayName = (profile?.display_name ?? '').trim();
     const firstName = profile?.first_name ?? '';
     const lastName = profile?.last_name ?? '';
     const email = (profile?.email ?? '').trim();
     const fullName = `${firstName} ${lastName}`.trim();
-    
-    const effectiveName = displayName || fullName || email || (profile?.search_name ?? '');
+
+    // Fallback to biodata if user_profiles has no name
+    const biodataNama = (biodata?.nama ?? '').trim();
+    const biodataNickname = (biodata?.nickname ?? '').trim();
+
+    const effectiveName = displayName || fullName || email || (profile?.search_name ?? '') || biodataNama || biodataNickname;
     const deptObj = mObj?.departments;
     const departmentName = Array.isArray(deptObj) ? (deptObj[0]?.name ?? '') : (deptObj?.name ?? '');
 
@@ -242,7 +249,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         if (recDateStr && (recDateStr < fromStr || recDateStr > toStr)) {
           return;
         }
-      } catch {}
+      } catch { }
       const mapped: AttendanceListItem = mapRowToItem(data);
 
       setAttendanceData((prev) => {
@@ -544,9 +551,9 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     const ci = first?.checkIn ? new Date(first.checkIn) : null;
     const co = first?.checkOut ? new Date(first.checkOut) : null;
     editForm.reset({
-      checkInDate: ci ? `${ci.getFullYear()}-${pad2(ci.getMonth()+1)}-${pad2(ci.getDate())}` : toLocalYMD(new Date()),
+      checkInDate: ci ? `${ci.getFullYear()}-${pad2(ci.getMonth() + 1)}-${pad2(ci.getDate())}` : toLocalYMD(new Date()),
       checkInTime: ci ? toLocalHM(ci) : '08:00',
-      checkOutDate: co ? `${co.getFullYear()}-${pad2(co.getMonth()+1)}-${pad2(co.getDate())}` : '',
+      checkOutDate: co ? `${co.getFullYear()}-${pad2(co.getMonth() + 1)}-${pad2(co.getDate())}` : '',
       checkOutTime: co ? toLocalHM(co) : '',
       remarks: '',
     });
@@ -559,9 +566,9 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     const ci = rec?.checkIn ? new Date(rec.checkIn) : null;
     const co = rec?.checkOut ? new Date(rec.checkOut) : null;
     editForm.reset({
-      checkInDate: ci ? `${ci.getFullYear()}-${pad2(ci.getMonth()+1)}-${pad2(ci.getDate())}` : toLocalYMD(new Date()),
+      checkInDate: ci ? `${ci.getFullYear()}-${pad2(ci.getMonth() + 1)}-${pad2(ci.getDate())}` : toLocalYMD(new Date()),
       checkInTime: ci ? toLocalHM(ci) : '08:00',
-      checkOutDate: co ? `${co.getFullYear()}-${pad2(co.getMonth()+1)}-${pad2(co.getDate())}` : '',
+      checkOutDate: co ? `${co.getFullYear()}-${pad2(co.getMonth() + 1)}-${pad2(co.getDate())}` : '',
       checkOutTime: co ? toLocalHM(co) : '',
       remarks: '',
     });
@@ -1226,7 +1233,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     <th className="p-3 text-left text-xs font-medium">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
                   {(loading || !initialized) ? (
                     <>
                       {Array.from({ length: 6 }).map((_, i) => (

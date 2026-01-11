@@ -245,11 +245,11 @@ export default function MembersImportPage() {
           onNext={handleNext}
           onPrevious={handlePrevious}
           canGoNext={
-            currentStep === 1 
-              ? !!file 
-              : currentStep === 2 
-              ? validateMapping() && testSummary !== null && testSummary.failed === 0
-              : false
+            currentStep === 1
+              ? !!file
+              : currentStep === 2
+                ? validateMapping() && testSummary !== null && testSummary.failed === 0
+                : false
           }
           canGoPrevious={currentStep > 1 && !loading}
           showNavigation={currentStep !== 3}
@@ -258,9 +258,8 @@ export default function MembersImportPage() {
           {currentStep === 1 && (
             <div className="space-y-4">
               <div
-                className={`flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-8 cursor-pointer transition-colors ${
-                  isDragActive ? "border-primary bg-primary/5" : "border-muted"
-                }`}
+                className={`flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-8 cursor-pointer transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-muted"
+                  }`}
                 onDragEnter={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
@@ -352,195 +351,195 @@ export default function MembersImportPage() {
 
               {!loading && (
                 <>
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Map Excel columns to database fields. Unmapped fields will be skipped.
-                  <strong className="ml-1">Email is required.</strong>
-                </AlertDescription>
-              </Alert>
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Map Excel columns to database fields. Unmapped fields will be skipped.
+                      <strong className="ml-1">Email is required.</strong>
+                    </AlertDescription>
+                  </Alert>
 
-              {/* Data Preview */}
-              {preview.length > 0 && (
-                <div className="border rounded-lg">
-                  <div className="p-3 bg-muted/50 border-b">
-                    <p className="text-sm font-medium">
-                      Data Preview (showing first {preview.length} of {totalRows} rows)
-                    </p>
-                  </div>
-                  <ScrollArea className="h-48">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          {excelHeaders.map((header) => (
-                            <TableHead key={header} className="text-xs">
-                              {header}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {preview.map((row, idx) => (
-                          <TableRow key={idx}>
-                            {excelHeaders.map((header) => (
-                              <TableCell key={header} className="text-xs">
-                                {String(row[header] || "")}
-                              </TableCell>
+                  {/* Data Preview */}
+                  {preview.length > 0 && (
+                    <div className="border rounded-lg">
+                      <div className="p-3 bg-muted/50 border-b">
+                        <p className="text-sm font-medium">
+                          Data Preview (showing first {preview.length} of {totalRows} rows)
+                        </p>
+                      </div>
+                      <ScrollArea className="h-48">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              {excelHeaders.map((header) => (
+                                <TableHead key={header} className="text-xs">
+                                  {header}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
+                            {preview.map((row, idx) => (
+                              <TableRow key={idx}>
+                                {excelHeaders.map((header) => (
+                                  <TableCell key={header} className="text-xs">
+                                    {String(row[header] || "")}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
                             ))}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                </div>
-              )}
-
-              {/* Mapping Table */}
-              <div className="border rounded-lg">
-                <ScrollArea className="max-h-[400px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[300px]">File Column</TableHead>
-                        <TableHead>Database Field</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {excelHeaders.map((header) => {
-                        const mappedField = Object.keys(mapping).find(
-                          (key) => mapping[key] === header
-                        )
-                        const previewValue = preview.length > 0 ? preview[0]?.[header] : ""
-
-                        return (
-                          <TableRow key={header}>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">{header}</p>
-                                {previewValue && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    {String(previewValue)}
-                                  </p>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Select
-                                value={mappedField || "__UNMAPPED__"}
-                                onValueChange={(value) => {
-                                  if (value === "__UNMAPPED__") {
-                                    // Remove mapping
-                                    const newMapping = { ...mapping }
-                                    Object.keys(newMapping).forEach((key) => {
-                                      if (newMapping[key] === header) {
-                                        delete newMapping[key]
-                                      }
-                                    })
-                                    setMapping(newMapping)
-                                  } else {
-                                    // Remove old mapping for this header
-                                    const newMapping = { ...mapping }
-                                    Object.keys(newMapping).forEach((key) => {
-                                      if (newMapping[key] === header && key !== value) {
-                                        delete newMapping[key]
-                                      }
-                                    })
-                                    // Add new mapping
-                                    newMapping[value] = header
-                                    setMapping(newMapping)
-                                  }
-                                  // Reset test summary when mapping changes
-                                  setTestSummary(null)
-                                }}
-                              >
-                                <SelectTrigger className="w-[300px]">
-                                  <SelectValue placeholder="To import, select a field..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__UNMAPPED__">
-                                    To import, select a field...
-                                  </SelectItem>
-                                  {DATABASE_FIELDS.map((field) => (
-                                    <SelectItem key={field.key} value={field.key}>
-                                      {field.label}
-                                      {field.required && " *"}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
-              </div>
-
-              {/* Test Results - Error Details (at bottom) */}
-              {testSummary && testSummary.errors.length > 0 && (
-                <div className="border-2 rounded-lg border-destructive bg-destructive/10">
-                  <div className="p-4 bg-destructive/20 border-b border-destructive">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertCircle className="h-5 w-5 text-destructive" />
-                      <p className="text-base font-semibold text-destructive">
-                        Validation Errors Found
-                      </p>
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
                     </div>
-                    <p className="text-sm text-destructive/90">
-                      {testSummary.failed} invalid row(s) found. Please fix the errors below before
-                      importing.
-                    </p>
-                  </div>
-                  <ScrollArea className="h-64">
-                    <div className="p-4 space-y-3">
-                      {testSummary.errors.map((error, idx) => (
-                        <div
-                          key={idx}
-                          className="text-sm text-destructive bg-background p-3 rounded-md border-2 border-destructive/30 shadow-sm"
-                        >
-                          <div className="flex items-start gap-2">
-                            <span className="font-bold text-destructive mt-0.5">•</span>
-                            <span className="font-medium">{error}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
-
-              {/* Test Results - Success Message */}
-              {testSummary && testSummary.failed === 0 && testSummary.success > 0 && (
-                <Alert className="border-green-500/50 bg-green-500/5">
-                  <AlertCircle className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-700 dark:text-green-400">
-                    <strong>All rows are valid!</strong> {testSummary.success} row(s) are ready to
-                    import.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button
-                  variant="secondary"
-                  onClick={() => runImport("test")}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Testing...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="mr-2 h-4 w-4" />
-                      Test
-                    </>
                   )}
-                </Button>
-              </div>
-              </>
+
+                  {/* Mapping Table */}
+                  <div className="border rounded-lg">
+                    <ScrollArea className="max-h-[400px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[300px]">File Column</TableHead>
+                            <TableHead>Database Field</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
+                          {excelHeaders.map((header) => {
+                            const mappedField = Object.keys(mapping).find(
+                              (key) => mapping[key] === header
+                            )
+                            const previewValue = preview.length > 0 ? preview[0]?.[header] : ""
+
+                            return (
+                              <TableRow key={header}>
+                                <TableCell>
+                                  <div>
+                                    <p className="font-medium">{header}</p>
+                                    {previewValue && (
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        {String(previewValue)}
+                                      </p>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Select
+                                    value={mappedField || "__UNMAPPED__"}
+                                    onValueChange={(value) => {
+                                      if (value === "__UNMAPPED__") {
+                                        // Remove mapping
+                                        const newMapping = { ...mapping }
+                                        Object.keys(newMapping).forEach((key) => {
+                                          if (newMapping[key] === header) {
+                                            delete newMapping[key]
+                                          }
+                                        })
+                                        setMapping(newMapping)
+                                      } else {
+                                        // Remove old mapping for this header
+                                        const newMapping = { ...mapping }
+                                        Object.keys(newMapping).forEach((key) => {
+                                          if (newMapping[key] === header && key !== value) {
+                                            delete newMapping[key]
+                                          }
+                                        })
+                                        // Add new mapping
+                                        newMapping[value] = header
+                                        setMapping(newMapping)
+                                      }
+                                      // Reset test summary when mapping changes
+                                      setTestSummary(null)
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-[300px]">
+                                      <SelectValue placeholder="To import, select a field..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="__UNMAPPED__">
+                                        To import, select a field...
+                                      </SelectItem>
+                                      {DATABASE_FIELDS.map((field) => (
+                                        <SelectItem key={field.key} value={field.key}>
+                                          {field.label}
+                                          {field.required && " *"}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </div>
+
+                  {/* Test Results - Error Details (at bottom) */}
+                  {testSummary && testSummary.errors.length > 0 && (
+                    <div className="border-2 rounded-lg border-destructive bg-destructive/10">
+                      <div className="p-4 bg-destructive/20 border-b border-destructive">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertCircle className="h-5 w-5 text-destructive" />
+                          <p className="text-base font-semibold text-destructive">
+                            Validation Errors Found
+                          </p>
+                        </div>
+                        <p className="text-sm text-destructive/90">
+                          {testSummary.failed} invalid row(s) found. Please fix the errors below before
+                          importing.
+                        </p>
+                      </div>
+                      <ScrollArea className="h-64">
+                        <div className="p-4 space-y-3">
+                          {testSummary.errors.map((error, idx) => (
+                            <div
+                              key={idx}
+                              className="text-sm text-destructive bg-background p-3 rounded-md border-2 border-destructive/30 shadow-sm"
+                            >
+                              <div className="flex items-start gap-2">
+                                <span className="font-bold text-destructive mt-0.5">•</span>
+                                <span className="font-medium">{error}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  )}
+
+                  {/* Test Results - Success Message */}
+                  {testSummary && testSummary.failed === 0 && testSummary.success > 0 && (
+                    <Alert className="border-green-500/50 bg-green-500/5">
+                      <AlertCircle className="h-4 w-4 text-green-600" />
+                      <AlertDescription className="text-green-700 dark:text-green-400">
+                        <strong>All rows are valid!</strong> {testSummary.success} row(s) are ready to
+                        import.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="flex justify-end gap-2 pt-4 border-t">
+                    <Button
+                      variant="secondary"
+                      onClick={() => runImport("test")}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Testing...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="mr-2 h-4 w-4" />
+                          Test
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -624,7 +623,7 @@ export default function MembersImportPage() {
                   {/* Import Summary Card */}
                   <div className="border rounded-lg p-6 space-y-4">
                     <h3 className="text-lg font-semibold">Import Summary</h3>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">File Name</p>

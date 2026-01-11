@@ -127,7 +127,7 @@ export function FlexibleImportDialog({
         const matchingHeader = data.headers.find((header: string) => {
           const headerLower = header.toLowerCase().trim()
           const fieldLower = field.label.toLowerCase()
-          
+
           // Exact match or contains
           return (
             headerLower === fieldLower ||
@@ -236,7 +236,7 @@ export function FlexibleImportDialog({
       }
 
       const summary = data.summary || { success: 0, failed: 0, errors: [] }
-      
+
       if (summary.success > 0) {
         toast.success(
           `Import completed! Success: ${summary.success}, Failed: ${summary.failed}`
@@ -278,11 +278,10 @@ export function FlexibleImportDialog({
           {step === "upload" && (
             <div className="flex-1 flex flex-col gap-4">
               <div
-                className={`flex-1 flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-8 ${
-                  isDragActive
+                className={`flex-1 flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-8 ${isDragActive
                     ? "border-blue-500 bg-blue-50/60 dark:bg-blue-400/10"
                     : "border-muted"
-                }`}
+                  }`}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}
@@ -365,7 +364,7 @@ export function FlexibleImportDialog({
                           ))}
                         </TableRow>
                       </TableHeader>
-                      <TableBody>
+                      <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
                         {preview.map((row, idx) => (
                           <TableRow key={idx}>
                             {excelHeaders.map((header) => (
