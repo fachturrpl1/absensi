@@ -217,7 +217,9 @@ export default function MemberProfileEnhanced({
   const [profileSearchQuery, setProfileSearchQuery] = useState<string>("")
 
   const user = member.user
-  const email = user?.email ?? (member as { email?: string }).email ?? "-"
+  const rawEmail = user?.email ?? (member as { email?: string }).email ?? ""
+  // Filter out dummy emails (ending with @dummy.local)
+  const email = rawEmail && !rawEmail.toLowerCase().endsWith('@dummy.local') ? rawEmail : "-"
   const phone = user?.mobile || user?.phone || ""
   const photoUrl = useProfilePhotoUrl(user?.profile_photo_url ?? undefined) ?? undefined
 
@@ -236,7 +238,7 @@ export default function MemberProfileEnhanced({
   const displayName = user
     ? [user.first_name, user.middle_name, user.last_name]
         .filter((part) => part && part.trim().length)
-        .join(" ") || user.email || "Name unavailable"
+        .join(" ") || (user.email && !user.email.toLowerCase().endsWith('@dummy.local') ? user.email : null) || "Name unavailable"
     : "Name unavailable"
 
   const canEmail = email && email !== "-"

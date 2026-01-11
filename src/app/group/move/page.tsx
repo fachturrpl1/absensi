@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { DataTable } from "@/components/data-table-move"
-import { ColumnDef, useReactTable, getCoreRowModel, getPaginationRowModel } from "@tanstack/react-table"
+import { ColumnDef, useReactTable, getCoreRowModel, getPaginationRowModel, RowSelectionState } from "@tanstack/react-table"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -33,6 +33,35 @@ import { createClient } from '@/utils/supabase/client'
 import { getMembersByGroupId, moveMembersToGroup } from '@/action/members'
 import { IGroup, IOrganization_member } from '@/interface'
 import { toast } from 'sonner'
+
+type MemberRow = {
+  id: string
+  user_id: string
+  department_id: string
+  organization_id: string
+  created_at?: string
+  user_profiles?: {
+    id: string
+    first_name?: string
+    middle_name?: string
+    last_name?: string
+    display_name?: string | null
+    email?: string
+    phone?: string
+    mobile?: string
+    profile_photo_url?: string | null
+  } | {
+    id: string
+    first_name?: string
+    middle_name?: string
+    last_name?: string
+    display_name?: string | null
+    email?: string
+    phone?: string
+    mobile?: string
+    profile_photo_url?: string | null
+  }[] | null
+}
 
 const createGroupSchema = z.object({
   name: z.string().min(2, "Group name must be at least 2 characters"),
@@ -111,14 +140,20 @@ export default function MoveGroupPage() {
             user_id,
             department_id,
             organization_id,
-            biodata:biodata_nik (*),
+            created_at,
             user_profiles (
               id,
               first_name,
+              middle_name,
               last_name,
               display_name,
               email,
-              phone
+              phone,
+              mobile,
+              profile_photo_url,
+              nik,
+              jenis_kelamin,
+              agama
             )
           `)
           .eq('is_active', true)
@@ -128,19 +163,29 @@ export default function MoveGroupPage() {
         if (!membersData) throw new Error('Members not found')
 
         // Transform ke struktur IOrganization_member dengan field user
-        const transformed = membersData.map((m: any) => ({
-          ...m,
-          user: m.user_profiles ? {
-            id: m.user_profiles.id,
-            first_name: m.user_profiles.first_name,
-            last_name: m.user_profiles.last_name,
-            display_name: m.user_profiles.display_name,
-            email: m.user_profiles.email,
-            phone: m.user_profiles.phone,
+        const transformed = (membersData as unknown as MemberRow[]).map((m: MemberRow) => {
+          const up = Array.isArray(m.user_profiles) ? (m.user_profiles[0] || undefined) : (m.user_profiles || undefined)
+          return{
+          ...(m as unknown as object),
+          user: up ? {
+            id: up.id,
+            first_name: up.first_name,
+            middle_name: up.middle_name,
+            last_name: up.last_name,
+            display_name: up.display_name,
+            email: up.email,
+            phone: up.phone,
+            mobile: up.mobile,
+            profile_photo_url: up.profile_photo_url,
+            // nik: up.nik,
+            // jenis_kelamin: up.jenis_kelamin,
+            // agama: up.agama,
           } : undefined,
           // biodata removed - using user_profiles instead
-        }))
-        setMembers(transformed)
+        }
+      })
+
+      setMembers(transformed as IOrganization_member[])
 
         // Get organization_id from the source group
         const organizationId = groupRes.data.organization_id;
@@ -236,10 +281,10 @@ export default function MoveGroupPage() {
         },
       }
     ],
-    []
+    [handleMemberClick]
   )
 
-  const [rowSelection, setRowSelection] = useState({})
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
   const filteredAndSortedMembers = useMemo(() => {
     let result = [...members];

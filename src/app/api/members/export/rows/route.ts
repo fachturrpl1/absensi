@@ -57,68 +57,95 @@ export async function GET(request: NextRequest) {
     }
 
     // Build query - fetch ALL user_profiles columns
-    let query = adminClient
-      .from("organization_members")
-      .select(`
-        id,
-        biodata_nik,
-        employee_id,
-        is_active,
-        hire_date,
-        user:user_id (
+    // Fetch all data using pagination to handle large datasets (>1000 records)
+    let allMembers: any[] = []
+    let currentPage = 0
+    const fetchPageSize = 1000 // Supabase max per request
+    let hasMore = true
+
+    while (hasMore) {
+      const from = currentPage * fetchPageSize
+      const to = from + fetchPageSize - 1
+      
+      let query = adminClient
+        .from("organization_members")
+        .select(`
           id,
-          email,
-          first_name,
-          middle_name,
-          last_name,
-          display_name,
-          phone,
-          mobile,
-          date_of_birth,
-          jenis_kelamin,
-          nik,
-          nisn,
-          tempat_lahir,
-          agama,
-          jalan,
-          rt,
-          rw,
-          dusun,
-          kelurahan,
-          kecamatan
-        ),
-        departments:department_id (
-          id,
-          name
-        ),
-        positions:position_id (
-          id,
-          title
+          biodata_nik,
+          is_active,
+          hire_date,
+          department_id,
+          user:user_id (
+            id,
+            nik,
+            email,
+            first_name,
+            middle_name,
+            last_name,
+            display_name,
+            phone,
+            mobile,
+            date_of_birth,
+            jenis_kelamin,
+            nisn,
+            tempat_lahir,
+            agama,
+            jalan,
+            rt,
+            rw,
+            dusun,
+            kelurahan,
+            kecamatan
+          ),
+          departments:department_id ( id, name ),
+          positions:position_id ( id, title )
+        `)
+        .eq("organization_id", organizationId)
+        .order("id", { ascending: true })
+        .range(from, to)
+
+      // Apply filters
+      if (active === "active") {
+        query = query.eq("is_active", true)
+      } else if (active === "inactive") {
+        query = query.eq("is_active", false)
+      }
+
+      // Apply group filter (multiple)
+      if (selectedGroups.length > 0) {
+        query = query.in("department_id", selectedGroups.map(id => parseInt(id, 10)))
+      }
+
+      const { data: pageData, error } = await query
+
+      if (error) {
+        console.error("Error fetching members:", error)
+        return NextResponse.json(
+          { success: false, message: "Failed to fetch members" },
+          { status: 500 }
         )
-      `)
-      .eq("organization_id", organizationId)
+      }
 
-    // Apply filters
-    if (active === "active") {
-      query = query.eq("is_active", true)
-    } else if (active === "inactive") {
-      query = query.eq("is_active", false)
+      if (pageData && pageData.length > 0) {
+        allMembers = allMembers.concat(pageData)
+        // If we got less than fetchPageSize, we're done
+        if (pageData.length < fetchPageSize) {
+          hasMore = false
+        } else {
+          currentPage++
+        }
+      } else {
+        hasMore = false
+      }
+
+      // Safety limit: stop after 20 pages (20,000 records)
+      if (currentPage >= 20) {
+        console.warn("Reached safety limit of 20 pages (20,000 records)")
+        hasMore = false
+      }
     }
 
-    // Apply group filter (multiple)
-    if (selectedGroups.length > 0) {
-      query = query.in("department_id", selectedGroups.map(id => parseInt(id, 10)))
-    }
-
-    const { data: members, error } = await query
-
-    if (error) {
-      console.error("Error fetching members:", error)
-      return NextResponse.json(
-        { success: false, message: "Failed to fetch members" },
-        { status: 500 }
-      )
-    }
+    const members = allMembers
 
     // Helper function to extract user profile from Supabase relation
     const getUserProfile = (member: any) => {
@@ -128,6 +155,16 @@ export async function GET(request: NextRequest) {
         return member.user
       }
       return {}
+    }
+
+    // Helper function to filter dummy emails
+    const getEmail = (email: string | null | undefined): string => {
+      if (!email) return ""
+      // Filter out dummy emails (ending with @dummy.local)
+      if (email.toLowerCase().endsWith('@dummy.local')) {
+        return ""
+      }
+      return email
     }
 
     // Filter out members without user profile
@@ -146,7 +183,7 @@ export async function GET(request: NextRequest) {
           member.biodata_nik?.toLowerCase().includes(searchLower) ||
           member.employee_id?.toLowerCase().includes(searchLower) ||
           displayName.toLowerCase().includes(searchLower) ||
-          userProfile.email?.toLowerCase().includes(searchLower) ||
+          (userProfile.email && !userProfile.email.toLowerCase().endsWith('@dummy.local') && userProfile.email.toLowerCase().includes(searchLower)) ||
           userProfile.nik?.toLowerCase().includes(searchLower)
         )
       })
@@ -183,6 +220,18 @@ export async function GET(request: NextRequest) {
       const genderMap: Record<string, string> = { 'male': 'L', 'female': 'P' }
       const jenisKelamin = genderMap[userProfile.jenis_kelamin || ''] || userProfile.jenis_kelamin || ""
 
+      // Get department name from departments relation
+      const getDepartmentName = (member: any): string => {
+        if (member.departments) {
+          if (Array.isArray(member.departments) && member.departments.length > 0) {
+            return member.departments[0]?.name || ""
+          } else if (typeof member.departments === 'object' && member.departments.name) {
+            return member.departments.name
+          }
+        }
+        return ""
+      }
+
       // Return columns from user_profiles (mapped to biodata format for compatibility)
       return {
         nik: member.biodata_nik || userProfile.nik || "",
@@ -200,8 +249,8 @@ export async function GET(request: NextRequest) {
         kelurahan: userProfile.kelurahan || "",
         kecamatan: userProfile.kecamatan || "",
         no_telepon: userProfile.phone || userProfile.mobile || "",
-        email: userProfile.email || "",
-        department_id: member.department_id || "",
+        email: getEmail(userProfile.email) || "",
+        department_id: getDepartmentName(member) || "", // Use department name instead of ID
       }
     })
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useOrgStore } from '@/store/org-store'
+import { useHydration } from '@/hooks/useHydration'
 import { useEffect, useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -165,7 +166,7 @@ export default function ImprovedDashboard() {
   const orgStore = useOrgStore();
   const { organizationName, loading: orgLoading } = useOrganizationName();
   const queryClient = useQueryClient();
-  const [isHydrated, setIsHydrated] = useState(false);
+  const { isHydrated, organizationId: hydratedOrgId } = useHydration();
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(true);
@@ -202,10 +203,7 @@ export default function ImprovedDashboard() {
     }
   }, [orgStore.organizationId, orgStore.organizationName]);
 
-  // Hydration check
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
+  // Hydration handled by useHydration()
 
   // Invalidate cache when organization changes
   useEffect(() => {
@@ -228,11 +226,22 @@ export default function ImprovedDashboard() {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const orgId = orgStore.organizationId;
-        
+        const getPersistedOrgId = () => {
+          try {
+            const raw = localStorage.getItem('org-store');
+            if (!raw) return null as number | null;
+            const parsed = JSON.parse(raw);
+            const val = parsed?.state?.organizationId ?? parsed?.state?.organization_id;
+            const n = Number(val);
+            return Number.isFinite(n) ? n : null;
+          } catch {
+            return null as number | null;
+          }
+        };
+        const orgId = hydratedOrgId ?? orgStore.organizationId ?? getPersistedOrgId();
+
         if (!orgId) {
-          console.error('Organization ID not found in store');
-          setIsLoading(false);
+          // wait until hydration/store resolves organizationId
           return;
         }
         
@@ -258,7 +267,7 @@ export default function ImprovedDashboard() {
     };
 
     fetchData();
-  }, [isHydrated, orgStore.organizationId]);
+  }, [isHydrated, hydratedOrgId, orgStore.organizationId]);
 
   // Filter records
   const fromDateStr = dateRange.from.toISOString().split('T')[0];
@@ -421,7 +430,7 @@ export default function ImprovedDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="ml-5 mt-5 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center   md:justify-between gap-4">
         <div>

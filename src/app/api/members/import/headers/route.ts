@@ -335,11 +335,20 @@ export async function POST(request: NextRequest) {
     })
     
     // Also get raw values for data accuracy
+    // Use defval: null to preserve null values, but we'll handle empty strings too
+    // IMPORTANT: Use blankrows: false to skip completely empty rows, but this might skip rows with some empty cells
+    // So we'll use blankrows: true to preserve structure, then filter manually
     const rowsRaw = XLSX.utils.sheet_to_json<any[]>(sheet, { 
       header: 1,
-      defval: null,
-      raw: true,   // Get raw values for data
+      defval: null, // Use null for empty cells (preserves data structure)
+      raw: true,   // Get raw values for data (preserves dates, numbers, etc.)
+      blankrows: true, // Include blank rows to preserve row structure
+      range: sheet['!ref'] || undefined, // Use full sheet range to ensure all data is read
     })
+    
+    // Also try reading directly from sheet cells as fallback for sparse data
+    const sheetRange = XLSX.utils.decode_range(sheet['!ref'] || 'A1')
+    console.log(`[HEADERS] Sheet range: ${sheet['!ref']}, rows: ${sheetRange.e.r + 1}, cols: ${sheetRange.e.c + 1}`)
     
     // Convert formatted rows to string array
     const rows = rowsFormatted.map(row => 
@@ -647,7 +656,11 @@ export async function POST(request: NextRequest) {
         header = `__EMPTY_${col}`
         console.log(`[HEADERS] Column ${col} has no header found anywhere, using __EMPTY_${col}`)
       } else {
-        console.log(`[HEADERS] Column ${col}: "${header}"`)
+        // Log all headers, especially email-related ones
+        const isEmailHeader = header.toLowerCase().includes('email') || header.toLowerCase().includes('e-mail')
+        if (isEmailHeader || col < 15) {
+          console.log(`[HEADERS] Column ${col}: "${header}" (length: ${header.length})`)
+        }
       }
 
       headers.push(header)
@@ -655,34 +668,336 @@ export async function POST(request: NextRequest) {
     
     // Get data rows (after header rows)
     // Use raw values for data accuracy (dates, numbers, etc.)
-    const dataRowsRaw = rowsRaw.slice(headerRow - 1 + headerRowCount)
-    const dataRowsFormatted = rows.slice(headerRow - 1 + headerRowCount) // For fallback
+    const dataStartIdx = headerRow - 1 + headerRowCount
+    const dataRowsRaw = rowsRaw.slice(dataStartIdx)
+    const dataRowsFormatted = rows.slice(dataStartIdx) // For fallback
     
-    // Get preview (first 5 rows for user to see)
+    console.log(`[HEADERS] Data rows start from index ${dataStartIdx} (after header row ${headerRow} with ${headerRowCount} row(s))`)
+    console.log(`[HEADERS] Total data rows: ${dataRowsRaw.length}`)
+    if (dataRowsRaw.length > 0) {
+      console.log(`[HEADERS] First data row (first 15 columns):`, dataRowsRaw[0]?.slice(0, 15))
+      console.log(`[HEADERS] First data row length:`, dataRowsRaw[0]?.length)
+      if (dataRowsRaw.length > 1) {
+        console.log(`[HEADERS] Second data row (first 15 columns):`, dataRowsRaw[1]?.slice(0, 15))
+        console.log(`[HEADERS] Second data row length:`, dataRowsRaw[1]?.length)
+      }
+      if (dataRowsRaw.length > 2) {
+        console.log(`[HEADERS] Third data row (first 15 columns):`, dataRowsRaw[2]?.slice(0, 15))
+        console.log(`[HEADERS] Third data row length:`, dataRowsRaw[2]?.length)
+      }
+    }
+    
+    // Find email column index for debugging
+    const emailColIdx = headers.findIndex(h => h && (h.toLowerCase().includes('email') || h.toLowerCase().includes('e-mail')))
+    if (emailColIdx >= 0) {
+      console.log(`[HEADERS] Email column found at index ${emailColIdx}: "${headers[emailColIdx]}"`)
+      // Check data in email column for limited rows to find where email data appears
+      // Try multiple methods to read data (handles sparse arrays)
+      // Only check first 20 rows for performance (enough for preview)
+      let emailFound = false
+      const maxRowsToCheck = Math.min(20, dataRowsRaw.length) // Check up to 20 rows for performance
+      console.log(`[HEADERS] Checking email data in first ${maxRowsToCheck} rows...`)
+      
+      for (let idx = 0; idx < maxRowsToCheck; idx++) {
+        const row = dataRowsRaw[idx]
+        if (!row) continue
+        
+        let emailValue: any = undefined
+        
+        // Method 1: Array access with 'in' check (sparse arrays)
+        if (Array.isArray(row)) {
+          if (emailColIdx in row) {
+            emailValue = row[emailColIdx]
+          } else if (emailColIdx < row.length) {
+            emailValue = row[emailColIdx]
+          }
+        }
+        // Method 2: Object access
+        else if (typeof row === 'object' && row !== null) {
+          emailValue = (row as any)[emailColIdx] || (row as any)[String(emailColIdx)]
+        }
+        
+        if (emailValue !== null && emailValue !== undefined && emailValue !== '') {
+          const strValue = String(emailValue).trim()
+          if (strValue.length > 0 && 
+              strValue.toLowerCase() !== 'nan' && 
+              strValue.toLowerCase() !== 'null' &&
+              strValue.toLowerCase() !== 'undefined') {
+            console.log(`[HEADERS] ✓ Email data found at data row ${idx} (Excel row ${dataStartIdx + idx + 1}): "${strValue}" (type: ${typeof emailValue})`)
+            emailFound = true
+          }
+        }
+      }
+      
+      if (!emailFound) {
+        console.log(`[HEADERS] WARNING: No email data found in email column at index ${emailColIdx} in first ${maxRowsToCheck} rows!`)
+        console.log(`[HEADERS] Total data rows available: ${dataRowsRaw.length}`)
+      }
+    } else {
+      console.log(`[HEADERS] WARNING: Email column not found in headers!`)
+    }
+    
+    // Filter out completely empty columns (no header and no data in any row)
+    // Check each column to see if it has any data
+    const columnHasData: boolean[] = headers.map((header, colIdx) => {
+      // Check if header is not empty (not __EMPTY_)
+      const hasHeader = header && !header.startsWith('__EMPTY_')
+      
+      // If column has valid header, always include it (even if no data in first few rows)
+      // This ensures columns like "E-Mail", "SKHUN", "Penerima KPS" are shown even if data appears later
+      if (hasHeader) {
+        console.log(`[HEADERS] Column ${colIdx} ("${header}") has valid header - will NOT be filtered`)
+        return true
+      }
+      
+      // For columns without headers, check if any data row has non-empty value
+      // Check ALL rows, not just first few, to catch data that appears later
+      const hasData = dataRowsRaw.some((row: any) => {
+        if (!row || row.length <= colIdx) return false
+        const value = row[colIdx]
+        if (value === undefined || value === null) return false
+        const strValue = String(value).trim()
+        return strValue.length > 0 && 
+               strValue.toLowerCase() !== 'nan' && 
+               strValue.toLowerCase() !== 'null' &&
+               strValue !== '-' &&
+               strValue !== 'N/A'
+      })
+      
+      return hasData
+    })
+    
+    // Filter headers and create column mapping (old index -> new index)
+    const filteredHeaders: string[] = []
+    const columnMapping: number[] = [] // Maps new column index to old column index
+    headers.forEach((header, oldIdx) => {
+      if (columnHasData[oldIdx]) {
+        columnMapping.push(oldIdx)
+        filteredHeaders.push(header)
+        
+        // Log email column mapping for debugging
+        const isEmailHeader = header.toLowerCase().includes('email') || header.toLowerCase().includes('e-mail')
+        if (isEmailHeader) {
+          console.log(`[HEADERS] Email column found: "${header}" at old index ${oldIdx}, new index ${filteredHeaders.length - 1}`)
+          // Check first few data rows for this column
+          dataRowsRaw.slice(0, 3).forEach((row, rowIdx) => {
+            const value = row?.[oldIdx]
+            console.log(`[HEADERS] Email column data at row ${rowIdx}: "${value}" (type: ${typeof value})`)
+          })
+        }
+      }
+    })
+    
+    console.log(`[HEADERS] Filtered ${headers.length} columns to ${filteredHeaders.length} columns with data`)
+    console.log(`[HEADERS] Removed ${headers.length - filteredHeaders.length} empty columns`)
+    
+    // Get preview (first 5 non-empty rows for user to see)
+    // Skip completely empty rows to ensure we show actual data
+    // BUT: Also ensure we include rows that have data in important columns like email
+    const nonEmptyRows: { row: any[], rowIdx: number }[] = []
+    const emailRows: { row: any[], rowIdx: number }[] = [] // Rows with email data
+    
+    // Scan limited rows to find email data (up to 20 rows for performance)
+    // We only need to find email data for preview, not all rows
+    const maxRowsToScan = Math.min(20, dataRowsRaw.length)
+    console.log(`[PREVIEW] Scanning ${maxRowsToScan} rows to find email data...`)
+    
+    for (let idx = 0; idx < maxRowsToScan; idx++) {
+      const row = dataRowsRaw[idx]
+      if (!row) continue
+      // Check if row has any non-empty data
+      const hasData = row && Array.isArray(row) && row.some((cell: any) => {
+        if (cell === null || cell === undefined || cell === '') return false
+        const strValue = String(cell).trim()
+        return strValue.length > 0 && 
+               strValue.toLowerCase() !== 'nan' && 
+               strValue.toLowerCase() !== 'null' &&
+               strValue.toLowerCase() !== 'undefined' &&
+               strValue !== '-' &&
+               strValue !== 'N/A'
+      })
+      
+      // Check if this row has email data (if email column exists)
+      // Try multiple ways to read the data to handle sparse arrays
+      let hasEmailData = false
+      if (emailColIdx >= 0 && row) {
+        let emailValue: any = undefined
+        
+        // Method 1: Direct array access
+        if (Array.isArray(row)) {
+          // Check if index exists (handles sparse arrays)
+          if (emailColIdx in row) {
+            emailValue = row[emailColIdx]
+          }
+          // Also try accessing by index if within bounds
+          else if (emailColIdx < row.length) {
+            emailValue = row[emailColIdx]
+          }
+        }
+        // Method 2: Object-style access (for XLSX object format)
+        else if (typeof row === 'object' && row !== null) {
+          emailValue = (row as any)[emailColIdx]
+        }
+        
+        // Check if email value is valid
+        if (emailValue !== null && emailValue !== undefined && emailValue !== '') {
+          const strValue = String(emailValue).trim()
+          if (strValue.length > 0 && 
+              strValue.toLowerCase() !== 'nan' && 
+              strValue.toLowerCase() !== 'null' &&
+              strValue.toLowerCase() !== 'undefined') {
+            hasEmailData = true
+            console.log(`[PREVIEW] Found email at row ${idx}: "${strValue}"`)
+          }
+        }
+      }
+      
+      if (hasData) {
+        nonEmptyRows.push({ row, rowIdx: idx })
+      }
+      
+      if (hasEmailData) {
+        emailRows.push({ row, rowIdx: idx })
+        // Logging already done above
+      }
+      
+      // Stop early if we have enough data (but only after checking for email)
+      if (nonEmptyRows.length >= 5 && emailRows.length >= 2) {
+        console.log(`[PREVIEW] Found enough rows (${nonEmptyRows.length} non-empty, ${emailRows.length} with email) - stopping scan`)
+        break
+      }
+    }
+    
+    // If we found rows with email data, make sure at least one is in preview
+    const previewRows: { row: any[], rowIdx: number }[] = []
+    const usedIndices = new Set<number>()
+    
+    // First, add rows with email data to preview
+    emailRows.slice(0, 2).forEach(({ row, rowIdx }) => {
+      if (!usedIndices.has(rowIdx)) {
+        previewRows.push({ row, rowIdx })
+        usedIndices.add(rowIdx)
+      }
+    })
+    
+    // Then add other non-empty rows
+    nonEmptyRows.forEach(({ row, rowIdx }) => {
+      if (!usedIndices.has(rowIdx) && previewRows.length < 5) {
+        previewRows.push({ row, rowIdx })
+        usedIndices.add(rowIdx)
+      }
+    })
+    
+    // Sort by row index to maintain order
+    previewRows.sort((a, b) => a.rowIdx - b.rowIdx)
+    
+    console.log(`[PREVIEW] Found ${nonEmptyRows.length} non-empty rows out of ${dataRowsRaw.length} total rows`)
+    console.log(`[PREVIEW] Found ${emailRows.length} rows with email data`)
+    if (previewRows.length > 0) {
+      console.log(`[PREVIEW] Preview will show rows at indices:`, previewRows.map(r => r.rowIdx))
+    }
+    
     // IMPORTANT: Use column index directly, not indexOf, to ensure correct column mapping
-    const preview = dataRowsRaw.slice(0, 5).map((row, rowIdx) => {
+    const preview = previewRows.map(({ row, rowIdx }) => {
       const previewRow: Record<string, string> = {}
-      headers.forEach((header, colIdx) => {
+      filteredHeaders.forEach((header, newColIdx) => {
+        // Map new column index to old column index
+        const oldColIdx = columnMapping[newColIdx]
+        
+        // Safety check: skip if mapping is invalid
+        if (oldColIdx === undefined || oldColIdx === null) {
+          console.warn(`[PREVIEW] Column mapping missing for new index ${newColIdx}, header: ${header}`)
+          previewRow[header] = ''
+          return
+        }
+        
         // Use colIdx directly to ensure we get data from the correct column
         // This is critical for multi-row headers where header names might be similar
         // Priority: raw value (accurate) > formatted value (fallback)
-        const rawValue = (row as any)?.[colIdx]
-        const formattedValue = (dataRowsFormatted[rowIdx] as any)?.[colIdx]
+        // Handle both array access and potential sparse arrays
+        // For sparse arrays, we need to check if the index exists, not just if it's less than length
+        let rawValue: any = undefined
+        let formattedValue: any = undefined
+        
+        if (row && Array.isArray(row)) {
+          // Check if index exists in array (handles sparse arrays)
+          if (oldColIdx in row) {
+            rawValue = row[oldColIdx]
+          }
+          // Also try direct access if within bounds (for non-sparse arrays)
+          else if (oldColIdx < row.length) {
+            rawValue = row[oldColIdx]
+          }
+        } else if (row && typeof row === 'object' && row !== null) {
+          // Handle object-style row (from XLSX)
+          rawValue = (row as any)[oldColIdx]
+          // Also try numeric key access
+          if (rawValue === undefined) {
+            rawValue = (row as any)[String(oldColIdx)]
+          }
+        }
+        
+        // Use rowIdx to get corresponding formatted row
+        const formattedRow = dataRowsFormatted[rowIdx]
+        if (formattedRow && Array.isArray(formattedRow)) {
+          // Check if index exists in array (handles sparse arrays)
+          if (oldColIdx in formattedRow) {
+            formattedValue = formattedRow[oldColIdx]
+          }
+          // Also try direct access if within bounds
+          else if (oldColIdx < formattedRow.length) {
+            formattedValue = formattedRow[oldColIdx]
+          }
+        } else if (formattedRow && typeof formattedRow === 'object' && formattedRow !== null) {
+          formattedValue = (formattedRow as any)[oldColIdx]
+          // Also try numeric key access
+          if (formattedValue === undefined) {
+            formattedValue = (formattedRow as any)[String(oldColIdx)]
+          }
+        }
         
         let cellValue = ''
-        if (rawValue !== undefined && rawValue !== null && rawValue !== '') {
-          // Use raw value for accuracy (preserves dates, numbers, etc.)
-          cellValue = String(rawValue).trim()
-        } else if (formattedValue !== undefined && formattedValue !== null && formattedValue !== '') {
-          // Fallback to formatted value
-          cellValue = String(formattedValue).trim()
+        // Check raw value first (most accurate)
+        if (rawValue !== undefined && rawValue !== null) {
+          const rawStr = String(rawValue).trim()
+          // Filter out common empty representations
+          if (rawStr.length > 0 && 
+              rawStr.toLowerCase() !== 'nan' && 
+              rawStr.toLowerCase() !== 'null' && 
+              rawStr.toLowerCase() !== 'undefined' &&
+              rawStr !== '-' &&
+              rawStr !== 'N/A') {
+            cellValue = rawStr
+          }
+        } 
+        // Fallback to formatted value if raw is empty/null
+        if (!cellValue && formattedValue !== undefined && formattedValue !== null) {
+          const formattedStr = String(formattedValue).trim()
+          if (formattedStr.length > 0 && 
+              formattedStr.toLowerCase() !== 'nan' && 
+              formattedStr.toLowerCase() !== 'null' && 
+              formattedStr.toLowerCase() !== 'undefined' &&
+              formattedStr !== '-' &&
+              formattedStr !== 'N/A') {
+            cellValue = formattedStr
+          }
         }
         
         previewRow[header] = cellValue
         
-        // Log first row for debugging
-        if (rowIdx === 0 && colIdx < 10) {
-          console.log(`[PREVIEW] Column ${colIdx} (${header}): "${previewRow[header]}"`)
+        // Log all rows for email column to debug missing data
+        const isEmailHeader = header.toLowerCase().includes('email') || header.toLowerCase().includes('e-mail')
+        if (isEmailHeader) {
+          console.log(`[PREVIEW] Row ${rowIdx}, Column ${newColIdx} (${header}, old idx: ${oldColIdx}): "${cellValue}"`)
+          console.log(`[PREVIEW]   - rawValue:`, rawValue, `(type: ${typeof rawValue})`)
+          console.log(`[PREVIEW]   - formattedValue:`, formattedValue, `(type: ${typeof formattedValue})`)
+          console.log(`[PREVIEW]   - row length:`, row?.length, `oldColIdx:`, oldColIdx)
+          if (row && Array.isArray(row)) {
+            console.log(`[PREVIEW]   - row[oldColIdx] exists:`, oldColIdx in row)
+            console.log(`[PREVIEW]   - row[oldColIdx] value:`, row[oldColIdx])
+          }
+        } else if (rowIdx < 3 && newColIdx < 15) {
+          console.log(`[PREVIEW] Row ${rowIdx}, Column ${newColIdx} (${header}, old idx: ${oldColIdx}): "${cellValue}"`)
         }
       })
       return previewRow
@@ -692,7 +1007,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      headers,
+      headers: filteredHeaders, // Return filtered headers
       preview,
       totalRows: dataRows.length,
       sheetName,
@@ -700,6 +1015,7 @@ export async function POST(request: NextRequest) {
       headerRow,
       headerRowCount,
       autoDetected,
+      columnMapping, // Include column mapping for processing step
     })
   } catch (error) {
     console.error('Error reading Excel headers:', error)

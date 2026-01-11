@@ -515,8 +515,8 @@ export default function ModernDataTable<TData extends Employee, TValue>({
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
           <span>
             Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
             {Math.min(
@@ -526,7 +526,7 @@ export default function ModernDataTable<TData extends Employee, TValue>({
             of {table.getFilteredRowModel().rows.length} entries
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-end">
           <Button
             variant="outline"
             size="icon"

@@ -211,7 +211,11 @@ export default function MemberEditFormImproved({
                         </div>
                         <div className="space-y-1 sm:space-y-2">
                             <h3 className="text-lg sm:text-xl font-semibold">{fullName || "N/A"}</h3>
-                            <p className="text-xs sm:text-sm text-muted-foreground">{userProfile?.email}</p>
+                            <p className="text-xs sm:text-sm text-muted-foreground">
+                              {userProfile?.email && !userProfile.email.toLowerCase().endsWith('@dummy.local') 
+                                ? userProfile.email 
+                                : ''}
+                            </p>
                             <div className="flex gap-2 justify-center mt-3">
                                 {initialValues.employee_id && (
                                     <Badge variant="secondary">

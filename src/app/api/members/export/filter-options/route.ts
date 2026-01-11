@@ -46,6 +46,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    if (!["jenis_kelamin", "agama"].includes(column)) {
+      return NextResponse.json({ success: true, options: [] })
+    }
+
     // Get unique values from user_profiles for the specified column
     const query = adminClient
       .from("organization_members")

@@ -61,12 +61,11 @@ export async function GET(request: NextRequest) {
       .from("organization_members")
       .select(`
         id,
-        biodata_nik,
-        employee_id,
         is_active,
         hire_date,
         user:user_id (
           id,
+          nik,
           email,
           first_name,
           middle_name,
@@ -76,16 +75,10 @@ export async function GET(request: NextRequest) {
           mobile,
           date_of_birth,
           jenis_kelamin,
-          nik,
           nisn,
           tempat_lahir,
           agama,
-          jalan,
-          rt,
-          rw,
-          dusun,
-          kelurahan,
-          kecamatan
+          profile_photo_url
         ),
         departments:department_id (
           id,
@@ -132,6 +125,16 @@ export async function GET(request: NextRequest) {
       return {}
     }
 
+    // Helper function to filter dummy emails
+    const getEmail = (email: string | null | undefined): string => {
+      if (!email) return ""
+      // Filter out dummy emails (ending with @dummy.local)
+      if (email.toLowerCase().endsWith('@dummy.local')) {
+        return ""
+      }
+      return email
+    }
+
     // Filter out members without user profile
     let filteredMembers = (members || []).filter((member: any) => {
       const userProfile = getUserProfile(member)
@@ -148,7 +151,7 @@ export async function GET(request: NextRequest) {
           member.biodata_nik?.toLowerCase().includes(searchLower) ||
           member.employee_id?.toLowerCase().includes(searchLower) ||
           displayName.toLowerCase().includes(searchLower) ||
-          userProfile.email?.toLowerCase().includes(searchLower)
+          (userProfile.email && !userProfile.email.toLowerCase().endsWith('@dummy.local') && userProfile.email.toLowerCase().includes(searchLower))
         )
       })
     }
@@ -174,22 +177,25 @@ export async function GET(request: NextRequest) {
     filteredMembers = filteredMembers.slice(0, limit)
 
     // Transform data based on selected fields - from user_profiles
+    type ExportRow = Record<string, string>
     const transformedData = filteredMembers.map((member: any) => {
       const userProfile = getUserProfile(member)
       const displayName = userProfile.display_name || `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim()
+      const fullName = [userProfile.first_name, userProfile.middle_name, userProfile.last_name].filter(Boolean).join(" ").trim()
       
       // Convert user_profiles jenis_kelamin (male/female) to biodata format (L/P)
       const genderMap: Record<string, string> = { 'male': 'L', 'female': 'P' }
       const jenisKelamin = genderMap[userProfile.jenis_kelamin || ''] || userProfile.jenis_kelamin || ""
-
-      const row: Record<string, any> = {}
+      
+      const dep = member.departments
+      const row: ExportRow = {}
 
       // Include fields from user_profiles (mapped to biodata format for compatibility)
       if (selectedFields.includes("nik")) {
         row.nik = member.biodata_nik || userProfile.nik || "-"
       }
       if (selectedFields.includes("nama")) {
-        row.nama = displayName || "-"
+        row.nama = displayName || fullName || "-"
       }
       if (selectedFields.includes("nickname")) {
         row.nickname = "-" // nickname tidak ada di user_profiles
@@ -231,10 +237,11 @@ export async function GET(request: NextRequest) {
         row.no_telepon = userProfile.phone || userProfile.mobile || "-"
       }
       if (selectedFields.includes("email")) {
-        row.email = userProfile.email || "-"
+        row.email = getEmail(userProfile.email) || "-"
       }
       if (selectedFields.includes("department_id")) {
-        row.department_id = member.department_id || "-"
+        const depName = Array.isArray(dep) ? (dep[0]?.name ?? "-") : (dep?.name ?? "-")
+        row.department_id = String(depName)
       }
 
       return row

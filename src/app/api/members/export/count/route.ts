@@ -83,6 +83,7 @@ export async function GET(request: NextRequest) {
           biodata_nik,
           user:user_id (
             id,
+            nik,
             email,
             first_name,
             middle_name,
@@ -136,14 +137,16 @@ export async function GET(request: NextRequest) {
         filtered = filtered.filter((member: any) => {
           const userProfile = getUserProfile(member)
           const displayName = userProfile.display_name || `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim()
+          const full = [userProfile.first_name, userProfile.middle_name, userProfile.last_name].filter(Boolean).join(' ')
           return (
             member.biodata_nik?.toLowerCase().includes(searchLower) ||
+            (userProfile.nik || '').toLowerCase().includes(searchLower) ||
             displayName.toLowerCase().includes(searchLower) ||
-            userProfile.email?.toLowerCase().includes(searchLower)
+            full.toLowerCase().includes(searchLower) ||
+            (userProfile.email && !userProfile.email.toLowerCase().endsWith('@dummy.local') && userProfile.email.toLowerCase().includes(searchLower))
           )
         })
       }
-
       if (selectedGenders.length > 0) {
         filtered = filtered.filter((member: any) => {
           const userProfile = getUserProfile(member)
@@ -153,7 +156,6 @@ export async function GET(request: NextRequest) {
           return selectedGenders.includes(gender)
         })
       }
-
       if (selectedAgamas.length > 0) {
         filtered = filtered.filter((member: any) => {
           const userProfile = getUserProfile(member)
@@ -161,10 +163,8 @@ export async function GET(request: NextRequest) {
         })
       }
 
-      return NextResponse.json({
-        success: true,
-        count: filtered.length,
-      })
+      return NextResponse.json({ success: true, count: filtered.length })
+
     } else {
       // Simple count query without joins
       const { count, error } = await query

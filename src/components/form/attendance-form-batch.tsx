@@ -211,7 +211,6 @@ export function AttendanceFormBatch() {
         const membersData = Array.isArray(membersRes.data) ? membersRes.data : []
 
         if (membersData.length === 0) {
-          toast.info("No members found in your organization")
           setMembers([])
           return
         }
@@ -503,23 +502,6 @@ export function AttendanceFormBatch() {
                   <CardTitle>Add Single Attendance</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Group Filter */}
-                  <div className="space-y-2">
-                    <FormLabel>Filter by Department</FormLabel>
-                    <Select value={departmentFilter} onValueChange={setDepartmentFilter} disabled={loading}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="All Groups" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Groups</SelectItem>
-                        {departments.map((name) => (
-                          <SelectItem key={name} value={name}>
-                            {name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
 
                   {/* Member Selection */}
                   <FormField
@@ -663,22 +645,7 @@ export function AttendanceFormBatch() {
               <CardTitle>Add Batch Attendance</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Filter by Department</label>
-                <Select value={departmentFilter} onValueChange={setDepartmentFilter} disabled={loading}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="All Groups" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Groups</SelectItem>
-                    {departments.map((name) => (
-                      <SelectItem key={name} value={name}>
-                        {name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              
 
               {/* Master Date & Time for Batch Entries */}
               <div className="space-y-3">
@@ -763,10 +730,7 @@ export function AttendanceFormBatch() {
                     />
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-48 overflow-y-auto pt-2">
-                    {(departmentFilter === "all"
-                      ? members
-                      : members.filter((m) => m.department === departmentFilter)
-                    ).filter(m =>
+                    {members.filter(m =>
                       m.label.toLowerCase().includes(memberSearch.toLowerCase()) ||
                       m.department.toLowerCase().includes(memberSearch.toLowerCase())
                     ).map((member) => (
@@ -909,6 +873,22 @@ export function AttendanceFormBatch() {
             <DialogTitle>Select Member</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Filter by Department</label>
+              <Select value={departmentFilter} onValueChange={setDepartmentFilter} disabled={loading}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All Groups" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Groups</SelectItem>
+                  {departments.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input

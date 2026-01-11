@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation';
 const pathMapping: Record<string, string> = {
   'settings': 'Settings',
   'members': 'Members',
-  'attendance': 'Attendance',
+  'attendance': 'Dashboard',
   'schedule': 'Schedules',
   'member-schedules': 'Member Schedules',
   'leaves': 'Leaves',

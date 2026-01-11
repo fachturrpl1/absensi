@@ -583,7 +583,8 @@ export async function POST(request: NextRequest) {
             try {
               const nameParts = vr.nama.trim().split(" ")
               const firstName = nameParts[0] || vr.nama
-              const lastName = nameParts.slice(1).join(" ") || null
+              // Ensure last_name is never null (use empty string if no last name)
+              const lastName = nameParts.slice(1).join(" ") || ""
               const randomPassword = `password`
               
               // Generate email dummy jika tidak ada email
@@ -706,11 +707,13 @@ export async function POST(request: NextRequest) {
             }
 
             const nameParts = vr.nama.trim().split(" ")
+            // Ensure last_name is never null (use empty string if no last name)
+            const lastName = nameParts.slice(1).join(" ") || ""
             return {
               id: userId,
               email: emailToUse,
               first_name: nameParts[0] || vr.nama,
-              last_name: nameParts.slice(1).join(" ") || null,
+              last_name: lastName,
               phone: vr.noTelepon || null,
               display_name: vr.nama,
               is_active: true,
@@ -719,6 +722,7 @@ export async function POST(request: NextRequest) {
               nisn: vr.nisn || null,
               jenis_kelamin: convertJenisKelamin(vr.jenisKelamin),
               tempat_lahir: vr.tempatLahir || null,
+              date_of_birth: vr.tanggalLahir || null,
               agama: vr.agama || null,
               jalan: vr.jalan || null,
               rt: vr.rt || null,
@@ -743,13 +747,15 @@ export async function POST(request: NextRequest) {
               const userId = usersByEmail.get(emailToUse.toLowerCase())?.id
               if (!userId) continue
               const nameParts = vr.nama.trim().split(" ")
+              // Ensure last_name is never null (use empty string if no last name)
+              const lastName = nameParts.slice(1).join(" ") || ""
               const { error: singleProfileError } = await adminClient
                 .from("user_profiles")
                 .upsert({
                   id: userId,
                   email: emailToUse,
                   first_name: nameParts[0] || vr.nama,
-                  last_name: nameParts.slice(1).join(" ") || null,
+                  last_name: lastName,
                   phone: vr.noTelepon || null,
                   display_name: vr.nama,
                   is_active: true,
@@ -758,6 +764,7 @@ export async function POST(request: NextRequest) {
                   nisn: vr.nisn || null,
                   jenis_kelamin: convertJenisKelamin(vr.jenisKelamin),
                   tempat_lahir: vr.tempatLahir || null,
+                  date_of_birth: vr.tanggalLahir || null,
                   agama: vr.agama || null,
                   jalan: vr.jalan || null,
                   rt: vr.rt || null,
@@ -1533,14 +1540,17 @@ export async function POST(request: NextRequest) {
           if (existingUserData) {
             userId = existingUserData.id
 
+            // Ensure last_name is never null (use empty string if no last name)
+            const nameParts = nama.trim().split(" ")
+            const lastName = nameParts.slice(1).join(" ") || ""
             const { error: profileError } = await adminClient
               .from("user_profiles")
               .upsert(
                 {
                   id: userId,
                   email: finalEmail,
-                  first_name: nama.split(" ")[0] || nama,
-                  last_name: nama.split(" ").slice(1).join(" ") || null,
+                  first_name: nameParts[0] || nama,
+                  last_name: lastName,
                   phone: noTelepon || null,
                   display_name: nama,
                   is_active: true,
@@ -1549,6 +1559,7 @@ export async function POST(request: NextRequest) {
                   nisn: nisn || null,
                   jenis_kelamin: convertJenisKelamin(jenisKelamin),
                   tempat_lahir: tempatLahir || null,
+                  date_of_birth: tanggalLahir || null,
                   agama: agama || null,
                   jalan: jalan || null,
                   rt: rt || null,
@@ -1576,7 +1587,8 @@ export async function POST(request: NextRequest) {
 
             const nameParts = nama.trim().split(" ")
             const firstName = nameParts[0] || nama
-            const lastName = nameParts.slice(1).join(" ") || null
+            // Ensure last_name is never null (use empty string if no last name)
+            const lastName = nameParts.slice(1).join(" ") || ""
 
             const { data: newUser, error: createUserError } = await adminClient.auth.admin.createUser({
               email: finalEmail,
@@ -1714,6 +1726,7 @@ export async function POST(request: NextRequest) {
                   nisn: nisn || null,
                   jenis_kelamin: convertJenisKelamin(jenisKelamin),
                   tempat_lahir: tempatLahir || null,
+                  date_of_birth: tanggalLahir || null,
                   agama: agama || null,
                   jalan: jalan || null,
                   rt: rt || null,
@@ -1823,13 +1836,15 @@ export async function POST(request: NextRequest) {
                     
                     // Buat user profile
                     const nameParts = nama.trim().split(" ")
+                    // Ensure last_name is never null (use empty string if no last name)
+                    const lastName = nameParts.slice(1).join(" ") || ""
                     const { error: profileError } = await adminClient
                       .from("user_profiles")
                       .upsert({
                         id: userId,
                         email: dummyEmail,
                         first_name: nameParts[0] || nama,
-                        last_name: nameParts.slice(1).join(" ") || null,
+                        last_name: lastName,
                         phone: noTelepon || null,
                         display_name: nama,
                         is_active: true,
@@ -1838,6 +1853,7 @@ export async function POST(request: NextRequest) {
                         nisn: nisn || null,
                         jenis_kelamin: convertJenisKelamin(jenisKelamin),
                         tempat_lahir: tempatLahir || null,
+                        date_of_birth: tanggalLahir || null,
                         agama: agama || null,
                         jalan: jalan || null,
                         rt: rt || null,

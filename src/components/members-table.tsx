@@ -3,7 +3,7 @@
 import React from "react"
 import { IOrganization_member } from "@/interface"
 import { Button } from "@/components/ui/button"
-import { Trash, Pencil, Eye, Check, X, Columns3Cog, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
+import { Trash, Pencil, Eye, Check, X, Columns3Cog } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
   DropdownMenu,
@@ -25,6 +25,7 @@ import {
 import { deleteOrganization_member } from "@/action/members"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
+import { PaginationFooter } from "@/components/pagination-footer"
 
 interface MembersTableProps {
   members: IOrganization_member[]
@@ -67,20 +68,72 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
     }
   }
 
+  type MemberUser = {
+    id?: string
+    email?: string
+    first_name?: string
+    middle_name?: string
+    last_name?: string
+    display_name?: string
+    phone?: string
+    mobile?: string
+    profile_photo_url?: string
+    search_name?: string
+    jenis_kelamin?: string
+    agama?: string
+    is_active?: boolean
+  }
+  type MemberBiodata = { nik?: string; nama?: string; nickname?: string; jenis_kelamin?: string; agama?: string }
+  type MemberExtended = IOrganization_member & {
+    user?: MemberUser
+    biodata?: MemberBiodata
+    departments?: { name?: string } | Array<{ name?: string }>
+    groupName?: string
+    positions?: { title?: string }
+  }
+
   const getFullName = (member: IOrganization_member) => {
-    const user = (member as any).user
-    
-    // Get name from user_profiles
-    if (user) {
-      const fullName = [user.first_name, user.middle_name, user.last_name]
-        .filter((part: any) => part && part.trim() !== "")
-        .join(" ")
-      if (fullName) return fullName
-      if (user.display_name) return user.display_name
-      if (user.email) return user.email
-    }
-    
-    return "No Name"
+    const m = member as MemberExtended
+    const displayName = (m.user?.display_name ?? '').trim()
+    const firstName = m.user?.first_name ?? ''
+    const middleName = m.user?.middle_name ?? ''
+    const lastName = m.user?.last_name ?? ''
+    const rawEmail = (m.user?.email ?? '').trim()
+    // Filter out dummy emails (ending with @dummy.local)
+    const email = rawEmail && !rawEmail.toLowerCase().endsWith('@dummy.local') ? rawEmail : ''
+    const searchName = (m.user?.search_name ?? '').trim()
+    const fullName = [firstName, middleName, lastName].filter((p) => p && p.trim() !== '').join(' ').trim()
+    const biodataNama = (m.biodata?.nama ?? '').trim()
+    const biodataNickname = (m.biodata?.nickname ?? '').trim()
+
+    return displayName || fullName || email || searchName || biodataNama || biodataNickname || "No Name"
+  }
+
+  const getNik = (member: IOrganization_member): string => {
+    const m = member as MemberExtended
+    const nik = (m.biodata?.nik ?? '')
+    const nikAlt = ((member as unknown as { biodata_nik?: string }).biodata_nik ?? '')
+    return String(nik || nikAlt || '-')
+  }
+
+  const getGroupName = (member: IOrganization_member): string => {
+    const m = member as MemberExtended
+    if (m.groupName) return m.groupName
+    const dep = Array.isArray(m.departments) ? (m.departments[0] ?? undefined) : m.departments
+    return String(dep?.name || '-')
+  }
+
+  const getGender = (member: IOrganization_member): string => {
+    const m = member as MemberExtended
+    const gender = m.user?.jenis_kelamin
+    if (gender === 'male') return 'L'
+    if (gender === 'female') return 'P'
+    return String(gender || m.biodata?.jenis_kelamin || '-')
+  }
+
+  const getReligion = (member: IOrganization_member): string => {
+    const m = member as MemberExtended
+    return String(m.user?.agama || m.biodata?.agama || '-')
   }
 
   // Filter and sort data
@@ -91,15 +144,11 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
     if (globalFilter) {
       const searchTerm = globalFilter.toLowerCase()
       filtered = filtered.filter((member) => {
+        const m = member as MemberExtended
         const fullName = getFullName(member).toLowerCase()
-        const phone = ((member as any).user?.phone || "").toLowerCase()
-        const group = (
-          (member as any).groupName || 
-          (member as any).departments?.name || 
-          (Array.isArray((member as any).departments) && (member as any).departments[0]?.name) || 
-          ""
-        ).toLowerCase()
-        const nik = (((member as any).user?.nik || (member as any).biodata_nik || "") as string).toLowerCase()
+        const phone = ((m.user?.phone || m.user?.mobile || "")).toLowerCase()
+        const group = getGroupName(member).toLowerCase()
+        const nik = getNik(member).toLowerCase()
         return (
           fullName.includes(searchTerm) ||
           phone.includes(searchTerm) ||
@@ -252,34 +301,34 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg overflow-hidden">
-        <table className="w-full">
+      <div className="border rounded-lg overflow-x-auto">
+        <table className="w-full min-w-[880px]">
         {/* Header */}
         <thead className="bg-muted/50 border-b">
           <tr>
             {visibleColumns.members && (
-              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Members</th>
+              <th className="p-3 text-left text-xs font-medium text-foreground">Members</th>
             )}
             {visibleColumns.nik && (
-              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">NIK</th>
+              <th className="p-3 text-left text-xs font-medium text-foreground">NIK</th>
             )}
             {/* {visibleColumns.phone && (
-              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Phone Number</th>
+              <th className="p-3 text-left text-xs font-medium text-foreground">Phone Number</th>
             )} */}
             {visibleColumns.group && (
-              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Group</th>
+              <th className="p-3 text-left text-xs font-medium text-foreground">Group</th>
             )}
             {visibleColumns.gender && (
-              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Gender</th>
+              <th className="p-3 text-left text-xs font-medium text-foreground">Gender</th>
             )}
             {visibleColumns.religion && (
-              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Religion</th>
+              <th className="p-3 text-left text-xs font-medium text-foreground">Religion</th>
             )}
             {visibleColumns.status && (
-              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Status</th>
+              <th className="p-3 text-left text-xs font-medium text-foreground">Status</th>
             )}
             {visibleColumns.actions && (
-              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Actions</th>
+              <th className="p-3 text-left text-xs font-medium text-foreground">Actions</th>
             )}
           </tr>
         </thead>
@@ -288,13 +337,13 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
         <tbody>
           {isLoading ? (
             <tr>
-              <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="px-4 py-8 text-center text-muted-foreground">
+              <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="px-3 py-6 text-center text-muted-foreground text-sm">
                 Loading...
               </td>
             </tr>
           ) : paginatedData.length === 0 ? (
             <tr>
-              <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="px-4 py-8 text-center text-muted-foreground">
+              <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="px-3 py-6 text-center text-muted-foreground text-sm">
                 No members found
               </td>
             </tr>
@@ -303,7 +352,7 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
               return (
                 <tr key={member.id} className="border-b hover:bg-muted/30 transition-colors">
                   {visibleColumns.members && (
-                    <td className="px-4 py-3 text-sm">
+                    <td className="p-3 text-xs">
                       <button
                         type="button"
                         onClick={() => router.push(`/members/${member.id}`)}
@@ -315,51 +364,43 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
                     </td>
                   )}
                   {visibleColumns.nik && (
-                    <td className="px-4 py-3 text-sm">
-                      {(member as any).user?.nik || (member as any).biodata_nik || "-"}
+                    <td className="p-3 text-xs">
+                      {getNik(member)}
                     </td>
                   )}
                   {/* {visibleColumns.phone && (
-                    <td className="px-4 py-3 text-sm">
+                    <td className="p-3 text-xs">
                       {user?.phone || "No Phone"}
                     </td>
                   )} */}
 
                   {visibleColumns.group && (
-                    <td className="px-4 py-3 text-sm">
-                      {(member as any).groupName || 
-                       ((member as any).departments?.name) || 
-                       (Array.isArray((member as any).departments) && (member as any).departments[0]?.name) || 
-                       "-"}
+                    <td className="p-3 text-xs">
+                      {getGroupName(member)}
                     </td>
                   )}
 
                   {visibleColumns.gender && (
-                    <td className="px-4 py-3 text-sm">
-                      {(() => {
-                        const gender = (member as any).user?.jenis_kelamin
-                        if (gender === 'male') return 'L'
-                        if (gender === 'female') return 'P'
-                        return gender || "-"
-                      })()}
+                    <td className="p-3 text-xs">
+                      {getGender(member)}
                     </td>
                   )}
 
                   {visibleColumns.religion && (
-                    <td className="px-4 py-3 text-sm">
-                      {(member as any).user?.agama || "-"}
+                    <td className="p-3 text-xs">
+                      {getReligion(member)}
                     </td>
                   )}
 
 
                   {visibleColumns.status && (
-                    <td className="px-4 py-3 text-sm">
+                    <td className="p-3 text-xs">
                       {member.is_active ? (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-primary-foreground">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-500 text-primary-foreground">
                           <Check className="w-3 h-3 mr-1" /> Active
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
                           <X className="w-3 h-3 mr-1" /> Inactive
                         </span>
                       )}
@@ -367,7 +408,7 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
                   )}
 
                   {visibleColumns.actions && (
-                    <td className="px-4 py-3 text-sm">
+                    <td className="p-3 text-xs">
                       <div className="flex items-center gap-2">
                         <Button
                           variant="ghost"
@@ -429,89 +470,18 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
 
       {/* Pagination Footer */}
       {showPagination && (
-      <div className="flex items-center justify-between py-4 px-4 bg-muted/50 rounded-md border">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setPageIndex(0)}
-            disabled={pageIndex === 0 || isLoading}
-            className="h-8 w-8 p-0"
-            title="First page"
-          >
-            <ChevronsLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setPageIndex(Math.max(0, pageIndex - 1))}
-            disabled={pageIndex === 0 || isLoading}
-            className="h-8 w-8 p-0"
-            title="Previous page"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          
-          <span className="text-sm text-muted-foreground">Page</span>
-          
-          <input
-            type="number"
-            min="1"
-            max={totalPages}
-            value={pageIndex + 1}
-            onChange={(e) => {
-              const page = e.target.value ? Number(e.target.value) - 1 : 0
-              setPageIndex(Math.max(0, Math.min(page, totalPages - 1)))
-            }}
-            className="w-12 h-8 px-2 border rounded text-sm text-center bg-background"
-            disabled={isLoading}
-          />
-          
-          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setPageIndex(Math.min(totalPages - 1, pageIndex + 1))}
-            disabled={pageIndex >= totalPages - 1 || isLoading}
-            className="h-8 w-8 p-0"
-            title="Next page"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setPageIndex(totalPages - 1)}
-            disabled={pageIndex >= totalPages - 1 || isLoading}
-            className="h-8 w-8 p-0"
-            title="Last page"
-          >
-            <ChevronsRight className="h-4 w-4" />
-          </Button>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <div className="text-sm text-muted-foreground">
-            Showing {filteredData.length > 0 ? pageIndex * parseInt(pageSize) + 1 : 0} to {Math.min((pageIndex + 1) * parseInt(pageSize), filteredData.length)} of {filteredData.length} total records
-          </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(e.target.value)
-                setPageIndex(0)
-              }}
-              className="px-2 py-1 border rounded text-sm bg-background"
-            >
-              <option value="5">5</option>
-              <option value="10">10</option>
-              <option value="20">20</option>
-              <option value="50">50</option>
-            </select>
-          </div>
-        </div>
-      </div>
+        <PaginationFooter
+          page={pageIndex + 1}
+          totalPages={totalPages || 1}
+          onPageChange={(p) => setPageIndex(Math.max(0, Math.min((p - 1), Math.max(0, totalPages - 1))))}
+          isLoading={isLoading}
+          from={filteredData.length > 0 ? pageIndex * pageSizeNum + 1 : 0}
+          to={Math.min((pageIndex + 1) * pageSizeNum, filteredData.length)}
+          total={filteredData.length}
+          pageSize={pageSizeNum}
+          onPageSizeChange={(size) => { setPageSize(String(size)); setPageIndex(0); }}
+          pageSizeOptions={[5, 10, 20, 50]}
+        />
       )}
     </div>
   )

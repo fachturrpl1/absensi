@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useOrgStore } from '@/store/org-store'
 
+
 /**
  * Hook untuk handle Zustand hydration timing
  * Memastikan organizationId tersedia sebelum fetch data

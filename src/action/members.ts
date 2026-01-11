@@ -86,7 +86,10 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         rw,
         dusun,
         kelurahan,
-        kecamatan
+        kecamatan,
+        profile_photo_url,
+        search_name,
+        is_active
       ),
       departments:department_id (
         id,
@@ -96,7 +99,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
       ),
       positions:position_id (
         id,
-          title,
+        title,
         code
       ),
       role:role_id (

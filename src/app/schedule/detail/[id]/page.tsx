@@ -46,12 +46,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -62,7 +56,6 @@ import {
   VisibilityState,
   ColumnFiltersState,
 } from "@tanstack/react-table"
-import { Columns3Cog } from "lucide-react"
 
 import { IWorkScheduleDetail } from "@/interface"
 import {
@@ -205,13 +198,11 @@ function DataTableWithBack<TData, TValue>({
   columns,
   data,
   filterColumn,
-  onBackClick,
   isLoading = false,
 }: {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   filterColumn?: keyof TData
-  onBackClick: () => void
   isLoading?: boolean
 }) {
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -240,8 +231,7 @@ function DataTableWithBack<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end items-center gap-4">
-        {/* Filter */}
+      <div className="flex items-center justify-end gap-4">
         {filterColumn && (
           <Input
             placeholder={`Filter ${String(filterColumn)}...`}
@@ -254,38 +244,6 @@ function DataTableWithBack<TData, TValue>({
             className="max-w-sm"
           />
         )}
-
-        {/* Toggle Columns */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline">
-              <Columns3Cog />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  className="capitalize"
-                  checked={column.getIsVisible()}
-                  onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                >
-                  {(() => {
-                    const columnLabels: Record<string, string> = {
-                      'is_active': 'Active',
-                      'user_full_name': 'Full Name',
-                      'phone_number': 'Phone Number'
-                    };
-                    return columnLabels[column.id] || column.id;
-                  })()}
-                </DropdownMenuCheckboxItem>
-              ))
-            }
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       {/* Table */}
@@ -332,38 +290,24 @@ function DataTableWithBack<TData, TValue>({
         </Table>
       </div>
 
-      {/* Pagination with Back button */}
-      <div className="flex items-center justify-between space-x-2 py-4">
-        {/* Back button */}
+      {/* Pagination */}
+      <div className="flex items-center justify-end space-x-2 py-4">
         <Button
           variant="outline"
           size="sm"
-          onClick={onBackClick}
-          className="flex items-center gap-2"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage() || isLoading}
         >
-          <ArrowLeft className="h-4 w-4" />
-          Back
+          Previous
         </Button>
-        
-        {/* Pagination */}
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage() || isLoading}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage() || isLoading}
-          >
-            Next
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage() || isLoading}
+        >
+          Next
+        </Button>
       </div>
     </div>
   )
@@ -727,57 +671,17 @@ export default function WorkScheduleDetailsPage() {
   return (
     <div className="flex flex-1 flex-col gap-4">
       <div className="w-full max-w-6xl mx-auto py-8 space-y-6">
-        {/* Summary Cards */}
-        {!loading && details.length > 0 && (
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Working Days
-                </CardTitle>
-                <CalendarDays className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{summary.totalWorkingDays}</div>
-                <p className="text-xs text-muted-foreground">
-                  per week
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Hours
-                </CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{summary.totalHours}h</div>
-                <p className="text-xs text-muted-foreground">
-                  per week
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Average Hours
-                </CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{summary.avgHoursPerDay}h</div>
-                <p className="text-xs text-muted-foreground">
-                  per working day
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        <div className="flex items-center justify-between">
+          <Button
+            variant="outline"
+            type="button"
+            onClick={handleGoBack}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
 
-        <div className="">
           <Dialog
             open={open}
             onOpenChange={(isOpen) => {
@@ -786,9 +690,10 @@ export default function WorkScheduleDetailsPage() {
               }
             }}
           >
-            <DialogTrigger asChild className="float-end ml-5">
-              <Button onClick={() => handleOpenDialog()}>
-                Add <Plus className="ml-2" />
+            <DialogTrigger asChild>
+              <Button onClick={() => handleOpenDialog()} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -940,6 +845,57 @@ export default function WorkScheduleDetailsPage() {
             </DialogContent>
           </Dialog>
         </div>
+
+        {/* Summary Cards */}
+        {!loading && details.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Working Days
+                </CardTitle>
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summary.totalWorkingDays}</div>
+                <p className="text-xs text-muted-foreground">
+                  per week
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Hours
+                </CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summary.totalHours}h</div>
+                <p className="text-xs text-muted-foreground">
+                  per week
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Average Hours
+                </CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summary.avgHoursPerDay}h</div>
+                <p className="text-xs text-muted-foreground">
+                  per working day
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {loading ? (
           <TableSkeleton rows={10} columns={7} />
         ) : (
@@ -947,7 +903,6 @@ export default function WorkScheduleDetailsPage() {
             columns={columns} 
             data={details} 
             filterColumn="day_of_week"
-            onBackClick={handleGoBack}
           />
         )}
       </div>

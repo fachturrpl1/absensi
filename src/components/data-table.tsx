@@ -29,7 +29,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { Columns3Cog, Loader2, Filter, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Search } from "lucide-react"
+import { Columns3Cog, Loader2, Filter, Search } from "lucide-react"
+import { PaginationFooter } from "@/components/pagination-footer"
 import {
   Select,
   SelectContent,
@@ -303,20 +304,6 @@ export function DataTable<TData, TValue>({
                 <SelectItem value="z-a">Z-A</SelectItem>
               </SelectContent>
             </Select>
-
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">Show:</span>
-              <Select value={pageSize} onValueChange={setPageSize}>
-                <SelectTrigger className="w-[70px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </>
         )}
       </div>
@@ -460,100 +447,24 @@ export function DataTable<TData, TValue>({
     </div>
   )
 
-  const paginationFooter = showPagination ? (
-    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-muted/50 rounded-md border">
-      <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-nowrap justify-center w-full md:w-auto">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handlePageIndexChange(0)}
-          disabled={pageIndex === 0 || isLoading}
-          className="h-8 w-8 p-0"
-          title="First page"
-        >
-          <ChevronsLeft className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handlePageIndexChange(pageIndex - 1)}
-          disabled={pageIndex === 0 || isLoading}
-          className="h-8 w-8 p-0"
-          title="Previous page"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-
-        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap ml-1 sm:ml-2">Page</span>
-
-        <input
-          type="number"
-          min="1"
-          max={effectivePageCount}
-          value={pageIndex + 1}
-          onChange={(e) => {
-            const page = e.target.value ? Number(e.target.value) - 1 : 0;
-            handlePageIndexChange(page);
-          }}
-          className="w-10 sm:w-12 h-8 px-2 border rounded text-xs sm:text-sm text-center mx-1 sm:mx-2 bg-background"
-          disabled={isLoading || effectivePageCount === 0}
-        />
-
-        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/ {effectivePageCount}</span>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handlePageIndexChange(pageIndex + 1)}
-          disabled={pageIndex >= effectivePageCount - 1 || isLoading}
-          className="h-8 w-8 p-0"
-          title="Next page"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handlePageIndexChange(effectivePageCount - 1)}
-          disabled={pageIndex >= effectivePageCount - 1 || isLoading}
-          className="h-8 w-8 p-0"
-          title="Last page"
-        >
-          <ChevronsRight className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="flex flex-row items-center justify-center md:justify-end gap-2 md:gap-4 w-full md:w-auto">
-        <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-          {(() => {
-            const ps = parseInt(pageSize, 10) || 10;
-            if (manualPagination) {
-              const total = totalRecords ?? 0
-              const start = total > 0 ? pageIndex * ps + 1 : 0
-              const end = Math.min((pageIndex + 1) * ps, total)
-              return `Showing ${start} to ${end} of ${total} total records`
-            }
-
-            return `Showing ${table.getRowModel().rows.length > 0 ? pageIndex * ps + 1 : 0} to ${Math.min((pageIndex + 1) * ps, table.getFilteredRowModel().rows.length)} of ${table.getFilteredRowModel().rows.length} total records`;
-          })()}
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              handlePageSizeChange(e.target.value);
-              handlePageIndexChange(0);
-            }}
-            className="px-2 py-1 border rounded text-xs sm:text-sm bg-background"
-          >
-            <option value="10">10</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  ) : null
+  const paginationFooter = showPagination ? (() => {
+    const ps = parseInt(pageSize, 10) || 10
+    const total = manualPagination ? (totalRecords ?? 0) : table.getFilteredRowModel().rows.length
+    return (
+      <PaginationFooter
+        page={pageIndex + 1}
+        totalPages={effectivePageCount || 1}
+        onPageChange={(p) => handlePageIndexChange(Math.max(0, (p - 1)))}
+        isLoading={isLoading}
+        from={total > 0 ? pageIndex * ps + 1 : 0}
+        to={Math.min((pageIndex + 1) * ps, total)}
+        total={total}
+        pageSize={ps}
+        onPageSizeChange={(size) => { handlePageSizeChange(String(size)); handlePageIndexChange(0); }}
+        pageSizeOptions={[10, 50, 100]}
+      />
+    )
+  })() : null
 
   return (
     <div className="space-y-4">

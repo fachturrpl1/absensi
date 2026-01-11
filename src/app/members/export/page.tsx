@@ -27,7 +27,9 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Upload,
+  Download
 } from "lucide-react"
 import { toast } from "sonner"
 import { useHydration } from "@/hooks/useHydration"
@@ -41,7 +43,7 @@ const WIZARD_STEPS: WizardStep[] = [
   { number: 1, title: "Pilih Data", description: "Ringkasan data yang akan diexport" },
   { number: 2, title: "Konfigurasi Export", description: "Pilih format dan kolom" },
   { number: 3, title: "Preview Data", description: "Preview hasil export" },
-  { number: 4, title: "Proses Export", description: "Sedang memproses export" },
+  { number: 4, title: "Export", description: "Proses export ke file" },
   { number: 5, title: "Result", description: "Hasil export" },
 ]
 
@@ -92,6 +94,7 @@ export default function MembersExportPage() {
   const [totalCount, setTotalCount] = useState(0)
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set()) // Indeks row yang dipilih
+  const [selectAllPages, setSelectAllPages] = useState(false) // Flag untuk menandai semua halaman dipilih
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(1000) // Maksimal 1000 data per halaman
   const [exportResult, setExportResult] = useState<{
@@ -252,6 +255,12 @@ export default function MembersExportPage() {
     }
   }, [isHydrated, organizationId, loadFilterOptions])
 
+  // Reset selectAllPages ketika filter atau search berubah
+  useEffect(() => {
+    setSelectAllPages(false)
+    setSelectedRows(new Set())
+  }, [searchQuery, filters])
+
   // Step 1: Load member data summary and rows
   useEffect(() => {
     if (currentStep === 1 && isHydrated && organizationId) {
@@ -319,7 +328,12 @@ export default function MembersExportPage() {
       if (json.success) {
         setMemberRows(json.data || [])
         // Reset selected rows saat ganti halaman
-        setSelectedRows(new Set())
+        // Tapi jika selectAllPages true, tetap pilih semua row di halaman baru untuk visual feedback
+        if (selectAllPages) {
+          setSelectedRows(new Set(json.data?.map((_: any, idx: number) => idx) || []))
+        } else {
+          setSelectedRows(new Set())
+        }
       } else {
         toast.error(json.message || "Gagal memuat data member")
       }
@@ -332,6 +346,8 @@ export default function MembersExportPage() {
   }
 
   const toggleRowSelection = (index: number) => {
+    // Jika user memilih/deselect row secara manual, reset selectAllPages
+    setSelectAllPages(false)
     setSelectedRows(prev => {
       const newSet = new Set(prev)
       if (newSet.has(index)) {
@@ -344,9 +360,14 @@ export default function MembersExportPage() {
   }
 
   const toggleSelectAll = () => {
-    if (selectedRows.size === memberRows.length) {
+    if (selectAllPages) {
+      // Jika semua halaman sudah dipilih, hapus semua pilihan
+      setSelectAllPages(false)
       setSelectedRows(new Set())
     } else {
+      // Pilih semua halaman (semua data yang sesuai filter)
+      setSelectAllPages(true)
+      // Juga pilih semua row di halaman saat ini untuk visual feedback
       setSelectedRows(new Set(memberRows.map((_, idx) => idx)))
     }
   }
@@ -406,68 +427,186 @@ export default function MembersExportPage() {
   // Step 4: Process export
   const processExport = async () => {
     setExporting(true)
+    setExportResult(null) // Reset previous result
     try {
-      // Ambil NIK dari row yang dipilih
-      const selectedNiks = Array.from(selectedRows)
-        .map(idx => memberRows[idx]?.nik)
-        .filter(nik => nik) // Filter NIK yang valid
+      // Jika selectAllPages true, jangan kirim selectedNiks (biarkan API fetch semua data berdasarkan filter)
+      // Jika selectAllPages false, kirim selectedNiks dari row yang dipilih
+      let selectedNiks: string[] = []
       
-      if (selectedNiks.length === 0) {
-        toast.error("Tidak ada data yang dipilih untuk diexport")
-        setExporting(false)
-        return
+      if (selectAllPages) {
+        // Semua halaman dipilih - jangan kirim selectedNiks, biarkan API fetch semua data
+        selectedNiks = []
+      } else {
+        // Ambil NIK dari row yang dipilih di halaman saat ini
+        selectedNiks = Array.from(selectedRows)
+          .map(idx => memberRows[idx]?.nik)
+          .filter(nik => nik) // Filter NIK yang valid
+        
+        if (selectedNiks.length === 0) {
+          toast.error("Tidak ada data yang dipilih untuk diexport")
+          setExporting(false)
+          return
+        }
       }
 
+      // Use POST request to avoid 431 error (Request Header Fields Too Large)
+      // when sending large number of selectedNiks
       const url = new URL("/api/members/export", window.location.origin)
+      
+      // Only put small params in URL, large data goes in body
       url.searchParams.set("format", exportConfig.format)
       url.searchParams.set("includeHeader", String(exportConfig.includeHeader))
       url.searchParams.set("dateFormat", exportConfig.dateFormat)
       if (organizationId) url.searchParams.set("organizationId", String(organizationId))
-      
-      // Kirim NIK yang dipilih
-      url.searchParams.set("selectedNiks", selectedNiks.join(","))
-      
-      url.searchParams.set("fields", exportConfig.selectedFields.join(","))
 
-      const res = await fetch(url.toString(), { credentials: "same-origin" })
-      
-      if (!res.ok) {
-        throw new Error("Export failed")
+      // Prepare request body with large data
+      const requestBody: any = {
+        format: exportConfig.format,
+        includeHeader: exportConfig.includeHeader,
+        dateFormat: exportConfig.dateFormat,
+        organizationId: organizationId ? String(organizationId) : undefined,
+        fields: exportConfig.selectedFields,
       }
-
-      // Get blob and create download link
-      const blob = await res.blob()
-      const downloadUrl = window.URL.createObjectURL(blob)
-      const fileName = `members-export-${new Date().toISOString().split("T")[0]}.${exportConfig.format}`
       
-      // Trigger download
-      const link = document.createElement("a")
-      link.href = downloadUrl
-      link.download = fileName
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(downloadUrl)
+      // Hanya kirim selectedNiks jika tidak selectAllPages
+      if (!selectAllPages && selectedNiks.length > 0) {
+        requestBody.selectedNiks = selectedNiks
+      }
+      
+      // Kirim filter params agar API bisa fetch semua data yang sesuai filter
+      const filterParams = getFilterParams()
+      if (filterParams.groups?.length) requestBody.groups = filterParams.groups.join(",")
+      if (filterParams.genders?.length) requestBody.genders = filterParams.genders.join(",")
+      if (filterParams.agamas?.length) requestBody.agamas = filterParams.agamas.join(",")
+      if (filterParams.status?.length && filterParams.status[0]) {
+        requestBody.active = filterParams.status[0]
+      }
+      if (searchQuery) requestBody.search = searchQuery
 
-      // Get count from selected rows
-      const exportedCount = selectedNiks.length
+      // Add timeout (5 minutes for large exports)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000) // 5 minutes
 
-      setExportResult({
-        success: true,
-        fileName,
-        exportedCount,
-        message: "Export berhasil!",
-      })
+      try {
+        console.log("[EXPORT] Starting export request (POST):", {
+          url: url.toString(),
+          selectedNiksCount: selectedNiks.length,
+          format: exportConfig.format,
+          fieldsCount: exportConfig.selectedFields.length
+        })
 
-      toast.success("Export berhasil!")
-      setCurrentStep(5)
-    } catch (error) {
+        const res = await fetch(url.toString(), { 
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+          credentials: "same-origin",
+          signal: controller.signal
+        })
+        
+        clearTimeout(timeoutId)
+        
+        if (!res.ok) {
+          // Try to get error message from response
+          let errorMessage = `Export failed (Status: ${res.status} ${res.statusText})`
+          
+          try {
+            // Clone response to read without consuming
+            const clonedRes = res.clone()
+            const contentType = res.headers.get("content-type") || ""
+            
+            if (contentType.includes("application/json")) {
+              // API returns JSON error response
+              const errorJson = await clonedRes.json()
+              // Check if errorJson is empty or has no useful message
+              if (errorJson && typeof errorJson === 'object' && Object.keys(errorJson).length > 0) {
+                errorMessage = errorJson.message || errorJson.error || errorMessage
+              } else if (errorJson && typeof errorJson === 'string') {
+                errorMessage = errorJson
+              } else {
+                // If errorJson is empty or invalid, use status-based message
+                if (res.status === 500) {
+                  errorMessage = "Server error occurred. Please check server logs for details."
+                } else if (res.status === 404) {
+                  errorMessage = "Resource not found. Please check your request parameters."
+                } else if (res.status === 403) {
+                  errorMessage = "Access forbidden. You may not have permission to perform this action."
+                } else if (res.status === 401) {
+                  errorMessage = "Authentication required. Please log in again."
+                } else {
+                  errorMessage = `Request failed with status ${res.status}: ${res.statusText}`
+                }
+              }
+              console.error("[EXPORT] API error response (JSON):", {
+                status: res.status,
+                statusText: res.statusText,
+                error: errorJson,
+                errorMessage
+              })
+            } else {
+              // Read as text
+              const errorText = await clonedRes.text()
+              if (errorText && errorText.trim()) {
+                errorMessage = errorText.length > 200 
+                  ? `${errorText.substring(0, 200)}...` 
+                  : errorText
+              }
+              console.error("[EXPORT] API error response (Text):", {
+                status: res.status,
+                statusText: res.statusText,
+                errorText: errorText.substring(0, 500)
+              })
+            }
+          } catch (parseError) {
+            console.error("[EXPORT] Failed to parse error response:", parseError)
+            // Keep default error message with status info
+          }
+          
+          throw new Error(errorMessage)
+        }
+
+        // Get blob and create download link
+        const blob = await res.blob()
+        const downloadUrl = window.URL.createObjectURL(blob)
+        const fileName = `members-export-${new Date().toISOString().split("T")[0]}.${exportConfig.format}`
+        
+        // Trigger download
+        const link = document.createElement("a")
+        link.href = downloadUrl
+        link.download = fileName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(downloadUrl)
+
+        // Get count from selected rows atau totalCount jika selectAllPages
+        const exportedCount = selectAllPages ? totalCount : selectedNiks.length
+
+        setExportResult({
+          success: true,
+          fileName,
+          exportedCount,
+          message: "Export berhasil!",
+        })
+
+        toast.success("Export berhasil!")
+        setCurrentStep(5)
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId)
+        if (fetchError.name === 'AbortError') {
+          throw new Error("Export timeout. Data terlalu banyak, silakan pilih data yang lebih sedikit atau coba lagi.")
+        }
+        throw fetchError
+      }
+    } catch (error: any) {
       console.error("Error exporting:", error)
+      const errorMessage = error?.message || "Gagal melakukan export. Silakan coba lagi."
       setExportResult({
         success: false,
-        message: "Gagal melakukan export. Silakan coba lagi.",
+        message: errorMessage,
       })
-      toast.error("Gagal melakukan export")
+      toast.error(errorMessage)
     } finally {
       setExporting(false)
     }
@@ -479,7 +618,7 @@ export default function MembersExportPage() {
         toast.error("Tidak ada data untuk diexport")
         return
       }
-      if (selectedRows.size === 0) {
+      if (!selectAllPages && selectedRows.size === 0) {
         toast.error("Pilih minimal satu data member terlebih dahulu")
         return
       }
@@ -493,15 +632,23 @@ export default function MembersExportPage() {
       loadPreviewData()
     } else if (currentStep === 3) {
       setCurrentStep(4)
-      processExport()
+      // Don't auto-start export, wait for user to click "Start Export" button
     } else if (currentStep === 4) {
-      // This step is automatic, handled by processExport
+      // This step requires user to click "Start Export" button
     }
   }
 
   const handlePrevious = () => {
-    if (currentStep > 1 && currentStep !== 4) {
+    if (currentStep > 1) {
+      // Allow going back from step 4 if not exporting
+      if (currentStep === 4 && exporting) {
+        return // Don't allow going back while exporting
+      }
       setCurrentStep(currentStep - 1)
+      // Reset export result when going back
+      if (currentStep === 4) {
+        setExportResult(null)
+      }
     }
   }
 
@@ -515,10 +662,10 @@ export default function MembersExportPage() {
   }
 
   const canGoNext = () => {
-    if (currentStep === 1) return totalCount > 0 && selectedRows.size > 0
+    if (currentStep === 1) return totalCount > 0 && (selectAllPages || selectedRows.size > 0)
     if (currentStep === 2) return exportConfig.selectedFields.length > 0
     if (currentStep === 3) return true
-    if (currentStep === 4) return false // Auto-progress
+    if (currentStep === 4) return false // User must click "Start Export" button
     return false
   }
 
@@ -922,23 +1069,23 @@ export default function MembersExportPage() {
                                  size="sm"
                                  onClick={toggleSelectAll}
                                  disabled={memberRows.length === 0}
-                                 aria-label={selectedRows.size === memberRows.length && memberRows.length > 0
-                                   ? "Hapus semua pilihan baris di tabel"
-                                   : "Pilih semua baris di tabel"}
-                                 aria-pressed={selectedRows.size === memberRows.length && memberRows.length > 0}
+                                 aria-label={selectAllPages
+                                   ? "Hapus semua pilihan (semua halaman)"
+                                   : "Pilih semua data di semua halaman"}
+                                 aria-pressed={selectAllPages}
                                >
-                                 {selectedRows.size === memberRows.length && memberRows.length > 0
+                                 {selectAllPages
                                    ? "Hapus Semua"
                                    : "Pilih Semua"}
                                </Button>
-                               {selectedRows.size > 0 && (
+                               {(selectAllPages || selectedRows.size > 0) && (
                                  <Badge 
                                    variant="secondary"
                                    role="status"
                                    aria-live="polite"
                                    aria-atomic="true"
                                  >
-                                   {selectedRows.size} dipilih
+                                   {selectAllPages ? `${totalCount.toLocaleString()} dipilih (semua halaman)` : `${selectedRows.size} dipilih`}
                                  </Badge>
                                )}
                              </div>
@@ -963,9 +1110,9 @@ export default function MembersExportPage() {
                                    <TableHead className="w-12" role="columnheader" scope="col">
                                      <span className="sr-only">Pilih baris</span>
                                      <Checkbox
-                                       checked={selectedRows.size === memberRows.length && memberRows.length > 0}
+                                       checked={selectAllPages || (selectedRows.size === memberRows.length && memberRows.length > 0)}
                                        onCheckedChange={toggleSelectAll}
-                                       aria-label="Pilih semua baris di tabel"
+                                       aria-label={selectAllPages ? "Semua halaman dipilih" : "Pilih semua baris di tabel"}
                                      />
                                    </TableHead>
                                    <TableHead className="whitespace-nowrap" role="columnheader" scope="col">NIK</TableHead>
@@ -1294,36 +1441,99 @@ export default function MembersExportPage() {
           {currentStep === 4 && (
             <div className="space-y-6">
               <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  {exporting ? (
-                    <div role="status" aria-live="polite" aria-busy="true">
-                      <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" aria-hidden="true" />
-                      <p className="text-lg font-medium">Sedang memproses export...</p>
-                      <p className="text-sm text-muted-foreground mt-2">
+                <CardHeader>
+                  <CardTitle>Ready to Export</CardTitle>
+                  <CardDescription>
+                    Review your configuration and click Export to start the process
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-sm">
+                      <span className="font-medium">Format:</span> {exportConfig.format.toUpperCase()}
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">Selected Fields:</span>{" "}
+                      {exportConfig.selectedFields.length} of {EXPORT_FIELDS.length}
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">Total Rows:</span> {selectAllPages ? totalCount.toLocaleString() : (selectedRows.size > 0 ? selectedRows.size.toLocaleString() : totalCount.toLocaleString())}
+                    </p>
+                    {exportConfig.includeHeader && (
+                      <p className="text-sm">
+                        <span className="font-medium">Include Header:</span> Yes
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Progress bar saat proses export berjalan */}
+                  {exporting && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Memproses export{" "}
+                        <span className="font-semibold">
+                          {selectAllPages ? totalCount.toLocaleString() : (selectedRows.size > 0 ? selectedRows.size.toLocaleString() : totalCount.toLocaleString())}
+                        </span>{" "}
+                        baris...
+                      </p>
+                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden relative">
+                        <div className="h-full w-full bg-primary/20 rounded-full" />
+                        <div className="h-full animate-progress-shimmer rounded-full" />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
                         Mohon tunggu, jangan tutup halaman ini
                       </p>
                     </div>
-                  ) : exportResult ? (
+                  )}
+
+                  {exportResult && !exporting && (
                     <>
                       {exportResult.success ? (
-                        <div role="status" aria-live="polite">
-                          <CheckCircle2 className="h-12 w-12 text-green-500 mb-4" aria-hidden="true" />
-                          <p className="text-lg font-medium">Export berhasil!</p>
-                          <p className="text-sm text-muted-foreground mt-2">
-                            {exportResult.exportedCount?.toLocaleString()} data berhasil diexport
-                          </p>
-                        </div>
+                        <Alert className="border-green-500/50 bg-green-50 dark:bg-green-950">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <AlertDescription>
+                            Export berhasil! {exportResult.exportedCount?.toLocaleString()} data berhasil diexport
+                          </AlertDescription>
+                        </Alert>
                       ) : (
-                        <div role="alert" aria-live="assertive">
-                          <AlertCircle className="h-12 w-12 text-red-500 mb-4" aria-hidden="true" />
-                          <p className="text-lg font-medium">Export gagal</p>
-                          <p className="text-sm text-muted-foreground mt-2">
-                            {exportResult.message}
-                          </p>
-                        </div>
+                        <Alert variant="destructive">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription>
+                            {exportResult.message || "Export gagal"}
+                          </AlertDescription>
+                        </Alert>
                       )}
                     </>
-                  ) : null}
+                  )}
+
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      onClick={handlePrevious}
+                      disabled={exporting}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      onClick={processExport}
+                      disabled={exporting || (!selectAllPages && selectedRows.size === 0) || exportConfig.selectedFields.length === 0}
+                      className="flex-1"
+                      size="lg"
+                    >
+                      {exporting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Exporting...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="mr-2 h-4 w-4" />
+                          Start Export
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>

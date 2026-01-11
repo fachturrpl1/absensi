@@ -533,15 +533,17 @@ export default function MembersImportSimplePage() {
       importProgressTimerRef.current = setInterval(() => {
         setImportProgress((prev) => {
           if (!prev.total) return prev
-          // Batasi maksimum sebelum selesai agar masih ada ruang untuk loncat ke nilai akhir
-          const maxDuringProcessing = Math.max(prev.total - 1, 1)
+          // Batasi maksimum ke 85% agar tidak penuh duluan sebelum server selesai
+          // Ini memberikan ruang untuk proses yang lebih lama
+          const maxDuringProcessing = Math.max(Math.floor(prev.total * 0.85), 1)
           if (prev.current >= maxDuringProcessing) return prev
 
-          const increment = Math.max(1, Math.floor(prev.total / 50)) // ~50 langkah
+          // Increment lebih kecil untuk progress yang lebih halus
+          const increment = Math.max(1, Math.floor(prev.total / 100)) // ~100 langkah untuk lebih halus
           const nextCurrent = Math.min(prev.current + increment, maxDuringProcessing)
           return { ...prev, current: nextCurrent }
         })
-      }, 300)
+      }, 200) // Update lebih sering untuk animasi lebih halus
     } else {
       // Jika tidak tahu totalnya, tetap reset progres
       setImportProgress({ current: 0, total: 0 })
@@ -1413,46 +1415,6 @@ export default function MembersImportSimplePage() {
                         </div>
                       </div>
 
-                      {/* Error Summary */}
-                      {importSummary.failed > 0 && importSummary.errors.length > 0 && (
-                        <Alert className="border-destructive/50 bg-destructive/5">
-                          <AlertCircle className="h-4 w-4 text-destructive" />
-                          <AlertDescription>
-                            <div className="space-y-2">
-                              <p className="text-sm font-medium text-destructive mb-2">
-                                Ringkasan Error ({importSummary.failed} data gagal):
-                              </p>
-                              <div className="max-h-40 overflow-auto space-y-1">
-                                {/* Group errors by message type */}
-                                {(() => {
-                                  const errorGroups = new Map<string, number>()
-                                  importSummary.errors.forEach((err: any) => {
-                                    const msg = err.message || "Unknown error"
-                                    errorGroups.set(msg, (errorGroups.get(msg) || 0) + 1)
-                                  })
-                                  
-                                  return Array.from(errorGroups.entries())
-                                    .sort((a, b) => b[1] - a[1]) // Sort by count
-                                    .slice(0, 5) // Show top 5 error types
-                                    .map(([message, count], idx) => (
-                                      <div key={idx} className="text-xs flex items-start gap-2">
-                                        <span className="text-destructive font-medium min-w-[60px]">
-                                          {count}x:
-                                        </span>
-                                        <span className="text-destructive">{message}</span>
-                                      </div>
-                                    ))
-                                })()}
-                              </div>
-                              {importSummary.errors.length > 5 && (
-                                <p className="text-xs text-muted-foreground mt-2">
-                                  Lihat kolom "Error Message" di tabel untuk detail lengkap setiap baris.
-                                </p>
-                              )}
-                            </div>
-                          </AlertDescription>
-                        </Alert>
-                      )}
 
                       {importResults.length > 0 && (
                         <div>
