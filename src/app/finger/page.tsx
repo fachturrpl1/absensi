@@ -370,7 +370,7 @@ export default function FingerPage() {
       if (organizationId) url.searchParams.set('organizationId', String(organizationId))
       url.searchParams.set('limit', String(pageSizeNum))
       url.searchParams.set('page', String(pageNum))
-      // cache-busting to avoid any intermediary caches affecting freshness
+      // cache-busting, void any intermediary caches affecting freshness
       url.searchParams.set('t', String(Date.now()))
 
       const res = await fetch(url.toString(), { credentials: 'same-origin', cache: 'no-store' })
