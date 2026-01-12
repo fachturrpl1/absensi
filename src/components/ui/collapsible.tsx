@@ -2,17 +2,10 @@
 
 import * as React from "react"
 import * as CollapsiblePrimitive from "@radix-ui/react-collapsible"
-import { useMounted } from "@/hooks/use-mounted"
 
 function Collapsible({
   ...props
 }: React.ComponentProps<typeof CollapsiblePrimitive.Root>) {
-  const mounted = useMounted()
-  
-  if (!mounted) {
-    return <div data-slot="collapsible" suppressHydrationWarning />
-  }
-  
   return <CollapsiblePrimitive.Root data-slot="collapsible" suppressHydrationWarning {...props} />
 }
 

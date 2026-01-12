@@ -200,12 +200,12 @@ export interface IWorkSchedule {
   work_schedule_details?: IWorkScheduleDetail[]
 }
 
-
 export interface IWorkScheduleDetail {
     id: string;
     work_schedule_id: number;
     day_of_week: number; 
     is_working_day:boolean;// 0=Sunday, 1=Monday, ..., 6=Saturday
+
     start_time?: string; // HH:MM:SS
     end_time?: string;   // HH:MM:SS
     break_start:string;
@@ -217,13 +217,41 @@ export interface IWorkScheduleDetail {
     updated_at?: string;    
 
     work_schedule?: IWorkSchedule;
+}
 
+export interface IShift {
+  id: string;
+  organization_id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  start_time: string;
+  end_time: string;
+  overnight?: boolean;
+  break_duration_minutes?: number;
+  color_code?: string | null;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface IShiftAssignment {
+  id: string;
+  organization_member_id: string;
+  shift_id: string;
+  assignment_date: string;
+  created_by?: string | null;
+  created_at?: string;
+
+  organization_member?: IOrganization_member;
+  shift?: Pick<IShift, "id" | "code" | "name" | "start_time" | "end_time">;
 }
 
 export interface IMemberSchedule{
     id: string;
     organization_member_id: string;
     work_schedule_id: string;
+
     shift_id?: string;
     effective_date: string;
     end_date?: string | null;
