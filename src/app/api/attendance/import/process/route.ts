@@ -308,11 +308,11 @@ export async function POST(request: NextRequest) {
       return withoutLeadingZeros
     }
 
-    // Cache organization members by NIK
+    // Cache organization members by NIK/NIP
     // First, get all organization_members with their biodata_nik and employee_id
     const { data: existingMembers } = await adminClient
       .from("organization_members")
-      .select("id, biodata_nik, employee_id, organization_id")
+      .select("id, biodata_nik, employee_id, organization_id, user_id")
       .eq("organization_id", orgId)
 
     const membersByNik = new Map<string, { id: number }>()
@@ -334,49 +334,55 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Also query biodata table directly and find organization_members linked to those biodata
+    // Also query user_profiles table to get both NIK and NIP
     // This handles cases where biodata_nik in organization_members might be null or different
     try {
-      const { data: allBiodata } = await adminClient
-        .from("biodata")
-        .select("nik")
-        .limit(10000) // Reasonable limit
+      // Get all user_ids for this organization
+      const userIds = existingMembers?.map(m => m.user_id).filter(Boolean) || []
 
-      if (allBiodata && allBiodata.length > 0) {
-        // Get unique NIKs from biodata
-        const biodataNiks = [...new Set(allBiodata.map(b => b.nik).filter(Boolean))]
-        
-        // Find organization_members that have these biodata_nik values
-        if (biodataNiks.length > 0) {
-          // Process in batches to avoid query size limits
-          const BATCH_SIZE = 500
-          for (let i = 0; i < biodataNiks.length; i += BATCH_SIZE) {
-            const batch = biodataNiks.slice(i, i + BATCH_SIZE)
-            const { data: orgMembersWithBiodata } = await adminClient
-              .from("organization_members")
-              .select("id, biodata_nik")
-              .eq("organization_id", orgId)
-              .in("biodata_nik", batch)
+      if (userIds.length > 0) {
+        // Create a map of user_id to organization_member_id for this org
+        const userIdToOrgMemberId = new Map<string, number>()
+        existingMembers?.forEach((member) => {
+          if (member.user_id) {
+            userIdToOrgMemberId.set(member.user_id, member.id)
+          }
+        })
 
-            orgMembersWithBiodata?.forEach((member) => {
-              if (member.biodata_nik) {
-                const normalizedNik = normalizeNik(member.biodata_nik)
-                membersByNik.set(member.biodata_nik, { id: member.id })
-                if (normalizedNik !== member.biodata_nik) {
-                  membersByNik.set(normalizedNik, { id: member.id })
+        // Process in batches to avoid query size limits
+        const BATCH_SIZE = 500
+        for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
+          const batch = userIds.slice(i, i + BATCH_SIZE)
+
+          // Query user_profiles with NIK for these users
+          // Note: user_profiles.id = auth.users.id = organization_members.user_id
+          const { data: userProfiles } = await adminClient
+            .from("user_profiles")
+            .select("id, nik")
+            .in("id", batch)
+
+          // Process user_profiles records and add NIK to the lookup map
+          userProfiles?.forEach((profile) => {
+            // Find the organization_member_id for this user (profile.id = member.user_id)
+            const orgMemberId = profile.id ? userIdToOrgMemberId.get(profile.id) : null
+
+            if (orgMemberId) {
+              // Add NIK to the map
+              if (profile.nik) {
+                const normalizedNik = normalizeNik(profile.nik)
+                membersByNik.set(profile.nik, { id: orgMemberId })
+                if (normalizedNik !== profile.nik) {
+                  membersByNik.set(normalizedNik, { id: orgMemberId })
                 }
               }
-            })
-          }
 
-          // Also add biodata NIKs directly to map (in case biodata_nik is null but biodata exists)
-          // We'll query organization_members by matching biodata later if needed
-          // Note: We'll query biodata on-demand during processing to avoid too many queries
-          // This loop is kept for potential future use
+
+            }
+          })
         }
       }
     } catch (error) {
-      console.error("[ATTENDANCE IMPORT] Error querying biodata for caching:", error)
+      console.error("[ATTENDANCE IMPORT] Error querying user_profiles for caching:", error)
       // Continue without this cache, will fallback to on-demand queries
     }
 
@@ -441,13 +447,13 @@ export async function POST(request: NextRequest) {
       // Find organization member - try multiple matching strategies
       const normalizedNik = normalizeNik(nik)
       let member = membersByNik.get(nik) || membersByNik.get(normalizedNik)
-      
+
       // If still not found, try with leading zeros added (for shorter NIKs)
       if (!member && normalizedNik.length < 16) {
         const withLeadingZeros = normalizedNik.padStart(16, "0")
         member = membersByNik.get(withLeadingZeros)
       }
-      
+
       // If still not found, try removing leading zeros from all stored NIKs
       if (!member) {
         for (const [storedNik, memberData] of membersByNik.entries()) {
@@ -458,82 +464,155 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-      
-      // If still not found, try querying biodata table directly and then find organization_member
+
+      // If still not found, try querying user_profiles table directly and then find organization_member
       if (!member) {
         try {
-          // Try exact match first
-          let biodataRecord = null
-          const { data: biodataExact } = await adminClient
-            .from("biodata")
-            .select("nik")
+          // Try exact match first - check NIK in user_profiles
+          // Note: user_profiles.id = auth.users.id = organization_members.user_id
+          let userProfileRecord = null
+          const { data: profileExact } = await adminClient
+            .from("user_profiles")
+            .select("id, nik")
             .eq("nik", nik)
             .maybeSingle()
-          
-          if (biodataExact) {
-            biodataRecord = biodataExact
+
+          if (profileExact) {
+            userProfileRecord = profileExact
           } else if (normalizedNik !== nik) {
             // Try normalized match
-            const { data: biodataNormalized } = await adminClient
-              .from("biodata")
-              .select("nik")
+            const { data: profileNormalized } = await adminClient
+              .from("user_profiles")
+              .select("id, nik")
               .eq("nik", normalizedNik)
               .maybeSingle()
-            
-            if (biodataNormalized) {
-              biodataRecord = biodataNormalized
+
+            if (profileNormalized) {
+              userProfileRecord = profileNormalized
             }
           }
-          
-          if (biodataRecord) {
-            // Try to find organization_member with this biodata_nik (exact match)
-            let orgMember = null
-            const { data: orgMemberExact } = await adminClient
-              .from("organization_members")
-              .select("id")
-              .eq("organization_id", orgId)
-              .eq("biodata_nik", biodataRecord.nik)
-              .maybeSingle()
-            
-            if (orgMemberExact) {
-              orgMember = orgMemberExact
-            } else {
-              // Try with normalized NIK
-              const normalizedBiodataNik = normalizeNik(biodataRecord.nik)
-              if (normalizedBiodataNik !== biodataRecord.nik) {
-                const { data: orgMemberNormalized } = await adminClient
-                  .from("organization_members")
-                  .select("id")
-                  .eq("organization_id", orgId)
-                  .eq("biodata_nik", normalizedBiodataNik)
-                  .maybeSingle()
-                
-                if (orgMemberNormalized) {
-                  orgMember = orgMemberNormalized
+
+          if (userProfileRecord) {
+            // If we have user profile, try to find org member by user_id (which is profile.id)
+            if (userProfileRecord.id) {
+              const { data: orgMemberByUserId } = await adminClient
+                .from("organization_members")
+                .select("id")
+                .eq("organization_id", orgId)
+                .eq("user_id", userProfileRecord.id)
+                .maybeSingle()
+
+              if (orgMemberByUserId) {
+                member = { id: orgMemberByUserId.id }
+                // Cache it for future lookups
+                membersByNik.set(nik, member)
+                membersByNik.set(normalizedNik, member)
+                if (userProfileRecord.nik) {
+                  membersByNik.set(userProfileRecord.nik, member)
+                  const normalizedProfileNik = normalizeNik(userProfileRecord.nik)
+                  if (normalizedProfileNik !== userProfileRecord.nik) {
+                    membersByNik.set(normalizedProfileNik, member)
+                  }
                 }
               }
             }
-            
-            if (orgMember) {
-              member = { id: orgMember.id }
-              // Cache it for future lookups
-              membersByNik.set(nik, member)
-              membersByNik.set(normalizedNik, member)
-              membersByNik.set(biodataRecord.nik, member)
-              const normalizedBiodataNik = normalizeNik(biodataRecord.nik)
-              if (normalizedBiodataNik !== biodataRecord.nik) {
-                membersByNik.set(normalizedBiodataNik, member)
+
+            // If not found by user_id, try matching with biodata_nik or employee_id
+            if (!member && userProfileRecord.nik) {
+              const checkNikValue = userProfileRecord.nik
+
+              // Try to find organization_member with this biodata_nik (exact match)
+              let orgMember = null
+              const { data: orgMemberExact } = await adminClient
+                .from("organization_members")
+                .select("id")
+                .eq("organization_id", orgId)
+                .eq("biodata_nik", checkNikValue)
+                .maybeSingle()
+
+              if (orgMemberExact) {
+                orgMember = orgMemberExact
+              } else {
+                // Try with normalized NIK
+                const normalizedProfileNik = normalizeNik(checkNikValue)
+                if (normalizedProfileNik !== checkNikValue) {
+                  const { data: orgMemberNormalized } = await adminClient
+                    .from("organization_members")
+                    .select("id")
+                    .eq("organization_id", orgId)
+                    .eq("biodata_nik", normalizedProfileNik)
+                    .maybeSingle()
+
+                  if (orgMemberNormalized) {
+                    orgMember = orgMemberNormalized
+                  }
+                }
               }
-            } else {
-              // If biodata exists but no organization_member found, log for debugging
-              console.warn(`[ATTENDANCE IMPORT] Biodata with NIK ${biodataRecord.nik} exists but no organization_member found for org ${orgId}`)
+
+              if (orgMember) {
+                member = { id: orgMember.id }
+                // Cache it for future lookups
+                membersByNik.set(nik, member)
+                membersByNik.set(normalizedNik, member)
+                membersByNik.set(userProfileRecord.nik, member)
+                const normalizedProfileNik = normalizeNik(checkNikValue)
+                if (normalizedProfileNik !== checkNikValue) {
+                  membersByNik.set(normalizedProfileNik, member)
+                }
+              } else {
+                // If user_profile exists but no organization_member found with biodata_nik,
+                // try to find by employee_id that matches the NIK
+                const { data: orgMemberByEmployeeId } = await adminClient
+                  .from("organization_members")
+                  .select("id")
+                  .eq("organization_id", orgId)
+                  .eq("employee_id", checkNikValue)
+                  .maybeSingle()
+
+                if (orgMemberByEmployeeId) {
+                  member = { id: orgMemberByEmployeeId.id }
+                  // Cache it for future lookups
+                  membersByNik.set(nik, member)
+                  membersByNik.set(normalizedNik, member)
+                  membersByNik.set(userProfileRecord.nik, member)
+                  const normalizedProfileNik = normalizeNik(checkNikValue)
+                  if (normalizedProfileNik !== checkNikValue) {
+                    membersByNik.set(normalizedProfileNik, member)
+                  }
+                } else {
+                  // Try with normalized NIK as employee_id
+                  const normalizedProfileNik = normalizeNik(checkNikValue)
+                  if (normalizedProfileNik !== checkNikValue) {
+                    const { data: orgMemberByEmployeeIdNormalized } = await adminClient
+                      .from("organization_members")
+                      .select("id")
+                      .eq("organization_id", orgId)
+                      .eq("employee_id", normalizedProfileNik)
+                      .maybeSingle()
+
+                    if (orgMemberByEmployeeIdNormalized) {
+                      member = { id: orgMemberByEmployeeIdNormalized.id }
+                      // Cache it for future lookups
+                      membersByNik.set(nik, member)
+                      membersByNik.set(normalizedNik, member)
+                      membersByNik.set(userProfileRecord.nik, member)
+                      membersByNik.set(normalizedProfileNik, member)
+                    }
+                  }
+                }
+
+                // If still not found, log for debugging
+                if (!member) {
+                  console.warn(`[ATTENDANCE IMPORT] User profile with NIK ${checkNikValue} exists but no organization_member found for org ${orgId}`)
+                }
+              }
             }
           }
         } catch (error) {
-          console.error(`[ATTENDANCE IMPORT] Error querying biodata for NIK ${nik}:`, error)
+          console.error(`[ATTENDANCE IMPORT] Error querying user_profiles for NIK ${nik}:`, error)
         }
       }
-      
+
       if (!member) {
         failed++
         errors.push({ row: rowNumber, message: `Member with NIK "${nik}" not found` })
