@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Wizard, WizardStep } from "@/components/ui/wizard"
 import { Button } from "@/components/ui/button"
@@ -103,6 +103,12 @@ export default function MembersExportPage() {
     exportedCount?: number
     message?: string
   } | null>(null)
+  const [exportProgress, setExportProgress] = useState<{ current: number; total: number }>({
+    current: 0,
+    total: 0,
+  })
+  const exportProgressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const exportFinishTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Filter states - dynamic filter system (like Supabase)
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "")
@@ -269,6 +275,20 @@ export default function MembersExportPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, isHydrated, organizationId, searchQuery, filters, currentPage, pageSize])
 
+  // Cleanup progress timer on unmount
+  useEffect(() => {
+    return () => {
+      if (exportProgressTimerRef.current) {
+        clearInterval(exportProgressTimerRef.current)
+        exportProgressTimerRef.current = null
+      }
+      if (exportFinishTimerRef.current) {
+        clearInterval(exportFinishTimerRef.current)
+        exportFinishTimerRef.current = null
+      }
+    }
+  }, [])
+
   const loadMemberSummary = async () => {
     setLoading(true)
     try {
@@ -427,6 +447,47 @@ export default function MembersExportPage() {
   const processExport = async () => {
     setExporting(true)
     setExportResult(null) // Reset previous result
+    
+    // Hitung total rows yang akan diexport
+    const estimatedTotal = selectAllPages ? totalCount : selectedRows.size
+    
+    // Setup progress tracking dengan timer incremental yang lebih realistis
+    if (estimatedTotal > 0) {
+      setExportProgress({ current: 0, total: estimatedTotal })
+
+      // Estimasi waktu export berdasarkan jumlah data (lebih realistis)
+      // Asumsi: ~100-500 rows per detik tergantung kompleksitas
+      const estimatedSeconds = Math.max(2, Math.ceil(estimatedTotal / 200)) // Minimal 2 detik
+      const targetProgress = Math.floor(estimatedTotal * 0.95) // Target 95% sebelum selesai
+      const steps = estimatedSeconds * 5 // 5 update per detik = smooth animation
+      const incrementPerStep = Math.ceil(targetProgress / steps)
+
+      let stepCount = 0
+      // Fake incremental progress selama proses export berjalan
+      // Akan diset ke nilai sebenarnya ketika server selesai memproses
+      exportProgressTimerRef.current = setInterval(() => {
+        setExportProgress((prev) => {
+          if (!prev.total) return prev
+          stepCount++
+          
+          // Hitung progress berdasarkan waktu yang sudah berlalu
+          const maxProgress = Math.min(
+            targetProgress,
+            stepCount * incrementPerStep
+          )
+          
+          if (prev.current >= maxProgress) return prev
+          
+          // Update progress dengan increment yang lebih besar untuk lebih cepat
+          const nextCurrent = Math.min(prev.current + incrementPerStep, maxProgress)
+          return { ...prev, current: nextCurrent }
+        })
+      }, 200) // Update setiap 200ms untuk animasi halus
+    } else {
+      // Jika tidak tahu totalnya, tetap reset progres
+      setExportProgress({ current: 0, total: 0 })
+    }
+    
     try {
       // Jika selectAllPages true, jangan kirim selectedNiks (biarkan API fetch semua data berdasarkan filter)
       // Jika selectAllPages false, kirim selectedNiks dari row yang dipilih
@@ -582,6 +643,62 @@ export default function MembersExportPage() {
         // Get count from selected rows atau totalCount jika selectAllPages
         const exportedCount = selectAllPages ? totalCount : selectedNiks.length
 
+        // Set progress ke nilai sebenarnya setelah server selesai memproses
+        // Pastikan progress sudah mendekati 100% sebelum set ke 100%
+        if (estimatedTotal > 0) {
+          // Clear timer utama dulu
+          if (exportProgressTimerRef.current) {
+            clearInterval(exportProgressTimerRef.current)
+            exportProgressTimerRef.current = null
+          }
+          
+          // Clear finish timer jika ada
+          if (exportFinishTimerRef.current) {
+            clearInterval(exportFinishTimerRef.current)
+            exportFinishTimerRef.current = null
+          }
+          
+          // Animate dari progress saat ini ke 100% dengan smooth transition
+          // Gunakan setTimeout untuk mendapatkan current progress state
+          setTimeout(() => {
+            setExportProgress((prev) => {
+              const currentProgress = prev.current
+              const remaining = estimatedTotal - currentProgress
+              
+              if (remaining <= 0) {
+                return { current: estimatedTotal, total: estimatedTotal }
+              }
+              
+              // Buat finish timer untuk animasi smooth ke 100%
+              const steps = Math.max(5, Math.min(20, Math.ceil(remaining / 10))) // 5-20 langkah
+              const increment = Math.ceil(remaining / steps)
+              let step = 0
+              
+              exportFinishTimerRef.current = setInterval(() => {
+                step++
+                setExportProgress((prevState) => {
+                  const nextCurrent = Math.min(
+                    prevState.current + increment,
+                    estimatedTotal
+                  )
+                  
+                  if (nextCurrent >= estimatedTotal || step >= steps) {
+                    if (exportFinishTimerRef.current) {
+                      clearInterval(exportFinishTimerRef.current)
+                      exportFinishTimerRef.current = null
+                    }
+                    return { current: estimatedTotal, total: estimatedTotal }
+                  }
+                  
+                  return { ...prevState, current: nextCurrent }
+                })
+              }, 50) // Update cepat untuk finish animation
+              
+              return prev // Return current state, finish timer akan handle update
+            })
+          }, 0)
+        }
+
         setExportResult({
           success: true,
           fileName,
@@ -608,6 +725,14 @@ export default function MembersExportPage() {
       toast.error(errorMessage)
     } finally {
       setExporting(false)
+      if (exportProgressTimerRef.current) {
+        clearInterval(exportProgressTimerRef.current)
+        exportProgressTimerRef.current = null
+      }
+      if (exportFinishTimerRef.current) {
+        clearInterval(exportFinishTimerRef.current)
+        exportFinishTimerRef.current = null
+      }
     }
   }
 
@@ -1062,32 +1187,30 @@ export default function MembersExportPage() {
                          <div className="space-y-2">
                            <div className="flex items-center justify-between">
                              <Label id="data-member-label">Data Member ({totalCount.toLocaleString()} rows total, halaman {currentPage} dari {totalPages})</Label>
-                             <div className="flex items-center gap-2">
-                               <Button
-                                 variant="outline"
-                                 size="sm"
-                                 onClick={toggleSelectAll}
-                                 disabled={memberRows.length === 0}
-                                 aria-label={selectAllPages
-                                   ? "Hapus semua pilihan (semua halaman)"
-                                   : "Pilih semua data di semua halaman"}
-                                 aria-pressed={selectAllPages}
-                               >
-                                 {selectAllPages
-                                   ? "Hapus Semua"
-                                   : "Pilih Semua"}
-                               </Button>
-                               {(selectAllPages || selectedRows.size > 0) && (
-                                 <Badge 
-                                   variant="secondary"
-                                   role="status"
-                                   aria-live="polite"
-                                   aria-atomic="true"
-                                 >
-                                   {selectAllPages ? `${totalCount.toLocaleString()} dipilih (semua halaman)` : `${selectedRows.size} dipilih`}
-                                 </Badge>
-                               )}
-                             </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (selectAllPages) {
+                                    // Jika semua halaman sudah dipilih, hapus semua pilihan
+                                    setSelectAllPages(false)
+                                    setSelectedRows(new Set())
+                                  } else {
+                                    // Pilih semua halaman (semua data yang sesuai filter)
+                                    setSelectAllPages(true)
+                                    // Juga pilih semua row di halaman saat ini untuk visual feedback
+                                    setSelectedRows(new Set(memberRows.map((_, idx) => idx)))
+                                  }
+                                }}
+                                disabled={memberRows.length === 0}
+                                aria-label={selectAllPages
+                                  ? "Hapus semua pilihan (semua halaman)"
+                                  : "Pilih semua data di semua halaman"}
+                              >
+                                {selectAllPages ? "Hapus Semua" : "Pilih Semua"}
+                              </Button>
+                            </div>
                            </div>
                            <div 
                              className="border rounded-lg overflow-auto custom-scrollbar" 
@@ -1334,22 +1457,24 @@ export default function MembersExportPage() {
                       ))}
                     </div>
                   </ScrollArea>
-                  <div className="mt-4 flex gap-2">
+                  <div className="mt-4">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setExportConfig(prev => ({ ...prev, selectedFields: EXPORT_FIELDS.map(f => f.key) }))}
-                      aria-label="Pilih semua kolom untuk export"
+                      onClick={() => {
+                        const allFieldsSelected = exportConfig.selectedFields.length === EXPORT_FIELDS.length
+                        setExportConfig(prev => ({ 
+                          ...prev, 
+                          selectedFields: allFieldsSelected ? [] : EXPORT_FIELDS.map(f => f.key)
+                        }))
+                      }}
+                      aria-label={exportConfig.selectedFields.length === EXPORT_FIELDS.length 
+                        ? "Hapus semua pilihan kolom" 
+                        : "Pilih semua kolom untuk export"}
                     >
-                      Pilih Semua
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setExportConfig(prev => ({ ...prev, selectedFields: [] }))}
-                      aria-label="Hapus semua pilihan kolom"
-                    >
-                      Hapus Semua
+                      {exportConfig.selectedFields.length === EXPORT_FIELDS.length 
+                        ? "Hapus Semua" 
+                        : "Pilih Semua"}
                     </Button>
                   </div>
                 </CardContent>
@@ -1475,12 +1600,29 @@ export default function MembersExportPage() {
                         </span>{" "}
                         baris...
                       </p>
-                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden relative">
-                        <div className="h-full w-full bg-primary/20 rounded-full" />
-                        <div className="h-full animate-progress-shimmer rounded-full" />
+                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                        {exportProgress.total > 0 ? (
+                          <div
+                            className="h-2 bg-primary transition-all duration-300 ease-out"
+                            style={{
+                              width: `${Math.min(
+                                100,
+                                (exportProgress.current / exportProgress.total) * 100 || 0
+                              )}%`,
+                            }}
+                          />
+                        ) : (
+                          <>
+                            <div className="h-full w-full bg-primary/20 rounded-full" />
+                            <div className="h-full animate-progress-shimmer rounded-full" />
+                          </>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Mohon tunggu, jangan tutup halaman ini
+                        {exportProgress.total > 0 
+                          ? `${exportProgress.current.toLocaleString()} / ${exportProgress.total.toLocaleString()} baris (${Math.round((exportProgress.current / exportProgress.total) * 100)}%)`
+                          : "Mohon tunggu, jangan tutup halaman ini"
+                        }
                       </p>
                     </div>
                   )}
