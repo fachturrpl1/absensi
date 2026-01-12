@@ -73,6 +73,7 @@ interface ModernAttendanceListProps {
 export default function ModernAttendanceList({ initialData: _initialData, initialStats: _initialStats, initialMeta }: ModernAttendanceListProps) {
   const orgStore = useOrgStore();
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const SHOW_LOCATION = false;
   const [attendanceData, setAttendanceData] = useState<AttendanceListItem[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [userTimezone, setUserTimezone] = useState('UTC');
@@ -1242,7 +1243,9 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     <th className="p-3 text-left text-xs font-medium">Work Hours</th>
                     <th className="p-3 text-left text-xs font-medium">Status</th>
                     <th className="p-3 text-left text-xs font-medium">Method</th>
-                    <th className="p-3 text-left text-xs font-medium">Location</th>
+                    {SHOW_LOCATION ? (
+                      <th className="p-3 text-left text-xs font-medium">Location</th>
+                    ) : null}
                     <th className="p-3 text-left text-xs font-medium">Actions</th>
                   </tr>
                 </thead>
@@ -1268,7 +1271,9 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                           <td className="p-3"><Skeleton className="h-3 w-20" /></td>
                           <td className="p-3"><Skeleton className="h-5 w-20 rounded-full" /></td>
                           <td className="p-3"><Skeleton className="h-3 w-24" /></td>
-                          <td className="p-3"><Skeleton className="h-3 w-28" /></td>
+                          {SHOW_LOCATION ? (
+                            <td className="p-3"><Skeleton className="h-3 w-28" /></td>
+                          ) : null}
                           <td className="p-3">
                             <div className="flex items-center gap-1">
                               <Skeleton className="h-8 w-8 rounded" />
@@ -1355,12 +1360,14 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                               checkOutMethod={record.checkOutMethod}
                             />
                           </td>
-                          <td className="p-3">
-                            <LocationDisplay
-                              checkInLocationName={record.checkInLocationName}
-                              checkOutLocationName={record.checkOutLocationName}
-                            />
-                          </td>
+                          {SHOW_LOCATION ? (
+                            <td className="p-3">
+                              <LocationDisplay
+                                checkInLocationName={record.checkInLocationName}
+                                checkOutLocationName={record.checkOutLocationName}
+                              />
+                            </td>
+                          ) : null}
                           <td className="p-3">
                             <div className="flex items-center gap-1">
                               <Button

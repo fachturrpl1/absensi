@@ -4,13 +4,12 @@ import React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
-import { Trash, Pencil, Clock, Plus, Calendar } from "lucide-react"
+import { Trash, Pencil, ChevronRight, Plus, Calendar } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyContent,
   EmptyMedia,
 } from "@/components/ui/empty"
 import {
@@ -62,7 +61,7 @@ import {
   deleteWorkSchedule,
   updateWorkSchedule,
 } from "@/action/schedule"
-import { SCHEDULE_TYPES } from "@/constants/attendance-status"
+import { SCHEDULE_TYPES, getTimezoneLabel } from "@/constants/attendance-status"
 
 const scheduleSchema = z.object({
   organization_id: z.string().min(1, "Organization is required"),
@@ -78,6 +77,7 @@ interface ScheduleClientProps {
   initialSchedules: IWorkSchedule[]
   organizationId: string
   organizationName: string
+  organizationTimezone?: string
   isLoading?: boolean
   pageIndex?: number
   pageSize?: number
@@ -91,6 +91,7 @@ export default function ScheduleClient({
   initialSchedules,
   organizationId,
   organizationName,
+  organizationTimezone = "Asia/Jakarta",
   isLoading = false,
   pageIndex,
   pageSize,
@@ -229,10 +230,22 @@ export default function ScheduleClient({
       header: "Type",
       cell: ({ row }) => {
         const type = row.getValue("schedule_type") as string
+        const typeInfo = SCHEDULE_TYPES.find((t) => t.value === type)
         return (
-          <div className="capitalize font-medium">{type?.replace("_", " ")}</div>
+          <div className="capitalize font-medium" title={typeInfo?.label || type}>
+            {typeInfo?.label || type?.replace("_", " ") || "-"}
+          </div>
         )
       }
+    },
+    {
+      id: "timezone",
+      header: "Timezone",
+      cell: () => (
+        <span className="text-sm text-muted-foreground" title={organizationTimezone}>
+          {getTimezoneLabel(organizationTimezone)}
+        </span>
+      )
     },
     {
       accessorKey: "is_active",
@@ -240,7 +253,12 @@ export default function ScheduleClient({
       cell: ({ row }) => {
         const isActive = row.getValue("is_active") as boolean
         return (
-          <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-green-500 hover:bg-green-600" : ""}>
+          <Badge
+            variant={isActive ? "default" : "secondary"}
+            className={isActive ? "bg-green-500 hover:bg-green-600" : ""}
+            role="status"
+            aria-label={isActive ? "Schedule is active" : "Schedule is inactive"}
+          >
             {isActive ? "Active" : "Inactive"}
           </Badge>
         )
@@ -252,14 +270,16 @@ export default function ScheduleClient({
       cell: ({ row }) => {
         const ws = row.original
         return (
-          <div className="flex gap-2">
+          <div className="flex gap-2" role="group" aria-label="Schedule actions">
             <Button
               variant="outline"
               size="icon"
               className="h-9 w-9 cursor-pointer bg-secondary border-0 p-0"
               onClick={() => handleOpenDialog(ws)}
+              aria-label={`Edit schedule ${ws.name}`}
+              title="Edit schedule"
             >
-              <Pencil className="h-4 w-4" />
+              <Pencil className="h-4 w-4" aria-hidden="true" />
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -267,8 +287,10 @@ export default function ScheduleClient({
                   variant="outline"
                   size="icon"
                   className="h-9 w-9 text-red-500 cursor-pointer bg-secondary border-0 p-0"
+                  aria-label={`Delete schedule ${ws.name}`}
+                  title="Delete schedule"
                 >
-                  <Trash className="h-4 w-4" />
+                  <Trash className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -290,11 +312,11 @@ export default function ScheduleClient({
               <Button
                 variant="outline"
                 size="icon"
-                title="Atur jam kerja"
-                aria-label="Atur jam kerja"
+                title="Configure work hours"
+                aria-label={`Configure work hours for ${ws.name}`}
                 className="h-9 w-9 cursor-pointer bg-secondary border-0 p-0"
               >
-                <Clock className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4"/>
               </Button>
             </Link>
           </div>
@@ -360,7 +382,7 @@ export default function ScheduleClient({
                       <FormItem>
                         <FormLabel>Name</FormLabel>
                         <FormControl>
-                          <Input type="text" {...field} />
+                          <Input type="text" placeholder="e.g. Office Shift (Mon–Fri)" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -373,7 +395,7 @@ export default function ScheduleClient({
                       <FormItem>
                         <FormLabel>Description</FormLabel>
                         <FormControl>
-                          <Input type="text" {...field ?? ""} />
+                          <Input type="text" placeholder="Optional: brief description" {...field} />
                         </FormControl>
                       </FormItem>
                     )}
@@ -433,12 +455,6 @@ export default function ScheduleClient({
                 create one.
               </EmptyDescription>
             </EmptyHeader>
-            <EmptyContent>
-              <Button onClick={() => handleOpenDialog()} className="gap-2">
-                <Plus className="h-4 w-4" />
-                New
-              </Button>
-            </EmptyContent>
           </Empty>
         }
       />
