@@ -155,6 +155,7 @@ function NavMain({ items }: { items: NavMainItem[] }) {
   const pathname = usePathname();
   const { role, permissions } = useUserStore();
   const [isHydrated, setIsHydrated] = useState(false)
+  const [openItems, setOpenItems] = useState<Record<string, boolean>>({})
   
   useEffect(() => {
     setIsHydrated(true)
@@ -182,8 +183,12 @@ function NavMain({ items }: { items: NavMainItem[] }) {
 
         if (hasSubItems) {
           return (
-            <Collapsible key={item.title} asChild defaultOpen={isActive} className="group/collapsible">
-              <SidebarMenuItem>
+            <SidebarMenuItem key={item.title} className="group/collapsible">
+              <Collapsible
+                open={isHydrated ? (openItems[item.title] ?? isActive) : false}
+                onOpenChange={(v) => setOpenItems((prev) => ({ ...prev, [item.title]: v }))}
+                className="group/collapsible"
+              >
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton tooltip={item.title}>
                     {item.icon && <item.icon />}
@@ -224,8 +229,8 @@ function NavMain({ items }: { items: NavMainItem[] }) {
                     })}
                   </SidebarMenuSub>
                 </CollapsibleContent>
-              </SidebarMenuItem>
-            </Collapsible>
+              </Collapsible>
+            </SidebarMenuItem>
           );
         }
 
@@ -250,7 +255,22 @@ function NavMain({ items }: { items: NavMainItem[] }) {
 }
 
 export function AppSidebarNew({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const [mounted, setMounted] = useState(false)
   const sidebarGroups = getSidebarGroups();
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <div
+        data-slot="sidebar-wrapper"
+        className="group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full"
+        suppressHydrationWarning
+      />
+    )
+  }
   
   return (
     <Sidebar collapsible="icon" {...props}>
