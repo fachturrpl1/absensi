@@ -254,96 +254,54 @@ export default function FingerPage() {
     }
   }, [organizationId])
 
-  // Fetch organization-wide fingerprint stats for cards
+  // Fetch organization-wide fingerprint stats for cards (via API to mirror table logic precisely)
   const fetchFingerStats = React.useCallback(async () => {
     if (!organizationId) return
-    const supabase = createClient()
     try {
-      // Count all active members in the organization
-      const { count } = await supabase
-        .from('organization_members')
-        .select('id', { count: 'exact', head: true })
-        .eq('organization_id', organizationId)
-        .eq('is_active', true)
-      const total: number = typeof count === 'number' ? count : 0
+      const pageSizeNum = 100
+      // 1) Fetch first page to get total
+      const url = new URL('/api/finger/members', window.location.origin)
+      url.searchParams.set('limit', String(pageSizeNum))
+      url.searchParams.set('page', '1')
+      url.searchParams.set('t', String(Date.now()))
+      if (organizationId) url.searchParams.set('organizationId', String(organizationId))
+      const first = await fetch(url.toString(), { credentials: 'same-origin', cache: 'no-store' })
+      const firstJson = await first.json()
+      if (!firstJson?.success) throw new Error(firstJson?.message || 'Failed to load stats')
 
-      // Fetch biometric data for all active members
-      // Strategy: Fetch all member IDs first, then fetch biometric data for those IDs.
-      // This avoids complex joins that might fail or return empty due to RLS/filtering issues.
+      const total: number = Number(firstJson?.pagination?.total || 0)
+      const totalPages: number = Math.max(1, Math.ceil((total || 0) / pageSizeNum))
 
-      const ids: number[] = []
-      const fetchPageSize = 1000
-
-      // Fetch all member IDs
-      for (let from = 0; ; from += fetchPageSize) {
-        const { data: idRows, error: idErr } = await supabase
-          .from('organization_members')
-          .select('id')
-          .eq('organization_id', organizationId)
-          .eq('is_active', true)
-          .range(from, from + fetchPageSize - 1)
-
-        if (idErr) {
-          console.error('Error fetching member IDs:', idErr)
-          break
-        }
-        if (!idRows || idRows.length === 0) break
-        ids.push(...idRows.map(r => r.id))
-        if (idRows.length < fetchPageSize) break
-      }
-
-      let bioRows: { organization_member_id: number; finger_number: number | null; is_active: boolean }[] = []
-
-      if (ids.length > 0) {
-        const chunk = 200 // Chunk size for IN query
-        const allRows: typeof bioRows = []
-
-        for (let i = 0; i < ids.length; i += chunk) {
-          const slice = ids.slice(i, i + chunk)
-          const { data: rows, error: bioErr } = await supabase
-            .from('biometric_data')
-            .select('organization_member_id, finger_number, is_active')
-            .eq('biometric_type', 'FINGERPRINT')
-            .eq('is_active', true)
-            .in('organization_member_id', slice)
-
-          if (bioErr) {
-            console.error('Error fetching biometric chunk:', bioErr)
-            continue
-          }
-
-          if (rows) {
-            const normalized = rows.map(r => ({
-              organization_member_id: Number(r.organization_member_id),
-              finger_number: typeof r.finger_number === 'number' ? r.finger_number : null,
-              is_active: r.is_active
-            }))
-            allRows.push(...normalized)
-          }
-        }
-        bioRows = allRows
-      }
-
-      // Aggregate counts per member
-      const map: Map<number, Set<number>> = new Map()
-      for (const r of bioRows || []) {
-        const mid = r.organization_member_id
-        const f = typeof r.finger_number === 'number' ? r.finger_number : null
-        if (!map.has(mid)) map.set(mid, new Set<number>())
-        if (f !== null) map.get(mid)!.add(f)
-      }
-
-      let registered = 0
+      let complete = 0
       let partial = 0
-      map.forEach((fingers) => {
-        const has1 = fingers.has(1)
-        const has2 = fingers.has(2)
-        if (has1 && has2) registered += 1
-        else if (has1 || has2) partial += 1
-      })
+      let unregistered = 0
 
-      const unregistered = Math.max(0, total - (registered + partial))
-      setFingerStats({ total: Number(total), registered, partial, unregistered })
+      const accumulate = (rows: Array<{ finger1_registered: boolean; finger2_registered: boolean }>) => {
+        for (const r of rows) {
+          const has1 = !!r.finger1_registered
+          const has2 = !!r.finger2_registered
+          if (has1 && has2) complete += 1
+          else if ((has1 ? 1 : 0) + (has2 ? 1 : 0) === 1) partial += 1
+          else unregistered += 1
+        }
+      }
+
+      accumulate(firstJson.data || [])
+
+      // 2) Fetch remaining pages
+      for (let p = 2; p <= totalPages; p++) {
+        const u = new URL('/api/finger/members', window.location.origin)
+        u.searchParams.set('limit', String(pageSizeNum))
+        u.searchParams.set('page', String(p))
+        u.searchParams.set('t', String(Date.now()))
+        if (organizationId) u.searchParams.set('organizationId', String(organizationId))
+        const res = await fetch(u.toString(), { credentials: 'same-origin', cache: 'no-store' })
+        const json = await res.json()
+        if (!json?.success) throw new Error(json?.message || 'Failed to load stats page')
+        accumulate(json.data || [])
+      }
+
+      setFingerStats({ total, registered: complete, partial, unregistered })
     } catch (e) {
       console.error('[FINGER-PAGE] Fetch finger stats error:', e)
     }
@@ -1000,175 +958,177 @@ export default function FingerPage() {
           </div>
         </div>
 
-        <div className="bg-card/90 rounded-xl shadow-sm border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/30 hover:bg-muted/40">
-                <TableHead className="font-semibold w-16">No</TableHead>
-                <TableHead className="font-semibold w-32">Nick Name</TableHead>
-                <TableHead className="font-semibold">Full Name</TableHead>
-                <TableHead className="font-semibold">Group</TableHead>
-                <TableHead className="font-semibold text-center">Finger 1</TableHead>
-                <TableHead className="font-semibold text-center">Finger 2</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="[&>tr:nth-child(even)]:bg-muted/30">
-              {(isLoading && members.length === 0) ? (
-                <>
-                  {Array.from({ length: Math.max(5, pageSizeNum) }).map((_, i) => (
-                    <TableRow key={`sk-${i}`}>
-                      <TableCell colSpan={6}>
-                        <div className="flex items-center gap-4">
-                          <div className="h-5 w-12 bg-muted rounded animate-pulse" />
-                          <div className="h-5 w-24 bg-muted rounded animate-pulse" />
-                          <div className="h-5 w-40 bg-muted rounded animate-pulse" />
-                          <div className="h-5 w-24 bg-muted rounded animate-pulse" />
-                          <div className="h-5 w-20 bg-muted rounded animate-pulse ml-auto" />
+        <div className="w-full bg-card rounded-lg shadow-sm border">
+          <div className="p-4 md:p-6 overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-semibold w-16">No</TableHead>
+                  <TableHead className="font-semibold w-32">Nick Name</TableHead>
+                  <TableHead className="font-semibold">Full Name</TableHead>
+                  <TableHead className="font-semibold">Group</TableHead>
+                  <TableHead className="font-semibold text-center">Finger 1</TableHead>
+                  <TableHead className="font-semibold text-center">Finger 2</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(isLoading && members.length === 0) ? (
+                  <>
+                    {Array.from({ length: Math.max(5, pageSizeNum) }).map((_, i) => (
+                      <TableRow key={`sk-${i}`}>
+                        <TableCell colSpan={6}>
+                          <div className="flex items-center gap-4">
+                            <div className="h-5 w-12 bg-muted rounded animate-pulse" />
+                            <div className="h-5 w-24 bg-muted rounded animate-pulse" />
+                            <div className="h-5 w-40 bg-muted rounded animate-pulse" />
+                            <div className="h-5 w-24 bg-muted rounded animate-pulse" />
+                            <div className="h-5 w-20 bg-muted rounded animate-pulse ml-auto" />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </>
+                ) : paginatedMembers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                      {searchQuery || selectedDepartment !== "all" || selectedStatus !== "all"
+                        ? "No data found"
+                        : "No members registered yet"}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedMembers.map((member, index) => (
+                    <TableRow
+                      key={member.id}
+                      className={cn(
+                        "transition-colors",
+                        "hover:bg-muted/40"
+                      )}
+                    >
+                      <TableCell className="font-medium text-muted-foreground">
+                        {pageIndex * pageSizeNum + index + 1}
+                      </TableCell>
+                      <TableCell
+                        className="font-medium text-foreground hover:underline cursor-pointer"
+                        onClick={() => handleMemberClick(member.id)}
+                      >
+                        {member.first_name || 'N/A'}
+                      </TableCell>
+                      <TableCell
+                        className="text-foreground hover:underline cursor-pointer"
+                        onClick={() => handleMemberClick(member.id)}
+                      >
+                        {member.display_name}
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {member.department_name}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center">
+                          {activeMemberId === member.id && activeFingerNumber === 1 ? (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={handleCancelRegistration}
+                              disabled={!isRegistering}
+                              className="gap-2"
+                            >
+                              {isRegistering ? (
+                                <>
+                                  <Fingerprint className="w-4 h-4 animate-pulse" />
+                                  Cancel
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="w-4 h-4" />
+                                  Done
+                                </>
+                              )}
+                            </Button>
+                          ) : (
+                            <Button
+                              variant={member.finger1_registered ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleFingerClick(member, 1)}
+                              disabled={isRegistering || activeMemberId !== null}
+                              className={cn(
+                                "gap-2 transition-all",
+                                member.finger1_registered && "bg-green-600 hover:bg-green-700 text-primary-foreground",
+                                activeMemberId !== null && activeMemberId !== member.id && "opacity-50 cursor-not-allowed"
+                              )}
+                            >
+                              {member.finger1_registered ? (
+                                <>
+                                  <Check className="w-4 h-4" />
+                                  Registered
+                                </>
+                              ) : (
+                                <>
+                                  <Fingerprint className="w-4 h-4" />
+                                  Finger 1
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center">
+                          {activeMemberId === member.id && activeFingerNumber === 2 ? (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={handleCancelRegistration}
+                              disabled={!isRegistering}
+                              className="gap-2"
+                            >
+                              {isRegistering ? (
+                                <>
+                                  <Fingerprint className="w-4 h-4 animate-pulse" />
+                                  Cancel
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="w-4 h-4" />
+                                  Done
+                                </>
+                              )}
+                            </Button>
+                          ) : (
+                            <Button
+                              variant={member.finger2_registered ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleFingerClick(member, 2)}
+                              disabled={isRegistering || activeMemberId !== null}
+                              className={cn(
+                                "gap-2 transition-all",
+                                member.finger2_registered && "bg-green-600 hover:bg-green-700 text-primary-foreground",
+                                activeMemberId !== null && activeMemberId !== member.id && "opacity-50 cursor-not-allowed"
+                              )}
+                            >
+                              {member.finger2_registered ? (
+                                <>
+                                  <Check className="w-4 h-4" />
+                                  Registered
+                                </>
+                              ) : (
+                                <>
+                                  <Fingerprint className="w-4 h-4" />
+                                  Finger 2
+                                </>
+                              )}
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </>
-              ) : paginatedMembers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                    {searchQuery || selectedDepartment !== "all" || selectedStatus !== "all"
-                      ? "No data found"
-                      : "No members registered yet"}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginatedMembers.map((member, index) => (
-                  <TableRow
-                    key={member.id}
-                    className={cn(
-                      "transition-colors",
-                      "hover:bg-muted/40"
-                    )}
-                  >
-                    <TableCell className="font-medium text-muted-foreground">
-                      {pageIndex * pageSizeNum + index + 1}
-                    </TableCell>
-                    <TableCell
-                      className="font-medium text-foreground hover:underline cursor-pointer"
-                      onClick={() => handleMemberClick(member.id)}
-                    >
-                      {member.first_name || 'N/A'}
-                    </TableCell>
-                    <TableCell
-                      className="text-foreground hover:underline cursor-pointer"
-                      onClick={() => handleMemberClick(member.id)}
-                    >
-                      {member.display_name}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {member.department_name}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex justify-center">
-                        {activeMemberId === member.id && activeFingerNumber === 1 ? (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={handleCancelRegistration}
-                            disabled={!isRegistering}
-                            className="gap-2"
-                          >
-                            {isRegistering ? (
-                              <>
-                                <Fingerprint className="w-4 h-4 animate-pulse" />
-                                Cancel
-                              </>
-                            ) : (
-                              <>
-                                <Check className="w-4 h-4" />
-                                Done
-                              </>
-                            )}
-                          </Button>
-                        ) : (
-                          <Button
-                            variant={member.finger1_registered ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => handleFingerClick(member, 1)}
-                            disabled={isRegistering || activeMemberId !== null}
-                            className={cn(
-                              "gap-2 transition-all",
-                              member.finger1_registered && "bg-green-600 hover:bg-green-700 text-primary-foreground",
-                              activeMemberId !== null && activeMemberId !== member.id && "opacity-50 cursor-not-allowed"
-                            )}
-                          >
-                            {member.finger1_registered ? (
-                              <>
-                                <Check className="w-4 h-4" />
-                                Registered
-                              </>
-                            ) : (
-                              <>
-                                <Fingerprint className="w-4 h-4" />
-                                Finger 1
-                              </>
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex justify-center">
-                        {activeMemberId === member.id && activeFingerNumber === 2 ? (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={handleCancelRegistration}
-                            disabled={!isRegistering}
-                            className="gap-2"
-                          >
-                            {isRegistering ? (
-                              <>
-                                <Fingerprint className="w-4 h-4 animate-pulse" />
-                                Cancel
-                              </>
-                            ) : (
-                              <>
-                                <Check className="w-4 h-4" />
-                                Done
-                              </>
-                            )}
-                          </Button>
-                        ) : (
-                          <Button
-                            variant={member.finger2_registered ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => handleFingerClick(member, 2)}
-                            disabled={isRegistering || activeMemberId !== null}
-                            className={cn(
-                              "gap-2 transition-all",
-                              member.finger2_registered && "bg-green-600 hover:bg-green-700 text-primary-foreground",
-                              activeMemberId !== null && activeMemberId !== member.id && "opacity-50 cursor-not-allowed"
-                            )}
-                          >
-                            {member.finger2_registered ? (
-                              <>
-                                <Check className="w-4 h-4" />
-                                Registered
-                              </>
-                            ) : (
-                              <>
-                                <Fingerprint className="w-4 h-4" />
-                                Finger 2
-                              </>
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
 
         {/* Pagination Footer (shared) */}

@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { IWorkSchedule, IWorkScheduleDetail } from "@/interface"
 
 
+
 const toScheduleCode = (name?: string, code?: string) => {
     const existing = typeof code === "string" ? code.trim() : "";
     if (existing) return existing;
@@ -151,6 +152,38 @@ export async function getWorkScheduleDetails(workScheduleId: number) {
     return { success: true, data }
 }
 
+function toMinutes(v?: string | null) {
+    if (!v) return null
+    const parts = v.split(":").map((x) => Number(x))
+    if (parts.some((n) => Number.isNaN(n))) return null
+    const [hh = 0, mm = 0] = parts
+    return hh * 60 + mm
+}
+
+function validateDetailInput(payload: Partial<IWorkScheduleDetail>) {
+    const isWorking = Boolean(payload.is_working_day)
+    if (!isWorking) return { ok: true as const }
+
+    const s = toMinutes(payload.start_time as string | undefined)
+    const e = toMinutes(payload.end_time as string | undefined)
+    const bs = toMinutes(payload.break_start as string | undefined)
+    const be = toMinutes(payload.break_end as string | undefined)
+
+    if (s == null) return { ok: false as const, message: "Start time is required" }
+    if (e == null) return { ok: false as const, message: "End time is required" }
+    if (e <= s) return { ok: false as const, message: "End time must be later than start time" }
+
+    const hasBs = bs != null
+    const hasBe = be != null
+    if (hasBs !== hasBe) return { ok: false as const, message: "Break start and break end must both be filled" }
+    if (!hasBs || !hasBe) return { ok: true as const }
+    if (be! <= bs!) return { ok: false as const, message: "Break end must be later than break start" }
+    if (bs! <= s) return { ok: false as const, message: "Break start must be after start time" }
+    if (be! >= e) return { ok: false as const, message: "Break end must be before end time" }
+
+    return { ok: true as const }
+}
+
 export async function createWorkSchedule(payload: Partial<IWorkSchedule>) {
     const supabase = await createClient();
 
@@ -205,8 +238,13 @@ export const deleteWorkSchedule = async ( scheduleId: string | number) => {
 };
 
 // ---------------- WorkScheduleDetail ----------------
+
 export async function createWorkScheduleDetail(payload: Partial<IWorkScheduleDetail>) {
     const supabase = await createClient();
+    const v = validateDetailInput(payload)
+    if (!v.ok) {
+        return { success: false, message: v.message, data: null };
+    }
     const { data, error } = await supabase
         .from("work_schedule_details")
         .insert(payload)
@@ -221,6 +259,10 @@ export async function createWorkScheduleDetail(payload: Partial<IWorkScheduleDet
 
 export async function updateWorkScheduleDetail(id: string | number, payload: Partial<IWorkScheduleDetail>) {
     const supabase = await createClient();
+    const v = validateDetailInput(payload)
+    if (!v.ok) {
+        return { success: false, message: v.message, data: null };
+    }
     const { data, error } = await supabase
         .from("work_schedule_details")
         .update({ ...payload, updated_at: new Date().toISOString() })
@@ -247,4 +289,44 @@ export const deleteWorkScheduleDetail = async (id: string) => {
     }
     return { success: true, message: "deleted successfully", data: data as IWorkScheduleDetail };
 };
+
+export async function upsertWorkScheduleDetails(
+    workScheduleId: number,
+    items: Array<Partial<IWorkScheduleDetail>>,
+) {
+    
+    const supabase = await createClient();
+
+    for (const it of items) {
+        const v = validateDetailInput(it)
+        if (!v.ok) {
+            return { success: false, message: v.message, data: [] as IWorkScheduleDetail[] }
+        }
+    }
+
+    const rows = (items || []).map((it) => ({
+        work_schedule_id: workScheduleId,
+        day_of_week: it.day_of_week,
+        is_working_day: Boolean(it.is_working_day),
+        start_time: (it.start_time ?? null) as string | null,
+        end_time: (it.end_time ?? null) as string | null,
+        break_start: (it.break_start ?? null) as string | null,
+        break_end: (it.break_end ?? null) as string | null,
+        break_duration_minutes: typeof it.break_duration_minutes === 'number' ? it.break_duration_minutes : null,
+        flexible_hours: Boolean(it.flexible_hours),
+        is_active: it.is_active ?? true,
+    }))
+
+
+    const { data, error } = await supabase
+        .from("work_schedule_details")
+        .upsert(rows, { onConflict: 'work_schedule_id,day_of_week' })
+        .select()
+
+    if (error) {
+        return { success: false, message: error.message, data: [] as IWorkScheduleDetail[] }
+    }
+
+    return { success: true, data: (data || []) as IWorkScheduleDetail[] }
+}
 

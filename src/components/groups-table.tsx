@@ -296,7 +296,7 @@ export function GroupsTable({ groups, isLoading = false, onDelete, onEdit }: Gro
               </tr>
             ) : (
               paginatedData.map((group) => (
-                <tr key={group.id} className="border-b hover:bg-muted/30 transition-colors">
+                <tr key={group.id} className="border-b hover:bg-blue-200 transition-colors">
                   {visibleColumns.code && (
                     <td className="px-4 py-3 text-sm">{group.code}</td>
                   )}

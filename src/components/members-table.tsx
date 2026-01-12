@@ -350,7 +350,7 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
             ) : (
               paginatedData.map((member) => {
                 return (
-                  <tr key={member.id} className="border-b hover:bg-muted/30 transition-colors">
+                  <tr key={member.id} className="border-b hover:bg-blue-200 transition-colors">
                     {visibleColumns.members && (
                       <td className="p-3 text-xs">
                         <button

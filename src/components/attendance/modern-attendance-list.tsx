@@ -1294,7 +1294,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       return (
                         <tr
                           key={`table-${record.id}-${index}`}
-                          className="border-b hover:bg-muted/50 transition-colors"
+                          className="border-b hover:bg-blue-200 transition-colors"
                         >
                           <td className="p-3">
                             <input

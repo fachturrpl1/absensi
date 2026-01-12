@@ -63,6 +63,7 @@ import {
   createWorkScheduleDetail,
   updateWorkScheduleDetail,
   deleteWorkScheduleDetail,
+  upsertWorkScheduleDetails,
 } from "@/action/schedule"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -525,6 +526,49 @@ export default function WorkScheduleDetailsPage() {
     router.back()
   }
 
+  const copyFromMonday = React.useCallback(async (targetDays: number[]) => {
+    const mon = details.find((d) => Number(d.day_of_week) === 1)
+    if (!mon) {
+      toast.warning("Monday detail not found")
+      return
+    }
+
+    const items = targetDays.map((day) => ({
+      day_of_week: day,
+      is_working_day: mon.is_working_day,
+      start_time: mon.start_time,
+      end_time: mon.end_time,
+      break_start: mon.break_start,
+      break_end: mon.break_end,
+      break_duration_minutes: mon.break_duration_minutes,
+      flexible_hours: mon.flexible_hours,
+      is_active: mon.is_active ?? true,
+    }))
+
+    setIsSubmitting(true)
+    try {
+      const res = await upsertWorkScheduleDetails(scheduleId, items)
+      if (!res.success) {
+        toast.error(res.message || "Failed to apply copy")
+        return
+      }
+      toast.success("Schedule copied successfully")
+      fetchDetails()
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Unknown error")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [details, scheduleId])
+
+  const handleCopyMonToWeekdays = React.useCallback(() => {
+    copyFromMonday([1, 2, 3, 4, 5])
+  }, [copyFromMonday])
+
+  const handleCopyMonToAllWeek = React.useCallback(() => {
+    copyFromMonday([0, 1, 2, 3, 4, 5, 6])
+  }, [copyFromMonday])
+
   // Calculate summary statistics
   const calculateSummary = () => {
     const workingDays = details.filter(d => d.is_working_day)
@@ -670,6 +714,7 @@ export default function WorkScheduleDetailsPage() {
             <Button
               variant="outline"
               size="icon"
+              className="h-9 w-9 cursor-pointer bg-secondary border-0 p-0"
               onClick={() => handleOpenDialog(d)}
             >
               <Pencil className="h-4 w-4" />
@@ -679,7 +724,7 @@ export default function WorkScheduleDetailsPage() {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="text-red-500"
+                  className="h-9 w-9 text-red-500 cursor-pointer bg-secondary border-0 p-0"
                 >
                   <Trash className="h-4 w-4" />
                 </Button>
@@ -722,6 +767,25 @@ export default function WorkScheduleDetailsPage() {
             <ArrowLeft className="h-4 w-4" />
             Back
           </Button>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            type="button"
+            onClick={handleCopyMonToWeekdays}
+            disabled={isSubmitting || loading}
+          >
+            Copy Mon → Weekdays
+          </Button>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={handleCopyMonToAllWeek}
+            disabled={isSubmitting || loading}
+          >
+            Copy Mon → All Week
+          </Button>
+        </div>
 
           <Dialog
             open={open}

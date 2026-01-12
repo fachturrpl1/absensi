@@ -494,7 +494,7 @@ export default function ModernDataTable<TData extends Employee, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  className="group hover:bg-muted/50"
+                  className="group hover:bg-blue-200"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
