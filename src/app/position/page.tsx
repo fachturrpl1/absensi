@@ -67,6 +67,7 @@ import { Can } from "@/components/can"
 import { useHydration } from "@/hooks/useHydration"
 import { logger } from '@/lib/logger';
 import { getCache, setCache } from "@/lib/local-cache"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 const positionSchema = z.object({
     organization_id: z.string().min(1, "Organization is required"),
@@ -481,43 +482,43 @@ export default function PositionsPage() {
                                 </div>
                             ) : (
                                 <>
-                                    <div className="border rounded-lg overflow-hidden">
-                                        <table className="w-full">
-                                            <thead className="bg-muted/50 border-b">
-                                                <tr>
-                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Code</th>
-                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Position Name</th>
-                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Description</th>
-                                                    {/* <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Level</th> */}
-                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Status</th>
-                                                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
+                                    <div className="border rounded-lg overflow-x-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Code</TableHead>
+                                                    <TableHead>Position Name</TableHead>
+                                                    <TableHead>Description</TableHead>
+                                                    {/* <TableHead>Level</TableHead> */}
+                                                    <TableHead>Status</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
                                                 {loading ? (
-                                                    <tr>
-                                                        <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
-                                                    </tr>
+                                                    <TableRow>
+                                                        <TableCell colSpan={5} className="text-center text-muted-foreground">Loading...</TableCell>
+                                                    </TableRow>
                                                 ) : paginatedData.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No positions found</td>
-                                                    </tr>
+                                                    <TableRow>
+                                                        <TableCell colSpan={5} className="text-center text-muted-foreground">No positions found</TableCell>
+                                                    </TableRow>
                                                 ) : (
                                                     paginatedData.map((position) => (
-                                                        <tr key={position.id} className="border-b hover:bg-muted/30 transition-colors">
-                                                            <td className="px-4 py-3 text-sm">{position.code}</td>
-                                                            <td className="px-4 py-3 text-sm">{position.title}</td>
-                                                            <td className="px-4 py-3 text-sm">{position.description || "-"}</td>
-                                                            {/* <td className="px-4 py-3 text-sm">{position.level || "-"}</td> */}
-                                                            <td className="px-4 py-3 text-sm">
+                                                        <TableRow key={position.id}>
+                                                            <TableCell>{position.code}</TableCell>
+                                                            <TableCell>{position.title}</TableCell>
+                                                            <TableCell>{position.description || "-"}</TableCell>
+                                                            {/* <TableCell>{position.level || "-"}</TableCell> */}
+                                                            <TableCell>
                                                                 {position.is_active ? (
                                                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-primary-foreground">Active</span>
                                                                 ) : (
                                                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">Inactive</span>
                                                                 )}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-sm">
-                                                                <div className="flex items-center gap-2">
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex items-center justify-end gap-2">
                                                                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingDetail(position); form.reset(position); setOpen(true); }} title="Edit position">
                                                                         <Pencil className="w-4 h-4" />
                                                                     </Button>
@@ -544,12 +545,12 @@ export default function PositionsPage() {
                                                                         </Link>
                                                                     </AlertDialog>
                                                                 </div>
-                                                            </td>
-                                                        </tr>
+                                                            </TableCell>
+                                                        </TableRow>
                                                     ))
                                                 )}
-                                            </tbody>
-                                        </table>
+                                            </TableBody>
+                                        </Table>
                                     </div>
                                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 px-4 bg-muted/50 rounded-md border mt-10">
                                         <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-nowrap justify-center w-full md:w-auto">

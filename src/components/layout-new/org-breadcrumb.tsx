@@ -22,7 +22,7 @@ export function OrgBreadcrumb() {
   useEffect(() => {
     // Set hydrated flag
     setIsHydrated(true)
-    
+
     // Try to get organizationName from localStorage as fallback
     // This handles the case where Zustand hasn't hydrated yet
     if (!organizationName && !displayName) {
@@ -65,7 +65,7 @@ export function OrgBreadcrumb() {
     '/attendance/locations': 'Locations',
     '/attendance-devices': 'Devices',
     '/analytics': 'Analytics',
-    '/attendance/list/add':'Add',
+    '/attendance/list/add': 'Add',
 
     // Schedules
     '/schedule': 'Schedules',
@@ -79,7 +79,7 @@ export function OrgBreadcrumb() {
     '/organization/new': 'New',
     '/organization/settings': 'Settings',
     '/organization/finger': 'Fingerprint',
-    
+
     // Fingerprint
     '/finger': 'Fingerprint',
 
@@ -87,7 +87,7 @@ export function OrgBreadcrumb() {
     '/': 'Home',
 
     // Settings
-    '/settings':'Settings',
+    '/settings': 'Settings',
   }
 
   // Parent mapping untuk nested pages
@@ -104,7 +104,7 @@ export function OrgBreadcrumb() {
 
   const buildBreadcrumbs = (): BreadcrumbItem[] => {
     const items: BreadcrumbItem[] = []
-    
+
     const nameToDisplay = displayName || organizationName
 
     // Jika di halaman /organization, tampilkan hanya nama organisasi
@@ -117,7 +117,7 @@ export function OrgBreadcrumb() {
       }
       return items
     }
-    
+
     // Tambahkan nama organisasi jika ada (selalu tampil pertama)
     if (nameToDisplay) {
       items.push({
@@ -126,16 +126,20 @@ export function OrgBreadcrumb() {
       })
     }
 
-    // Cek apakah ada parent page (skip untuk /organization/* pages)
+    // Tambahkan seluruh parent chain (skip untuk /organization/* pages)
     if (!pathname.startsWith('/organization/')) {
-      const parentPath = parentMapping[pathname]
-      if (parentPath) {
-        const parentLabel = pathMapping[parentPath]
+      const parents: string[] = []
+      let current: string | undefined = pathname
+      while (current) {
+        const p: string | undefined = parentMapping[current]
+        if (!p) break
+        parents.unshift(p)
+        current = p
+      }
+      for (const p of parents) {
+        const parentLabel = pathMapping[p]
         if (parentLabel) {
-          items.push({
-            label: parentLabel,
-            href: parentPath,
-          })
+          items.push({ label: parentLabel, href: p })
         }
       }
     }
@@ -195,9 +199,8 @@ export function OrgBreadcrumb() {
             </Link>
           ) : (
             <span
-              className={`${
-                index === breadcrumbs.length - 1 ? 'text-foreground font-medium' : ''
-              }`}
+              className={`${index === breadcrumbs.length - 1 ? 'text-foreground font-medium' : ''
+                }`}
             >
               {item.label}
             </span>

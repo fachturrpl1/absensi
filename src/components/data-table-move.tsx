@@ -52,7 +52,7 @@ export function DataTable<TData>({ table, server }: DataTableProps<TData>) {
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
+          <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow

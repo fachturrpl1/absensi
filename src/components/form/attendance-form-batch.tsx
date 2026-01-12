@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, X, Search, Plus, Minus} from "lucide-react"
+import { Loader2, X, Search, Plus, Minus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -121,6 +121,11 @@ export function AttendanceFormBatch() {
     },
   })
 
+  const singleCheckInDate = form.watch('checkInDate')
+  useEffect(() => {
+    form.setValue('checkOutDate', singleCheckInDate || '')
+  }, [singleCheckInDate])
+
   // Initialize current date and time on client side only
   useEffect(() => {
     const now = new Date();
@@ -137,16 +142,19 @@ export function AttendanceFormBatch() {
     });
   }, [])
 
-  // Initialize master batch date/time once
   useEffect(() => {
     const now = new Date();
     const date = format(now, 'yyyy-MM-dd');
     const time = format(now, 'HH:mm');
     setBatchCheckInDate(date)
     setBatchCheckInTime(time)
-    setBatchCheckOutDate("")
+    setBatchCheckOutDate(date)
     setBatchCheckOutTime("")
   }, [])
+
+  useEffect(() => {
+    setBatchCheckOutDate(batchCheckInDate)
+  }, [batchCheckInDate])
 
   // Keep all batch entries in sync with master date/time
   useEffect(() => {
@@ -154,7 +162,7 @@ export function AttendanceFormBatch() {
       ...e,
       checkInDate: batchCheckInDate || e.checkInDate,
       checkInTime: batchCheckInTime || e.checkInTime,
-      checkOutDate: batchCheckOutDate || "",
+      checkOutDate: batchCheckInDate || "",
       checkOutTime: batchCheckOutTime || "",
     })))
   }, [batchCheckInDate, batchCheckInTime, batchCheckOutDate, batchCheckOutTime])
@@ -585,7 +593,7 @@ export function AttendanceFormBatch() {
                           <FormItem>
                             <FormLabel className="text-sm">Date</FormLabel>
                             <FormControl>
-                              <Input type="date" {...field} value={field.value || ""} />
+                              <Input type="date" {...field} value={singleCheckInDate || ""} disabled />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -669,7 +677,7 @@ export function AttendanceFormBatch() {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="text-xs text-muted-foreground">Check-out Date</label>
-                      <Input type="date" value={batchCheckOutDate} onChange={(e) => setBatchCheckOutDate(e.target.value)} placeholder="Optional" />
+                      <Input type="date" value={batchCheckInDate} disabled placeholder="Follows check-in date" />
                     </div>
                     <div>
                       <label className="text-xs text-muted-foreground">Check-out Time </label>

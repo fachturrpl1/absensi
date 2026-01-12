@@ -120,7 +120,7 @@ export default function FingerPage() {
         if (key && key.startsWith(prefix)) keys.push(key)
       }
       keys.forEach((k) => localStorage.removeItem(k))
-    } catch {}
+    } catch { }
   }, [])
 
   // Handle click on member name to navigate to profile
@@ -267,71 +267,57 @@ export default function FingerPage() {
         .eq('is_active', true)
       const total: number = typeof count === 'number' ? count : 0
 
-      // Try to fetch biometric rows via relationship join (no need for organization_id column on biometric_data)
-      type BioRow = {
-        organization_member_id: number
-        finger_number: number | null
-        is_active: boolean
-      }
+      // Fetch biometric data for all active members
+      // Strategy: Fetch all member IDs first, then fetch biometric data for those IDs.
+      // This avoids complex joins that might fail or return empty due to RLS/filtering issues.
 
-      let bioRows: BioRow[] = []
-      const { data: joinedRows, error: joinErr } = await supabase
-        .from('biometric_data')
-        .select('organization_member_id, finger_number, is_active, organization_members!inner(organization_id)')
-        .eq('biometric_type', 'FINGERPRINT')
-        .eq('is_active', true)
-        .eq('organization_members.organization_id', organizationId)
+      const ids: number[] = []
+      const fetchPageSize = 1000
 
-      // Helper to normalize unknown row into BioRow without using any
-      const normalizeBioRow = (r: unknown): BioRow | null => {
-        if (!r || typeof r !== 'object') return null
-        const o = r as Record<string, unknown>
-        const omid = o['organization_member_id']
-        const fn = o['finger_number']
-        const ia = o['is_active']
-        const organization_member_id =
-          typeof omid === 'number' ? omid : typeof omid === 'string' ? Number(omid) : NaN
-        const finger_number =
-          typeof fn === 'number' ? fn : typeof fn === 'string' && fn !== '' ? Number(fn) : null
-        const is_active = Boolean(ia)
-        if (!Number.isFinite(organization_member_id)) return null
-        return { organization_member_id: Number(organization_member_id), finger_number, is_active }
-      }
+      // Fetch all member IDs
+      for (let from = 0; ; from += fetchPageSize) {
+        const { data: idRows, error: idErr } = await supabase
+          .from('organization_members')
+          .select('id')
+          .eq('organization_id', organizationId)
+          .eq('is_active', true)
+          .range(from, from + fetchPageSize - 1)
 
-      if (!joinErr && Array.isArray(joinedRows)) {
-        bioRows = (joinedRows as unknown[])
-          .map((r) => normalizeBioRow(r))
-          .filter((x): x is BioRow => x !== null)
-      } else {
-        // Fallback: fetch member IDs and then query biometric_data with IN chunks
-        const ids: number[] = []
-        const pageSize = 1000
-        for (let from = 0; ; from += pageSize) {
-          const { data: idRows } = await supabase
-            .from('organization_members')
-            .select('id')
-            .eq('organization_id', organizationId)
-            .eq('is_active', true)
-            .range(from, from + pageSize - 1)
-          if (!idRows || idRows.length === 0) break
-          ids.push(...idRows.map(r => r.id))
-          if (idRows.length < pageSize) break
+        if (idErr) {
+          console.error('Error fetching member IDs:', idErr)
+          break
         }
+        if (!idRows || idRows.length === 0) break
+        ids.push(...idRows.map(r => r.id))
+        if (idRows.length < fetchPageSize) break
+      }
 
-        const chunk = 300
-        const allRows: BioRow[] = []
+      let bioRows: { organization_member_id: number; finger_number: number | null; is_active: boolean }[] = []
+
+      if (ids.length > 0) {
+        const chunk = 200 // Chunk size for IN query
+        const allRows: typeof bioRows = []
+
         for (let i = 0; i < ids.length; i += chunk) {
           const slice = ids.slice(i, i + chunk)
-          const { data: rows } = await supabase
+          const { data: rows, error: bioErr } = await supabase
             .from('biometric_data')
             .select('organization_member_id, finger_number, is_active')
             .eq('biometric_type', 'FINGERPRINT')
             .eq('is_active', true)
             .in('organization_member_id', slice)
-          if (Array.isArray(rows)) {
-            const normalized = (rows as unknown[])
-              .map((r) => normalizeBioRow(r))
-              .filter((x): x is BioRow => x !== null)
+
+          if (bioErr) {
+            console.error('Error fetching biometric chunk:', bioErr)
+            continue
+          }
+
+          if (rows) {
+            const normalized = rows.map(r => ({
+              organization_member_id: Number(r.organization_member_id),
+              finger_number: typeof r.finger_number === 'number' ? r.finger_number : null,
+              is_active: r.is_active
+            }))
             allRows.push(...normalized)
           }
         }
@@ -350,8 +336,10 @@ export default function FingerPage() {
       let registered = 0
       let partial = 0
       map.forEach((fingers) => {
-        if (fingers.size >= 2) registered += 1
-        else if (fingers.size === 1) partial += 1
+        const has1 = fingers.has(1)
+        const has2 = fingers.has(2)
+        if (has1 && has2) registered += 1
+        else if (has1 || has2) partial += 1
       })
 
       const unregistered = Math.max(0, total - (registered + partial))
@@ -857,7 +845,7 @@ export default function FingerPage() {
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="flex items-center gap-3 px-4 py-3 bg-card rounded-lg shadow-sm border">
-              <div className="p-2 rounded-lg bg-primary/10">
+              <div className="p-2 rounded-lg bg-green-500/10">
                 <Check className="w-5 h-5 text-primary" />
               </div>
               <div>
