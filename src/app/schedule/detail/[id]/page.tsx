@@ -1,1015 +1,491 @@
 "use client"
 
-import React from "react"
-import { useParams, useRouter } from "next/navigation"
-import { ColumnDef } from "@tanstack/react-table"
-import { Button } from "@/components/ui/button"
-import { Pencil, Plus, Trash, ArrowLeft } from "lucide-react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
+import { useParams } from "next/navigation"
 import { toast } from "sonner"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
-import { z } from "zod"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  SortingState,
-  useReactTable,
-  VisibilityState,
-  ColumnFiltersState,
-} from "@tanstack/react-table"
-
+import { Globe, Save, RotateCcw, Copy } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { TableSkeleton } from "@/components/ui/loading-skeleton"
+import { formatTime } from "@/utils/format-time"
+import { useTimeFormat } from "@/store/time-format-store"
+import { getTimezoneLabel, getTimezoneOffset } from "@/constants/attendance-status"
+import { getDayName } from "@/utils/date-helper"
+import { useOrgStore } from "@/store/org-store"
 import { IWorkScheduleDetail } from "@/interface"
 import {
   getWorkScheduleDetails,
-  createWorkScheduleDetail,
-  updateWorkScheduleDetail,
-  deleteWorkScheduleDetail,
   upsertWorkScheduleDetails,
 } from "@/action/schedule"
-import { TableSkeleton } from "@/components/ui/loading-skeleton"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, CalendarDays, TrendingUp } from "lucide-react"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { formatTime } from "@/utils/format-time"
-import { useTimeFormat } from "@/store/time-format-store"
 
-const timeStringToMinutes = (value?: string) => {
-  if (!value) return null
-  const [hh, mm] = value.split(":")
-  const hours = Number(hh)
-  const minutes = Number(mm)
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null
-  return hours * 60 + minutes
+// Day keys for iteration
+type DayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6
+const DAYS: DayIndex[] = [0, 1, 2, 3, 4, 5, 6]
+const WORKDAYS: DayIndex[] = [1, 2, 3, 4, 5] // Mon-Fri
+const WEEKEND: DayIndex[] = [0, 6] // Sun, Sat
+
+// Rule item for local state
+interface RuleItem {
+  day_of_week: DayIndex
+  label: string
+  is_working_day: boolean
+  start_time: string
+  end_time: string
+  break_start: string
+  break_end: string
+  flexible_hours: boolean
+  notes: string
 }
 
-const detailSchema = z
-  .object({
-    day_of_week: z.number().min(0).max(6),
-    is_working_day: z.boolean(),
-    flexible_hours: z.boolean(),
-    start_time: z.string().optional(),
-    end_time: z.string().optional(),
-    break_start: z.string().optional(),
-    break_end: z.string().optional(),
-  })
-  .superRefine((values, ctx) => {
-    if (!values.is_working_day) return
+// Preset configurations
+const PRESETS = {
+  normal: {
+    label: "Normal Working Hours",
+    is_working_day: true,
+    start_time: "08:30",
+    end_time: "17:00",
+    break_start: "12:00",
+    break_end: "13:00",
+    flexible_hours: false,
+    notes: "",
+  },
+  morning: {
+    label: "Morning Shift",
+    is_working_day: true,
+    start_time: "06:00",
+    end_time: "14:00",
+    break_start: "10:00",
+    break_end: "10:30",
+    flexible_hours: false,
+    notes: "Morning shift",
+  },
+  evening: {
+    label: "Evening Shift",
+    is_working_day: true,
+    start_time: "14:00",
+    end_time: "22:00",
+    break_start: "18:00",
+    break_end: "18:30",
+    flexible_hours: false,
+    notes: "Evening shift",
+  },
+  flexible: {
+    label: "Flexible Hours",
+    is_working_day: true,
+    start_time: "09:00",
+    end_time: "17:00",
+    break_start: "12:00",
+    break_end: "13:00",
+    flexible_hours: true,
+    notes: "Flexible working hours",
+  },
+  off: {
+    label: "Day Off",
+    is_working_day: false,
+    start_time: "",
+    end_time: "",
+    break_start: "",
+    break_end: "",
+    flexible_hours: false,
+    notes: "Holiday / Day off",
+  },
+}
 
-    const startMin = timeStringToMinutes(values.start_time)
-    const endMin = timeStringToMinutes(values.end_time)
-    const breakStartMin = timeStringToMinutes(values.break_start)
-    const breakEndMin = timeStringToMinutes(values.break_end)
-
-    if (startMin == null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Start time is required",
-        path: ["start_time"],
-      })
-    }
-
-    if (endMin == null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "End time is required",
-        path: ["end_time"],
-      })
-    }
-
-    if (startMin != null && endMin != null && endMin <= startMin) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "End time must be later than start time",
-        path: ["end_time"],
-      })
-    }
-
-    const hasBreakStart = breakStartMin != null
-    const hasBreakEnd = breakEndMin != null
-
-    if (hasBreakStart !== hasBreakEnd) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Break start and break end must both be filled",
-        path: [hasBreakStart ? "break_end" : "break_start"],
-      })
-      return
-    }
-
-    if (!hasBreakStart || !hasBreakEnd) return
-
-    if (breakEndMin! <= breakStartMin!) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Break end must be later than break start",
-        path: ["break_end"],
-      })
-    }
-
-    if (startMin != null && breakStartMin! <= startMin) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Break start must be after start time",
-        path: ["break_start"],
-      })
-    }
-
-    if (endMin != null && breakEndMin! >= endMin) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Break end must be before end time",
-        path: ["break_end"],
-      })
-    }
-  })
-
-type DetailForm = z.infer<typeof detailSchema>
-
-const dayNames = [
-  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
-]
-
-const calculateWorkingHours = (start?: string, end?: string, breakStart?: string, breakEnd?: string) => {
-  if (!start || !end) return "-"
-
-  const startTime = new Date(`2000-01-01T${start}`)
-  const endTime = new Date(`2000-01-01T${end}`)
-  let totalMinutes = (endTime.getTime() - startTime.getTime()) / 1000 / 60
-
-  if (breakStart && breakEnd) {
-    const breakStartTime = new Date(`2000-01-01T${breakStart}`)
-    const breakEndTime = new Date(`2000-01-01T${breakEnd}`)
-    const breakMinutes = (breakEndTime.getTime() - breakStartTime.getTime()) / 1000 / 60
-    totalMinutes -= breakMinutes
+// Default rule creator
+const createDefaultRule = (day: DayIndex): RuleItem => {
+  const isWeekend = WEEKEND.includes(day)
+  return {
+    day_of_week: day,
+    label: isWeekend ? "Day Off" : "Normal Working Hours",
+    is_working_day: !isWeekend,
+    start_time: isWeekend ? "" : "08:30",
+    end_time: isWeekend ? "" : "17:00",
+    break_start: isWeekend ? "" : "12:00",
+    break_end: isWeekend ? "" : "13:00",
+    flexible_hours: false,
+    notes: isWeekend ? "Weekend off" : "",
   }
-
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = Math.round(totalMinutes % 60)
-
-  return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
-}
-
-// Custom DataTable with Back button in pagination
-function DataTableWithBack<TData, TValue>({
-  columns,
-  data,
-  filterColumn,
-  isLoading = false,
-}: {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[]
-  filterColumn?: keyof TData
-  isLoading?: boolean
-}) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
-
-  const table = useReactTable({
-    data,
-    columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
-    },
-  })
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-end gap-4">
-        {filterColumn && (
-          <Input
-            placeholder={`Filter ${String(filterColumn)}...`}
-            value={
-              (table.getColumn(String(filterColumn))?.getFilterValue() as string) ?? ""
-            }
-            onChange={(event) =>
-              table.getColumn(String(filterColumn))?.setFilterValue(event.target.value)
-            }
-            className="max-w-sm"
-          />
-        )}
-      </div>
-
-      {/* Table */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  {isLoading ? "Loading..." : "No results."}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage() || isLoading}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage() || isLoading}
-        >
-          Next
-        </Button>
-      </div>
-    </div>
-  )
 }
 
 export default function WorkScheduleDetailsPage() {
   const params = useParams()
-  const router = useRouter()
   const scheduleId = Number(params.id)
   const { format: timeFormat } = useTimeFormat()
+  const { timezone } = useOrgStore()
+  const organizationTimezone = timezone || "Asia/Jakarta"
 
-  const [details, setDetails] = React.useState<IWorkScheduleDetail[]>([])
-  const [loading, setLoading] = React.useState(true)
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  // State
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [rules, setRules] = useState<RuleItem[]>(() => DAYS.map(createDefaultRule))
+  const [origRules, setOrigRules] = useState<RuleItem[]>([])
+  const [selectedDay, setSelectedDay] = useState<DayIndex>(1) // Monday default
 
-  const [open, setOpen] = React.useState(false)
-  const [editingDetail, setEditingDetail] = React.useState<IWorkScheduleDetail | null>(null)
-
-  // Format time range with organization's time format
-  const formatTimeRange = (start?: string, end?: string) => {
-    if (!start || !end) return "-"
-    return `${formatTime(start, timeFormat)} - ${formatTime(end, timeFormat)}`
-  }
-
-  const fetchDetails = async () => {
+  // Fetch schedule details
+  const loadDetails = useCallback(async () => {
     setLoading(true)
-    const res: unknown = await getWorkScheduleDetails(scheduleId)
-    const typedRes = res as { success: boolean; data: IWorkScheduleDetail[]; message: string }
-    if (typedRes.success) {
-      setDetails(typedRes.data)
-    } else {
-      toast.error(typedRes.message)
-    }
-    setLoading(false)
-  }
+    try {
+      const res = await getWorkScheduleDetails(scheduleId)
+      const typedRes = res as { success: boolean; data: IWorkScheduleDetail[]; message?: string }
 
-  React.useEffect(() => {
-    fetchDetails()
+      if (typedRes.success && typedRes.data) {
+        // Convert IWorkScheduleDetail[] to RuleItem[]
+        const loadedRules: RuleItem[] = DAYS.map((day) => {
+          const detail = typedRes.data.find((d) => Number(d.day_of_week) === day)
+          if (detail) {
+            return {
+              day_of_week: day,
+              label: detail.is_working_day ? "Working Day" : "Day Off",
+              is_working_day: detail.is_working_day,
+              start_time: detail.start_time || "",
+              end_time: detail.end_time || "",
+              break_start: detail.break_start || "",
+              break_end: detail.break_end || "",
+              flexible_hours: detail.flexible_hours,
+              notes: "",
+            }
+          }
+          return createDefaultRule(day)
+        })
+        setRules(loadedRules)
+        setOrigRules(JSON.parse(JSON.stringify(loadedRules)))
+      }
+    } catch (error) {
+      toast.error("Failed to load schedule details")
+    } finally {
+      setLoading(false)
+    }
   }, [scheduleId])
 
-  const form = useForm<DetailForm>({
-    resolver: zodResolver(detailSchema),
-    defaultValues: {
-      day_of_week: 1,
-      is_working_day: true,
-      flexible_hours: false,
-      start_time: undefined,
-      end_time: undefined,
-      break_start: undefined,
-      break_end: undefined,
-    },
-  })
+  useEffect(() => {
+    loadDetails()
+  }, [loadDetails])
 
-  const handleSubmit = async (values: DetailForm) => {
-    if (isSubmitting) return
-    form.clearErrors(["start_time", "end_time", "break_start", "break_end"])
+  // Selected rule
+  const selectedRule = useMemo(
+    () => rules.find((r) => r.day_of_week === selectedDay) || null,
+    [rules, selectedDay]
+  )
 
-    const dayExists = details.some((d) => {
-      if (editingDetail && String(d.id) === String(editingDetail.id)) return false
-      return Number(d.day_of_week) === Number(values.day_of_week)
-    })
+  // Dirty check
+  const isDirty = useMemo(
+    () => JSON.stringify(rules) !== JSON.stringify(origRules),
+    [rules, origRules]
+  )
 
-    if (dayExists) {
-      const dayLabel = dayNames[values.day_of_week]
-      form.setError("day_of_week", { message: `Jadwal untuk ${dayLabel} sudah ada. Silakan edit.` })
-      toast.warning(`Jadwal untuk ${dayLabel} sudah ada. Silakan edit jadwal yang sudah dibuat.`)
-      return
-    }
-
-    if (values.is_working_day) {
-      const startMin = timeStringToMinutes(values.start_time)
-      const endMin = timeStringToMinutes(values.end_time)
-      const breakStartMin = timeStringToMinutes(values.break_start)
-      const breakEndMin = timeStringToMinutes(values.break_end)
-
-      let hasError = false
-
-      if (startMin == null) {
-        form.setError("start_time", { message: "Start time is required" })
-        hasError = true
-      }
-
-      if (endMin == null) {
-        form.setError("end_time", { message: "End time is required" })
-        hasError = true
-      }
-
-      if (startMin != null && endMin != null && endMin <= startMin) {
-        form.setError("end_time", { message: "End time must be later than start time" })
-        hasError = true
-      }
-
-      const hasBreakStart = breakStartMin != null
-      const hasBreakEnd = breakEndMin != null
-
-      if (hasBreakStart !== hasBreakEnd) {
-        form.setError(hasBreakStart ? "break_end" : "break_start", {
-          message: "Break start and break end must both be filled",
-        })
-        hasError = true
-      }
-
-      if (hasBreakStart && hasBreakEnd) {
-        if (breakEndMin! <= breakStartMin!) {
-          form.setError("break_end", { message: "Break end must be later than break start" })
-          hasError = true
+  // Update rule
+  const updateRule = (day: DayIndex, patch: Partial<RuleItem>) => {
+    setRules((prev) =>
+      prev.map((r) => {
+        if (r.day_of_week !== day) return r
+        const updated = { ...r, ...patch }
+        // Clear times if not working day
+        if (!updated.is_working_day) {
+          updated.start_time = ""
+          updated.end_time = ""
+          updated.break_start = ""
+          updated.break_end = ""
         }
-
-        if (startMin != null && breakStartMin! <= startMin) {
-          form.setError("break_start", { message: "Break start must be after start time" })
-          hasError = true
-        }
-
-        if (endMin != null && breakEndMin! >= endMin) {
-          form.setError("break_end", { message: "Break end must be before end time" })
-          hasError = true
-        }
-      }
-
-      if (hasError) return
-    }
-
-    setIsSubmitting(true)
-    try {
-      let res
-      if (editingDetail) {
-        res = await updateWorkScheduleDetail(editingDetail.id, values)
-      } else {
-        res = await createWorkScheduleDetail({ ...values, work_schedule_id: scheduleId })
-      }
-
-      if (!res?.success) {
-        const raw = String(res?.message || "")
-        const lower = raw.toLowerCase()
-
-        const isUniqueDay = lower.includes("work_schedule_details_work_schedule_id_day_of_week_key")
-
-        if (isUniqueDay) {
-          const dayLabel = dayNames[values.day_of_week]
-          toast.warning(`Jadwal untuk ${dayLabel} sudah ada. Silakan edit jadwal yang sudah dibuat.`)
-        } else {
-          const isValidation =
-            lower.includes("duplicate") ||
-            lower.includes("already") ||
-            lower.includes("exists") ||
-            lower.includes("unique") ||
-            lower.includes("validation")
-          if (isValidation) toast.warning(raw || "Data tidak valid")
-          else toast.error(raw || "Gagal menyimpan jadwal")
-        }
-
-        return
-      }
-
-      toast.success(editingDetail ? "Updated successfully" : "Created successfully")
-      handleCloseDialog()
-      fetchDetails()
-    } catch (err: unknown) {
-      const raw = err instanceof Error ? err.message : "Unknown error"
-      toast.error(raw)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleCloseDialog = () => {
-    setOpen(false)
-    setEditingDetail(null)
-    form.reset({
-      day_of_week: 1,
-      is_working_day: true,
-      flexible_hours: false,
-      start_time: undefined,
-      end_time: undefined,
-      break_start: undefined,
-      break_end: undefined,
-    })
-  }
-
-  const handleOpenDialog = (detail?: IWorkScheduleDetail) => {
-    if (detail) {
-      setEditingDetail(detail)
-      form.reset(detail)
-    } else {
-      setEditingDetail(null)
-      form.reset({
-        day_of_week: 1,
-        is_working_day: true,
-        flexible_hours: false,
-        start_time: undefined,
-        end_time: undefined,
-        break_start: undefined,
-        break_end: undefined,
+        return updated
       })
-    }
-    setOpen(true)
+    )
   }
 
-  const handleDelete = async (detailId: string) => {
-    try {
-      setLoading(true);
-      const response = await deleteWorkScheduleDetail(detailId);
-      if (!response.success) throw new Error(response.message);
-
-      toast.success("Schedule detail deleted successfully");
-      fetchDetails(); // refresh list
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete schedule detail");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoBack = () => {
-    router.back()
+  // Apply preset
+  const applyPreset = (presetKey: keyof typeof PRESETS) => {
+    const preset = PRESETS[presetKey]
+    updateRule(selectedDay, preset)
+    toast.success(`Applied "${preset.label}" preset`)
   }
 
-  const copyFromMonday = React.useCallback(async (targetDays: number[]) => {
-    const mon = details.find((d) => Number(d.day_of_week) === 1)
-    if (!mon) {
-      toast.warning("Monday detail not found")
-      return
-    }
+  // Copy to days
+  const copyToDays = (targetDays: DayIndex[]) => {
+    if (!selectedRule) return
+    setRules((prev) =>
+      prev.map((r) => {
+        if (!targetDays.includes(r.day_of_week)) return r
+        return {
+          ...r,
+          label: selectedRule.label,
+          is_working_day: selectedRule.is_working_day,
+          start_time: selectedRule.start_time,
+          end_time: selectedRule.end_time,
+          break_start: selectedRule.break_start,
+          break_end: selectedRule.break_end,
+          flexible_hours: selectedRule.flexible_hours,
+          notes: selectedRule.notes,
+        }
+      })
+    )
+    toast.success(`Copied to ${targetDays.length} days`)
+  }
 
-    const items = targetDays.map((day) => ({
-      day_of_week: day,
-      is_working_day: mon.is_working_day,
-      start_time: mon.start_time,
-      end_time: mon.end_time,
-      break_start: mon.break_start,
-      break_end: mon.break_end,
-      break_duration_minutes: mon.break_duration_minutes,
-      flexible_hours: mon.flexible_hours,
-      is_active: mon.is_active ?? true,
-    }))
-
-    setIsSubmitting(true)
+  // Save all
+  const saveAll = async () => {
+    setSaving(true)
     try {
+      const items = rules.map((r) => ({
+        day_of_week: r.day_of_week,
+        is_working_day: r.is_working_day,
+        start_time: r.is_working_day ? (r.start_time || "08:30") : undefined,
+        end_time: r.is_working_day ? (r.end_time || "17:00") : undefined,
+        break_start: r.is_working_day ? (r.break_start || undefined) : undefined,
+        break_end: r.is_working_day ? (r.break_end || undefined) : undefined,
+        flexible_hours: r.flexible_hours,
+        is_active: true,
+      }))
+
       const res = await upsertWorkScheduleDetails(scheduleId, items)
       if (!res.success) {
-        toast.error(res.message || "Failed to apply copy")
+        toast.error(res.message || "Failed to save schedule")
         return
       }
-      toast.success("Schedule copied successfully")
-      fetchDetails()
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Unknown error")
+
+      toast.success("Schedule saved successfully")
+      setOrigRules(JSON.parse(JSON.stringify(rules)))
+    } catch (error) {
+      toast.error("Failed to save schedule")
     } finally {
-      setIsSubmitting(false)
-    }
-  }, [details, scheduleId])
-
-  const handleCopyMonToWeekdays = React.useCallback(() => {
-    copyFromMonday([1, 2, 3, 4, 5])
-  }, [copyFromMonday])
-
-  const handleCopyMonToAllWeek = React.useCallback(() => {
-    copyFromMonday([0, 1, 2, 3, 4, 5, 6])
-  }, [copyFromMonday])
-
-  // Calculate summary statistics
-  const calculateSummary = () => {
-    const workingDays = details.filter(d => d.is_working_day)
-    const totalWorkingDays = workingDays.length
-
-    let totalMinutes = 0
-    workingDays.forEach(day => {
-      if (day.start_time && day.end_time) {
-        const start = new Date(`2000-01-01T${day.start_time}`)
-        const end = new Date(`2000-01-01T${day.end_time}`)
-        let minutes = (end.getTime() - start.getTime()) / 1000 / 60
-
-        if (day.break_start && day.break_end) {
-          const breakStart = new Date(`2000-01-01T${day.break_start}`)
-          const breakEnd = new Date(`2000-01-01T${day.break_end}`)
-          minutes -= (breakEnd.getTime() - breakStart.getTime()) / 1000 / 60
-        }
-        totalMinutes += minutes
-      }
-    })
-
-    const totalHours = Math.floor(totalMinutes / 60)
-    const avgHoursPerDay = totalWorkingDays > 0 ? (totalMinutes / 60 / totalWorkingDays).toFixed(1) : "0"
-
-    return {
-      totalWorkingDays,
-      totalHours,
-      avgHoursPerDay
+      setSaving(false)
     }
   }
 
-  const summary = calculateSummary()
+  // Discard changes
+  const discardChanges = () => {
+    setRules(JSON.parse(JSON.stringify(origRules)))
+    toast.info("Changes discarded")
+  }
 
-  const columns: ColumnDef<IWorkScheduleDetail>[] = [
-    {
-      accessorKey: "day_of_week",
-      header: "Day",
-      cell: ({ row }) => {
-        const dayNum = row.getValue("day_of_week") as number
-        const isWorking = row.original.is_working_day
-        const isFlexible = row.original.flexible_hours
-        return (
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{dayNames[dayNum]}</span>
-            {isWorking ? (
-              <span className="px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs rounded-full">
-                Working
-              </span>
-            ) : (
-              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 text-xs rounded-full">
-                Off
-              </span>
-            )}
-            {isFlexible && isWorking && (
-              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs rounded-full">
-                Flexible
-              </span>
-            )}
-          </div>
-        )
-      }
-    },
-    {
-      id: "work_hours",
-      header: "Work Hours",
-      cell: ({ row }) => {
-        const start = row.original.start_time
-        const end = row.original.end_time
-        const isWorking = row.original.is_working_day
-        const isFlexible = row.original.flexible_hours
+  // Reset to defaults
+  const resetToDefaults = () => {
+    const defaults = DAYS.map(createDefaultRule)
+    setRules(defaults)
+    toast.info("Reset to default schedule")
+  }
 
-        if (!isWorking) {
-          return (
-            <span className="text-sm text-muted-foreground italic">
-              Off Day
-            </span>
-          )
-        }
+  // Format time for display
+  const formatTimeDisplay = (time: string) => {
+    if (!time) return "—"
+    return formatTime(time, timeFormat)
+  }
 
-        return (
-          <div className="flex flex-col">
-            <span className="font-mono text-sm font-medium">
-              {formatTimeRange(start, end)}
-            </span>
-            {isFlexible && (
-              <span className="text-xs text-muted-foreground italic">
-                Adjustable hours
-              </span>
-            )}
-          </div>
-        )
-      }
-    },
-    {
-      id: "break_time",
-      header: "Break Time",
-      cell: ({ row }) => {
-        const breakStart = row.original.break_start
-        const breakEnd = row.original.break_end
-        const isWorking = row.original.is_working_day
-
-        if (!isWorking) {
-          return <span className="text-xs text-muted-foreground">-</span>
-        }
-
-        const range = formatTimeRange(breakStart, breakEnd)
-        return (
-          <span className="font-mono text-xs text-muted-foreground">
-            {range}
-          </span>
-        )
-      }
-    },
-    {
-      id: "total_hours",
-      header: "Total Hours",
-      cell: ({ row }) => {
-        const isWorking = row.original.is_working_day
-
-        if (!isWorking) {
-          return <span className="text-sm text-muted-foreground">-</span>
-        }
-
-        const hours = calculateWorkingHours(
-          row.original.start_time,
-          row.original.end_time,
-          row.original.break_start,
-          row.original.break_end
-        )
-
-        return (
-          <span className="font-bold text-sm">{hours}</span>
-        )
-      }
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const d = row.original
-        return (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 cursor-pointer bg-secondary border-0 p-0"
-              onClick={() => handleOpenDialog(d)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 text-red-500 cursor-pointer bg-secondary border-0 p-0"
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Schedule Detail</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete this schedule detail?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={async () => {
-                      await handleDelete(d.id)
-                    }}
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        )
-      },
-    },
-  ]
+  if (loading) {
+    return (
+      <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
+        <TableSkeleton rows={7} columns={4} />
+      </div>
+    )
+  }
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <div className="w-full max-w-6xl mx-auto py-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            type="button"
-            onClick={handleGoBack}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
+      {/* Action Bar */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={resetToDefaults}
+          className="gap-2"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Reset to Default
+        </Button>
+        <Button
+          variant="outline"
+          onClick={discardChanges}
+          disabled={!isDirty}
+          className="gap-2 text-orange-600 border-orange-300 hover:bg-orange-50"
+        >
+          Discard Changes
+        </Button>
+        <Button
+          onClick={saveAll}
+          disabled={!isDirty || saving}
+          className="gap-2"
+        >
+          <Save className="h-4 w-4" />
+          {saving ? "Saving..." : "Save Schedule"}
+        </Button>
+      </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            type="button"
-            onClick={handleCopyMonToWeekdays}
-            disabled={isSubmitting || loading}
-          >
-            Copy Mon → Weekdays
-          </Button>
-          <Button
-            variant="outline"
-            type="button"
-            onClick={handleCopyMonToAllWeek}
-            disabled={isSubmitting || loading}
-          >
-            Copy Mon → All Week
-          </Button>
-        </div>
-
-          <Dialog
-            open={open}
-            onOpenChange={(isOpen) => {
-              if (!isOpen) {
-                handleCloseDialog()
-              }
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button onClick={() => handleOpenDialog()} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {editingDetail ? "Edit Detail" : "Add Detail"}
-                </DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="day_of_week"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Day of Week</FormLabel>
-                        <Select
-                          onValueChange={(value) => field.onChange(parseInt(value))}
-                          value={field.value?.toString()}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select day" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {dayNames.map((day, index) => (
-                              <SelectItem key={index} value={index.toString()}>
-                                {day}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="is_working_day"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Working Day</FormLabel>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="flexible_hours"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Flexible Hours</FormLabel>
-                          <p className="text-xs text-muted-foreground">
-                            Allow adjustable work hours for this day
-                          </p>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="start_time"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Start Time</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="time"
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value || undefined)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="end_time"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>End Time</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="time"
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value || undefined)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="break_start"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Break Start</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="time"
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value || undefined)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="break_end"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Break End</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="time"
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value || undefined)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? "Saving..." : (editingDetail ? "Update" : "Create")}
-                  </Button>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {/* Summary Cards */}
-        {!loading && details.length > 0 && (
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Working Days
-                </CardTitle>
-                <CalendarDays className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{summary.totalWorkingDays}</div>
-                <p className="text-xs text-muted-foreground">
-                  per week
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Hours
-                </CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{summary.totalHours}h</div>
-                <p className="text-xs text-muted-foreground">
-                  per week
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Average Hours
-                </CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{summary.avgHoursPerDay}h</div>
-                <p className="text-xs text-muted-foreground">
-                  per working day
-                </p>
-              </CardContent>
-            </Card>
+      {/* Two-Panel Editor */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {/* Day Selector (Left Panel) */}
+        <div className="border rounded-lg p-2 md:col-span-1 bg-card h-full">
+          {/* Timezone Banner */}
+          <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 rounded-lg border" role="status">
+            <Globe className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <span className="text-sm text-muted-foreground">
+              Timezone: <strong>{getTimezoneLabel(organizationTimezone)}</strong>
+              <span className="ml-1 text-xs">({getTimezoneOffset(organizationTimezone)})</span>
+            </span>
+            {isDirty && (
+              <Badge variant="outline" className="ml-auto text-orange-600 border-orange-300">
+                Unsaved Changes
+              </Badge>
+            )}
           </div>
-        )}
+          <div className="divide-y">
+            {DAYS.map((day) => {
+              const rule = rules.find((r) => r.day_of_week === day)
+              const active = selectedDay === day
+              const hours = rule?.is_working_day
+                ? `${formatTimeDisplay(rule.start_time)} - ${formatTimeDisplay(rule.end_time)}`
+                : "No schedule"
 
-        {loading ? (
-          <TableSkeleton rows={10} columns={7} />
-        ) : (
-          <DataTableWithBack
-            columns={columns}
-            data={details}
-            filterColumn="day_of_week"
-          />
-        )}
+              return (
+                <button
+                  key={day}
+                  className={`w-full text-left p-3 flex items-center justify-between transition-colors ${active ? "bg-accent" : "hover:bg-muted/50"
+                    }`}
+                  onClick={() => setSelectedDay(day)}
+                >
+                  <div>
+                    <div className="font-medium">{getDayName(day)}</div>
+                    <div className="text-xs text-muted-foreground">{hours}</div>
+                  </div>
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full font-medium ${rule?.is_working_day
+                      ? "bg-green-500 dark:bg-green-600 text-white"
+                      : "bg-blue-500 dark:bg-blue-600 text-white"
+                      }`}
+                  >
+                    {rule?.is_working_day ? "Working" : "Off"}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Day Editor (Right Panel) */}
+        <div className="border rounded-lg p-4 md:col-span-2 lg:col-span-3 bg-card h-full flex flex-col">
+          {selectedRule && (
+            <>
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-lg font-semibold">{getDayName(selectedDay)}</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">Status:</span>
+                  <select
+                    className="h-8 rounded-md border px-2 text-sm"
+                    value={selectedRule.is_working_day ? "on" : "off"}
+                    onChange={(e) => updateRule(selectedDay, { is_working_day: e.target.value === "on" })}
+                  >
+                    <option value="on">Working Day</option>
+                    <option value="off">Day Off</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Presets */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Button variant="outline" size="sm" onClick={() => applyPreset("normal")}>
+                  Normal Hours
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => applyPreset("morning")}>
+                  Morning Shift
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => applyPreset("evening")}>
+                  Evening Shift
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => applyPreset("flexible")}>
+                  Flexible
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => applyPreset("off")}>
+                  Day Off
+                </Button>
+              </div>
+
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Time Settings */}
+                <div className="space-y-3 md:col-span-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="space-y-1">
+                      <div className="text-sm font-medium">Check In</div>
+                      <Input
+                        type="time"
+                        value={selectedRule.start_time}
+                        disabled={!selectedRule.is_working_day}
+                        onChange={(e) => updateRule(selectedDay, { start_time: e.target.value })}
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <div className="text-sm font-medium">Check Out</div>
+                      <Input
+                        type="time"
+                        value={selectedRule.end_time}
+                        disabled={!selectedRule.is_working_day}
+                        onChange={(e) => updateRule(selectedDay, { end_time: e.target.value })}
+                      />
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="space-y-1">
+                      <div className="text-sm font-medium">Break Start</div>
+                      <Input
+                        type="time"
+                        value={selectedRule.break_start}
+                        disabled={!selectedRule.is_working_day}
+                        onChange={(e) => updateRule(selectedDay, { break_start: e.target.value })}
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <div className="text-sm font-medium">Break End</div>
+                      <Input
+                        type="time"
+                        value={selectedRule.break_end}
+                        disabled={!selectedRule.is_working_day}
+                        onChange={(e) => updateRule(selectedDay, { break_end: e.target.value })}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Flexible Hours Toggle */}
+                <div className="md:col-span-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedRule.flexible_hours}
+                      disabled={!selectedRule.is_working_day}
+                      onChange={(e) => updateRule(selectedDay, { flexible_hours: e.target.checked })}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    <span className="text-sm font-medium">Flexible Hours</span>
+                    <span className="text-xs text-muted-foreground">(Allow adjustable work hours)</span>
+                  </label>
+                </div>
+
+                {/* Copy Actions */}
+                <div className="md:col-span-2 pt-4 border-t">
+                  <div className="text-sm font-medium mb-2">Copy to other days:</div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToDays(WORKDAYS)}
+                      className="gap-1"
+                    >
+                      <Copy className="h-3 w-3" />
+                      Copy to Weekdays
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToDays(DAYS.filter((d) => d !== selectedDay))}
+                      className="gap-1"
+                    >
+                      <Copy className="h-3 w-3" />
+                      Copy to All Days
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )

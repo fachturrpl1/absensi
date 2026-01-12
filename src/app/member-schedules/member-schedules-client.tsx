@@ -39,6 +39,7 @@ interface MemberSchedulesClientProps {
   initialMembers: IOrganization_member[]
   initialWorkSchedules: IWorkSchedule[]
   activeMemberIds?: string[]
+  organizationTimezone?: string
   isLoading?: boolean
   pageIndex?: number
   pageSize?: number
@@ -53,6 +54,7 @@ export default function MemberSchedulesClient({
   initialMembers,
   initialWorkSchedules,
   activeMemberIds: initialActiveMemberIds,
+  organizationTimezone = "Asia/Jakarta",
   isLoading = false,
   pageIndex,
   pageSize,
@@ -67,6 +69,7 @@ export default function MemberSchedulesClient({
   void initialMembers
   void initialWorkSchedules
   void initialActiveMemberIds
+  void organizationTimezone
 
   // Sync state when props change (user login/logout/switch org)
   React.useEffect(() => {
@@ -151,11 +154,36 @@ export default function MemberSchedulesClient({
       accessorKey: "effective_date",
       cell: ({ row }) => {
         const date = new Date(row.getValue("effective_date"))
-        return date.toLocaleDateString("id-ID", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
+        // Use browser locale for i18n instead of hardcoded "id-ID"
+        return (
+          <time dateTime={date.toISOString().split("T")[0]}>
+            {date.toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </time>
+        )
+      },
+    },
+    {
+      header: "End Date",
+      accessorKey: "end_date",
+      cell: ({ row }) => {
+        const endDate = row.original.end_date
+        if (!endDate) {
+          return <span className="text-muted-foreground">Ongoing</span>
+        }
+        const date = new Date(endDate)
+        return (
+          <time dateTime={date.toISOString().split("T")[0]}>
+            {date.toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })}
+          </time>
+        )
       },
     },
     {
@@ -164,7 +192,12 @@ export default function MemberSchedulesClient({
       cell: ({ row }) => {
         const active = row.getValue("is_active") as boolean
         return (
-          <Badge variant={active ? "default" : "secondary"} className={active ? "bg-green-500 hover:bg-green-600" : ""}>
+          <Badge
+            variant={active ? "default" : "secondary"}
+            className={active ? "bg-green-500 hover:bg-green-600" : ""}
+            role="status"
+            aria-label={active ? "Schedule is active" : "Schedule is inactive"}
+          >
             {active ? "Active" : "Inactive"}
           </Badge>
         )
@@ -183,8 +216,10 @@ export default function MemberSchedulesClient({
                   variant="outline"
                   size="icon"
                   className="h-9 w-9 text-red-500 cursor-pointer bg-secondary border-0 p-0"
+                  aria-label={`Delete schedule assignment for ${getMemberName(schedule)}`}
+                  title="Delete assignment"
                 >
-                  <Trash className="h-4 w-4" />
+                  <Trash className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>

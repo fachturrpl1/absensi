@@ -326,11 +326,11 @@ export function MemberScheduleAssignForm() {
                       >
                         {field.value
                           ? (() => {
-                              const m = members.find((x) => String(x.id) === String(field.value))
-                              const label = m ? getMemberDisplayName(m) : "Unknown"
-                              const dept = m ? getMemberDepartment(m) : ""
-                              return dept ? `${label} (${dept})` : label
-                            })()
+                            const m = members.find((x) => String(x.id) === String(field.value))
+                            const label = m ? getMemberDisplayName(m) : "Unknown"
+                            const dept = m ? getMemberDepartment(m) : ""
+                            return dept ? `${label} (${dept})` : label
+                          })()
                           : "Choose a member..."}
                         <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -499,11 +499,18 @@ export function MemberScheduleAssignForm() {
       </Tabs>
 
       <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
-        <DialogContent className="w-full max-w-[560px] max-h-[80vh] overflow-hidden p-0">
+        <DialogContent
+          className="w-full max-w-[560px] max-h-[80vh] overflow-hidden p-0"
+          aria-labelledby="member-dialog-title"
+          aria-describedby="member-dialog-description"
+        >
           <div className="flex h-full max-h-[80vh] flex-col">
             <div className="px-6 pt-6">
               <DialogHeader>
-                <DialogTitle>Select Member</DialogTitle>
+                <DialogTitle id="member-dialog-title">Select Member</DialogTitle>
+                <p id="member-dialog-description" className="sr-only">
+                  Search and select members to assign work schedules
+                </p>
               </DialogHeader>
             </div>
 
@@ -526,18 +533,19 @@ export function MemberScheduleAssignForm() {
               </div>
 
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 <Input
                   value={memberSearch}
                   onChange={(e) => setMemberSearch(e.target.value)}
                   placeholder="Search member name or department..."
                   className="pl-9"
+                  aria-label="Search members"
                 />
               </div>
             </div>
 
             <div className="px-6 py-3 flex-1 overflow-hidden">
-              <div className="border rounded-md h-full overflow-hidden">
+              <div className="border rounded-md h-full overflow-hidden" role="listbox" aria-label="Available members">
                 <div className="h-full overflow-y-auto">
                   {lookupsLoading && members.length === 0 ? (
                     <div className="p-4 text-sm text-muted-foreground">Loading...</div>
