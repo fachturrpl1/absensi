@@ -485,6 +485,12 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     },
   });
 
+  // Ensure check-out date always follows check-in date in edit dialog
+  const editCheckInDate = editForm.watch('checkInDate');
+  useEffect(() => {
+    editForm.setValue('checkOutDate', editCheckInDate || '');
+  }, [editCheckInDate]);
+
   const handleDeleteClick = async (recordId: string) => {
     setRecordToDelete(recordId);
     setDeleteDialogOpen(true);
@@ -1565,7 +1571,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" {...field} value={editCheckInDate || ''} disabled />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
