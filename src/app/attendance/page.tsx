@@ -600,55 +600,6 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
       </motion.div>
-
-      {/* SECTION 5: ADDITIONAL METRICS */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-      >
-        <div className="flex items-center gap-2 mb-3">
-          <BarChart3 className="w-5 h-5 text-primary" />
-          <h2 className="text-xl font-semibold">Additional Insights</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-border">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Active Members</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{metrics?.activeMembers || 0}</div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {metrics ? 'Unique members with attendance records' : 'No data available'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Work Hours</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{metrics?.totalWorkHours.toFixed(0) || '0'}h</div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {metrics ? 'Combined hours for the period' : 'No data available'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Avg Late Time</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{metrics?.avgLateMinutes.toFixed(0) || '0'} min</div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {metrics ? 'Average lateness when late' : 'No data available'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </motion.div>
     </div>
   );
 }
