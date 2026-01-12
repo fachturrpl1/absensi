@@ -62,6 +62,7 @@ export default function AnalyticsPage() {
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [masterData, setMasterData] = useState<MasterData>({ totalMembers: 0, totalDepartments: 0, averageTeamSize: 0 });
+  const [deptMemberCounts, setDeptMemberCounts] = useState<Record<string, number>>({});
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
     const today = new Date();
     const monthStart = startOfMonth(today);
@@ -115,6 +116,22 @@ export default function AnalyticsPage() {
           totalDepartments: deptsResult.count || 0,
           averageTeamSize: (membersResult.count || 0) / (deptsResult.count || 1),
         });
+
+        // Fetch active member list with departments to compute per-department member counts
+        const { data: memberRows } = await supabase
+          .from('organization_members')
+          .select('id, is_active, departments:departments!organization_members_department_id_fkey(name)')
+          .eq('organization_id', orgId)
+          .eq('is_active', true);
+
+        const counts: Record<string, number> = {};
+        (memberRows || []).forEach((row: any) => {
+          // departments can be object or array depending on join
+          const depObj = Array.isArray(row.departments) ? row.departments[0] : row.departments;
+          const name: string = depObj?.name || 'Unknown';
+          counts[name] = (counts[name] || 0) + 1;
+        });
+        setDeptMemberCounts(counts);
 
         // Fetch attendance records using secure API route (last 90 days)
         const startDate = format(subDays(new Date(), 90), 'yyyy-MM-dd');
@@ -265,33 +282,39 @@ export default function AnalyticsPage() {
     }));
   }, [filteredRecords, dateRange.preset]);
 
-  // Department performance
+  // Department performance (rate against total active members in the department)
   const departmentData = useMemo(() => {
-    const depts: Record<string, { present: number; late: number; absent: number; total: number }> = {};
+    const depts: Record<string, { present: number; late: number; absent: number }> = {};
 
     filteredRecords.forEach(record => {
       const deptName = record.department_name || 'Unknown';
       if (!depts[deptName]) {
-        depts[deptName] = { present: 0, late: 0, absent: 0, total: 0 };
+        depts[deptName] = { present: 0, late: 0, absent: 0 };
       }
-      depts[deptName].total++;
       if (record.status === 'present') depts[deptName].present++;
       else if (record.status === 'late') depts[deptName].late++;
       else if (record.status === 'absent') depts[deptName].absent++;
     });
 
     return Object.entries(depts)
-      .map(([name, data]) => ({
-        name,
-        rate: data.total > 0 ? ((data.present + data.late) / data.total * 100) : 0,
-        present: data.present,
-        late: data.late,
-        absent: data.absent,
-        total: data.total,
-      }))
+      .map(([name, data]) => {
+        const members = deptMemberCounts[name] || 0;
+        const attended = data.present + data.late; // attended = present + late
+        const rate = members > 0 ? (attended / members) * 100 : 0;
+        return {
+          name,
+          rate,
+          present: data.present,
+          late: data.late,
+          absent: data.absent,
+          attended,
+          members,
+          total: members,
+        };
+      })
       .sort((a, b) => b.rate - a.rate)
       .slice(0, 5);
-  }, [filteredRecords]);
+  }, [filteredRecords, deptMemberCounts]);
 
   if (isLoading) {
     return <AnalyticsSkeleton />;
@@ -591,7 +614,7 @@ export default function AnalyticsPage() {
                           <span className={`font-medium group-hover:underline ${c.name}`}>{displayName}</span>
                         </Link>
                         <div className="flex items-center gap-4 text-sm">
-                          <span className="text-green-600 dark:text-green-400">{dept.present}✓</span>
+                          <span className="text-green-600 dark:text-green-400">{dept.attended}/{dept.members}✓</span>
                           <span className="font-bold min-w-[60px] text-right">{dept.rate.toFixed(1)}%</span>
                         </div>
                       </div>

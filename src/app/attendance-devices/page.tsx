@@ -41,6 +41,7 @@ import { ActivateDeviceDialog } from "@/components/dialogs/activate-device-dialo
 import { PaginationFooter } from "@/components/pagination-footer"
 import { useOrgStore } from "@/store/org-store"
 import { useDebounce } from "@/utils/debounce"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 const editDeviceSchema = z.object({
     deviceName: z.string().min(1, "Device name is required"),
@@ -345,35 +346,35 @@ export default function AttendanceDevicesPage() {
                                 </div>
                             ) : (
                                 <div className="space-y-4 min-w-full">
-                                    <div className="min-w-full overflow-x-auto">
-                                        <table className="min-w-full bg-card rounded-md overflow-hidden border">
-                                            <thead className="bg-muted/50">
-                                                <tr className="text-left">
-                                                    <th className="px-4 py-3 border-b">Device Name</th>
-                                                    <th className="px-4 py-3 border-b">Serial Number</th>
-                                                    <th className="px-4 py-3 border-b">Device Type</th>
-                                                    <th className="px-4 py-3 border-b">Status</th>
-                                                    <th className="px-4 py-3 border-b">Location</th>
-                                                    <th className="px-4 py-3 border-b whitespace-nowrap">Created At</th>
-                                                    <th className="px-4 py-3 border-b">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
+                                    <div className="border rounded-lg overflow-x-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Device Name</TableHead>
+                                                    <TableHead>Serial Number</TableHead>
+                                                    <TableHead>Device Type</TableHead>
+                                                    <TableHead>Status</TableHead>
+                                                    <TableHead>Location</TableHead>
+                                                    <TableHead>Created At</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
                                                 {devices.map((device: IAttendanceDevice) => (
-                                                    <tr key={device.id} className="hover:bg-muted/30">
-                                                        <td className="px-4 py-3 border-b">{device.device_name}</td>
-                                                        <td className="px-4 py-3 border-b">{device.serial_number || '-'}</td>
-                                                        <td className="px-4 py-3 border-b">{device.device_types?.name || '-'}</td>
-                                                        <td className="px-4 py-3 border-b">
+                                                    <TableRow key={device.id}>
+                                                        <TableCell>{device.device_name}</TableCell>
+                                                        <TableCell>{device.serial_number || '-'}</TableCell>
+                                                        <TableCell>{device.device_types?.name || '-'}</TableCell>
+                                                        <TableCell>
                                                             {device.is_active ? (
                                                                 <Badge className="bg-green-500 text-primary-foreground"><CheckCircle2 className="w-3 h-3 mr-1" /> Active</Badge>
                                                             ) : (
                                                                 <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" /> Inactive</Badge>
                                                             )}
-                                                        </td>
-                                                        <td className="px-4 py-3 border-b">{device.location || '-'}</td>
-                                                        <td className="px-4 py-3 border-b whitespace-nowrap">{new Date(device.created_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
-                                                        <td className="px-4 py-3 border-b">
+                                                        </TableCell>
+                                                        <TableCell>{device.location || '-'}</TableCell>
+                                                        <TableCell className="whitespace-nowrap">{new Date(device.created_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</TableCell>
+                                                        <TableCell className="text-right">
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
@@ -388,11 +389,11 @@ export default function AttendanceDevicesPage() {
                                                             >
                                                                 <Edit2 className="w-4 h-4" />
                                                             </Button>
-                                                        </td>
-                                                    </tr>
+                                                        </TableCell>
+                                                    </TableRow>
                                                 ))}
-                                            </tbody>
-                                        </table>
+                                            </TableBody>
+                                        </Table>
                                     </div>
 
                                     <PaginationFooter
