@@ -20,10 +20,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
   AlertDialog,
@@ -309,147 +305,143 @@ export default function ScheduleClient({
 
   return (
     <div className="w-full h-full">
-      <Card className="h-full border-0 shadow-none">
-        <CardContent className="p-0">
-          <DataTable
-            columns={columns}
-            data={schedules}
-            isLoading={isLoading}
-            showGlobalFilter={true}
-            showFilters={true}
-            showColumnToggle={false}
-            layout="card"
-            globalFilterPlaceholder="Search schedules..."
-            manualPagination={typeof pageIndex === "number" && typeof pageSize === "number"}
-            pageIndex={pageIndex}
-            pageSize={pageSize}
-            totalRecords={totalRecords}
-            onPageIndexChange={onPageIndexChange}
-            onPageSizeChange={onPageSizeChange}
-            toolbarRight={
-              <Dialog
-                open={open}
-                onOpenChange={(isOpen) => {
-                  if (!isOpen) {
-                    handleCloseDialog()
-                  }
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button onClick={() => handleOpenDialog()} className="gap-2 whitespace-nowrap">
-                    <Plus className="h-4 w-4" />
-                    New
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{editingDetail ? "Edit Schedule" : "Add Schedule"}</DialogTitle>
-                  </DialogHeader>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="organization_id"
-                        render={({ field }) => <input type="hidden" {...field} />}
-                      />
-                      <FormItem>
-                        <FormLabel>Organization</FormLabel>
-                        <div className="text-sm text-muted-foreground">
-                          {organizationName || "(Organization name not loaded)"}
-                        </div>
-                      </FormItem>
+      <DataTable
+        columns={columns}
+        data={schedules}
+        isLoading={isLoading}
+        showGlobalFilter={true}
+        showFilters={true}
+        showColumnToggle={false}
+        layout="card"
+        globalFilterPlaceholder="Search schedules..."
+        manualPagination={typeof pageIndex === "number" && typeof pageSize === "number"}
+        pageIndex={pageIndex}
+        pageSize={pageSize}
+        totalRecords={totalRecords}
+        onPageIndexChange={onPageIndexChange}
+        onPageSizeChange={onPageSizeChange}
+        toolbarRight={
+          <Dialog
+            open={open}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) {
+                handleCloseDialog()
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button onClick={() => handleOpenDialog()} className="gap-2 whitespace-nowrap">
+                <Plus className="h-4 w-4" />
+                New
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingDetail ? "Edit Schedule" : "Add Schedule"}</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="organization_id"
+                    render={({ field }) => <input type="hidden" {...field} />}
+                  />
+                  <FormItem>
+                    <FormLabel>Organization</FormLabel>
+                    <div className="text-sm text-muted-foreground">
+                      {organizationName || "(Organization name not loaded)"}
+                    </div>
+                  </FormItem>
 
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Name</FormLabel>
-                            <FormControl>
-                              <Input type="text" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <FormControl>
-                              <Input type="text" {...field ?? ""} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="schedule_type"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Type</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select schedule type" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {SCHEDULE_TYPES.map((type) => (
-                                  <SelectItem key={type.value} value={type.value}>
-                                    {type.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="is_active"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Active</FormLabel>
-                            <FormControl>
-                              <Switch checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="submit" className="w-full">
-                        {editingDetail ? "Update" : "Create"}
-                      </Button>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            }
-            emptyState={
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <Calendar className="h-14 w-14 text-muted-foreground mx-auto" />
-                  </EmptyMedia>
-                  <EmptyTitle>No schedules yet</EmptyTitle>
-                  <EmptyDescription>
-                    There are no schedules for this organization. Use the "Add Schedule" button to
-                    create one.
-                  </EmptyDescription>
-                </EmptyHeader>
-                <EmptyContent>
-                  <Button onClick={() => handleOpenDialog()} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    New
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                          <Input type="text" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Input type="text" {...field ?? ""} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="schedule_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select schedule type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {SCHEDULE_TYPES.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="is_active"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Active</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full">
+                    {editingDetail ? "Update" : "Create"}
                   </Button>
-                </EmptyContent>
-              </Empty>
-            }
-          />
-        </CardContent>
-      </Card>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        }
+        emptyState={
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Calendar className="h-14 w-14 text-muted-foreground mx-auto" />
+              </EmptyMedia>
+              <EmptyTitle>No schedules yet</EmptyTitle>
+              <EmptyDescription>
+                There are no schedules for this organization. Use the "Add Schedule" button to
+                create one.
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button onClick={() => handleOpenDialog()} className="gap-2">
+                <Plus className="h-4 w-4" />
+                New
+              </Button>
+            </EmptyContent>
+          </Empty>
+        }
+      />
     </div >
   )
 }

@@ -22,10 +22,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
   Form,
@@ -480,315 +476,265 @@ export default function MemberSchedulesClient({
 
   return (
     <div className="w-full h-full">
-      <Card className="h-full border-0 shadow-none">
-        <CardContent className="p-0">
-          <DataTable
-            columns={columns}
-            data={schedules}
-            isLoading={isLoading}
-            showGlobalFilter={true}
-            showFilters={true}
-            showColumnToggle={false}
-            layout="card"
-            globalFilterPlaceholder="Search member schedules..."
-            manualPagination={typeof pageIndex === "number" && typeof pageSize === "number"}
-            pageIndex={pageIndex}
-            pageSize={pageSize}
-            totalRecords={totalRecords}
-            onPageIndexChange={onPageIndexChange}
-            onPageSizeChange={onPageSizeChange}
-            toolbarRight={
-              <Dialog
-                open={open}
-                onOpenChange={(isOpen) => {
-                  if (!isOpen) {
-                    handleCloseDialog()
-                    return
-                  }
+      <DataTable
+        columns={columns}
+        data={schedules}
+        isLoading={isLoading}
+        showGlobalFilter={true}
+        showFilters={true}
+        showColumnToggle={false}
+        layout="card"
+        globalFilterPlaceholder="Search member schedules..."
+        manualPagination={typeof pageIndex === "number" && typeof pageSize === "number"}
+        pageIndex={pageIndex}
+        pageSize={pageSize}
+        totalRecords={totalRecords}
+        onPageIndexChange={onPageIndexChange}
+        onPageSizeChange={onPageSizeChange}
+        toolbarRight={
+          <Dialog
+            open={open}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) {
+                handleCloseDialog()
+                return
+              }
 
+              resetForCreate()
+              setOpen(true)
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button
+                onClick={() => {
                   resetForCreate()
                   setOpen(true)
                 }}
+                className="gap-2 whitespace-nowrap"
               >
-                <DialogTrigger asChild>
-                  <Button
-                    onClick={() => {
-                      resetForCreate()
-                      setOpen(true)
-                    }}
-                    className="gap-2 whitespace-nowrap"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Assign
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px]">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingSchedule ? "Edit Schedule" : "Assign Schedule"}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      {editingSchedule ? (
-                        <div className="rounded-lg bg-secondary/50 px-4 py-3 space-y-1">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Member</p>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="w-10 h-10 border-2 border-primary/20">
-                              <AvatarImage
-                                src={
-                                  (editingSchedule.organization_member as { user?: { profile_photo_url?: string | null } })?.user?.profile_photo_url || undefined
-                                }
-                                alt={getMemberName(editingSchedule)}
-                              />
-                              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                                {getMemberName(editingSchedule).charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col">
-                              <p className="text-sm font-semibold text-foreground">
-                                {getMemberName(editingSchedule)}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <FormField
-                          control={form.control}
-                          name="organization_member_id"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Member</FormLabel>
-                              <FormControl>
-                                <Popover
-                                  open={memberPopoverOpen}
-                                  onOpenChange={(next) => {
-                                    setMemberPopoverOpen(next)
-                                    if (next) {
-                                      setMemberQuery("")
+                <Plus className="h-4 w-4" />
+                Assign
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingSchedule ? "Edit Schedule" : "Assign Schedule"}
+                </DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="organization_member_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Member</FormLabel>
+                        <FormControl>
+                          <Popover
+                            open={memberPopoverOpen}
+                            onOpenChange={(next) => {
+                              setMemberPopoverOpen(next)
+                              if (next) setMemberQuery("")
+                            }}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={memberPopoverOpen}
+                                className={cn(
+                                  "w-full justify-between",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                                type="button"
+                              >
+                                {field.value
+                                  ? getMemberDisplayName(
+                                      members.find((m) => String(m.id) === String(field.value)) ||
+                                        ({ id: field.value, user: undefined } as any)
+                                    )
+                                  : "Select member..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-[--radix-popover-trigger-width] p-0"
+                              align="start"
+                            >
+                              <Command shouldFilter={false}>
+                                <CommandInput
+                                  placeholder="Search member..."
+                                  value={memberQuery}
+                                  onValueChange={setMemberQuery}
+                                />
+                                <CommandList className="max-h-[220px] overflow-y-auto">
+                                  {(() => {
+                                    const q = memberQuery.trim().toLowerCase()
+                                    const filtered = q.length === 0
+                                      ? membersSorted
+                                      : membersSorted.filter((member) => {
+                                          const name = getMemberDisplayName(member)
+                                          const nameLower = name.toLowerCase()
+                                          const user = member.user as { email?: string } | undefined
+                                          const emailLower = (user?.email ?? "").toLowerCase()
+
+                                          if (nameLower.includes(q)) return true
+                                          if (emailLower.includes(q)) return true
+                                          return false
+                                        })
+
+                                    if (lookupsLoading && members.length === 0) {
+                                      return (
+                                        <CommandGroup>
+                                          <CommandItem value="loading" disabled>
+                                            Loading...
+                                          </CommandItem>
+                                        </CommandGroup>
+                                      )
                                     }
-                                  }}
-                                >
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      role="combobox"
-                                      aria-expanded={memberPopoverOpen}
-                                      className={cn(
-                                        "w-full justify-between",
-                                        !field.value && "text-muted-foreground"
-                                      )}
-                                      type="button"
-                                    >
-                                      {field.value
-                                        ? getMemberDisplayName(
-                                            members.find((m) => String(m.id) === String(field.value)) ||
-                                              ({ id: field.value, user: undefined } as any)
-                                          )
-                                        : "Select member..."}
-                                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                                    <Command shouldFilter={false}>
-                                      <CommandInput
-                                        placeholder="Search member..."
-                                        value={memberQuery}
-                                        onValueChange={(value) => {
-                                          setMemberQuery(value)
-                                        }}
-                                      />
-                                      <CommandList className="max-h-[220px] overflow-y-auto">
-                                        {(() => {
-                                          const q = memberQuery.trim().toLowerCase()
-                                          const filtered = q.length === 0
-                                            ? membersSorted
-                                            : membersSorted.filter((member) => {
-                                                const name = getMemberDisplayName(member)
-                                                const nameLower = name.toLowerCase()
-                                                const user = member.user as { email?: string } | undefined
-                                                const emailLower = (user?.email ?? "").toLowerCase()
 
-                                                if (nameLower.includes(q)) return true
-                                                if (emailLower.includes(q)) return true
-                                                return false
-                                              })
+                                    if (!lookupsLoading && filtered.length === 0) {
+                                      return <CommandEmpty>No results.</CommandEmpty>
+                                    }
 
-                                          if (lookupsLoading && members.length === 0) {
-                                            return (
-                                              <CommandGroup>
-                                                <CommandItem value="loading" disabled>
-                                                  Loading...
-                                                </CommandItem>
-                                              </CommandGroup>
-                                            )
-                                          }
-
-                                          if (!lookupsLoading && filtered.length === 0) {
-                                            return <CommandEmpty>No results.</CommandEmpty>
-                                          }
+                                    return (
+                                      <CommandGroup>
+                                        {filtered.map((member) => {
+                                          const name = getMemberDisplayName(member)
+                                          const hasActiveSchedule = membersWithActiveSchedule.has(String(member.id))
+                                          const isSelected = String(field.value) === String(member.id)
 
                                           return (
-                                            <CommandGroup>
-                                              {filtered.map((member) => {
-                                                const name = getMemberDisplayName(member)
-                                                const hasActiveSchedule = membersWithActiveSchedule.has(String(member.id))
-                                                const isSelected = String(field.value) === String(member.id)
-
-                                                return (
-                                                  <CommandItem
-                                                    key={member.id}
-                                                    value={name}
-                                                    disabled={hasActiveSchedule}
-                                                    onSelect={() => {
-                                                      field.onChange(String(member.id))
-                                                      setMemberPopoverOpen(false)
-                                                      setMemberQuery("")
-                                                    }}
-                                                  >
-                                                    <Check
-                                                      className={
-                                                        isSelected
-                                                          ? "mr-2 h-4 w-4 opacity-100"
-                                                          : "mr-2 h-4 w-4 opacity-0"
-                                                      }
-                                                    />
-                                                    <span className="truncate">
-                                                      {name} {hasActiveSchedule ? "(Has active schedule)" : ""}
-                                                    </span>
-                                                  </CommandItem>
-                                                )
-                                              })}
-                                            </CommandGroup>
+                                            <CommandItem
+                                              key={member.id}
+                                              value={name}
+                                              disabled={hasActiveSchedule}
+                                              onSelect={() => {
+                                                field.onChange(String(member.id))
+                                                setMemberPopoverOpen(false)
+                                                setMemberQuery("")
+                                              }}
+                                            >
+                                              <Check
+                                                className={
+                                                  isSelected
+                                                    ? "mr-2 h-4 w-4 opacity-100"
+                                                    : "mr-2 h-4 w-4 opacity-0"
+                                                }
+                                              />
+                                              <span className="truncate">
+                                                {name} {hasActiveSchedule ? "(Has active schedule)" : ""}
+                                              </span>
+                                            </CommandItem>
                                           )
-                                        })()}
-                                      </CommandList>
-                                    </Command>
-                                  </PopoverContent>
-                                </Popover>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-
-                    {editingSchedule ? (
-                      <div className="rounded-lg bg-secondary/50 px-4 py-3 space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Effective Date</p>
-                        <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-primary" />
-                          {new Date(editingSchedule.effective_date).toLocaleDateString("id-ID", {
-                            weekday: "long",
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })}
-                        </p>
-                      </div>
-                    ) : (
-                      <FormField
-                        control={form.control}
-                        name="effective_date"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Effective Date</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                                        })}
+                                      </CommandGroup>
+                                    )
+                                  })()}
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
+                  />
 
-                    <FormField
-                      control={form.control}
-                      name="work_schedule_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Work Schedule</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select work schedule" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {workSchedules.map((schedule) => (
-                                <SelectItem key={schedule.id} value={String(schedule.id)}>
-                                  {schedule.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="is_active"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                          <div className="space-y-0.5">
-                            <FormLabel>Active Status</FormLabel>
-                          </div>
+                  <FormField
+                    control={form.control}
+                    name="work_schedule_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Work Schedule</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select work schedule" />
+                            </SelectTrigger>
                           </FormControl>
-                        </FormItem>
-                      )}
-                    />
+                          <SelectContent>
+                            {workSchedules.map((schedule) => (
+                              <SelectItem key={schedule.id} value={String(schedule.id)}>
+                                {schedule.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                    <div className="flex gap-2 justify-end">
-                      <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                        Cancel
-                      </Button>
-                      <Button type="submit">
-                        {editingSchedule ? "Update" : "Assign"}
-                      </Button>
-                    </div>
-                      </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            }
-            emptyState={
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <Calendar className="h-14 w-14 text-muted-foreground mx-auto" />
-                  </EmptyMedia>
-                  <EmptyTitle>No member schedules</EmptyTitle>
-                  <EmptyDescription>
-                    Get started by assigning a work schedule to a member.
-                  </EmptyDescription>
-                </EmptyHeader>
-                <EmptyContent>
-                  <Button
-                    onClick={() => {
-                      resetForCreate()
-                      setOpen(true)
-                    }}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Assign
-                  </Button>
-                </EmptyContent>
-              </Empty>
-            }
-          />
-        </CardContent>
-      </Card>
+                  <FormField
+                    control={form.control}
+                    name="effective_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Effective Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="is_active"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel>Active Status</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex gap-2 justify-end">
+                    <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={lookupsLoading}>
+                      {editingSchedule ? "Update" : "Assign"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        }
+        emptyState={
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Calendar className="h-14 w-14 text-muted-foreground mx-auto" />
+              </EmptyMedia>
+              <EmptyTitle>No member schedules</EmptyTitle>
+              <EmptyDescription>
+                Get started by assigning a work schedule to a member.
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button
+                onClick={() => {
+                  resetForCreate()
+                  setOpen(true)
+                }}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Assign
+              </Button>
+            </EmptyContent>
+          </Empty>
+        }
+      />
     </div>
   )
 }

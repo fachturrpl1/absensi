@@ -321,6 +321,7 @@ export default function WorkScheduleDetailsPage() {
 
   const [details, setDetails] = React.useState<IWorkScheduleDetail[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const [open, setOpen] = React.useState(false)
   const [editingDetail, setEditingDetail] = React.useState<IWorkScheduleDetail | null>(null)
@@ -361,7 +362,20 @@ export default function WorkScheduleDetailsPage() {
   })
 
   const handleSubmit = async (values: DetailForm) => {
+    if (isSubmitting) return
     form.clearErrors(["start_time", "end_time", "break_start", "break_end"])
+
+    const dayExists = details.some((d) => {
+      if (editingDetail && String(d.id) === String(editingDetail.id)) return false
+      return Number(d.day_of_week) === Number(values.day_of_week)
+    })
+
+    if (dayExists) {
+      const dayLabel = dayNames[values.day_of_week]
+      form.setError("day_of_week", { message: `Jadwal untuk ${dayLabel} sudah ada. Silakan edit.` })
+      toast.warning(`Jadwal untuk ${dayLabel} sudah ada. Silakan edit jadwal yang sudah dibuat.`)
+      return
+    }
 
     if (values.is_working_day) {
       const startMin = timeStringToMinutes(values.start_time)
@@ -416,6 +430,7 @@ export default function WorkScheduleDetailsPage() {
       if (hasError) return
     }
 
+    setIsSubmitting(true)
     try {
       let res
       if (editingDetail) {
@@ -423,12 +438,38 @@ export default function WorkScheduleDetailsPage() {
       } else {
         res = await createWorkScheduleDetail({ ...values, work_schedule_id: scheduleId })
       }
-      if (!res.success) throw new Error(res.message)
+
+      if (!res?.success) {
+        const raw = String(res?.message || "")
+        const lower = raw.toLowerCase()
+
+        const isUniqueDay = lower.includes("work_schedule_details_work_schedule_id_day_of_week_key")
+
+        if (isUniqueDay) {
+          const dayLabel = dayNames[values.day_of_week]
+          toast.warning(`Jadwal untuk ${dayLabel} sudah ada. Silakan edit jadwal yang sudah dibuat.`)
+        } else {
+          const isValidation =
+            lower.includes("duplicate") ||
+            lower.includes("already") ||
+            lower.includes("exists") ||
+            lower.includes("unique") ||
+            lower.includes("validation")
+          if (isValidation) toast.warning(raw || "Data tidak valid")
+          else toast.error(raw || "Gagal menyimpan jadwal")
+        }
+
+        return
+      }
+
       toast.success(editingDetail ? "Updated successfully" : "Created successfully")
       handleCloseDialog()
       fetchDetails()
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Unknown error')
+      const raw = err instanceof Error ? err.message : "Unknown error"
+      toast.error(raw)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -837,8 +878,8 @@ export default function WorkScheduleDetailsPage() {
                     )}
                   />
 
-                  <Button type="submit" className="w-full">
-                    {editingDetail ? "Update" : "Create"}
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? "Saving..." : (editingDetail ? "Update" : "Create")}
                   </Button>
                 </form>
               </Form>
