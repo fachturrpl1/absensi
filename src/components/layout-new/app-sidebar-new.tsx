@@ -10,7 +10,7 @@ import {
   ClipboardList,
   Calendar,
   Clock,
-  MapPin,
+  // MapPin,
   Building2,
   Briefcase,
   BarChart3,
@@ -73,12 +73,12 @@ const shouldShowMenuItem = (pathname: string, itemTitle: string): boolean => {
     // Hanya tampilkan All Organizations menu
     return itemTitle === 'All Organizations'
   }
-  
+
   // Di halaman lain, sembunyikan menu organization
   if (itemTitle === 'All Organizations') {
     return false
   }
-  
+
   // Tampilkan menu lainnya (termasuk Fingerprint Scanner)
   return true
 }
@@ -97,9 +97,8 @@ const getSidebarGroups = (): NavGroup[] => [
         subItems: [
           { title: 'Dashboard', url: '/attendance', icon: BarChart3 },
           { title: 'Attendance List', url: '/attendance/list', icon: ListChecks },
-          { title: 'Locations', url: '/attendance/locations', icon: MapPin },
+          // { title: 'Locations', url: '/attendance/locations', icon: MapPin },
           { title: 'Devices', url: '/attendance-devices', icon: Cpu },
-          // { title: 'Analytics', url: '/analytics', icon: BarChart3 },
         ],
       },
       {
@@ -110,15 +109,6 @@ const getSidebarGroups = (): NavGroup[] => [
           { title: 'Member Schedules', url: '/member-schedules', icon: Users },
         ],
       },
-      // {
-      //   title: 'Leaves',
-      //   icon: Calendar, // Using Calendar instead of CalendarDays
-      //   subItems: [
-      //     { title: 'Dashboard', url: '/leaves', icon: BarChart3 },
-      //     { title: 'New Request', url: '/leaves/new', icon: Plus },
-      //     { title: 'Manage Types', url: '/leaves/types', icon: ListChecks, requiresAdmin: true },
-      //   ],
-      // },
       {
         title: 'Shift',
         icon: Clock,
@@ -156,18 +146,18 @@ function NavMain({ items }: { items: NavMainItem[] }) {
   const { role, permissions } = useUserStore();
   const [isHydrated, setIsHydrated] = useState(false)
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({})
-  
+
   useEffect(() => {
     setIsHydrated(true)
   }, [])
-  
+
   // Debug logging
   console.log('🔍 Sidebar Debug:', { role, permissions });
-  
+
   // Role codes: A001 = Admin Org, SA001 = Super Admin
   const isAdmin = role === 'A001' || role === 'SA001';
   const canManageLeaveTypes = isHydrated && (permissions?.includes('leaves:type:manage') || isAdmin);
-  
+
   console.log('✅ Admin Check:', { isAdmin, canManageLeaveTypes });
 
   return (
@@ -177,7 +167,7 @@ function NavMain({ items }: { items: NavMainItem[] }) {
         if (!shouldShowMenuItem(pathname, item.title)) {
           return null
         }
-        
+
         const hasSubItems = item.subItems && item.subItems.length > 0;
         const isActive = item.url === pathname || item.subItems?.some(sub => sub.url === pathname);
 
@@ -271,7 +261,7 @@ export function AppSidebarNew({ ...props }: React.ComponentProps<typeof Sidebar>
       />
     )
   }
-  
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -290,7 +280,7 @@ export function AppSidebarNew({ ...props }: React.ComponentProps<typeof Sidebar>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      
+
       <SidebarContent>
         {sidebarGroups.map((group, index) => (
           <SidebarGroup key={`group-${index}`}>
@@ -300,7 +290,7 @@ export function AppSidebarNew({ ...props }: React.ComponentProps<typeof Sidebar>
           </SidebarGroup>
         ))}
       </SidebarContent>
-      
+
       <SidebarFooter>
         <NavUser />
       </SidebarFooter>

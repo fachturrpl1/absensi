@@ -1,8 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, X, Search } from "lucide-react"
-import { PlusIcon, MinusIcon } from "@radix-ui/react-icons"
+import { Loader2, X, Search, Plus, Minus} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -651,7 +650,7 @@ export function AttendanceFormBatch() {
               <CardTitle>Add Batch Attendance</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              
+
 
               {/* Master Date & Time for Batch Entries */}
               <div className="space-y-3">
@@ -740,7 +739,7 @@ export function AttendanceFormBatch() {
                         disabled={isSubmitting}
                         className="text-left truncate"
                       >
-                        <PlusIcon className="mr-1 h-3 w-3" />
+                        <Plus className="mr-1 h-3 w-3" />
                         <span className="truncate text-xs">{member.label}</span>
                       </Button>
                     ))}
@@ -774,7 +773,7 @@ export function AttendanceFormBatch() {
                           disabled={isSubmitting}
                           className="text-left truncate"
                         >
-                          <MinusIcon className="mr-1 h-3 w-3" />
+                          <Minus className="mr-1 h-3 w-3" />
                           <span className="truncate text-xs">{selectedMember ? selectedMember.label : 'Select member...'}</span>
                         </Button>
                       )

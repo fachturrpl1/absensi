@@ -1204,13 +1204,13 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                         </div>
                       </div>
 
-                      <div>
+                      {/* <div>
                         <p className="text-xs text-muted-foreground mb-1">Location</p>
                         <LocationDisplay
                           checkInLocationName={record.checkInLocationName}
                           checkOutLocationName={record.checkOutLocationName}
                         />
-                      </div>
+                      </div> */}
                     </div>
                   );
                 }).filter(Boolean)

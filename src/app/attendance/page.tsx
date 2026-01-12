@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { 
+import {
   Users, Clock, Target,
   Building2, BarChart3, Activity,
   CheckCircle2, XCircle, Award, Timer
@@ -16,16 +16,17 @@ import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filt
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { AnalyticsSkeleton } from '@/components/analytics/analytics-skeleton';
 import { useHydration } from '@/hooks/useHydration';
+import Link from 'next/link';
 import {
-  AreaChart, 
-  Area, 
-  PieChart as RechartsDonutChart, 
-  Pie, 
+  AreaChart,
+  Area,
+  PieChart as RechartsDonutChart,
+  Pie,
   Cell,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer
 } from 'recharts';
 
@@ -67,7 +68,7 @@ export default function AnalyticsPage() {
     monthStart.setHours(0, 0, 0, 0);
     const monthEnd = endOfMonth(today);
     monthEnd.setHours(23, 59, 59, 999);
-    
+
     return {
       from: monthStart,
       to: monthEnd,
@@ -80,20 +81,20 @@ export default function AnalyticsPage() {
       console.log('[DASHBOARD] Waiting for organization ID - orgId:', organizationId)
       return
     }
-    
+
     console.log('[DASHBOARD] Starting to fetch data - orgId:', organizationId)
 
     const fetchData = async () => {
       try {
         setIsLoading(true);
         const supabase = createClient();
-        
+
         if (!organizationId) {
           console.log('[DASHBOARD] No organization ID from store');
           setIsLoading(false);
           return;
         }
-        
+
         const orgId = organizationId;
 
         // Fetch master data - still safe as it only counts, doesn't return sensitive data
@@ -183,7 +184,7 @@ export default function AnalyticsPage() {
       return sum + duration;
     }, 0);
     const totalLateMinutes = filteredRecords.reduce((sum, r) => sum + (r.late_minutes || 0), 0);
-    
+
     const attendanceRate = ((presentCount + lateCount) / total) * 100;
     const punctualityRate = presentCount > 0 ? (presentCount / (presentCount + lateCount)) * 100 : 0;
     const absenteeismRate = (absentCount / total) * 100;
@@ -230,13 +231,13 @@ export default function AnalyticsPage() {
   const dailyTrend = useMemo(() => {
     const isYearView = dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear';
     const dateMap: Record<string, { present: number; late: number; absent: number }> = {};
-    
+
     filteredRecords.forEach(record => {
       // For year views, group by month; otherwise by day
-      const dateKey = isYearView 
+      const dateKey = isYearView
         ? format(new Date(record.attendance_date), 'MMM')
         : format(new Date(record.attendance_date), 'MMM dd');
-      
+
       if (!dateMap[dateKey]) {
         dateMap[dateKey] = { present: 0, late: 0, absent: 0 };
       }
@@ -256,7 +257,7 @@ export default function AnalyticsPage() {
 
     // For daily view, show last 14 days; for year view, show all months
     const slicedEntries = isYearView ? sortedEntries : sortedEntries.slice(-14);
-    
+
     return slicedEntries.map(([date, data]) => ({
       date,
       ...data,
@@ -267,7 +268,7 @@ export default function AnalyticsPage() {
   // Department performance
   const departmentData = useMemo(() => {
     const depts: Record<string, { present: number; late: number; absent: number; total: number }> = {};
-    
+
     filteredRecords.forEach(record => {
       const deptName = record.department_name || 'Unknown';
       if (!depts[deptName]) {
@@ -357,11 +358,11 @@ export default function AnalyticsPage() {
 
           <Card className="border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Avg Team Size</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Avg Group Size</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">{masterData.averageTeamSize.toFixed(1)}</div>
+                <div className="text-3xl font-bold">{masterData.averageTeamSize.toFixed(0)}</div>
                 <Target className="w-8 h-8 text-green-500 opacity-50" />
               </div>
               <p className="text-xs text-muted-foreground mt-2">Members per Groups</p>
@@ -381,7 +382,7 @@ export default function AnalyticsPage() {
           <h2 className="text-xl font-semibold">Key Performance Indicators</h2>
           <Badge variant="outline" className="ml-auto">{getFilterLabel()}</Badge>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background">
             <CardHeader className="pb-3">
@@ -393,7 +394,7 @@ export default function AnalyticsPage() {
             <CardContent>
               <div className="text-3xl font-bold text-green-600">{metrics?.attendanceRate.toFixed(1) || '0.0'}%</div>
               <div className="mt-2 h-2 bg-green-200 rounded-full overflow-hidden">
-                <div className="h-full bg-green-600" style={{width: `${Math.min(100, metrics?.attendanceRate || 0)}%`}} />
+                <div className="h-full bg-green-600" style={{ width: `${Math.min(100, metrics?.attendanceRate || 0)}%` }} />
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 {metrics ? `${metrics.presentCount + metrics.lateCount} of ${metrics.total} attended` : 'No data available'}
@@ -411,7 +412,7 @@ export default function AnalyticsPage() {
             <CardContent>
               <div className="text-3xl font-bold text-blue-600">{metrics?.punctualityRate.toFixed(1) || '0.0'}%</div>
               <div className="mt-2 h-2 bg-blue-200 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-600" style={{width: `${Math.min(100, metrics?.punctualityRate || 0)}%`}} />
+                <div className="h-full bg-blue-600" style={{ width: `${Math.min(100, metrics?.punctualityRate || 0)}%` }} />
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 {metrics ? `${metrics.presentCount} on-time arrivals` : 'No data available'}
@@ -444,7 +445,7 @@ export default function AnalyticsPage() {
             <CardContent>
               <div className="text-3xl font-bold text-red-600">{metrics?.absenteeismRate.toFixed(1) || '0.0'}%</div>
               <div className="mt-2 h-2 bg-red-200 rounded-full overflow-hidden">
-                <div className="h-full bg-red-600" style={{width: `${Math.min(100, metrics?.absenteeismRate || 0)}%`}} />
+                <div className="h-full bg-red-600" style={{ width: `${Math.min(100, metrics?.absenteeismRate || 0)}%` }} />
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 {metrics ? `${metrics.absentCount} absences recorded` : 'No data available'}
@@ -469,8 +470,8 @@ export default function AnalyticsPage() {
           <Card className="border-border">
             <CardHeader>
               <CardTitle className="text-base">
-                {dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear' 
-                  ? 'Monthly Attendance Trend' 
+                {dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear'
+                  ? 'Monthly Attendance Trend'
                   : 'Daily Attendance Trend'}
               </CardTitle>
               <CardDescription>
@@ -485,12 +486,12 @@ export default function AnalyticsPage() {
                   <AreaChart data={dailyTrend}>
                     <defs>
                       <linearGradient id="colorPresent" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={COLORS.present} stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor={COLORS.present} stopOpacity={0}/>
+                        <stop offset="5%" stopColor={COLORS.present} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={COLORS.present} stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="colorLate" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={COLORS.late} stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor={COLORS.late} stopOpacity={0}/>
+                        <stop offset="5%" stopColor={COLORS.late} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={COLORS.late} stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
@@ -572,23 +573,32 @@ export default function AnalyticsPage() {
           <CardContent>
             {departmentData.length > 0 ? (
               <div className="space-y-4">
-                {departmentData.map((dept, index) => (
-                  <div key={dept.name} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={index === 0 ? 'default' : 'outline'} className="w-6 h-6 flex items-center justify-center p-0">
-                          {index + 1}
-                        </Badge>
-                        <span className="font-medium">{dept.name}</span>
+                {departmentData.map((dept, index) => {
+                  const colorSets = [
+                    { name: 'text-blue-700 dark:text-blue-300', badge: 'border-blue-500 text-blue-600', progress: 'bg-blue-500' },
+                    { name: 'text-green-700 dark:text-green-300', badge: 'border-green-500 text-green-600', progress: 'bg-green-500' },
+                    { name: 'text-yellow-700 dark:text-yellow-400', badge: 'border-yellow-500 text-yellow-600', progress: 'bg-yellow-500' },
+                  ] as const;
+                  const c = colorSets[index % colorSets.length] || colorSets[0];
+                  const displayName = (!dept.name || dept.name === 'Unknown' || dept.name === 'N/A') ? 'no group' : dept.name;
+                  return (
+                    <div key={`${dept.name}-${index}`} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Link href="/group" className="flex items-center gap-2 group">
+                          <Badge variant={'outline'} className={`w-6 h-6 flex items-center justify-center p-0 ${c.badge}`}>
+                            {index + 1}
+                          </Badge>
+                          <span className={`font-medium group-hover:underline ${c.name}`}>{displayName}</span>
+                        </Link>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="text-green-600 dark:text-green-400">{dept.present}✓</span>
+                          <span className="font-bold min-w-[60px] text-right">{dept.rate.toFixed(1)}%</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-4 text-sm">
-                        <span className="text-green-600 dark:text-green-400">{dept.present}✓</span>
-                        <span className="font-bold min-w-[60px] text-right">{dept.rate.toFixed(1)}%</span>
-                      </div>
+                      <Progress value={dept.rate} className="h-2" indicatorClassName={c.progress} />
                     </div>
-                    <Progress value={dept.rate} className="h-2" />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <EmptyState
