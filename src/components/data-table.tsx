@@ -389,7 +389,7 @@ export function DataTable<TData, TValue>({
                     }
 
                     return (
-                      <TableHead key={header.id} className={cn("px-2 py-3", getColumnWidth())}>
+                      <TableHead key={header.id} className={cn(getColumnWidth())}>
                         {header.column.id === 'select' ? (
                           flexRender(header.column.columnDef.header, header.getContext())
                         ) : (
@@ -419,16 +419,11 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={getRowKey ? getRowKey(row.original, index) : row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className={
-                    index % 2 === 0
-                      ? "!bg-background ![&>td]:bg-background"
-                      : "!bg-muted/40 ![&>td]:bg-muted/40 dark:!bg-muted/20 dark:![&>td]:bg-muted/20"
-                  }
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className="px-2 py-3 text-left whitespace-nowrap"
+                      className="whitespace-nowrap"
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
