@@ -414,11 +414,16 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               ))}
             </TableHeader>
-            <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
+            <TableBody>
               {table.getRowModel().rows.map((row, index) => (
                 <TableRow
                   key={getRowKey ? getRowKey(row.original, index) : row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  className={
+                    index % 2 === 0
+                      ? "!bg-background ![&>td]:bg-background"
+                      : "!bg-muted/40 ![&>td]:bg-muted/40 dark:!bg-muted/20 dark:![&>td]:bg-muted/20"
+                  }
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
@@ -471,10 +476,12 @@ export function DataTable<TData, TValue>({
       {layout === "card" ? (
         <>
           <Card>
-            <CardContent className="p-4">{controls}</CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-0">{tableContent}</CardContent>
+            <CardContent className="p-4 space-y-4">
+              {controls}
+              <div>
+                {tableContent}
+              </div>
+            </CardContent>
           </Card>
           {paginationFooter}
         </>
