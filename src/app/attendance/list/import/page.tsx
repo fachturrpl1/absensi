@@ -387,7 +387,7 @@ export default function AttendanceImportPage() {
       const headerRowNum = headerRow > 0 ? headerRow : 1
       const headerRowCountNum = headerRowCount || 1
       const startDataRow = headerRowNum + headerRowCountNum
-      
+
       const results = preview.map((rowData, index) => {
         // Row number = header row + header row count + index (1-based dari data rows)
         const rowNumber = startDataRow + index
@@ -494,9 +494,8 @@ export default function AttendanceImportPage() {
 
               {!file ? (
                 <div
-                  className={`w-full p-12 border-2 border-dashed rounded-lg transition-colors ${
-                    isDragActive ? "bg-primary/5 border-primary" : "border-muted"
-                  }`}
+                  className={`w-full p-12 border-2 border-dashed rounded-lg transition-colors ${isDragActive ? "bg-primary/5 border-primary" : "border-muted"
+                    }`}
                   onDragEnter={handleDragEnter}
                   onDragLeave={handleDragLeave}
                   onDragOver={handleDragOver}
@@ -639,7 +638,7 @@ export default function AttendanceImportPage() {
                             <SelectTrigger id="check-in-method-select" className="w-full">
                               <SelectValue placeholder="Pilih check in method" />
                             </SelectTrigger>
-                          <SelectContent>
+                            <SelectContent>
                               <SelectItem value="none">-- Tidak Dipilih --</SelectItem>
                               <SelectItem value="face_recognition_kiosk">Face Recognition Kiosk</SelectItem>
                               <SelectItem value="FINGERPRINT">Fingerprint</SelectItem>
@@ -848,8 +847,8 @@ export default function AttendanceImportPage() {
                       </p>
                       {testSummary.errors.length > 0 && (
                         <div className="mt-2">
-                          <p className="font-medium">Error:</p>
-                          <ul className="list-disc list-inside text-sm">
+                          <p className="font-medium text-red-600">Error:</p>
+                          <ul className="list-disc list-inside text-sm text-red-600">
                             {testSummary.errors.slice(0, 5).map((error, idx) => (
                               <li key={idx}>
                                 Baris {error.row}: {error.message}
@@ -862,6 +861,7 @@ export default function AttendanceImportPage() {
                   </AlertDescription>
                 </Alert>
               )}
+
 
             </div>
           )}
@@ -914,12 +914,11 @@ export default function AttendanceImportPage() {
                         <div
                           className="h-2 bg-primary transition-all"
                           style={{
-                            width: `${
-                              Math.min(
-                                100,
-                                (importProgress.current / importProgress.total) * 100 || 0
-                              )
-                            }%`,
+                            width: `${Math.min(
+                              100,
+                              (importProgress.current / importProgress.total) * 100 || 0
+                            )
+                              }%`,
                           }}
                         />
                       </div>
@@ -985,46 +984,7 @@ export default function AttendanceImportPage() {
                     </div>
                   </div>
 
-                  {/* Error Summary */}
-                  {importSummary.failed > 0 && importSummary.errors.length > 0 && (
-                    <Alert className="border-destructive/50 bg-destructive/5">
-                      <AlertCircle className="h-4 w-4 text-destructive" />
-                      <AlertDescription>
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium text-destructive mb-2">
-                            Ringkasan Error ({importSummary.failed} data gagal):
-                          </p>
-                          <div className="max-h-40 overflow-auto space-y-1">
-                            {/* Group errors by message type */}
-                            {(() => {
-                              const errorGroups = new Map<string, number>()
-                              importSummary.errors.forEach((err: any) => {
-                                const msg = err.message || "Unknown error"
-                                errorGroups.set(msg, (errorGroups.get(msg) || 0) + 1)
-                              })
-                              
-                              return Array.from(errorGroups.entries())
-                                .sort((a, b) => b[1] - a[1]) // Sort by count
-                                .slice(0, 5) // Show top 5 error types
-                                .map(([message, count], idx) => (
-                                  <div key={idx} className="text-xs flex items-start gap-2">
-                                    <span className="text-destructive font-medium min-w-[60px]">
-                                      {count}x:
-                                    </span>
-                                    <span className="text-destructive">{message}</span>
-                                  </div>
-                                ))
-                            })()}
-                          </div>
-                          {importSummary.errors.length > 5 && (
-                            <p className="text-xs text-muted-foreground mt-2">
-                              Lihat detail error di bawah untuk informasi lengkap setiap baris.
-                            </p>
-                          )}
-                        </div>
-                      </AlertDescription>
-                    </Alert>
-                  )}
+
 
                   {/* Import Results Table */}
                   {importResults.length > 0 && (
@@ -1040,7 +1000,6 @@ export default function AttendanceImportPage() {
                                   <TableHead key={`${header}-${idx}`} className="min-w-[150px]">{header}</TableHead>
                                 ))}
                                 <TableHead className="min-w-[200px]">Import Result</TableHead>
-                                <TableHead className="min-w-[300px]">Error Message</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1074,17 +1033,6 @@ export default function AttendanceImportPage() {
                                         </div>
                                       )}
                                     </TableCell>
-                                    <TableCell className="min-w-[300px]">
-                                      {!isSuccess && result.error ? (
-                                        <div className="text-xs text-red-600 whitespace-normal break-words">
-                                          {result.error}
-                                        </div>
-                                      ) : isSuccess ? (
-                                        <span className="text-xs text-muted-foreground">-</span>
-                                      ) : (
-                                        <span className="text-xs text-muted-foreground italic">No error message available</span>
-                                      )}
-                                    </TableCell>
                                   </TableRow>
                                 )
                               })}
@@ -1096,11 +1044,11 @@ export default function AttendanceImportPage() {
                   )}
 
                   <div className="flex gap-2 pt-4">
-                    <Button 
+                    <Button
                       asChild
                       className="flex-1"
                     >
-                      <Link 
+                      <Link
                         href="/attendance/list"
                         prefetch={true}
                       >
