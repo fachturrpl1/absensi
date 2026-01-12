@@ -78,6 +78,9 @@ export function PaginationFooter({
             setInputValue(e.target.value)
           }}
           onKeyDown={(e) => {
+            if (["-", "+", "e", "E", "."].includes(e.key)) {
+              e.preventDefault();
+            }
             if (e.key === 'Enter') {
               const num = Number((inputValue || '1').trim())
               const next = Number.isFinite(num) ? num : 1

@@ -1024,7 +1024,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 Manual Entry
               </Button>
             </Link>
-            <Link href="/attendance/import" className="shrink-0">
+            <Link href="/attendance/list/import" className="shrink-0">
               <Button variant="outline" className="whitespace-nowrap">
                 <Download className="mr-2 h-4 w-4" />
                 Import
@@ -1204,13 +1204,13 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                         </div>
                       </div>
 
-                      <div>
+                      {/* <div>
                         <p className="text-xs text-muted-foreground mb-1">Location</p>
                         <LocationDisplay
                           checkInLocationName={record.checkInLocationName}
                           checkOutLocationName={record.checkOutLocationName}
                         />
-                      </div>
+                      </div> */}
                     </div>
                   );
                 }).filter(Boolean)

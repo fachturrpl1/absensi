@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, X, Plus, Search, Minus } from "lucide-react"
+import { Loader2, X, Search, Plus, Minus} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -250,12 +250,6 @@ export function AttendanceFormBatch() {
         const deptNames = Array.from(new Set(options.map((m) => m.department).filter(Boolean))).sort() as string[]
         setDepartments(deptNames)
 
-        if (options.length === 0) {
-          toast.warning("No valid members found. Please check member data.")
-        } else {
-          toast.success(`Loaded ${options.length} members successfully`)
-        }
-
         setMembers(options)
       } catch (error) {
         const message = error instanceof Error ? error.message : "An error occurred while loading data"
@@ -474,7 +468,7 @@ export function AttendanceFormBatch() {
         // Invalidate dashboard cache to refresh data
         await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
         toast.success(`${successCount} attendance records saved successfully`)
-        router.push("/attendance")
+        router.push("/attendance/list")
       } else if (successCount > 0) {
         // Invalidate dashboard cache even for partial success
         await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
@@ -656,7 +650,7 @@ export function AttendanceFormBatch() {
               <CardTitle>Add Batch Attendance</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              
+
 
               {/* Master Date & Time for Batch Entries */}
               <div className="space-y-3">
@@ -711,7 +705,6 @@ export function AttendanceFormBatch() {
                     onClick={() => addBatchEntry()}
                     disabled={isSubmitting}
                   >
-                    <Plus className="mr-1 h-4 w-4" /> Add Empty Entry
                   </Button>
                 </div>
                 <div className="space-y-2">

@@ -791,6 +791,7 @@ export default function MembersImportSimplePage() {
                             href="/templates/members-import-template.xlsx"
                             download
                             className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <Download className="h-4 w-4" />
                             Download Template
