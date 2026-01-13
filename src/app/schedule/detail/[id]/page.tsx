@@ -14,6 +14,8 @@ import { getTimezoneLabel, getTimezoneOffset } from "@/constants/attendance-stat
 import { getDayName } from "@/utils/date-helper"
 import { useOrgStore } from "@/store/org-store"
 import { IWorkScheduleDetail } from "@/interface"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   getWorkScheduleDetails,
   upsertWorkScheduleDetails,
@@ -32,6 +34,8 @@ interface RuleItem {
   is_working_day: boolean
   start_time: string
   end_time: string
+  core_hours_start: string
+  core_hours_end: string
   break_start: string
   break_end: string
   flexible_hours: boolean
@@ -43,8 +47,10 @@ const PRESETS = {
   normal: {
     label: "Normal Working Hours",
     is_working_day: true,
-    start_time: "08:30",
-    end_time: "17:00",
+    start_time: "07:30",
+    end_time: "19:00",
+    core_hours_start: "08:00",
+    core_hours_end: "16:30",
     break_start: "12:00",
     break_end: "13:00",
     flexible_hours: false,
@@ -53,8 +59,10 @@ const PRESETS = {
   morning: {
     label: "Morning Shift",
     is_working_day: true,
-    start_time: "06:00",
-    end_time: "14:00",
+    start_time: "06:30",
+    end_time: "19:00",
+    core_hours_start: "07:00",
+    core_hours_end: "13:00",
     break_start: "10:00",
     break_end: "10:30",
     flexible_hours: false,
@@ -63,8 +71,10 @@ const PRESETS = {
   evening: {
     label: "Evening Shift",
     is_working_day: true,
-    start_time: "14:00",
-    end_time: "22:00",
+    start_time: "13:00",
+    end_time: "23:00",
+    core_hours_start: "13:30",
+    core_hours_end: "21:00",
     break_start: "18:00",
     break_end: "18:30",
     flexible_hours: false,
@@ -74,7 +84,9 @@ const PRESETS = {
     label: "Flexible Hours",
     is_working_day: true,
     start_time: "09:00",
-    end_time: "17:00",
+    end_time: "21:00",
+    core_hours_start: "09:30",
+    core_hours_end: "17:00",
     break_start: "12:00",
     break_end: "13:00",
     flexible_hours: true,
@@ -85,6 +97,8 @@ const PRESETS = {
     is_working_day: false,
     start_time: "",
     end_time: "",
+    core_hours_start: "",
+    core_hours_end: "",
     break_start: "",
     break_end: "",
     flexible_hours: false,
@@ -101,6 +115,8 @@ const createDefaultRule = (day: DayIndex): RuleItem => {
     is_working_day: !isWeekend,
     start_time: isWeekend ? "" : "08:30",
     end_time: isWeekend ? "" : "17:00",
+    core_hours_start: isWeekend ? "" : "08:30",
+    core_hours_end: isWeekend ? "" : "17:00",
     break_start: isWeekend ? "" : "12:00",
     break_end: isWeekend ? "" : "13:00",
     flexible_hours: false,
@@ -121,6 +137,9 @@ export default function WorkScheduleDetailsPage() {
   const [rules, setRules] = useState<RuleItem[]>(() => DAYS.map(createDefaultRule))
   const [origRules, setOrigRules] = useState<RuleItem[]>([])
   const [selectedDay, setSelectedDay] = useState<DayIndex>(1) // Monday default
+  const [daysDialogOpen, setDaysDialogOpen] = useState(false)
+  const [tempDays, setTempDays] = useState<DayIndex[]>([])
+  const [panelBump, setPanelBump] = useState(0)
 
   // Fetch schedule details
   const loadDetails = useCallback(async () => {
@@ -140,6 +159,8 @@ export default function WorkScheduleDetailsPage() {
               is_working_day: detail.is_working_day,
               start_time: detail.start_time || "",
               end_time: detail.end_time || "",
+              core_hours_start: detail.core_hours_start || "",
+              core_hours_end: detail.core_hours_end || "",
               break_start: detail.break_start || "",
               break_end: detail.break_end || "",
               flexible_hours: detail.flexible_hours,
@@ -184,6 +205,8 @@ export default function WorkScheduleDetailsPage() {
         if (!updated.is_working_day) {
           updated.start_time = ""
           updated.end_time = ""
+          updated.core_hours_start = ""
+          updated.core_hours_end = ""
           updated.break_start = ""
           updated.break_end = ""
         }
@@ -191,14 +214,11 @@ export default function WorkScheduleDetailsPage() {
       })
     )
   }
-
-  // Apply preset
   const applyPreset = (presetKey: keyof typeof PRESETS) => {
     const preset = PRESETS[presetKey]
     updateRule(selectedDay, preset)
-    toast.success(`Applied "${preset.label}" preset`)
+    setPanelBump((k) => k + 1)
   }
-
   // Copy to days
   const copyToDays = (targetDays: DayIndex[]) => {
     if (!selectedRule) return
@@ -211,6 +231,8 @@ export default function WorkScheduleDetailsPage() {
           is_working_day: selectedRule.is_working_day,
           start_time: selectedRule.start_time,
           end_time: selectedRule.end_time,
+          core_hours_start: selectedRule.core_hours_start,
+          core_hours_end: selectedRule.core_hours_end,
           break_start: selectedRule.break_start,
           break_end: selectedRule.break_end,
           flexible_hours: selectedRule.flexible_hours,
@@ -218,13 +240,17 @@ export default function WorkScheduleDetailsPage() {
         }
       })
     )
-    toast.success(`Copied to ${targetDays.length} days`)
   }
 
-  // Save all
   const saveAll = async () => {
     setSaving(true)
     try {
+      const id = Number(scheduleId)
+      if (!Number.isFinite(id)) {
+        toast.error("Invalid schedule id")
+        return
+      }
+
       const items = rules.map((r) => ({
         day_of_week: r.day_of_week,
         is_working_day: r.is_working_day,
@@ -232,19 +258,26 @@ export default function WorkScheduleDetailsPage() {
         end_time: r.is_working_day ? (r.end_time || "17:00") : undefined,
         break_start: r.is_working_day ? (r.break_start || undefined) : undefined,
         break_end: r.is_working_day ? (r.break_end || undefined) : undefined,
+        core_hours_start: r.is_working_day ? (r.core_hours_start || undefined) : undefined,
+        core_hours_end: r.is_working_day ? (r.core_hours_end || undefined) : undefined,
         flexible_hours: r.flexible_hours,
         is_active: true,
       }))
 
-      const res = await upsertWorkScheduleDetails(scheduleId, items)
+      console.log('[saveAll] Saving schedule items:', items)
+      const res = await upsertWorkScheduleDetails(id, items)
+      console.log('[saveAll] Response:', res)
+
       if (!res.success) {
+        console.error('[saveAll] Save failed:', res.message)
         toast.error(res.message || "Failed to save schedule")
         return
       }
 
-      toast.success("Schedule saved successfully")
-      setOrigRules(JSON.parse(JSON.stringify(rules)))
+      toast.success(`Schedule saved successfully! (${res.data?.length || 0} days)`)
+      await loadDetails() // refresh dari DB agar UI sesuai DB
     } catch (error) {
+      console.error('[saveAll] Exception:', error)
       toast.error("Failed to save schedule")
     } finally {
       setSaving(false)
@@ -333,7 +366,6 @@ export default function WorkScheduleDetailsPage() {
                     onClick={(e) => {
                       e.stopPropagation()
                       updateRule(day, { is_working_day: !rule?.is_working_day })
-                      toast.success(`${getDayName(day)} is now ${!rule?.is_working_day ? "working day" : "day off"}`)
                     }}
                     title={`Click to toggle ${getDayName(day)} status`}
                   >
@@ -346,12 +378,12 @@ export default function WorkScheduleDetailsPage() {
         </div>
 
         {/* Day Editor (Right Panel) */}
-        <div className="border rounded-lg p-4 md:col-span-2 lg:col-span-3 bg-card h-full flex flex-col">
-          {selectedRule && (
-            <>
-              {/* Header */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-lg font-semibold">{getDayName(selectedDay)}</div>
+    <div className="border rounded-lg p-4 md:col-span-2 lg:col-span-3 bg-card h-full flex flex-col">
+      {selectedRule && (
+      <div key={`${selectedDay}-${panelBump}`}>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-lg font-semibold">{getDayName(selectedDay)}</div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">Status:</span>
                   <Badge
@@ -377,9 +409,9 @@ export default function WorkScheduleDetailsPage() {
                 <Button variant="outline" size="sm" onClick={() => applyPreset("evening")}>
                   Evening Shift
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => applyPreset("flexible")}>
+                {/* <Button variant="outline" size="sm" onClick={() => applyPreset("flexible")}>
                   Flexible
-                </Button>
+                </Button> */}
                 <Button variant="outline" size="sm" onClick={() => applyPreset("off")}>
                   Day Off
                 </Button>
@@ -393,6 +425,7 @@ export default function WorkScheduleDetailsPage() {
                     <label className="space-y-1">
                       <div className="text-sm font-medium">Check In</div>
                       <Input
+                        key={`start-${selectedDay}`}
                         type="time"
                         value={selectedRule.start_time}
                         disabled={!selectedRule.is_working_day}
@@ -402,6 +435,7 @@ export default function WorkScheduleDetailsPage() {
                     <label className="space-y-1">
                       <div className="text-sm font-medium">Check Out</div>
                       <Input
+                        key={`end-${selectedDay}`}
                         type="time"
                         value={selectedRule.end_time}
                         disabled={!selectedRule.is_working_day}
@@ -413,6 +447,7 @@ export default function WorkScheduleDetailsPage() {
                     <label className="space-y-1">
                       <div className="text-sm font-medium">Break Start</div>
                       <Input
+                        key={`bstart-${selectedDay}`}
                         type="time"
                         value={selectedRule.break_start}
                         disabled={!selectedRule.is_working_day}
@@ -422,6 +457,7 @@ export default function WorkScheduleDetailsPage() {
                     <label className="space-y-1">
                       <div className="text-sm font-medium">Break End</div>
                       <Input
+                        key={`bend-${selectedDay}`}
                         type="time"
                         value={selectedRule.break_end}
                         disabled={!selectedRule.is_working_day}
@@ -429,10 +465,32 @@ export default function WorkScheduleDetailsPage() {
                       />
                     </label>
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="space-y-1">
+                      <div className="text-sm font-medium">Core Hours Start</div>
+                      <Input
+                        key={`cstart-${selectedDay}`}
+                        type="time"
+                        value={selectedRule.core_hours_start}
+                        disabled={!selectedRule.is_working_day}
+                        onChange={(e) => updateRule(selectedDay, { core_hours_start: e.target.value })}
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <div className="text-sm font-medium">Core Hours End</div>
+                      <Input
+                        key={`cend-${selectedDay}`}
+                        type="time"
+                        value={selectedRule.core_hours_end}
+                        disabled={!selectedRule.is_working_day}
+                        onChange={(e) => updateRule(selectedDay, { core_hours_end: e.target.value })}
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 {/* Flexible Hours Toggle */}
-                <div className="md:col-span-2">
+                {/* <div className="md:col-span-2">
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -444,12 +502,24 @@ export default function WorkScheduleDetailsPage() {
                     <span className="text-sm font-medium">Flexible Hours</span>
                     <span className="text-xs text-muted-foreground">(Allow adjustable work hours)</span>
                   </label>
-                </div>
+                </div> */}
 
                 {/* Copy Actions */}
                 <div className="md:col-span-2 pt-4 border-t">
                   <div className="text-sm font-medium mb-2">Copy to other days:</div>
                   <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setTempDays(WORKDAYS.filter((d) => d !== selectedDay)) // default: semua selain hari aktif
+                        setDaysDialogOpen(true)
+                      }}
+                      className="gap-1"
+                    >
+                      <Copy className="h-3 w-3" />
+                      Select Days
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -469,9 +539,86 @@ export default function WorkScheduleDetailsPage() {
                       Copy to All Days
                     </Button>
                   </div>
+                  <Dialog open={daysDialogOpen} onOpenChange={setDaysDialogOpen}>
+                    <DialogContent className="max-w-sm">
+                      <DialogHeader>
+                        <DialogTitle>Select days</DialogTitle>
+                      </DialogHeader>
+
+                      <div className="space-y-2">
+                        {DAYS.map((d) => (
+                          <label key={d} className="flex items-center gap-2">
+                            <Checkbox
+                              checked={tempDays.includes(d)}
+                              disabled={d === selectedDay}
+                              onCheckedChange={(c) => {
+                                setTempDays((prev) =>
+                                  c === true ? (prev.includes(d) ? prev : [...prev, d]) : prev.filter((x) => x !== d)
+                                )
+                              }}
+                            />
+                            <span>{getDayName(d)}</span>
+                          </label>
+                        ))}
+
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setTempDays(DAYS.filter((d) => d !== selectedDay))}
+                          >
+                            Select All
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setTempDays([])}
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setDaysDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            if (tempDays.length === 0) {
+                              // Kosong => set Day Off untuk weekdays (Mon–Fri) kecuali hari aktif
+                              const targets = WORKDAYS.filter((d) => d !== selectedDay)
+                              setRules((prev) =>
+                                prev.map((r) =>
+                                  targets.includes(r.day_of_week)
+                                    ? {
+                                        ...r,
+                                        is_working_day: false,
+                                        start_time: "",
+                                        end_time: "",
+                                        break_start: "",
+                                        break_end: "",
+                                        flexible_hours: false,
+                                        label: "Day Off",
+                                        notes: "",
+                                      }
+                                    : r
+                                )
+                              )
+                            } else {
+                              // Ada pilihan hari = salin jadwal
+                              copyToDays(tempDays)
+                            }
+                            setDaysDialogOpen(false)
+                          }}
+                        >
+                          Apply
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>
