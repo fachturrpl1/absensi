@@ -280,33 +280,6 @@ export default function WorkScheduleDetailsPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
-      {/* Action Bar */}
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          onClick={resetToDefaults}
-          className="gap-2"
-        >
-          <RotateCcw className="h-4 w-4" />
-          Reset to Default
-        </Button>
-        <Button
-          variant="outline"
-          onClick={discardChanges}
-          disabled={!isDirty}
-          className="gap-2 text-orange-600 border-orange-300 hover:bg-orange-50"
-        >
-          Discard Changes
-        </Button>
-        <Button
-          onClick={saveAll}
-          disabled={!isDirty || saving}
-          className="gap-2"
-        >
-          <Save className="h-4 w-4" />
-          {saving ? "Saving..." : "Save Schedule"}
-        </Button>
-      </div>
 
       {/* Two-Panel Editor */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -334,25 +307,39 @@ export default function WorkScheduleDetailsPage() {
                 : "No schedule"
 
               return (
-                <button
+                <div
                   key={day}
-                  className={`w-full text-left p-3 flex items-center justify-between transition-colors ${active ? "bg-accent" : "hover:bg-muted/50"
+                  role="button"
+                  tabIndex={0}
+                  className={`w-full text-left p-3 flex items-center justify-between transition-colors cursor-pointer ${active ? "bg-accent" : "hover:bg-muted/50"
                     }`}
                   onClick={() => setSelectedDay(day)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setSelectedDay(day)
+                    }
+                  }}
                 >
                   <div>
                     <div className="font-medium">{getDayName(day)}</div>
                     <div className="text-xs text-muted-foreground">{hours}</div>
                   </div>
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full font-medium ${rule?.is_working_day
-                      ? "bg-green-500 dark:bg-green-600 text-white"
-                      : "bg-blue-500 dark:bg-blue-600 text-white"
+                  <button
+                    className={`text-xs px-2 py-1 rounded-full font-medium transition-all hover:opacity-80 ${rule?.is_working_day
+                      ? "bg-green-500 dark:bg-green-600 text-white hover:bg-green-600"
+                      : "bg-blue-500 dark:bg-blue-600 text-white hover:bg-blue-600"
                       }`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      updateRule(day, { is_working_day: !rule?.is_working_day })
+                      toast.success(`${getDayName(day)} is now ${!rule?.is_working_day ? "working day" : "day off"}`)
+                    }}
+                    title={`Click to toggle ${getDayName(day)} status`}
                   >
                     {rule?.is_working_day ? "Working" : "Off"}
-                  </span>
-                </button>
+                  </button>
+                </div>
               )
             })}
           </div>
@@ -367,14 +354,15 @@ export default function WorkScheduleDetailsPage() {
                 <div className="text-lg font-semibold">{getDayName(selectedDay)}</div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">Status:</span>
-                  <select
-                    className="h-8 rounded-md border px-2 text-sm"
-                    value={selectedRule.is_working_day ? "on" : "off"}
-                    onChange={(e) => updateRule(selectedDay, { is_working_day: e.target.value === "on" })}
+                  <Badge
+                    variant={selectedRule.is_working_day ? "default" : "secondary"}
+                    className={`${selectedRule.is_working_day
+                      ? "bg-green-500 hover:bg-green-500 text-white"
+                      : "bg-blue-500 hover:bg-blue-500 text-white"
+                      } cursor-default`}
                   >
-                    <option value="on">Working Day</option>
-                    <option value="off">Day Off</option>
-                  </select>
+                    {selectedRule.is_working_day ? "Working Day" : "Day Off"}
+                  </Badge>
                 </div>
               </div>
 
@@ -486,6 +474,34 @@ export default function WorkScheduleDetailsPage() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Action Buttons - Moved to Bottom */}
+      <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t">
+        <Button
+          variant="outline"
+          onClick={resetToDefaults}
+          className="gap-2"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Reset to Default
+        </Button>
+        <Button
+          variant="outline"
+          onClick={discardChanges}
+          disabled={!isDirty}
+          className="gap-2 text-orange-600 border-orange-300 hover:bg-orange-50 disabled:text-muted-foreground disabled:border-muted"
+        >
+          Discard Changes
+        </Button>
+        <Button
+          onClick={saveAll}
+          disabled={!isDirty || saving}
+          className="gap-2 min-w-[140px]"
+        >
+          <Save className="h-4 w-4" />
+          {saving ? "Saving..." : "Save Schedule"}
+        </Button>
       </div>
     </div>
   )
