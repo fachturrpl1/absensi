@@ -187,67 +187,76 @@ export interface IAttendance {
 }
 
 export interface IWorkSchedule {
-  id: string;
-  organization_id: string;
-  code?: string;
-  name: string;
-  description?: string;
-  schedule_type: string;
-  is_default: boolean;
-  is_active: boolean;
-  created_at: string;
-  updated_at?: string;
-  work_schedule_details?: IWorkScheduleDetail[]
+    id: string;
+    organization_id: string;
+    code?: string;
+    name: string;
+    description?: string;
+    schedule_type: string;
+    is_default: boolean;
+    is_active: boolean;
+    created_at: string;
+    updated_at?: string;
+    work_schedule_details?: IWorkScheduleDetail[]
 }
 
 export interface IWorkScheduleDetail {
     id: string;
     work_schedule_id: number;
-    day_of_week: number; 
-    is_working_day:boolean;// 0=Sunday, 1=Monday, ..., 6=Saturday
+    day_of_week: number; // 0=Sunday, 1=Monday, ..., 6=Saturday
+    is_working_day: boolean;
 
-    start_time?: string; // HH:MM:SS
-    end_time?: string;   // HH:MM:SS
-    break_start:string;
-    break_end:string;
+    start_time?: string; // HH:MM:SS - Check-in time (must be earlier than core_hours_start)
+    end_time?: string;   // HH:MM:SS - Check-out time (must be later than core_hours_end)
+
+    // Core hours define the mandatory work period
+    core_hours_start?: string; // HH:MM:SS
+    core_hours_end?: string;   // HH:MM:SS
+
+    // Grace periods (in minutes) to soften status classification
+    grace_in_minutes?: number;  // Allowed lateness before LATE status
+    grace_out_minutes?: number; // Allowed early leave before EARLY_LEAVE status
+
+    break_start: string;
+    break_end: string;
     break_duration_minutes?: number;
     flexible_hours: boolean;
     is_active: boolean;
     created_at: string;
-    updated_at?: string;    
+    updated_at?: string;
 
     work_schedule?: IWorkSchedule;
 }
 
 export interface IShift {
-  id: string;
-  organization_id: string;
-  code: string;
-  name: string;
-  description?: string | null;
-  start_time: string;
-  end_time: string;
-  overnight?: boolean;
-  break_duration_minutes?: number;
-  color_code?: string | null;
-  is_active: boolean;
-  created_at?: string;
-  updated_at?: string;
+    id: string;
+    organization_id: string;
+    code: string;
+    name: string;
+    description?: string | null;
+    start_time: string;
+    end_time: string;
+    overnight?: boolean;
+    break_duration_minutes?: number;
+    color_code?: string | null;
+    is_active: boolean;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface IShiftAssignment {
-  id: string;
-  organization_member_id: string;
-  shift_id: string;
-  assignment_date: string;
-  created_by?: string | null;
-  created_at?: string;
+    id: string;
+    organization_member_id: string;
+    shift_id: string;
+    assignment_date: string;
+    created_by?: string | null;
+    created_at?: string;
 
-  organization_member?: IOrganization_member;
-  shift?: Pick<IShift, "id" | "code" | "name" | "start_time" | "end_time">;
+    organization_member?: IOrganization_member;
+    shift?: Pick<IShift, "id" | "code" | "name" | "start_time" | "end_time">;
 }
 
-export interface IMemberSchedule{
+export interface IMemberSchedule {
     id: string;
     organization_member_id: string;
     work_schedule_id: string;
@@ -263,51 +272,51 @@ export interface IMemberSchedule{
     work_schedule?: IWorkSchedule;
 }
 
-export interface IRole{
-    id:string;
-    code?:string;
-    name:string;
-    description:string;
+export interface IRole {
+    id: string;
+    code?: string;
+    name: string;
+    description: string;
 }
 
 export interface ApiResponse<T> {
-  success: boolean;
-  message?: string;
-  data: T;
+    success: boolean;
+    message?: string;
+    data: T;
 }
 
 export interface IPermission {
-    id:string;
-    code?:string;
-    module:string;
-    name:string;
-    description:string;
+    id: string;
+    code?: string;
+    module: string;
+    name: string;
+    description: string;
 }
 
-export interface IRolePermission{
-    id:string;
+export interface IRolePermission {
+    id: string;
     role_id: number;
-  permission_id: string;
-    created_at:string;
-    role?:IRole;
-    permission:IPermission;
+    permission_id: string;
+    created_at: string;
+    role?: IRole;
+    permission: IPermission;
 }
 
-export interface IUserRole{
-    user_id:string;
-    role_id:string;
+export interface IUserRole {
+    user_id: string;
+    role_id: string;
 
-    user:IUser
-    role:IRole;
+    user: IUser
+    role: IRole;
 }
 
-export interface IRfidCard{
-    id:string;
-    organization_member_id:string;
-    card_number:string;
-    card_type:string;
-    issue_date:string;
-    organization_member:IOrganization_member;
+export interface IRfidCard {
+    id: string;
+    organization_member_id: string;
+    card_number: string;
+    card_type: string;
+    issue_date: string;
+    organization_member: IOrganization_member;
 }
 
 export interface IDeviceType {
@@ -365,7 +374,7 @@ export interface IMemberInvitation {
     accepted_at?: string;
     created_at: string;
     updated_at?: string;
-    
+
     // Relations (populated via Supabase select)
     organization?: IOrganization;
     inviter?: IUser;

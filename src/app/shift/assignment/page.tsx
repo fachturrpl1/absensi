@@ -69,7 +69,7 @@ export default function ShiftAssignmentPage() {
           setShifts([])
         }
       } catch (error) {
-        toast.error("Failed to load shift assignments")
+        toast.error(error instanceof Error ? error.message : "Failed to load shift assignments")
         setAssignments([])
         setMembers([])
         setShifts([])
@@ -114,6 +114,7 @@ export default function ShiftAssignmentPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 w-full">
       <ShiftAssignmentClient
+        organizationId={String(organizationId)}
         initialAssignments={assignments}
         members={members}
         shifts={shifts}

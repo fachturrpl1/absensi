@@ -24,9 +24,9 @@ const toScheduleCode = (name?: string, code?: string) => {
 
 export const getAllWorkSchedules = async (organizationId?: number | string) => {
     const supabase = await createClient();
-    
+
     let finalOrgId = organizationId;
-    
+
     // If no organizationId provided, get from current user
     if (!finalOrgId) {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -44,7 +44,7 @@ export const getAllWorkSchedules = async (organizationId?: number | string) => {
         if (memberError || !member) {
             return { success: false, message: "User not in any organization", data: [] };
         }
-        
+
         finalOrgId = member.organization_id;
     }
 
@@ -168,10 +168,23 @@ function validateDetailInput(payload: Partial<IWorkScheduleDetail>) {
     const e = toMinutes(payload.end_time as string | undefined)
     const bs = toMinutes(payload.break_start as string | undefined)
     const be = toMinutes(payload.break_end as string | undefined)
+    const coreStart = toMinutes(payload.core_hours_start as string | undefined)
+    const coreEnd = toMinutes(payload.core_hours_end as string | undefined)
 
     if (s == null) return { ok: false as const, message: "Start time is required" }
     if (e == null) return { ok: false as const, message: "End time is required" }
     if (e <= s) return { ok: false as const, message: "End time must be later than start time" }
+
+    // Core hours validation
+    if (coreStart != null && coreEnd != null && coreEnd <= coreStart) {
+        return { ok: false as const, message: "Core hours end must be later than core hours start" }
+    }
+    if (s != null && coreStart != null && s > coreStart) {
+    return { ok: false as const, message: "Start time must be earlier than core hours start" }
+    }
+    if (e != null && coreEnd != null && e < coreEnd) {
+    return { ok: false as const, message: "End time must be later than core hours end" }
+    }
 
     const hasBs = bs != null
     const hasBe = be != null
@@ -223,8 +236,8 @@ export async function updateWorkSchedule(id: string | number, payload: Partial<I
 }
 
 
-export const deleteWorkSchedule = async ( scheduleId: string | number) => {
-     const id = String(scheduleId) // convert to string
+export const deleteWorkSchedule = async (scheduleId: string | number) => {
+    const id = String(scheduleId) // convert to string
     const supabase = await createClient();
     const { data, error } = await supabase
         .from("work_schedules").delete().eq("id", id)
@@ -294,12 +307,14 @@ export async function upsertWorkScheduleDetails(
     workScheduleId: number,
     items: Array<Partial<IWorkScheduleDetail>>,
 ) {
-    
+    console.log('[upsertWorkScheduleDetails] Starting with workScheduleId:', workScheduleId, 'items count:', items.length)
+
     const supabase = await createClient();
 
     for (const it of items) {
         const v = validateDetailInput(it)
         if (!v.ok) {
+            console.error('[upsertWorkScheduleDetails] Validation failed for day', it.day_of_week, ':', v.message)
             return { success: false, message: v.message, data: [] as IWorkScheduleDetail[] }
         }
     }
@@ -310,13 +325,15 @@ export async function upsertWorkScheduleDetails(
         is_working_day: Boolean(it.is_working_day),
         start_time: (it.start_time ?? null) as string | null,
         end_time: (it.end_time ?? null) as string | null,
+        core_hours_start: (it.core_hours_start ?? null) as string | null,
+        core_hours_end: (it.core_hours_end ?? null) as string | null,
         break_start: (it.break_start ?? null) as string | null,
         break_end: (it.break_end ?? null) as string | null,
         break_duration_minutes: typeof it.break_duration_minutes === 'number' ? it.break_duration_minutes : null,
         flexible_hours: Boolean(it.flexible_hours),
-        is_active: it.is_active ?? true,
     }))
 
+    console.log('[upsertWorkScheduleDetails] Rows to upsert:', JSON.stringify(rows, null, 2))
 
     const { data, error } = await supabase
         .from("work_schedule_details")
@@ -324,9 +341,11 @@ export async function upsertWorkScheduleDetails(
         .select()
 
     if (error) {
+        console.error('[upsertWorkScheduleDetails] Database error:', error.message, error.details, error.code)
         return { success: false, message: error.message, data: [] as IWorkScheduleDetail[] }
     }
 
+    console.log('[upsertWorkScheduleDetails] Success! Saved', data?.length, 'rows')
     return { success: true, data: (data || []) as IWorkScheduleDetail[] }
 }
 
