@@ -76,9 +76,13 @@ export default function FingerPage() {
   const [showConfirmDialog, setShowConfirmDialog] = React.useState(false)
   const [registeringMember, setRegisteringMember] = React.useState<{ member: Member; fingerNumber: 1 | 2 } | null>(null)
   const [isRegistering, setIsRegistering] = React.useState(false)
-  const [selectedDepartment, setSelectedDepartment] = React.useState<string>("all")
+  const [selectedDepartment, setSelectedDepartment] = React.useState<string>("All Groups")
+  const [serverDepartments, setServerDepartments] = React.useState<string[]>([]) // Added state
   const [selectedStatus, setSelectedStatus] = React.useState<FilterStatus>("all")
+
   const [activeMemberId, setActiveMemberId] = React.useState<number | null>(null)
+
+
   const [activeFingerNumber, setActiveFingerNumber] = React.useState<1 | 2 | null>(null)
   const { organizationId } = useOrgStore()
   const [isHydrated, setIsHydrated] = React.useState(false)
@@ -254,54 +258,31 @@ export default function FingerPage() {
     }
   }, [organizationId])
 
-  // Fetch organization-wide fingerprint stats for cards (via API to mirror table logic precisely)
+  // Store fetchDevices in ref for stable reference
+  const fetchDevicesRef = React.useRef(fetchDevices)
+  React.useEffect(() => {
+    fetchDevicesRef.current = fetchDevices
+  }, [fetchDevices])
+
+  // Fetch organization-wide fingerprint stats for cards
   const fetchFingerStats = React.useCallback(async () => {
     if (!organizationId) return
     try {
-      const pageSizeNum = 100
-      // 1) Fetch first page to get total
-      const url = new URL('/api/finger/members', window.location.origin)
-      url.searchParams.set('limit', String(pageSizeNum))
-      url.searchParams.set('page', '1')
+      const url = new URL('/api/finger/stats', window.location.origin)
+      url.searchParams.set('organizationId', String(organizationId))
       url.searchParams.set('t', String(Date.now()))
-      if (organizationId) url.searchParams.set('organizationId', String(organizationId))
-      const first = await fetch(url.toString(), { credentials: 'same-origin', cache: 'no-store' })
-      const firstJson = await first.json()
-      if (!firstJson?.success) throw new Error(firstJson?.message || 'Failed to load stats')
 
-      const total: number = Number(firstJson?.pagination?.total || 0)
-      const totalPages: number = Math.max(1, Math.ceil((total || 0) / pageSizeNum))
+      const res = await fetch(url.toString(), { credentials: 'same-origin', cache: 'no-store' })
+      const json = await res.json()
 
-      let complete = 0
-      let partial = 0
-      let unregistered = 0
-
-      const accumulate = (rows: Array<{ finger1_registered: boolean; finger2_registered: boolean }>) => {
-        for (const r of rows) {
-          const has1 = !!r.finger1_registered
-          const has2 = !!r.finger2_registered
-          if (has1 && has2) complete += 1
-          else if ((has1 ? 1 : 0) + (has2 ? 1 : 0) === 1) partial += 1
-          else unregistered += 1
-        }
+      if (json?.success && json?.data) {
+        setFingerStats({
+          total: json.data.total || 0,
+          registered: json.data.complete || 0,
+          partial: json.data.partial || 0,
+          unregistered: json.data.unregistered || 0
+        })
       }
-
-      accumulate(firstJson.data || [])
-
-      // 2) Fetch remaining pages
-      for (let p = 2; p <= totalPages; p++) {
-        const u = new URL('/api/finger/members', window.location.origin)
-        u.searchParams.set('limit', String(pageSizeNum))
-        u.searchParams.set('page', String(p))
-        u.searchParams.set('t', String(Date.now()))
-        if (organizationId) u.searchParams.set('organizationId', String(organizationId))
-        const res = await fetch(u.toString(), { credentials: 'same-origin', cache: 'no-store' })
-        const json = await res.json()
-        if (!json?.success) throw new Error(json?.message || 'Failed to load stats page')
-        accumulate(json.data || [])
-      }
-
-      setFingerStats({ total, registered: complete, partial, unregistered })
     } catch (e) {
       console.error('[FINGER-PAGE] Fetch finger stats error:', e)
     }
@@ -316,6 +297,12 @@ export default function FingerPage() {
       if (organizationId) url.searchParams.set('organizationId', String(organizationId))
       url.searchParams.set('limit', String(pageSizeNum))
       url.searchParams.set('page', String(pageNum))
+
+      // Add filters
+      if (searchQuery) url.searchParams.set('search', searchQuery)
+      if (selectedDepartment && selectedDepartment !== 'All Groups') url.searchParams.set('department', selectedDepartment)
+      if (selectedStatus && selectedStatus !== 'all') url.searchParams.set('status', selectedStatus)
+
       // cache-busting, void any intermediary caches affecting freshness
       url.searchParams.set('t', String(Date.now()))
 
@@ -325,6 +312,9 @@ export default function FingerPage() {
 
       setMembers(json.data || [])
       setTotalItems(json.pagination?.total || 0)
+      if (json.filters?.departments) {
+        setServerDepartments(json.filters.departments)
+      }
 
       if (organizationId) {
         setCache<Member[]>(
@@ -334,14 +324,19 @@ export default function FingerPage() {
         )
       }
       // Update cards after members fetch
-      await fetchFingerStats()
+      try {
+        await fetchFingerStats()
+      } catch (statsError) {
+        console.error('Failed to fetch finger stats:', statsError)
+        // Don't block if stats fail
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       console.error('❌ Fetch error:', message)
     } finally {
       setIsLoading(false)
     }
-  }, [organizationId, pageIndex, pageSize, fetchFingerStats])
+  }, [organizationId, pageIndex, pageSize, searchQuery, selectedDepartment, selectedStatus, fetchFingerStats])
 
   React.useEffect(() => {
     setMounted(true)
@@ -349,27 +344,30 @@ export default function FingerPage() {
 
   // Fetch data when hydration completes
   React.useEffect(() => {
-    if (isHydrated && organizationId) {
-      const cachedDevices = getCache<Device[]>(`finger:devices:${organizationId}`)
-      if (cachedDevices && cachedDevices.length > 0) setDevices(cachedDevices)
-      // Do not hydrate members from cache to avoid stale counts in cards
-      clearMembersCacheForOrg(organizationId)
-      console.log('[FINGER-PAGE] Hydration complete, organizationId available:', organizationId)
-      fetchDevices()
-      fetchMembers()
-      fetchFingerStats()
-    }
-  }, [isHydrated, organizationId, fetchDevices, fetchMembers, fetchFingerStats, clearMembersCacheForOrg])
+    if (!isHydrated || !organizationId) return
+
+    const cachedDevices = getCache<Device[]>(`finger:devices:${organizationId}`)
+    if (cachedDevices && cachedDevices.length > 0) setDevices(cachedDevices)
+
+    // Do not hydrate members from cache to avoid stale counts in cards
+    clearMembersCacheForOrg(organizationId)
+    console.log('[FINGER-PAGE] Hydration complete, organizationId available:', organizationId)
+
+    // Call functions directly instead of via ref
+    fetchDevicesRef.current()
+    fetchMembers()
+    fetchFingerStats()
+  }, [isHydrated, organizationId])
 
   // Refetch when page index or page size changes
   React.useEffect(() => {
-    if (isHydrated && organizationId) {
-      // Always fetch fresh when paging/pageSize changes
-      clearMembersCacheForOrg(organizationId)
-      fetchMembers()
-      fetchFingerStats()
-    }
-  }, [pageIndex, pageSize, isHydrated, organizationId, fetchMembers, fetchFingerStats, clearMembersCacheForOrg])
+    if (!isHydrated || !organizationId) return
+
+    // Always fetch fresh when paging/pageSize changes
+    clearMembersCacheForOrg(organizationId)
+    fetchMembers()
+    fetchFingerStats()
+  }, [pageIndex, pageSize, isHydrated, organizationId, searchQuery, selectedDepartment, selectedStatus])
 
   // Setup real-time subscription for biometric_data changes
   React.useEffect(() => {
@@ -453,47 +451,24 @@ export default function FingerPage() {
     }
   }, [selectedDevice, mounted])
 
-  const getUniqueDepartments = (): string[] => {
-    const deptNames: string[] = []
-    members.forEach(member => {
-      if (member.department_name) {
-        deptNames.push(member.department_name)
-      }
-    })
-    return Array.from(new Set(deptNames)).sort()
-  }
-
-  const getFilteredMembers = (): Member[] => {
-    return members.filter(member => {
-      const matchesSearch =
-        member.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (member.phone && member.phone.toLowerCase().includes(searchQuery.toLowerCase()))
-
-      const matchesDepartment =
-        selectedDepartment === "all" || member.department_name === selectedDepartment
-
-      const matchesStatus =
-        selectedStatus === "all" ||
-        (selectedStatus === "complete" && member.finger1_registered && member.finger2_registered) ||
-        (selectedStatus === "partial" && (member.finger1_registered || member.finger2_registered) && !(member.finger1_registered && member.finger2_registered)) ||
-        (selectedStatus === "unregistered" && !member.finger1_registered && !member.finger2_registered)
-
-      return matchesSearch && matchesDepartment && matchesStatus
-    })
-  }
-
-  const filteredMembers = getFilteredMembers()
-  const uniqueDepartments = getUniqueDepartments()
-
-  // Pagination logic (backend pagination)
+  // Pagination logic - NO filtering, direct display
   const pageSizeNum = parseInt(pageSize)
   const totalPages = Math.max(1, Math.ceil((totalItems || 0) / pageSizeNum))
-  const paginatedMembers = filteredMembers
+  const paginatedMembers = members // Direct use, no filtering
 
-  // Reset page index when filters change
-  React.useEffect(() => {
-    setPageIndex(0)
-  }, [searchQuery, selectedDepartment, selectedStatus])
+  // Get unique departments from current members data for dropdown (info only)
+  const uniqueDepartments = React.useMemo(() => {
+    if (serverDepartments.length > 0) return serverDepartments
+
+    const deptSet = new Set<string>()
+    members.forEach(member => {
+      if (member.department_name && member.department_name !== 'No Group') {
+        deptSet.add(member.department_name)
+      }
+    })
+    return Array.from(deptSet).sort()
+  }, [members, serverDepartments])
+
 
   // Clamp page index if it exceeds total pages
   React.useEffect(() => {
@@ -1002,7 +977,8 @@ export default function FingerPage() {
                       key={member.id}
                       className={cn(
                         "transition-colors",
-                        "hover:bg-muted/40"
+                        "hover:bg-muted/40",
+                        index % 2 === 1 ? "bg-muted" : ""
                       )}
                     >
                       <TableCell className="font-medium text-muted-foreground">
@@ -1132,7 +1108,7 @@ export default function FingerPage() {
         </div>
 
         {/* Pagination Footer (shared) */}
-        {filteredMembers.length > 0 && (
+        {paginatedMembers.length > 0 && (
           <PaginationFooter
             page={pageIndex + 1}
             totalPages={totalPages || 1}
