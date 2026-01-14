@@ -927,6 +927,14 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   return (
     <div className="space-y-6">
+      <style jsx global>{`
+        .custom-hover-row:hover {
+          background-color: #d1d5db !important; /* dark gray hover */
+        }
+        .dark .custom-hover-row:hover {
+          background-color: #374151 !important;
+        }
+      `}</style>
       {/* Filters & Actions */}
       <Card className="border border-gray-200 shadow-sm">
         <CardContent className="p-4 md:p-6">
@@ -1249,7 +1257,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     <th className="p-3 text-left text-xs font-medium">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
+                <tbody>
                   {(loading || !initialized) ? (
                     <>
                       {Array.from({ length: 6 }).map((_, i) => (
@@ -1298,8 +1306,12 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       console.log(`📋 Rendering table row ${index + 1}/${attendanceData.length}:`, record.id, record.member.name);
                       return (
                         <tr
-                          key={`table-${record.id}-${index}`}
-                          className="border-b hover:bg-blue-200 transition-colors"
+                          style={{
+                            backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
+                          }}
+                          className={cn(
+                            "border-b transition-colors cursor-pointer custom-hover-row",
+                          )}
                         >
                           <td className="p-3">
                             <input

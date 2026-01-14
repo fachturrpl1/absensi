@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/select"
 import { getCache, setCache } from "@/lib/local-cache"
 import { PaginationFooter } from "@/components/pagination-footer"
+import { getAllGroups } from "@/action/group"
 
 interface Device {
   device_code: string
@@ -76,7 +77,7 @@ export default function FingerPage() {
   const [showConfirmDialog, setShowConfirmDialog] = React.useState(false)
   const [registeringMember, setRegisteringMember] = React.useState<{ member: Member; fingerNumber: 1 | 2 } | null>(null)
   const [isRegistering, setIsRegistering] = React.useState(false)
-  const [selectedDepartment, setSelectedDepartment] = React.useState<string>("All Groups")
+  const [selectedDepartment, setSelectedDepartment] = React.useState<string>("all")
   const [serverDepartments, setServerDepartments] = React.useState<string[]>([]) // Added state
   const [selectedStatus, setSelectedStatus] = React.useState<FilterStatus>("all")
 
@@ -264,6 +265,22 @@ export default function FingerPage() {
     fetchDevicesRef.current = fetchDevices
   }, [fetchDevices])
 
+  const fetchGroups = React.useCallback(async () => {
+    if (!organizationId) return
+    try {
+      const res = await getAllGroups(organizationId)
+      if (res.success && res.data) {
+        // Extract names and sort
+        const groups = res.data
+          .map((g: { name: string }) => g.name)
+          .sort((a: string, b: string) => a.localeCompare(b))
+        setServerDepartments(groups)
+      }
+    } catch (e) {
+      console.error('[FINGER-PAGE] Fetch groups error:', e)
+    }
+  }, [organizationId])
+
   // Fetch organization-wide fingerprint stats for cards
   const fetchFingerStats = React.useCallback(async () => {
     if (!organizationId) return
@@ -300,7 +317,7 @@ export default function FingerPage() {
 
       // Add filters
       if (searchQuery) url.searchParams.set('search', searchQuery)
-      if (selectedDepartment && selectedDepartment !== 'All Groups') url.searchParams.set('department', selectedDepartment)
+      if (selectedDepartment && selectedDepartment !== 'all') url.searchParams.set('department', selectedDepartment)
       if (selectedStatus && selectedStatus !== 'all') url.searchParams.set('status', selectedStatus)
 
       // cache-busting, void any intermediary caches affecting freshness
@@ -322,13 +339,6 @@ export default function FingerPage() {
           json.data || [],
           1000 * 180
         )
-      }
-      // Update cards after members fetch
-      try {
-        await fetchFingerStats()
-      } catch (statsError) {
-        console.error('Failed to fetch finger stats:', statsError)
-        // Don't block if stats fail
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error'
@@ -355,9 +365,8 @@ export default function FingerPage() {
 
     // Call functions directly instead of via ref
     fetchDevicesRef.current()
-    fetchMembers()
-    fetchFingerStats()
-  }, [isHydrated, organizationId])
+    fetchGroups()
+  }, [isHydrated, organizationId, fetchGroups])
 
   // Refetch when page index or page size changes
   React.useEffect(() => {
@@ -385,18 +394,32 @@ export default function FingerPage() {
           table: 'biometric_data',
           filter: 'biometric_type=eq.FINGERPRINT'
         },
-        (payload) => {
+        async (payload) => {
           if (DEBUG) console.log('🔄 Biometric data change detected:', payload.eventType)
-          const p = payload as unknown as { new?: { organization_id?: number }, old?: { organization_id?: number } }
-          const payloadOrgId = p.new?.organization_id ?? p.old?.organization_id
-          if (!payloadOrgId || payloadOrgId !== organizationId) {
-            if (DEBUG) console.log('🔄 Change from another organization, skipping refetch')
-            return
+
+          // The payload usually contains organization_member_id, NOT organization_id
+          const p = payload as unknown as { new?: { organization_member_id?: number }, old?: { organization_member_id?: number } }
+          const memberId = p.new?.organization_member_id ?? p.old?.organization_member_id
+
+          if (!memberId) return
+
+          // Verify if this member belongs to the current organization
+          // We use the same supabase client which should have permissions
+          const { data: memberData } = await supabase
+            .from('organization_members')
+            .select('organization_id')
+            .eq('id', memberId)
+            .single()
+
+          if (memberData && memberData.organization_id === organizationId) {
+            if (DEBUG) console.log('🔄 Change matches current organization, refreshing...')
+            // Refetch all data and clear cache to ensure consistency
+            clearMembersCacheForOrg(organizationId)
+            fetchMembers()
+            fetchFingerStats()
+          } else {
+            if (DEBUG) console.log('🔄 Change from another organization or member not found, skipping refetch')
           }
-          // Refetch all data and clear cache to ensure consistency
-          clearMembersCacheForOrg(organizationId)
-          fetchMembers()
-          fetchFingerStats()
         }
       )
       .subscribe((status) => {
@@ -808,8 +831,16 @@ export default function FingerPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 w-full">
-            <div className="flex flex-col sm:flex-row gap-2 w-full items-start sm:items-center">
+          <div className="space-y-6">
+            <style jsx global>{`
+              .custom-hover-row:hover {
+                background-color: #d1d5db !important; /* dark gray hover */
+              }
+              .dark .custom-hover-row:hover {
+                background-color: #374151 !important;
+              }
+            `}</style>
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border shadow-sm shrink-0">
                 <Monitor className="w-4 h-4 text-primary" />
                 <div className="flex items-center gap-2">
@@ -975,10 +1006,13 @@ export default function FingerPage() {
                   paginatedMembers.map((member, index) => (
                     <TableRow
                       key={member.id}
+                      style={{
+                        backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
+                      }}
                       className={cn(
-                        "transition-colors",
-                        "hover:bg-muted/40",
-                        index % 2 === 1 ? "bg-muted" : ""
+                        "transition-colors custom-hover-row",
+                        // "hover:!bg-zinc-200/70 dark:hover:!bg-zinc-800/70",
+                        // index % 2 === 1 ? "bg-zinc-100/50 dark:bg-zinc-900/40" : "bg-card"
                       )}
                     >
                       <TableCell className="font-medium text-muted-foreground">
@@ -1141,7 +1175,7 @@ export default function FingerPage() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </div>
+    </div >
   )
 }
 
