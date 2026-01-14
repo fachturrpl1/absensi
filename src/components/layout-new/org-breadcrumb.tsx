@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useOrgStore } from '@/store/org-store'
 import { ChevronRight } from 'lucide-react'
+import { createClient } from '@/utils/supabase/client'
 
 interface BreadcrumbItem {
   label: string
@@ -18,6 +19,7 @@ export function OrgBreadcrumb() {
   const [isHydrated, setIsHydrated] = useState(false)
   // Init to null to keep SSR and initial client render identical
   const [displayName, setDisplayName] = useState<string | null>(null)
+  const [scheduleName, setScheduleName] = useState<string | null>(null)
 
   useEffect(() => {
     // Set hydrated flag
@@ -54,6 +56,33 @@ export function OrgBreadcrumb() {
       setDisplayName(organizationName)
     }
   }, [organizationName])
+
+  useEffect(() => {
+    const parts = pathname.split('/').filter(Boolean)
+    const isScheduleDetail = parts[0] === 'schedule' && parts.length === 2
+    if (!isScheduleDetail) {
+      setScheduleName(null)
+      return
+    }
+    const id = parts[1]
+    const supabase = createClient()
+    let aborted = false
+    ;(async () => {
+      try {
+        type WorkScheduleRow = { name: string | null }
+        const { data } = await supabase
+          .from('work_schedules')
+          .select('name')
+          .eq('id', id)
+          .maybeSingle()
+        const row = data as WorkScheduleRow | null
+        if (!aborted) setScheduleName(row?.name ?? null)
+      } catch {
+        if (!aborted) setScheduleName(null)
+      }
+    })()
+    return () => { aborted = true }
+  }, [pathname])
 
   // Mapping pathname ke breadcrumb labels
   const pathMapping: Record<string, string> = {
@@ -144,13 +173,17 @@ export function OrgBreadcrumb() {
       }
     }
 
-    // Tambah current page berdasarkan pathname
+    const parts = pathname.split('/').filter(Boolean)
+    const isScheduleDetail = parts[0] === 'schedule' && parts.length === 2
+    if (isScheduleDetail) {
+      items.push({ label: 'Schedule', href: '/schedule' })
+      items.push({ label: scheduleName ?? parts[1] ?? 'Schedule', href: pathname })
+      return items
+    }
+
     const currentLabel = pathMapping[pathname]
     if (currentLabel && currentLabel !== nameToDisplay) {
-      items.push({
-        label: currentLabel,
-        href: pathname,
-      })
+      items.push({ label: currentLabel, href: pathname })
     }
 
     return items

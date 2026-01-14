@@ -36,6 +36,8 @@ interface RuleItem {
   end_time: string
   core_hours_start: string
   core_hours_end: string
+  grace_in_minutes: number
+  grace_out_minutes: number
   break_start: string
   break_end: string
   flexible_hours: boolean
@@ -117,6 +119,8 @@ const createDefaultRule = (day: DayIndex): RuleItem => {
     end_time: isWeekend ? "" : "17:00",
     core_hours_start: isWeekend ? "" : "08:30",
     core_hours_end: isWeekend ? "" : "17:00",
+    grace_in_minutes: 0,
+    grace_out_minutes: 0,
     break_start: isWeekend ? "" : "12:00",
     break_end: isWeekend ? "" : "13:00",
     flexible_hours: false,
@@ -161,6 +165,8 @@ export default function WorkScheduleDetailsPage() {
               end_time: detail.end_time || "",
               core_hours_start: detail.core_hours_start || "",
               core_hours_end: detail.core_hours_end || "",
+              grace_in_minutes: detail.grace_in_minutes || 0,
+              grace_out_minutes: detail.grace_out_minutes || 0,
               break_start: detail.break_start || "",
               break_end: detail.break_end || "",
               flexible_hours: detail.flexible_hours,
@@ -207,6 +213,8 @@ export default function WorkScheduleDetailsPage() {
           updated.end_time = ""
           updated.core_hours_start = ""
           updated.core_hours_end = ""
+          updated.grace_in_minutes = 0
+          updated.grace_out_minutes = 0
           updated.break_start = ""
           updated.break_end = ""
         }
@@ -233,6 +241,8 @@ export default function WorkScheduleDetailsPage() {
           end_time: selectedRule.end_time,
           core_hours_start: selectedRule.core_hours_start,
           core_hours_end: selectedRule.core_hours_end,
+          grace_in_minutes: selectedRule.grace_in_minutes,
+          grace_out_minutes: selectedRule.grace_out_minutes,
           break_start: selectedRule.break_start,
           break_end: selectedRule.break_end,
           flexible_hours: selectedRule.flexible_hours,
@@ -260,6 +270,8 @@ export default function WorkScheduleDetailsPage() {
         break_end: r.is_working_day ? (r.break_end || undefined) : undefined,
         core_hours_start: r.is_working_day ? (r.core_hours_start || undefined) : undefined,
         core_hours_end: r.is_working_day ? (r.core_hours_end || undefined) : undefined,
+        grace_in_minutes: r.grace_in_minutes,
+        grace_out_minutes: r.grace_out_minutes,
         flexible_hours: r.flexible_hours,
         is_active: true,
       }))
@@ -378,12 +390,12 @@ export default function WorkScheduleDetailsPage() {
         </div>
 
         {/* Day Editor (Right Panel) */}
-    <div className="border rounded-lg p-4 md:col-span-2 lg:col-span-3 bg-card h-full flex flex-col">
-      {selectedRule && (
-      <div key={`${selectedDay}-${panelBump}`}>
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-lg font-semibold">{getDayName(selectedDay)}</div>
+        <div className="border rounded-lg p-4 md:col-span-2 lg:col-span-3 bg-card h-full flex flex-col">
+          {selectedRule && (
+            <div key={`${selectedDay}-${panelBump}`}>
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-lg font-semibold">{getDayName(selectedDay)}</div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">Status:</span>
                   <Badge
@@ -484,6 +496,30 @@ export default function WorkScheduleDetailsPage() {
                         value={selectedRule.core_hours_end}
                         disabled={!selectedRule.is_working_day}
                         onChange={(e) => updateRule(selectedDay, { core_hours_end: e.target.value })}
+                      />
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="space-y-1">
+                      <div className="text-sm font-medium">Grace In (Minutes)</div>
+                      <Input
+                        key={`grace-in-${selectedDay}`}
+                        type="number"
+                        min="0"
+                        value={selectedRule.grace_in_minutes}
+                        disabled={!selectedRule.is_working_day}
+                        onChange={(e) => updateRule(selectedDay, { grace_in_minutes: Number(e.target.value) })}
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <div className="text-sm font-medium">Grace Out (Minutes)</div>
+                      <Input
+                        key={`grace-out-${selectedDay}`}
+                        type="number"
+                        min="0"
+                        value={selectedRule.grace_out_minutes}
+                        disabled={!selectedRule.is_working_day}
+                        onChange={(e) => updateRule(selectedDay, { grace_out_minutes: Number(e.target.value) })}
                       />
                     </label>
                   </div>
@@ -591,16 +627,16 @@ export default function WorkScheduleDetailsPage() {
                                 prev.map((r) =>
                                   targets.includes(r.day_of_week)
                                     ? {
-                                        ...r,
-                                        is_working_day: false,
-                                        start_time: "",
-                                        end_time: "",
-                                        break_start: "",
-                                        break_end: "",
-                                        flexible_hours: false,
-                                        label: "Day Off",
-                                        notes: "",
-                                      }
+                                      ...r,
+                                      is_working_day: false,
+                                      start_time: "",
+                                      end_time: "",
+                                      break_start: "",
+                                      break_end: "",
+                                      flexible_hours: false,
+                                      label: "Day Off",
+                                      notes: "",
+                                    }
                                     : r
                                 )
                               )
