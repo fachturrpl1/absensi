@@ -518,7 +518,7 @@ export default function PositionsPage() {
                                                             style={{
                                                                 backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
                                                             }}
-                                                            className="transition-colors custom-hover-row"
+                                                            className="transition-colors custom-hover-row cursor-pointer"
                                                         >
                                                             <TableCell>{position.code}</TableCell>
                                                             <TableCell>{position.title}</TableCell>

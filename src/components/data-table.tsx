@@ -419,7 +419,10 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={getRowKey ? getRowKey(row.original, index) : row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className={index % 2 === 1 ? 'bg-muted' : ''}
+                  style={{
+                    backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
+                  }}
+                  className="transition-colors custom-hover-row cursor-pointer"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
@@ -469,6 +472,26 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
+      <style jsx global>{`
+        /* Nuclear option to override any conflicting blue hover */
+        html body .custom-hover-row:hover,
+        html body .custom-hover-row:hover > td {
+          background-color: #d1d5db !important; /* dark gray hover */
+        }
+        html body .dark .custom-hover-row:hover,
+        html body .dark .custom-hover-row:hover > td {
+          background-color: #374151 !important;
+        }
+        /* Override potential blue selected state */
+        html body .custom-hover-row[data-state="selected"],
+        html body .custom-hover-row[data-state="selected"] > td {
+          background-color: #f3f4f6 !important;
+        }
+        html body .dark .custom-hover-row[data-state="selected"],
+        html body .dark .custom-hover-row[data-state="selected"] > td {
+          background-color: #374151 !important;
+        }
+      `}</style>
       {layout === "card" ? (
         <>
           <Card>
