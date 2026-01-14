@@ -334,7 +334,7 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
           </thead>
 
           {/* Body */}
-          <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
+          <tbody>
             {isLoading ? (
               <tr>
                 <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="px-3 py-6 text-center text-muted-foreground text-sm">
@@ -348,9 +348,9 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
                 </td>
               </tr>
             ) : (
-              paginatedData.map((member) => {
+              paginatedData.map((member, index) => {
                 return (
-                  <tr key={member.id} className="border-b hover:bg-blue-200 transition-colors">
+                  <tr key={member.id} className={`border-b hover:bg-muted/70 transition-colors ${index % 2 === 1 ? 'bg-muted' : ''}`}>
                     {visibleColumns.members && (
                       <td className="p-3 text-xs">
                         <button
