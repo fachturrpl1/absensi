@@ -3,6 +3,8 @@
 import { useOrgStore } from '@/store/org-store'
 import { useHydration } from '@/hooks/useHydration'
 import { useEffect, useState, useMemo } from 'react';
+import type { ComponentType, SVGProps } from 'react';
+import type { TooltipProps } from 'recharts';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -74,16 +76,17 @@ const COLORS = {
 };
 
 // Custom Tooltip
-const CustomTooltip = ({ active, payload, label }: any) => {
+// Ganti definisi CustomTooltip agar kompatibel dengan Recharts
+const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-card border border-border rounded-lg shadow-lg p-3">
         <p className="font-semibold text-sm mb-2">{label}</p>
-        {payload.map((entry: any, index: number) => (
+        {payload?.map((entry, index) => (
           <div key={index} className="flex items-center gap-2 text-xs">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-            <span className="text-muted-foreground">{entry.name}:</span>
-            <span className="font-bold">{entry.value}</span>
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: (entry as any)?.color }} />
+            <span className="text-muted-foreground">{entry?.name}:</span>
+            <span className="font-bold">{entry?.value as number}</span>
           </div>
         ))}
       </div>
@@ -92,26 +95,25 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-// Enhanced Stat Card Component with proper dark/light mode
-const EnhancedStatCard = ({ 
-  title, 
-  value, 
-  icon: Icon, 
-  trend,
-  trendValue,
-  trendLabel,
-  color = 'blue',
-  delay = 0 
-}: {
-  title: string;
-  value: string | number;
-  icon: any;
-  trend?: 'up' | 'down' | 'neutral';
-  trendValue?: string;
-  trendLabel?: string;
-  color?: 'blue' | 'green' | 'orange' | 'purple';
-  delay?: number;
-}) => {
+  const EnhancedStatCard = ({ 
+    title, 
+    value, 
+    icon: Icon, 
+    trend,
+    trendValue,
+    trendLabel,
+    color = 'blue',
+    delay = 0 
+  }: {
+    title: string;
+    value: string | number;
+    icon: ComponentType<SVGProps<SVGSVGElement>>;
+    trend?: 'up' | 'down' | 'neutral';
+    trendValue?: string;
+    trendLabel?: string;
+    color?: 'blue' | 'green' | 'orange' | 'purple';
+    delay?: number;
+  }) => {
   const iconColorClasses = {
     blue: 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
     green: 'bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400',
@@ -219,13 +221,14 @@ export default function ImprovedDashboard() {
     }
   }, [orgStore.organizationId, queryClient])
 
-  // Fetch data
+// Fetch data
   useEffect(() => {
     if (!isHydrated) return;
     
     const fetchData = async () => {
       try {
         setIsLoading(true);
+
         const getPersistedOrgId = () => {
           try {
             const raw = localStorage.getItem('org-store');
@@ -238,6 +241,7 @@ export default function ImprovedDashboard() {
             return null as number | null;
           }
         };
+
         const orgId = hydratedOrgId ?? orgStore.organizationId ?? getPersistedOrgId();
 
         if (!orgId) {
@@ -246,9 +250,22 @@ export default function ImprovedDashboard() {
         }
         
         console.log('[DASHBOARD] Fetching data for organization:', orgId);
-        
-        // Pass organizationId as query parameter
-        const response = await fetch(`/api/attendance-records?organizationId=${orgId}&limit=1000&t=${Date.now()}`);
+
+        // Kirim filter ke API (server-side filtering)
+        const toYMD = (d?: Date): string => (d ? d.toISOString().slice(0, 10) : '');
+        const params = new URLSearchParams();
+        params.set('organizationId', String(orgId));
+        params.set('limit', '1000');
+        params.set('page', '1');
+        const fromStr: string | undefined = dateRange?.from ? toYMD(dateRange.from) : undefined;
+        const toStr: string | undefined = dateRange?.to ? toYMD(dateRange.to) : undefined;
+        if (fromStr !== undefined) params.set('dateFrom', fromStr);
+        if (toStr !== undefined) params.set('dateTo', toStr);
+
+        const response = await fetch(`/api/attendance-records?${params.toString()}`, {
+          method: 'GET',
+          credentials: 'same-origin',
+        });
         const result = await response.json();
 
         if (result.success && result.data) {
@@ -267,7 +284,7 @@ export default function ImprovedDashboard() {
     };
 
     fetchData();
-  }, [isHydrated, hydratedOrgId, orgStore.organizationId]);
+  }, [isHydrated, hydratedOrgId, orgStore.organizationId, dateRange]);
 
   // Filter records
   const fromDateStr = dateRange.from.toISOString().split('T')[0];

@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { createClient } from '@/utils/supabase/client';
-import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { AnalyticsSkeleton } from '@/components/analytics/analytics-skeleton';
@@ -133,16 +133,27 @@ export default function AnalyticsPage() {
         });
         setDeptMemberCounts(counts);
 
-        // Fetch attendance records using secure API route (last 90 days)
-        const startDate = format(subDays(new Date(), 90), 'yyyy-MM-dd');
-        const response = await fetch(`/api/attendance-records?organizationId=${orgId}&startDate=${startDate}`);
-        const result = await response.json();
+      // Fetch attendance records using secure API route (server-side filtering)
+      const toYMD = (d: Date) => format(d, 'yyyy-MM-dd');
+      const params = new URLSearchParams();
+      params.set('organizationId', String(orgId));
+      params.set('page', '1');
+      params.set('limit', '1000');
+      params.set('dateFrom', toYMD(dateRange.from));
+      params.set('dateTo', toYMD(dateRange.to));
 
-        if (result.success && result.data) {
-          setAllRecords(result.data);
-        } else {
-          console.error('Failed to fetch attendance records:', result.message);
-        }
+      const response = await fetch(`/api/attendance-records?${params.toString()}`, {
+        method: 'GET',
+        credentials: 'same-origin',
+      });
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setAllRecords(result.data);
+      } else {
+        console.error('Failed to fetch attendance records:', result.message);
+        setAllRecords([]);
+      }
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -151,7 +162,7 @@ export default function AnalyticsPage() {
     };
 
     fetchData();
-  }, [organizationId]);
+  }, [organizationId, dateRange]);
 
   const getFilterLabel = () => {
     if (!dateRange.preset) {

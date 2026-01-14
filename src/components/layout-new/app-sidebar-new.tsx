@@ -10,7 +10,7 @@ import {
   ClipboardList,
   Calendar,
   Clock,
-  // MapPin,
+  MapPin,
   Building2,
   Briefcase,
   BarChart3,
@@ -20,6 +20,25 @@ import {
   ListChecks,
   Cpu,
   Fingerprint,
+  Clock3,
+  TrendingUp,
+  Lightbulb,
+  Folder,
+  Columns2,
+  FileUser,
+  Fullscreen,
+  HighlighterIcon,
+  Gauge,
+  History,
+  Bell,
+  SquareArrowOutUpRight,
+  MousePointer2,
+  ClockPlus,
+  Notebook,
+  LucideNotebookText,
+  CalendarCheck2,
+  Activity,
+  Link as LinkIcon,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -46,7 +65,7 @@ import { NavUser } from './nav-user';
 interface NavSubItem {
   title: string;
   url: string;
-  icon?: any;
+  icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   badge?: string;
   requiresAdmin?: boolean;
   hideOn?: string[]; // Hide on specific routes
@@ -55,7 +74,7 @@ interface NavSubItem {
 interface NavMainItem {
   title: string;
   url?: string;
-  icon: any;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   subItems?: NavSubItem[];
   badge?: string;
   hideOn?: string[]; // Hide on specific routes
@@ -92,14 +111,43 @@ const getSidebarGroups = (): NavGroup[] => [
         icon: LayoutDashboard,
       },
       {
+        title: 'Timesheets',
+        icon: Clock3,
+        subItems:[
+          { title: 'View & edit', url: '/', icon:Columns2},
+          { title: 'Approvals', url: '/', icon:FileUser },
+        ]
+      },
+      {
         title: 'Attendance',
         icon: ClipboardList,
         subItems: [
           { title: 'Dashboard', url: '/attendance', icon: BarChart3 },
           { title: 'Attendance List', url: '/attendance/list', icon: ListChecks },
-          // { title: 'Locations', url: '/attendance/locations', icon: MapPin },
+          { title: 'Locations', url: '/attendance/locations', icon: MapPin },
           { title: 'Devices', url: '/attendance-devices', icon: Cpu },
         ],
+      },
+      {
+        title:'Activity',
+        icon: TrendingUp,
+        subItems:[
+          { title: 'Screenshots', url: '/', icon:Fullscreen},
+          { title: 'Apps', url: '/', icon:Folder },
+          { title: 'URLs', url: '/', icon:LinkIcon },
+        ]
+      },
+      {
+        title:'Insight',
+        icon:Lightbulb,
+        subItems:[
+          { title: 'Hightlights', url:'/', icon:HighlighterIcon},
+          { title: 'Performance', url: '/', icon:Gauge},
+          { title: 'Timeline', url: '/', icon:History},
+          { title: 'Unusual Activity', url: '/', icon:Activity},
+          { title: 'Smart Notifications', url: '/', icon:Bell},
+          { title: 'Output', url: '/', icon:SquareArrowOutUpRight },
+        ]
       },
       {
         title: 'Schedules',
@@ -110,12 +158,33 @@ const getSidebarGroups = (): NavGroup[] => [
         ],
       },
       {
+        title:'Project management',
+        icon:Folder,
+        subItems:[
+          { title: 'Projects', url: '/', icon:Folder},
+          { title: 'Tasks', url: '/', icon:ClipboardList},
+          { title: 'Clients',url:'/', icon:MousePointer2}
+        ]
+      },
+      {
         title: 'Shift',
         icon: Clock,
         subItems: [
           { title: 'Shift Management', url: '/shift/management', icon: Clock },
           { title: 'Shift Assignment', url: '/shift/assignment', icon: Users },
         ],
+      },
+      {
+        title:'Reports',
+        icon:ClipboardList,
+        subItems:[
+          { title: 'Time & activity', url: '/', icon:ClockPlus},
+          { title: 'Activity', url: '/', icon:Activity},
+          { title: 'Daily totals', url: '/', icon:CalendarCheck2},
+          { title: 'Project management', url: '/', icon:Folder},
+          { title: 'All reports', url: '/', icon:Notebook},
+          { title: 'Customized reports', url: '/', icon:LucideNotebookText},
+        ]
       },
       {
         title: 'All Organizations',

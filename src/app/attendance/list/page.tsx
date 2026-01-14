@@ -1,10 +1,11 @@
 "use client"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"
 import type { DateFilterState } from "@/components/analytics/date-filter-bar"
 import { DateFilterBar } from "@/components/analytics/date-filter-bar"
 import { useOrgStore } from "@/store/org-store"
 import { formatInTimeZone } from "date-fns-tz"
-import { getAllAttendance, type GetAttendanceResult, type AttendanceListItem } from "@/action/attendance"
+import type { GetAttendanceResult, AttendanceListItem } from "@/action/attendance"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -108,13 +109,18 @@ function ModernAttendanceListCloned() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'attendance_records' },
-        (payload: any) => {
+        (
+          payload: RealtimePostgresChangesPayload<{
+            new: { id?: string | number } | null
+            old: { id?: string | number } | null
+          }>
+        ) => {
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            const id = String((payload.new as { id?: string | number })?.id ?? "")
+            const id = String((payload.new as { id?: string | number })?.id ?? '')
             if (id) fetchRef.current({ mode: 'single', id })
             else fetchRef.current({ mode: 'full' })
           } else if (payload.eventType === 'DELETE') {
-            const id = String((payload.old as { id?: string | number })?.id ?? "")
+            const id = String((payload.old as { id?: string | number })?.id ?? '')
             if (id) {
               setAttendanceData(prev => prev.filter(r => r.id !== id))
               setTotalItems(prev => Math.max(0, prev - 1))
@@ -145,7 +151,13 @@ function ModernAttendanceListCloned() {
 
   // Debounce input ke query
   useEffect(() => {
-    const timer = window.setTimeout(() => setSearchQuery(searchInput), 10)
+    const timer = window.setTimeout(() => {
+      const v = (searchInput || '').trim()
+      // Backend-driven: trigger hanya jika kosong (reset) atau >= 2 karakter
+      if (v.length === 0 || v.length >= 2) {
+        setSearchQuery(v)
+      }
+    }, 400)
     return () => window.clearTimeout(timer)
   }, [searchInput])
 
@@ -220,18 +232,21 @@ function ModernAttendanceListCloned() {
 
       try {
         const searchParam = (searchQuery || "").trim()
-        const res = await getAllAttendance({
-          page: currentPage,
-          limit: itemsPerPage,
-          dateFrom: toOrgYMD(dateRange.from, userTimezone),
-          dateTo: toOrgYMD(dateRange.to, userTimezone),
-          search: searchParam.length >= 2 ? searchParam : undefined,
-          status: statusFilter === "all" ? undefined : statusFilter,
-          department: departmentFilter === "all" ? undefined : departmentFilter,
-          organizationId: orgId,
-        })
+        const params = new URLSearchParams()
+        params.set("page", String(currentPage))
+        params.set("limit", String(itemsPerPage))
+        params.set("dateFrom", toOrgYMD(dateRange.from, userTimezone))
+        params.set("dateTo", toOrgYMD(dateRange.to, userTimezone))
+        params.set("organizationId", String(orgId))
+        if (statusFilter && statusFilter !== "all") params.set("status", statusFilter)
+        if (departmentFilter && departmentFilter !== "all") params.set("department", departmentFilter)
+        if (searchParam.length >= 2) params.set("search", searchParam)
 
-        const result: GetAttendanceResult = res as GetAttendanceResult
+        const res = await fetch(`/api/attendance-records?${params.toString()}`, {
+          method: "GET",
+          credentials: "same-origin",
+        })
+        const result: GetAttendanceResult = await res.json()
         if (reqId !== latestRequestRef.current) return
 
         if (result.success) {

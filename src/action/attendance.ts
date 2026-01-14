@@ -72,6 +72,7 @@ export type GetAttendanceParams = {
   status?: string;
   department?: string;
   organizationId?: number;  // Add organization ID parameter
+  noCache?: boolean;
   cursor?: string; // base64 cursor for keyset pagination
 };
 
@@ -122,13 +123,13 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     search,
     status,
     department,
-    organizationId  // Get organization ID from params
+    organizationId,  // Get organization ID from params
+    noCache
   } = params;
 
   // Default date range to today in production to avoid full table scans
-  const todayStr = new Date().toISOString().split('T')[0];
-  const effDateFrom = dateFrom || todayStr;
-  const effDateTo = dateTo || todayStr;
+  const effDateFrom = dateFrom || undefined;
+  const effDateTo = dateTo || undefined;
 
   // Resolve effective organization id: prefer param, else cookie, else fallback to user's active membership
   let effectiveOrgId: number | null = null;
@@ -197,27 +198,29 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     `q=${(search || '').trim().toLowerCase()}`,
   ].join(':');
 
-  // Try cache first (safe if Redis down)
-  let cached: GetAttendanceResult | null = null;
-  try {
-    cached = await getJSON<GetAttendanceResult>(cacheKey);
-  } catch (_) {
-    attendanceLogger.warn(`⚠️ Cache read failed for key ${cacheKey}, proceeding without cache`);
-  }
-  if (cached && cached.success) {
-    attendanceLogger.debug(`🗄️ Cache hit: ${cacheKey}`);
+  // Try cache first (safe if Redis down) unless noCache requested
+  if (!noCache) {
+    let cached: GetAttendanceResult | null = null;
     try {
-      if (cached.meta && Array.isArray(cached.data)) {
-        const rowsLen = cached.data.length;
-        const currentLimit = cached.meta.limit || limit;
-        if ((cached.meta.total ?? 0) < rowsLen) {
-          cached.meta.total = rowsLen;
-          cached.meta.totalPages = Math.ceil(rowsLen / currentLimit);
-          try { await setJSON(cacheKey, cached, 60); } catch { }
+      cached = await getJSON<GetAttendanceResult>(cacheKey);
+    } catch (_) {
+      attendanceLogger.warn(`⚠️ Cache read failed for key ${cacheKey}, proceeding without cache`);
+    }
+    if (cached && cached.success) {
+      attendanceLogger.debug(`🗄️ Cache hit: ${cacheKey}`);
+      try {
+        if (cached.meta && Array.isArray(cached.data)) {
+          const rowsLen = cached.data.length;
+          const currentLimit = cached.meta.limit || limit;
+          if ((cached.meta.total ?? 0) < rowsLen) {
+            cached.meta.total = rowsLen;
+            cached.meta.totalPages = Math.ceil(rowsLen / currentLimit);
+            try { await setJSON(cacheKey, cached, 60); } catch { }
+          }
         }
-      }
-    } catch { }
-    return cached;
+      } catch { }
+      return cached;
+    }
   }
 
   type AttendanceRow = {
@@ -282,8 +285,8 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     'count'
   ].join(':');
   let totalCount: number | undefined = undefined;
-  let needCount = page === 1;
-  if (!needCount) {
+  let needCount = page === 1 || Boolean(noCache);
+  if (!needCount && !noCache) {
     try {
       const cachedCount = await getJSON<number>(countCacheKey);
       if (typeof cachedCount === 'number') {
@@ -296,11 +299,10 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     }
   }
   if (needCount) {
-    let countQuery = supabase
-      .from('attendance_records')
-      .select(`id, ${countRel}`, { count: 'exact', head: true })
-      .eq('organization_members.organization_id', effectiveOrgId)
-      .eq('organization_members.is_active', true);
+  let countQuery = supabase
+    .from('attendance_records')
+    .select(`id, ${countRel}`, { count: 'exact', head: true })
+    .eq('organization_members.organization_id', effectiveOrgId);
     if (effDateFrom) countQuery = countQuery.gte('attendance_date', effDateFrom);
     if (effDateTo) countQuery = countQuery.lte('attendance_date', effDateTo);
     if (status && status !== 'all') countQuery = countQuery.eq('status', status);
@@ -308,7 +310,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     if (hasSearch) countQuery = countQuery.ilike('organization_members.user_profiles.search_name', pattern);
     const countResp = await countQuery;
     totalCount = (countResp as unknown as { count: number | null }).count ?? 0;
-    try { await setJSON(countCacheKey, totalCount, 60); } catch { }
+    try { if (!noCache) await setJSON(countCacheKey, totalCount, 60); } catch { }
   }
 
   // LIST dengan join untuk mengambil profil/departemen/biodata
@@ -322,7 +324,6 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     .from('attendance_records')
     .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, check_in_method, check_out_method, ${listRel}`)
     .eq('organization_members.organization_id', effectiveOrgId)
-    .eq('organization_members.is_active', true);
   if (effDateFrom) listQuery = listQuery.gte('attendance_date', effDateFrom);
   if (effDateTo) listQuery = listQuery.lte('attendance_date', effDateTo);
   if (status && status !== 'all') listQuery = listQuery.eq('status', status);
@@ -346,7 +347,6 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
       .from('attendance_records')
       .select(`id, ${countRel}`, { count: 'exact', head: true })
       .eq('organization_members.organization_id', effectiveOrgId)
-      .eq('organization_members.is_active', true);
     if (effDateFrom) freshCount = freshCount.gte('attendance_date', effDateFrom);
     if (effDateTo) freshCount = freshCount.lte('attendance_date', effDateTo);
     if (status && status !== 'all') freshCount = freshCount.eq('status', status);
@@ -496,12 +496,14 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     meta: { total, page, limit, totalPages: Math.ceil(total / limit), nextCursor }
   };
 
-  // Save to cache (TTL 60s)
-  try {
-    await setJSON(cacheKey, result, 120);
-    attendanceLogger.debug(`🗄️ Cache set: ${cacheKey}`);
-  } catch (_) {
-    attendanceLogger.warn(`⚠️ Cache write failed for key ${cacheKey}, returning result without cache`);
+  // Save to cache (TTL 120s) unless noCache requested
+  if (!noCache) {
+    try {
+      await setJSON(cacheKey, result, 120);
+      attendanceLogger.debug(`🗄️ Cache set: ${cacheKey}`);
+    } catch (_) {
+      attendanceLogger.warn(`⚠️ Cache write failed for key ${cacheKey}, returning result without cache`);
+    }
   }
   return result;
 };
