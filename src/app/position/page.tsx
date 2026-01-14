@@ -504,8 +504,8 @@ export default function PositionsPage() {
                                                         <TableCell colSpan={5} className="text-center text-muted-foreground">No positions found</TableCell>
                                                     </TableRow>
                                                 ) : (
-                                                    paginatedData.map((position) => (
-                                                        <TableRow key={position.id}>
+                                                    paginatedData.map((position, index) => (
+                                                        <TableRow key={position.id} className={index % 2 === 1 ? 'bg-muted' : ''}>
                                                             <TableCell>{position.code}</TableCell>
                                                             <TableCell>{position.title}</TableCell>
                                                             <TableCell>{position.description || "-"}</TableCell>
