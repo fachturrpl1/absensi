@@ -97,22 +97,8 @@ export default function FingerPage() {
   const realtimeStatusRef = React.useRef<string | null>(null)
   const [fingerStats, setFingerStats] = React.useState<{ total: number; registered: number; partial: number; unregistered: number }>({ total: 0, registered: 0, partial: 0, unregistered: 0 })
 
-  // Throttled logger to avoid console spam on loops/polling
-  const lastLogRef = React.useRef<Record<string, number>>({})
-  const logOnce = React.useCallback((key: string, level: 'log' | 'warn' | 'error' = 'log', ...args: unknown[]) => {
-    const now = Date.now()
-    const last = lastLogRef.current[key] || 0
-    // 10s throttle per key
-    if (now - last > 10000) {
-      const logger: Record<'log' | 'warn' | 'error', (...data: unknown[]) => void> = {
-        log: console.log,
-        warn: console.warn,
-        error: console.error,
-      }
-      logger[level](...args)
-      lastLogRef.current[key] = now
-    }
-  }, [])
+
+
 
   // Clear local cached members for current organization to avoid stale counts in cards
   const clearMembersCacheForOrg = React.useCallback((orgId?: number | null) => {
@@ -394,7 +380,7 @@ export default function FingerPage() {
           table: 'biometric_data',
           filter: 'biometric_type=eq.FINGERPRINT'
         },
-        async (payload) => {
+        async (payload: any) => {
           if (DEBUG) console.log('🔄 Biometric data change detected:', payload.eventType)
 
           // The payload usually contains organization_member_id, NOT organization_id
@@ -422,14 +408,11 @@ export default function FingerPage() {
           }
         }
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          if (DEBUG) console.log('✅ Real-time subscription active for biometric_data')
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time subscription error for biometric_data - this may be due to real-time not being enabled for the table in Supabase')
-          console.error('💡 To enable: Run this SQL in Supabase SQL Editor:')
-          console.error('   ALTER PUBLICATION supabase_realtime ADD TABLE biometric_data;')
-        } else {
+      .subscribe((status: any) => {
+        if (DEBUG) console.log(`📡 Realtime Subscription Status: ${status}`)
+        if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Real-time subscription error. Check RLS policies or permissions.')
+          // toast.error('Real-time updates failed. Auto-refresh disabled.') 
         }
       })
 
@@ -438,7 +421,7 @@ export default function FingerPage() {
       console.log('🧹 Cleaning up real-time subscription')
       supabase.removeChannel(channel)
     }
-  }, [mounted, organizationId, fetchMembers])
+  }, [organizationId, fetchMembers, fetchFingerStats])
 
   React.useEffect(() => {
     if (!mounted || !activeCommandId) return
@@ -453,7 +436,7 @@ export default function FingerPage() {
           table: 'device_commands',
           filter: `id=eq.${activeCommandId}`
         },
-        (payload) => {
+        (payload: any) => {
           const next = (payload as unknown as { new?: Record<string, unknown> }).new
           const s = typeof next?.status === 'string' ? (next.status as string) : undefined
           if (s === 'EXECUTED' || s === 'FAILED' || s === 'CANCELLED' || s === 'TIMEOUT') {
@@ -598,65 +581,26 @@ export default function FingerPage() {
               .select('status')
               .eq('id', command.id)
               .maybeSingle()
-            if (error) {
-              logOnce('polling-error', 'warn', '⚠️ Polling error reading device_commands:', error)
-              continue
-            }
-            status = (data as unknown as { status?: string } | null)
-          } catch (e: unknown) {
-            logOnce('polling-error', 'warn', '⚠️ Polling error reading device_commands:', e)
-            continue
+
+            if (error) throw error
+            status = data
+          } catch (pollErr) {
+            console.error('Poll error:', pollErr)
           }
 
-          if (status?.status !== lastPolledStatusRef.current) {
-            if (DEBUG) console.log('📊 Polling status changed:', status?.status, '| Elapsed:', Date.now() - startTime, 'ms')
-            lastPolledStatusRef.current = status?.status ?? null
+          const currentStatus = status?.status
+          if (currentStatus && currentStatus !== lastPolledStatusRef.current) {
+            lastPolledStatusRef.current = currentStatus
+            if (DEBUG) console.log(`Polling status: ${currentStatus}`)
           }
 
-          if (status?.status === 'EXECUTED') {
-            console.log('✅ Polling detected EXECUTED status')
-            registrationCompleteRef.current = true
+          if (currentStatus === 'EXECUTED') {
             return true
           }
-
-          if (status?.status === 'FAILED') {
-            console.log('❌ Polling detected FAILED status')
-            registrationCompleteRef.current = true
-            toast.error('Registration failed')
-            return false
-          }
-
-          if (status?.status === 'TIMEOUT') {
-            console.log('⏱️ Polling detected TIMEOUT status')
-            registrationCompleteRef.current = true
-            toast.error('Timeout: device not responding')
-            return false
-          }
-
-          if (status?.status === 'CANCELLED') {
-            registrationCompleteRef.current = true
+          if (currentStatus === 'FAILED' || currentStatus === 'CANCELLED' || currentStatus === 'TIMEOUT') {
             return false
           }
         }
-
-        // Timeout reached - auto-cancel the command
-        console.log('⏱️ Timeout reached (30 seconds), auto-failed command...')
-        const { error: cancelError } = await supabase
-          .from('device_commands')
-          .update({ status: 'TIMEOUT' })
-          .eq('id', command?.id)
-          .select()
-
-        if (cancelError) {
-          console.error('Failed to auto-cancel command:', cancelError)
-        } else {
-          console.log('✅ Command auto-failed successfully')
-        }
-
-        registrationCompleteRef.current = true
-        realtimeStatusRef.current = 'TIMEOUT'
-
-        toast.error('Timeout: device not responding')
         return false
       }
 
@@ -833,83 +777,98 @@ export default function FingerPage() {
 
           <div className="space-y-6">
             <style jsx global>{`
-              .custom-hover-row:hover {
+              .custom-hover-row:hover,
+              .custom-hover-row:hover > td {
                 background-color: #d1d5db !important; /* dark gray hover */
               }
-              .dark .custom-hover-row:hover {
+              .dark .custom-hover-row:hover,
+              .dark .custom-hover-row:hover > td {
+                background-color: #374151 !important;
+              }
+              /* Override potential blue selected state */
+              html body .custom-hover-row[data-state="selected"],
+              html body .custom-hover-row[data-state="selected"] > td {
+                background-color: #f3f4f6 !important;
+              }
+              html body .dark .custom-hover-row[data-state="selected"],
+              html body .dark .custom-hover-row[data-state="selected"] > td {
                 background-color: #374151 !important;
               }
             `}</style>
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-              <div className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border shadow-sm shrink-0">
-                <Monitor className="w-4 h-4 text-primary" />
-                <div className="flex items-center gap-2">
-                  {!mounted || loadingDevices ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">Loading devices...</span>
-                    </div>
-                  ) : devices.length === 0 ? (
-                    <span className="text-sm font-medium text-destructive">No devices found</span>
-                  ) : (
-                    <Select
-                      value={selectedDevice}
-                      onValueChange={setSelectedDevice}
-                      disabled={!mounted || loadingDevices || devices.length === 0}
-                    >
-                      <SelectTrigger className="h-6 border-0 shadow-none p-0 font-mono font-semibold text-sm hover:bg-transparent focus:ring-0">
-                        <SelectValue placeholder="Pilih...">
-                          {selectedDevice && devices.find(d => d.device_code === selectedDevice)?.device_code.replace(/_/g, ' ')}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="w-[320px]">
-                        {devices.length === 0 ? (
-                          <div className="p-4 text-center text-muted-foreground">
-                            <Monitor className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                            <p className="text-sm font-medium">No active device</p>
-                            <p className="text-xs mt-1">Contact the administrator</p>
-                          </div>
-                        ) : (
-                          devices.map((device, index) => {
-                            const deviceKey = device.device_code || `device-${index}`
-                            const deviceValue = device.device_code || ''
 
-                            return (
-                              <SelectItem
-                                key={deviceKey}
-                                value={deviceValue}
-                                className="cursor-pointer"
-                                disabled={!device.device_code}
-                              >
-                                <div className="flex items-start gap-3 py-1">
-                                  <div className="p-2 rounded-md bg-primary/10 mt-0.5 shrink-0">
-                                    <Monitor className="w-4 h-4 text-primary" />
-                                  </div>
-                                  <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                                    <span className="font-semibold text-sm font-mono">
-                                      {device.device_code || '(No Code)'}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground truncate">
-                                      {device.device_name || '(No Name)'}
-                                    </span>
-                                    {device.location && (
-                                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                        📍 {device.location}
+            {/* Control Panel: Responsive Grid */}
+            <div className="grid grid-cols-2 lg:flex lg:flex-row gap-4 items-start lg:items-center justify-between">
+
+              {/* Device Selector + Refresh - Top on Mobile, Left on Desktop */}
+              <div className="col-span-2 lg:col-span-1 lg:w-auto flex gap-2 w-full lg:w-auto">
+                <div className="flex flex-1 lg:flex-initial items-center gap-2 px-3 py-2 bg-card rounded-lg border shadow-sm">
+                  <Monitor className="w-4 h-4 text-primary shrink-0" />
+                  <div className="flex items-center gap-2 w-full lg:w-auto overflow-hidden">
+                    {!mounted || loadingDevices ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                        <span className="text-sm shrink-0">Loading...</span>
+                      </div>
+                    ) : devices.length === 0 ? (
+                      <span className="text-sm font-medium text-destructive shrink-0">No devices</span>
+                    ) : (
+                      <Select
+                        value={selectedDevice}
+                        onValueChange={setSelectedDevice}
+                        disabled={!mounted || loadingDevices || devices.length === 0}
+                      >
+                        <SelectTrigger className="h-6 border-0 shadow-none p-0 font-mono font-semibold text-sm hover:bg-transparent focus:ring-0 w-full lg:w-[200px] truncate">
+                          <SelectValue placeholder="Pilih...">
+                            {selectedDevice && devices.find(d => d.device_code === selectedDevice)?.device_code.replace(/_/g, ' ')}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="w-[320px]">
+                          {devices.length === 0 ? (
+                            <div className="p-4 text-center text-muted-foreground">
+                              <Monitor className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm font-medium">No active device</p>
+                              <p className="text-xs mt-1">Contact the administrator</p>
+                            </div>
+                          ) : (
+                            devices.map((device, index) => {
+                              const deviceKey = device.device_code || `device-${index}`
+                              const deviceValue = device.device_code || ''
+
+                              return (
+                                <SelectItem
+                                  key={deviceKey}
+                                  value={deviceValue}
+                                  className="cursor-pointer"
+                                  disabled={!device.device_code}
+                                >
+                                  <div className="flex items-start gap-3 py-1">
+                                    <div className="p-2 rounded-md bg-primary/10 mt-0.5 shrink-0">
+                                      <Monitor className="w-4 h-4 text-primary" />
+                                    </div>
+                                    <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                                      <span className="font-semibold text-sm font-mono">
+                                        {device.device_code || '(No Code)'}
                                       </span>
-                                    )}
+                                      <span className="text-xs text-muted-foreground truncate">
+                                        {device.device_name || '(No Name)'}
+                                      </span>
+                                      {device.location && (
+                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                          📍 {device.location}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              </SelectItem>
-                            )
-                          })
-                        )}
-                      </SelectContent>
-                    </Select>
-                  )}
+                                </SelectItem>
+                              )
+                            })
+                          )}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="icon"
@@ -924,41 +883,48 @@ export default function FingerPage() {
                 </Button>
               </div>
 
-              <div className="relative flex-1">
+              {/* Search - Middle on Mobile (Full Width), Flex-1 on Desktop */}
+              <div className="col-span-2 lg:col-span-1 lg:flex-1 w-full relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by Nick name, Full name, or Groups"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-full"
                 />
               </div>
 
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                <SelectTrigger className="w-full sm:w-[250px]">
-                  <SelectValue placeholder="Filter Department..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Groups</SelectItem>
-                  {uniqueDepartments.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Department Filter - Bottom Left on Mobile (50%) */}
+              <div className="col-span-1 lg:w-auto w-full">
+                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                  <SelectTrigger className="w-full lg:w-[250px]">
+                    <SelectValue placeholder="Group?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Groups</SelectItem>
+                    {uniqueDepartments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as FilterStatus)}>
-                <SelectTrigger className="w-full sm:w-[250px]">
-                  <SelectValue placeholder="Filter Status..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="complete">Complete (2 Fingers)</SelectItem>
-                  <SelectItem value="partial">Partial (1 Finger)</SelectItem>
-                  <SelectItem value="unregistered">Not Registered</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* Status Filter - Bottom Right on Mobile (50%) */}
+              <div className="col-span-1 lg:w-auto w-full">
+                <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as FilterStatus)}>
+                  <SelectTrigger className="w-full lg:w-[250px]">
+                    <SelectValue placeholder="Status?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="complete">Complete (2 Fingers)</SelectItem>
+                    <SelectItem value="partial">Partial (1 Finger)</SelectItem>
+                    <SelectItem value="unregistered">Not Registered</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
             </div>
           </div>

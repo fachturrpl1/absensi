@@ -309,7 +309,7 @@ export function GroupsTable({ groups, isLoading = false, onDelete, onEdit }: Gro
                   style={{
                     backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
                   }}
-                  className="border-b transition-colors custom-hover-row"
+                  className="border-b transition-colors custom-hover-row cursor-pointer"
                 >
                   {visibleColumns.code && (
                     <td className="px-4 py-3 text-sm">{group.code}</td>
@@ -432,6 +432,6 @@ export function GroupsTable({ groups, isLoading = false, onDelete, onEdit }: Gro
           </Button>
         </div>
       </div>
-    </div>
+    </div >
   )
 }
