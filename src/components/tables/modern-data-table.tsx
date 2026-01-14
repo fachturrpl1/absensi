@@ -351,6 +351,14 @@ export default function ModernDataTable<TData extends Employee, TValue>({
   return (
     <div className="space-y-4">
       {/* Header Actions */}
+      <style jsx global>{`
+        .custom-hover-row:hover {
+          background-color: #d1d5db !important; /* dark gray hover */
+        }
+        .dark .custom-hover-row:hover {
+          background-color: #374151 !important;
+        }
+      `}</style>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
         {/* Filters and Actions */}
@@ -488,13 +496,16 @@ export default function ModernDataTable<TData extends Employee, TValue>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
+          <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
+              table.getRowModel().rows.map((row, index) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  className="group hover:bg-blue-200"
+                  style={{
+                    backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
+                  }}
+                  className="group transition-colors custom-hover-row"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

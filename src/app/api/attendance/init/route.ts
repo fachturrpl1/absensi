@@ -30,9 +30,9 @@ export async function GET(request: Request) {
       // Members
       organizationId
         ? supabase
-            .from("organization_members")
-            .select("*")
-            .eq("organization_id", organizationId)
+          .from("organization_members")
+          .select("*")
+          .eq("organization_id", organizationId)
         : supabase.from("organization_members").select("*"),
 
       // Users
@@ -46,9 +46,9 @@ export async function GET(request: Request) {
     const [workSchedulesResult, memberSchedulesResult] = await Promise.all([
       organizationId
         ? supabase
-            .from("work_schedules")
-            .select("*")
-            .eq("organization_id", organizationId)
+          .from("work_schedules")
+          .select("*")
+          .eq("organization_id", organizationId)
         : supabase.from("work_schedules").select("*"),
 
       supabase
@@ -65,8 +65,8 @@ export async function GET(request: Request) {
     // Filter member schedules by organization
     let memberSchedules = memberSchedulesResult.data || []
     if (organizationId && membersResult.data) {
-      const memberIds = membersResult.data.map((m) => m.id)
-      memberSchedules = memberSchedules.filter((ms) =>
+      const memberIds = membersResult.data.map((m: any) => m.id)
+      memberSchedules = memberSchedules.filter((ms: any) =>
         memberIds.includes(ms.organization_member_id)
       )
     }

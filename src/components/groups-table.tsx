@@ -147,6 +147,14 @@ export function GroupsTable({ groups, isLoading = false, onDelete, onEdit }: Gro
 
   return (
     <div className="w-full space-y-4">
+      <style jsx global>{`
+        .custom-hover-row:hover {
+          background-color: #d1d5db !important; /* dark gray hover */
+        }
+        .dark .custom-hover-row:hover {
+          background-color: #374151 !important;
+        }
+      `}</style>
       {/* Search Bar */}
       <div className="relative w-full">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10 pointer-events-none" />
@@ -281,7 +289,7 @@ export function GroupsTable({ groups, isLoading = false, onDelete, onEdit }: Gro
           </thead>
 
           {/* Body */}
-          <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
+          <tbody>
             {isLoading ? (
               <tr>
                 <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="px-4 py-8 text-center text-muted-foreground">
@@ -295,8 +303,14 @@ export function GroupsTable({ groups, isLoading = false, onDelete, onEdit }: Gro
                 </td>
               </tr>
             ) : (
-              paginatedData.map((group) => (
-                <tr key={group.id} className="border-b hover:bg-blue-200 transition-colors">
+              paginatedData.map((group, index) => (
+                <tr
+                  key={group.id}
+                  style={{
+                    backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
+                  }}
+                  className="border-b transition-colors custom-hover-row"
+                >
                   {visibleColumns.code && (
                     <td className="px-4 py-3 text-sm">{group.code}</td>
                   )}

@@ -221,6 +221,14 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
 
   return (
     <div className="w-full space-y-4">
+      <style jsx global>{`
+        .custom-hover-row:hover {
+          background-color: #d1d5db !important; /* dark gray hover */
+        }
+        .dark .custom-hover-row:hover {
+          background-color: #374151 !important;
+        }
+      `}</style>
       {/* Filters and Controls */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
 
@@ -350,7 +358,13 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
             ) : (
               paginatedData.map((member, index) => {
                 return (
-                  <tr key={member.id} className={`border-b hover:bg-muted/70 transition-colors ${index % 2 === 1 ? 'bg-muted' : ''}`}>
+                  <tr
+                    key={member.id}
+                    style={{
+                      backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
+                    }}
+                    className="border-b transition-colors custom-hover-row"
+                  >
                     {visibleColumns.members && (
                       <td className="p-3 text-xs">
                         <button

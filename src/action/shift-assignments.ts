@@ -3,6 +3,16 @@
 import { createClient } from "@/utils/supabase/server";
 import { IShiftAssignment } from "@/interface";
 
+const getPostgrestErrorExtras = (err: unknown) => {
+  if (!err || typeof err !== "object") return { code: undefined, details: undefined, hint: undefined };
+  const o = err as Record<string, unknown>;
+  return {
+    code: typeof o.code === "string" ? o.code : undefined,
+    details: typeof o.details === "string" ? o.details : undefined,
+    hint: typeof o.hint === "string" ? o.hint : undefined,
+  };
+};
+
 export type ShiftAssignmentMemberOption = {
   id: string;
   employee_id?: string | null;
@@ -24,6 +34,122 @@ export type ShiftOption = {
   end_time?: string | null;
   color_code?: string | null;
   is_active?: boolean | null;
+};
+
+export const updateShiftColor = async (shiftId: string, color_code: string) => {
+  try {
+    const supabase = await createClient();
+    const v = typeof color_code === "string" ? color_code.trim() : "";
+    if (!/^#[0-9a-fA-F]{6}$/.test(v)) {
+      return { success: false, message: "Invalid color code" };
+    }
+
+    const { error } = await supabase
+      .from("shifts")
+      .update({ color_code: v })
+      .eq("id", shiftId);
+
+    if (error) {
+      const extra = getPostgrestErrorExtras(error);
+      return {
+        success: false,
+        message: `${error.message}${extra.code ? ` (code: ${extra.code})` : ""}${extra.details ? `\n${extra.details}` : ""}${extra.hint ? `\nHint: ${extra.hint}` : ""}`,
+      };
+    }
+
+    return { success: true, message: "Shift color updated" };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Unknown server error",
+    };
+  }
+};
+
+export const getShiftAssignmentMembersPage = async (
+  organizationId: number | string | undefined,
+  pageIndex = 0,
+  pageSize = 10,
+  search?: string,
+) => {
+  try {
+    const supabase = await createClient();
+
+    let finalOrgId = organizationId;
+
+    if (!finalOrgId) {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        return { success: false, message: "User not authenticated", data: [], total: 0 };
+      }
+
+      const { data: member, error: memberError } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (memberError || !member) {
+        return { success: false, message: "User not in any organization", data: [], total: 0 };
+      }
+
+      finalOrgId = member.organization_id;
+    }
+
+    const safePageIndex = Math.max(0, Number(pageIndex) || 0);
+    const safePageSize = Math.max(1, Math.min(200, Number(pageSize) || 10));
+    const from = safePageIndex * safePageSize;
+    const to = from + safePageSize - 1;
+
+    let query = supabase
+      .from("organization_members")
+      .select(
+        `id, employee_id, user:user_id (id, first_name, middle_name, last_name, display_name, email)`,
+        { count: "estimated" },
+      )
+      .eq("organization_id", finalOrgId)
+      .eq("is_active", true)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true });
+
+    const q = typeof search === "string" ? search.trim() : "";
+    if (q) {
+      // Filter by name only (requested): use foreignTable so PostgREST applies conditions to the joined user
+      query = query.or(
+        `first_name.ilike.%${q}%,middle_name.ilike.%${q}%,last_name.ilike.%${q}%,display_name.ilike.%${q}%`,
+        { foreignTable: "user" },
+      ) as unknown as typeof query;
+    }
+
+    const { data, error, count } = await query.range(from, to);
+
+    if (error) {
+      const extra = getPostgrestErrorExtras(error);
+      return {
+        success: false,
+        message: `${error.message}${extra.code ? ` (code: ${extra.code})` : ""}${extra.details ? `\n${extra.details}` : ""}${extra.hint ? `\nHint: ${extra.hint}` : ""}`,
+        data: [],
+        total: 0,
+      };
+    }
+
+    return {
+      success: true,
+      data: (data || []) as unknown as ShiftAssignmentMemberOption[],
+      total: typeof count === "number" ? count : data?.length || 0,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Unknown server error",
+      data: [],
+      total: 0,
+    };
+  }
 };
 
 export const getShiftAssignmentOptions = async (organizationId?: number | string) => {
@@ -65,17 +191,13 @@ export const getShiftAssignmentOptions = async (organizationId?: number | string
       .order("created_at", { ascending: true }),
     supabase
       .from("shifts")
-      .select("id, code, name, start_time, end_time, is_active")
+      .select("id, code, name, start_time, end_time, color_code, is_active")
       .eq("organization_id", finalOrgId)
       .order("created_at", { ascending: false }),
   ]);
 
   if (membersRes.error) {
-    const extra = {
-      code: (membersRes.error as any).code,
-      details: (membersRes.error as any).details,
-      hint: (membersRes.error as any).hint,
-    };
+    const extra = getPostgrestErrorExtras(membersRes.error);
     return {
       success: false,
       message: `${membersRes.error.message}${extra.code ? ` (code: ${extra.code})` : ""}${extra.details ? `\n${extra.details}` : ""}${extra.hint ? `\nHint: ${extra.hint}` : ""}`,
@@ -85,11 +207,7 @@ export const getShiftAssignmentOptions = async (organizationId?: number | string
   }
 
   if (shiftsRes.error) {
-    const extra = {
-      code: (shiftsRes.error as any).code,
-      details: (shiftsRes.error as any).details,
-      hint: (shiftsRes.error as any).hint,
-    };
+    const extra = getPostgrestErrorExtras(shiftsRes.error);
     return {
       success: false,
       message: `${shiftsRes.error.message}${extra.code ? ` (code: ${extra.code})` : ""}${extra.details ? `\n${extra.details}` : ""}${extra.hint ? `\nHint: ${extra.hint}` : ""}`,
@@ -244,11 +362,7 @@ export const getShiftAssignmentsRange = async (
       .order("assignment_date", { ascending: true });
 
     if (error) {
-      const extra = {
-        code: (error as any).code,
-        details: (error as any).details,
-        hint: (error as any).hint,
-      };
+      const extra = getPostgrestErrorExtras(error);
       return {
         success: false,
         message: `${error.message}${extra.code ? ` (code: ${extra.code})` : ""}${extra.details ? `\n${extra.details}` : ""}${extra.hint ? `\nHint: ${extra.hint}` : ""}`,

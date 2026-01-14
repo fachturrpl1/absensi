@@ -284,6 +284,14 @@ export default function PositionsPage() {
 
     return (
         <div className="flex flex-1 flex-col gap-4 w-full">
+            <style jsx global>{`
+                .custom-hover-row:hover {
+                    background-color: #d1d5db !important; /* dark gray hover */
+                }
+                .dark .custom-hover-row:hover {
+                    background-color: #374151 !important;
+                }
+            `}</style>
             <div className="w-full">
                 <div className="w-full bg-card rounded-lg shadow-sm border">
                     <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
@@ -505,7 +513,13 @@ export default function PositionsPage() {
                                                     </TableRow>
                                                 ) : (
                                                     paginatedData.map((position, index) => (
-                                                        <TableRow key={position.id} className={index % 2 === 1 ? 'bg-muted' : ''}>
+                                                        <TableRow
+                                                            key={position.id}
+                                                            style={{
+                                                                backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
+                                                            }}
+                                                            className="transition-colors custom-hover-row"
+                                                        >
                                                             <TableCell>{position.code}</TableCell>
                                                             <TableCell>{position.title}</TableCell>
                                                             <TableCell>{position.description || "-"}</TableCell>

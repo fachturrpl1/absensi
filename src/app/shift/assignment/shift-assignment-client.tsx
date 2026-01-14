@@ -42,25 +42,42 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { CalendarIcon, ChevronLeft, ChevronRight, Plus, Trash } from "lucide-react"
+import { CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, Plus, Trash } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 import type { IShiftAssignment } from "@/interface"
 import {
   createShiftAssignment,
   deleteShiftAssignment,
   getShiftAssignmentsRange,
+  getShiftAssignmentMembersPage,
+  updateShiftColor,
   ShiftAssignmentMemberOption,
   ShiftOption,
 } from "@/action/shift-assignments"
+import { useDebounce } from "@/utils/debounce"
+
+type ApiSuccess<T> = { success: true; data: T }
+type ApiFailure = { success: false; message?: string }
+type ApiListPage<T> = (ApiSuccess<T[]> | ApiFailure) & { total?: number }
 
 const assignmentSchema = z.object({
   organization_member_ids: z.array(z.string()).min(1, "Member is required"),
   shift_id: z.string().min(1, "Shift is required"),
+  color_code: z.string().optional(),
   start_date: z.string().min(1, "Start date is required"),
   end_date: z.string().min(1, "End date is required"),
   start_time: z.string().min(1, "Start time is required"),
@@ -100,12 +117,11 @@ const addDays = (d: Date, days: number) => {
   return dt
 }
 
-const startOfWeekMonday = (d: Date) => {
+
+
+const startOfDay = (d: Date) => {
   const dt = new Date(d)
   dt.setHours(0, 0, 0, 0)
-  const day = dt.getDay() // 0=Sun ... 6=Sat
-  const diff = (day + 6) % 7 // convert so Monday=0
-  dt.setDate(dt.getDate() - diff)
   return dt
 }
 
@@ -117,15 +133,17 @@ const formatWeekRangeLabel = (weekStart: Date) => {
   return `${start} - ${end}`
 }
 
-const toMemberLabel = (m: ShiftAssignmentMemberOption) => {
-  const u = (m as any).user
+const toMemberName = (m: ShiftAssignmentMemberOption) => {
+  const u = m.user
   const fullName = [u?.first_name, u?.middle_name, u?.last_name]
-    .filter((p: any) => p && String(p).trim() !== "")
+    .filter((p) => p && String(p).trim() !== "")
     .join(" ")
+  const name = fullName || u?.display_name
+  return typeof name === "string" ? name.trim() : ""
+}
 
-  const name = fullName || u?.display_name || u?.email || m.employee_id || `Member ${m.id}`
-  const suffix = m.employee_id ? ` (${m.employee_id})` : ""
-  return `${name}${suffix}`
+const toMemberLabel = (m: ShiftAssignmentMemberOption) => {
+  return toMemberName(m)
 }
 
 const toShiftLabel = (s: ShiftOption) => {
@@ -148,6 +166,27 @@ const colorFromString = (input?: string) => {
   return `hsl(${hue} 85% 45%)`
 }
 
+const isHexColor = (v?: string) => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v)
+
+const getPaginationItems = (totalPages: number, currentPage: number) => {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+
+  const items: Array<number | "ellipsis"> = []
+  const clamped = Math.min(Math.max(1, currentPage), totalPages)
+
+  items.push(1)
+
+  const start = Math.max(2, clamped - 1)
+  const end = Math.min(totalPages - 1, clamped + 1)
+
+  if (start > 2) items.push("ellipsis")
+  for (let p = start; p <= end; p++) items.push(p)
+  if (end < totalPages - 1) items.push("ellipsis")
+
+  items.push(totalPages)
+  return items
+}
+
 export default function ShiftAssignmentClient({
   organizationId,
   initialAssignments,
@@ -159,9 +198,26 @@ export default function ShiftAssignmentClient({
   const [assignments, setAssignments] = React.useState<IShiftAssignment[]>(initialAssignments)
   const [open, setOpen] = React.useState(false)
   const [calendarLoading, setCalendarLoading] = React.useState(false)
-  const [weekStart, setWeekStart] = React.useState<Date>(() => startOfWeekMonday(new Date()))
+  const [rangeStart, setRangeStart] = React.useState<Date>(() => startOfDay(new Date()))
+  const [datePickerOpen, setDatePickerOpen] = React.useState(false)
   const [selectedMemberId, setSelectedMemberId] = React.useState<string>("all")
   const [membersOpen, setMembersOpen] = React.useState(false)
+
+  const [membersData, setMembersData] = React.useState<ShiftAssignmentMemberOption[]>(members)
+  const [membersTotal, setMembersTotal] = React.useState(-1)
+  const [membersSearch, setMembersSearch] = React.useState("")
+  const [membersPageIndex, setMembersPageIndex] = React.useState(0)
+  const [membersLoading, setMembersLoading] = React.useState(false)
+  const [membersLoadError, setMembersLoadError] = React.useState<string | null>(null)
+  const [membersPageSize, setMembersPageSize] = React.useState(10)
+
+  const debouncedMembersSearch = useDebounce(membersSearch, 300)
+  const membersFetchSeqRef = React.useRef(0)
+  const membersCacheRef = React.useRef(new Map<string, { rows: ShiftAssignmentMemberOption[]; total: number }>())
+
+  const membersCacheKey = React.useMemo(() => {
+    return `${organizationId}__${membersPageIndex}__${membersPageSize}__${debouncedMembersSearch || ""}`
+  }, [organizationId, membersPageIndex, membersPageSize, debouncedMembersSearch])
 
   const shiftsById = React.useMemo(() => {
     const m = new Map<string, ShiftOption>()
@@ -173,6 +229,79 @@ export default function ShiftAssignmentClient({
     setAssignments(initialAssignments)
   }, [initialAssignments])
 
+  const fetchMembersPage = React.useCallback(async () => {
+    try {
+      const seq = ++membersFetchSeqRef.current
+      setMembersLoading(true)
+      setMembersLoadError(null)
+
+      const res = await getShiftAssignmentMembersPage(
+        organizationId,
+        membersPageIndex,
+        membersPageSize,
+        debouncedMembersSearch,
+      )
+
+      const page = res as unknown as ApiListPage<ShiftAssignmentMemberOption>
+
+      if (seq !== membersFetchSeqRef.current) return
+
+      if (!page?.success) throw new Error(("message" in page && page.message) || "Failed to load members")
+
+      const rows = Array.isArray(page.data) ? page.data : []
+      const total = typeof page.total === "number" ? page.total : -1
+      if (total >= 0) setMembersTotal(total)
+      setMembersData(rows)
+
+      if (total >= 0) {
+        membersCacheRef.current.set(membersCacheKey, { rows, total })
+      }
+
+      if (total >= 0) {
+        const totalPages = Math.max(1, Math.ceil(total / (membersPageSize || 1)))
+        const nextIndex = membersPageIndex + 1
+        if (nextIndex < totalPages) {
+          const nextKey = `${organizationId}__${nextIndex}__${membersPageSize}__${debouncedMembersSearch || ""}`
+          if (!membersCacheRef.current.has(nextKey)) {
+            void getShiftAssignmentMembersPage(organizationId, nextIndex, membersPageSize, debouncedMembersSearch).then((r) => {
+              const p = r as unknown as ApiListPage<ShiftAssignmentMemberOption>
+              if (!p?.success) return
+              const nextRows = Array.isArray(p.data) ? p.data : []
+              const nextTotal = typeof p.total === "number" ? p.total : -1
+              if (nextTotal >= 0) membersCacheRef.current.set(nextKey, { rows: nextRows, total: nextTotal })
+            })
+          }
+        }
+      }
+    } catch (err: unknown) {
+      // ignore stale failures
+      if (membersFetchSeqRef.current <= 0) return
+      const msg = err instanceof Error ? err.message : "Failed to load members"
+      setMembersLoadError(msg)
+    } finally {
+      setMembersLoading(false)
+    }
+  }, [organizationId, membersPageIndex, membersPageSize, debouncedMembersSearch, membersCacheKey])
+
+  React.useEffect(() => {
+    setSelectedMemberId("all")
+  }, [organizationId])
+
+  React.useEffect(() => {
+    setMembersPageIndex(0)
+  }, [organizationId, debouncedMembersSearch, membersPageSize])
+
+  React.useEffect(() => {
+    fetchMembersPage()
+  }, [fetchMembersPage])
+
+  React.useEffect(() => {
+    const cached = membersCacheRef.current.get(membersCacheKey)
+    if (!cached) return
+    setMembersData(cached.rows)
+    setMembersTotal(cached.total)
+  }, [membersCacheKey])
+
   const fetchWeekAssignments = React.useCallback(
     async (ws: Date) => {
       try {
@@ -180,8 +309,9 @@ export default function ShiftAssignmentClient({
         const startDate = toISODate(ws)
         const endDate = toISODate(addDays(ws, 6))
         const res = await getShiftAssignmentsRange(organizationId, startDate, endDate)
-        if (!res?.success) throw new Error((res as any)?.message || "Failed to load assignments")
-        setAssignments(Array.isArray((res as any).data) ? ((res as any).data as IShiftAssignment[]) : [])
+        const range = res as unknown as (ApiSuccess<IShiftAssignment[]> | ApiFailure)
+        if (!range?.success) throw new Error(("message" in range && range.message) || "Failed to load assignments")
+        setAssignments(Array.isArray(range.data) ? range.data : [])
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : "Failed to load assignments")
         setAssignments([])
@@ -193,14 +323,15 @@ export default function ShiftAssignmentClient({
   )
 
   React.useEffect(() => {
-    fetchWeekAssignments(weekStart)
-  }, [fetchWeekAssignments, weekStart])
+    fetchWeekAssignments(rangeStart)
+  }, [fetchWeekAssignments, rangeStart])
 
   const form = useForm<AssignmentForm>({
     resolver: zodResolver(assignmentSchema) as unknown as Resolver<AssignmentForm>,
     defaultValues: {
       organization_member_ids: [],
       shift_id: "",
+      color_code: "",
       start_date: new Date().toISOString().slice(0, 10),
       end_date: new Date().toISOString().slice(0, 10),
       start_time: "09:00",
@@ -216,8 +347,9 @@ export default function ShiftAssignmentClient({
     form.reset({
       organization_member_ids: [],
       shift_id: "",
-      start_date: toISODate(weekStart),
-      end_date: toISODate(weekStart),
+      color_code: "",
+      start_date: toISODate(rangeStart),
+      end_date: toISODate(rangeStart),
       start_time: "09:00",
       end_time: "17:00",
       repeat: "never",
@@ -262,6 +394,16 @@ export default function ShiftAssignmentClient({
       const memberIds = Array.isArray(values.organization_member_ids) ? values.organization_member_ids : []
       if (memberIds.length === 0) throw new Error("Member is required")
 
+      const pickedColor = typeof values.color_code === "string" ? values.color_code.trim() : ""
+      if (pickedColor && isHexColor(pickedColor)) {
+        const current = shiftsById.get(values.shift_id)
+        const currentColor = typeof current?.color_code === "string" ? current.color_code.trim() : ""
+        if (pickedColor !== currentColor) {
+          const upd = await updateShiftColor(values.shift_id, pickedColor)
+          if (!upd?.success) throw new Error(upd?.message || "Failed to update shift color")
+        }
+      }
+
       const created: IShiftAssignment[] = []
       for (const memberId of memberIds) {
         for (const dateStr of allDates) {
@@ -278,7 +420,7 @@ export default function ShiftAssignmentClient({
       toast.success(created.length > 1 ? "Shifts created" : "Shift assigned")
       setAssignments((prev) => [...created, ...prev])
       onRefresh?.()
-      await fetchWeekAssignments(weekStart)
+      await fetchWeekAssignments(rangeStart)
       closeDialog()
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Unknown error")
@@ -293,15 +435,15 @@ export default function ShiftAssignmentClient({
       toast.success(res.message || "Assignment deleted")
       setAssignments((prev) => prev.filter((a) => a.id !== id))
       onRefresh?.()
-      await fetchWeekAssignments(weekStart)
+      await fetchWeekAssignments(rangeStart)
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Unknown error")
     }
   }
 
   const days = React.useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-  }, [weekStart])
+    return Array.from({ length: 7 }, (_, i) => addDays(rangeStart, i))
+  }, [rangeStart])
 
   const assignmentsByMemberDate = React.useMemo(() => {
     const map = new Map<string, IShiftAssignment[]>()
@@ -321,9 +463,19 @@ export default function ShiftAssignmentClient({
   }, [assignments])
 
   const visibleMembers = React.useMemo(() => {
-    if (selectedMemberId === "all") return members
-    return members.filter((m) => m.id === selectedMemberId)
-  }, [members, selectedMemberId])
+    const named = membersData.filter((m) => toMemberName(m) !== "")
+    if (selectedMemberId === "all") return named
+    return named.filter((m) => m.id === selectedMemberId)
+  }, [membersData, selectedMemberId])
+
+  const allMembersFilterOptions = React.useMemo(() => membersData.filter((m) => toMemberName(m) !== ""), [membersData])
+
+  const membersTotalPages = Math.max(1, Math.ceil((membersTotal >= 0 ? membersTotal : 0) / (membersPageSize || 1)))
+  const currentMembersPage = membersPageIndex + 1
+  const membersPaginationItems = getPaginationItems(membersTotalPages, currentMembersPage)
+
+  const canPrevMembersPage = currentMembersPage > 1
+  const canNextMembersPage = currentMembersPage < membersTotalPages
 
   return (
     <div className="w-full h-full">
@@ -331,56 +483,100 @@ export default function ShiftAssignmentClient({
         <CardContent className="p-0">
           <div className="w-full">
             <div className="flex flex-col gap-3 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setWeekStart((d) => addDays(d, -7))}
-                  >
+              <div className="w-full overflow-x-auto">
+                <div className="flex items-center gap-2 flex-nowrap min-w-max">
+                  <Button type="button" variant="outline" size="icon" onClick={() => setRangeStart((d) => addDays(d, -7))}>
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setWeekStart((d) => addDays(d, 7))}
-                  >
+                  <Button type="button" variant="outline" size="icon" onClick={() => setRangeStart((d) => addDays(d, 7))}>
                     <ChevronRight className="h-4 w-4" />
                   </Button>
-                  <Button type="button" variant="outline" onClick={() => setWeekStart(startOfWeekMonday(new Date()))}>
+                  <Button type="button" variant="outline" onClick={() => setRangeStart(startOfDay(new Date()))}>
                     Today
                   </Button>
-                  <Popover>
+                  <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                     <PopoverTrigger asChild>
-                      <Button type="button" variant="outline" className="gap-2">
+                      <Button type="button" variant="outline" className="gap-2 min-w-[220px] justify-start">
                         <CalendarIcon className="h-4 w-4 opacity-70" />
-                        <span className="text-sm tabular-nums">{formatWeekRangeLabel(weekStart)}</span>
+                        <span className="text-sm tabular-nums flex-1 text-left">{formatWeekRangeLabel(rangeStart)}</span>
+                        <ChevronDown className="h-4 w-4 opacity-50" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={weekStart}
-                        onSelect={(d) => {
-                          if (!d) return
-                          setWeekStart(startOfWeekMonday(d))
-                        }}
-                        initialFocus
-                      />
+                      <div className="p-3">
+                        <Calendar
+                          className="p-0"
+                          captionLayout={"dropdown-buttons" as any}
+                          fromYear={2000}
+                          toYear={new Date().getFullYear() + 5}
+                          classNames={{
+                            months: "flex flex-col",
+                            month: "space-y-3",
+                            caption: "flex items-center justify-between gap-2",
+                            caption_label: "hidden",
+                            nav: "flex items-center gap-1",
+                            nav_button: "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100",
+                            table: "w-full border-collapse space-y-1",
+                            head_row: "flex",
+                            head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
+                            row: "flex w-full mt-2",
+                            cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
+                            day: "h-9 w-9 p-0 font-normal",
+                          }}
+                          mode="single"
+                          selected={rangeStart}
+                          onSelect={(d) => {
+                            if (!d) return
+                            setRangeStart(startOfDay(d))
+                            setDatePickerOpen(false)
+                          }}
+                          initialFocus
+                        />
+                        <div className="mt-3 flex items-center justify-between">
+                          <Button
+                            type="button"
+                            variant="link"
+                            className="h-auto p-0"
+                            onClick={() => {
+                              setRangeStart(startOfDay(new Date()))
+                              setDatePickerOpen(false)
+                            }}
+                          >
+                            Clear
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="link"
+                            className="h-auto p-0"
+                            onClick={() => {
+                              setRangeStart(startOfDay(new Date()))
+                              setDatePickerOpen(false)
+                            }}
+                          >
+                            Today
+                          </Button>
+                        </div>
+                      </div>
                     </PopoverContent>
                   </Popover>
-                </div>
 
-                <div className="flex items-center gap-2">
+                  <Input
+                    value={membersSearch}
+                    onChange={(e) => {
+                      setMembersSearch(e.target.value)
+                      // debounce not added yet; this triggers refetch via effect dependency
+                    }}
+                    placeholder="Search members..."
+                    className="w-[220px]"
+                  />
+
                   <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
                     <SelectTrigger className="w-[220px]">
                       <SelectValue placeholder="Members" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All members</SelectItem>
-                      {members.map((m) => (
+                      {allMembersFilterOptions.map((m) => (
                         <SelectItem key={m.id} value={m.id}>
                           {toMemberLabel(m)}
                         </SelectItem>
@@ -397,8 +593,9 @@ export default function ShiftAssignmentClient({
                         form.reset({
                           organization_member_ids: presetMemberIds,
                           shift_id: "",
-                          start_date: toISODate(weekStart),
-                          end_date: toISODate(weekStart),
+                          color_code: "",
+                          start_date: toISODate(rangeStart),
+                          end_date: toISODate(rangeStart),
                           start_time: "09:00",
                           end_time: "17:00",
                           repeat: "never",
@@ -448,12 +645,12 @@ export default function ShiftAssignmentClient({
                                       <CommandList>
                                         <CommandEmpty>No member found.</CommandEmpty>
                                         <ScrollArea className="max-h-[260px]">
-                                          {members.map((m) => {
+                                          {allMembersFilterOptions.map((m) => {
                                             const checked = Array.isArray(field.value) ? field.value.includes(m.id) : false
                                             return (
                                               <CommandItem
                                                 key={m.id}
-                                                value={toMemberLabel(m)}
+                                                value={toMemberName(m)}
                                                 onSelect={() => {
                                                   const current = Array.isArray(field.value) ? field.value : []
                                                   const next = checked ? current.filter((id) => id !== m.id) : [...current, m.id]
@@ -490,6 +687,9 @@ export default function ShiftAssignmentClient({
                                     const et = s?.end_time ? String(s.end_time).slice(0, 5) : "17:00"
                                     form.setValue("start_time", st)
                                     form.setValue("end_time", et)
+
+                                    const c = typeof s?.color_code === "string" ? s.color_code.trim() : ""
+                                    form.setValue("color_code", isHexColor(c) ? c : "#f97316")
                                   }}
                                 >
                                   <FormControl>
@@ -505,6 +705,37 @@ export default function ShiftAssignmentClient({
                                     ))}
                                   </SelectContent>
                                 </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="color_code"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Shift color</FormLabel>
+                                <FormControl>
+                                  <div className="flex items-center gap-3">
+                                    <Input
+                                      type="color"
+                                      value={isHexColor(field.value) ? field.value : "#f97316"}
+                                      onChange={(e) => field.onChange(e.target.value)}
+                                      className="h-10 w-14 p-1"
+                                    />
+                                    <Input
+                                      value={field.value || ""}
+                                      onChange={(e) => field.onChange(e.target.value)}
+                                      placeholder="#f97316"
+                                      className="w-[140px]"
+                                    />
+                                    <div
+                                      className="h-6 w-6 rounded border"
+                                      style={{ backgroundColor: field.value || "transparent" }}
+                                    />
+                                  </div>
+                                </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -660,11 +891,12 @@ export default function ShiftAssignmentClient({
                       </Form>
                     </DialogContent>
                   </Dialog>
+
                 </div>
               </div>
             </div>
 
-            <div className="w-full overflow-auto">
+            <div className="w-full max-h-[calc(100vh-260px)] overflow-auto">
               <div className="min-w-[980px]">
                 <div className="grid" style={{ gridTemplateColumns: "260px repeat(7, minmax(140px, 1fr))" }}>
                   <div className="sticky left-0 z-10 bg-background border-b border-r px-3 py-3 text-sm font-medium">
@@ -685,11 +917,30 @@ export default function ShiftAssignmentClient({
                   })}
 
                   {(calendarLoading || isLoading) && (
-                    <div className="col-span-8 border-b p-6 text-sm text-muted-foreground">Loading schedules...</div>
+                    <div
+                      style={{ gridColumn: "1 / -1" }}
+                      className="border-b p-6 text-sm text-muted-foreground"
+                    >
+                      Loading schedules...
+                    </div>
                   )}
 
-                  {!calendarLoading && !isLoading && visibleMembers.length === 0 && (
-                    <div className="col-span-8 border-b p-6 text-sm text-muted-foreground">No members.</div>
+                  {!calendarLoading && !isLoading && membersLoading && membersData.length === 0 && (
+                    <div
+                      style={{ gridColumn: "1 / -1" }}
+                      className="border-b p-6 text-sm text-muted-foreground"
+                    >
+                      Loading members...
+                    </div>
+                  )}
+
+                  {!calendarLoading && !isLoading && !membersLoading && visibleMembers.length === 0 && (
+                    <div
+                      style={{ gridColumn: "1 / -1" }}
+                      className="border-b p-6 text-sm text-muted-foreground"
+                    >
+                      No members.
+                    </div>
                   )}
 
                   {!calendarLoading && !isLoading &&
@@ -705,11 +956,30 @@ export default function ShiftAssignmentClient({
                             const cellAssignments = assignmentsByMemberDate.get(key) || []
 
                             return (
-                              <div key={key} className="border-b border-r px-2 py-2 align-top">
+                              <div
+                                key={key}
+                                className={`border-b border-r px-2 py-2 align-top ${cellAssignments.length === 0 ? "cursor-pointer hover:bg-muted/40" : ""}`}
+                                onClick={() => {
+                                  if (cellAssignments.length !== 0) return
+                                  setOpen(true)
+                                  form.reset({
+                                    organization_member_ids: [m.id],
+                                    shift_id: "",
+                                    color_code: "",
+                                    start_date: dateStr,
+                                    end_date: dateStr,
+                                    start_time: "09:00",
+                                    end_time: "17:00",
+                                    repeat: "never",
+                                    repeat_interval_days: 1,
+                                    repeat_weekly_days: [],
+                                  })
+                                }}
+                              >
                                 <div className="flex flex-col gap-2">
                                   {cellAssignments.map((a) => {
                                     const shift = shiftsById.get(a.shift_id)
-                                    const bg = (shift as any)?.color_code || colorFromString(a.shift_id)
+                                    const bg = shift?.color_code || colorFromString(a.shift_id)
                                     const label = toShiftShortLabel(shift)
                                     return (
                                       <div
@@ -754,7 +1024,114 @@ export default function ShiftAssignmentClient({
                         </React.Fragment>
                       )
                     })}
+
+                  {membersLoadError && (
+                    <div
+                      style={{ gridColumn: "1 / -1" }}
+                      className="border-b p-4 text-sm text-muted-foreground flex items-center justify-between gap-3"
+                    >
+                      <div className="truncate">{membersLoadError}</div>
+                      <Button type="button" variant="outline" size="sm" onClick={fetchMembersPage} disabled={membersLoading}>
+                        Try again
+                      </Button>
+                    </div>
+                  )}
                 </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 px-4 pb-4">
+              <div className="text-sm text-muted-foreground flex-1 min-w-0 truncate flex items-center gap-2">
+                {membersLoading && <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />}
+                <span>
+                  {membersTotal >= 0
+                    ? `Showing ${membersData.length === 0 ? 0 : membersPageIndex * membersPageSize + 1}-${Math.min((membersPageIndex + 1) * membersPageSize, membersTotal)
+                    } of ${membersTotal}`
+                    : `Showing ${membersData.length} member(s)`}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <Select
+                  value={String(membersPageSize)}
+                  onValueChange={(v) => {
+                    const next = Math.max(1, Number(v) || 10)
+                    setMembersPageSize(next)
+                  }}
+                  disabled={membersLoading}
+                >
+                  <SelectTrigger className="w-[110px]">
+                    <SelectValue placeholder="Page size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 20, 50, 100].map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n} / page
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Pagination className="justify-end">
+                  <PaginationContent className="flex-wrap justify-end">
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        size="default"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          if (membersLoading) return
+                          if (!canPrevMembersPage) return
+                          setMembersPageIndex((p) => Math.max(0, p - 1))
+                        }}
+                        className={!canPrevMembersPage || membersLoading ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+
+                    {membersPaginationItems.map((it, idx) => {
+                      if (it === "ellipsis") {
+                        return (
+                          <PaginationItem key={`ellipsis-${idx}`}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )
+                      }
+
+                      const pageNum = it
+                      const active = pageNum === currentMembersPage
+                      return (
+                        <PaginationItem key={pageNum}>
+                          <PaginationLink
+                            href="#"
+                            isActive={active}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              if (membersLoading) return
+                              if (active) return
+                              setMembersPageIndex(pageNum - 1)
+                            }}
+                          >
+                            {pageNum}
+                          </PaginationLink>
+                        </PaginationItem>
+                      )
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        size="default"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          if (membersLoading) return
+                          if (!canNextMembersPage) return
+                          setMembersPageIndex((p) => p + 1)
+                        }}
+                        className={!canNextMembersPage || membersLoading ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               </div>
             </div>
           </div>
