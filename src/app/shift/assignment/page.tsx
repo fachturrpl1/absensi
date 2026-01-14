@@ -14,12 +14,15 @@ import { useHydration } from "@/hooks/useHydration"
 import { useOrgStore } from "@/store/org-store"
 import ShiftAssignmentClient from "./shift-assignment-client"
 
+type ApiSuccess<T> = { success: true; data: T }
+type ApiFailure = { success: false; message?: string }
+type ApiListPage<T> = (ApiSuccess<T[]> | ApiFailure) & { total?: number }
+
 export default function ShiftAssignmentPage() {
   const { isReady, organizationId } = useHydration()
   const { organizationName: _organizationName } = useOrgStore()
 
   const [assignments, setAssignments] = useState<IShiftAssignment[]>([])
-  const [members, setMembers] = useState<ShiftAssignmentMemberOption[]>([])
   const [shifts, setShifts] = useState<ShiftOption[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [pageIndex, setPageIndex] = useState(0)
@@ -37,7 +40,6 @@ export default function ShiftAssignmentPage() {
 
     if (!organizationId) {
       setAssignments([])
-      setMembers([])
       setShifts([])
       setTotalRecords(0)
       setIsLoading(false)
@@ -53,25 +55,24 @@ export default function ShiftAssignmentPage() {
           getShiftAssignmentOptions(organizationId),
         ])
 
-        if (pageRes?.success && Array.isArray(pageRes.data)) {
-          setAssignments(pageRes.data as IShiftAssignment[])
-          setTotalRecords(typeof (pageRes as any).total === "number" ? (pageRes as any).total : 0)
+        const page = pageRes as unknown as ApiListPage<IShiftAssignment>
+
+        if (page?.success && Array.isArray(page.data)) {
+          setAssignments(page.data)
+          setTotalRecords(typeof page.total === "number" ? page.total : 0)
         } else {
           setAssignments([])
           setTotalRecords(0)
         }
 
         if (optionsRes?.success) {
-          setMembers(Array.isArray(optionsRes.members) ? optionsRes.members : [])
           setShifts(Array.isArray(optionsRes.shifts) ? optionsRes.shifts : [])
         } else {
-          setMembers([])
           setShifts([])
         }
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to load shift assignments")
         setAssignments([])
-        setMembers([])
         setShifts([])
         setTotalRecords(0)
       } finally {
@@ -116,7 +117,7 @@ export default function ShiftAssignmentPage() {
       <ShiftAssignmentClient
         organizationId={String(organizationId)}
         initialAssignments={assignments}
-        members={members}
+        members={[] as ShiftAssignmentMemberOption[]}
         shifts={shifts}
         isLoading={isLoading}
         pageIndex={pageIndex}
