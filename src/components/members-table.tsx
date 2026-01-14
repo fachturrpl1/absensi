@@ -222,10 +222,12 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
   return (
     <div className="w-full space-y-4">
       <style jsx global>{`
-        .custom-hover-row:hover {
+        html body .custom-hover-row:hover,
+        html body .custom-hover-row:hover > td {
           background-color: #d1d5db !important; /* dark gray hover */
         }
-        .dark .custom-hover-row:hover {
+        html body.dark .custom-hover-row:hover,
+        html body.dark .custom-hover-row:hover > td {
           background-color: #374151 !important;
         }
       `}</style>
