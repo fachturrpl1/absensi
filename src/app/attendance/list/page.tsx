@@ -1,4 +1,3 @@
-// src/app/attendance/list/page.tsx
 "use client"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { DateFilterState } from "@/components/analytics/date-filter-bar"
@@ -66,11 +65,14 @@ function ModernAttendanceListCloned() {
   const orgStore = useOrgStore()
 
   const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null)
-  const [dateRange, setDateRange] = useState<DateFilterState>({
-    from: new Date(),
-    to: new Date(),
-    preset: "today",
-  })
+   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
+     const start = new Date()
+     start.setHours(0, 0, 0, 0)
+     const end = new Date()
+     end.setHours(23, 59, 59, 999)
+     return { from: start, to: end, preset: "today" }
+   })
+
   const [searchInput, setSearchInput] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -91,40 +93,43 @@ function ModernAttendanceListCloned() {
   const [isSubmitting] = useState(false)
   const SHOW_LOCATION = false
 
+  // const fetchRef = useRef<(opts?: { mode?: "full" | "single"; id?: string }) => void>(() => {})
+  // useEffect(() => { fetchRef.current = fetchData }, [fetchData])
+
   // request id guard untuk menghindari stale update
   const latestRequestRef = useRef(0)
 
-  // Inisialisasi date range ke hari ini (00:00 - 23:59)
-  useEffect(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const endOfToday = new Date(today)
-    endOfToday.setHours(23, 59, 59, 999)
-    setDateRange({ from: today, to: endOfToday, preset: "today" })
-  }, [])
-
-  // Set org dari store saat tersedia
   useEffect(() => {
     const orgId = selectedOrgId || orgStore.organizationId
-    if (!orgId || !dateRange?.from || !dateRange?.to) return
-
+    if (!orgId) return
     const supabase = createClient()
-    // Catatan: Tidak bisa filter by join di Realtime, maka subscribe seluruh table.
     const channel = supabase
       .channel(`attendance_records:${orgId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'attendance_records' },
-        async (payload) => {
-          fetchData()
+        (payload) => {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const id = String((payload.new as { id?: string | number })?.id ?? "")
+            if (id) fetchRef.current({ mode: 'single', id })
+            else fetchRef.current({ mode: 'full' })
+          } else if (payload.eventType === 'DELETE') {
+            const id = String((payload.old as { id?: string | number })?.id ?? "")
+            if (id) {
+              setAttendanceData(prev => prev.filter(r => r.id !== id))
+              setTotalItems(prev => Math.max(0, prev - 1))
+            } else {
+              fetchRef.current({ mode: 'full' })
+            }
+          }
         }
       )
       .subscribe()
 
-  return () => {
-    try { supabase.removeChannel(channel) } catch {}
-  }
-}, [selectedOrgId, orgStore.organizationId, dateRange.from, dateRange.to, statusFilter, departmentFilter, searchQuery, itemsPerPage, currentPage])
+    return () => {
+      try { supabase.removeChannel(channel) } catch {}
+    }
+  }, [selectedOrgId, orgStore.organizationId])
 
   // Fallback org dari cookie jika store belum siap
   useEffect(() => {
@@ -171,54 +176,94 @@ function ModernAttendanceListCloned() {
   }, [selectedOrgId, orgStore.organizationId, currentPage, itemsPerPage, dateRange.from, dateRange.to, statusFilter, departmentFilter, searchQuery, userTimezone])
 
    // Fetch attendance data via server action (sudah Anda tambahkan di Tahap-5)
-   const fetchData = useCallback(async () => {
-     const orgId = selectedOrgId || orgStore.organizationId
-     if (!orgId) {
-       setLoading(true)
-       return
-     }
- 
-     setLoading(true)
-     const reqId = latestRequestRef.current + 1
-     latestRequestRef.current = reqId
- 
-     try {
-       const searchParam = (searchQuery || "").trim()
-       const res = await getAllAttendance({
-         page: currentPage,
-         limit: itemsPerPage,
-         dateFrom: toOrgYMD(dateRange.from, userTimezone),
-         dateTo: toOrgYMD(dateRange.to, userTimezone),
-         search: searchParam.length >= 2 ? searchParam : undefined,
-         status: statusFilter === "all" ? undefined : statusFilter,
-         department: departmentFilter === "all" ? undefined : departmentFilter,
-         organizationId: orgId,
-       })
- 
-       const result: GetAttendanceResult = res as GetAttendanceResult
-       if (reqId !== latestRequestRef.current) return
- 
-       if (result.success) {
-         const data = (result.data || []) as AttendanceListItem[]
-         setAttendanceData(data)
-         setTotalItems(Math.max(result.meta?.total || 0, data.length))
-         if (data.length > 0) {
-           setUserTimezone(data[0]?.timezone ?? "UTC")
-         }
-       } else {
-         setAttendanceData([])
-         setTotalItems(0)
-       }
-     } catch {
-       if (reqId !== latestRequestRef.current) return
-     } finally {
-       if (reqId === latestRequestRef.current) setLoading(false)
-     }
-   }, [selectedOrgId, orgStore.organizationId, currentPage, itemsPerPage, dateRange.from, dateRange.to, searchQuery, statusFilter, departmentFilter, userTimezone])
-  // Trigger fetch saat filter/pagination berubah
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+   // helper untuk merge 1 record ke state saat incremental
+  // function upsertRecord(next: AttendanceListItem) {
+  //   setAttendanceData(prev => {
+  //     const idx = prev.findIndex(r => r.id === next.id)
+  //     if (idx >= 0) {
+  //       const copied = [...prev]
+  //       copied[idx] = next
+  //       return copied
+  //     }
+  //     return [next, ...prev]
+  //   })
+  //   setTotalItems(prev => Math.max(prev, 1))
+  // }
+
+  const fetchData = useCallback(
+    async (opts?: { mode?: "full" | "single"; id?: string }) => {
+      const orgId = selectedOrgId || orgStore.organizationId
+      if (!orgId) {
+        setLoading(true)
+        return
+      }
+
+      const mode = opts?.mode ?? "full"
+      const recordId = opts?.id
+
+      if (mode === "single" && recordId) {
+        // Rekomendasi: gunakan API route GET /api/attendance-records?id=...&organizationId=...
+        // agar hasilnya sama dengan shape AttendanceListItem.
+        // Di sini contoh minimal: fallback ke full fetch jika endpoint by-id belum tersedia.
+        // Ketika endpoint by-id siap, ganti blok ini:
+        //   const one = await fetchSingleAttendance(recordId, orgId)
+        //   if (one && isRecordMatchesActiveFilters(one)) upsertRecord(one)
+        await (async () => {
+          await fetchData({ mode: "full" })
+        })()
+        return
+      }
+
+      setLoading(true)
+      const reqId = latestRequestRef.current + 1
+      latestRequestRef.current = reqId
+
+      try {
+        const searchParam = (searchQuery || "").trim()
+        const res = await getAllAttendance({
+          page: currentPage,
+          limit: itemsPerPage,
+          dateFrom: toOrgYMD(dateRange.from, userTimezone),
+          dateTo: toOrgYMD(dateRange.to, userTimezone),
+          search: searchParam.length >= 2 ? searchParam : undefined,
+          status: statusFilter === "all" ? undefined : statusFilter,
+          department: departmentFilter === "all" ? undefined : departmentFilter,
+          organizationId: orgId,
+        })
+
+        const result: GetAttendanceResult = res as GetAttendanceResult
+        if (reqId !== latestRequestRef.current) return
+
+        if (result.success) {
+          const data = (result.data || []) as AttendanceListItem[]
+          setAttendanceData(data)
+          setTotalItems(Math.max(result.meta?.total || 0, data.length))
+          if (data.length > 0) {
+            const nextTz = data[0]?.timezone ?? "UTC"
+            setUserTimezone((prev) => (prev === nextTz ? prev : nextTz))
+          }
+        } else {
+          setAttendanceData([])
+          setTotalItems(0)
+        }
+      } catch {
+        if (reqId !== latestRequestRef.current) return
+      } finally {
+        if (reqId === latestRequestRef.current) setLoading(false)
+      }
+    },
+    [selectedOrgId, orgStore.organizationId, currentPage, itemsPerPage, dateRange.from, dateRange.to, searchQuery, statusFilter, departmentFilter, userTimezone]
+  )
+
+  const fetchRef = useRef<(opts?: { mode?: "full" | "single"; id?: string }) => Promise<void>>(async () => {})
+  useEffect(() => { fetchRef.current = fetchData }, [fetchData])
+
+useEffect(() => {
+  const orgId = selectedOrgId || orgStore.organizationId
+  if (!orgId) return
+  fetchData({ mode: 'full' })
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [dateRange.from, dateRange.to, statusFilter, departmentFilter, searchQuery, itemsPerPage, currentPage, selectedOrgId, orgStore.organizationId])
 
   // Handler Selected Actions (sementara no-op; akan diisi setelah list pindah)
   const handleEditClick = () => {
@@ -540,8 +585,12 @@ const LocationDisplay: React.FC<{ checkInLocationName: string | null; checkOutLo
                         </tr>
                       ) : (
                         attendanceData.map((record: AttendanceListItem, index: number) => (
-                          <tr key={`table-${record.id}-${index}`} className="border-b hover:bg-blue-200 transition-colors">
-                            <td className="p-3">
+                          <tr
+                          key={`table-${record.id}-${index}`}
+                          style={{ backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff' }}
+                          className={cn("border-b transition-colors cursor-pointer custom-hover-row")}
+                        >
+                          <td className="p-3">
                               <input
                                 type="checkbox"
                                 checked={selectedRecords.includes(record.id)}

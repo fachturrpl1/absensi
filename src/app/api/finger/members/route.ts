@@ -3,7 +3,6 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 
 export async function GET(req: Request) {
-    const started = Date.now()
     try {
         const { searchParams } = new URL(req.url)
         const limitParam = searchParams.get('limit')
@@ -46,7 +45,7 @@ export async function GET(req: Request) {
         }
 
         // 2. Fetch ALL Members that match Search & Dept (Database Filter)
-        let allMembers: any[] = []
+        const allMembers: any[] = []
         let rangeFrom = 0
         const step = 1000
 

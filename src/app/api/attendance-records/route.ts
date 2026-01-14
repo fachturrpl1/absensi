@@ -23,7 +23,10 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     const limit = parseInt(searchParams.get('limit') || '1000')
-
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
+    const pageSize = Math.max(1, parseInt(searchParams.get('pageSize') || searchParams.get('limit') || '20'))
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
     const supabase = await createClient()
 
     let query = supabase
@@ -51,6 +54,7 @@ export async function GET(request: NextRequest) {
       .eq('organization_members.organization_id', organizationId)
       .order('attendance_date', { ascending: false })
       .limit(limit)
+      .range(from, to) // Tambahkan ini
 
     // Add date filters if provided
     if (startDate) {
@@ -69,6 +73,17 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Hitung total (count) dengan filter yang sama
+    let countQuery = supabase
+      .from('attendance_records')
+      .select(`id, organization_members!inner(organization_id)`, { count: 'exact', head: true })
+      .eq('organization_members.organization_id', organizationId)
+    if (startDate) countQuery = countQuery.gte('attendance_date', startDate)
+    if (endDate) countQuery = countQuery.lte('attendance_date', endDate)
+
+    const { count: total } = await countQuery
+
 
     // Transform data
     const formattedRecords = records?.map((record: any) => {
@@ -91,7 +106,16 @@ export async function GET(request: NextRequest) {
     }) || []
 
     return NextResponse.json(
-      { success: true, data: formattedRecords },
+      { 
+        success: true,
+        data: formattedRecords,
+        meta: {
+        total: total || 0,
+        page,
+        pageSize,
+        totalPages: Math.max(1, Math.ceil((total || 0) / pageSize)),
+      }
+      },
       {
         headers: {
           'Cache-Control': 'private, no-cache, must-revalidate',

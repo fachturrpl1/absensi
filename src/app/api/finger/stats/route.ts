@@ -130,7 +130,7 @@ export async function GET(req: Request) {
             }
 
             // Calculate stats
-            for (const [memberId, fingers] of fingerMap.entries()) {
+            for (const [,fingers] of fingerMap.entries()) {
                 const count = fingers.size
                 if (count === 2) {
                     complete++

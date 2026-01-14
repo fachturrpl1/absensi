@@ -1,0 +1,246 @@
+"use client"
+
+import React from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
+import { ArrowRight, ChevronDown, Users, UserCheck, Clock, FileText, Calendar } from "lucide-react"
+import Link from "next/link"
+
+// Dummy Data for Activity Table
+const activityData = Array(5).fill({
+    name: "Diah",
+    division: "Design",
+    position: "Owner",
+    activity: "Absen Masuk (08 : 05 : 21)",
+})
+
+// Dummy Data for Staff Status Chart
+const staffStatusData = [
+    { name: "Staff Tetap", value: 10, color: "#00C49F" },    // Green
+    { name: "Staff Kontrak", value: 3, color: "#FFBB28" },   // Orange/Yellow
+    { name: "Staff Magang", value: 2, color: "#A78BFA" },    // Purple
+]
+
+// Dummy Data for Summary Stats
+const summaryStats = [
+    { label: "Total Pegawai", value: 156, icon: Users, color: "text-blue-600 bg-blue-100" },
+    { label: "Hadir", value: 142, icon: UserCheck, color: "text-green-600 bg-green-100" },
+    { label: "Terlambat", value: 8, icon: Clock, color: "text-orange-600 bg-orange-100" },
+    { label: "Izin / Sakit", value: 4, icon: FileText, color: "text-purple-600 bg-purple-100" },
+]
+
+// Dummy Data for Pending Requests
+const pendingRequests = [
+    { name: "Budi Santoso", type: "Cuti Tahunan", date: "15 Jan 2026", status: "Pending" },
+    { name: "Siti Aminah", type: "Izin Sakit", date: "14 Jan 2026", status: "Pending" },
+    { name: "Rudi Hermawan", type: "Lembur", date: "14 Jan 2026", status: "Pending" },
+]
+
+export default function DashboardPage() {
+    // Get today's date in Indonesian format
+    const today = new Date().toLocaleDateString("id-ID", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+    })
+
+    // Calculate total staff for the badge
+    const totalStaff = 10000 // Hardcoded from screenshot or sum of data
+
+    return (
+        <div className="p-4 md:p-6 space-y-6 w-full bg-muted/10 min-h-screen">
+            <div className="flex items-center justify-between mb-4">
+                <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+            </div>
+
+            {/* Top Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {summaryStats.map((stat) => (
+                    <Card key={stat.label} className="shadow-sm">
+                        <CardContent className="p-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground mb-1">{stat.label}</p>
+                                <h3 className="text-2xl font-bold">{stat.value}</h3>
+                            </div>
+                            <div className={`p-3 rounded-full ${stat.color}`}>
+                                <stat.icon className="w-6 h-6" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Panel: Today's Activity */}
+                <Card className="lg:col-span-2 shadow-sm">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                        <div className="space-y-1">
+                            <h2 className="text-lg font-semibold">Aktivitas Hari Ini</h2>
+                            <p className="text-muted-foreground text-base capitalize">{today}</p>
+                        </div>
+                        <Link href="/attendance/list">
+                            <Button variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50 gap-2">
+                                Lihat Riwayat Absensi
+                                <ArrowRight className="h-4 w-4" />
+                            </Button>
+                        </Link>
+                    </CardHeader>
+                    <CardContent>
+                        {/* Pagination Control */}
+                        <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+                            <span>Menampilkan</span>
+                            <div className="relative">
+                                <select
+                                    className="appearance-none border rounded px-3 py-1 bg-background pr-8 focus:outline-none focus:ring-1 focus:ring-ring"
+                                    defaultValue={10}
+                                >
+                                    <option value={10}>10</option>
+                                    <option value={20}>20</option>
+                                    <option value={50}>50</option>
+                                </select>
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
+                            </div>
+                            <span>Baris per halaman</span>
+                        </div>
+
+                        {/* Table */}
+                        <div className="border rounded-lg overflow-hidden">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="font-semibold text-foreground">Nama Staff</TableHead>
+                                        <TableHead className="font-semibold text-foreground">Divisi</TableHead>
+                                        <TableHead className="font-semibold text-foreground">Jabatan</TableHead>
+                                        <TableHead className="font-semibold text-foreground">Aktivitas</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {activityData.map((row, index) => (
+                                        <TableRow key={index} className="hover:bg-muted/50">
+                                            <TableCell>{row.name}</TableCell>
+                                            <TableCell>{row.division}</TableCell>
+                                            <TableCell>{row.position}</TableCell>
+                                            <TableCell>{row.activity}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {/* Empty state padding if needed */}
+                                    {activityData.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="h-24 text-center">
+                                                No activity found.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Right Panel Wrapper: Chart + Requests */}
+                <div className="space-y-6">
+                    {/* Staff Status Chart */}
+                    <Card className="shadow-sm h-fit">
+                        <CardHeader className="pb-2">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-base font-semibold">Data Status Staff</CardTitle>
+                                <Badge variant="secondary" className="bg-blue-500 text-white hover:bg-blue-600">
+                                    Jml Staff : {totalStaff}
+                                </Badge>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="flex flex-col items-center">
+                            {/* Donut Chart */}
+                            <div className="h-[250px] w-full mt-4 relative">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={staffStatusData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={90}
+                                            paddingAngle={0}
+                                            dataKey="value"
+                                            stroke="none"
+                                        >
+                                            {staffStatusData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            formatter={(value: number) => [value, 'Staff']}
+                                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
+
+                                {/* Center Text */}
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+                                    <div className="text-2xl font-bold">66.67%</div>
+                                </div>
+                            </div>
+
+                            {/* Custom Legend */}
+                            <div className="w-full space-y-3 mt-4 self-start pl-4">
+                                <h4 className="font-semibold text-sm mb-2">Keterangan:</h4>
+                                {staffStatusData.map((item) => (
+                                    <div key={item.name} className="flex items-center justify-between text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                className="w-3 h-3 rounded-sm"
+                                                style={{ backgroundColor: item.color }}
+                                            />
+                                            <span className="text-muted-foreground">{item.name}</span>
+                                        </div>
+                                        <span className="font-medium">:{item.value}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Permission Requests List */}
+                    <Card className="shadow-sm">
+                        <CardHeader className="pb-3 border-b mb-2">
+                            <CardTitle className="text-base font-semibold flex items-center justify-between">
+                                Daftar Pengajuan
+                                <Badge variant="outline" className="text-xs font-normal">3 Pending</Badge>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <div className="divide-y">
+                                {pendingRequests.map((req, idx) => (
+                                    <div key={idx} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium leading-none">{req.name}</p>
+                                            <p className="text-xs text-muted-foreground">{req.type}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-xs font-medium bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full inline-block mb-1">
+                                                {req.status}
+                                            </div>
+                                            <div className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end">
+                                                <Calendar className="w-3 h-3" />
+                                                {req.date}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="p-3 border-t text-center">
+                                <Button variant="ghost" size="sm" className="w-full text-xs text-blue-600 hover:text-blue-700 h-8">
+                                    Lihat Semua Pengajuan
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        </div>
+    )
+}
