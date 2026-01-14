@@ -48,7 +48,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
- import {
+import {
   Pagination,
   PaginationContent,
   PaginationEllipsis,
@@ -56,7 +56,7 @@ import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
- } from "@/components/ui/pagination"
+} from "@/components/ui/pagination"
 
 import type { IShiftAssignment } from "@/interface"
 import {
@@ -117,14 +117,7 @@ const addDays = (d: Date, days: number) => {
   return dt
 }
 
-const startOfWeekMonday = (d: Date) => {
-  const dt = new Date(d)
-  dt.setHours(0, 0, 0, 0)
-  const day = dt.getDay() // 0=Sun ... 6=Sat
-  const diff = (day + 6) % 7 // convert so Monday=0
-  dt.setDate(dt.getDate() - diff)
-  return dt
-}
+
 
 const startOfDay = (d: Date) => {
   const dt = new Date(d)
@@ -513,7 +506,7 @@ export default function ShiftAssignmentClient({
                       <div className="p-3">
                         <Calendar
                           className="p-0"
-                          captionLayout="dropdown-buttons"
+                          captionLayout={"dropdown-buttons" as any}
                           fromYear={2000}
                           toYear={new Date().getFullYear() + 5}
                           classNames={{
@@ -1052,9 +1045,8 @@ export default function ShiftAssignmentClient({
                 {membersLoading && <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />}
                 <span>
                   {membersTotal >= 0
-                    ? `Showing ${membersData.length === 0 ? 0 : membersPageIndex * membersPageSize + 1}-${
-                        Math.min((membersPageIndex + 1) * membersPageSize, membersTotal)
-                      } of ${membersTotal}`
+                    ? `Showing ${membersData.length === 0 ? 0 : membersPageIndex * membersPageSize + 1}-${Math.min((membersPageIndex + 1) * membersPageSize, membersTotal)
+                    } of ${membersTotal}`
                     : `Showing ${membersData.length} member(s)`}
                 </span>
               </div>

@@ -10,7 +10,7 @@ const combinedPaths: Record<string, string> = {
   '/organization/finger': 'Fingerprint',
   '/settings': 'Settings',
   '/settings/invitations': 'Invitations',
-  'account': 'Account',
+  '/account': 'Account',
 };
 
 // Parent mapping untuk breadcrumb hierarchy

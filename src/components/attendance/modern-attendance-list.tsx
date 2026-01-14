@@ -795,7 +795,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           }, 500);
         }
       )
-      .subscribe((status) => {
+      .subscribe((status: string) => {
         if (status === 'SUBSCRIBED') setRealtimeActive(true);
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setRealtimeActive(false);
       });
@@ -1306,6 +1306,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       console.log(`📋 Rendering table row ${index + 1}/${attendanceData.length}:`, record.id, record.member.name);
                       return (
                         <tr
+                          key={record.id}
                           style={{
                             backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
                           }}

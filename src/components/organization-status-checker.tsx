@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { checkOrganizationStatus, OrganizationStatus } from "@/action/organization";
 
 import { organizationLogger } from '@/lib/logger';
-import { useOrgStore } from "@/store/org-store"; // Import store
+
 interface OrganizationStatusCheckerProps {
   children: React.ReactNode;
 }

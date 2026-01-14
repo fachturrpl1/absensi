@@ -29,7 +29,7 @@ export async function getInitialUserData(userId: string): Promise<BootstrapData>
             permissions,
             role: {
                 code: orgRoleData.role?.code ?? null,
-                id: orgRoleData.role?.id ?? null
+                id: orgRoleData.role?.id ? Number(orgRoleData.role.id) : null
             },
             organizationId: orgRoleData.organizationId ? Number(orgRoleData.organizationId) : null,
             organizationStatus: orgStatus

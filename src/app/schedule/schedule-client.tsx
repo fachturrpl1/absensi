@@ -308,7 +308,7 @@ export default function ScheduleClient({
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-            <Link href={`/schedule/detail/${ws.id}`}>
+            <Link href={`/schedule/${ws.id}`}>
               <Button
                 variant="outline"
                 size="icon"
@@ -316,7 +316,7 @@ export default function ScheduleClient({
                 aria-label={`Configure work hours for ${ws.name}`}
                 className="h-9 w-9 cursor-pointer bg-secondary border-0 p-0"
               >
-                <ChevronRight className="h-4 w-4"/>
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -442,7 +442,7 @@ export default function ScheduleClient({
               </Form>
             </DialogContent>
           </Dialog>
-          
+
         }
         emptyState={
           <Empty>
