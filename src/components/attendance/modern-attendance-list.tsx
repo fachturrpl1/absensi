@@ -1306,6 +1306,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       console.log(`📋 Rendering table row ${index + 1}/${attendanceData.length}:`, record.id, record.member.name);
                       return (
                         <tr
+                          key={record.id}
                           style={{
                             backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
                           }}
