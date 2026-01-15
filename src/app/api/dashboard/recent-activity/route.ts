@@ -5,6 +5,7 @@ export const revalidate = 0
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
+import { calculateAttendanceStatus, getDayOfWeek, type ScheduleRule } from '@/lib/attendance-status-calculator'
 
 import { dashboardLogger } from '@/lib/logger';
 async function getUserOrganizationId() {
@@ -55,7 +56,9 @@ export async function GET(request: Request) {
         id,
         status,
         actual_check_in,
+        actual_check_out,
         late_minutes,
+        attendance_date,
         organization_member_id,
         organization_members!inner (
           id,
@@ -83,21 +86,89 @@ export async function GET(request: Request) {
       )
     }
 
-    // Transform data
-    const activities = records?.map((record: any) => {
-      const member = record.organization_members
-      const profile = member?.user_profiles
-      const department = member?.departments
+    // Helpers to safely pick nested shapes (object or array)
+    const pickFirstObject = (u: unknown): Record<string, unknown> | null => {
+      if (Array.isArray(u)) return (u[0] && typeof u[0] === 'object') ? (u[0] as Record<string, unknown>) : null;
+      return (u && typeof u === 'object') ? (u as Record<string, unknown>) : null;
+    };
+    const getProp = <T>(obj: Record<string, unknown> | null, key: string, fallback: T): T => {
+      const v = obj?.[key];
+      return (v as T) ?? fallback;
+    };
+
+    type Row = {
+      id: number;
+      status: string;
+      actual_check_in: string | null;
+      actual_check_out: string | null;
+      late_minutes: number | null;
+      attendance_date: string;
+      organization_member_id: number;
+      organization_members: unknown;
+    };
+
+    const activities = await Promise.all(((records ?? []) as Row[]).map(async (record) => {
+      const member = pickFirstObject(record.organization_members);
+      const profile = pickFirstObject(getProp(member, 'user_profiles', null));
+      const department = pickFirstObject(getProp(member, 'departments', null));
+
+      let status = record.status;
+      // Try recompute using schedule rule (best-effort)
+      try {
+        const dayOfWeek = getDayOfWeek(record.attendance_date);
+        const ms = await supabase
+          .from('member_schedules')
+          .select('work_schedule_id, effective_date, end_date, is_active')
+          .eq('organization_member_id', record.organization_member_id)
+          .eq('is_active', true)
+          .lte('effective_date', record.attendance_date)
+          .or('end_date.is.null,end_date.gte.' + record.attendance_date)
+          .order('effective_date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const workScheduleId = (ms.data as { work_schedule_id: number } | null)?.work_schedule_id;
+        if (workScheduleId) {
+          const det = await supabase
+            .from('work_schedule_details')
+            .select('day_of_week,is_working_day,start_time,end_time,core_hours_start,core_hours_end,grace_in_minutes,grace_out_minutes,is_active')
+            .eq('work_schedule_id', workScheduleId)
+            .eq('day_of_week', dayOfWeek)
+            .maybeSingle();
+
+          const d = det.data as {
+            day_of_week: number; is_working_day: boolean; start_time: string | null; end_time: string | null;
+            core_hours_start: string | null; core_hours_end: string | null; grace_in_minutes: number | null; grace_out_minutes: number | null; is_active: boolean | null;
+          } | null;
+          if (d && d.is_working_day && d.is_active && d.start_time && d.end_time && d.core_hours_start && d.core_hours_end) {
+            const rule: ScheduleRule = {
+              day_of_week: d.day_of_week,
+              start_time: d.start_time,
+              end_time: d.end_time,
+              core_hours_start: d.core_hours_start,
+              core_hours_end: d.core_hours_end,
+              grace_in_minutes: d.grace_in_minutes ?? 0,
+              grace_out_minutes: d.grace_out_minutes ?? 0,
+            };
+            const calc = calculateAttendanceStatus(record.actual_check_in, record.actual_check_out, rule);
+            status = calc.status;
+          }
+        }
+      } catch {}
+
+      const firstName = getProp<string | null>(profile, 'first_name', null) || '';
+      const lastName = getProp<string | null>(profile, 'last_name', null) || '';
+      const deptName = getProp<string | null>(department, 'name', null);
 
       return {
         id: record.id.toString(),
-        memberName: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Unknown',
-        status: record.status,
+        memberName: `${firstName} ${lastName}`.trim() || 'Unknown',
+        status,
         checkInTime: record.actual_check_in,
         lateMinutes: record.late_minutes,
-        department: department?.name || null
-      }
-    }) || []
+        department: deptName || null,
+      };
+    }))
 
     return NextResponse.json(
       { success: true, data: activities },

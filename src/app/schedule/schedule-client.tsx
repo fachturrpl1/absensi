@@ -60,6 +60,7 @@ import {
   createWorkSchedule,
   deleteWorkSchedule,
   updateWorkSchedule,
+  setDefaultWorkSchedule,
 } from "@/action/schedule"
 import { SCHEDULE_TYPES, getTimezoneLabel } from "@/constants/attendance-status"
 
@@ -103,11 +104,18 @@ export default function ScheduleClient({
   const [schedules, setSchedules] = React.useState(initialSchedules)
   const [open, setOpen] = React.useState(false)
   const [editingDetail, setEditingDetail] = React.useState<IWorkSchedule | null>(null)
+  const [selectedDefaultId, setSelectedDefaultId] = React.useState<string | number | null>(null)
+  const [settingDefaultId, setSettingDefaultId] = React.useState<string | number | null>(null)
 
   // Sync state when initialSchedules changes
   React.useEffect(() => {
     setSchedules(initialSchedules)
   }, [initialSchedules, organizationId])
+
+  React.useEffect(() => {
+    const current = (schedules || []).find((s) => s.is_default)
+    setSelectedDefaultId(current ? current.id : null)
+  }, [schedules])
 
   const form = useForm<ScheduleForm>({
     resolver: zodResolver(scheduleSchema),
@@ -222,6 +230,27 @@ export default function ScheduleClient({
     }
   }
 
+  const handleSetDefault = async (id: string | number) => {
+    try {
+      setSettingDefaultId(id)
+      const res = await setDefaultWorkSchedule(id)
+      if (res.success && res.data) {
+        toast.success("Default schedule updated")
+        setSelectedDefaultId(id)
+        setSchedules((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, is_default: true, is_active: true } : { ...s, is_default: false }))
+        )
+        onRefresh?.()
+      } else {
+        throw new Error(res.message || "Failed to set default schedule")
+      }
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Unknown error")
+    } finally {
+      setSettingDefaultId(null)
+    }
+  }
+
   const columns: ColumnDef<IWorkSchedule>[] = [
     { accessorKey: "name", header: "Name" },
     { accessorKey: "description", header: "Description" },
@@ -246,6 +275,24 @@ export default function ScheduleClient({
           {getTimezoneLabel(organizationTimezone)}
         </span>
       )
+    },
+    {
+      id: "default",
+      header: "Default",
+      cell: ({ row }) => {
+        const ws = row.original
+        const checked = selectedDefaultId === ws.id
+        return (
+          <input
+            type="radio"
+            name="defaultSchedule"
+            checked={checked}
+            onChange={() => handleSetDefault(ws.id)}
+            aria-label={`Set ${ws.name} as default`}
+            disabled={Boolean(settingDefaultId)}
+          />
+        )
+      }
     },
     {
       accessorKey: "is_active",

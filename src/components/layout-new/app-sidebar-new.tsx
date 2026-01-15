@@ -53,7 +53,14 @@ import {
   SidebarMenuSub,
   SidebarMenuSubItem,
   SidebarMenuSubButton,
+  useSidebar,
 } from '@/components/ui/sidebar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Collapsible,
   CollapsibleContent,
@@ -215,6 +222,7 @@ function NavMain({ items }: { items: NavMainItem[] }) {
   const { role, permissions } = useUserStore();
   const [isHydrated, setIsHydrated] = useState(false)
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({})
+  const { state } = useSidebar();
 
   useEffect(() => {
     setIsHydrated(true)
@@ -241,6 +249,49 @@ function NavMain({ items }: { items: NavMainItem[] }) {
         const isActive = item.url === pathname || item.subItems?.some(sub => sub.url === pathname);
 
         if (hasSubItems) {
+          // If sidebar is collapsed, show dropdown on icon click. Otherwise, keep collapsible inline.
+          if (state === 'collapsed') {
+            return (
+              <SidebarMenuItem key={item.title}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton tooltip={item.title} isActive={isActive}>
+                      {item.icon && <item.icon />}
+                      <span>{item.title}</span>
+                      {item.badge && (
+                        <Badge variant="outline" className="ml-auto text-xs">
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </SidebarMenuButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="right" align="start" className="w-56 p-1">
+                    {item.subItems?.filter(subItem => {
+                      if (subItem.requiresAdmin && !canManageLeaveTypes) return false;
+                      return true;
+                    }).map((subItem) => {
+                      const isSubActive = subItem.url === pathname;
+                      return (
+                        <DropdownMenuItem key={subItem.title} asChild className={isSubActive ? 'bg-accent' : undefined}>
+                          <Link href={subItem.url} className="flex items-center gap-2">
+                            {subItem.icon && <subItem.icon className="h-4 w-4" />}
+                            <span>{subItem.title}</span>
+                            {subItem.badge && (
+                              <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0">
+                                {subItem.badge}
+                              </Badge>
+                            )}
+                          </Link>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarMenuItem>
+            );
+          }
+
+          // Expanded sidebar: keep the existing collapsible submenu.
           return (
             <SidebarMenuItem key={item.title} className="group/collapsible">
               <Collapsible
@@ -263,10 +314,7 @@ function NavMain({ items }: { items: NavMainItem[] }) {
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {item.subItems?.filter(subItem => {
-                      // Filter out admin-only items if user is not admin
-                      if (subItem.requiresAdmin && !canManageLeaveTypes) {
-                        return false;
-                      }
+                      if (subItem.requiresAdmin && !canManageLeaveTypes) return false;
                       return true;
                     }).map((subItem) => {
                       const isSubActive = subItem.url === pathname;

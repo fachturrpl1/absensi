@@ -31,11 +31,35 @@ const statusConfig = {
     icon: CheckCircle2,
     iconColor: 'text-green-600 dark:text-green-400',
   },
+  on_time: {
+    label: 'Hadir',
+    color: 'bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400',
+    icon: CheckCircle2,
+    iconColor: 'text-green-600 dark:text-green-400',
+  },
   late: {
     label: 'Terlambat',
     color: 'bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400',
     icon: AlertCircle,
     iconColor: 'text-orange-600 dark:text-orange-400',
+  },
+  early_leave: {
+    label: 'Pulang Awal',
+    color: 'bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400',
+    icon: AlertCircle,
+    iconColor: 'text-orange-600 dark:text-orange-400',
+  },
+  late_and_early: {
+    label: 'Telat & Pulang Awal',
+    color: 'bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400',
+    icon: AlertCircle,
+    iconColor: 'text-orange-600 dark:text-orange-400',
+  },
+  excused_absence: {
+    label: 'Izin/Cuti',
+    color: 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
+    icon: Clock,
+    iconColor: 'text-blue-600 dark:text-blue-400',
   },
   absent: {
     label: 'Tidak Hadir',
@@ -43,7 +67,7 @@ const statusConfig = {
     icon: XCircle,
     iconColor: 'text-red-600 dark:text-red-400',
   },
-};
+} as const;
 
 // Simple cache to prevent duplicate requests
 const activityCache: {
@@ -190,7 +214,7 @@ export function ActivityTimeline({
           
           <div className="space-y-4">
             {activities.map((activity, index) => {
-              const config = statusConfig[activity.status as keyof typeof statusConfig] || statusConfig.present;
+              const config = statusConfig[activity.status as keyof typeof statusConfig] || statusConfig.absent;
               const Icon = config.icon;
               const checkInDate = new Date(activity.checkInTime);
 

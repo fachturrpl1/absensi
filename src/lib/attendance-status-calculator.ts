@@ -20,7 +20,9 @@
  * - Missing check-in or check-out
  */
 
-export type AttendanceStatus = 'present' | 'late' | 'leave' | 'absent' | 'early_leave';
+// Presence-oriented status (working day)
+// Note: 'leave' is intentionally NOT used to avoid ambiguity with paid/unpaid leave.
+export type AttendanceStatus = 'on_time' | 'late' | 'early_leave' | 'late_and_early' | 'absent' | 'excused_absence';
 
 export interface AttendanceStatusResult {
     status: AttendanceStatus;
@@ -29,6 +31,11 @@ export interface AttendanceStatusResult {
         lateMinutes?: number;
         earlyLeaveMinutes?: number;
         isWithinGrace?: boolean;
+        overtimeMinutes?: number;
+        compliant?: boolean;
+        punchException?: PunchException;
+        halfDay?: HalfDayType;
+        breakViolation?: boolean;
     };
 }
 
@@ -41,6 +48,21 @@ export interface ScheduleRule {
     grace_in_minutes: number; // Tolerance for late arrival
     grace_out_minutes: number; // Tolerance for early departure
 }
+
+// Day classification and auxiliary enums for international standards
+export type DayType = 'working_day' | 'off_day' | 'public_holiday' | 'leave_day';
+export type ExcusedReasonCode =
+  | 'vacation'
+  | 'sick'
+  | 'maternity'
+  | 'paternity'
+  | 'bereavement'
+  | 'unpaid'
+  | 'training'
+  | 'business_trip';
+export type WorkMode = 'onsite' | 'remote' | 'on_duty';
+export type PunchException = 'none' | 'missing_check_in' | 'missing_check_out' | 'missing_both' | 'outside_window';
+export type HalfDayType = 'none' | 'half_day_am' | 'half_day_pm';
 
 /**
  * Convert HH:MM or HH:MM:SS time string to minutes since midnight
@@ -111,14 +133,43 @@ export function calculateAttendanceStatus(
     // Parse times
     const checkIn = timeToMinutes(actualCheckIn);
     const checkOut = timeToMinutes(actualCheckOut);
+    const startTime = timeToMinutes(rule.start_time)!;
+    const endTime = timeToMinutes(rule.end_time)!;
     const coreStart = timeToMinutes(rule.core_hours_start)!;
     const coreEnd = timeToMinutes(rule.core_hours_end)!;
     const graceIn = rule.grace_in_minutes || 0;
     const graceOut = rule.grace_out_minutes || 0;
 
-    // Invalid: Missing check-in or check-out
-    if (checkIn === null || checkOut === null) {
-        return absentResult;
+    // Guard: Check-in must be within scheduled window [start_time, end_time]
+    if (checkIn !== null && (checkIn < startTime || checkIn > endTime)) {
+        return {
+            status: 'absent',
+            present: false,
+            details: { punchException: 'outside_window' }
+        };
+    }
+
+    // Invalid: Missing check-in or check-out (punch exceptions)
+    if (checkIn === null && checkOut === null) {
+        return {
+            status: 'absent',
+            present: false,
+            details: { punchException: 'missing_both' }
+        };
+    }
+    if (checkIn === null) {
+        return {
+            status: 'absent',
+            present: false,
+            details: { punchException: 'missing_check_in' }
+        };
+    }
+    if (checkOut === null) {
+        return {
+            status: 'absent',
+            present: false,
+            details: { punchException: 'missing_check_out' }
+        };
     }
 
     // Calculate effective thresholds with grace periods
@@ -144,13 +195,15 @@ export function calculateAttendanceStatus(
         lateMinutes = checkIn - coreStart;
     }
 
-    // Determine check-out status
+    // Determine check-out status and overtime
     let earlyLeaveMinutes = 0;
     let isEarlyLeave = false;
+    let overtimeMinutes = 0;
 
     if (checkOut >= coreEnd) {
         // Checked out after core hours end - OK
         isEarlyLeave = false;
+        overtimeMinutes = checkOut - coreEnd;
     } else if (checkOut >= earlyLeaveThreshold) {
         // Within grace period - technically early but tolerated
         isEarlyLeave = false;
@@ -162,45 +215,62 @@ export function calculateAttendanceStatus(
     }
 
     // Determine final status
-    // Priority: absent > late > early_leave > present
+    // Priority resolution among presence variants
+    const compliant = !isLate && !isEarlyLeave;
     if (isLate && isEarlyLeave) {
-        // Both late AND early leave
         return {
-            status: 'late',
+            status: 'late_and_early',
             present: true,
             details: {
                 lateMinutes,
                 earlyLeaveMinutes,
                 isWithinGrace,
+                overtimeMinutes,
+                compliant,
+                punchException: 'none',
+                halfDay: 'none',
             },
         };
-    } else if (isLate) {
+    }
+    if (isLate) {
         return {
             status: 'late',
             present: true,
             details: {
                 lateMinutes,
                 isWithinGrace,
+                overtimeMinutes,
+                compliant,
+                punchException: 'none',
+                halfDay: 'none',
             },
         };
-    } else if (isEarlyLeave) {
+    }
+    if (isEarlyLeave) {
         return {
             status: 'early_leave',
             present: true,
             details: {
                 earlyLeaveMinutes,
                 isWithinGrace,
-            },
-        };
-    } else {
-        return {
-            status: 'present',
-            present: true,
-            details: {
-                isWithinGrace,
+                overtimeMinutes,
+                compliant,
+                punchException: 'none',
+                halfDay: 'none',
             },
         };
     }
+    return {
+        status: 'on_time',
+        present: true,
+        details: {
+            isWithinGrace,
+            overtimeMinutes,
+            compliant,
+            punchException: 'none',
+            halfDay: 'none',
+        },
+    };
 }
 
 /**

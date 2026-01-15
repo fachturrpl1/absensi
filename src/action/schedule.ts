@@ -349,3 +349,46 @@ export async function upsertWorkScheduleDetails(
     return { success: true, data: (data || []) as IWorkScheduleDetail[] }
 }
 
+
+// Set a single default work schedule within an organization
+export async function setDefaultWorkSchedule(id: string | number) {
+    const supabase = await createClient();
+
+    // Fetch the schedule to get its organization_id
+    const { data: target, error: fetchErr } = await supabase
+        .from('work_schedules')
+        .select('id, organization_id')
+        .eq('id', String(id))
+        .maybeSingle();
+
+    if (fetchErr || !target) {
+        return { success: false as const, message: fetchErr?.message || 'Schedule not found', data: null };
+    }
+
+    const orgId = (target as { organization_id: number | string }).organization_id;
+
+    // Unset default for all schedules in the same organization
+    const { error: unsetErr } = await supabase
+        .from('work_schedules')
+        .update({ is_default: false, updated_at: new Date().toISOString() })
+        .eq('organization_id', orgId);
+
+    if (unsetErr) {
+        return { success: false as const, message: unsetErr.message, data: null };
+    }
+
+    // Set selected schedule as default (and active)
+    const { data: updated, error: setErr } = await supabase
+        .from('work_schedules')
+        .update({ is_default: true, is_active: true, updated_at: new Date().toISOString() })
+        .eq('id', String(id))
+        .select('id, organization_id, code, name, description, schedule_type, is_default, is_active, created_at, updated_at')
+        .single();
+
+    if (setErr) {
+        return { success: false as const, message: setErr.message, data: null };
+    }
+
+    return { success: true as const, message: 'Default schedule set successfully', data: updated as IWorkSchedule };
+}
+

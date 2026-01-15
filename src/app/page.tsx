@@ -65,6 +65,7 @@ interface DashboardStats {
   activeMembers: number;
 }
 
+
 // Color Palette
 const COLORS = {
   primary: '#3B82F6',
@@ -251,7 +252,7 @@ export default function ImprovedDashboard() {
         
         console.log('[DASHBOARD] Fetching data for organization:', orgId);
 
-        // Kirim filter ke API (server-side filtering)
+        // Kirim filter ke API home (real-time, no-cache di server)
         const toYMD = (d?: Date): string => (d ? d.toISOString().slice(0, 10) : '');
         const params = new URLSearchParams();
         params.set('organizationId', String(orgId));
@@ -262,19 +263,40 @@ export default function ImprovedDashboard() {
         if (fromStr !== undefined) params.set('dateFrom', fromStr);
         if (toStr !== undefined) params.set('dateTo', toStr);
 
-        const response = await fetch(`/api/attendance-records?${params.toString()}`, {
+        const response = await fetch(`/api/home?${params.toString()}`, {
           method: 'GET',
           credentials: 'same-origin',
         });
         const result = await response.json();
 
-        if (result.success && result.data) {
-          console.log('[DASHBOARD] Fetched', result.data.length, 'records for org', orgId);
-          setAllRecords(result.data);
-        } else {
-          console.error('Failed to fetch attendance records:', result.message);
-          setAllRecords([]);
-        }
+      if (result.success && Array.isArray(result.data)) {
+        console.log('[DASHBOARD] Fetched', result.data.length, 'records for org', orgId);
+
+        const toMinutes = (s?: string | null) => {
+          const str = s ?? '';
+          const hh = parseInt(str.match(/(\d+)h/)?.[1] ?? '0', 10);
+          const mm = parseInt(str.match(/(\d+)m/)?.[1] ?? '0', 10);
+          return hh * 60 + mm;
+        };
+
+        const mapped: AttendanceRecord[] = result.data.map((it: any) => ({
+          id: Number(it.id),
+          member_name: it?.member?.name ?? '',
+          department_name: it?.member?.department ?? '',
+          status: it?.status ?? '',
+          actual_check_in: it?.checkIn ?? null,
+          actual_check_out: it?.checkOut ?? null,
+          work_duration_minutes: toMinutes(it?.workHours), // fallback 0 jika tidak ada
+          scheduled_duration_minutes: 480, // opsional: default 8 jam agar metrik tidak 0 total
+          attendance_date: it?.date,
+          profile_photo_url: it?.member?.avatar ?? null,
+        }));
+
+        setAllRecords(mapped);
+      } else {
+        console.error('Failed to fetch attendance records:', result.message);
+        setAllRecords([]);
+      }
       } catch (error) {
         console.error('Error fetching data:', error);
         setAllRecords([]);

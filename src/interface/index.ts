@@ -1,3 +1,4 @@
+import type { DayType, ExcusedReasonCode, WorkMode, PunchException, HalfDayType } from '@/lib/attendance-status-calculator';
 // Emergency Contact Interface
 export interface IEmergencyContact {
     name?: string;
@@ -168,7 +169,7 @@ export interface IAttendance {
     overtime_minutes?: number;
     late_minutes?: number;
     early_leave_minutes?: number;
-    status: "present" | "absent" | "late" | "excused";
+    status: "on_time" | "present" | "late" | "early_leave" | "late_and_early" | "absent" | "excused" | "excused_absence";
     validated_status?: "approved" | "rejected" | "pending";
     validated_by?: string;
     validated_at?: string;
@@ -180,6 +181,15 @@ export interface IAttendance {
     updated_at?: string;
     notes?: string;
 
+    // International-standard optional dimensions
+    day_type?: DayType;               // working_day | off_day | public_holiday | leave_day
+    leave_reason_code?: ExcusedReasonCode; // vacation | sick | maternity | paternity | bereavement | unpaid | training | business_trip
+    work_mode?: WorkMode;             // onsite | remote | on_duty
+    punch_exception?: PunchException; // none | missing_check_in | missing_check_out | missing_both
+    within_grace?: boolean;
+    compliant?: boolean;              // memenuhi core hours
+    break_violation?: boolean;
+    half_day_type?: HalfDayType;      // none | half_day_am | half_day_pm
 
     organization_member?: IOrganization_member;
     timezone?: string;

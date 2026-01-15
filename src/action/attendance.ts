@@ -7,8 +7,74 @@ import { createClient } from "@/utils/supabase/server";
 
 import { attendanceLogger } from '@/lib/logger';
 import { getJSON, setJSON, delByPrefix } from '@/lib/cache';
+import { calculateAttendanceStatus, getDayOfWeek, type ScheduleRule } from '@/lib/attendance-status-calculator';
 async function getSupabase() {
   return await createClient();
+}
+
+// Resolve active schedule rule for a member on a given date.
+// Returns null if no active rule or non-working day.
+async function resolveScheduleRuleForMemberDate(
+  supabase: Awaited<ReturnType<typeof getSupabase>>,
+  organizationMemberId: number,
+  dateISO: string,
+): Promise<ScheduleRule | null> {
+  // Find active member schedule effective for the date
+  const { data: ms, error: msErr } = await supabase
+    .from('member_schedules')
+    .select('work_schedule_id, effective_date, end_date, is_active')
+    .eq('organization_member_id', organizationMemberId)
+    .eq('is_active', true)
+    .lte('effective_date', dateISO)
+    .or('end_date.is.null,end_date.gte.' + dateISO)
+    .order('effective_date', { ascending: false })
+    .limit(1);
+
+  if (msErr || !ms || ms.length === 0) {
+    return null;
+  }
+
+  const workScheduleId = ms[0].work_schedule_id as number | string | null;
+  if (!workScheduleId) return null;
+
+  // Fetch schedule detail for day of week
+  const dayOfWeek = getDayOfWeek(dateISO);
+  type DetailRow = {
+    day_of_week: number;
+    is_working_day: boolean;
+    start_time: string | null;
+    end_time: string | null;
+    core_hours_start: string | null;
+    core_hours_end: string | null;
+    grace_in_minutes: number | null;
+    grace_out_minutes: number | null;
+    is_active: boolean | null;
+  };
+  const { data: det, error: detErr } = await supabase
+    .from('work_schedule_details')
+    .select('day_of_week,is_working_day,start_time,end_time,core_hours_start,core_hours_end,grace_in_minutes,grace_out_minutes,is_active')
+    .eq('work_schedule_id', workScheduleId)
+    .eq('day_of_week', dayOfWeek)
+    .maybeSingle();
+
+  if (detErr || !det) return null;
+  if (!det.is_working_day) return null;
+  if (!det.is_active) return null;
+
+  const rule: ScheduleRule = {
+    day_of_week: det.day_of_week,
+    start_time: det.start_time || '',
+    end_time: det.end_time || '',
+    core_hours_start: det.core_hours_start || '',
+    core_hours_end: det.core_hours_end || '',
+    grace_in_minutes: det.grace_in_minutes ?? 0,
+    grace_out_minutes: det.grace_out_minutes ?? 0,
+  };
+  // Basic guard: empty strings mean invalid rule
+  if (!rule.start_time || !rule.end_time || !rule.core_hours_start || !rule.core_hours_end) {
+    return null;
+  }
+  return rule;
 }
 
 // Update check-in/check-out times and remarks for a single attendance record
@@ -26,18 +92,60 @@ export async function updateAttendanceRecord(payload: {
     try {
       const { data: recOrg } = await supabase
         .from('attendance_records')
-        .select('organization_members!inner(organization_id)')
+        .select('organization_member_id, attendance_date, actual_check_in, actual_check_out, organization_members!inner(organization_id)')
         .eq('id', payload.id)
         .maybeSingle();
-      const orgRel: any = (recOrg as any)?.organization_members;
+      const orgRel = (recOrg as unknown as { organization_members: { organization_id: number } | { organization_id: number }[] | null }).organization_members;
       const orgObj = Array.isArray(orgRel) ? orgRel[0] : orgRel;
       orgId = orgObj?.organization_id ?? null;
+
+      // Recalculate status only if check-in/out provided
+      const shouldRecalc = payload.actual_check_in !== undefined || payload.actual_check_out !== undefined;
+      if (shouldRecalc && recOrg) {
+        const memberId = (recOrg as unknown as { organization_member_id: number }).organization_member_id;
+        const attendanceDate = (recOrg as unknown as { attendance_date: string }).attendance_date;
+        const currentIn = (recOrg as unknown as { actual_check_in: string | null }).actual_check_in;
+        const currentOut = (recOrg as unknown as { actual_check_out: string | null }).actual_check_out;
+        const nextIn = payload.actual_check_in !== undefined ? payload.actual_check_in : currentIn;
+        const nextOut = payload.actual_check_out !== undefined ? payload.actual_check_out : currentOut;
+
+        const rule = await resolveScheduleRuleForMemberDate(supabase, Number(memberId), attendanceDate);
+        if (rule) {
+          const result = calculateAttendanceStatus(nextIn ?? null, nextOut ?? null, rule);
+          // Include status in update
+          if (result && result.status) {
+            // updateData is declared below; stash computed status to apply later
+            (payload as { _computedStatus?: string })._computedStatus = result.status;
+          }
+          // Stash computed minutes
+          (payload as { _lateMinutes?: number | null })._lateMinutes = result.details.lateMinutes ?? null;
+          (payload as { _earlyLeaveMinutes?: number | null })._earlyLeaveMinutes = result.details.earlyLeaveMinutes ?? null;
+          (payload as { _overtimeMinutes?: number | null })._overtimeMinutes = result.details.overtimeMinutes ?? null;
+        } else {
+          (payload as { _computedStatus?: string })._computedStatus = 'absent';
+          (payload as { _lateMinutes?: number | null })._lateMinutes = null;
+          (payload as { _earlyLeaveMinutes?: number | null })._earlyLeaveMinutes = null;
+          (payload as { _overtimeMinutes?: number | null })._overtimeMinutes = null;
+        }
+      }
     } catch (_) { }
 
     const updateData: Record<string, any> = {};
     if (payload.actual_check_in !== undefined) updateData.actual_check_in = payload.actual_check_in;
     if (payload.actual_check_out !== undefined) updateData.actual_check_out = payload.actual_check_out;
     if (payload.remarks !== undefined) updateData.remarks = payload.remarks;
+    if ((payload as { _computedStatus?: string })._computedStatus) {
+      updateData.status = (payload as { _computedStatus?: string })._computedStatus;
+    }
+    if ((payload as { _lateMinutes?: number | null })._lateMinutes !== undefined) {
+      updateData.late_minutes = (payload as { _lateMinutes?: number | null })._lateMinutes;
+    }
+    if ((payload as { _earlyLeaveMinutes?: number | null })._earlyLeaveMinutes !== undefined) {
+      updateData.early_leave_minutes = (payload as { _earlyLeaveMinutes?: number | null })._earlyLeaveMinutes;
+    }
+    if ((payload as { _overtimeMinutes?: number | null })._overtimeMinutes !== undefined) {
+      updateData.overtime_minutes = (payload as { _overtimeMinutes?: number | null })._overtimeMinutes;
+    }
 
     const { error } = await supabase
       .from('attendance_records')
@@ -672,7 +780,36 @@ export async function createManualAttendance(payload: ManualAttendancePayload) {
       check_in: payload.actual_check_in,
     });
 
-    const { error } = await supabase.from("attendance_records").insert([payload]);
+    // Compute status based on schedule rule
+    const memberIdNum = Number(payload.organization_member_id);
+    const rule = Number.isFinite(memberIdNum)
+      ? await resolveScheduleRuleForMemberDate(supabase, memberIdNum, payload.attendance_date)
+      : null;
+    let computedStatus = 'absent' as string;
+    let lateMinutes: number | null = null;
+    let earlyLeaveMinutes: number | null = null;
+    let overtimeMinutes: number | null = null;
+    if (rule) {
+      const result = calculateAttendanceStatus(payload.actual_check_in ?? null, payload.actual_check_out ?? null, rule);
+      computedStatus = result.status;
+      lateMinutes = result.details.lateMinutes ?? null;
+      earlyLeaveMinutes = result.details.earlyLeaveMinutes ?? null;
+      overtimeMinutes = result.details.overtimeMinutes ?? null;
+    }
+
+    const insertPayload: ManualAttendancePayload & {
+      late_minutes?: number | null;
+      early_leave_minutes?: number | null;
+      overtime_minutes?: number | null;
+    } = {
+      ...payload,
+      status: computedStatus,
+      late_minutes: lateMinutes,
+      early_leave_minutes: earlyLeaveMinutes,
+      overtime_minutes: overtimeMinutes,
+    };
+
+    const { error } = await supabase.from("attendance_records").insert([insertPayload]);
 
     if (error) {
       attendanceLogger.error("❌ Error creating attendance:", error);
