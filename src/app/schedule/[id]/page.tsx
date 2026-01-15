@@ -5,7 +5,7 @@ import { useParams } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Globe, Save, RotateCcw, Copy } from "lucide-react"
+import { Globe, Save, RotateCcw, Copy, Search, Plus, Minus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import { formatTime } from "@/utils/format-time"
@@ -20,6 +20,8 @@ import {
   getWorkScheduleDetails,
   upsertWorkScheduleDetails,
 } from "@/action/schedule"
+import { getAllOrganization_member } from "@/action/members"
+import { createMemberSchedule } from "@/action/members_schedule"
 
 // Day keys for iteration
 type DayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6
@@ -132,8 +134,8 @@ export default function WorkScheduleDetailsPage() {
   const params = useParams()
   const scheduleId = Number(params.id)
   const { format: timeFormat } = useTimeFormat()
-  const { timezone } = useOrgStore()
-  const organizationTimezone = timezone || "Asia/Jakarta"
+  const orgStore = useOrgStore()
+  const organizationTimezone = orgStore.timezone || "Asia/Jakarta"
 
   // State
   const [loading, setLoading] = useState(true)
@@ -144,6 +146,16 @@ export default function WorkScheduleDetailsPage() {
   const [daysDialogOpen, setDaysDialogOpen] = useState(false)
   const [tempDays, setTempDays] = useState<DayIndex[]>([])
   const [panelBump, setPanelBump] = useState(0)
+
+  // Assignment states (below two panels)
+  type MemberOption = { id: string; label: string; department: string }
+  const [members, setMembers] = useState<MemberOption[]>([])
+  const [memberSearch, setMemberSearch] = useState("")
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([])
+  const [assigning, setAssigning] = useState(false)
+  const [effectiveDate, setEffectiveDate] = useState<string>("")
+  const [departments, setDepartments] = useState<string[]>([])
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all")
 
   // Fetch schedule details
   const loadDetails = useCallback(async () => {
@@ -188,6 +200,74 @@ export default function WorkScheduleDetailsPage() {
   useEffect(() => {
     loadDetails()
   }, [loadDetails])
+
+// Load members for assignment, and init effective date to today
+useEffect(() => {
+  const init = async () => {
+    try {
+      const today = new Date()
+      const yyyy = today.getFullYear()
+      const mm = String(today.getMonth() + 1).padStart(2, '0')
+      const dd = String(today.getDate()).padStart(2, '0')
+      setEffectiveDate(`${yyyy}-${mm}-${dd}`)
+
+      const rawOrgId = orgStore.organizationId
+      let safeOrgId: number | undefined
+      if (typeof rawOrgId === 'number' && Number.isFinite(rawOrgId)) {
+        safeOrgId = rawOrgId
+      } else if (typeof rawOrgId === 'string') {
+        const parsed = Number(rawOrgId)
+        if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+          safeOrgId = parsed
+        }
+      }
+
+      const res = await getAllOrganization_member(safeOrgId)
+      if (!res.success) {
+        toast.error(res.message || 'Failed to load members')
+        setMembers([])
+        return
+      }
+
+      const data = Array.isArray(res.data) ? res.data : []
+      const opts: MemberOption[] = data
+        .filter((m: unknown) => {
+          const o = m as { id?: unknown }
+          const num = Number(o.id)
+          return Number.isFinite(num) && num > 0
+        })
+        .map((m: unknown) => {
+          const o = m as {
+            id?: unknown
+            user?: { first_name?: string | null; middle_name?: string | null; last_name?: string | null; email?: string | null; display_name?: string | null } | null
+            departments?: { name?: string | null } | null
+            groups?: { name?: string | null } | null
+          }
+          const idStr = String(Number(o.id))
+          const u = o.user || null
+          const labelBase =
+            u?.display_name?.trim()
+            || [u?.first_name, u?.middle_name, u?.last_name].filter(Boolean).join(' ').trim()
+            || u?.email
+            || 'No Name'
+                const dept = o.departments?.name || o.groups?.name || ''
+                return { id: idStr, label: labelBase, department: dept }
+              })
+            setMembers(opts)
+
+            // derive departments (groups) sorted, unique
+            const deptNames = Array.from(new Set(opts.map(m => m.department).filter(Boolean))).sort()
+            setDepartments(deptNames)
+            setDepartmentFilter("all")
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to load members'
+      console.error('[schedule-assign] load members:', e)
+      toast.error(msg)
+      setMembers([])
+    }
+  }
+  init()
+}, [orgStore.organizationId])
 
   // Selected rule
   const selectedRule = useMemo(
@@ -656,6 +736,161 @@ export default function WorkScheduleDetailsPage() {
               </div>
             </div>
           )}
+            </div>
+            </div>
+                {/* Assign Members to this Schedule */}
+      <div className="border rounded-lg p-4 bg-card">
+        <div className="flex items-center justify-between mb-3">
+          <div className="font-semibold">Assign members to this schedule</div>
+          <div className="text-xs text-muted-foreground">Schedule ID: {scheduleId}</div>
+        </div>
+
+        {/* Toolbar */}
+        <div className="flex flex-col md:flex-row gap-3 items-start md:items-center mb-3">
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={memberSearch}
+              onChange={(e) => setMemberSearch(e.target.value)}
+              placeholder="Cari member..."
+              className="pl-8"
+            />
+          </div>
+
+          {/* Group filter */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-muted-foreground">Group</label>
+            <select
+              className="appearance-none border rounded px-3 py-1 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+            >
+              <option value="all">All groups</option>
+              {departments.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-muted-foreground">Effective date</label>
+            <Input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} className="w-[160px]" />
+          </div>
+
+          {/* Add all members (respecting search + group filter) */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              const term = memberSearch.trim().toLowerCase()
+              const filtered = members.filter(m => {
+                const byGroup = departmentFilter === "all" || m.department === departmentFilter
+                const bySearch = term === "" || m.label.toLowerCase().includes(term) || m.department.toLowerCase().includes(term)
+                return byGroup && bySearch
+              })
+              if (filtered.length === 0) {
+                toast.info("No members match current filter")
+                return
+              }
+              const ids = filtered.map(m => m.id)
+              setSelectedMemberIds(prev => Array.from(new Set([...prev, ...ids])))
+            }}
+          >
+            Add all
+          </Button>
+          <Button
+            onClick={async () => {
+              if (!effectiveDate) {
+                toast.error('Effective date is required')
+                return
+              }
+              if (selectedMemberIds.length === 0) {
+                toast.error('Select at least one member')
+                return
+              }
+              try {
+                setAssigning(true)
+                let ok = 0
+                let fail = 0
+                for (const mid of selectedMemberIds) {
+                const res = await createMemberSchedule({
+                  organization_member_id: mid,
+                  work_schedule_id: String(scheduleId),
+                  shift_id: undefined,
+                  effective_date: effectiveDate,
+                  end_date: null,
+                  is_active: true,
+                })
+                  if (res.success) ok++; else fail++
+                }
+                if (ok > 0) toast.success(`Assigned to ${ok} member(s)`)
+                if (fail > 0) toast.error(`${fail} assignment(s) failed`)
+                if (ok > 0) setSelectedMemberIds([])
+              } catch (e) {
+                const msg = e instanceof Error ? e.message : 'Failed to assign schedule'
+                toast.error(msg)
+              } finally {
+                setAssigning(false)
+              }
+            }}
+            disabled={assigning || selectedMemberIds.length === 0}
+            className="ml-auto"
+          >
+            {assigning ? 'Assigning...' : `Assign to ${selectedMemberIds.length} member(s)`}
+          </Button>
+        </div>
+
+        {/* Quick list */}
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-48 overflow-y-auto pt-1">
+          {members
+            .filter(m => {
+              const term = memberSearch.toLowerCase()
+              const byGroup = departmentFilter === "all" || m.department === departmentFilter
+              const bySearch = term === "" || m.label.toLowerCase().includes(term) || m.department.toLowerCase().includes(term)
+              return byGroup && bySearch
+            })
+            .map(m => {
+                const selected = selectedMemberIds.includes(m.id)
+                return (
+                  <Button
+                    key={m.id}
+                    type="button"
+                    variant={selected ? 'default' : 'outline'}
+                    size="sm"
+                    className="justify-start"
+                    onClick={() => {
+                      setSelectedMemberIds(prev => selected ? prev.filter(x => x !== m.id) : [...prev, m.id])
+                    }}
+                    disabled={assigning}
+                  >
+                    {selected ? <Minus className="mr-1 h-3 w-3" /> : <Plus className="mr-1 h-3 w-3" />}
+                    <span className="truncate text-xs">{m.label}{m.department ? ` (${m.department})` : ''}</span>
+                  </Button>
+                )
+              })}
+          </div>
+
+          {/* Selected chips */}
+          <div className="pt-2 flex flex-wrap gap-2">
+            {selectedMemberIds.map(id => {
+              const mm = members.find(x => x.id === id)
+              const lbl = mm ? `${mm.label}${mm.department ? ` (${mm.department})` : ''}` : id
+              return (
+                <button
+                  key={id}
+                  className="text-xs px-2 py-1 rounded-full border hover:bg-muted/50"
+                  onClick={() => setSelectedMemberIds(prev => prev.filter(x => x !== id))}
+                  title="Remove"
+                >
+                  {lbl}
+                </button>
+              )
+            })}
+            {selectedMemberIds.length === 0 && (
+              <span className="text-xs text-muted-foreground">No members selected</span>
+            )}
+          </div>
         </div>
       </div>
 

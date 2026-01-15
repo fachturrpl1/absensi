@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
-import { ArrowRight, ChevronDown, Users, UserCheck, Clock, FileText, Calendar } from "lucide-react"
+import { ArrowRight, ChevronDown, Users, UserCheck, Clock, FileText, Calendar, Activity, BarChart3, Briefcase } from "lucide-react"
 import Link from "next/link"
 
 // Dummy Data for Activity Table
@@ -39,6 +39,83 @@ const pendingRequests = [
     { name: "Rudi Hermawan", type: "Lembur", date: "14 Jan 2026", status: "Pending" },
 ]
 
+// Small Widgets (dummy)
+const earnedWidgets = [
+    { label: "Earned this week", value: "Rp 3.450.000" },
+    { label: "Earned today", value: "Rp 550.000" },
+]
+const workedWidgets = [
+    { label: "Worked this week", value: "38h 25m" },
+    { label: "Worked today", value: "6h 40m" },
+]
+const projectsWorked = [
+    { label: "Projects worked", value: "5" },
+]
+const activityWidgets = [
+    { label: "Today's activity", value: "Normal" },
+    { label: "Weekly activity", value: "↑ 12%" },
+]
+
+// Large Widgets (dummy)
+type LateMissedItem = { name: string; shift: string; issue: string; lateBy?: string; missed?: boolean }
+const lateMissedShifts: LateMissedItem[] = [
+    { name: "Anisa Putri", shift: "15 Jan, 08:00–17:00", issue: "Late", lateBy: "15m" },
+    { name: "Bagus Wibowo", shift: "15 Jan, 08:00–17:00", issue: "Missed", missed: true },
+    { name: "Citra Lestari", shift: "15 Jan, 08:00–17:00", issue: "Late", lateBy: "7m" },
+]
+
+type ManualTimeItem = { name: string; date: string; change: string; note: string }
+const manualTime: ManualTimeItem[] = [
+    { name: "Dimas Pratama", date: "15 Jan", change: "+0:30", note: "Add meeting" },
+    { name: "Eka Sari", date: "15 Jan", change: "-0:10", note: "Trim break" },
+]
+
+type PaymentItem = { date: string; method: string; amount: string; status: "Paid" | "Processing" }
+const payments: PaymentItem[] = [
+    { date: "15 Jan", method: "Bank Transfer", amount: "Rp 12.500.000", status: "Paid" },
+    { date: "14 Jan", method: "Bank Transfer", amount: "Rp 8.200.000", status: "Processing" },
+]
+
+type TimeOffBalance = { policy: string; balance: string; used: string }
+const timeOffBalances: TimeOffBalance[] = [
+    { policy: "Cuti Tahunan", balance: "8d", used: "4d" },
+    { policy: "Sakit", balance: "Unlimited", used: "2d" },
+]
+
+type TimeOffRequest = { name: string; policy: string; range: string; status: "Pending" | "Approved" | "Rejected" }
+const timeOffRequested: TimeOffRequest[] = [
+    { name: "Farhan Akbar", policy: "Cuti Tahunan", range: "20–22 Jan", status: "Pending" },
+    { name: "Gita Puspa", policy: "Sakit", range: "15 Jan", status: "Pending" },
+]
+
+type TimesheetRow = { name: string; start: string; stop: string; total: string }
+const timesheetRows: TimesheetRow[] = [
+    { name: "Hasan Basri", start: "08:05", stop: "17:15", total: "8h 40m" },
+    { name: "Ika Nirmala", start: "08:20", stop: "17:00", total: "8h 10m" },
+]
+
+type TodoItem = { title: string; assignee: string; due: string; status: "Open" | "Done" }
+const todos: TodoItem[] = [
+    { title: "Lengkapi profil karyawan baru", assignee: "HR", due: "16 Jan", status: "Open" },
+    { title: "Review kebijakan lembur", assignee: "Admin", due: "18 Jan", status: "Open" },
+]
+
+type ProjectActivity = { project: string; hours: string; tasks: number }
+const currentProjectActivity: ProjectActivity[] = [
+    { project: "Website Revamp", hours: "12h", tasks: 6 },
+    { project: "Mobile App", hours: "7h", tasks: 3 },
+]
+
+const smallStats = [
+    { label: earnedWidgets[0].label, value: earnedWidgets[0].value, icon: BarChart3, color: "text-blue-600 bg-blue-100" },
+    { label: earnedWidgets[1].label, value: earnedWidgets[1].value, icon: BarChart3, color: "text-blue-600 bg-blue-100" },
+    { label: workedWidgets[0].label, value: workedWidgets[0].value, icon: Clock, color: "text-emerald-600 bg-emerald-100" },
+    { label: workedWidgets[1].label, value: workedWidgets[1].value, icon: Clock, color: "text-emerald-600 bg-emerald-100" },
+    { label: projectsWorked[0].label, value: projectsWorked[0].value, icon: Briefcase, color: "text-purple-600 bg-purple-100" },
+    { label: activityWidgets[0].label, value: activityWidgets[0].value, icon: Activity, color: "text-cyan-600 bg-cyan-100" },
+    { label: activityWidgets[1].label, value: activityWidgets[1].value, icon: Activity, color: "text-cyan-600 bg-cyan-100" },
+]
+
 export default function DashboardPage() {
     // Get today's date in Indonesian format
     const today = new Date().toLocaleDateString("id-ID", {
@@ -60,6 +137,22 @@ export default function DashboardPage() {
             {/* Top Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {summaryStats.map((stat) => (
+                    <Card key={stat.label} className="shadow-sm">
+                        <CardContent className="p-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground mb-1">{stat.label}</p>
+                                <h3 className="text-2xl font-bold">{stat.value}</h3>
+                            </div>
+                            <div className={`p-3 rounded-full ${stat.color}`}>
+                                <stat.icon className="w-6 h-6" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {smallStats.map((stat) => (
                     <Card key={stat.label} className="shadow-sm">
                         <CardContent className="p-6 flex items-center justify-between">
                             <div>
@@ -241,6 +334,191 @@ export default function DashboardPage() {
                     </Card>
                 </div>
             </div>
+        {/* Widgets Section */}
+        <div className="mt-8 space-y-6">
+            {/* Large widgets */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Late & Missed Shifts */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Late & Missed Shifts</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                            {lateMissedShifts.map((it, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-sm">
+                                    <div>
+                                        <div className="font-medium">{it.name}</div>
+                                        <div className="text-muted-foreground">{it.shift}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <Badge variant={it.missed ? "destructive" : "secondary"} className={it.missed ? "" : "bg-orange-100 text-orange-700"}>
+                                            {it.missed ? "Missed" : `Late ${it.lateBy ?? ""}`}
+                                        </Badge>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Manual Time */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Manual Time</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                            {manualTime.map((it, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-sm">
+                                    <div>
+                                        <div className="font-medium">{it.name}</div>
+                                        <div className="text-muted-foreground">{it.date} • {it.note}</div>
+                                    </div>
+                                    <div className="font-medium">{it.change}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Payments */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Payments</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                            {payments.map((p, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-sm">
+                                    <div>
+                                        <div className="font-medium">{p.date}</div>
+                                        <div className="text-muted-foreground">{p.method}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="font-semibold">{p.amount}</div>
+                                        <div className="text-xs text-muted-foreground">{p.status}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Time off balances */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Time off balances</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Policy</TableHead>
+                                    <TableHead>Balance</TableHead>
+                                    <TableHead>Used</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {timeOffBalances.map((b, idx) => (
+                                    <TableRow key={idx}>
+                                        <TableCell>{b.policy}</TableCell>
+                                        <TableCell>{b.balance}</TableCell>
+                                        <TableCell>{b.used}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+
+                {/* Time off requested */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Time off requested</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                            {timeOffRequested.map((r, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-sm">
+                                    <div>
+                                        <div className="font-medium">{r.name}</div>
+                                        <div className="text-muted-foreground">{r.policy} • {r.range}</div>
+                                    </div>
+                                    <Badge variant="outline" className="text-xs">{r.status}</Badge>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Timesheet */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Timesheet</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Member</TableHead>
+                                    <TableHead>Start</TableHead>
+                                    <TableHead>Stop</TableHead>
+                                    <TableHead>Total</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {timesheetRows.map((row, idx) => (
+                                    <TableRow key={idx}>
+                                        <TableCell>{row.name}</TableCell>
+                                        <TableCell>{row.start}</TableCell>
+                                        <TableCell>{row.stop}</TableCell>
+                                        <TableCell>{row.total}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+
+                {/* To-dos */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">To-dos</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                            {todos.map((t, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-sm">
+                                    <div>
+                                        <div className="font-medium">{t.title}</div>
+                                        <div className="text-muted-foreground">{t.assignee} • Due {t.due}</div>
+                                    </div>
+                                    <Badge variant="secondary" className="bg-blue-100 text-blue-700">{t.status}</Badge>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Current project activity */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Current project activity</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                            {currentProjectActivity.map((p, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-sm">
+                                    <div className="font-medium">{p.project}</div>
+                                    <div className="text-right text-muted-foreground">{p.hours} • {p.tasks} tasks</div>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
+    </div>
     )
 }
