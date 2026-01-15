@@ -419,9 +419,6 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={getRowKey ? getRowKey(row.original, index) : row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  style={{
-                    backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
-                  }}
                   className="transition-colors custom-hover-row cursor-pointer"
                 >
                   {row.getVisibleCells().map((cell) => (
@@ -473,7 +470,15 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-4">
       <style jsx global>{`
-        /* Nuclear option to override any conflicting blue hover */
+        /* Zebra striping */
+        html body .custom-hover-row:nth-child(even) {
+          background-color: #f3f4f6;
+        }
+        html body .dark .custom-hover-row:nth-child(even) {
+          background-color: #1f2937;
+        }
+
+        /* Hover effect */
         html body .custom-hover-row:hover,
         html body .custom-hover-row:hover > td {
           background-color: #d1d5db !important; /* dark gray hover */
