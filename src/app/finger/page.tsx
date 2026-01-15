@@ -840,126 +840,184 @@ export default function FingerPage() {
                 background-color: #374151 !important;
               }
             `}</style>
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-              <div className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border shadow-sm shrink-0">
-                <Monitor className="w-4 h-4 text-primary" />
-                <div className="flex items-center gap-2">
-                  {!mounted || loadingDevices ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">Loading devices...</span>
-                    </div>
-                  ) : devices.length === 0 ? (
-                    <span className="text-sm font-medium text-destructive">No devices found</span>
-                  ) : (
-                    <Select
-                      value={selectedDevice}
-                      onValueChange={setSelectedDevice}
-                      disabled={!mounted || loadingDevices || devices.length === 0}
-                    >
-                      <SelectTrigger className="h-6 border-0 shadow-none p-0 font-mono font-semibold text-sm hover:bg-transparent focus:ring-0">
-                        <SelectValue placeholder="Pilih...">
-                          {selectedDevice && devices.find(d => d.device_code === selectedDevice)?.device_code.replace(/_/g, ' ')}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="w-[320px]">
-                        {devices.length === 0 ? (
-                          <div className="p-4 text-center text-muted-foreground">
-                            <Monitor className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                            <p className="text-sm font-medium">No active device</p>
-                            <p className="text-xs mt-1">Contact the administrator</p>
-                          </div>
-                        ) : (
-                          devices.map((device, index) => {
-                            const deviceKey = device.device_code || `device-${index}`
-                            const deviceValue = device.device_code || ''
-
-                            return (
-                              <SelectItem
-                                key={deviceKey}
-                                value={deviceValue}
-                                className="cursor-pointer"
-                                disabled={!device.device_code}
-                              >
-                                <div className="flex items-start gap-3 py-1">
-                                  <div className="p-2 rounded-md bg-primary/10 mt-0.5 shrink-0">
-                                    <Monitor className="w-4 h-4 text-primary" />
-                                  </div>
-                                  <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                                    <span className="font-semibold text-sm font-mono">
-                                      {device.device_code || '(No Code)'}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground truncate">
-                                      {device.device_name || '(No Name)'}
-                                    </span>
-                                    {device.location && (
-                                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                        📍 {device.location}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </SelectItem>
-                            )
-                          })
-                        )}
-                      </SelectContent>
-                    </Select>
-                  )}
+            {/* =========================================
+                MOBILE TOOLBAR (Visible only on Mobile)
+                Layout: Stacked
+                1. Device Selector
+                2. Search + Refresh
+                3. Filters (Grid)
+               ========================================= */}
+            <div className="flex flex-col gap-4 md:hidden">
+              {/* Row 1: Device Selector (Moved to Top) */}
+              <div className="w-full">
+                <div className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border shadow-sm w-full">
+                  <Monitor className="w-4 h-4 text-primary shrink-0" />
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {!mounted || loadingDevices ? (
+                      <span className="text-sm text-muted-foreground">Loading...</span>
+                    ) : devices.length === 0 ? (
+                      <span className="text-sm text-destructive">No devices</span>
+                    ) : (
+                      <Select value={selectedDevice} onValueChange={setSelectedDevice} disabled={!mounted || loadingDevices || devices.length === 0}>
+                        <SelectTrigger className="h-6 border-0 shadow-none p-0 font-semibold text-sm bg-transparent w-full gap-2">
+                          <SelectValue placeholder="Select Device">
+                            {selectedDevice ? (devices.find(d => d.device_code === selectedDevice)?.device_code?.replace(/_/g, ' ') || selectedDevice) : "Select Device"}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="w-[300px]">
+                          {devices.map((device, index) => (
+                            <SelectItem key={device.device_code || index} value={device.device_code || ''} disabled={!device.device_code}>
+                              {device.device_code}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => {
-                    fetchDevices()
-                    fetchMembers()
-                  }}
-                  disabled={isLoading || loadingDevices}
-                  className="shrink-0"
-                >
+              {/* Row 2: Search & Refresh */}
+              <div className="flex gap-2 items-center w-full">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by Nick name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 w-full"
+                  />
+                </div>
+                <Button variant="outline" size="icon" onClick={() => { fetchDevices(); fetchMembers(); }} disabled={isLoading || loadingDevices} className="shrink-0">
                   <RefreshCw className={cn("w-4 h-4", (isLoading || loadingDevices) && "animate-spin")} />
                 </Button>
               </div>
 
+              {/* Row 3: Filters */}
+              <div className="grid grid-cols-2 gap-2 w-full">
+                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All Groups" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Groups</SelectItem>
+                    {uniqueDepartments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as FilterStatus)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="complete">Complete</SelectItem>
+                    <SelectItem value="partial">Partial</SelectItem>
+                    <SelectItem value="unregistered">Unregistered</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* =========================================
+                DESKTOP TOOLBAR (Visible only on Desktop)
+                Layout: Single Row
+                1. Device Selector
+                2. Refresh
+                3. Search (Wide)
+                4. Group Filter
+                5. Status Filter
+               ========================================= */}
+            <div className="hidden md:flex md:flex-row md:items-center md:gap-6">
+
+              {/* 1. Device Selector (Left) */}
+              <div className="w-auto">
+                <div className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border shadow-sm">
+                  <Monitor className="w-4 h-4 text-primary shrink-0" />
+                  <div className="flex items-center gap-2 min-w-0">
+                    {!mounted || loadingDevices ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    ) : devices.length === 0 ? (
+                      <span className="text-sm text-destructive">No devices</span>
+                    ) : (
+                      <Select value={selectedDevice} onValueChange={setSelectedDevice} disabled={!mounted || loadingDevices || devices.length === 0}>
+                        <SelectTrigger className="h-6 border-0 shadow-none p-0 font-semibold text-sm bg-transparent gap-2 w-[100px]">
+                          <SelectValue placeholder="Select Device">
+                            {selectedDevice ? (
+                              <span className="truncate block max-w-[90px]">
+                                {devices.find(d => d.device_code === selectedDevice)?.device_code?.replace(/_/g, ' ') || selectedDevice}
+                              </span>
+                            ) : "Select Device"}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="w-[320px]">
+                          {devices.map((device, index) => (
+                            <SelectItem key={device.device_code || index} value={device.device_code || ''} className="cursor-pointer" disabled={!device.device_code}>
+                              <div className="flex items-start gap-3 py-1">
+                                <div className="p-2 rounded-md bg-primary/10 mt-0.5 shrink-0">
+                                  <Monitor className="w-4 h-4 text-primary" />
+                                </div>
+                                <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                                  <span className="font-semibold text-sm font-mono">{device.device_code || '(No Code)'}</span>
+                                  <span className="text-xs text-muted-foreground truncate">{device.device_name || '(No Name)'}</span>
+                                  {device.location && <span className="text-xs text-muted-foreground">📍 {device.location}</span>}
+                                </div>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Refresh Button */}
+              <Button variant="outline" size="icon" onClick={() => { fetchDevices(); fetchMembers(); }} disabled={isLoading || loadingDevices} className="shrink-0">
+                <RefreshCw className={cn("w-4 h-4", (isLoading || loadingDevices) && "animate-spin")} />
+              </Button>
+
+              {/* 3. Search Bar (Flex-1) */}
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by Nick name, Full name, or Groups"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-full"
                 />
               </div>
 
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                <SelectTrigger className="w-full sm:w-[250px]">
-                  <SelectValue placeholder="Filter Department..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Groups</SelectItem>
-                  {uniqueDepartments.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* 4. Filter Group */}
+              <div className="w-[180px]">
+                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All Groups" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Groups</SelectItem>
+                    {uniqueDepartments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as FilterStatus)}>
-                <SelectTrigger className="w-full sm:w-[250px]">
-                  <SelectValue placeholder="Filter Status..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="complete">Complete (2 Fingers)</SelectItem>
-                  <SelectItem value="partial">Partial (1 Finger)</SelectItem>
-                  <SelectItem value="unregistered">Not Registered</SelectItem>
-                </SelectContent>
-              </Select>
-
+              {/* 5. Filter Status */}
+              <div className="w-[180px]">
+                <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as FilterStatus)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="complete">Complete</SelectItem>
+                    <SelectItem value="partial">Partial</SelectItem>
+                    <SelectItem value="unregistered">Unregistered</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </div>

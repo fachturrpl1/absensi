@@ -285,6 +285,12 @@ export default function PositionsPage() {
     return (
         <div className="flex flex-1 flex-col gap-4 w-full">
             <style jsx global>{`
+                html body .custom-hover-row:nth-child(even) {
+                    background-color: #f3f4f6;
+                }
+                html body.dark .custom-hover-row:nth-child(even) {
+                    background-color: #1f2937;
+                }
                 html body .custom-hover-row:hover,
                 html body .custom-hover-row:hover > td {
                     background-color: #d1d5db !important; /* dark gray hover */
@@ -514,12 +520,9 @@ export default function PositionsPage() {
                                                         <TableCell colSpan={5} className="text-center text-muted-foreground">No positions found</TableCell>
                                                     </TableRow>
                                                 ) : (
-                                                    paginatedData.map((position, index) => (
+                                                    paginatedData.map((position) => (
                                                         <TableRow
                                                             key={position.id}
-                                                            style={{
-                                                                backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
-                                                            }}
                                                             className="transition-colors custom-hover-row cursor-pointer"
                                                         >
                                                             <TableCell>{position.code}</TableCell>

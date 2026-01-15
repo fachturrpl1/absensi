@@ -148,6 +148,15 @@ export function GroupsTable({ groups, isLoading = false, onDelete, onEdit }: Gro
   return (
     <div className="w-full space-y-4">
       <style jsx global>{`
+        /* Zebra striping */
+        html body .custom-hover-row:nth-child(even) {
+          background-color: #f3f4f6;
+        }
+        html body.dark .custom-hover-row:nth-child(even) {
+          background-color: #1f2937; /* dark mode muted */
+        }
+
+        /* Hover effect */
         html body .custom-hover-row:hover,
         html body .custom-hover-row:hover > td {
           background-color: #d1d5db !important; /* dark gray hover */
@@ -305,12 +314,9 @@ export function GroupsTable({ groups, isLoading = false, onDelete, onEdit }: Gro
                 </td>
               </tr>
             ) : (
-              paginatedData.map((group, index) => (
+              paginatedData.map((group) => (
                 <tr
                   key={group.id}
-                  style={{
-                    backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
-                  }}
                   className="border-b transition-colors custom-hover-row cursor-pointer"
                 >
                   {visibleColumns.code && (
