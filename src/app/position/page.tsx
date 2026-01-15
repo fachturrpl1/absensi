@@ -520,7 +520,7 @@ export default function PositionsPage() {
                                                         <TableCell colSpan={5} className="text-center text-muted-foreground">No positions found</TableCell>
                                                     </TableRow>
                                                 ) : (
-                                                    paginatedData.map((position, index) => (
+                                                    paginatedData.map((position) => (
                                                         <TableRow
                                                             key={position.id}
                                                             className="transition-colors custom-hover-row cursor-pointer"

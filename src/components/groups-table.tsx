@@ -314,7 +314,7 @@ export function GroupsTable({ groups, isLoading = false, onDelete, onEdit }: Gro
                 </td>
               </tr>
             ) : (
-              paginatedData.map((group, index) => (
+              paginatedData.map((group) => (
                 <tr
                   key={group.id}
                   className="border-b transition-colors custom-hover-row cursor-pointer"

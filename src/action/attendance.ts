@@ -34,22 +34,12 @@ async function resolveScheduleRuleForMemberDate(
     return null;
   }
 
-  const workScheduleId = ms[0].work_schedule_id as number | string | null;
+  const workScheduleId = ms[0]?.work_schedule_id as number | string | null;
   if (!workScheduleId) return null;
 
   // Fetch schedule detail for day of week
   const dayOfWeek = getDayOfWeek(dateISO);
-  type DetailRow = {
-    day_of_week: number;
-    is_working_day: boolean;
-    start_time: string | null;
-    end_time: string | null;
-    core_hours_start: string | null;
-    core_hours_end: string | null;
-    grace_in_minutes: number | null;
-    grace_out_minutes: number | null;
-    is_active: boolean | null;
-  };
+
   const { data: det, error: detErr } = await supabase
     .from('work_schedule_details')
     .select('day_of_week,is_working_day,start_time,end_time,core_hours_start,core_hours_end,grace_in_minutes,grace_out_minutes,is_active')
@@ -407,10 +397,10 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     }
   }
   if (needCount) {
-  let countQuery = supabase
-    .from('attendance_records')
-    .select(`id, ${countRel}`, { count: 'exact', head: true })
-    .eq('organization_members.organization_id', effectiveOrgId);
+    let countQuery = supabase
+      .from('attendance_records')
+      .select(`id, ${countRel}`, { count: 'exact', head: true })
+      .eq('organization_members.organization_id', effectiveOrgId);
     if (effDateFrom) countQuery = countQuery.gte('attendance_date', effDateFrom);
     if (effDateTo) countQuery = countQuery.lte('attendance_date', effDateTo);
     if (status && status !== 'all') countQuery = countQuery.eq('status', status);
@@ -546,7 +536,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     const profile: MemberProfile | null = Array.isArray(profileObj) ? (profileObj[0] ?? null) : (profileObj ?? null);
     const biodataObj = mObj?.biodata;
     const biodata: Biodata | null = Array.isArray(biodataObj) ? (biodataObj[0] ?? null) : (biodataObj ?? null);
-    
+
     // Try user_profiles first
     const displayName = (profile?.display_name ?? '').trim();
     const firstName = profile?.first_name ?? '';
@@ -554,11 +544,11 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     const email = (profile?.email ?? '').trim();
     const searchName = (profile?.search_name ?? '').trim();
     const fullName = `${firstName} ${lastName}`.trim();
-    
+
     // Fallback to biodata if user_profiles has no name
     const biodataNama = (biodata?.nama ?? '').trim();
     const biodataNickname = (biodata?.nickname ?? '').trim();
-    
+
     const effectiveName = displayName || fullName || email || searchName || biodataNama || biodataNickname;
     const deptObj = mObj?.departments;
     const departmentName = Array.isArray(deptObj) ? (deptObj[0]?.name ?? '') : (deptObj?.name ?? '');
