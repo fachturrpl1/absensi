@@ -21,7 +21,7 @@ import {
   upsertWorkScheduleDetails,
 } from "@/action/schedule"
 import { getAllOrganization_member } from "@/action/members"
-import { createMemberSchedule } from "@/action/members_schedule"
+import { createMemberSchedulesBulk } from "@/action/members_schedule"
 
 // Day keys for iteration
 type DayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6
@@ -152,7 +152,6 @@ export default function WorkScheduleDetailsPage() {
   const [members, setMembers] = useState<MemberOption[]>([])
   const [memberSearch, setMemberSearch] = useState("")
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([])
-  const [assigning, setAssigning] = useState(false)
   const [effectiveDate, setEffectiveDate] = useState<string>("")
   const [departments, setDepartments] = useState<string[]>([])
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
@@ -366,7 +365,25 @@ useEffect(() => {
         return
       }
 
-      toast.success(`Schedule saved successfully! (${res.data?.length || 0} days)`)
+      // Jadwal berhasil disimpan → lanjut batch assign (opsional)
+      let assignedInfo = ""
+      if (selectedMemberIds.length > 0) {
+        if (!effectiveDate) {
+          assignedInfo = " | assign skipped (effective date empty)"
+        } else {
+          const bulk = await createMemberSchedulesBulk(String(scheduleId), selectedMemberIds, effectiveDate)
+          if (!bulk.success) {
+            assignedInfo = " | assign failed"
+            toast.error(bulk.message || "Failed to assign members")
+          } else {
+            const inserted = bulk.data?.inserted ?? 0
+            const skipped = bulk.data?.skipped ?? 0
+            assignedInfo = ` | assigned: ${inserted}${skipped > 0 ? `, skipped: ${skipped}` : ""}`
+            if (skipped > 0) toast.info(`${skipped} member(s) already had active schedule`)
+          }
+        }
+      }
+
       await loadDetails() // refresh dari DB agar UI sesuai DB
     } catch (error) {
       console.error('[saveAll] Exception:', error)
@@ -417,7 +434,7 @@ useEffect(() => {
               Timezone: <strong>{getTimezoneLabel(organizationTimezone)}</strong>
               <span className="ml-1 text-xs">({getTimezoneOffset(organizationTimezone)})</span>
             </span>
-            {isDirty && (
+            {(isDirty || selectedMemberIds.length > 0) && (
               <Badge variant="outline" className="ml-auto text-orange-600 border-orange-300">
                 Unsaved Changes
               </Badge>
@@ -739,7 +756,7 @@ useEffect(() => {
             </div>
             </div>
                 {/* Assign Members to this Schedule */}
-      <div className="border rounded-lg p-4 bg-card">
+      <div className="border rounded-lg p-4 bg-white">
         <div className="flex items-center justify-between mb-3">
           <div className="font-semibold">Assign members to this schedule</div>
           <div className="text-xs text-muted-foreground">Schedule ID: {scheduleId}</div>
@@ -752,7 +769,7 @@ useEffect(() => {
             <Input
               value={memberSearch}
               onChange={(e) => setMemberSearch(e.target.value)}
-              placeholder="Cari member..."
+              placeholder="Search member to add..."
               className="pl-8"
             />
           </div>
@@ -770,11 +787,6 @@ useEffect(() => {
                 <option key={d} value={d}>{d}</option>
               ))}
             </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-foreground">Effective date</label>
-            <Input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} className="w-[160px]" />
           </div>
 
           {/* Add all members (respecting search + group filter) */}
@@ -796,48 +808,13 @@ useEffect(() => {
               setSelectedMemberIds(prev => Array.from(new Set([...prev, ...ids])))
             }}
           >
-            Add all
+            <Plus className="mr-1 h-3 w-3" />Add all
           </Button>
-          <Button
-            onClick={async () => {
-              if (!effectiveDate) {
-                toast.error('Effective date is required')
-                return
-              }
-              if (selectedMemberIds.length === 0) {
-                toast.error('Select at least one member')
-                return
-              }
-              try {
-                setAssigning(true)
-                let ok = 0
-                let fail = 0
-                for (const mid of selectedMemberIds) {
-                const res = await createMemberSchedule({
-                  organization_member_id: mid,
-                  work_schedule_id: String(scheduleId),
-                  shift_id: undefined,
-                  effective_date: effectiveDate,
-                  end_date: null,
-                  is_active: true,
-                })
-                  if (res.success) ok++; else fail++
-                }
-                if (ok > 0) toast.success(`Assigned to ${ok} member(s)`)
-                if (fail > 0) toast.error(`${fail} assignment(s) failed`)
-                if (ok > 0) setSelectedMemberIds([])
-              } catch (e) {
-                const msg = e instanceof Error ? e.message : 'Failed to assign schedule'
-                toast.error(msg)
-              } finally {
-                setAssigning(false)
-              }
-            }}
-            disabled={assigning || selectedMemberIds.length === 0}
-            className="ml-auto"
-          >
-            {assigning ? 'Assigning...' : `Assign to ${selectedMemberIds.length} member(s)`}
-          </Button>
+
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-muted-foreground">Effective date</label>
+            <Input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} className="w-[160px]" />
+          </div>
         </div>
 
         {/* Quick list */}
@@ -856,40 +833,47 @@ useEffect(() => {
                   <Button
                     key={m.id}
                     type="button"
-                    variant={selected ? 'default' : 'outline'}
+                    variant="outline"
                     size="sm"
-                    className="justify-start"
+                    className={`justify-start h-8 rounded-full border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 shadow-sm ${selected ? 'ring-1 ring-blue-300' : ''}`}
                     onClick={() => {
                       setSelectedMemberIds(prev => selected ? prev.filter(x => x !== m.id) : [...prev, m.id])
                     }}
-                    disabled={assigning}
                   >
-                    {selected ? <Minus className="mr-1 h-3 w-3" /> : <Plus className="mr-1 h-3 w-3" />}
+                    <Plus className="mr-1 h-3 w-3" />
                     <span className="truncate text-xs">{m.label}{m.department ? ` (${m.department})` : ''}</span>
                   </Button>
                 )
               })}
           </div>
 
-          {/* Selected chips */}
-          <div className="pt-2 flex flex-wrap gap-2">
-            {selectedMemberIds.map(id => {
-              const mm = members.find(x => x.id === id)
-              const lbl = mm ? `${mm.label}${mm.department ? ` (${mm.department})` : ''}` : id
-              return (
-                <button
-                  key={id}
-                  className="text-xs px-2 py-1 rounded-full border hover:bg-muted/50"
-                  onClick={() => setSelectedMemberIds(prev => prev.filter(x => x !== id))}
-                  title="Remove"
-                >
-                  {lbl}
-                </button>
-              )
-            })}
-            {selectedMemberIds.length === 0 && (
-              <span className="text-xs text-muted-foreground">No members selected</span>
-            )}
+            {/* Selected chips */}
+            <div className="pt-2">
+              <div className="text-xs font-semibold text-muted-foreground mb-1">
+                Selected Member(s) ({selectedMemberIds.length})
+              </div>
+              <div className="max-h-48 overflow-y-auto overscroll-contain border rounded-md p-2 bg-white">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {selectedMemberIds.map(id => {
+                    const mm = members.find(x => x.id === id)
+                    const lbl = mm ? `${mm.label}${mm.department ? ` (${mm.department})` : ''}` : id
+                    return (
+                      <button
+                        key={id}
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 w-full rounded-full border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                        onClick={() => setSelectedMemberIds(prev => prev.filter(x => x !== id))}
+                        title="Remove"
+                      >
+                        <Minus className="h-3 w-3" />
+                        <span className="truncate">{lbl}</span>
+                      </button>
+                    )
+                  })}
+                  {selectedMemberIds.length === 0 && (
+                    <span className="text-xs text-muted-foreground">No members selected</span>
+                  )}
+                </div>
+              </div>
           </div>
         </div>
       </div>
@@ -914,11 +898,11 @@ useEffect(() => {
         </Button>
         <Button
           onClick={saveAll}
-          disabled={!isDirty || saving}
+          disabled={((!isDirty && selectedMemberIds.length === 0) || saving)}
           className="gap-2 min-w-[140px]"
         >
           <Save className="h-4 w-4" />
-          {saving ? "Saving..." : "Save Schedule"}
+          {saving ? "Saving..." : "Save"}
         </Button>
       </div>
     </div>
