@@ -362,6 +362,16 @@ function ModernAttendanceListCloned() {
 
   return (
     <>
+      <style jsx global>{`
+        html body .custom-hover-row:hover,
+        html body .custom-hover-row:hover > td {
+          background-color: #d1d5db !important; /* dark gray hover */
+        }
+        html body.dark .custom-hover-row:hover,
+        html body.dark .custom-hover-row:hover > td {
+          background-color: #374151 !important;
+        }
+      `}</style>
       {SHOW_LOCAL_TOOLBAR && (
         <div className="space-y-6">
           <Card className="border border-gray-200 shadow-sm">
