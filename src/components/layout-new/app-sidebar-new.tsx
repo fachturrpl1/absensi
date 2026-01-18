@@ -120,9 +120,9 @@ const getSidebarGroups = (): NavGroup[] => [
       {
         title: 'Timesheets',
         icon: Clock3,
-        subItems:[
-          { title: 'View & edit', url: '/', icon:Columns2},
-          { title: 'Approvals', url: '/', icon:FileUser },
+        subItems: [
+          { title: 'View & edit', url: '/timesheets/view-edit', icon: Columns2 },
+          { title: 'Approvals', url: '/timesheets/approvals', icon: FileUser },
         ]
       },
       {
@@ -136,24 +136,24 @@ const getSidebarGroups = (): NavGroup[] => [
         ],
       },
       {
-        title:'Activity',
+        title: 'Activity',
         icon: TrendingUp,
-        subItems:[
-          { title: 'Screenshots', url: '/', icon:Fullscreen},
-          { title: 'Apps', url: '/', icon:Folder },
-          { title: 'URLs', url: '/', icon:LinkIcon },
+        subItems: [
+          { title: 'Screenshots', url: '/activity/screenshots', icon: Fullscreen },
+          { title: 'Apps', url: '/activity/apps', icon: Folder },
+          { title: 'URLs', url: '/activity/urls', icon: LinkIcon },
         ]
       },
       {
-        title:'Insight',
-        icon:Lightbulb,
-        subItems:[
-          { title: 'Hightlights', url:'/', icon:HighlighterIcon},
-          { title: 'Performance', url: '/', icon:Gauge},
-          { title: 'Timeline', url: '/', icon:History},
-          { title: 'Unusual Activity', url: '/', icon:Activity},
-          { title: 'Smart Notifications', url: '/', icon:Bell},
-          { title: 'Output', url: '/', icon:SquareArrowOutUpRight },
+        title: 'Insight',
+        icon: Lightbulb,
+        subItems: [
+          { title: 'Hightlights', url: '/insight/highlights', icon: HighlighterIcon },
+          { title: 'Performance', url: '/insight/performance', icon: Gauge },
+          { title: 'Timeline', url: '/insight/timeline', icon: History },
+          { title: 'Unusual Activity', url: '/insight/unusual-activity', icon: Activity },
+          { title: 'Smart Notifications', url: '/insight/smart-notifications', icon: Bell },
+          { title: 'Output', url: '/insight/output', icon: SquareArrowOutUpRight },
         ]
       },
       {
@@ -165,12 +165,12 @@ const getSidebarGroups = (): NavGroup[] => [
         ],
       },
       {
-        title:'Project management',
-        icon:Folder,
-        subItems:[
-          { title: 'Projects', url: '/', icon:Folder},
-          { title: 'Tasks', url: '/', icon:ClipboardList},
-          { title: 'Clients',url:'/', icon:MousePointer2}
+        title: 'Project management',
+        icon: Folder,
+        subItems: [
+          { title: 'Projects', url: '/projects/list', icon: Folder },
+          { title: 'Tasks', url: '/projects/tasks', icon: ClipboardList },
+          { title: 'Clients', url: '/projects/clients', icon: MousePointer2 }
         ]
       },
       {
@@ -182,15 +182,15 @@ const getSidebarGroups = (): NavGroup[] => [
         ],
       },
       {
-        title:'Reports',
-        icon:ClipboardList,
-        subItems:[
-          { title: 'Time & activity', url: '/', icon:ClockPlus},
-          { title: 'Activity', url: '/', icon:Activity},
-          { title: 'Daily totals', url: '/', icon:CalendarCheck2},
-          { title: 'Project management', url: '/', icon:Folder},
-          { title: 'All reports', url: '/', icon:Notebook},
-          { title: 'Customized reports', url: '/', icon:LucideNotebookText},
+        title: 'Reports',
+        icon: ClipboardList,
+        subItems: [
+          { title: 'Time & activity', url: '/reports/time-activity', icon: ClockPlus },
+          { title: 'Activity', url: '/reports/activity-report', icon: Activity },
+          { title: 'Daily totals', url: '/reports/daily-totals', icon: CalendarCheck2 },
+          { title: 'Project management', url: '/reports/project-reports', icon: Folder },
+          { title: 'All reports', url: '/reports/all', icon: Notebook },
+          { title: 'Customized reports', url: '/reports/custom', icon: LucideNotebookText },
         ]
       },
       {

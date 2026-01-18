@@ -11,6 +11,17 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/utils/supabase/client"
 import { Input } from "@/components/ui/input"
+import { toast } from "sonner"
+import { deleteAttendanceRecord, deleteMultipleAttendanceRecords, updateAttendanceRecord } from "@/action/attendance"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog"
 import {
   Select,
   SelectContent,
@@ -91,9 +102,20 @@ function ModernAttendanceListCloned() {
   // Tambahan untuk toolbar
   const [departments, setDepartments] = useState<string[]>([])
   const [isMounted, setIsMounted] = useState(false)
-  const [isSubmitting] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const SHOW_LOCATION = false
 
+  // Confirm dialog state
+  type ConfirmState = { mode: "single" | "bulk"; id?: string }
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmState, setConfirmState] = useState<ConfirmState | null>(null)
+
+  // Edit dialog state
+  const [editOpen, setEditOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<AttendanceListItem | null>(null)
+  const [editIn, setEditIn] = useState<string>("")
+  const [editOut, setEditOut] = useState<string>("")
+  const [editRemarks, setEditRemarks] = useState<string>("")
   // const fetchRef = useRef<(opts?: { mode?: "full" | "single"; id?: string }) => void>(() => {})
   // useEffect(() => { fetchRef.current = fetchData }, [fetchData])
 
@@ -281,11 +303,81 @@ function ModernAttendanceListCloned() {
   }, [dateRange.from, dateRange.to, statusFilter, departmentFilter, searchQuery, itemsPerPage, currentPage, selectedOrgId, orgStore.organizationId])
 
   // Handler Selected Actions (sementara no-op; akan diisi setelah list pindah)
+  // Handler Selected Actions
   const handleEditClick = () => {
-    // no-op: akan diimplementasi setelah UI list & selection dipindah
+    if (selectedRecords.length === 1) {
+      const id = selectedRecords[0]
+      const rec = attendanceData.find(r => r.id === id) || null
+      if (!rec) {
+        toast.error("Selected record not found")
+        return
+      }
+      // Prefill form
+      setEditTarget(rec)
+      setEditIn(rec.checkIn ?? "")
+      setEditOut(rec.checkOut ?? "")
+      setEditRemarks("") // tidak ada kolom remarks di list, default kosong
+      setEditOpen(true)
+    } else if (selectedRecords.length > 1) {
+      toast.info("Bulk edit belum didukung")
+    } else {
+      toast.info("Pilih satu record untuk diedit")
+    }
   }
-  const handleDeleteMultiple = () => {
-    // no-op: akan diimplementasi setelah UI list & selection dipindah
+
+  const handleEditSingle = (rec: AttendanceListItem) => {
+    setEditTarget(rec)
+    setEditIn(rec.checkIn ?? "")
+    setEditOut(rec.checkOut ?? "")
+    setEditRemarks("")
+    setEditOpen(true)
+  }
+
+  const submitEdit = async () => {
+    if (!editTarget) return
+    try {
+      setIsSubmitting(true)
+      const res = await updateAttendanceRecord({
+        id: editTarget.id,
+        actual_check_in: editIn.trim() === "" ? null : editIn.trim(),
+        actual_check_out: editOut.trim() === "" ? null : editOut.trim(),
+        remarks: editRemarks.trim() === "" ? null : editRemarks.trim(),
+      })
+      if (!res.success) {
+        toast.error(res.message || "Failed to update record")
+        return
+      }
+      // Optimistic update
+      setAttendanceData(prev => {
+        const next = prev.map(r => {
+          if (r.id !== editTarget.id) return r
+          return {
+            ...r,
+            checkIn: editIn.trim() === "" ? null : editIn.trim(),
+            checkOut: editOut.trim() === "" ? null : editOut.trim(),
+            // status akan ikut dikoreksi oleh realtime/refresh; biarkan server hitung
+          }
+        })
+        return next
+      })
+      toast.success("Record updated")
+      setEditOpen(false)
+      setEditTarget(null)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to update record"
+      toast.error(msg)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteMultiple = async () => {
+    if (selectedRecords.length === 0) {
+      toast.info("No records selected")
+      return
+    }
+    setConfirmState({ mode: "bulk" })
+    setConfirmOpen(true)
   }
 
   useEffect(() => {
@@ -348,11 +440,12 @@ function ModernAttendanceListCloned() {
       setSelectedRecords(attendanceData.map((r) => r.id))
     }
   }
-  const handleEditSingle = (_rec: AttendanceListItem) => {
-    // no-op sementara
-  }
-  const handleDeleteClick = (_id: string) => {
-    // no-op sementara
+
+
+
+  const handleDeleteClick = (id: string) => {
+    setConfirmState({ mode: "single", id })
+    setConfirmOpen(true)
   }
 
   // Flag sementara agar UI TIDAK berubah (toolbar baru tidak ditampilkan)
@@ -707,6 +800,114 @@ function ModernAttendanceListCloned() {
           </Card>
         </div>
       )}
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmState?.mode === "bulk" ? "Delete selected records" : "Delete attendance record"}
+        description={
+          confirmState?.mode === "bulk"
+            ? `This will delete ${selectedRecords.length} selected record(s). This action cannot be undone.`
+            : "This will delete the selected attendance record. This action cannot be undone."
+        }
+        confirmText="Delete"
+        destructive
+        loadingText="Deleting..."
+        onConfirm={async () => {
+          if (!confirmState) return
+          try {
+            setIsSubmitting(true)
+            if (confirmState.mode === "bulk") {
+              const res = await deleteMultipleAttendanceRecords(selectedRecords)
+              if (!res.success) {
+                toast.error(res.message || "Failed to delete selected records")
+                return
+              }
+              setAttendanceData(prev => {
+                const next = prev.filter(r => !selectedRecords.includes(r.id))
+                const removed = prev.length - next.length
+                setTotalItems(t => Math.max(0, t - removed))
+                return next
+              })
+              setSelectedRecords([])
+              toast.success("Selected records deleted")
+            } else if (confirmState.mode === "single" && confirmState.id) {
+              const id = confirmState.id
+              const res = await deleteAttendanceRecord(id)
+              if (!res.success) {
+                toast.error(res.message || "Failed to delete record")
+                return
+              }
+              setAttendanceData(prev => {
+                const next = prev.filter(r => r.id !== id)
+                const removed = prev.length - next.length
+                if (removed > 0) setTotalItems(t => Math.max(0, t - removed))
+                return next
+              })
+              setSelectedRecords(prev => prev.filter(x => x !== id))
+              toast.success("Record deleted")
+            }
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : "Failed to delete"
+            toast.error(msg)
+          } finally {
+            setIsSubmitting(false)
+            setConfirmState(null)
+          }
+        }}
+      />
+      <Dialog open={editOpen} onOpenChange={(open) => { if (!isSubmitting) setEditOpen(open) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit attendance record</DialogTitle>
+            <DialogDescription>
+              Perbarui waktu Check In/Out dan catatan. Biarkan kosong untuk menghapus nilai.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-3">
+            <div className="grid gap-1.5">
+              <label className="text-sm font-medium">Check In (ISO)</label>
+              <Input
+                value={editIn}
+                onChange={(e) => setEditIn(e.target.value)}
+                placeholder="contoh: 2026-01-15T08:30:00+07:00"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="grid gap-1.5">
+              <label className="text-sm font-medium">Check Out (ISO)</label>
+              <Input
+                value={editOut}
+                onChange={(e) => setEditOut(e.target.value)}
+                placeholder="contoh: 2026-01-15T17:00:00+07:00"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="grid gap-1.5">
+              <label className="text-sm font-medium">Remarks</label>
+              <Input
+                value={editRemarks}
+                onChange={(e) => setEditRemarks(e.target.value)}
+                placeholder="Catatan (opsional)"
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button onClick={submitEdit} disabled={isSubmitting} className="bg-black text-white hover:bg-black/90">
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </>
   )
 }

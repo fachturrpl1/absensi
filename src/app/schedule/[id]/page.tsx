@@ -200,73 +200,73 @@ export default function WorkScheduleDetailsPage() {
     loadDetails()
   }, [loadDetails])
 
-// Load members for assignment, and init effective date to today
-useEffect(() => {
-  const init = async () => {
-    try {
-      const today = new Date()
-      const yyyy = today.getFullYear()
-      const mm = String(today.getMonth() + 1).padStart(2, '0')
-      const dd = String(today.getDate()).padStart(2, '0')
-      setEffectiveDate(`${yyyy}-${mm}-${dd}`)
+  // Load members for assignment, and init effective date to today
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const today = new Date()
+        const yyyy = today.getFullYear()
+        const mm = String(today.getMonth() + 1).padStart(2, '0')
+        const dd = String(today.getDate()).padStart(2, '0')
+        setEffectiveDate(`${yyyy}-${mm}-${dd}`)
 
-      const rawOrgId = orgStore.organizationId
-      let safeOrgId: number | undefined
-      if (typeof rawOrgId === 'number' && Number.isFinite(rawOrgId)) {
-        safeOrgId = rawOrgId
-      } else if (typeof rawOrgId === 'string') {
-        const parsed = Number(rawOrgId)
-        if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
-          safeOrgId = parsed
-        }
-      }
-
-      const res = await getAllOrganization_member(safeOrgId)
-      if (!res.success) {
-        toast.error(res.message || 'Failed to load members')
-        setMembers([])
-        return
-      }
-
-      const data = Array.isArray(res.data) ? res.data : []
-      const opts: MemberOption[] = data
-        .filter((m: unknown) => {
-          const o = m as { id?: unknown }
-          const num = Number(o.id)
-          return Number.isFinite(num) && num > 0
-        })
-        .map((m: unknown) => {
-          const o = m as {
-            id?: unknown
-            user?: { first_name?: string | null; middle_name?: string | null; last_name?: string | null; email?: string | null; display_name?: string | null } | null
-            departments?: { name?: string | null } | null
-            groups?: { name?: string | null } | null
+        const rawOrgId = orgStore.organizationId
+        let safeOrgId: number | undefined
+        if (typeof rawOrgId === 'number' && Number.isFinite(rawOrgId)) {
+          safeOrgId = rawOrgId
+        } else if (typeof rawOrgId === 'string') {
+          const parsed = Number(rawOrgId)
+          if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+            safeOrgId = parsed
           }
-          const idStr = String(Number(o.id))
-          const u = o.user || null
-          const labelBase =
-            u?.display_name?.trim()
-            || [u?.first_name, u?.middle_name, u?.last_name].filter(Boolean).join(' ').trim()
-            || u?.email
-            || 'No Name'
-                const dept = o.departments?.name || o.groups?.name || ''
-                return { id: idStr, label: labelBase, department: dept }
-              })
-            setMembers(opts)
+        }
 
-            // derive departments (groups) sorted, unique
-            const deptNames = Array.from(new Set(opts.map(m => m.department).filter(Boolean))).sort()
-            setDepartments(deptNames)
-            setDepartmentFilter("all")
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to load members'
-      console.error('[schedule-assign] load members:', e)
-      toast.error(msg)
-      setMembers([])
+        const res = await getAllOrganization_member(safeOrgId)
+        if (!res.success) {
+          toast.error(res.message || 'Failed to load members')
+          setMembers([])
+          return
+        }
+
+        const data = Array.isArray(res.data) ? res.data : []
+        const opts: MemberOption[] = data
+          .filter((m: unknown) => {
+            const o = m as { id?: unknown }
+            const num = Number(o.id)
+            return Number.isFinite(num) && num > 0
+          })
+          .map((m: unknown) => {
+            const o = m as {
+              id?: unknown
+              user?: { first_name?: string | null; middle_name?: string | null; last_name?: string | null; email?: string | null; display_name?: string | null } | null
+              departments?: { name?: string | null } | null
+              groups?: { name?: string | null } | null
+            }
+            const idStr = String(Number(o.id))
+            const u = o.user || null
+            const labelBase =
+              u?.display_name?.trim()
+              || [u?.first_name, u?.middle_name, u?.last_name].filter(Boolean).join(' ').trim()
+              || u?.email
+              || 'No Name'
+            const dept = o.departments?.name || o.groups?.name || ''
+            return { id: idStr, label: labelBase, department: dept }
+          })
+        setMembers(opts)
+
+        // derive departments (groups) sorted, unique
+        const deptNames = Array.from(new Set(opts.map(m => m.department).filter(Boolean))).sort()
+        setDepartments(deptNames)
+        setDepartmentFilter("all")
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Failed to load members'
+        console.error('[schedule-assign] load members:', e)
+        toast.error(msg)
+        setMembers([])
+      }
     }
-  }
-  init()
-}, [orgStore.organizationId])
+    init()
+  }, [orgStore.organizationId])
 
   // Selected rule
   const selectedRule = useMemo(
@@ -366,20 +366,22 @@ useEffect(() => {
       }
 
       // Jadwal berhasil disimpan → lanjut batch assign (opsional)
-      let assignedInfo = ""
       if (selectedMemberIds.length > 0) {
         if (!effectiveDate) {
-          assignedInfo = " | assign skipped (effective date empty)"
+          // efficient date empty, do nothing or warn? 
+          // considering user might just want to save schedule details
         } else {
           const bulk = await createMemberSchedulesBulk(String(scheduleId), selectedMemberIds, effectiveDate)
           if (!bulk.success) {
-            assignedInfo = " | assign failed"
             toast.error(bulk.message || "Failed to assign members")
           } else {
             const inserted = bulk.data?.inserted ?? 0
-            const skipped = bulk.data?.skipped ?? 0
-            assignedInfo = ` | assigned: ${inserted}${skipped > 0 ? `, skipped: ${skipped}` : ""}`
-            if (skipped > 0) toast.info(`${skipped} member(s) already had active schedule`)
+            const updated = bulk.data?.updated ?? 0
+
+            let msg = `Assigned to ${inserted} member(s)`
+            if (updated > 0) msg += `, updated ${updated} existing schedule(s)`
+
+            toast.success(msg)
           }
         }
       }
@@ -753,9 +755,9 @@ useEffect(() => {
               </div>
             </div>
           )}
-            </div>
-            </div>
-                {/* Assign Members to this Schedule */}
+        </div>
+      </div>
+      {/* Assign Members to this Schedule */}
       <div className="border rounded-lg p-4 bg-white">
         <div className="flex items-center justify-between mb-3">
           <div className="font-semibold">Assign members to this schedule</div>
@@ -820,14 +822,14 @@ useEffect(() => {
         {/* Quick list */}
         <div className="space-y-2">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-48 overflow-y-auto pt-1">
-          {members
-            .filter(m => {
-              const term = memberSearch.toLowerCase()
-              const byGroup = departmentFilter === "all" || m.department === departmentFilter
-              const bySearch = term === "" || m.label.toLowerCase().includes(term) || m.department.toLowerCase().includes(term)
-              return byGroup && bySearch
-            })
-            .map(m => {
+            {members
+              .filter(m => {
+                const term = memberSearch.toLowerCase()
+                const byGroup = departmentFilter === "all" || m.department === departmentFilter
+                const bySearch = term === "" || m.label.toLowerCase().includes(term) || m.department.toLowerCase().includes(term)
+                return byGroup && bySearch
+              })
+              .map(m => {
                 const selected = selectedMemberIds.includes(m.id)
                 return (
                   <Button
@@ -847,33 +849,33 @@ useEffect(() => {
               })}
           </div>
 
-            {/* Selected chips */}
-            <div className="pt-2">
-              <div className="text-xs font-semibold text-muted-foreground mb-1">
-                Selected Member(s) ({selectedMemberIds.length})
+          {/* Selected chips */}
+          <div className="pt-2">
+            <div className="text-xs font-semibold text-muted-foreground mb-1">
+              Selected Member(s) ({selectedMemberIds.length})
+            </div>
+            <div className="max-h-48 overflow-y-auto overscroll-contain border rounded-md p-2 bg-white">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {selectedMemberIds.map(id => {
+                  const mm = members.find(x => x.id === id)
+                  const lbl = mm ? `${mm.label}${mm.department ? ` (${mm.department})` : ''}` : id
+                  return (
+                    <button
+                      key={id}
+                      className="inline-flex items-center gap-1 text-xs px-3 py-1.5 w-full rounded-full border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                      onClick={() => setSelectedMemberIds(prev => prev.filter(x => x !== id))}
+                      title="Remove"
+                    >
+                      <Minus className="h-3 w-3" />
+                      <span className="truncate">{lbl}</span>
+                    </button>
+                  )
+                })}
+                {selectedMemberIds.length === 0 && (
+                  <span className="text-xs text-muted-foreground">No members selected</span>
+                )}
               </div>
-              <div className="max-h-48 overflow-y-auto overscroll-contain border rounded-md p-2 bg-white">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                  {selectedMemberIds.map(id => {
-                    const mm = members.find(x => x.id === id)
-                    const lbl = mm ? `${mm.label}${mm.department ? ` (${mm.department})` : ''}` : id
-                    return (
-                      <button
-                        key={id}
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 w-full rounded-full border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-                        onClick={() => setSelectedMemberIds(prev => prev.filter(x => x !== id))}
-                        title="Remove"
-                      >
-                        <Minus className="h-3 w-3" />
-                        <span className="truncate">{lbl}</span>
-                      </button>
-                    )
-                  })}
-                  {selectedMemberIds.length === 0 && (
-                    <span className="text-xs text-muted-foreground">No members selected</span>
-                  )}
-                </div>
-              </div>
+            </div>
           </div>
         </div>
       </div>
