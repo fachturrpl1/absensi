@@ -238,15 +238,17 @@ export function ModernProfileCard({
         <CardContent className="space-y-4">
           {/* Contact Info */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <a
-                href={`mailto:${profile.email}`}
-                className="text-primary hover:underline"
-              >
-                {profile.email}
-              </a>
-            </div>
+            {profile.email && !profile.email.toLowerCase().endsWith('@dummy.local') && (
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <a
+                  href={`mailto:${profile.email}`}
+                  className="text-primary hover:underline"
+                >
+                  {profile.email}
+                </a>
+              </div>
+            )}
             <div className="flex items-center gap-2 text-sm">
               <Phone className="h-4 w-4 text-muted-foreground" />
               <span>{profile.phone && profile.phone.trim() !== '' ? profile.phone : 'No Phone'}</span>

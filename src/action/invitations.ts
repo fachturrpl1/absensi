@@ -1,13 +1,14 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { IMemberInvitation } from "@/interface";
 import { sendInvitationEmailViaSupabase, sendInvitationEmail } from "@/lib/email";
 
 import { logger } from '@/lib/logger';
 // Toggle email service:
-// true  = Supabase built-in email (creates auth user immediately, only NEW emails)
-// false = Custom email + custom accept page (requires RESEND_API_KEY)
+// true = Supabase built-in email (only works for NEW emails)
+// false = Resend (works for all emails, but requires third-party)
 const USE_SUPABASE_EMAIL = true;
 
 /**
@@ -26,35 +27,74 @@ interface CreateInvitationData {
   position_id?: string;
   message?: string;
   phone?: string;
+  organization_id?: string; // Optional: if provided, skip member lookup
+  invited_by?: string; // Optional: if provided, skip user auth check
 }
 
 export async function createInvitation(data: CreateInvitationData) {
   try {
     const supabase = await createClient();
+    const adminClient = createAdminClient();
 
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    let organizationId: string;
+    let userId: string;
 
-    if (userError || !user) {
-      return { success: false, message: "User not authenticated", data: null };
-    }
+    // If organization_id is provided (e.g., from import), use it directly
+    if (data.organization_id) {
+      organizationId = data.organization_id;
+      userId = data.invited_by || '';
+      
+      // Still verify user exists if invited_by is provided
+      if (data.invited_by) {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user || user.id !== data.invited_by) {
+          return { success: false, message: "User not authenticated", data: null };
+        }
+        userId = user.id;
+      } else {
+        // Get current user if invited_by not provided
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-    // Get user's organization
-    const { data: member } = await supabase
-      .from("organization_members")
-      .select("organization_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
+        if (userError || !user) {
+          return { success: false, message: "User not authenticated", data: null };
+        }
+        userId = user.id;
+      }
+    } else {
+      // Original flow: get user and find their organization
+      // Get current user
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-    if (!member) {
-      return {
-        success: false,
-        message: "User not member of any organization",
-        data: null,
-      };
+      if (userError || !user) {
+        return { success: false, message: "User not authenticated", data: null };
+      }
+
+      userId = user.id;
+
+      // Get user's organization using admin client to bypass RLS
+      const { data: member } = await adminClient
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!member) {
+        return {
+          success: false,
+          message: "User not member of any organization",
+          data: null,
+        };
+      }
+
+      organizationId = String(member.organization_id);
     }
 
     // Validate email format
@@ -68,11 +108,11 @@ export async function createInvitation(data: CreateInvitationData) {
     const existingAuthUser = authUsers?.users?.find((u) => u.email?.toLowerCase() === data.email.toLowerCase());
 
     if (existingAuthUser) {
-      // Check if they're already a member of this organization
-      const { data: existingOrgMember } = await supabase
+      // Check if they're already a member of this organization using admin client
+      const { data: existingOrgMember } = await adminClient
         .from("organization_members")
         .select("id")
-        .eq("organization_id", member.organization_id)
+        .eq("organization_id", organizationId)
         .eq("user_id", existingAuthUser.id)
         .maybeSingle();
 
@@ -95,7 +135,7 @@ export async function createInvitation(data: CreateInvitationData) {
     const { data: existingInvitation } = await supabase
       .from("member_invitations")
       .select("id, status, expires_at")
-      .eq("organization_id", member.organization_id)
+      .eq("organization_id", organizationId)
       .eq("email", data.email)
       .eq("status", "pending")
       .maybeSingle();
@@ -116,7 +156,7 @@ export async function createInvitation(data: CreateInvitationData) {
     await supabase
       .from("member_invitations")
       .update({ status: "expired" })
-      .eq("organization_id", member.organization_id)
+      .eq("organization_id", organizationId)
       .eq("email", data.email)
       .eq("status", "pending")
       .lt("expires_at", new Date().toISOString());
@@ -125,14 +165,14 @@ export async function createInvitation(data: CreateInvitationData) {
     const { data: invitation, error } = await supabase
       .from("member_invitations")
       .insert({
-        organization_id: member.organization_id,
+        organization_id: organizationId,
         email: data.email,
-        invited_by: user.id,
+        invited_by: userId,
         role_id: data.role_id || null,
         department_id: data.department_id || null,
         position_id: data.position_id || null,
-        message: data.message || null,
         phone: data.phone || null,
+        message: data.message || null,
       })
       .select(
         `
@@ -172,39 +212,24 @@ export async function createInvitation(data: CreateInvitationData) {
         const { data: inviterProfile } = await supabase
           .from("user_profiles")
           .select("first_name, last_name")
-          .eq("id", user.id)
+          .eq("id", userId)
           .single();
 
         const inviterName = inviterProfile
           ? `${inviterProfile.first_name || ""} ${inviterProfile.last_name || ""}`.trim()
           : "Someone";
 
-        const emailResult = await sendInvitationEmail({
+        await sendInvitationEmail({
           to: invitation.email,
           organizationName: orgData?.name || "the organization",
           inviterName: inviterName || "Team",
           invitationToken: invitation.invitation_token,
           message: invitation.message || undefined,
         });
-
-        if (!emailResult.success) {
-          logger.warn("Email tidak terkirim:", emailResult.message);
-          // Invitation tetap dibuat, tapi user perlu tahu bahwa email gagal
-          return {
-            success: true,
-            message: `⚠️ Invitation berhasil dibuat, tapi email tidak terkirim: ${emailResult.message}. Pastikan RESEND_API_KEY sudah di-set di .env file. Link invite: ${process.env.NEXT_PUBLIC_APP_URL}/invite/accept/${invitation.invitation_token}`,
-            data: invitation as IMemberInvitation,
-          };
-        }
       }
     } catch (emailError) {
       logger.error("Failed to send invitation email:", emailError);
-      // Don't fail the invitation creation if email fails, but inform user
-      return {
-        success: true,
-        message: `⚠️ Invitation berhasil dibuat, tapi email gagal terkirim. Pastikan RESEND_API_KEY sudah di-set di .env file. Link invite: ${process.env.NEXT_PUBLIC_APP_URL}/invite/accept/${invitation.invitation_token}`,
-        data: invitation as IMemberInvitation,
-      };
+      // Don't fail the invitation creation if email fails
     }
 
     return {
@@ -310,7 +335,6 @@ interface AcceptInvitationData {
 export async function acceptInvitation(data: AcceptInvitationData) {
   try {
     const supabase = await createClient();
-    const { createAdminClient } = await import("@/utils/supabase/admin");
     const adminSupabase = createAdminClient();
 
     // Get invitation
@@ -325,40 +349,35 @@ export async function acceptInvitation(data: AcceptInvitationData) {
 
     const invitation = invitationResult.data;
 
-    // Check if user already exists (created by Supabase inviteUserByEmail)
+    // Check if user already exists (e.g. via Supabase invite)
     const { data: existingUsers } = await adminSupabase.auth.admin.listUsers();
     const existingUser = existingUsers?.users?.find(
-      (u) => u.email?.toLowerCase() === invitation.email.toLowerCase()
+      (user) => user.email?.toLowerCase() === invitation.email.toLowerCase(),
     );
 
     let userId: string;
 
     if (existingUser) {
-      // User already exists (created by Supabase invite) - update password and confirm email
       const { data: updatedUser, error: updateError } = await adminSupabase.auth.admin.updateUserById(
         existingUser.id,
         {
           password: data.password,
-          email_confirm: true, // Confirm email
+          email_confirm: true,
           user_metadata: {
             first_name: data.first_name,
             last_name: data.last_name,
           },
-        }
+        },
       );
 
       if (updateError) {
         return { success: false, message: updateError.message, data: null };
       }
 
-      if (!updatedUser.user) {
-        return { success: false, message: "Failed to update user", data: null };
-      }
-
-      userId = updatedUser.user.id;
+      userId = updatedUser.user?.id || existingUser.id;
     } else {
-      // User doesn't exist - create new account
-      const { data: signUpData, error: authError } = await supabase.auth.signUp({
+      // Create user via Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: invitation.email,
         password: data.password,
         options: {
@@ -373,58 +392,91 @@ export async function acceptInvitation(data: AcceptInvitationData) {
         return { success: false, message: authError.message, data: null };
       }
 
-      if (!signUpData.user) {
+      if (!authData.user) {
         return { success: false, message: "Failed to create user", data: null };
       }
 
-      userId = signUpData.user.id;
+      userId = authData.user.id;
     }
 
-    // Get phone from invitation (now stored directly in phone column)
-    const phoneNumber = invitation.phone || null
-
-    // Check if profile already exists
-    const { data: existingProfile } = await supabase
+    // Create or update user profile
+    const { data: existingProfile, error: profileFetchError } = await supabase
       .from("user_profiles")
       .select("id")
       .eq("id", userId)
-      .maybeSingle()
+      .maybeSingle();
+
+    if (profileFetchError) {
+      logger.error("Error fetching user profile:", profileFetchError);
+    }
+
+    const profilePayload = {
+      id: userId,
+      email: invitation.email,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      phone: invitation.phone || null,
+      is_active: true,
+    };
 
     if (existingProfile) {
-      // Update existing profile with phone
-      const { error: updateError } = await supabase
+      const { error: updateProfileError } = await supabase
         .from("user_profiles")
-        .update({
-          first_name: data.first_name,
-          last_name: data.last_name,
-          phone: phoneNumber || null,
-        })
-        .eq("id", userId)
+        .update(profilePayload)
+        .eq("id", userId);
 
-      if (updateError) {
-        logger.error("Error updating user profile:", updateError)
+      if (updateProfileError) {
+        logger.error("Error updating user profile:", updateProfileError);
       }
     } else {
-      // Create new user profile
-      const { error: profileError } = await supabase
-        .from("user_profiles")
-        .insert({
-          id: userId,
-          email: invitation.email,
-          first_name: data.first_name,
-          last_name: data.last_name,
-          phone: phoneNumber || null,
-          is_active: true,
-        })
-
-      if (profileError) {
-        logger.error("Error creating user profile:", profileError)
-        // Continue anyway, profile might already exist
+      const { error: createProfileError } = await supabase.from("user_profiles").insert(profilePayload);
+      if (createProfileError) {
+        logger.error("Error creating user profile:", createProfileError);
       }
     }
 
-    // Create organization member
-    const { data: orgMember, error: memberError } = await supabase
+    // Check if user is already a member of this organization
+    const { data: existingMember, error: checkError } = await adminSupabase
+      .from("organization_members")
+      .select("id, is_active")
+      .eq("organization_id", invitation.organization_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (checkError) {
+      logger.error("Error checking existing member:", checkError);
+      return { success: false, message: "Failed to check membership status", data: null };
+    }
+
+    if (existingMember) {
+      // User is already a member - update the invitation status but don't create duplicate
+      logger.warn(`User ${userId} is already a member of organization ${invitation.organization_id}`);
+      
+      // Update invitation status to accepted
+      await supabase
+        .from("member_invitations")
+        .update({
+          status: "accepted",
+          accepted_at: new Date().toISOString(),
+        })
+        .eq("id", invitation.id);
+
+      // Return existing member
+      const { data: memberData } = await adminSupabase
+        .from("organization_members")
+        .select("*")
+        .eq("id", existingMember.id)
+        .single();
+
+      return {
+        success: true,
+        message: "You are already a member of this organization",
+        data: memberData,
+      };
+    }
+
+    // Create organization member (user is not yet a member)
+    const { data: newOrgMember, error: memberError } = await supabase
       .from("organization_members")
       .insert({
         organization_id: invitation.organization_id,
@@ -439,6 +491,34 @@ export async function acceptInvitation(data: AcceptInvitationData) {
       .single();
 
     if (memberError) {
+      // Check if it's a duplicate key error
+      if (memberError.code === "23505" || memberError.message.includes("duplicate key")) {
+        // Race condition: member was created between check and insert
+        // Fetch the existing member
+        const { data: raceMember } = await adminSupabase
+          .from("organization_members")
+          .select("*")
+          .eq("organization_id", invitation.organization_id)
+          .eq("user_id", userId)
+          .single();
+
+        if (raceMember) {
+          // Update invitation status
+          await supabase
+            .from("member_invitations")
+            .update({
+              status: "accepted",
+              accepted_at: new Date().toISOString(),
+            })
+            .eq("id", invitation.id);
+
+          return {
+            success: true,
+            message: "You are already a member of this organization",
+            data: raceMember,
+          };
+        }
+      }
       return { success: false, message: memberError.message, data: null };
     }
 
@@ -454,7 +534,7 @@ export async function acceptInvitation(data: AcceptInvitationData) {
     return {
       success: true,
       message: "Invitation accepted successfully",
-      data: orgMember,
+      data: newOrgMember,
     };
   } catch (error) {
     logger.error("Error accepting invitation:", error);

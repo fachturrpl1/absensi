@@ -25,6 +25,8 @@ import { InstallPrompt } from "@/components/install-prompt";
 import { OfflineDetector } from "@/components/offline-detector";
 import { GlobalTitleManager } from "@/components/global-title-manager";
 import { AuthErrorHandler } from "@/components/auth-error-handler";
+import PWACleanup from "@/components/pwa-cleanup";
+
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -48,75 +50,47 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+ 
+
 // Base metadata will be generated dynamically
 export async function generateMetadata(): Promise<Metadata> {
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    const organizationName = user ? await getCachedOrganizationName(user.id) : null;
-    
-    const defaultTitle = organizationName 
-      ? `${organizationName} - Presensi`
-      : 'Presensi';
-    
-    const description = organizationName
-      ? `Sistem presensi digital ${organizationName}. Kelola absensi, jadwal, dan laporan kehadiran dengan mudah.`
-      : "Sistem manajemen kehadiran digital untuk organisasi Anda. Kelola absensi, jadwal, dan laporan kehadiran dengan mudah.";
-    
-    return {
-      title: {
-        template: '%s', // Allow pages to completely override title
-        default: defaultTitle,
-      },
+  const description = "Sistem manajemen kehadiran digital untuk organisasi Anda. Kelola absensi, jadwal, dan laporan kehadiran dengan mudah.";
+
+  return {
+    title: {
+      template: '%s',
+      default: 'Presensi',
+    },
+    description,
+    metadataBase: new URL(
+      process.env.APP_URL
+        ? `${process.env.APP_URL}`
+        : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : `http://localhost:${process.env.PORT || 3000}`
+    ),
+    alternates: { canonical: "/" },
+    manifest: "/manifest.json",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: "Presensi",
+    },
+    formatDetection: {
+      telephone: false,
+    },
+    openGraph: {
+      url: "/",
+      title: 'Presensi',
       description,
-      metadataBase: new URL(
-        process.env.APP_URL
-          ? `${process.env.APP_URL}`
-          : process.env.VERCEL_URL
-          ? `https://${process.env.VERCEL_URL}`
-          : `http://localhost:${process.env.PORT || 3000}`
-      ),
-      alternates: { canonical: "/" },
-      manifest: "/manifest.json",
-      appleWebApp: {
-        capable: true,
-        statusBarStyle: "default",
-        title: organizationName?.split(' ').slice(0, 2).join(' ') || "Presensi",
-      },
-      formatDetection: {
-        telephone: false,
-      },
-      openGraph: {
-        url: "/",
-        title: defaultTitle,
-        description,
-        type: "website",
-      },
-      twitter: {
-        card: "summary_large_image",
-        title: defaultTitle,
-        description,
-      },
-    };
-  } catch (error) {
-    // Fallback metadata if there's an error
-    return {
-      title: {
-        template: '%s',
-        default: 'Presensi',
-      },
-      description: "Sistem manajemen kehadiran digital untuk organisasi Anda.",
-      metadataBase: new URL(
-        process.env.APP_URL
-          ? `${process.env.APP_URL}`
-          : process.env.VERCEL_URL
-          ? `https://${process.env.VERCEL_URL}`
-          : `http://localhost:${process.env.PORT || 3000}`
-      ),
-      alternates: { canonical: "/" },
-      manifest: "/manifest.json",
-    };
-  }
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: 'Presensi',
+      description,
+    },
+  };
 }
 
 export const viewport = {
@@ -192,6 +166,7 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-title" content={dynamicShortTitle} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
+        <PWACleanup/>
         <GlobalTitleManager />
         <InstallPrompt />
         <OfflineDetector />

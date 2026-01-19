@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { EllipsisVertical, CircleUser, Settings, LogOut } from 'lucide-react';
+import { useEffect, useState, memo } from 'react';
+import { EllipsisVertical, CircleUser, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -36,7 +36,8 @@ interface UserProfile {
   avatar: string | null;
 }
 
-export function NavUser() {
+export const NavUser = memo(function NavUser() {
+  // const MemoizedNavUser = useMemo (() => <NavUser />, []);
   const { isMobile } = useSidebar();
   const [user, setUser] = useState<UserProfile>({
     name: 'Loading...',
@@ -48,11 +49,11 @@ export function NavUser() {
   useEffect(() => {
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
-    
+
     const setupProfileAndSubscription = async () => {
       // Fetch current user
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      
+
       if (!authUser) return;
 
       // Fetch user profile
@@ -85,10 +86,10 @@ export function NavUser() {
             table: 'user_profiles',
             filter: `id=eq.${authUser.id}`,
           },
-          async (payload) => {
+          async (payload: any) => {
             if (payload.new) {
               const newProfile = payload.new as any;
-              
+
               // Import utility for consistent display name logic
               const { getUserDisplayName } = await import('@/utils/user-display-name');
               const displayName = getUserDisplayName(newProfile);
@@ -116,9 +117,9 @@ export function NavUser() {
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
-    
+
     setIsLoggingOut(true);
-    
+
     // Import complete logout handler
     const { handleCompleteLogout } = await import('@/utils/logout-handler');
     await handleCompleteLogout();
@@ -170,12 +171,6 @@ export function NavUser() {
                   Account
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/organization/settings">
-                  <Settings />
-                  Settings
-                </Link>
-              </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
@@ -187,4 +182,4 @@ export function NavUser() {
       </SidebarMenuItem>
     </SidebarMenu>
   );
-}
+});

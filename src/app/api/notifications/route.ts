@@ -118,13 +118,13 @@ export async function GET(request: Request) {
         .limit(limit)
     ])
 
-    const notifications: any[] = []
+    const notifications: Record<string, unknown>[] = []
 
     // Transform attendance records
     if (attendanceResult.data) {
-      attendanceResult.data.forEach((record: any) => {
-        const member = record.organization_members
-        const profile = member?.user_profiles
+      attendanceResult.data.forEach((record: Record<string, unknown>) => {
+        const member = record.organization_members as Record<string, unknown>
+        const profile = member?.user_profiles as Record<string, unknown>
         const memberName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Unknown'
         
         notifications.push({
@@ -144,11 +144,11 @@ export async function GET(request: Request) {
 
     // Transform leave requests
     if (leavesResult.data) {
-      leavesResult.data.forEach((request: any) => {
-        const member = request.organization_member
-        const profile = member?.user_profiles
+      leavesResult.data.forEach((request: Record<string, unknown>) => {
+        const member = request.organization_member as Record<string, unknown>
+        const profile = member?.user_profiles as Record<string, unknown>
         const memberName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Unknown'
-        const leaveType = request.leave_type?.name || 'Leave'
+        const leaveType = (request.leave_type as Record<string, unknown>)?.name || 'Leave'
         
         let timestamp = request.requested_at
         let action = 'requested'
@@ -229,8 +229,8 @@ export async function GET(request: Request) {
 
     // Sort by timestamp (newest first)
     notifications.sort((a, b) => {
-      const dateA = new Date(a.timestamp).getTime()
-      const dateB = new Date(b.timestamp).getTime()
+      const dateA = new Date(a.timestamp as string).getTime()
+      const dateB = new Date(b.timestamp as string).getTime()
       return dateB - dateA
     })
 
@@ -254,4 +254,3 @@ export async function GET(request: Request) {
     )
   }
 }
-

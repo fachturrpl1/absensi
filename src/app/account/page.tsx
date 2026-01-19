@@ -38,9 +38,6 @@ export default async function AccountPage() {
       <div className="w-full py-6 px-4 md:px-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold tracking-tight">Account Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your personal information, work details, and security settings.
-          </p>
         </div>
         
         <AccountForm initialData={accountResult.data} />

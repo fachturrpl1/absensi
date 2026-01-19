@@ -40,7 +40,6 @@ import { Input } from "@/components/ui/input"
 
 import { toast } from "sonner"
 import Link from "next/link"
-import { useParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
@@ -48,6 +47,8 @@ import z from "zod"
 import { IRole } from "@/interface"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import { createRole, deleteRole, getAllRole, updateRole } from "@/action/role"
+import { useOrgGuard } from "@/hooks/use-org-guard"
+import { useHydration } from "@/hooks/useHydration"
 
 const roleSchema = z.object({
     code: z.string().min(2, "min 2 characters"),
@@ -59,8 +60,8 @@ const roleSchema = z.object({
 type RoleForm = z.infer<typeof roleSchema>
 
 export default function RolesPage() {
-    const params = useParams()
-    const roleId = Number(params.id)
+    const { organizationId } = useHydration()
+    useOrgGuard()
 
     const [open, setOpen] = React.useState(false)
     const [editingDetail, setEditingDetail] = React.useState<IRole | null>(null)
@@ -71,9 +72,17 @@ export default function RolesPage() {
     const fetchroles = async () => {
         try {
             setLoading(true)
+            
+            if (!organizationId) {
+                toast.error('Please select an organization')
+                setLoading(false)
+                return
+            }
+            
             const response: unknown = await getAllRole()
             const typedResponse = response as { success: boolean; data: IRole[]; message: string }
             if (!typedResponse.success) throw new Error(typedResponse.message)
+            
             setroles(typedResponse.data)
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'Unknown error')
@@ -84,30 +93,32 @@ export default function RolesPage() {
 
     React.useEffect(() => {
         fetchroles()
-
-    }, [roleId])
+    }, [organizationId, fetchroles])
 
     const form = useForm<RoleForm>({
         resolver: zodResolver(roleSchema),
         defaultValues: {
-
             code: "",
             name: "",
             description: "",
-
         },
     })
 
     const handleSubmit = async (values: RoleForm) => {
         try {
+            if (!organizationId) {
+                toast.error('Please select an organization')
+                return
+            }
+            
             let res
             if (editingDetail) {
-                res = await updateRole(editingDetail.id, values as Partial<IRole>)
+                res = await updateRole(editingDetail.id, values)
             } else {
-                res = await createRole(values as Partial<IRole>)
+                res = await createRole(values)
             }
             if (!res.success) throw new Error(res.message)
-            toast.success(editingDetail ? 'Role updated successfully' : 'Role created successfully')
+            toast.success(editingDetail ? 'Saved successfully' : 'Role created successfully')
             setOpen(false)
             setEditingDetail(null)
             fetchroles()
@@ -119,8 +130,8 @@ export default function RolesPage() {
     const handleDelete = async (roleId: string | number) => {
         try {
             setLoading(true)
-            const response = await deleteRole(roleId)
-            if (!response.success) throw new Error(response.message)
+            const result = await deleteRole(roleId)
+            if (!result.success) throw new Error(result.message)
             toast.success('Role deleted successfully')
             fetchroles()
         } catch (error: unknown) {
@@ -200,9 +211,9 @@ export default function RolesPage() {
     ]
 
     return (
-        <div className="flex flex-1 flex-col gap-4">
+        <div className="flex flex-1 flex-col gap-4 w-full">
             
-            <div className="w-full max-w-6xl mx-auto">
+            <div className="w-full">
                 <div className=" items-center my-7">
                    
                     <Dialog open={open} onOpenChange={setOpen}>
@@ -279,7 +290,9 @@ export default function RolesPage() {
                 {loading ? (
                     <TableSkeleton rows={5} columns={4} />
                 ) : (
-                    <DataTable columns={columns} data={roles} />
+                    <div className="min-w-full overflow-x-auto">
+                        <DataTable columns={columns} data={roles} />
+                    </div>
                 )}
             </div>
         </div>

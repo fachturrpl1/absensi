@@ -44,8 +44,7 @@ export function useNotifications(limit: number = 50) {
     gcTime: 1000 * 60 * 10, // 10 minutes
     refetchInterval: 1000 * 60 * 3, // Auto-refresh every 3 minutes
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true,
     refetchOnReconnect: true,
   })
 }
-

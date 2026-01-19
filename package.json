@@ -11,7 +11,8 @@
     "start:network": "next start --hostname 0.0.0.0",
     "lint": "eslint",
     "analyze": "ANALYZE=true next build",
-    "geo:generate": "node scripts/fetch-geo-data.mjs"
+    "geo:generate": "node scripts/fetch-geo-data.mjs",
+    "members:template": "node scripts/generate-members-template.mjs"
   },
   "dependencies": {
     "@countrystatecity/countries": "^1.0.4",
@@ -74,6 +75,7 @@
     "react-hook-form": "^7.65.0",
     "react-leaflet": "^5.0.0",
     "recharts": "^2.15.4",
+    "redis": "^5.10.0",
     "sharp": "^0.34.4",
     "simple-icons": "^15.18.0",
     "sonner": "^2.0.7",
@@ -94,6 +96,7 @@
     "@types/three": "^0.181.0",
     "@types/xlsx": "^0.0.35",
     "@vitejs/plugin-react": "^4.3.4",
+    "baseline-browser-mapping": "^2.9.14",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
     "eslint-formatter-unix": "^8.40.0",

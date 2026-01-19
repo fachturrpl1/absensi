@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "types": [],
@@ -14,7 +18,6 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    
     // Strict Type Checking Options
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -23,7 +26,6 @@
     "strictPropertyInitialization": true,
     "noImplicitThis": true,
     "alwaysStrict": true,
-    
     // Additional Checks
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -32,19 +34,28 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": false,
-    
     // Module Resolution Options
     "forceConsistentCasingInFileNames": true,
-    
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "src/lib/optimize-imports.ts"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "next-env.d.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "src/lib/optimize-imports.ts"
+  ]
 }

@@ -60,6 +60,8 @@ export function MemberGridCards({ members, onView, onEdit, onDelete }: MemberGri
   // Filter members
   const filteredMembers = members.filter((member: any) => {
     const user = member.user;
+    
+    // Get name from user_profiles
     const fullName = user
       ? [user.first_name, user.middle_name, user.last_name]
           .filter(Boolean)
@@ -67,8 +69,11 @@ export function MemberGridCards({ members, onView, onEdit, onDelete }: MemberGri
           .toLowerCase()
       : '';
     
+    // Get email from user_profiles
+    const email = (user?.email || '').toLowerCase();
+    
     const matchesSearch = fullName.includes(searchQuery.toLowerCase()) ||
-                         user?.email?.toLowerCase().includes(searchQuery.toLowerCase());
+                         email.includes(searchQuery.toLowerCase());
     
     const matchesStatus = filterStatus === 'all' || 
                          (filterStatus === 'active' && member.is_active) ||
@@ -95,7 +100,7 @@ export function MemberGridCards({ members, onView, onEdit, onDelete }: MemberGri
     const fullName = user
       ? [user.first_name, user.middle_name, user.last_name]
           .filter(Boolean)
-          .join(' ') || user.display_name || user.email
+          .join(' ') || user.display_name || (user.email && !user.email.toLowerCase().endsWith('@dummy.local') ? user.email : null)
       : 'No Name';
     
     const stats = getMemberStats(member);
@@ -180,7 +185,7 @@ export function MemberGridCards({ members, onView, onEdit, onDelete }: MemberGri
 
               {/* Contact Info */}
               <div className="w-full mt-4 space-y-2">
-                {user?.email && (
+                {user?.email && !user.email.toLowerCase().endsWith('@dummy.local') && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Mail className="h-3.5 w-3.5 flex-shrink-0" />
                     <span className="truncate">{user.email}</span>

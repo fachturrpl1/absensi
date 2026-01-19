@@ -1,6 +1,11 @@
 'use client';
 
+import { useOrgStore } from '@/store/org-store'
+import { useHydration } from '@/hooks/useHydration'
 import { useEffect, useState, useMemo } from 'react';
+import type { ComponentType, SVGProps } from 'react';
+import type { TooltipProps } from 'recharts';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -60,6 +65,7 @@ interface DashboardStats {
   activeMembers: number;
 }
 
+
 // Color Palette
 const COLORS = {
   primary: '#3B82F6',
@@ -71,16 +77,17 @@ const COLORS = {
 };
 
 // Custom Tooltip
-const CustomTooltip = ({ active, payload, label }: any) => {
+// Ganti definisi CustomTooltip agar kompatibel dengan Recharts
+const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-card border border-border rounded-lg shadow-lg p-3">
         <p className="font-semibold text-sm mb-2">{label}</p>
-        {payload.map((entry: any, index: number) => (
+        {payload?.map((entry, index) => (
           <div key={index} className="flex items-center gap-2 text-xs">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-            <span className="text-muted-foreground">{entry.name}:</span>
-            <span className="font-bold">{entry.value}</span>
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: (entry as any)?.color }} />
+            <span className="text-muted-foreground">{entry?.name}:</span>
+            <span className="font-bold">{entry?.value as number}</span>
           </div>
         ))}
       </div>
@@ -89,20 +96,19 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-// Enhanced Stat Card Component with proper dark/light mode
-const EnhancedStatCard = ({ 
-  title, 
-  value, 
-  icon: Icon, 
+const EnhancedStatCard = ({
+  title,
+  value,
+  icon: Icon,
   trend,
   trendValue,
   trendLabel,
   color = 'blue',
-  delay = 0 
+  delay = 0
 }: {
   title: string;
   value: string | number;
-  icon: any;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
   trend?: 'up' | 'down' | 'neutral';
   trendValue?: string;
   trendLabel?: string;
@@ -134,7 +140,7 @@ const EnhancedStatCard = ({
               <Icon className="w-6 h-6" />
             </div>
           </div>
-          
+
           {trend && (
             <div className="flex items-center gap-1.5 text-sm">
               {trend === 'up' && <ArrowUp className="w-4 h-4 text-green-600 dark:text-green-400" />}
@@ -160,11 +166,14 @@ const EnhancedStatCard = ({
 };
 
 export default function ImprovedDashboard() {
-  const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [isLoading, setIsLoading] = useState(true);
+  const orgStore = useOrgStore();
   const { organizationName, loading: orgLoading } = useOrganizationName();
-  
+  const queryClient = useQueryClient();
+  const { isHydrated, organizationId: hydratedOrgId } = useHydration();
+  const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+  const [isLoading, setIsLoading] = useState(true);
+
   // Date filter state
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
     const today = new Date();
@@ -184,46 +193,131 @@ export default function ImprovedDashboard() {
     activeMembers: 0,
   });
 
-  // Clock
+  // Clock - update time every second
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
+  // Monitor organization changes
+  useEffect(() => {
+    if (orgStore.organizationId) {
+      console.log('[DASHBOARD] Organization changed to:', orgStore.organizationId, orgStore.organizationName);
+    }
+  }, [orgStore.organizationId, orgStore.organizationName]);
+
+  // Hydration handled by useHydration()
+
+  // Invalidate cache when organization changes
+  useEffect(() => {
+    if (orgStore.organizationId) {
+      // Invalidate ALL organization-related queries
+      queryClient.invalidateQueries({ queryKey: ['organization'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
+      queryClient.invalidateQueries({ queryKey: ['members'] })
+      queryClient.invalidateQueries({ queryKey: ['attendance'] })
+      queryClient.invalidateQueries({ queryKey: ['leaves'] })
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+    }
+  }, [orgStore.organizationId, queryClient])
+
   // Fetch data
   useEffect(() => {
+    if (!isHydrated) return;
+
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        // Use secure API route that auto-filters by organization
-        const response = await fetch('/api/attendance-records?limit=1000');
+
+        const getPersistedOrgId = () => {
+          try {
+            const raw = localStorage.getItem('org-store');
+            if (!raw) return null as number | null;
+            const parsed = JSON.parse(raw);
+            const val = parsed?.state?.organizationId ?? parsed?.state?.organization_id;
+            const n = Number(val);
+            return Number.isFinite(n) ? n : null;
+          } catch {
+            return null as number | null;
+          }
+        };
+
+        const orgId = hydratedOrgId ?? orgStore.organizationId ?? getPersistedOrgId();
+
+        if (!orgId) {
+          // wait until hydration/store resolves organizationId
+          return;
+        }
+
+        console.log('[DASHBOARD] Fetching data for organization:', orgId);
+
+        // Kirim filter ke API home (real-time, no-cache di server)
+        const toYMD = (d?: Date): string => (d ? d.toISOString().slice(0, 10) : '');
+        const params = new URLSearchParams();
+        params.set('organizationId', String(orgId));
+        params.set('limit', '1000');
+        params.set('page', '1');
+        const fromStr: string | undefined = dateRange?.from ? toYMD(dateRange.from) : undefined;
+        const toStr: string | undefined = dateRange?.to ? toYMD(dateRange.to) : undefined;
+        if (fromStr !== undefined) params.set('dateFrom', fromStr);
+        if (toStr !== undefined) params.set('dateTo', toStr);
+
+        const response = await fetch(`/api/home?${params.toString()}`, {
+          method: 'GET',
+          credentials: 'same-origin',
+        });
         const result = await response.json();
 
-        if (result.success && result.data) {
-          setAllRecords(result.data);
+        if (result.success && Array.isArray(result.data)) {
+          console.log('[DASHBOARD] Fetched', result.data.length, 'records for org', orgId);
+
+          const toMinutes = (s?: string | null) => {
+            const str = s ?? '';
+            const hh = parseInt(str.match(/(\d+)h/)?.[1] ?? '0', 10);
+            const mm = parseInt(str.match(/(\d+)m/)?.[1] ?? '0', 10);
+            return hh * 60 + mm;
+          };
+
+          const mapped: AttendanceRecord[] = result.data.map((it: any) => ({
+            id: Number(it.id),
+            member_name: it?.member?.name ?? '',
+            department_name: it?.member?.department ?? '',
+            status: it?.status ?? '',
+            actual_check_in: it?.checkIn ?? null,
+            actual_check_out: it?.checkOut ?? null,
+            work_duration_minutes: toMinutes(it?.workHours), // fallback 0 jika tidak ada
+            scheduled_duration_minutes: 480, // opsional: default 8 jam agar metrik tidak 0 total
+            attendance_date: it?.date,
+            profile_photo_url: it?.member?.avatar ?? null,
+          }));
+
+          setAllRecords(mapped);
         } else {
           console.error('Failed to fetch attendance records:', result.message);
+          setAllRecords([]);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
+        setAllRecords([]);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [isHydrated, hydratedOrgId, orgStore.organizationId, dateRange]);
 
   // Filter records
   const fromDateStr = dateRange.from.toISOString().split('T')[0];
   const toDateStr = dateRange.to.toISOString().split('T')[0];
-  
+
   const filteredRecords = useMemo(() => {
     if (allRecords.length === 0) return [];
 
     const fromDate = new Date(fromDateStr + 'T00:00:00');
     const toDate = new Date(toDateStr + 'T23:59:59.999');
-    
+
     return allRecords.filter(record => {
       const recordDate = new Date(record.attendance_date + 'T00:00:00');
       return recordDate >= fromDate && recordDate <= toDate;
@@ -235,7 +329,7 @@ export default function ImprovedDashboard() {
     const present = filteredRecords.filter(r => r.status === 'present' || r.status === 'late').length;
     const late = filteredRecords.filter(r => r.status === 'late').length;
     const absent = filteredRecords.filter(r => r.status === 'absent').length;
-    
+
     // Use actual duration if available, otherwise use scheduled duration (estimated)
     const totalWorkMinutes = filteredRecords.reduce((sum, r) => {
       const duration = r.work_duration_minutes || r.scheduled_duration_minutes || 0;
@@ -262,7 +356,7 @@ export default function ImprovedDashboard() {
   // Get filter period label and chart data
   const getFilterLabel = () => {
     if (!dateRange.preset) return 'Custom Range';
-    
+
     const labels: Record<string, string> = {
       'today': 'Today',
       'last7': 'Last 7 Days',
@@ -270,7 +364,7 @@ export default function ImprovedDashboard() {
       'thisYear': 'This Year',
       'lastYear': 'Last Year',
     };
-    
+
     return labels[dateRange.preset] || 'Custom Range';
   };
 
@@ -278,21 +372,21 @@ export default function ImprovedDashboard() {
   const chartData = useMemo(() => {
     const isToday = dateRange.preset === 'today';
     const isYearView = dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear';
-    
+
     if (isToday) {
       // Hourly data for today
       const hours = Array.from({ length: 24 }, (_, i) => i);
       const hourlyMap: Record<number, { present: number; late: number; absent: number }> = {};
-      
+
       hours.forEach(hour => {
         hourlyMap[hour] = { present: 0, late: 0, absent: 0 };
       });
-      
+
       filteredRecords.forEach(record => {
         if (record.actual_check_in) {
           const checkInDate = new Date(record.actual_check_in);
           const hour = checkInDate.getHours();
-          
+
           if (hourlyMap[hour]) {
             if (record.status === 'present') hourlyMap[hour].present++;
             else if (record.status === 'late') hourlyMap[hour].late++;
@@ -300,7 +394,7 @@ export default function ImprovedDashboard() {
           }
         }
       });
-      
+
       return hours.map(hour => ({
         label: `${hour.toString().padStart(2, '0')}:00`,
         present: hourlyMap[hour]?.present || 0,
@@ -311,22 +405,22 @@ export default function ImprovedDashboard() {
       // Monthly data for year views
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const monthlyMap: Record<string, { present: number; late: number; absent: number }> = {};
-      
+
       months.forEach(month => {
         monthlyMap[month] = { present: 0, late: 0, absent: 0 };
       });
-      
+
       filteredRecords.forEach(record => {
         const date = new Date(record.attendance_date);
         const monthName = months[date.getMonth()];
-        
+
         if (monthName && monthlyMap[monthName]) {
           if (record.status === 'present') monthlyMap[monthName].present++;
           else if (record.status === 'late') monthlyMap[monthName].late++;
           else if (record.status === 'absent') monthlyMap[monthName].absent++;
         }
       });
-      
+
       return months.map(month => ({
         label: month,
         present: monthlyMap[month]?.present || 0,
@@ -337,23 +431,23 @@ export default function ImprovedDashboard() {
       // Daily data for other periods
       const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       const daysMap: Record<string, { present: number; late: number; absent: number }> = {};
-      
+
       days.forEach(day => {
         daysMap[day] = { present: 0, late: 0, absent: 0 };
       });
-      
+
       filteredRecords.forEach(record => {
         const date = new Date(record.attendance_date);
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const dayName = dayNames[date.getDay()];
-        
+
         if (dayName && daysMap[dayName]) {
           if (record.status === 'present') daysMap[dayName].present++;
           else if (record.status === 'late') daysMap[dayName].late++;
           else if (record.status === 'absent') daysMap[dayName].absent++;
         }
       });
-      
+
       return days.map(day => ({
         label: day,
         present: daysMap[day]?.present || 0,
@@ -375,9 +469,9 @@ export default function ImprovedDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="ml-5 mt-5 space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center   md:justify-between gap-4">
         <div>
           {orgLoading ? (
             <Skeleton className="h-9 w-80 mb-2" />
@@ -390,9 +484,9 @@ export default function ImprovedDashboard() {
             {format(currentTime, 'EEEE, MMMM dd, yyyy • HH:mm:ss')}
           </p>
         </div>
-        
-        <DateFilterBar 
-          dateRange={dateRange} 
+
+        <DateFilterBar
+          dateRange={dateRange}
           onDateRangeChange={setDateRange}
         />
       </div>
@@ -456,19 +550,19 @@ export default function ImprovedDashboard() {
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2 text-foreground">
                     <BarChart3 className="w-5 h-5 text-primary" />
-                    {dateRange.preset === 'today' 
-                      ? 'Hourly Attendance' 
+                    {dateRange.preset === 'today'
+                      ? 'Hourly Attendance'
                       : (dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear')
-                      ? 'Monthly Attendance'
-                      : 'Attendance Trend'
+                        ? 'Monthly Attendance'
+                        : 'Attendance Trend'
                     }
                   </CardTitle>
                   <CardDescription className="text-muted-foreground">
-                    {dateRange.preset === 'today' 
+                    {dateRange.preset === 'today'
                       ? 'Check-in patterns throughout the day'
                       : (dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear')
-                      ? `Monthly attendance patterns for ${getFilterLabel().toLowerCase()}`
-                      : `Attendance patterns for ${getFilterLabel().toLowerCase()}`
+                        ? `Monthly attendance patterns for ${getFilterLabel().toLowerCase()}`
+                        : `Attendance patterns for ${getFilterLabel().toLowerCase()}`
                     }
                   </CardDescription>
                 </div>
@@ -480,19 +574,19 @@ export default function ImprovedDashboard() {
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="colorPresent" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={COLORS.success} stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor={COLORS.success} stopOpacity={0}/>
+                      <stop offset="5%" stopColor={COLORS.success} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={COLORS.success} stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorLate" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={COLORS.warning} stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor={COLORS.warning} stopOpacity={0}/>
+                      <stop offset="5%" stopColor={COLORS.warning} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={COLORS.warning} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
-                  <XAxis 
-                    dataKey="label" 
-                    stroke="currentColor" 
-                    opacity={0.5} 
+                  <XAxis
+                    dataKey="label"
+                    stroke="currentColor"
+                    opacity={0.5}
                     fontSize={12}
                     angle={dateRange.preset === 'today' ? -45 : 0}
                     textAnchor={dateRange.preset === 'today' ? 'end' : 'middle'}
@@ -581,8 +675,8 @@ export default function ImprovedDashboard() {
           transition={{ delay: 0.8 }}
           className="lg:col-span-1"
         >
-          <LiveAttendanceTable 
-            autoRefresh={true} 
+          <LiveAttendanceTable
+            autoRefresh={true}
             refreshInterval={60000}
             pageSize={5}
           />

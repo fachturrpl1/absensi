@@ -26,10 +26,22 @@ export function DashboardLayoutWrapper({
     '/organization-inactive',
     '/subscription-expired',
     '/offline',
+    '/role-selector',
+  ];
+
+  // Pages that should hide only the navbar (keep sidebar/layout)
+  const hideNavbarPaths = [
+    '/members/import-simple',
+    '/members/import-simple-1',
+    '/finger/import-simple',
+    '/finger/import-simple/mapping',
   ];
 
   // Check if current path is public (no sidebar/navbar)
   const isPublicPath = publicPaths.some(path => pathname?.startsWith(path));
+
+  // Check if navbar should be hidden
+  const hideNavbar = hideNavbarPaths.some(path => pathname?.startsWith(path));
 
   // If public path, render children without layout
   if (isPublicPath) {
@@ -37,12 +49,14 @@ export function DashboardLayoutWrapper({
   }
 
   // Dashboard pages: render with sidebar/navbar
+  // Always render NavbarNew to avoid hydration mismatch
+  // NavbarNew handles its own hydration internally
   return (
     <SidebarProvider defaultOpen={true}>
       <AppSidebarNew />
-      <SidebarInset>
-        <NavbarNew />
-        <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
+      <SidebarInset className="flex flex-col min-w-0">
+        {!hideNavbar && <NavbarNew />}
+        <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6 w-full min-w-0">
           {children}
         </div>
       </SidebarInset>

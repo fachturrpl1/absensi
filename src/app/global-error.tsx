@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { logger } from '@/lib/logger';
+
+// Global flag to prevent multiple logs across component instances
+const globalErrorLogCache = new Set<string>();
 
 export default function GlobalError({
   error,
@@ -11,12 +13,43 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // Create stable error identifier using useMemo
+  const errorId = useMemo(() => {
+    const message = error?.message || 'unknown';
+    const digest = error?.digest || 'no-digest';
+    return `${message}-${digest}`;
+  }, [error?.message, error?.digest]);
+
+  // Use useEffect with stable error ID to log only once per unique error
+  // We use errorId (memoized) to avoid loops
   useEffect(() => {
-    // Log the error to monitoring service
-    logger.error('Global error occurred', error, {
-      digest: error.digest,
-    });
-  }, [error]);
+    // Skip if already logged this exact error
+    if (globalErrorLogCache.has(errorId)) {
+      return;
+    }
+
+    try {
+      // Minimal logging - direct to console, no logger utility to avoid loops
+      console.error('[GlobalError]', {
+        message: error?.message || 'Unknown error',
+        digest: error?.digest,
+        name: error?.name,
+      });
+      
+      // Mark as logged
+      globalErrorLogCache.add(errorId);
+      
+      // Clean up cache after 10 entries to prevent memory leak
+      if (globalErrorLogCache.size > 10) {
+        const firstEntry = globalErrorLogCache.values().next().value;
+        if (firstEntry) {
+          globalErrorLogCache.delete(firstEntry);
+        }
+      }
+    } catch {
+      // Silently fail to prevent any loops
+    }
+  }, [errorId]); // Only depend on memoized errorId
 
   return (
     <html>

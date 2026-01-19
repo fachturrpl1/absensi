@@ -1,0 +1,181 @@
+* Unmerged path src/components/data-table.tsx
+[1mdiff --git a/src/components/data-table.tsx b/src/components/data-table.tsx[m
+[1mindex ebff84f..3c95ead 100644[m
+[1m--- a/src/components/data-table.tsx[m
+[1m+++ b/src/components/data-table.tsx[m
+[36m@@ -27,7 +27,7 @@[m [mimport {[m
+   DropdownMenuTrigger,[m
+ } from "@/components/ui/dropdown-menu"[m
+ import { cn } from "@/lib/utils"[m
+[31m-import { Columns3Cog, Loader2, Search, Filter } from "lucide-react"[m
+[32m+[m[32mimport { Columns3Cog, Loader2, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"[m
+ import { Input } from "@/components/ui/input"[m
+ import {[m
+   Select,[m
+[36m@@ -48,6 +48,10 @@[m [mtype DataTableProps<TData, TValue> = {[m
+   initialSorting?: SortingState[m
+   getRowKey?: (row: TData, index: number) => string[m
+   searchPlaceholder?: string[m
+[32m+[m[32m  pageIndex?: number[m
+[32m+[m[32m  onPageIndexChange?: (pageIndex: number) => void[m
+[32m+[m[32m  pageSize?: number[m
+[32m+[m[32m  onPageSizeChange?: (pageSize: number) => void[m
+ }[m
+ [m
+ export function DataTable<TData, TValue>({[m
+[36m@@ -61,6 +65,10 @@[m [mexport function DataTable<TData, TValue>({[m
+   initialSorting,[m
+   getRowKey,[m
+   searchPlaceholder = "Search members...",[m
+[32m+[m[32m  pageIndex: externalPageIndex,[m
+[32m+[m[32m  onPageIndexChange,[m
+[32m+[m[32m  pageSize: externalPageSize,[m
+[32m+[m[32m  onPageSizeChange,[m
+ }: DataTableProps<TData, TValue>) {[m
+   const [sorting, setSorting] = React.useState<SortingState>(initialSorting ?? [])[m
+   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})[m
+[36m@@ -68,8 +76,34 @@[m [mexport function DataTable<TData, TValue>({[m
+   const [globalFilter, setGlobalFilter] = React.useState("")[m
+   const [statusFilter, setStatusFilter] = React.useState("all")[m
+   const [sortOrder, setSortOrder] = React.useState("newest")[m
+[31m-  const [pageSize, setPageSize] = React.useState("10")[m
+[31m-  const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: parseInt(pageSize) })[m
+[32m+[m[32m  const [pageSize, setPageSize] = React.useState(String(externalPageSize ?? 8))[m
+[32m+[m[32m  const [pageIndex, setPageIndex] = React.useState(externalPageIndex ?? 0)[m
+[32m+[m
+[32m+[m[32m  // Sync with external pageIndex[m
+[32m+[m[32m  React.useEffect(() => {[m
+[32m+[m[32m    if (externalPageIndex !== undefined) {[m
+[32m+[m[32m      setPageIndex(externalPageIndex)[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }, [externalPageIndex])[m
+[32m+[m
+[32m+[m[32m  // Sync with external pageSize[m
+[32m+[m[32m  React.useEffect(() => {[m
+[32m+[m[32m    if (externalPageSize !== undefined) {[m
+[32m+[m[32m      setPageSize(String(externalPageSize))[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }, [externalPageSize])[m
+[32m+[m
+[32m+[m[32m  // Notify parent when pageIndex changes[m
+[32m+[m[32m  const handlePageIndexChange = (newPageIndex: number) => {[m
+[32m+[m[32m    setPageIndex(newPageIndex)[m
+[32m+[m[32m    onPageIndexChange?.(newPageIndex)[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  // Notify parent when pageSize changes[m
+[32m+[m[32m  const handlePageSizeChange = (newPageSize: string) => {[m
+[32m+[m[32m    setPageSize(newPageSize)[m
+[32m+[m[32m    onPageSizeChange?.(parseInt(newPageSize))[m
+[32m+[m[32m  }[m
+ [m
+   // Filter and sort data[m
+   const filteredData = React.useMemo(() => {[m
+[36m@@ -152,12 +186,24 @@[m [mexport function DataTable<TData, TValue>({[m
+     getSortedRowModel: getSortedRowModel(),[m
+     onColumnVisibilityChange: setColumnVisibility,[m
+     onRowSelectionChange: setRowSelection,[m
+[31m-    onPaginationChange: setPagination,[m
+[32m+[m[32m    onPaginationChange: (updater) => {[m
+[32m+[m[32m      if (typeof updater === 'function') {[m
+[32m+[m[32m        const newPagination = updater({ pageIndex, pageSize: parseInt(pageSize) })[m
+[32m+[m[32m        handlePageIndexChange(newPagination.pageIndex)[m
+[32m+[m[32m        handlePageSizeChange(String(newPagination.pageSize))[m
+[32m+[m[32m      } else {[m
+[32m+[m[32m        handlePageIndexChange(updater.pageIndex)[m
+[32m+[m[32m        handlePageSizeChange(String(updater.pageSize))[m
+[32m+[m[32m      }[m
+[32m+[m[32m    },[m
+     state: {[m
+       sorting,[m
+       columnVisibility,[m
+       rowSelection,[m
+[31m-      pagination,[m
+[32m+[m[32m      pagination: {[m
+[32m+[m[32m        pageIndex: pageIndex,[m
+[32m+[m[32m        pageSize: parseInt(pageSize),[m
+[32m+[m[32m      },[m
+     },[m
+     initialState: {[m
+       pagination: {[m
+[36m@@ -166,63 +212,13 @@[m [mexport function DataTable<TData, TValue>({[m
+     },[m
+   })[m
+   [m
+[31m-  // Sink select pageSize -> pagination state and reset to first page[m
+[31m-  React.useEffect(() => {[m
+[31m-    setPagination((prev) => ({ ...prev, pageSize: parseInt(pageSize), pageIndex: 0 }))[m
+[31m-  }, [pageSize])[m
+[31m-[m
+   // Clamp pageIndex when filtered data or pageSize changes[m
+   React.useEffect(() => {[m
+[31m-    const totalPages = Math.max(1, Math.ceil(filteredData.length / pagination.pageSize))[m
+[31m-    if (pagination.pageIndex > totalPages - 1) {[m
+[31m-      setPagination((prev) => ({ ...prev, pageIndex: totalPages - 1 }))[m
+[31m-    }[m
+[31m-  }, [filteredData.length, pagination.pageSize, pagination.pageIndex])[m
+[31m-[m
+[31m-  // Generate pagination numbers with smart ellipsis[m
+[31m-  const generatePaginationNumbers = () => {[m
+[31m-    const currentPage = table.getState().pagination.pageIndex + 1[m
+[31m-    const totalPages = table.getPageCount()[m
+[31m-    const pages: (number | string)[] = [][m
+[31m-    const maxVisible = 5[m
+[31m-    const sidePages = 2[m
+[31m-[m
+[31m-    if (totalPages <= maxVisible) {[m
+[31m-      // Show all pages if total is less than or equal to max visible[m
+[31m-      for (let i = 1; i <= totalPages; i++) {[m
+[31m-        pages.push(i)[m
+[31m-      }[m
+[31m-    } else {[m
+[31m-      // Always show first page[m
+[31m-      pages.push(1)[m
+[31m-[m
+[31m-      // Calculate range around current page[m
+[31m-      const rangeStart = Math.max(2, currentPage - sidePages)[m
+[31m-      const rangeEnd = Math.min(totalPages - 1, currentPage + sidePages)[m
+[31m-[m
+[31m-      // Add ellipsis before range if needed[m
+[31m-      if (rangeStart > 2) {[m
+[31m-        pages.push('...')[m
+[31m-      }[m
+[31m-[m
+[31m-      // Add pages in range[m
+[31m-      for (let i = rangeStart; i <= rangeEnd; i++) {[m
+[31m-        pages.push(i)[m
+[31m-      }[m
+[31m-[m
+[31m-      // Add ellipsis after range if needed[m
+[31m-      if (rangeEnd < totalPages - 1) {[m
+[31m-        pages.push('...')[m
+[31m-      }[m
+[31m-[m
+[31m-      // Always show last page[m
+[31m-      pages.push(totalPages)[m
+[32m+[m[32m    const totalPages = Math.max(1, Math.ceil(filteredData.length / parseInt(pageSize)))[m
+[32m+[m[32m    if (pageIndex > totalPages - 1) {[m
+[32m+[m[32m      handlePageIndexChange(Math.max(0, totalPages - 1))[m
+     }[m
+[31m-[m
+[31m-    return pages[m
+[31m-  }[m
+[31m-[m
+[31m-[m
+[32m+[m[32m  }, [filteredData.length, pageSize, pageIndex])[m
+ [m
+   return ([m
+     <div className="space-y-4">[m
+[36m@@ -275,7 +271,7 @@[m [mexport function DataTable<TData, TValue>({[m
+               {/* Show Items */}[m
+               <div className="flex items-center gap-2">[m
+                 <span className="text-sm text-muted-foreground whitespace-nowrap">Show:</span>[m
+[31m-                <Select value={pageSize} onValueChange={setPageSize}>[m
+[32m+[m[32m                <Select value={pageSize} onValueChange={handlePageSizeChange}>[m
+                   <SelectTrigger className="w-[70px]">[m
+                     <SelectValue />[m
+                   </SelectTrigger>[m
+[36m@@ -352,22 +348,27 @@[m [mexport function DataTable<TData, TValue>({[m
+                         : header.id;[m
+                       [m
+                       s

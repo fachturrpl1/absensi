@@ -1,12 +1,164 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 
 import { createClient } from "@/utils/supabase/server";
 
 import { attendanceLogger } from '@/lib/logger';
+import { getJSON, setJSON, delByPrefix } from '@/lib/cache';
+import { calculateAttendanceStatus, getDayOfWeek, type ScheduleRule } from '@/lib/attendance-status-calculator';
 async function getSupabase() {
   return await createClient();
+}
+
+// Resolve active schedule rule for a member on a given date.
+// Returns null if no active rule or non-working day.
+async function resolveScheduleRuleForMemberDate(
+  supabase: Awaited<ReturnType<typeof getSupabase>>,
+  organizationMemberId: number,
+  dateISO: string,
+): Promise<ScheduleRule | null> {
+  // Find active member schedule effective for the date
+  const { data: ms, error: msErr } = await supabase
+    .from('member_schedules')
+    .select('work_schedule_id, effective_date, end_date, is_active')
+    .eq('organization_member_id', organizationMemberId)
+    .eq('is_active', true)
+    .lte('effective_date', dateISO)
+    .or('end_date.is.null,end_date.gte.' + dateISO)
+    .order('effective_date', { ascending: false })
+    .limit(1);
+
+  if (msErr || !ms || ms.length === 0) {
+    return null;
+  }
+
+  const workScheduleId = ms[0]?.work_schedule_id as number | string | null;
+  if (!workScheduleId) return null;
+
+  // Fetch schedule detail for day of week
+  const dayOfWeek = getDayOfWeek(dateISO);
+
+  const { data: det, error: detErr } = await supabase
+    .from('work_schedule_details')
+    .select('day_of_week,is_working_day,start_time,end_time,core_hours_start,core_hours_end,grace_in_minutes,grace_out_minutes,is_active')
+    .eq('work_schedule_id', workScheduleId)
+    .eq('day_of_week', dayOfWeek)
+    .maybeSingle();
+
+  if (detErr || !det) return null;
+  if (!det.is_working_day) return null;
+  if (!det.is_active) return null;
+
+  const rule: ScheduleRule = {
+    day_of_week: det.day_of_week,
+    start_time: det.start_time || '',
+    end_time: det.end_time || '',
+    core_hours_start: det.core_hours_start || '',
+    core_hours_end: det.core_hours_end || '',
+    grace_in_minutes: det.grace_in_minutes ?? 0,
+    grace_out_minutes: det.grace_out_minutes ?? 0,
+  };
+  // Basic guard: empty strings mean invalid rule
+  if (!rule.start_time || !rule.end_time || !rule.core_hours_start || !rule.core_hours_end) {
+    return null;
+  }
+  return rule;
+}
+
+// Update check-in/check-out times and remarks for a single attendance record
+export async function updateAttendanceRecord(payload: {
+  id: string;
+  actual_check_in?: string | null;
+  actual_check_out?: string | null;
+  remarks?: string | null;
+}) {
+  try {
+    const supabase = await getSupabase();
+
+    // Resolve organization id for cache invalidation
+    let orgId: number | null = null;
+    try {
+      const { data: recOrg } = await supabase
+        .from('attendance_records')
+        .select('organization_member_id, attendance_date, actual_check_in, actual_check_out, organization_members!inner(organization_id)')
+        .eq('id', payload.id)
+        .maybeSingle();
+      const orgRel = (recOrg as unknown as { organization_members: { organization_id: number } | { organization_id: number }[] | null }).organization_members;
+      const orgObj = Array.isArray(orgRel) ? orgRel[0] : orgRel;
+      orgId = orgObj?.organization_id ?? null;
+
+      // Recalculate status only if check-in/out provided
+      const shouldRecalc = payload.actual_check_in !== undefined || payload.actual_check_out !== undefined;
+      if (shouldRecalc && recOrg) {
+        const memberId = (recOrg as unknown as { organization_member_id: number }).organization_member_id;
+        const attendanceDate = (recOrg as unknown as { attendance_date: string }).attendance_date;
+        const currentIn = (recOrg as unknown as { actual_check_in: string | null }).actual_check_in;
+        const currentOut = (recOrg as unknown as { actual_check_out: string | null }).actual_check_out;
+        const nextIn = payload.actual_check_in !== undefined ? payload.actual_check_in : currentIn;
+        const nextOut = payload.actual_check_out !== undefined ? payload.actual_check_out : currentOut;
+
+        const rule = await resolveScheduleRuleForMemberDate(supabase, Number(memberId), attendanceDate);
+        if (rule) {
+          const result = calculateAttendanceStatus(nextIn ?? null, nextOut ?? null, rule);
+          // Include status in update
+          if (result && result.status) {
+            // updateData is declared below; stash computed status to apply later
+            (payload as { _computedStatus?: string })._computedStatus = result.status;
+          }
+          // Stash computed minutes
+          (payload as { _lateMinutes?: number | null })._lateMinutes = result.details.lateMinutes ?? null;
+          (payload as { _earlyLeaveMinutes?: number | null })._earlyLeaveMinutes = result.details.earlyLeaveMinutes ?? null;
+          (payload as { _overtimeMinutes?: number | null })._overtimeMinutes = result.details.overtimeMinutes ?? null;
+        } else {
+          (payload as { _computedStatus?: string })._computedStatus = 'absent';
+          (payload as { _lateMinutes?: number | null })._lateMinutes = null;
+          (payload as { _earlyLeaveMinutes?: number | null })._earlyLeaveMinutes = null;
+          (payload as { _overtimeMinutes?: number | null })._overtimeMinutes = null;
+        }
+      }
+    } catch (_) { }
+
+    const updateData: Record<string, any> = {};
+    if (payload.actual_check_in !== undefined) updateData.actual_check_in = payload.actual_check_in;
+    if (payload.actual_check_out !== undefined) updateData.actual_check_out = payload.actual_check_out;
+    if (payload.remarks !== undefined) updateData.remarks = payload.remarks;
+    if ((payload as { _computedStatus?: string })._computedStatus) {
+      updateData.status = (payload as { _computedStatus?: string })._computedStatus;
+    }
+    if ((payload as { _lateMinutes?: number | null })._lateMinutes !== undefined) {
+      updateData.late_minutes = (payload as { _lateMinutes?: number | null })._lateMinutes;
+    }
+    if ((payload as { _earlyLeaveMinutes?: number | null })._earlyLeaveMinutes !== undefined) {
+      updateData.early_leave_minutes = (payload as { _earlyLeaveMinutes?: number | null })._earlyLeaveMinutes;
+    }
+    if ((payload as { _overtimeMinutes?: number | null })._overtimeMinutes !== undefined) {
+      updateData.overtime_minutes = (payload as { _overtimeMinutes?: number | null })._overtimeMinutes;
+    }
+
+    const { error } = await supabase
+      .from('attendance_records')
+      .update(updateData)
+      .eq('id', payload.id);
+
+    if (error) {
+      attendanceLogger.error('❌ Error updating attendance record:', error);
+      return { success: false, message: error.message } as const;
+    }
+
+    // Invalidate caches
+    try {
+      if (orgId) await delByPrefix(`attendance:list:${orgId}:`);
+      else await delByPrefix('attendance:list:');
+    } catch (_) { }
+    revalidatePath('/attendance');
+
+    return { success: true } as const;
+  } catch (err) {
+    attendanceLogger.error('❌ Exception updating attendance record:', err);
+    return { success: false, message: err instanceof Error ? err.message : 'An error occurred' } as const;
+  }
 }
 
 export type GetAttendanceParams = {
@@ -17,23 +169,50 @@ export type GetAttendanceParams = {
   search?: string;
   status?: string;
   department?: string;
+  organizationId?: number;  // Add organization ID parameter
+  noCache?: boolean;
+  cursor?: string; // base64 cursor for keyset pagination
+};
+
+export type AttendanceListItem = {
+  id: string;
+  member: {
+    id: number;
+    name: string;
+    avatar?: string;
+    position: string;
+    department: string;
+  };
+  date: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  workHours: string;
+  status: string;
+  checkInMethod: string | null;
+  checkOutMethod: string | null;
+  checkInLocationName: string | null;
+  checkOutLocationName: string | null;
+  notes: string;
+  timezone: string;
+  time_format: string;
 };
 
 export type GetAttendanceResult = {
   success: boolean;
-  data: any[];
+  data: AttendanceListItem[];
   meta?: {
     total: number;
     page: number;
     limit: number;
     totalPages: number;
+    nextCursor?: string;
   };
   message?: string;
 };
 
 export const getAllAttendance = async (params: GetAttendanceParams = {}): Promise<GetAttendanceResult> => {
   const supabase = await getSupabase();
-  
+
   const {
     page = 1,
     limit = 10,
@@ -41,143 +220,390 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     dateTo,
     search,
     status,
-    department
+    department,
+    organizationId,  // Get organization ID from params
+    noCache
   } = params;
 
-  // Get current user's organization
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    attendanceLogger.error("❌ User not authenticated");
-    return { success: false, data: [] };
-  }
+  // Default date range to today in production to avoid full table scans
+  const effDateFrom = dateFrom || undefined;
+  const effDateTo = dateTo || undefined;
 
-  // Get user's organization membership
-  const { data: userMember, error: memberError } = await supabase
-    .from("organization_members")
-    .select("organization_id, id")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  // Resolve effective organization id: prefer param, else cookie, else fallback to user's active membership
+  let effectiveOrgId: number | null = null;
+  let memberIdForLog: number | null = null;
 
-  if (memberError || !userMember) {
-    attendanceLogger.error("❌ User not in any organization");
-    return { success: false, data: [] };
-  }
+  if (organizationId) {
+    effectiveOrgId = organizationId;
+    attendanceLogger.info("🔑 Using organizationId from params:", organizationId);
+  } else {
+    // Try resolve from cookie first (works well on Vercel)
+    try {
+      const cookieStore = await cookies();
+      const raw = cookieStore.get('org_id')?.value;
+      const fromCookie = raw ? Number(raw) : NaN;
+      if (!Number.isNaN(fromCookie)) {
+        effectiveOrgId = fromCookie;
+        attendanceLogger.info("🍪 Using organizationId from cookie:", fromCookie);
+      }
+    } catch { }
 
-  // Start building the query
-  let query = supabase
-    .from("attendance_records")
-    .select(`
-      id,
-      organization_member_id,
-      attendance_date,
-      actual_check_in,
-      actual_check_out,
-      status,
-      created_at,
-      work_duration_minutes,
-      remarks,
-      organization_members!inner (
-        id,
-        user_id,
-        organization_id,
-        department_id,
-        user_profiles!inner (
-          first_name,
-          last_name,
-          profile_photo_url
-        ),
-        departments:departments!organization_members_department_id_fkey (
-          id,
-          name
-        ),
-        organizations (
-          id,
-          name,
-          timezone,
-          time_format
-        )
-      ),
-      check_in_device:attendance_devices!check_in_device_id (
-        device_name,
-        location
-      ),
-      check_out_device:attendance_devices!check_out_device_id (
-        device_name,
-        location
-      )
-    `, { count: 'exact' })
-    .eq("organization_members.organization_id", userMember.organization_id);
+    // Fallback: resolve via authenticated user's active membership
+    if (!effectiveOrgId) {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        attendanceLogger.error("❌ User not authenticated and no org cookie");
+        return { success: false, data: [], message: "User not authenticated" };
+      }
 
-  // Apply filters
-  if (dateFrom) {
-    query = query.gte("attendance_date", dateFrom);
-  }
-  
-  if (dateTo) {
-    query = query.lte("attendance_date", dateTo);
-  }
+      const { data: userMembers, error: memberError } = await supabase
+        .from("organization_members")
+        .select("organization_id, id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .limit(1);
 
-  if (status && status !== 'all') {
-    query = query.eq("status", status);
-  }
+      if (memberError) {
+        attendanceLogger.error("❌ Member query error:", memberError);
+        return { success: false, data: [], message: memberError.message || "Member query error" };
+      }
 
-  if (department && department !== 'all') {
-    query = query.eq("organization_members.departments.name", department);
-  }
+      const userMember = userMembers?.[0];
+      if (!userMember) {
+        attendanceLogger.error("❌ User not in any active organization");
+        return { success: false, data: [], message: "User not registered in any active organization" };
+      }
 
-  if (search) {
-    // Search by member name using ilike on user_profiles
-    // Note: Supabase doesn't support nested OR queries directly, so we use textSearch or filter manually
-    // For now, we'll search in first_name and last_name
-    query = query.or(`organization_members.user_profiles.first_name.ilike.%${search}%,organization_members.user_profiles.last_name.ilike.%${search}%`);
-  }
-
-  // Apply pagination
-  const from = (page - 1) * limit;
-  const to = from + limit - 1;
-  
-  query = query.range(from, to).order("attendance_date", { ascending: false });
-
-  const { data, error, count } = await query;
-
-  if (error) {
-    attendanceLogger.error("❌ Error fetching attendance:", error);
-    return { success: false, data: [] };
-  }
-
-  // Transform format
-  const mapped = (data || []).map((item: any) => ({
-    id: item.id,
-    member: {
-      name: `${item.organization_members?.user_profiles?.first_name || ''} ${item.organization_members?.user_profiles?.last_name || ''}`,
-      avatar: item.organization_members?.user_profiles?.profile_photo_url,
-      position: '', // Position not fetched in query above, add if needed
-      department: item.organization_members?.departments?.name || 'No Department',
-    },
-    date: item.attendance_date,
-    checkIn: item.actual_check_in,
-    checkOut: item.actual_check_out,
-    workHours: item.work_duration_minutes 
-      ? `${Math.floor(item.work_duration_minutes / 60)}h ${item.work_duration_minutes % 60}m` 
-      : (item.actual_check_in ? '-' : '-'),
-    status: item.status,
-    checkInLocationName: item.check_in_device?.location || item.check_in_device?.device_name || null,
-    checkOutLocationName: item.check_out_device?.location || item.check_out_device?.device_name || null,
-    notes: item.remarks || '',
-    timezone: item.organization_members?.organizations?.timezone || "Asia/Jakarta",
-    time_format: item.organization_members?.organizations?.time_format || "24h",
-  }));
-
-  return { 
-    success: true, 
-    data: mapped,
-    meta: {
-      total: count || 0,
-      page,
-      limit,
-      totalPages: Math.ceil((count || 0) / limit)
+      effectiveOrgId = userMember.organization_id;
+      memberIdForLog = userMember.id;
     }
+  }
+
+  if (!effectiveOrgId) {
+    return { success: false, data: [], message: "Organization not resolved" };
+  }
+  attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", memberIdForLog);
+  // Cache key per organisasi + filter
+  const cacheKey = [
+    'attendance:list',
+    String(effectiveOrgId),
+    `p=${page}`,
+    `l=${limit}`,
+    `from=${dateFrom || ''}`,
+    `to=${dateTo || ''}`,
+    `status=${status || 'all'}`,
+    `dept=${department || 'all'}`,
+    `q=${(search || '').trim().toLowerCase()}`,
+  ].join(':');
+
+  // Try cache first (safe if Redis down) unless noCache requested
+  if (!noCache) {
+    let cached: GetAttendanceResult | null = null;
+    try {
+      cached = await getJSON<GetAttendanceResult>(cacheKey);
+    } catch (_) {
+      attendanceLogger.warn(`⚠️ Cache read failed for key ${cacheKey}, proceeding without cache`);
+    }
+    if (cached && cached.success) {
+      attendanceLogger.debug(`🗄️ Cache hit: ${cacheKey}`);
+      try {
+        if (cached.meta && Array.isArray(cached.data)) {
+          const rowsLen = cached.data.length;
+          const currentLimit = cached.meta.limit || limit;
+          if ((cached.meta.total ?? 0) < rowsLen) {
+            cached.meta.total = rowsLen;
+            cached.meta.totalPages = Math.ceil(rowsLen / currentLimit);
+            try { await setJSON(cacheKey, cached, 60); } catch { }
+          }
+        }
+      } catch { }
+      return cached;
+    }
+  }
+
+  type AttendanceRow = {
+    id: number;
+    organization_member_id: number;
+    attendance_date: string;
+    actual_check_in: string | null;
+    actual_check_out: string | null;
+    status: string;
+    created_at: string;
+    work_duration_minutes: number | null;
+    remarks: string | null;
+    check_in_method: string | null;
+    check_out_method: string | null;
   };
+  type MemberProfile = {
+    first_name: string | null;
+    last_name: string | null;
+    display_name: string | null;
+    email: string | null;
+    profile_photo_url: string | null;
+    search_name: string | null;
+  };
+  type Biodata = {
+    nama: string | null;
+    nickname: string | null;
+  };
+  type MemberData = {
+    id: number;
+    user_profiles: MemberProfile | MemberProfile[] | null;
+    biodata: Biodata | Biodata[] | null;
+    departments: { name: string | null } | { name: string | null }[] | null;
+  };
+
+  // Inline filters below to avoid deep generic instantiation on Supabase types
+  const hasSearch = Boolean(search && search.trim() !== '');
+  const term = hasSearch ? search!.trim().toLowerCase() : '';
+  const pattern = hasSearch ? `%${term}%` : '';
+
+  // Offset variables are no longer needed when using keyset pagination
+
+  // Keyset pagination disabled for now (using offset pagination for stability)
+  // Use single-join filtering (no prefetch of memberIds)
+  // This keeps queries simple and allows PostgREST to optimize joins
+
+  // COUNT (lazy, page 1 saja)
+  // Prepare relation selection for count join (include only needed relations)
+  const innerParts: string[] = ['id'];
+  if (hasSearch) innerParts.push('user_profiles!organization_members_user_id_fkey!inner(search_name)');
+  if (department && department !== 'all') innerParts.push('departments!organization_members_department_id_fkey(name)');
+  const countRel = `organization_members!inner(${innerParts.join(',')})`;
+
+  // Cache key for COUNT should be independent of page/limit
+  const countCacheKey = [
+    'attendance:list',
+    String(effectiveOrgId),
+    `from=${effDateFrom || ''}`,
+    `to=${effDateTo || ''}`,
+    `status=${status || 'all'}`,
+    `dept=${department || 'all'}`,
+    `q=${(search || '').trim().toLowerCase()}`,
+    'count'
+  ].join(':');
+  let totalCount: number | undefined = undefined;
+  let needCount = page === 1 || Boolean(noCache);
+  if (!needCount && !noCache) {
+    try {
+      const cachedCount = await getJSON<number>(countCacheKey);
+      if (typeof cachedCount === 'number') {
+        totalCount = cachedCount;
+      } else {
+        needCount = true;
+      }
+    } catch {
+      needCount = true;
+    }
+  }
+  if (needCount) {
+    let countQuery = supabase
+      .from('attendance_records')
+      .select(`id, ${countRel}`, { count: 'exact', head: true })
+      .eq('organization_members.organization_id', effectiveOrgId);
+    if (effDateFrom) countQuery = countQuery.gte('attendance_date', effDateFrom);
+    if (effDateTo) countQuery = countQuery.lte('attendance_date', effDateTo);
+    if (status && status !== 'all') countQuery = countQuery.eq('status', status);
+    if (department && department !== 'all') countQuery = countQuery.eq('organization_members.departments.name', department);
+    if (hasSearch) countQuery = countQuery.ilike('organization_members.user_profiles.search_name', pattern);
+    const countResp = await countQuery;
+    totalCount = (countResp as unknown as { count: number | null }).count ?? 0;
+    try { if (!noCache) await setJSON(countCacheKey, totalCount, 60); } catch { }
+  }
+
+  // LIST dengan join untuk mengambil profil/departemen/biodata
+  // Specify exact FK for departments to avoid PostgREST ambiguous embed error
+  const listRel = hasSearch
+    ? 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey!inner(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))'
+    : 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))';
+  const fromIdx = (page - 1) * limit;
+  const toIdx = fromIdx + limit - 1;
+  let listQuery = supabase
+    .from('attendance_records')
+    .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, check_in_method, check_out_method, ${listRel}`)
+    .eq('organization_members.organization_id', effectiveOrgId)
+  if (effDateFrom) listQuery = listQuery.gte('attendance_date', effDateFrom);
+  if (effDateTo) listQuery = listQuery.lte('attendance_date', effDateTo);
+  if (status && status !== 'all') listQuery = listQuery.eq('status', status);
+  if (department && department !== 'all') listQuery = listQuery.eq('organization_members.departments.name', department);
+  if (hasSearch) listQuery = listQuery.ilike('organization_members.user_profiles.search_name', pattern);
+  listQuery = listQuery
+    .order('attendance_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .range(fromIdx, toIdx);
+  const listResp = await listQuery;
+  type AttendanceRowWithRel = AttendanceRow & { organization_members: MemberData | MemberData[] | null };
+  const rows = (listResp as unknown as { data: AttendanceRowWithRel[] | null }).data;
+  const dataError = (listResp as unknown as { error: { message: string } | null }).error;
+  if (dataError) {
+    return { success: false, data: [], message: dataError.message };
+  }
+
+  // Defensive: if rows are empty but cached totalCount > 0, recompute count fresh
+  if ((!rows || rows.length === 0) && typeof totalCount === 'number' && totalCount > 0) {
+    let freshCount = supabase
+      .from('attendance_records')
+      .select(`id, ${countRel}`, { count: 'exact', head: true })
+      .eq('organization_members.organization_id', effectiveOrgId)
+    if (effDateFrom) freshCount = freshCount.gte('attendance_date', effDateFrom);
+    if (effDateTo) freshCount = freshCount.lte('attendance_date', effDateTo);
+    if (status && status !== 'all') freshCount = freshCount.eq('status', status);
+    if (department && department !== 'all') freshCount = freshCount.eq('organization_members.departments.name', department);
+    if (hasSearch) freshCount = freshCount.ilike('organization_members.user_profiles.search_name', pattern);
+    const freshResp = await freshCount;
+    totalCount = (freshResp as unknown as { count: number | null }).count ?? 0;
+    try { await setJSON(countCacheKey, totalCount, 60); } catch { }
+  }
+
+  // If count somehow less than current page size, adjust to at least rows length
+  if (typeof totalCount === 'number' && rows && totalCount < rows.length) {
+    totalCount = rows.length;
+  }
+
+  // Fallback: if single-join returns no rows, try IN(memberIds) —
+  // Guarded to avoid heavy scans on serverless. Enable only when searching.
+  const FALLBACK_ON = process.env.ATTENDANCE_LIST_FALLBACK === '1';
+  let effectiveRows = rows;
+  if ((!effectiveRows || effectiveRows.length === 0) && FALLBACK_ON && hasSearch) {
+    attendanceLogger.warn("⚠️ Single-join returned 0 rows. Trying fallback IN(memberIds)...");
+    const { data: members, error: membersErr } = await supabase
+      .from('organization_members')
+      .select('id, user_profiles(search_name)')
+      .eq('organization_id', effectiveOrgId)
+      .eq('is_active', true);
+
+    if (!membersErr && Array.isArray(members) && members.length > 0) {
+      type MemberRow = { id: number; user_profiles: { search_name: string | null } | { search_name: string | null }[] | null };
+      let memberIds = (members as MemberRow[]).map(m => m.id);
+
+      if (hasSearch) {
+        const match = (m: MemberRow) => {
+          const up = m.user_profiles;
+          const sn = Array.isArray(up) ? up[0]?.search_name : up?.search_name;
+          return (sn || '').toLowerCase().includes(term);
+        };
+        memberIds = (members as MemberRow[]).filter(match).map(m => m.id);
+      }
+
+      if (memberIds.length > 0) {
+        // Limit IN size to avoid timeouts
+        const MAX_IDS = 500;
+        if (memberIds.length > MAX_IDS) memberIds = memberIds.slice(0, MAX_IDS);
+        let fbQuery = supabase
+          .from('attendance_records')
+          .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, check_in_method, check_out_method, ${listRel}`)
+          .in('organization_member_id', memberIds);
+
+        if (status && status !== 'all') fbQuery = fbQuery.eq('status', status);
+
+        const fbResp = await fbQuery
+          .order('attendance_date', { ascending: false })
+          .order('created_at', { ascending: false })
+          .range(fromIdx, toIdx);
+
+        const fbRows = (fbResp as unknown as { data: AttendanceRowWithRel[] | null }).data;
+        if (fbRows && fbRows.length > 0) {
+          attendanceLogger.info("✅ Fallback IN(memberIds) returned rows:", fbRows.length);
+          effectiveRows = fbRows;
+        }
+      }
+    }
+  }
+
+  // Small cache for org info to avoid repeated fetch on each page load
+  const orgInfoCacheKey = `org:info:${effectiveOrgId}`;
+  let orgInfo: { id: number; timezone: string | null; time_format: string | null } | null = null;
+  try {
+    orgInfo = await getJSON<{ id: number; timezone: string | null; time_format: string | null }>(orgInfoCacheKey);
+  } catch (_) {
+    attendanceLogger.warn(`⚠️ Org info cache read failed for key ${orgInfoCacheKey}, using DB fallback`);
+  }
+  if (!orgInfo) {
+    const { data: orgInfoRaw } = await supabase
+      .from('organizations')
+      .select('id, timezone, time_format')
+      .eq('id', effectiveOrgId)
+      .maybeSingle();
+    const fallbackInfo = { id: effectiveOrgId, timezone: 'Asia/Jakarta', time_format: '24h' }
+    orgInfo = orgInfoRaw || fallbackInfo;
+    try { await setJSON(orgInfoCacheKey, orgInfo, 600); } catch { }
+  }
+
+  const mapped = (effectiveRows || []).map((item: AttendanceRowWithRel) => {
+    const m = item.organization_members as MemberData | MemberData[] | null;
+    const mObj: MemberData | null = Array.isArray(m) ? (m[0] as MemberData) : (m as MemberData);
+    const profileObj = mObj?.user_profiles;
+    const profile: MemberProfile | null = Array.isArray(profileObj) ? (profileObj[0] ?? null) : (profileObj ?? null);
+    const biodataObj = mObj?.biodata;
+    const biodata: Biodata | null = Array.isArray(biodataObj) ? (biodataObj[0] ?? null) : (biodataObj ?? null);
+
+    // Try user_profiles first
+    const displayName = (profile?.display_name ?? '').trim();
+    const firstName = profile?.first_name ?? '';
+    const lastName = profile?.last_name ?? '';
+    const email = (profile?.email ?? '').trim();
+    const searchName = (profile?.search_name ?? '').trim();
+    const fullName = `${firstName} ${lastName}`.trim();
+
+    // Fallback to biodata if user_profiles has no name
+    const biodataNama = (biodata?.nama ?? '').trim();
+    const biodataNickname = (biodata?.nickname ?? '').trim();
+
+    const effectiveName = displayName || fullName || email || searchName || biodataNama || biodataNickname;
+    const deptObj = mObj?.departments;
+    const departmentName = Array.isArray(deptObj) ? (deptObj[0]?.name ?? '') : (deptObj?.name ?? '');
+
+    const inMethod = item.check_in_method ?? (item.actual_check_in ? 'manual' : null);
+    const outMethod = item.check_out_method ?? (item.actual_check_out ? 'manual' : null);
+    return {
+      id: String(item.id),
+      member: {
+        id: item.organization_member_id,
+        name: effectiveName || `Member #${item.organization_member_id}`,
+        avatar: profile?.profile_photo_url || undefined,
+        position: '',
+        department: departmentName,
+      },
+      date: item.attendance_date,
+      checkIn: item.actual_check_in,
+      checkOut: item.actual_check_out,
+      workHours: item.work_duration_minutes ? `${Math.floor(item.work_duration_minutes / 60)}h ${item.work_duration_minutes % 60}m` : (item.actual_check_in ? '-' : '-'),
+      status: item.status,
+      checkInMethod: inMethod ? String(inMethod) : null,
+      checkOutMethod: outMethod ? String(outMethod) : null,
+      checkInLocationName: null,
+      checkOutLocationName: null,
+      notes: '',
+      timezone: orgInfo?.timezone || 'Asia/Jakarta',
+      time_format: orgInfo?.time_format || '24h',
+    };
+  });
+
+  const total = typeof totalCount === 'number' ? totalCount : (effectiveRows?.length || 0);
+  let nextCursor: string | undefined = undefined;
+  if ((effectiveRows?.length || 0) === limit && effectiveRows && effectiveRows.length > 0) {
+    const last = effectiveRows[effectiveRows.length - 1] as AttendanceRow | undefined;
+    if (last) {
+      const payload = { ad: last.attendance_date, cr: last.created_at, id: last.id };
+      try { nextCursor = Buffer.from(JSON.stringify(payload)).toString('base64'); } catch { }
+    }
+  }
+  const result: GetAttendanceResult = {
+    success: true,
+    data: mapped,
+    meta: { total, page, limit, totalPages: Math.ceil(total / limit), nextCursor }
+  };
+
+  // Save to cache (TTL 120s) unless noCache requested
+  if (!noCache) {
+    try {
+      await setJSON(cacheKey, result, 120);
+      attendanceLogger.debug(`🗄️ Cache set: ${cacheKey}`);
+    } catch (_) {
+      attendanceLogger.warn(`⚠️ Cache write failed for key ${cacheKey}, returning result without cache`);
+    }
+  }
+  return result;
 };
 
 export async function updateAttendanceStatus(id: string, status: string) {
@@ -197,6 +623,8 @@ type ManualAttendancePayload = {
   actual_check_out: string | null;
   status: string;
   remarks?: string;
+  check_in_method?: string;
+  check_out_method?: string;
 };
 
 export async function checkExistingAttendance(
@@ -205,7 +633,7 @@ export async function checkExistingAttendance(
 ) {
   try {
     const supabase = await getSupabase();
-    
+
     // Ensure organization_member_id is a number
     const memberId = Number(organization_member_id);
     if (isNaN(memberId)) {
@@ -254,12 +682,14 @@ export const getAttendanceStats = async (params: GetAttendanceParams = {}): Prom
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false };
 
-  const { data: userMember } = await supabase
+  const { data: userMembers } = await supabase
     .from("organization_members")
     .select("organization_id")
     .eq("user_id", user.id)
-    .maybeSingle();
+    .eq("is_active", true)
+    .limit(1);
 
+  const userMember = userMembers?.[0];
   if (!userMember) return { success: false };
 
   // Base query builder
@@ -267,13 +697,13 @@ export const getAttendanceStats = async (params: GetAttendanceParams = {}): Prom
     // We use a single query construction to avoid type mismatches from reassignment
     let q = supabase
       .from("attendance_records")
-      .select("id, organization_members!inner(organization_id)", { count: 'exact', head: true })
+      .select("id, organization_members!inner(organization_id)", { count: 'planned', head: true })
       .eq("organization_members.organization_id", userMember.organization_id);
 
     if (dateFrom) q = q.gte("attendance_date", dateFrom);
     if (dateTo) q = q.lte("attendance_date", dateTo);
     if (statusFilter) q = q.eq("status", statusFilter);
-    
+
     return q;
   };
 
@@ -296,7 +726,7 @@ export const getAttendanceStats = async (params: GetAttendanceParams = {}): Prom
         .eq("organization_members.organization_id", userMember.organization_id)
         .gte("attendance_date", dateFrom)
         .lte("attendance_date", dateTo);
-      
+
       if (trend) {
         // Group by date
         const grouped = trend.reduce((acc: any, curr: any) => {
@@ -332,7 +762,7 @@ export const getAttendanceStats = async (params: GetAttendanceParams = {}): Prom
 export async function createManualAttendance(payload: ManualAttendancePayload) {
   try {
     const supabase = await getSupabase();
-    
+
     // Log for debugging
     attendanceLogger.debug("📝 Creating attendance for:", {
       member_id: payload.organization_member_id,
@@ -340,31 +770,182 @@ export async function createManualAttendance(payload: ManualAttendancePayload) {
       check_in: payload.actual_check_in,
     });
 
-    const { error } = await supabase.from("attendance_records").insert([payload]);
+    // Compute status based on schedule rule
+    const memberIdNum = Number(payload.organization_member_id);
+    const rule = Number.isFinite(memberIdNum)
+      ? await resolveScheduleRuleForMemberDate(supabase, memberIdNum, payload.attendance_date)
+      : null;
+    let computedStatus = 'absent' as string;
+    let lateMinutes: number | null = null;
+    let earlyLeaveMinutes: number | null = null;
+    let overtimeMinutes: number | null = null;
+    if (rule) {
+      const result = calculateAttendanceStatus(payload.actual_check_in ?? null, payload.actual_check_out ?? null, rule);
+      computedStatus = result.status;
+      lateMinutes = result.details.lateMinutes ?? null;
+      earlyLeaveMinutes = result.details.earlyLeaveMinutes ?? null;
+      overtimeMinutes = result.details.overtimeMinutes ?? null;
+    }
+
+    const insertPayload: ManualAttendancePayload & {
+      late_minutes?: number | null;
+      early_leave_minutes?: number | null;
+      overtime_minutes?: number | null;
+    } = {
+      ...payload,
+      status: computedStatus,
+      late_minutes: lateMinutes,
+      early_leave_minutes: earlyLeaveMinutes,
+      overtime_minutes: overtimeMinutes,
+    };
+
+    const { error } = await supabase.from("attendance_records").insert([insertPayload]);
 
     if (error) {
       attendanceLogger.error("❌ Error creating attendance:", error);
-      
+
       // Check if duplicate key error
       if (error.code === "23505") {
-        return { 
-          success: false, 
-          message: `Attendance already exists for this date. Please check existing records.` 
+        return {
+          success: false,
+          message: `Attendance already exists for this date. Please check existing records.`
         };
       }
-      
+
       return { success: false, message: error.message };
     }
 
     attendanceLogger.debug("✓ Attendance created successfully");
+    // Invalidate list cache for the organization of this member
+    try {
+      const memberId = Number(payload.organization_member_id);
+      if (!isNaN(memberId)) {
+        const { data: orgRow } = await supabase
+          .from('organization_members')
+          .select('organization_id')
+          .eq('id', memberId)
+          .maybeSingle();
+        const orgId = orgRow?.organization_id;
+        if (orgId) {
+          await delByPrefix(`attendance:list:${orgId}:`);
+        } else {
+          await delByPrefix('attendance:list:');
+        }
+      }
+    } catch (_) { }
     revalidatePath("/attendance");
 
     return { success: true };
   } catch (err) {
     attendanceLogger.error("❌ Exception creating attendance:", err);
-    return { 
-      success: false, 
-      message: err instanceof Error ? err.message : "An error occurred" 
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "An error occurred"
+    };
+  }
+}
+
+export async function deleteAttendanceRecord(id: string) {
+  try {
+    const supabase = await getSupabase();
+
+    attendanceLogger.info("🗑️ Deleting attendance record:", id);
+
+    // Fetch orgId before deletion for targeted cache invalidation
+    let orgId: number | null = null;
+    try {
+      const { data: recOrg } = await supabase
+        .from('attendance_records')
+        .select('organization_members!inner(organization_id)')
+        .eq('id', id)
+        .maybeSingle();
+      const orgRel: any = (recOrg as any)?.organization_members;
+      const orgObj = Array.isArray(orgRel) ? orgRel[0] : orgRel;
+      orgId = orgObj?.organization_id ?? null;
+    } catch (_) { }
+
+    const { error } = await supabase
+      .from("attendance_records")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      attendanceLogger.error("❌ Error deleting attendance:", error);
+      return { success: false, message: error.message };
+    }
+
+    attendanceLogger.info("✓ Attendance record deleted successfully");
+    // Invalidate caches
+    try {
+      if (orgId) await delByPrefix(`attendance:list:${orgId}:`);
+      else await delByPrefix('attendance:list:');
+    } catch (_) { }
+    revalidatePath("/attendance");
+
+    return { success: true };
+  } catch (err) {
+    attendanceLogger.error("❌ Exception deleting attendance:", err);
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "An error occurred"
+    };
+  }
+}
+
+export async function deleteMultipleAttendanceRecords(ids: string[]) {
+  try {
+    const supabase = await getSupabase();
+
+    attendanceLogger.info("🗑️ Deleting multiple attendance records:", ids);
+
+    // Collect affected orgIds first
+    let affectedOrgIds: number[] = [];
+    try {
+      const { data: recs } = await supabase
+        .from('attendance_records')
+        .select('id, organization_members!inner(organization_id)')
+        .in('id', ids);
+
+      if (Array.isArray(recs)) {
+        type RecRow = { organization_members: { organization_id: number } | { organization_id: number }[] | null };
+        const set = new Set<number>();
+        for (const r of recs as RecRow[]) {
+          const rel = r.organization_members ?? null;
+          const obj = Array.isArray(rel) ? rel[0] : rel;
+          const oid = obj?.organization_id;
+          if (typeof oid === 'number') set.add(oid);
+        }
+        affectedOrgIds = Array.from(set);
+      }
+    } catch (_) { }
+
+    const { error } = await supabase
+      .from("attendance_records")
+      .delete()
+      .in("id", ids);
+
+    if (error) {
+      attendanceLogger.error("❌ Error deleting attendance records:", error);
+      return { success: false, message: error.message };
+    }
+
+    attendanceLogger.info("✓ Attendance records deleted successfully");
+    // Invalidate caches for affected orgs
+    try {
+      if (affectedOrgIds.length > 0) {
+        await Promise.all(affectedOrgIds.map((oid) => delByPrefix(`attendance:list:${oid}:`)));
+      } else {
+        await delByPrefix('attendance:list:');
+      }
+    } catch (_) { }
+    revalidatePath("/attendance");
+
+    return { success: true };
+  } catch (err) {
+    attendanceLogger.error("❌ Exception deleting attendance records:", err);
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "An error occurred"
     };
   }
 }

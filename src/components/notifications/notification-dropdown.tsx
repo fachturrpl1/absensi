@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Bell, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,12 +40,13 @@ function formatRelativeTime(timeString: string): string {
 
 export function NotificationDropdown() {
   const router = useRouter();
-  const { data: activities = [], isLoading } = useRecentActivity(5);
+  const [open, setOpen] = useState(false);
+  const { data: activities = [], isLoading } = useRecentActivity(5, { enabled: open, refetchIntervalMs: open ? 1000 * 60 * 3 : undefined });
 
   const notificationCount = activities.length;
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative h-9 w-9">
           <Bell className="h-5 w-5" />
@@ -103,5 +105,3 @@ export function NotificationDropdown() {
     </DropdownMenu>
   );
 }
-
-

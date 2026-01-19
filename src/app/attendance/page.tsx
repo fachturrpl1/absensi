@@ -1,411 +1,649 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useEffect, useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import {
-  UserCheck,
-  Clock,
-  XCircle,
-  Palmtree,
-  Info
-} from "lucide-react";
-import { DateFilterBar, DateFilterState } from "@/components/analytics/date-filter-bar";
+  Users, Clock, Target,
+  Building2, BarChart3, Activity,
+  CheckCircle2, XCircle, Award, Timer
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { createClient } from '@/utils/supabase/client';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
+import { EmptyState } from '@/components/dashboard/empty-state';
+import { AnalyticsSkeleton } from '@/components/analytics/analytics-skeleton';
+import { useHydration } from '@/hooks/useHydration';
+import Link from 'next/link';
 import {
   AreaChart,
   Area,
+  PieChart as RechartsDonutChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend
-} from "recharts";
+  ResponsiveContainer
+} from 'recharts';
 
-interface AttendanceStats {
-  present: number;
-  late: number;
-  absent: number;
-  onLeave: number;
+interface AttendanceRecord {
+  id: string;
+  member_name: string;
+  department_name: string;
+  status: string;
+  actual_check_in: string | null;
+  actual_check_out: string | null;
+  work_duration_minutes: number | null;
+  scheduled_duration_minutes?: number; // Default 8 jam (480 min) jika belum check out
+  late_minutes: number | null;
+  attendance_date: string;
 }
 
-interface HourlyData {
-  hour: string;
-  checkIns: number;
-}
-
-interface StatusDistribution {
-  name: string;
-  value: number;
-  color: string;
-}
-
-interface DepartmentData {
-  name: string;
-  present: number;
-  total: number;
+interface MasterData {
+  totalMembers: number;
+  totalDepartments: number;
+  averageTeamSize: number;
 }
 
 const COLORS = {
-  present: '#10B981',
-  late: '#F59E0B',
-  absent: '#EF4444',
-  onLeave: '#8B5CF6',
-  primary: '#3B82F6',
+  present: '#10b981',
+  late: '#f59e0b',
+  absent: '#ef4444',
+  leave: '#3b82f6',
+  excused: '#8b5cf6',
 };
 
-export default function AttendanceDashboard() {
-  const [loading, setLoading] = useState(true);
-  const [chartView, setChartView] = useState<'hour' | 'day'>('hour');
-  const [stats, setStats] = useState<AttendanceStats>({
-    present: 0,
-    late: 0,
-    absent: 0,
-    onLeave: 0
-  });
-  const [hourlyData, setHourlyData] = useState<HourlyData[]>([]);
-  const [statusData, setStatusData] = useState<StatusDistribution[]>([]);
-  const [departmentData, setDepartmentData] = useState<DepartmentData[]>([]);
-
-  // Date filter
+export default function AnalyticsPage() {
+  const { organizationId } = useHydration();
+  const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [masterData, setMasterData] = useState<MasterData>({ totalMembers: 0, totalDepartments: 0, averageTeamSize: 0 });
+  const [deptMemberCounts, setDeptMemberCounts] = useState<Record<string, number>>({});
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const endOfToday = new Date(today);
-    endOfToday.setHours(23, 59, 59, 999);
-    return { from: today, to: endOfToday, preset: 'today' };
+    const monthStart = startOfMonth(today);
+    monthStart.setHours(0, 0, 0, 0);
+    const monthEnd = endOfMonth(today);
+    monthEnd.setHours(23, 59, 59, 999);
+
+    return {
+      from: monthStart,
+      to: monthEnd,
+      preset: 'thisMonth',
+    };
   });
 
   useEffect(() => {
-    fetchAttendanceData();
-  }, [dateRange]);
+    if (!organizationId) {
+      console.log('[DASHBOARD] Waiting for organization ID - orgId:', organizationId)
+      return
+    }
 
-  const fetchAttendanceData = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/attendance-records?limit=1000`);
+    console.log('[DASHBOARD] Starting to fetch data - orgId:', organizationId)
+
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const supabase = createClient();
+
+        if (!organizationId) {
+          console.log('[DASHBOARD] No organization ID from store');
+          setIsLoading(false);
+          return;
+        }
+
+        const orgId = organizationId;
+
+        // Fetch master data - still safe as it only counts, doesn't return sensitive data
+        const [membersResult, deptsResult] = await Promise.all([
+          supabase
+            .from('organization_members')
+            .select('id', { count: 'exact', head: true })
+            .eq('organization_id', orgId)
+            .eq('is_active', true),
+          supabase
+            .from('departments')
+            .select('id, name', { count: 'exact' })
+            .eq('organization_id', orgId)
+        ]);
+
+        setMasterData({
+          totalMembers: membersResult.count || 0,
+          totalDepartments: deptsResult.count || 0,
+          averageTeamSize: (membersResult.count || 0) / (deptsResult.count || 1),
+        });
+
+        // Fetch active member list with departments to compute per-department member counts
+        const { data: memberRows } = await supabase
+          .from('organization_members')
+          .select('id, is_active, departments:departments!organization_members_department_id_fkey(name)')
+          .eq('organization_id', orgId)
+          .eq('is_active', true);
+
+        const counts: Record<string, number> = {};
+        (memberRows || []).forEach((row: any) => {
+          // departments can be object or array depending on join
+          const depObj = Array.isArray(row.departments) ? row.departments[0] : row.departments;
+          const name: string = depObj?.name || 'Unknown';
+          counts[name] = (counts[name] || 0) + 1;
+        });
+        setDeptMemberCounts(counts);
+
+      // Fetch attendance records using secure API route (server-side filtering)
+      const toYMD = (d: Date) => format(d, 'yyyy-MM-dd');
+      const params = new URLSearchParams();
+      params.set('organizationId', String(orgId));
+      params.set('page', '1');
+      params.set('limit', '1000');
+      params.set('dateFrom', toYMD(dateRange.from));
+      params.set('dateTo', toYMD(dateRange.to));
+
+      const response = await fetch(`/api/attendance-records?${params.toString()}`, {
+        method: 'GET',
+        credentials: 'same-origin',
+      });
       const result = await response.json();
 
       if (result.success && result.data) {
-        processAttendanceData(result.data);
+        setAllRecords(result.data);
+      } else {
+        console.error('Failed to fetch attendance records:', result.message);
+        setAllRecords([]);
       }
-    } catch (error) {
-      console.error('Error fetching attendance:', error);
-    } finally {
-      setLoading(false);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [organizationId, dateRange]);
+
+  const getFilterLabel = () => {
+    if (!dateRange.preset) {
+      // Generate label from actual date range
+      const fromDate = format(dateRange.from, 'MMM dd');
+      const toDate = format(dateRange.to, 'MMM dd, yyyy');
+      return `${fromDate} - ${toDate}`;
     }
+    const labels: Record<string, string> = {
+      'today': 'Today',
+      'yesterday': 'Yesterday',
+      'thisWeek': 'This Week',
+      'thisMonth': 'This Month',
+      'thisYear': 'This Year',
+      'lastYear': 'Last Year',
+      'last7': 'Last 7 Days',
+      'last30': 'Last 30 Days',
+    };
+    return labels[dateRange.preset] || format(dateRange.from, 'MMM dd') + ' - ' + format(dateRange.to, 'MMM dd, yyyy');
   };
 
-  const processAttendanceData = (records: any[]) => {
-    const fromDateStr = dateRange.from.toISOString().split('T')[0];
-    const toDateStr = dateRange.to.toISOString().split('T')[0];
-    
-    const filtered = records.filter(r => {
-      const recordDate = new Date(r.attendance_date + 'T00:00:00');
-      const fromDate = new Date(fromDateStr + 'T00:00:00');
-      const toDate = new Date(toDateStr + 'T23:59:59.999');
+  const filteredRecords = useMemo(() => {
+    return allRecords.filter(record => {
+      const recordDate = new Date(record.attendance_date);
+      recordDate.setHours(0, 0, 0, 0);
+      const fromDate = new Date(dateRange.from);
+      fromDate.setHours(0, 0, 0, 0);
+      const toDate = new Date(dateRange.to);
+      toDate.setHours(23, 59, 59, 999);
       return recordDate >= fromDate && recordDate <= toDate;
     });
+  }, [allRecords, dateRange]);
 
-    const present = filtered.filter(r => r.status === 'present').length;
-    const late = filtered.filter(r => r.status === 'late').length;
-    const absent = filtered.filter(r => r.status === 'absent').length;
-    const onLeave = filtered.filter(r => r.status === 'on_leave' || r.status === 'leave').length;
+  // Calculate metrics
+  const metrics = useMemo(() => {
+    const total = filteredRecords.length;
+    if (total === 0) return null;
 
-    setStats({ present, late, absent, onLeave });
+    const presentCount = filteredRecords.filter(r => r.status === 'present').length;
+    const lateCount = filteredRecords.filter(r => r.status === 'late').length;
+    const absentCount = filteredRecords.filter(r => r.status === 'absent').length;
+    const leaveCount = filteredRecords.filter(r => r.status === 'leave' || r.status === 'excused').length;
 
-    // Process hourly data
-    const hourlyMap: Record<number, number> = {};
-    for (let i = 0; i < 24; i++) {
-      hourlyMap[i] = 0;
+    // Use actual duration if available, otherwise use scheduled duration (estimated)
+    const totalWorkMinutes = filteredRecords.reduce((sum, r) => {
+      const duration = r.work_duration_minutes || r.scheduled_duration_minutes || 0;
+      return sum + duration;
+    }, 0);
+    const totalLateMinutes = filteredRecords.reduce((sum, r) => sum + (r.late_minutes || 0), 0);
+
+    const attendanceRate = ((presentCount + lateCount) / total) * 100;
+    const punctualityRate = presentCount > 0 ? (presentCount / (presentCount + lateCount)) * 100 : 0;
+    const absenteeismRate = (absentCount / total) * 100;
+    const avgWorkHours = totalWorkMinutes / total / 60;
+    const avgLateMinutes = lateCount > 0 ? totalLateMinutes / lateCount : 0;
+
+    const uniqueMembers = new Set(filteredRecords.map(r => r.member_name));
+
+    return {
+      total,
+      presentCount,
+      lateCount,
+      absentCount,
+      leaveCount,
+      totalWorkHours: totalWorkMinutes / 60,
+      attendanceRate,
+      punctualityRate,
+      absenteeismRate,
+      avgWorkHours,
+      avgLateMinutes,
+      activeMembers: uniqueMembers.size,
+    };
+  }, [filteredRecords]);
+
+  // Status distribution - always show all statuses
+  const statusData = useMemo(() => {
+    if (!metrics) {
+      return [
+        { name: 'Present', value: 0, color: COLORS.present },
+        { name: 'Late', value: 0, color: COLORS.late },
+        { name: 'Absent', value: 0, color: COLORS.absent },
+        { name: 'Leave', value: 0, color: COLORS.leave },
+      ];
     }
+    return [
+      { name: 'Present', value: metrics.presentCount, color: COLORS.present },
+      { name: 'Late', value: metrics.lateCount, color: COLORS.late },
+      { name: 'Absent', value: metrics.absentCount, color: COLORS.absent },
+      { name: 'Leave', value: metrics.leaveCount, color: COLORS.leave },
+    ];
+  }, [metrics]);
 
-    filtered.forEach(record => {
-      if (record.actual_check_in) {
-        const checkInDate = new Date(record.actual_check_in);
-        const hour = checkInDate.getHours();
-        hourlyMap[hour] = (hourlyMap[hour] || 0) + 1;
+  // Daily trend - supports both daily and monthly views
+  const dailyTrend = useMemo(() => {
+    const isYearView = dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear';
+    const dateMap: Record<string, { present: number; late: number; absent: number }> = {};
+
+    filteredRecords.forEach(record => {
+      // For year views, group by month; otherwise by day
+      const dateKey = isYearView
+        ? format(new Date(record.attendance_date), 'MMM')
+        : format(new Date(record.attendance_date), 'MMM dd');
+
+      if (!dateMap[dateKey]) {
+        dateMap[dateKey] = { present: 0, late: 0, absent: 0 };
       }
+      if (record.status === 'present') dateMap[dateKey].present++;
+      else if (record.status === 'late') dateMap[dateKey].late++;
+      else if (record.status === 'absent') dateMap[dateKey].absent++;
     });
 
-    const hourlyChartData = Array.from({ length: 24 }, (_, i) => ({
-      hour: `${i.toString().padStart(2, '0')}:00`,
-      checkIns: hourlyMap[i] || 0
+    const sortedEntries = Object.entries(dateMap).sort(([a], [b]) => {
+      if (isYearView) {
+        // Sort by month order
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return months.indexOf(a) - months.indexOf(b);
+      }
+      return new Date(a).getTime() - new Date(b).getTime();
+    });
+
+    // For daily view, show last 14 days; for year view, show all months
+    const slicedEntries = isYearView ? sortedEntries : sortedEntries.slice(-14);
+
+    return slicedEntries.map(([date, data]) => ({
+      date,
+      ...data,
+      total: data.present + data.late + data.absent,
     }));
+  }, [filteredRecords, dateRange.preset]);
 
-    setHourlyData(hourlyChartData);
+  // Department performance (rate against total active members in the department)
+  const departmentData = useMemo(() => {
+    const depts: Record<string, { present: number; late: number; absent: number }> = {};
 
-    // Status distribution
-    const statusDistribution: StatusDistribution[] = [
-      { name: 'Present', value: present, color: COLORS.present },
-      { name: 'Late', value: late, color: COLORS.late },
-      { name: 'Absent', value: absent, color: COLORS.absent },
-      { name: 'On Leave', value: onLeave, color: COLORS.onLeave },
-    ].filter(item => item.value > 0);
+    filteredRecords.forEach(record => {
+      const deptName = record.department_name || 'Unknown';
+      if (!depts[deptName]) {
+        depts[deptName] = { present: 0, late: 0, absent: 0 };
+      }
+      if (record.status === 'present') depts[deptName].present++;
+      else if (record.status === 'late') depts[deptName].late++;
+      else if (record.status === 'absent') depts[deptName].absent++;
+    });
 
-    setStatusData(statusDistribution);
+    return Object.entries(depts)
+      .map(([name, data]) => {
+        const members = deptMemberCounts[name] || 0;
+        const attended = data.present + data.late; // attended = present + late
+        const rate = members > 0 ? (attended / members) * 100 : 0;
+        return {
+          name,
+          rate,
+          present: data.present,
+          late: data.late,
+          absent: data.absent,
+          attended,
+          members,
+          total: members,
+        };
+      })
+      .sort((a, b) => b.rate - a.rate)
+      .slice(0, 5);
+  }, [filteredRecords, deptMemberCounts]);
 
-    // Department breakdown
-    const departments = ['Engineering', 'Sales', 'Marketing', 'HR', 'Operations'];
-    const deptData = departments.map(dept => ({
-      name: dept,
-      present: Math.floor(Math.random() * 20) + 5,
-      total: Math.floor(Math.random() * 25) + 20
-    }));
-    setDepartmentData(deptData);
-  };
-
-  // Stat Card Component
-  const StatCard = ({ 
-    title, 
-    value, 
-    icon: Icon, 
-    bgColor,
-    iconColor 
-  }: {
-    title: string;
-    value: number;
-    icon: any;
-    bgColor: string;
-    iconColor: string;
-  }) => (
-    <Card className={`${bgColor} border-none shadow-sm hover:shadow-md transition-shadow`}>
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-5xl font-bold mb-2">{value}</p>
-            <p className="text-sm font-medium text-gray-700">{title}</p>
-          </div>
-          <Icon className={`w-16 h-16 ${iconColor} opacity-80`} strokeWidth={1.5} />
-        </div>
-        <Button 
-          variant="link" 
-          className="p-0 h-auto mt-3 text-xs text-gray-600 hover:text-gray-900"
-        >
-          <Info className="w-3 h-3 mr-1" />
-          More Info
-        </Button>
-      </CardContent>
-    </Card>
-  );
+  if (isLoading) {
+    return <AnalyticsSkeleton />;
+  }
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6 bg-gray-50/50 dark:bg-gray-900/10">
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Attendance Dashboard</h1>
-        <DateFilterBar 
-          dateRange={dateRange} 
-          onDateRangeChange={setDateRange}
-        />
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+      >
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Dashboard</h1>
+        </div>
+        <DateFilterBar dateRange={dateRange} onDateRangeChange={setDateRange} />
+      </motion.div>
+
+      {/* Filter Info */}
+      <div className="flex items-center gap-2 text-sm">
+        <Badge variant="outline">{getFilterLabel()}</Badge>
+        <span className="text-muted-foreground">
+          {filteredRecords.length} records from {format(dateRange.from, 'MMM dd')} to {format(dateRange.to, 'MMM dd, yyyy')}
+        </span>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {loading ? (
-          <>
-            {[1, 2, 3, 4].map(i => (
-              <Card key={i}>
-                <CardContent className="p-6">
-                  <Skeleton className="h-32" />
-                </CardContent>
-              </Card>
-            ))}
-          </>
-        ) : (
-          <>
-            <StatCard
-              title="Present"
-              value={stats.present}
-              icon={UserCheck}
-              bgColor="bg-blue-50 dark:bg-blue-950/30"
-              iconColor="text-blue-600 dark:text-blue-400"
-            />
-            <StatCard
-              title="Late"
-              value={stats.late}
-              icon={Clock}
-              bgColor="bg-green-50 dark:bg-green-950/30"
-              iconColor="text-green-600 dark:text-green-400"
-            />
-            <StatCard
-              title="Absent"
-              value={stats.absent}
-              icon={XCircle}
-              bgColor="bg-blue-50 dark:bg-blue-950/30"
-              iconColor="text-blue-600 dark:text-blue-400"
-            />
-            <StatCard
-              title="On Leave"
-              value={stats.onLeave}
-              icon={Palmtree}
-              bgColor="bg-amber-50 dark:bg-amber-950/30"
-              iconColor="text-amber-600 dark:text-amber-400"
-            />
-          </>
-        )}
-      </div>
-
-      {/* Area Chart - Check-ins Pattern */}
-      <Card className="shadow-sm">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl font-bold">Check-in Pattern</CardTitle>
-              <CardDescription className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Attendance distribution throughout the day
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant={chartView === 'hour' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setChartView('hour')}
-              >
-                Hour
-              </Button>
-              <Button
-                variant={chartView === 'day' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setChartView('day')}
-              >
-                Day
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <Skeleton className="h-[300px]" />
-          ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={hourlyData}>
-                <defs>
-                  <linearGradient id="colorCheckIns" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0.1}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
-                <XAxis 
-                  dataKey="hour" 
-                  stroke="#9CA3AF"
-                  fontSize={11}
-                  angle={-45}
-                  textAnchor="end"
-                  height={60}
-                />
-                <YAxis stroke="#9CA3AF" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    fontSize: '12px'
-                  }}
-                  labelStyle={{ color: '#374151' }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="checkIns" 
-                  stroke={COLORS.primary}
-                  strokeWidth={2}
-                  fillOpacity={1} 
-                  fill="url(#colorCheckIns)" 
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Bottom Section - Pie Chart & Department Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Status Distribution */}
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold">Status Distribution</CardTitle>
-            <CardDescription className="text-sm text-gray-500 dark:text-gray-400">
-              Breakdown by attendance status
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-[250px]" />
-            ) : statusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    dataKey="value"
-                    label={(entry) => `${entry.name}: ${entry.value}`}
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-gray-400">
-                No status data available
+      {/* SECTION 1: MASTER DATA */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.1 }}
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <Building2 className="w-5 h-5 text-primary" />
+          <h2 className="text-xl font-semibold">Organization Overview</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="border-border">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Members</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="text-3xl font-bold">{masterData.totalMembers}</div>
+                <Users className="w-8 h-8 text-blue-500 opacity-50" />
               </div>
-            )}
-          </CardContent>
-        </Card>
+              <p className="text-xs text-muted-foreground mt-2">Active members in organization</p>
+            </CardContent>
+          </Card>
 
-        {/* Department Breakdown */}
-        <Card className="shadow-sm">
+          <Card className="border-border">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Groups</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="text-3xl font-bold">{masterData.totalDepartments}</div>
+                <Building2 className="w-8 h-8 text-purple-500 opacity-50" />
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Total organizational units</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Avg Group Size</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="text-3xl font-bold">{masterData.averageTeamSize.toFixed(0)}</div>
+                <Target className="w-8 h-8 text-green-500 opacity-50" />
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Members per Groups</p>
+            </CardContent>
+          </Card>
+        </div>
+      </motion.div>
+
+      {/* SECTION 2: KEY PERFORMANCE INDICATORS */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <Target className="w-5 h-5 text-primary" />
+          <h2 className="text-xl font-semibold">Key Performance Indicators</h2>
+          <Badge variant="outline" className="ml-auto">{getFilterLabel()}</Badge>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-green-600" />
+                Attendance Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600">{metrics?.attendanceRate.toFixed(1) || '0.0'}%</div>
+              <div className="mt-2 h-2 bg-green-200 rounded-full overflow-hidden">
+                <div className="h-full bg-green-600" style={{ width: `${Math.min(100, metrics?.attendanceRate || 0)}%` }} />
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {metrics ? `${metrics.presentCount + metrics.lateCount} of ${metrics.total} attended` : 'No data available'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Timer className="w-4 h-4 text-blue-600" />
+                Punctuality Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-600">{metrics?.punctualityRate.toFixed(1) || '0.0'}%</div>
+              <div className="mt-2 h-2 bg-blue-200 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-600" style={{ width: `${Math.min(100, metrics?.punctualityRate || 0)}%` }} />
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {metrics ? `${metrics.presentCount} on-time arrivals` : 'No data available'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-orange-500 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/20 dark:to-background">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Clock className="w-4 h-4 text-orange-600" />
+                Avg Work Hours
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-orange-600">{metrics?.avgWorkHours.toFixed(1) || '0.0'}h</div>
+              <p className="text-xs text-muted-foreground mt-4">
+                {metrics ? 'Per member per day average' : 'No data available'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-red-500 bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <XCircle className="w-4 h-4 text-red-600" />
+                Absenteeism Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-red-600">{metrics?.absenteeismRate.toFixed(1) || '0.0'}%</div>
+              <div className="mt-2 h-2 bg-red-200 rounded-full overflow-hidden">
+                <div className="h-full bg-red-600" style={{ width: `${Math.min(100, metrics?.absenteeismRate || 0)}%` }} />
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {metrics ? `${metrics.absentCount} absences recorded` : 'No data available'}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </motion.div>
+
+      {/* SECTION 3: ATTENDANCE TRENDS */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <Activity className="w-5 h-5 text-primary" />
+          <h2 className="text-xl font-semibold">Attendance Trends</h2>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Daily/Monthly Trend Chart */}
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="text-base">
+                {dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear'
+                  ? 'Monthly Attendance Trend'
+                  : 'Daily Attendance Trend'}
+              </CardTitle>
+              <CardDescription>
+                {dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear'
+                  ? `Attendance pattern for ${getFilterLabel().toLowerCase()}`
+                  : 'Last 14 days attendance pattern'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {dailyTrend.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={dailyTrend}>
+                    <defs>
+                      <linearGradient id="colorPresent" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={COLORS.present} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={COLORS.present} stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorLate" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={COLORS.late} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={COLORS.late} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                    <XAxis dataKey="date" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="present" stroke={COLORS.present} fillOpacity={1} fill="url(#colorPresent)" />
+                    <Area type="monotone" dataKey="late" stroke={COLORS.late} fillOpacity={1} fill="url(#colorLate)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center">
+                  <EmptyState
+                    icon={BarChart3}
+                    title="No trend data"
+                    description="Not enough data points to show trend"
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Status Distribution */}
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="text-base">Status Distribution</CardTitle>
+              <CardDescription>Breakdown by attendance status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-4">
+                <ResponsiveContainer width="100%" height={200}>
+                  <RechartsDonutChart>
+                    <Pie
+                      data={statusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </RechartsDonutChart>
+                </ResponsiveContainer>
+                <div className="grid grid-cols-2 gap-2">
+                  {statusData.map((item) => (
+                    <div key={item.name} className="flex items-center gap-2 text-sm">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-muted-foreground">{item.name}:</span>
+                      <span className="font-semibold">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </motion.div>
+
+      {/* SECTION 4: DEPARTMENT PERFORMANCE */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4 }}
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <Award className="w-5 h-5 text-primary" />
+          <h2 className="text-xl font-semibold">Groups Performance</h2>
+        </div>
+        <Card className="border-border">
           <CardHeader>
-            <CardTitle className="text-xl font-bold">Department Breakdown</CardTitle>
-            <CardDescription className="text-sm text-gray-500 dark:text-gray-400">
-              Present vs Total by department
-            </CardDescription>
+            <CardTitle className="text-base">Top {departmentData.length} Groups by Attendance Rate</CardTitle>
+            <CardDescription>Ranked by percentage of attendance</CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <Skeleton className="h-[250px]" />
-            ) : departmentData.length > 0 ? (
+            {departmentData.length > 0 ? (
               <div className="space-y-4">
-                {departmentData.map((dept, idx) => {
-                  const percentage = Math.round((dept.present / dept.total) * 100);
+                {departmentData.map((dept, index) => {
+                  const colorSets = [
+                    { name: 'text-blue-700 dark:text-blue-300', badge: 'border-blue-500 text-blue-600', progress: 'bg-blue-500' },
+                    { name: 'text-green-700 dark:text-green-300', badge: 'border-green-500 text-green-600', progress: 'bg-green-500' },
+                    { name: 'text-yellow-700 dark:text-yellow-400', badge: 'border-yellow-500 text-yellow-600', progress: 'bg-yellow-500' },
+                  ] as const;
+                  const c = colorSets[index % colorSets.length] || colorSets[0];
+                  const displayName = (!dept.name || dept.name === 'Unknown' || dept.name === 'N/A') ? 'no group' : dept.name;
                   return (
-                    <div key={idx} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-gray-700 dark:text-gray-300">{dept.name}</span>
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {dept.present}/{dept.total} ({percentage}%)
-                        </span>
+                    <div key={`${dept.name}-${index}`} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Link href="/group" className="flex items-center gap-2 group">
+                          <Badge variant={'outline'} className={`w-6 h-6 flex items-center justify-center p-0 ${c.badge}`}>
+                            {index + 1}
+                          </Badge>
+                          <span className={`font-medium group-hover:underline ${c.name}`}>{displayName}</span>
+                        </Link>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="text-green-600 dark:text-green-400">{dept.attended}/{dept.members}✓</span>
+                          <span className="font-bold min-w-[60px] text-right">{dept.rate.toFixed(1)}%</span>
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full transition-all"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
+                      <Progress value={dept.rate} className="h-2" indicatorClassName={c.progress} />
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="h-[250px] flex items-center justify-center text-gray-400">
-                No department data available
-              </div>
+              <EmptyState
+                icon={Building2}
+                title="No groups data"
+                description="No performance data available for groups"
+              />
             )}
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
     </div>
   );
 }

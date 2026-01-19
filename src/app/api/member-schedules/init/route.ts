@@ -79,8 +79,8 @@ export async function GET(request: Request) {
     // Filter member schedules by organization members
     let memberSchedules = memberSchedulesResult.data || []
     if (membersResult.data) {
-      const memberIds = membersResult.data.map((m) => m.id)
-      memberSchedules = (memberSchedulesResult.data || []).filter((ms) =>
+      const memberIds = membersResult.data.map((m: any) => m.id)
+      memberSchedules = (memberSchedulesResult.data || []).filter((ms: any) =>
         memberIds.includes(ms.organization_member_id)
       )
     }

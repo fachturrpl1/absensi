@@ -10,7 +10,6 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyContent,
   EmptyMedia,
 } from "@/components/ui/empty"
 import {
@@ -20,6 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,12 +60,12 @@ import {
   createWorkSchedule,
   deleteWorkSchedule,
   updateWorkSchedule,
+  setDefaultWorkSchedule,
 } from "@/action/schedule"
-import { SCHEDULE_TYPES } from "@/constants/attendance-status"
+import { SCHEDULE_TYPES, getTimezoneLabel } from "@/constants/attendance-status"
 
 const scheduleSchema = z.object({
   organization_id: z.string().min(1, "Organization is required"),
-  code: z.string().min(2, "min 2 characters"),
   name: z.string().min(2, "min 2 characters"),
   description: z.string().optional(),
   schedule_type: z.string().optional(),
@@ -78,27 +78,49 @@ interface ScheduleClientProps {
   initialSchedules: IWorkSchedule[]
   organizationId: string
   organizationName: string
+  organizationTimezone?: string
+  isLoading?: boolean
+  pageIndex?: number
+  pageSize?: number
+  totalRecords?: number
+  onPageIndexChange?: (pageIndex: number) => void
+  onPageSizeChange?: (pageSize: number) => void
+  onRefresh?: () => void
 }
 
 export default function ScheduleClient({
   initialSchedules,
   organizationId,
   organizationName,
+  organizationTimezone = "Asia/Jakarta",
+  isLoading = false,
+  pageIndex,
+  pageSize,
+  totalRecords,
+  onPageIndexChange,
+  onPageSizeChange,
+  onRefresh,
 }: ScheduleClientProps) {
   const [schedules, setSchedules] = React.useState(initialSchedules)
   const [open, setOpen] = React.useState(false)
   const [editingDetail, setEditingDetail] = React.useState<IWorkSchedule | null>(null)
+  const [selectedDefaultId, setSelectedDefaultId] = React.useState<string | number | null>(null)
+  const [settingDefaultId, setSettingDefaultId] = React.useState<string | number | null>(null)
 
   // Sync state when initialSchedules changes
   React.useEffect(() => {
     setSchedules(initialSchedules)
   }, [initialSchedules, organizationId])
 
+  React.useEffect(() => {
+    const current = (schedules || []).find((s) => s.is_default)
+    setSelectedDefaultId(current ? current.id : null)
+  }, [schedules])
+
   const form = useForm<ScheduleForm>({
     resolver: zodResolver(scheduleSchema),
     defaultValues: {
       organization_id: organizationId,
-      code: "",
       name: "",
       description: "",
       schedule_type: "",
@@ -107,45 +129,46 @@ export default function ScheduleClient({
   })
 
   const handleSubmit = async (values: ScheduleForm) => {
-    console.log('🚀 handleSubmit called with:', values);
-    console.log('📝 editingDetail:', editingDetail);
-    
+
+
     try {
       let res: { success: boolean; message?: string; data?: any }
-      
+
       if (editingDetail) {
-        console.log('🔄 Updating schedule:', { id: editingDetail.id, values });
+
         res = await updateWorkSchedule(editingDetail.id, values as Partial<IWorkSchedule>)
-        console.log('📥 Update response:', res);
-        
+
+
         if (res.success && res.data) {
           toast.success(res.message || "Schedule updated successfully")
           // Optimistic update with correct data
           setSchedules((prev) =>
             prev.map((s) => (s.id === editingDetail.id ? { ...s, ...res.data } : s))
           )
+          onRefresh?.()
         } else {
           throw new Error(res.message || "Failed to update schedule")
         }
       } else {
-        console.log('➕ Creating schedule:', values);
+
         res = await createWorkSchedule(values as Partial<IWorkSchedule>)
-        console.log('📥 Create response:', res);
-        
+
+
         if (res.success && res.data) {
           toast.success("Schedule created successfully")
           // Optimistic update
           setSchedules((prev) => [res.data as IWorkSchedule, ...prev])
+          onRefresh?.()
         } else {
           throw new Error(res.message || "Failed to create schedule")
         }
       }
-      
-      console.log('✅ Operation completed successfully');
+
+
       handleCloseDialog()
-      
+
     } catch (err: unknown) {
-      console.error('❌ Schedule operation error:', err);
+      // console.error('❌ Schedule operation error:', err);
       toast.error(err instanceof Error ? err.message : "Unknown error")
     }
   }
@@ -155,7 +178,6 @@ export default function ScheduleClient({
     setEditingDetail(null)
     form.reset({
       organization_id: organizationId,
-      code: "",
       name: "",
       description: "",
       schedule_type: "",
@@ -164,31 +186,29 @@ export default function ScheduleClient({
   }
 
   const handleOpenDialog = (schedule?: IWorkSchedule) => {
-    console.log('🔓 Opening dialog:', { schedule, organizationId });
-    
+
+
     if (schedule) {
       setEditingDetail(schedule)
       const formValues = {
         organization_id: String(schedule.organization_id || organizationId),
-        code: schedule.code || "",
         name: schedule.name || "",
         description: schedule.description || "",
         schedule_type: schedule.schedule_type || "",
         is_active: schedule.is_active ?? true,
       }
-      console.log('📝 Form reset with edit values:', formValues);
+
       form.reset(formValues)
     } else {
       setEditingDetail(null)
       const formValues = {
         organization_id: organizationId,
-        code: "",
         name: "",
         description: "",
         schedule_type: "",
         is_active: true,
       }
-      console.log('📝 Form reset with new values:', formValues);
+
       form.reset(formValues)
     }
     setOpen(true)
@@ -201,6 +221,7 @@ export default function ScheduleClient({
         toast.success("Schedule deleted successfully")
         // Optimistic update
         setSchedules((prev) => prev.filter((s) => s.id !== scheduleId))
+        onRefresh?.()
       } else {
         throw new Error(response.message)
       }
@@ -209,34 +230,114 @@ export default function ScheduleClient({
     }
   }
 
+  const handleSetDefault = async (id: string | number) => {
+    try {
+      setSettingDefaultId(id)
+      const res = await setDefaultWorkSchedule(id)
+      if (res.success && res.data) {
+        toast.success("Default schedule updated")
+        setSelectedDefaultId(id)
+        setSchedules((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, is_default: true, is_active: true } : { ...s, is_default: false }))
+        )
+        onRefresh?.()
+      } else {
+        throw new Error(res.message || "Failed to set default schedule")
+      }
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Unknown error")
+    } finally {
+      setSettingDefaultId(null)
+    }
+  }
+
   const columns: ColumnDef<IWorkSchedule>[] = [
-    { accessorKey: "code", header: "Code" },
     { accessorKey: "name", header: "Name" },
     { accessorKey: "description", header: "Description" },
-    { accessorKey: "schedule_type", header: "Type" },
+    {
+      accessorKey: "schedule_type",
+      header: "Type",
+      cell: ({ row }) => {
+        const type = row.getValue("schedule_type") as string
+        const typeInfo = SCHEDULE_TYPES.find((t) => t.value === type)
+        return (
+          <div className="capitalize font-medium" title={typeInfo?.label || type}>
+            {typeInfo?.label || type?.replace("_", " ") || "-"}
+          </div>
+        )
+      }
+    },
+    {
+      id: "timezone",
+      header: "Timezone",
+      cell: () => (
+        <span className="text-sm text-muted-foreground" title={organizationTimezone}>
+          {getTimezoneLabel(organizationTimezone)}
+        </span>
+      )
+    },
+    {
+      id: "default",
+      header: "Default",
+      cell: ({ row }) => {
+        const ws = row.original
+        const checked = selectedDefaultId === ws.id
+        return (
+          <input
+            type="radio"
+            name="defaultSchedule"
+            checked={checked}
+            onChange={() => handleSetDefault(ws.id)}
+            aria-label={`Set ${ws.name} as default`}
+            disabled={Boolean(settingDefaultId)}
+          />
+        )
+      }
+    },
+    {
+      accessorKey: "is_active",
+      header: "Status",
+      cell: ({ row }) => {
+        const isActive = row.getValue("is_active") as boolean
+        return (
+          <Badge
+            variant={isActive ? "default" : "secondary"}
+            className={isActive ? "bg-green-500 hover:bg-green-600" : ""}
+            role="status"
+            aria-label={isActive ? "Schedule is active" : "Schedule is inactive"}
+          >
+            {isActive ? "Active" : "Inactive"}
+          </Badge>
+        )
+      }
+    },
     {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => {
         const ws = row.original
         return (
-          <div className="flex gap-2">
+          <div className="flex gap-2" role="group" aria-label="Schedule actions">
             <Button
               variant="outline"
               size="icon"
-              className="border-0 cursor-pointer"
+              className="h-9 w-9 cursor-pointer bg-secondary border-0 p-0"
               onClick={() => handleOpenDialog(ws)}
+              aria-label={`Edit schedule ${ws.name}`}
+              title="Edit schedule"
             >
-              <Pencil />
+              <Pencil className="h-4 w-4" aria-hidden="true" />
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="outline"
                   size="icon"
-                  className="text-red-500 border-0 cursor-pointer"
+                  className="h-9 w-9 text-red-500 cursor-pointer bg-secondary border-0 p-0"
+                  aria-label={`Delete schedule ${ws.name}`}
+                  title="Delete schedule"
                 >
-                  <Trash />
+                  <Trash className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -254,9 +355,15 @@ export default function ScheduleClient({
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-            <Link href={`/schedule/detail/${ws.id}`}>
-              <Button variant="outline" className="border-0 cursor-pointer">
-                <ChevronRight />
+            <Link href={`/schedule/${ws.id}`}>
+              <Button
+                variant="outline"
+                size="icon"
+                title="Configure work hours"
+                aria-label={`Configure work hours for ${ws.name}`}
+                className="h-9 w-9 cursor-pointer bg-secondary border-0 p-0"
+              >
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -266,142 +373,125 @@ export default function ScheduleClient({
   ]
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
-      <div className="items-center my-7">
-        <Dialog
-          open={open}
-          onOpenChange={(isOpen) => {
-            if (!isOpen) {
-              handleCloseDialog()
-            }
-          }}
-        >
-          <DialogTrigger asChild className="float-end ml-5">
-            <Button onClick={() => handleOpenDialog()}>
-              Add Schedule <Plus className="ml-2" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingDetail ? "Edit Schedule" : "Add Schedule"}</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form 
-                onSubmit={(e) => {
-                  console.log('📤 Form submit event triggered');
-                  e.preventDefault();
-                  form.handleSubmit((values) => {
-                    console.log('✅ Form validation passed');
-                    handleSubmit(values);
-                  }, (errors) => {
-                    console.error('❌ Form validation errors:', errors);
-                  })(e);
-                }} 
-                className="space-y-4"
-              >
-                <FormField
-                  control={form.control}
-                  name="organization_id"
-                  render={({ field }) => <input type="hidden" {...field} />}
-                />
-                <FormItem>
-                  <FormLabel>Organization</FormLabel>
-                  <div className="text-sm text-muted-foreground">
-                    {organizationName || "(Organization name not loaded)"}
-                  </div>
-                </FormItem>
+    <div className="w-full h-full">
+      <DataTable
+        columns={columns}
+        data={schedules}
+        isLoading={isLoading}
+        showGlobalFilter={true}
+        showFilters={true}
+        showColumnToggle={false}
+        layout="card"
+        globalFilterPlaceholder="Search schedules..."
+        manualPagination={typeof pageIndex === "number" && typeof pageSize === "number"}
+        pageIndex={pageIndex}
+        pageSize={pageSize}
+        totalRecords={totalRecords}
+        onPageIndexChange={onPageIndexChange}
+        onPageSizeChange={onPageSizeChange}
+        toolbarRight={
+          <Dialog
+            open={open}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) {
+                handleCloseDialog()
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button onClick={() => handleOpenDialog()} className="gap-2 whitespace-nowrap">
+                <Plus className="h-4 w-4" />
+                New
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingDetail ? "Edit Schedule" : "Add Schedule"}</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="organization_id"
+                    render={({ field }) => <input type="hidden" {...field} />}
+                  />
+                  <FormItem>
+                    <FormLabel>Organization</FormLabel>
+                    <div className="text-sm text-muted-foreground">
+                      {organizationName || "(Organization name not loaded)"}
+                    </div>
+                  </FormItem>
 
-                <FormField
-                  control={form.control}
-                  name="code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Code</FormLabel>
-                      <FormControl>
-                        <Input type="text" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl>
-                        <Input type="text" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input type="text" {...field ?? ""} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="schedule_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select schedule type" />
-                          </SelectTrigger>
+                          <Input type="text" placeholder="e.g. Office Shift (Mon–Fri)" {...field} />
                         </FormControl>
-                        <SelectContent>
-                          {SCHEDULE_TYPES.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Active</FormLabel>
-                      <FormControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <Button 
-                  type="submit" 
-                  className="w-full"
-                  onClick={() => {
-                    console.log('🖱️ Button clicked');
-                    console.log('📋 Current form values:', form.getValues());
-                    console.log('⚠️ Form errors:', form.formState.errors);
-                  }}
-                >
-                  {editingDetail ? "Update" : "Create"}
-                </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </div>
-      {schedules.length === 0 ? (
-        <div className="mt-20">
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Input type="text" placeholder="Optional: brief description" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="schedule_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select schedule type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {SCHEDULE_TYPES.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="is_active"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Active</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full">
+                    {editingDetail ? "Update" : "Create"}
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+
+        }
+        emptyState={
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -413,14 +503,9 @@ export default function ScheduleClient({
                 create one.
               </EmptyDescription>
             </EmptyHeader>
-            <EmptyContent>
-              <Button onClick={() => setOpen(true)}>Add Schedule</Button>
-            </EmptyContent>
           </Empty>
-        </div>
-      ) : (
-        <DataTable columns={columns} data={schedules} />
-      )}
-    </div>
+        }
+      />
+    </div >
   )
 }

@@ -1,58 +1,58 @@
-import { getAllMemberSchedule } from "@/action/members_schedule"
-import { getAllOrganization_member } from "@/action/members"
-import { getAllWorkSchedules } from "@/action/schedule"
-import { createClient } from "@/utils/supabase/server"
+"use client"
+
+import { useEffect, useState } from "react"
+import { getMemberSchedulesPage } from "@/action/members_schedule"
 import MemberSchedulesClient from "./member-schedules-client"
-import { IMemberSchedule, IOrganization_member, IWorkSchedule } from "@/interface"
+import { IMemberSchedule } from "@/interface"
+import { useHydration } from "@/hooks/useHydration"
+import { toast } from "sonner"
 
-// Server Component - fetch data di server (SSR)
-export default async function MemberSchedulesPage() {
-  const supabase = await createClient()
-  
-  // Get organization ID
-  const { data: { user } } = await supabase.auth.getUser()
-  let organizationId = ""
-  
-  if (user) {
-    const { data } = await supabase
-      .from("organization_members")
-      .select("organization_id")
-      .eq("user_id", user.id)
-      .maybeSingle()
-    
-    if (data && data.organization_id) {
-      organizationId = String(data.organization_id)
+// Client Component - fetch data berdasarkan organization dari store
+export default function MemberSchedulesPage() {
+  const { organizationId } = useHydration()
+  const [schedules, setSchedules] = useState<IMemberSchedule[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
+  const [totalRecords, setTotalRecords] = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  useEffect(() => {
+    if (!organizationId) return
+
+    const fetchSchedules = async () => {
+      try {
+        setIsLoading(true)
+        const schedulesRes = await getMemberSchedulesPage(organizationId, pageIndex, pageSize)
+
+        if (schedulesRes?.success && Array.isArray(schedulesRes.data)) {
+          setSchedules(schedulesRes.data as IMemberSchedule[])
+          setTotalRecords(typeof schedulesRes.total === "number" ? schedulesRes.total : 0)
+        } else {
+          setSchedules([])
+          setTotalRecords(0)
+        }
+      } catch (error) {
+        toast.error('Failed to load member schedules')
+        setSchedules([])
+        setTotalRecords(0)
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }
 
-  // Fetch all data di server - 1 round trip saja!
-  // All functions now automatically filter by user's organization
-  const [schedulesRes, membersRes, workSchedulesRes] = await Promise.all([
-    getAllMemberSchedule(),
-    getAllOrganization_member(),
-    getAllWorkSchedules(),
-  ])
+    fetchSchedules()
+  }, [organizationId, pageIndex, pageSize, refreshKey])
 
-  const schedules = (schedulesRes.success ? schedulesRes.data : []) as IMemberSchedule[]
-  const members = (membersRes.success ? membersRes.data : []) as IOrganization_member[]
-  const workSchedules = (workSchedulesRes.success ? workSchedulesRes.data : []) as IWorkSchedule[]
-
-  // Filter members by organization
-  const filteredMembers = organizationId
-    ? members.filter((m) => String(m.organization_id) === organizationId)
-    : members
-
-  // Show message if user has no organization
-  if (!organizationId || organizationId === '') {
+  if (!organizationId) {
     return (
-      <div className="flex flex-1 flex-col gap-4">
+      <div className="flex flex-1 flex-col gap-4 w-full">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center space-y-4">
             <div className="text-6xl">🏢</div>
-            <h2 className="text-2xl font-semibold">No Organization Assigned</h2>
+            <h2 className="text-2xl font-semibold">No Organization Selected</h2>
             <p className="text-muted-foreground max-w-md">
-              You are not currently assigned to any organization. 
-              Please contact your administrator to get access to member schedules.
+              Please select an organization to view member schedules.
             </p>
           </div>
         </div>
@@ -61,11 +61,18 @@ export default async function MemberSchedulesPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-4 w-full">
       <MemberSchedulesClient
         initialSchedules={schedules}
-        initialMembers={filteredMembers}
-        initialWorkSchedules={workSchedules}
+        initialMembers={[]}
+        initialWorkSchedules={[]}
+        isLoading={isLoading}
+        pageIndex={pageIndex}
+        pageSize={pageSize}
+        totalRecords={totalRecords}
+        onPageIndexChange={setPageIndex}
+        onPageSizeChange={setPageSize}
+        onRefresh={() => setRefreshKey((k) => k + 1)}
       />
     </div>
   )

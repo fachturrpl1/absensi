@@ -169,6 +169,58 @@ export async function login(formData: FormData) {
 }
 
 // ======================
+// PASSWORD RESET
+// ======================
+export async function requestPasswordReset(formData: FormData) {
+  const supabase = await getSupabase()
+
+  const email = (formData.get('email') as string)?.trim()
+
+  if (!email) {
+    return { success: false, message: 'Email wajib diisi.' }
+  }
+
+  const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/reset-password`
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: redirectUrl,
+  })
+
+  if (error) {
+    return { success: false, message: error.message }
+  }
+
+  return {
+    success: true,
+    message: 'Kami telah mengirimkan tautan reset password ke email Anda.',
+  }
+}
+
+export async function resetPassword(formData: FormData) {
+  const supabase = await getSupabase()
+
+  const password = (formData.get('password') as string)?.trim()
+
+  if (!password || password.length < 8) {
+    return { success: false, message: 'Password baru minimal 8 karakter.' }
+  }
+
+  const { error } = await supabase.auth.updateUser({ password })
+
+  if (error) {
+    return { success: false, message: error.message }
+  }
+
+  // Optional: ensure recovery session is cleared so user logs in manually
+  await supabase.auth.signOut()
+
+  return {
+    success: true,
+    message: 'Password berhasil diperbarui. Silakan login kembali.',
+  }
+}
+
+// ======================
 // GET ALL USERS (ADMIN ONLY - USE WITH CAUTION)
 // ======================
 // WARNING: This function returns ALL users from ALL organizations

@@ -5,31 +5,56 @@ import { IWorkSchedule, IWorkScheduleDetail } from "@/interface"
 
 
 
-export const getAllWorkSchedules = async () => {
+const toScheduleCode = (name?: string, code?: string) => {
+    const existing = typeof code === "string" ? code.trim() : "";
+    if (existing) return existing;
+
+    const base = typeof name === "string" ? name.trim() : "";
+    const slug = base
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+
+    const safe = slug || "schedule";
+    const suffix = Date.now().toString(36).slice(-6);
+    return `${safe}-${suffix}`;
+}
+
+
+
+export const getAllWorkSchedules = async (organizationId?: number | string) => {
     const supabase = await createClient();
-    
-    // Get current user's organization
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-        return { success: false, message: "User not authenticated", data: [] };
-    }
 
-    // Get user's organization membership
-    const { data: member, error: memberError } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+    let finalOrgId = organizationId;
 
-    if (memberError || !member) {
-        return { success: false, message: "User not in any organization", data: [] };
+    // If no organizationId provided, get from current user
+    if (!finalOrgId) {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+            return { success: false, message: "User not authenticated", data: [] };
+        }
+
+        // Get user's organization membership
+        const { data: member, error: memberError } = await supabase
+            .from("organization_members")
+            .select("organization_id")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+        if (memberError || !member) {
+            return { success: false, message: "User not in any organization", data: [] };
+        }
+
+        finalOrgId = member.organization_id;
     }
 
     // Fetch work schedules ONLY for user's organization
     const { data, error } = await supabase
         .from("work_schedules")
-        .select("*, work_schedule_details(*)")
-        .eq("organization_id", member.organization_id)
+        .select(
+            "id, organization_id, code, name, description, schedule_type, is_default, is_active, created_at, updated_at",
+        )
+        .eq("organization_id", finalOrgId)
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -37,6 +62,70 @@ export const getAllWorkSchedules = async () => {
     }
 
     return { success: true, data: data as IWorkSchedule[] };
+};
+
+export const getWorkSchedulesPage = async (
+    organizationId: number | string | undefined,
+    pageIndex = 0,
+    pageSize = 10,
+) => {
+    try {
+        const supabase = await createClient();
+
+        let finalOrgId = organizationId;
+
+        if (!finalOrgId) {
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (userError || !user) {
+                return { success: false, message: "User not authenticated", data: [], total: 0 };
+            }
+
+            const { data: member, error: memberError } = await supabase
+                .from("organization_members")
+                .select("organization_id")
+                .eq("user_id", user.id)
+                .maybeSingle();
+
+            if (memberError || !member) {
+                return { success: false, message: "User not in any organization", data: [], total: 0 };
+            }
+
+            finalOrgId = member.organization_id;
+        }
+
+        const safePageIndex = Math.max(0, Number(pageIndex) || 0);
+        const safePageSize = Math.max(1, Number(pageSize) || 10);
+        const from = safePageIndex * safePageSize;
+        const to = from + safePageSize - 1;
+
+        const { data, error, count } = await supabase
+            .from("work_schedules")
+            .select(
+                "id, organization_id, code, name, description, schedule_type, is_default, is_active, created_at, updated_at",
+                { count: "estimated" },
+            )
+            .eq("organization_id", finalOrgId)
+            .order("created_at", { ascending: false })
+            .range(from, to);
+
+        if (error) {
+            return { success: false, message: error.message, data: [], total: 0 };
+        }
+
+        return {
+            success: true,
+            data: (data || []) as IWorkSchedule[],
+            total: typeof count === "number" ? count : (data?.length || 0),
+        };
+    } catch (error) {
+        console.error("[getWorkSchedulesPage] Unexpected error:", error);
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : "Unknown server error",
+            data: [],
+            total: 0,
+        };
+    }
 };
 export async function getWorkScheduleById(id: string) {
     const supabase = await createClient();
@@ -63,11 +152,62 @@ export async function getWorkScheduleDetails(workScheduleId: number) {
     return { success: true, data }
 }
 
+function toMinutes(v?: string | null) {
+    if (!v) return null
+    const parts = v.split(":").map((x) => Number(x))
+    if (parts.some((n) => Number.isNaN(n))) return null
+    const [hh = 0, mm = 0] = parts
+    return hh * 60 + mm
+}
+
+function validateDetailInput(payload: Partial<IWorkScheduleDetail>) {
+    const isWorking = Boolean(payload.is_working_day)
+    if (!isWorking) return { ok: true as const }
+
+    const s = toMinutes(payload.start_time as string | undefined)
+    const e = toMinutes(payload.end_time as string | undefined)
+    const bs = toMinutes(payload.break_start as string | undefined)
+    const be = toMinutes(payload.break_end as string | undefined)
+    const coreStart = toMinutes(payload.core_hours_start as string | undefined)
+    const coreEnd = toMinutes(payload.core_hours_end as string | undefined)
+
+    if (s == null) return { ok: false as const, message: "Start time is required" }
+    if (e == null) return { ok: false as const, message: "End time is required" }
+    if (e <= s) return { ok: false as const, message: "End time must be later than start time" }
+
+    // Core hours validation
+    if (coreStart != null && coreEnd != null && coreEnd <= coreStart) {
+        return { ok: false as const, message: "Core hours end must be later than core hours start" }
+    }
+    if (s != null && coreStart != null && s > coreStart) {
+    return { ok: false as const, message: "Start time must be earlier than core hours start" }
+    }
+    if (e != null && coreEnd != null && e < coreEnd) {
+    return { ok: false as const, message: "End time must be later than core hours end" }
+    }
+
+    const hasBs = bs != null
+    const hasBe = be != null
+    if (hasBs !== hasBe) return { ok: false as const, message: "Break start and break end must both be filled" }
+    if (!hasBs || !hasBe) return { ok: true as const }
+    if (be! <= bs!) return { ok: false as const, message: "Break end must be later than break start" }
+    if (bs! <= s) return { ok: false as const, message: "Break start must be after start time" }
+    if (be! >= e) return { ok: false as const, message: "Break end must be before end time" }
+
+    return { ok: true as const }
+}
+
 export async function createWorkSchedule(payload: Partial<IWorkSchedule>) {
     const supabase = await createClient();
+
+    const insertPayload: Partial<IWorkSchedule> = {
+        ...payload,
+        code: toScheduleCode(payload.name, payload.code),
+    }
+
     const { data, error } = await supabase
         .from("work_schedules")
-        .insert(payload)
+        .insert(insertPayload)
         .select()
         .single()
 
@@ -96,8 +236,8 @@ export async function updateWorkSchedule(id: string | number, payload: Partial<I
 }
 
 
-export const deleteWorkSchedule = async ( scheduleId: string | number) => {
-     const id = String(scheduleId) // convert to string
+export const deleteWorkSchedule = async (scheduleId: string | number) => {
+    const id = String(scheduleId) // convert to string
     const supabase = await createClient();
     const { data, error } = await supabase
         .from("work_schedules").delete().eq("id", id)
@@ -111,8 +251,13 @@ export const deleteWorkSchedule = async ( scheduleId: string | number) => {
 };
 
 // ---------------- WorkScheduleDetail ----------------
+
 export async function createWorkScheduleDetail(payload: Partial<IWorkScheduleDetail>) {
     const supabase = await createClient();
+    const v = validateDetailInput(payload)
+    if (!v.ok) {
+        return { success: false, message: v.message, data: null };
+    }
     const { data, error } = await supabase
         .from("work_schedule_details")
         .insert(payload)
@@ -127,6 +272,10 @@ export async function createWorkScheduleDetail(payload: Partial<IWorkScheduleDet
 
 export async function updateWorkScheduleDetail(id: string | number, payload: Partial<IWorkScheduleDetail>) {
     const supabase = await createClient();
+    const v = validateDetailInput(payload)
+    if (!v.ok) {
+        return { success: false, message: v.message, data: null };
+    }
     const { data, error } = await supabase
         .from("work_schedule_details")
         .update({ ...payload, updated_at: new Date().toISOString() })
@@ -153,4 +302,93 @@ export const deleteWorkScheduleDetail = async (id: string) => {
     }
     return { success: true, message: "deleted successfully", data: data as IWorkScheduleDetail };
 };
+
+export async function upsertWorkScheduleDetails(
+    workScheduleId: number,
+    items: Array<Partial<IWorkScheduleDetail>>,
+) {
+    console.log('[upsertWorkScheduleDetails] Starting with workScheduleId:', workScheduleId, 'items count:', items.length)
+
+    const supabase = await createClient();
+
+    for (const it of items) {
+        const v = validateDetailInput(it)
+        if (!v.ok) {
+            console.error('[upsertWorkScheduleDetails] Validation failed for day', it.day_of_week, ':', v.message)
+            return { success: false, message: v.message, data: [] as IWorkScheduleDetail[] }
+        }
+    }
+
+    const rows = (items || []).map((it) => ({
+        work_schedule_id: workScheduleId,
+        day_of_week: it.day_of_week,
+        is_working_day: Boolean(it.is_working_day),
+        start_time: (it.start_time ?? null) as string | null,
+        end_time: (it.end_time ?? null) as string | null,
+        core_hours_start: (it.core_hours_start ?? null) as string | null,
+        core_hours_end: (it.core_hours_end ?? null) as string | null,
+        break_start: (it.break_start ?? null) as string | null,
+        break_end: (it.break_end ?? null) as string | null,
+        break_duration_minutes: typeof it.break_duration_minutes === 'number' ? it.break_duration_minutes : null,
+        flexible_hours: Boolean(it.flexible_hours),
+    }))
+
+    console.log('[upsertWorkScheduleDetails] Rows to upsert:', JSON.stringify(rows, null, 2))
+
+    const { data, error } = await supabase
+        .from("work_schedule_details")
+        .upsert(rows, { onConflict: 'work_schedule_id,day_of_week' })
+        .select()
+
+    if (error) {
+        console.error('[upsertWorkScheduleDetails] Database error:', error.message, error.details, error.code)
+        return { success: false, message: error.message, data: [] as IWorkScheduleDetail[] }
+    }
+
+    console.log('[upsertWorkScheduleDetails] Success! Saved', data?.length, 'rows')
+    return { success: true, data: (data || []) as IWorkScheduleDetail[] }
+}
+
+
+// Set a single default work schedule within an organization
+export async function setDefaultWorkSchedule(id: string | number) {
+    const supabase = await createClient();
+
+    // Fetch the schedule to get its organization_id
+    const { data: target, error: fetchErr } = await supabase
+        .from('work_schedules')
+        .select('id, organization_id')
+        .eq('id', String(id))
+        .maybeSingle();
+
+    if (fetchErr || !target) {
+        return { success: false as const, message: fetchErr?.message || 'Schedule not found', data: null };
+    }
+
+    const orgId = (target as { organization_id: number | string }).organization_id;
+
+    // Unset default for all schedules in the same organization
+    const { error: unsetErr } = await supabase
+        .from('work_schedules')
+        .update({ is_default: false, updated_at: new Date().toISOString() })
+        .eq('organization_id', orgId);
+
+    if (unsetErr) {
+        return { success: false as const, message: unsetErr.message, data: null };
+    }
+
+    // Set selected schedule as default (and active)
+    const { data: updated, error: setErr } = await supabase
+        .from('work_schedules')
+        .update({ is_default: true, is_active: true, updated_at: new Date().toISOString() })
+        .eq('id', String(id))
+        .select('id, organization_id, code, name, description, schedule_type, is_default, is_active, created_at, updated_at')
+        .single();
+
+    if (setErr) {
+        return { success: false as const, message: setErr.message, data: null };
+    }
+
+    return { success: true as const, message: 'Default schedule set successfully', data: updated as IWorkSchedule };
+}
 

@@ -40,11 +40,39 @@ const hasSupabaseSessionCookie = (req: NextRequest) =>
   getAuthCookieNames().some((name) => Boolean(req.cookies.get(name)))
 
 export async function middleware(req: NextRequest) {
+  // Early CORS handling for preflight requests to avoid 400 and heavy work
+  if (req.method === 'OPTIONS') {
+    const origin = req.headers.get('origin') || '*'
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Accept, Origin',
+        'Vary': 'Origin',
+        'Cache-Control': 'no-store',
+      },
+    })
+  }
+
   let response = NextResponse.next({
     request: {
       headers: req.headers,
     },
   })
+
+  const orgIdCookie = req.cookies.get('org_id')
+  if (orgIdCookie) {
+    response.cookies.set({
+      name: 'org_id',
+      value: orgIdCookie.value,
+      path: '/',
+      maxAge: 2592000,
+      sameSite: 'lax',
+    })
+    logger.info(`[MIDDLEWARE] Preserving org_id cookie: ${orgIdCookie.value}`)
+  }
 
   const authCookieNames = getAuthCookieNames()
 
@@ -195,7 +223,8 @@ export async function middleware(req: NextRequest) {
 
   // Redirect logic based on user authentication
   if (user && pathname.startsWith("/auth/login")) {
-    return NextResponse.redirect(new URL("/", req.url))
+    // Redirect to organization instead of dashboard
+    return NextResponse.redirect(new URL("/organization", req.url))
   }
 
   // Allow newly signed up users to see signup page briefly before redirect
@@ -217,8 +246,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/auth/login", req.url))
   }
 
-  // Check if authenticated user has organization (except for special pages)
+  // Check if authenticated user has selected organization
+  // Allow access to organization and special pages without organization check
   const excludedPaths = [
+    "/organization",
     "/onboarding",
     "/account-inactive",
     "/organization-inactive",
@@ -226,47 +257,22 @@ export async function middleware(req: NextRequest) {
   ]
   const isExcludedPath = excludedPaths.some((path) => pathname.startsWith(path))
 
+  // For authenticated users accessing protected pages, check if organization is selected
   if (user && !isExcludedPath && !isPublicPath) {
-    try {
-      // Check if user has organization membership
-      const { data: member } = await supabase
-        .from("organization_members")
-        .select(`
-          is_active,
-          organization:organizations(
-            id,
-            is_active
-          )
-        `)
-        .eq("user_id", user.id)
-        .maybeSingle()
-
-      // Normalize typing from Supabase response for safer runtime checks
-      const memberData: any = member
-
-      // Priority order:
-      // 1. No organization → onboarding
-      // 2. Has organization but organization inactive → organization-inactive
-      // 3. Has active organization but member inactive → account-inactive
-
-      if (!memberData || !memberData.organization) {
-        // User has no organization membership → onboarding
-        return NextResponse.redirect(new URL("/onboarding", req.url))
-      }
-
-      if (!memberData.organization.is_active) {
-        // Organization exists but is inactive → organization-inactive
-        return NextResponse.redirect(new URL("/organization-inactive", req.url))
-      }
-
-      if (!memberData.is_active) {
-        // Organization is active but member is inactive → account-inactive
-        return NextResponse.redirect(new URL("/account-inactive", req.url))
-      }
-    } catch (error) {
-      logger.warn('Error checking organization membership:', error)
-      // On error, allow access but user will see appropriate message in UI
+    // Check if organization ID is in cookies or session
+    // If not, redirect to organization
+    const orgIdCookie = req.cookies.get('org_id')?.value
+    
+    logger.info(`[MIDDLEWARE] Checking org_id cookie for user ${user.id} on path ${pathname}`)
+    logger.info(`[MIDDLEWARE] org_id cookie value: ${orgIdCookie || 'NOT FOUND'}`)
+    logger.info(`[MIDDLEWARE] All cookies: ${JSON.stringify(req.cookies.getAll())}`)
+    
+    if (!orgIdCookie) {
+      logger.warn(`[MIDDLEWARE] No org_id cookie found for path ${pathname}, redirecting to /organization`)
+      return NextResponse.redirect(new URL("/organization", req.url))
     }
+    
+    logger.info(`[MIDDLEWARE] org_id cookie found: ${orgIdCookie}, allowing access to ${pathname}`)
   }
 
   return response

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,23 +14,24 @@ import {
   TableRow,
 } from '@/components/ui/table';
 // Removed Collapsible - not compatible with table structure
-import { 
-  ChevronDown, 
-  ChevronRight, 
-  Clock, 
-  MapPin, 
+import {
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  MapPin,
   FileText,
   Users,
   RefreshCw,
   CheckCircle2,
   AlertCircle,
   XCircle,
-} from 'lucide-react';
+} from '@/components/icons/lucide-exports';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/utils/supabase/client';
+import { useOrgStore } from '@/store/org-store';
 
 interface AttendanceRecord {
   id: number;
@@ -94,19 +95,47 @@ const attendanceCache: {
 
 const ATTENDANCE_CACHE_DURATION = 120000; // 2 minutes cache (increased from 10s)
 
-export function LiveAttendanceTable({
-  autoRefresh = true,
-  refreshInterval = 180000, // 3 minutes (increased from 60s)
-  pageSize = 10,
-}: LiveAttendanceTableProps) {
+export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 180000, pageSize = 10 }: LiveAttendanceTableProps) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [currentPage, setCurrentPage] = useState(1);
+  const orgStore = useOrgStore();
+  const [activeOrgId, setActiveOrgId] = useState<number | null>(null);
 
-  const fetchAttendanceRecords = async (force = false) => {
+  console.log('[LiveAttendance] Initializing activeOrgId', { activeOrgId: orgStore.organizationId });
+
+  useEffect(() => {
+    setActiveOrgId(orgStore.organizationId);
+  }, [orgStore.organizationId]);
+
+  const toggleRow = (id: number) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedRows(newExpanded);
+  };
+
+  const fetchAttendanceRecords = useCallback(async (force = false) => {
     const now = Date.now();
-    
+    const storeOrgId = useOrgStore.getState().organizationId;
+    const orgId = activeOrgId || storeOrgId;
+
+    console.log('[LiveAttendance] fetchAttendanceRecords called', {
+      activeOrgId,
+      storeOrgId,
+      finalOrgId: orgId,
+      force,
+    });
+
+    if (!orgId) {
+      console.log('[LiveAttendance] No active organization, skipping fetch');
+      return;
+    }
+
     // Check cache first
     if (!force && attendanceCache.data && (now - attendanceCache.timestamp) < ATTENDANCE_CACHE_DURATION) {
       setRecords(attendanceCache.data);
@@ -114,7 +143,7 @@ export function LiveAttendanceTable({
       return;
     }
 
-    // Prevent concurrent requests (CRITICAL: blocks duplicates)
+    // Prevent concurrent requests
     if (attendanceCache.isLoading) {
       console.log('[LiveAttendance] Request already in progress, skipping duplicate');
       return;
@@ -132,17 +161,58 @@ export function LiveAttendanceTable({
         throw new Error('User not authenticated');
       }
 
-      const { data: orgMember } = await supabase
+      console.log('[LiveAttendance] Validating user membership', {
+        userId: user.id,
+        organizationId: orgId,
+      });
+
+      // Check membership - try by user_id first, then by any active member in the org
+      const { data: orgMember, error: memberError } = await supabase
         .from('organization_members')
         .select('organization_id')
         .eq('user_id', user.id)
+        .eq('organization_id', orgId)
+        .eq('is_active', true)
         .maybeSingle();
 
-      if (!orgMember?.organization_id) {
-        throw new Error('Organization not found');
+      console.log('[LiveAttendance] Membership check result', {
+        orgMember,
+        memberError,
+      });
+
+      // If not found by user_id, check if user has any active membership in this org
+      // (handles cases where user might be member via different means)
+      let finalOrgId = orgMember?.organization_id;
+
+      if (!finalOrgId) {
+        // Try to find any active membership for this user in this organization
+        const { data: anyMember } = await supabase
+          .from('organization_members')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .eq('organization_id', orgId)
+          .maybeSingle();
+
+        if (anyMember?.organization_id) {
+          finalOrgId = anyMember.organization_id;
+          console.log('[LiveAttendance] Found membership (without is_active check)', finalOrgId);
+        }
       }
 
-      const { data, error } = await supabase
+      if (!finalOrgId) {
+        console.warn('[LiveAttendance] User not member of organization', {
+          userId: user.id,
+          organizationId: orgId,
+        });
+        // Don't throw error, just return early - allow component to show empty state
+        attendanceCache.isLoading = false;
+        setRecords([]);
+        return;
+      }
+
+      console.log('[LiveAttendance] Fetching attendance records for org', finalOrgId);
+
+      const { data, error: attendanceError } = await supabase
         .from('attendance_records')
         .select(`
           id,
@@ -166,12 +236,14 @@ export function LiveAttendanceTable({
             )
           )
         `)
-        .eq('organization_members.organization_id', orgMember.organization_id)
+        .eq('organization_members.organization_id', finalOrgId)
         .eq('attendance_date', today)
         .order('actual_check_in', { ascending: false })
         .limit(50);
 
-      if (error) throw error;
+      if (attendanceError) {
+        console.error('[LiveAttendance] Error fetching attendance records', attendanceError);
+      }
 
       const transformedData = data?.map((record: any) => {
         const member = record.organization_members;
@@ -181,16 +253,16 @@ export function LiveAttendanceTable({
         return {
           id: record.id,
           member_id: member?.id,
-          member_name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Unknown',
+          member_name: profile?.first_name || profile?.last_name || 'Unknown',
           department_name: department?.name || 'N/A',
           status: record.status,
           actual_check_in: record.actual_check_in,
           actual_check_out: record.actual_check_out,
           work_duration_minutes: record.work_duration_minutes,
-          scheduled_duration_minutes: 480, // Default 8 jam untuk estimasi
+          scheduled_duration_minutes: 480,
           late_minutes: record.late_minutes,
           notes: record.notes,
-          location: null, // Can be populated if location tracking exists
+          location: null,
           profile_photo_url: profile?.profile_photo_url,
         };
       }) || [];
@@ -199,32 +271,53 @@ export function LiveAttendanceTable({
       attendanceCache.timestamp = Date.now();
       setRecords(transformedData);
       setLastUpdate(new Date());
+      console.log('[LiveAttendance] Successfully fetched', transformedData.length, 'records');
     } catch (error) {
-      console.error('Failed to fetch attendance records:', error);
+      console.error('[LiveAttendance] Failed to fetch attendance records:', error);
+      // Don't throw, just log - allow component to continue
     } finally {
       attendanceCache.isLoading = false;
     }
-  };
+  }, [activeOrgId]);
 
+  // Organization change handler - removed as it's not used
+  // const handleOrgChange = useCallback((orgId: string | null) => {
+  //   setActiveOrgId(orgId);
+  //   if (orgId) fetchAttendanceRecords(true);
+  // }, [fetchAttendanceRecords]);
+
+  // Initialize activeOrgId from store on mount
   useEffect(() => {
-    fetchAttendanceRecords();
+    const unsubscribe = useOrgStore.subscribe((state, prev) => {
+      if (state.organizationId !== prev.organizationId) {
+        setActiveOrgId(state.organizationId);
+      }
+    });
+    return unsubscribe;
+  }, []);
 
-    if (autoRefresh) {
-      const interval = setInterval(() => fetchAttendanceRecords(true), refreshInterval);
-      return () => clearInterval(interval);
+  // Fetch when activeOrgId changes
+  useEffect(() => {
+    if (activeOrgId) {
+      console.log('[LiveAttendance] activeOrgId changed, fetching', { activeOrgId });
+      fetchAttendanceRecords(true);
+    }
+  }, [activeOrgId, fetchAttendanceRecords]);
+
+  // useEffect untuk auto refresh
+  useEffect(() => {
+    if (autoRefresh && activeOrgId) {
+      console.log('[LiveAttendance] Setting up auto refresh', { activeOrgId, refreshInterval });
+      const interval = setInterval(() => {
+        fetchAttendanceRecords(true);
+      }, refreshInterval);
+      return () => {
+        console.log('[LiveAttendance] Clearing auto refresh');
+        clearInterval(interval);
+      };
     }
     return undefined;
-  }, [autoRefresh, refreshInterval]);
-
-  const toggleRow = (id: number) => {
-    const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedRows(newExpanded);
-  };
+  }, [autoRefresh, refreshInterval, fetchAttendanceRecords, activeOrgId]);
 
   const totalPages = Math.ceil(records.length / pageSize);
   const paginatedRecords = records.slice(
@@ -238,11 +331,6 @@ export function LiveAttendanceTable({
     late: records.filter(r => r.status === 'late').length,
     absent: records.filter(r => r.status === 'absent').length,
   };
-
-  // Don't show loading state here - parent handles initial load
-  // if (loading && records.length === 0) {
-  //   return null; // Parent dashboard skeleton handles this
-  // }
 
   return (
     <Card className="border-border bg-card">
@@ -321,7 +409,7 @@ export function LiveAttendanceTable({
                     <TableHead>Work Hours</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
                   {paginatedRecords.map((record) => {
                     const isExpanded = expandedRows.has(record.id);
                     const config = statusConfig[record.status as keyof typeof statusConfig] || statusConfig.present;
@@ -329,14 +417,14 @@ export function LiveAttendanceTable({
 
                     return (
                       <React.Fragment key={record.id}>
-                        <TableRow 
+                        <TableRow
                           className="hover:bg-muted/50 cursor-pointer"
                           onClick={() => toggleRow(record.id)}
                         >
                           <TableCell>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="p-0 h-auto"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -369,7 +457,7 @@ export function LiveAttendanceTable({
                             </Badge>
                           </TableCell>
                           <TableCell className="text-foreground">
-                            {record.actual_check_in 
+                            {record.actual_check_in
                               ? format(new Date(record.actual_check_in), 'HH:mm', { locale: idLocale })
                               : '-'
                             }
@@ -405,7 +493,7 @@ export function LiveAttendanceTable({
                                         <div className="flex justify-between">
                                           <span className="text-muted-foreground">Check In:</span>
                                           <span className="font-medium text-foreground">
-                                            {record.actual_check_in 
+                                            {record.actual_check_in
                                               ? format(new Date(record.actual_check_in), 'HH:mm:ss', { locale: idLocale })
                                               : '-'
                                             }
@@ -414,7 +502,7 @@ export function LiveAttendanceTable({
                                         <div className="flex justify-between">
                                           <span className="text-muted-foreground">Check Out:</span>
                                           <span className="font-medium text-foreground">
-                                            {record.actual_check_out 
+                                            {record.actual_check_out
                                               ? format(new Date(record.actual_check_out), 'HH:mm:ss', { locale: idLocale })
                                               : 'Not yet'
                                             }

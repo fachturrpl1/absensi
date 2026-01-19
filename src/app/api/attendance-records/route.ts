@@ -1,113 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { NextResponse } from 'next/server'
+import { getAllAttendance } from '@/action/attendance'
 
-async function getUserOrganizationId() {
-  const supabase = await createClient()
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
-
-  if (userError || !user) {
-    return null
-  }
-
-  const { data: member } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .maybeSingle()
-
-  return member?.organization_id || null
-}
-
-export async function GET(request: NextRequest) {
+export async function GET(req: Request) {
   try {
-    const organizationId = await getUserOrganizationId()
-    if (!organizationId) {
-      return NextResponse.json(
-        { success: false, message: 'Organization not found' },
-        { status: 404 }
-      )
-    }
+    const { searchParams } = new URL(req.url)
+    const page = Number(searchParams.get('page') ?? '1')
+    const limit = Number(searchParams.get('limit') ?? '10')
+    const dateFrom = searchParams.get('dateFrom') ?? undefined
+    const dateTo = searchParams.get('dateTo') ?? undefined
+    const rawStatus = searchParams.get('status')
+    const rawDepartment = searchParams.get('department')
+    const rawSearch = searchParams.get('search')
+    const noCache = searchParams.get('noCache') === '1'
 
-    const { searchParams } = new URL(request.url)
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
-    const limit = parseInt(searchParams.get('limit') || '1000')
+    const status = rawStatus && rawStatus.trim().toLowerCase() !== 'all' ? rawStatus.trim() : undefined
+    const department = rawDepartment && rawDepartment.trim().toLowerCase() !== 'all' ? rawDepartment.trim() : undefined
+    const search = rawSearch && rawSearch.trim() !== '' ? rawSearch.trim() : undefined
+    const organizationId = Number(searchParams.get('organizationId') ?? '0') || undefined
 
-    const supabase = await createClient()
+    
+    const result = await getAllAttendance({
+      page,
+      limit,
+      dateFrom,
+      dateTo,
+      search,
+      status,
+      department,
+      organizationId,
+      noCache,
+    })
 
-    let query = supabase
-      .from('attendance_records')
-      .select(`
-        id,
-        status,
-        actual_check_in,
-        actual_check_out,
-        work_duration_minutes,
-        late_minutes,
-        attendance_date,
-        organization_members!inner (
-          organization_id,
-          user_profiles (
-            first_name,
-            last_name,
-            profile_photo_url
-          ),
-          departments!organization_members_department_id_fkey (
-            name
-          )
-        )
-      `)
-      .eq('organization_members.organization_id', organizationId)
-      .order('attendance_date', { ascending: false })
-      .limit(limit)
-
-    // Add date filters if provided
-    if (startDate) {
-      query = query.gte('attendance_date', startDate)
-    }
-    if (endDate) {
-      query = query.lte('attendance_date', endDate)
-    }
-
-    const { data: records, error } = await query
-
-    if (error) {
-      console.error('Error fetching attendance records:', error)
-      return NextResponse.json(
-        { success: false, message: 'Failed to fetch attendance records' },
-        { status: 500 }
-      )
-    }
-
-    // Transform data
-    const formattedRecords = records?.map((record: any) => {
-      // Default scheduled work hours: 8 hours = 480 minutes
-      const scheduledDuration = 480;
-      
-      return {
-        id: record.id,
-        member_name: `${record.organization_members?.user_profiles?.first_name || ''} ${record.organization_members?.user_profiles?.last_name || ''}`.trim() || 'Unknown',
-        department_name: record.organization_members?.departments?.name || 'N/A',
-        status: record.status,
-        actual_check_in: record.actual_check_in,
-        actual_check_out: record.actual_check_out,
-        work_duration_minutes: record.work_duration_minutes,
-        scheduled_duration_minutes: scheduledDuration, // Default 8 jam jika belum check out
-        late_minutes: record.late_minutes,
-        attendance_date: record.attendance_date,
-        profile_photo_url: record.organization_members?.user_profiles?.profile_photo_url,
-      };
-    }) || []
-
-    return NextResponse.json(
-      { success: true, data: formattedRecords },
-      {
-        headers: {
-          'Cache-Control': 'private, no-cache, must-revalidate',
-          'Vary': 'Cookie'
-        }
-      }
-    )
+    return NextResponse.json(result, {
+      status: result.success ? 200 : 400,
+      headers: {
+        'Cache-Control': noCache ? 'no-store' : 'private, max-age=60, stale-while-revalidate=300',
+        'Vary': 'Cookie, Authorization',
+      },
+    })
   } catch (err) {
     console.error('API /attendance-records error', err)
     return NextResponse.json(

@@ -1,10 +1,18 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { getAllGroups } from '@/action/group'
 
 import { logger } from '@/lib/logger';
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const response = await getAllGroups()
+    // Get organizationId from query parameter if provided
+    const organizationId = request.nextUrl.searchParams.get('organizationId');
+    const orgId = organizationId ? parseInt(organizationId, 10) : undefined;
+    
+    // Get includeInactive parameter (for import pages, we want all groups)
+    const includeInactiveParam = request.nextUrl.searchParams.get('includeInactive');
+    const includeInactive = includeInactiveParam === 'true' || includeInactiveParam === '1';
+    
+    const response = await getAllGroups(orgId, includeInactive)
     
     if (!response.success) {
       return NextResponse.json(

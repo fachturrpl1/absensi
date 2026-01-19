@@ -23,8 +23,8 @@ export interface OrganizationUpdateData {
   time_format?: '12h' | '24h';
 }
 
-// Get current user's organization
-export async function getCurrentUserOrganization(): Promise<{
+// Get organization by ID (with fallback to user's organization)
+export async function getCurrentUserOrganization(organizationId?: number | null): Promise<{
   success: boolean;
   data?: {
     id: number;
@@ -62,54 +62,63 @@ export async function getCurrentUserOrganization(): Promise<{
       return { success: false, message: "User not authenticated" };
     }
 
-    // Get user's organization through organization_members
-    const { data: member, error: memberError } = await supabase
-      .from("organization_members")
+    // Determine which organization to fetch
+    let targetOrgId = organizationId;
+    
+    if (!targetOrgId) {
+      // If no organizationId provided, get user's first organization
+      const { data: member, error: memberError } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (memberError || !member) {
+        return { success: false, message: "No organization found for this user" };
+      }
+      targetOrgId = member.organization_id;
+    }
+
+    // Fetch organization data
+    const { data: org, error: orgError } = await supabase
+      .from("organizations")
       .select(`
         id,
+        code,
+        name,
+        legal_name,
+        description,
+        address,
+        city,
+        state_province,
+        postal_code,
+        phone,
+        email,
+        website,
+        logo_url,
+        timezone,
+        currency_code,
+        country_code,
+        industry,
+        inv_code,
         is_active,
-        employment_status,
-        organization:organizations(
-          id,
-          code,
-          name,
-          legal_name,
-          description,
-          address,
-          city,
-          state_province,
-          postal_code,
-          phone,
-          email,
-          website,
-          logo_url,
-          timezone,
-          currency_code,
-          country_code,
-          industry,
-          inv_code,
-          is_active,
-          time_format,
-          created_at,
-          updated_at
-        )
+        time_format,
+        created_at,
+        updated_at
       `)
-      .eq("user_id", user.id)
-      .eq("is_active", true)
+      .eq("id", targetOrgId)
       .maybeSingle();
 
-    if (memberError) {
-      organizationLogger.error("Member query error:", memberError);
+    if (orgError) {
+      organizationLogger.error("Organization query error:", orgError);
       return { success: false, message: "Failed to fetch organization data" };
     }
 
-    if (!member || !member.organization) {
-      return { success: false, message: "No organization found for this user" };
+    if (!org) {
+      return { success: false, message: "Organization not found" };
     }
 
-  // org comes from supabase select shape; use any here to avoid tight typing in this helper
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const org = member.organization as any;
     const timeFormat = org.time_format === '12h' ? '12h' : '24h';
     
     return {
@@ -151,7 +160,7 @@ export async function getCurrentUserOrganization(): Promise<{
 }
 
 // Update organization data
-export async function updateOrganization(updateData: OrganizationUpdateData): Promise<{
+export async function updateOrganization(updateData: OrganizationUpdateData, organizationId?: number | null): Promise<{
   success: boolean;
   message: string;
 }> {
@@ -165,16 +174,22 @@ export async function updateOrganization(updateData: OrganizationUpdateData): Pr
       return { success: false, message: "User not authenticated" };
     }
 
-    // Get user's organization ID
-    const { data: member, error: memberError } = await supabase
-      .from("organization_members")
-      .select("organization_id")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .maybeSingle();
+    // Determine which organization to update
+    let targetOrgId = organizationId;
+    
+    if (!targetOrgId) {
+      // If no organizationId provided, get user's first organization
+      const { data: member, error: memberError } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
 
-    if (memberError || !member) {
-      return { success: false, message: "No organization found for this user" };
+      if (memberError || !member) {
+        return { success: false, message: "No organization found for this user" };
+      }
+      targetOrgId = member.organization_id;
     }
 
     // Update organization data - legal_name always syncs with name
@@ -200,7 +215,7 @@ export async function updateOrganization(updateData: OrganizationUpdateData): Pr
         time_format: updateData.time_format || '24h',
         updated_at: new Date().toISOString()
       })
-      .eq("id", member.organization_id);
+      .eq("id", targetOrgId);
 
     if (updateError) {
       organizationLogger.error("Organization update error:", updateError);
@@ -235,7 +250,7 @@ function generateInvitationCode(): string {
 }
 
 // Regenerate organization invite code
-export async function regenerateInviteCode(): Promise<{
+export async function regenerateInviteCode(organizationId?: number | null): Promise<{
   success: boolean;
   data?: string;
   message: string;
@@ -250,16 +265,22 @@ export async function regenerateInviteCode(): Promise<{
       return { success: false, message: "User not authenticated" };
     }
 
-    // Get user's organization ID
-    const { data: member, error: memberError } = await supabase
-      .from("organization_members")
-      .select("organization_id")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .maybeSingle();
+    // Determine which organization to update
+    let targetOrgId = organizationId;
+    
+    if (!targetOrgId) {
+      // If no organizationId provided, get user's first organization
+      const { data: member, error: memberError } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
 
-    if (memberError || !member) {
-      return { success: false, message: "No organization found for this user" };
+      if (memberError || !member) {
+        return { success: false, message: "No organization found for this user" };
+      }
+      targetOrgId = member.organization_id;
     }
 
     // Generate new unique invitation code
@@ -293,7 +314,7 @@ export async function regenerateInviteCode(): Promise<{
         inv_code: newInvCode,
         updated_at: new Date().toISOString()
       })
-      .eq("id", member.organization_id);
+      .eq("id", targetOrgId);
 
     if (updateError) {
       organizationLogger.error("Invite code update error:", updateError);
@@ -314,6 +335,91 @@ export async function regenerateInviteCode(): Promise<{
     return {
       success: false,
       message: "An unexpected error occurred while regenerating invitation code"
+    };
+  }
+}
+
+// Soft delete an organization
+export async function deleteOrganization(organizationId: number): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  try {
+    const supabase = await createClient();
+    
+    // 1. Get current user and verify permissions (e.g., must be owner or superadmin)
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return { success: false, message: "User not authenticated" };
+    }
+
+    // TODO: Add role-based access control here. For now, we assume the user is authorized.
+
+    // 2. Perform the soft delete by updating flags
+    const { error: updateError } = await supabase
+      .from("organizations")
+      .update({
+        is_active: false,
+        // @ts-ignore
+        deleted_at: new Date().toISOString(), // Assuming you add a 'deleted_at' timestamp column
+      })
+      .eq("id", organizationId);
+
+    if (updateError) {
+      organizationLogger.error("Soft delete organization error:", updateError);
+      return { success: false, message: "Failed to delete organization." };
+    }
+
+    const { data: orgMembers, error: orgMembersError } = await supabase
+      .from("organization_members")
+      .select("id")
+      .eq("organization_id", organizationId);
+
+    if (orgMembersError) {
+      organizationLogger.error("Fetch organization members error:", orgMembersError);
+    } else if (orgMembers && orgMembers.length > 0) {
+      const memberIds = orgMembers.map(m => m.id as number);
+
+      const { data: adminRoleRows, error: adminRolesError } = await supabase
+        .from("organization_member_roles")
+        .select("organization_member_id, system_roles!inner(code)")
+        .in("organization_member_id", memberIds)
+        .in("system_roles.code", ["A001", "SA001"]);
+
+      if (adminRolesError) {
+        organizationLogger.error("Fetch admin roles error:", adminRolesError);
+      }
+
+      const adminMemberIds = (adminRoleRows || [])
+        .map((r: { organization_member_id: number }) => r.organization_member_id)
+        .filter((id, idx, arr) => arr.indexOf(id) === idx);
+
+      const nonAdminIds = memberIds.filter(id => !adminMemberIds.includes(id));
+
+      if (nonAdminIds.length > 0) {
+        const { error: deactivateError } = await supabase
+          .from("organization_members")
+          .update({ is_active: false })
+          .in("id", nonAdminIds);
+
+        if (deactivateError) {
+          organizationLogger.error("Deactivate non-admin members error:", deactivateError);
+        }
+      }
+    }
+
+    revalidatePath("/organization"); // Revalidate the organization list page
+
+    return {
+      success: true,
+      message: "Organization has been successfully deleted."
+    };
+
+  } catch (error: unknown) {
+    organizationLogger.error("Delete organization error:", error);
+    return {
+      success: false,
+      message: "An unexpected error occurred while deleting the organization."
     };
   }
 }

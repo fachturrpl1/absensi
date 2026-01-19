@@ -313,15 +313,15 @@ export default function ModernDataTable<TData extends Employee, TValue>({
   // Filter data based on status and department
   const filteredData = useMemo(() => {
     let filtered = [...data];
-    
+
     if (statusFilter !== 'all') {
       filtered = filtered.filter((item) => (item as any).status === statusFilter);
     }
-    
+
     if (departmentFilter !== 'all') {
       filtered = filtered.filter((item) => (item as any).department === departmentFilter);
     }
-    
+
     return filtered;
   }, [data, statusFilter, departmentFilter]);
 
@@ -351,6 +351,16 @@ export default function ModernDataTable<TData extends Employee, TValue>({
   return (
     <div className="space-y-4">
       {/* Header Actions */}
+      <style jsx global>{`
+        html body .custom-hover-row:hover,
+        html body .custom-hover-row:hover > td {
+          background-color: #d1d5db !important; /* dark gray hover */
+        }
+        html body.dark .custom-hover-row:hover,
+        html body.dark .custom-hover-row:hover > td {
+          background-color: #374151 !important;
+        }
+      `}</style>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
         {/* Filters and Actions */}
@@ -409,7 +419,7 @@ export default function ModernDataTable<TData extends Employee, TValue>({
                         checked={column.getIsVisible()}
                         onCheckedChange={(value) => column.toggleVisibility(!!value)}
                       >
-{(() => {
+                        {(() => {
                           const columnLabels: Record<string, string> = {
                             'is_active': 'Active',
                             'user_full_name': 'Full Name',
@@ -490,11 +500,14 @@ export default function ModernDataTable<TData extends Employee, TValue>({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
+              table.getRowModel().rows.map((row, index) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  className="group hover:bg-muted/50"
+                  style={{
+                    backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
+                  }}
+                  className="group transition-colors custom-hover-row"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -515,8 +528,8 @@ export default function ModernDataTable<TData extends Employee, TValue>({
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
           <span>
             Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
             {Math.min(
@@ -526,7 +539,7 @@ export default function ModernDataTable<TData extends Employee, TValue>({
             of {table.getFilteredRowModel().rows.length} entries
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-end">
           <Button
             variant="outline"
             size="icon"

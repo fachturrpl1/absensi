@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Calendar, ChevronDown } from 'lucide-react';
+import { Calendar, ChevronDown, Timer, BarChart3, History } from 'lucide-react';
 import { 
   format, 
   startOfMonth, 
@@ -163,7 +163,10 @@ export function DateFilterBar({ dateRange, onDateRangeChange, className }: DateF
         <DropdownMenuContent align="start" className="w-[240px]">
           {/* Quick Access */}
           <DropdownMenuLabel className="text-xs text-muted-foreground">
-            📅 Quick
+            <span className="flex items-center gap-2">
+              <Timer className="h-3.5 w-3.5" />
+              <span>Quick</span>
+            </span>
           </DropdownMenuLabel>
           {DATE_PRESETS.filter(p => p.group === 'quick').map((preset) => (
             <DropdownMenuItem
@@ -185,7 +188,10 @@ export function DateFilterBar({ dateRange, onDateRangeChange, className }: DateF
           
           {/* Current Periods */}
           <DropdownMenuLabel className="text-xs text-muted-foreground">
-            📊 Period
+            <span className="flex items-center gap-2">
+              <BarChart3 className="h-3.5 w-3.5" />
+              <span>Period</span>
+            </span>
           </DropdownMenuLabel>
           {DATE_PRESETS.filter(p => p.group === 'period').map((preset) => (
             <DropdownMenuItem
@@ -207,7 +213,10 @@ export function DateFilterBar({ dateRange, onDateRangeChange, className }: DateF
           
           {/* Historical */}
           <DropdownMenuLabel className="text-xs text-muted-foreground">
-            🔙 Historical
+            <span className="flex items-center gap-2">
+              <History className="h-3.5 w-3.5" />
+              <span>Historical</span>
+            </span>
           </DropdownMenuLabel>
           {DATE_PRESETS.filter(p => p.group === 'historical').map((preset) => (
             <DropdownMenuItem

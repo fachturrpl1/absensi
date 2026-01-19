@@ -1,18 +1,16 @@
 "use client"
 
 import React from "react"
-import { useSearchParams } from "next/navigation"
-import { ColumnDef } from "@tanstack/react-table"
-import { DataTable } from "@/components/data-table"
+import { MembersTable } from "@/components/members-table"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Trash, Pencil, Eye, User, Shield, Check, X, Mail, Plus, FileDown, FileUp } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
+import { User, Shield, Mail, Plus, FileDown, Loader2, Search, FileSpreadsheet, Minus, RefreshCw } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyContent,
   EmptyMedia,
 } from "@/components/ui/empty"
 import {
@@ -41,35 +39,24 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
-import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useQuery } from "@tanstack/react-query"
+import { useDebounce } from "@/utils/debounce"
+import { PaginationFooter } from "@/components/pagination-footer"
+import { computeName, computeGroupName, computeGender, computeNik, MemberLike } from "@/lib/members-mapping"
 
 import { IOrganization_member } from "@/interface"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { deleteOrganization_member, getAllOrganization_member } from "@/action/members"
-import { getAllUsers } from "@/action/users"
-import { getAllGroups } from "@/action/group"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
-// ContentLayout removed - using new layout system
-import { createClient } from "@/utils/supabase/client"
+import { Skeleton } from "@/components/ui/skeleton" 
 import { createInvitation } from "@/action/invitations"
 import { getOrgRoles } from "@/lib/rbac"
 import { useGroups } from "@/hooks/use-groups"
 import { usePositions } from "@/hooks/use-positions"
-//tes
+import { useHydration } from "@/hooks/useHydration"
+// import { useRouter } from "next/navigation"
+
 const inviteSchema = z.object({
   email: z.string().email("Invalid email address"),
   role_id: z.string().optional(),
@@ -80,38 +67,270 @@ const inviteSchema = z.object({
 
 type InviteFormValues = z.infer<typeof inviteSchema>
 
-export default function MembersPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const supabase = createClient()
+type ExportFieldConfig = {
+  key: string
+  label: string
+  getValue: (member: any) => string | number | boolean | null
+}
 
-  const [members, setMembers] = React.useState<
-    (IOrganization_member & { groupName?: string })[]
-  >([])
-  const [loading, setLoading] = React.useState<boolean>(true)
+const EXPORT_FIELDS: ExportFieldConfig[] = [
+  {
+    key: "nik",
+    label: "NIK",
+    getValue: (member: any) => member.user?.nik || member.biodata_nik || "-",
+  },
+  {
+    key: "full_name",
+    label: "Full Name",
+    getValue: (member: any) => computeName(member as MemberLike),
+  },
+  {
+    key: "nickname",
+    label: "Nickname",
+    getValue: (_member: any) => "-", // nickname tidak ada di user_profiles
+  },
+  {
+    key: "nisn",
+    label: "NISN",
+    getValue: (member: any) => member.user?.nisn || "-",
+  },
+  {
+    key: "gender",
+    label: "Gender",
+    getValue: (member: any) => computeGender(member as MemberLike),
+  },
+  {
+    key: "email",
+    label: "Email",
+    getValue: (member: any) => {
+      const email = member.email || member.user?.email || ""
+      // Filter out dummy emails (ending with @dummy.local)
+      if (email && email.toLowerCase().endsWith('@dummy.local')) {
+        return "-"
+      }
+      return email || "-"
+    },
+  },
+  {
+    key: "phone",
+    label: "Phone Number",
+    getValue: (member: any) => member.user?.phone || member.user?.mobile || "-",
+  },
+  {
+    key: "group",
+    label: "Department / Group",
+    getValue: (member: any) => computeGroupName(member as MemberLike),
+  },
+  {
+    key: "position",
+    label: "Position",
+    getValue: (member: any) => member.position?.title || member.positions?.title || "-",
+  },
+  {
+    key: "role",
+    label: "Role",
+    getValue: (member: any) => member.role?.name || "-",
+  },
+  {
+    key: "status",
+    label: "Status",
+    getValue: (member: any) => (member.is_active ? "Active" : "Inactive"),
+  },
+  {
+    key: "hire_date",
+    label: "Hire Date",
+    getValue: (member: any) => member.hire_date || "-",
+  },
+]
+
+const MembersPageSkeleton = () => (
+  <div className="p-4 md:p-6 space-y-4">
+    <div className="flex flex-col sm:flex-row gap-2 items-center justify-between">
+      <Skeleton className="h-10 w-full sm:w-64" />
+      <div className="flex gap-2 w-full sm:w-auto">
+        <Skeleton className="h-10 w-28" />
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+    </div>
+    <TableSkeleton rows={8} columns={6} />
+    <div className="flex items-center justify-between">
+      <Skeleton className="h-8 w-40" />
+      <div className="flex gap-2">
+        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-8 w-24" />
+      </div>
+    </div>
+  </div>
+)
+
+export default function MembersPage() {
+  // const router = useRouter()
+  const { isHydrated, organizationId } = useHydration()
+  const queryClient = useQueryClient()
+  const [exporting, setExporting] = React.useState(false)
   const [inviteDialogOpen, setInviteDialogOpen] = React.useState(false)
   const [submittingInvite, setSubmittingInvite] = React.useState(false)
-  const [importing, setImporting] = React.useState(false)
-  const [importSummary, setImportSummary] = React.useState<{ success: number; failed: number; errors: string[] } | null>(null)
-  const fileInputRef = React.useRef<HTMLInputElement>(null)
-  const [isDragActive, setIsDragActive] = React.useState(false)
-  const [importDialogOpen, setImportDialogOpen] = React.useState(false)
+  const [searchQuery, setSearchQuery] = React.useState<string>("")
+  const [selectedMemberIds] = React.useState<string[]>([])
+  const [exportDialogOpen, setExportDialogOpen] = React.useState(false)
+  const [selectedExportFields, setSelectedExportFields] = React.useState<string[]>(
+    EXPORT_FIELDS.map((f) => f.key),
+  )
 
-  // Auto-open invite dialog if action=invite in URL
+  const [page, setPage] = React.useState<number>(1)
+  const [pageSize, setPageSize] = React.useState<number>(10)
+  const debouncedSearch = useDebounce(searchQuery, 400)
+
+  interface MembersApiPage {
+    success: boolean
+    data: IOrganization_member[]
+    pagination: { cursor: string | null; limit: number; hasMore: boolean; total: number }
+  }
+
+  const { data: pageData, isLoading: loading, isFetching, refetch } = useQuery<MembersApiPage>({
+    queryKey: ["members", "paged", organizationId, debouncedSearch, page, pageSize],
+    queryFn: async ({ signal }) => {
+      const url = new URL('/api/members', window.location.origin)
+      url.searchParams.set('limit', String(pageSize))
+      url.searchParams.set('active', 'all')
+      url.searchParams.set('countMode', 'planned')
+      url.searchParams.set('page', String(page))
+      // Hanya pass organizationId jika ada; jika belum ada, biarkan API fallback ke org user
+      if (organizationId) url.searchParams.set('organizationId', String(organizationId))
+      if (debouncedSearch) url.searchParams.set('search', debouncedSearch)
+      const res = await fetch(url.toString(), { credentials: 'same-origin', signal })
+      const json = await res.json()
+      if (!json?.success) throw new Error(json?.message || 'Failed to fetch members')
+      return json as MembersApiPage
+    },
+    // RELAX: query jalan setelah hydration selesai
+    enabled: isHydrated,
+    staleTime: 60_000,
+    gcTime: 300_000,
+  })
+
+  // Filter members client-side untuk search di semua fields
+  // Ini memastikan search bekerja untuk semua field termasuk joined fields (nama, department)
+  const members: IOrganization_member[] = React.useMemo(() => {
+    const rawMembers = pageData?.data ?? []
+    if (!searchQuery || !searchQuery.trim()) return rawMembers
+    
+    const searchTerm = searchQuery.toLowerCase().trim()
+    return rawMembers.filter((member: any) => {
+      const fullName = computeName(member as MemberLike).toLowerCase()
+      const rawEmail = (member.email || member.user?.email || '').toLowerCase()
+      // Filter out dummy emails from search
+      const email = rawEmail && !rawEmail.endsWith('@dummy.local') ? rawEmail : ''
+      const nik = (computeNik(member as MemberLike) || '').toLowerCase()
+      const employeeId = ((member.employee_id || '') as string).toLowerCase()
+      const departmentName = computeGroupName(member as MemberLike).toLowerCase()
+      const positionName = (
+        member.positions?.title ||
+        (Array.isArray(member.positions) && member.positions[0]?.title) ||
+        ''
+      ).toLowerCase()
+      const roleName = (member.role?.name || '').toLowerCase()
+
+      return (
+        fullName.includes(searchTerm) ||
+        email.includes(searchTerm) ||
+        nik.includes(searchTerm) ||
+        employeeId.includes(searchTerm) ||
+        departmentName.includes(searchTerm) ||
+        positionName.includes(searchTerm) ||
+        roleName.includes(searchTerm)
+      )
+    })
+  }, [pageData?.data, searchQuery])
+  
+  const total: number = pageData?.pagination?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / (pageSize || 1)))
+
+  // Debug: Log members data to check departments
   React.useEffect(() => {
-    if (searchParams.get('action') === 'invite') {
-      setInviteDialogOpen(true)
+    if (members && members.length > 0) {
+      console.log('[MEMBERS UI] Total members:', members.length)
+      
+      // Check all members for department_id
+      const membersWithDeptId = members.filter((m: any) => m.department_id != null && m.department_id !== undefined)
+      console.log('[MEMBERS UI] Members with department_id:', membersWithDeptId.length)
+      
+      if (membersWithDeptId.length > 0 && membersWithDeptId[0]) {
+        const sample = membersWithDeptId[0] as any;
+        console.log('[MEMBERS UI] Sample member with department_id:', {
+          id: sample.id,
+          department_id: sample.department_id,
+          department_id_type: typeof sample.department_id,
+          departments: sample.departments,
+          departments_type: typeof sample.departments,
+          is_departments_array: Array.isArray(sample.departments),
+          biodata_nik: sample.biodata_nik
+        })
+      }
+      
+      const membersWithDept = members.filter((m: any) => {
+        if (!m.departments) return false
+        if (Array.isArray(m.departments) && m.departments.length > 0 && m.departments[0]?.name) return true
+        if (typeof m.departments === 'object' && m.departments.name) return true
+        return false
+      })
+      const membersWithoutDept = members.filter((m: any) => {
+        if (!m.department_id) return false
+        const hasValidDept = m.departments && 
+          ((typeof m.departments === 'object' && !Array.isArray(m.departments) && m.departments.name) ||
+           (Array.isArray(m.departments) && m.departments.length > 0 && m.departments[0]?.name))
+        return !hasValidDept
+      })
+      
+      console.log('[MEMBERS UI] Members with departments:', membersWithDept.length)
+      console.log('[MEMBERS UI] Members without departments (but have department_id):', membersWithoutDept.length)
+      
+      if (membersWithoutDept.length > 0 && membersWithoutDept[0]) {
+        const sample = membersWithoutDept[0] as any;
+        console.log('[MEMBERS UI] Sample member without departments:', {
+          id: sample.id,
+          department_id: sample.department_id,
+          department_id_type: typeof sample.department_id,
+          departments: sample.departments,
+          departments_type: typeof sample.departments,
+          is_departments_array: Array.isArray(sample.departments),
+          biodata_nik: sample.biodata_nik
+        })
+      }
+      if (membersWithDept.length > 0 && membersWithDept[0]) {
+        const sampleMember = membersWithDept[0];
+        console.log('[MEMBERS UI] Sample member with departments:', {
+          id: sampleMember?.id,
+          department_id: sampleMember?.department_id,
+          departments: sampleMember?.departments,
+          departments_name: sampleMember?.departments?.name || (Array.isArray(sampleMember?.departments) ? sampleMember?.departments[0]?.name : null),
+          departments_keys: sampleMember?.departments ? Object.keys(sampleMember.departments) : null
+        })
+      }
+      
+      // Log first member structure for debugging
+      if (members.length > 0) {
+        console.log('[MEMBERS UI] First member full structure:', members[0])
+      }
     }
-  }, [searchParams])
+  }, [members])
 
+  React.useEffect(() => {
+    setPage(1)
+  }, [searchQuery])
+
+  //komentar
   // Fetch data for invite form
   const { data: roles = [], isLoading: rolesLoading } = useQuery({
     queryKey: ["org-roles"],
     queryFn: getOrgRoles,
+    enabled: inviteDialogOpen,
   })
   
-  const { data: departments = [], isLoading: deptLoading } = useGroups()
-  const { data: positions = [], isLoading: posLoading } = usePositions()
+  const { data: departments = [], isLoading: deptLoading } = useGroups({ enabled: inviteDialogOpen })
+  const { data: positions = [], isLoading: posLoading } = usePositions({ enabled: inviteDialogOpen })
 
   const inviteForm = useForm<InviteFormValues>({
     resolver: zodResolver(inviteSchema),
@@ -126,128 +345,15 @@ export default function MembersPage() {
 
   const isLoadingInviteData = rolesLoading || deptLoading || posLoading
 
-  const fetchMembers = async () => {
-    try {
-      setLoading(true)
-      
-      // Get organization ID
-      const { data: { user } } = await supabase.auth.getUser()
-      let orgId = ""
 
-      if (user) {
-        const { data } = await supabase
-          .from("organization_members")
-          .select("organization_id")
-          .eq("user_id", user.id)
-          .maybeSingle()
-
-        if (data) {
-          orgId = String(data.organization_id)
-        }
-      }
-
-      // Fetch all data
-      const [memberRes, userRes, groupsRes] = await Promise.all([
-        getAllOrganization_member(),
-        getAllUsers(),
-        getAllGroups(),
-      ])
-
-      if (!memberRes.success) throw new Error(memberRes.message)
-
-      const membersData = memberRes.data
-      const usersData = userRes.success ? userRes.data : []
-      const groupsData = groupsRes?.data || []
-
-      // Create group map
-      const groupMap = new Map<string, string>()
-      groupsData.forEach((g: any) => {
-        if (g && g.id) groupMap.set(String(g.id), g.name)
-      })
-
-      // Manual join
-      const mergedMembers = membersData.map((m: any) => {
-        const u = usersData.find((usr: any) => usr.id === m.user_id)
-        const groupName =
-          groupMap.get(String(m.department_id)) ||
-          (m.groups && (m.groups as any).name) ||
-          (m.departments && (m.departments as any).name) ||
-          ""
-        return { ...m, user: u, groupName }
-      })
-
-      // Filter by organization
-      const filteredMembers = orgId
-        ? mergedMembers.filter((m: any) => String(m.organization_id) === orgId)
-        : mergedMembers
-      
-      setMembers(filteredMembers)
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : 'An error occurred')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleImportDialogOpenChange = (open: boolean) => {
-    setImportDialogOpen(open)
-    if (!open) {
-      setIsDragActive(false)
-    }
-  }
-
-  const handleFileSelection = async (file: File) => {
-    await processImportFile(file)
-    handleImportDialogOpenChange(false)
-  }
-
-  const handleImportMembers = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    handleFileSelection(file)
-  }
-
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-  }
-
-  const handleDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    setIsDragActive(true)
-  }
-
-  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    setIsDragActive(false)
-  }
-
-  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    setIsDragActive(false)
-    const file = event.dataTransfer?.files?.[0]
-    if (!file) return
-    await handleFileSelection(file)
-  }
-
+  // Monitor organization changes
   React.useEffect(() => {
-    fetchMembers()
-  }, [])
-
-  async function handleDelete(id: string) {
-    try {
-      setLoading(true)
-      const res = await deleteOrganization_member(id)
-      if (!res.success) throw new Error(res.message)
-      toast.success("Member deleted successfully")
-      fetchMembers()
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "An error occurred")
-    } finally {
-      setLoading(false)
+    if (organizationId) {
+      console.log('[MEMBERS] Organization changed to:', organizationId)
     }
-  }
+  }, [organizationId])
 
+  // Initial fetch handled by useInfiniteQuery
   async function onSubmitInvite(values: InviteFormValues) {
     try {
       setSubmittingInvite(true)
@@ -262,9 +368,10 @@ export default function MembersPage() {
 
       if (result.success) {
         toast.success("Invitation sent successfully via email!")
+        await queryClient.invalidateQueries({ queryKey: ['members', 'paged', organizationId, searchQuery, page, pageSize]})
         setInviteDialogOpen(false)
         inviteForm.reset()
-        fetchMembers()
+        await refetch()
       } else {
         toast.error(result.message || "Failed to send invitation")
       }
@@ -275,6 +382,85 @@ export default function MembersPage() {
     }
   }
 
+  const handleRefresh = async () => {
+    try {
+      if (typeof window !== 'undefined') {
+        const keys = Object.keys(localStorage)
+        keys.forEach(key => {
+          if (key.startsWith('members:')) {
+            localStorage.removeItem(key)
+          }
+        })
+      }
+      // Force refresh data
+      await refetch()
+      toast.success("Data has been refreshed!")
+      await queryClient.invalidateQueries({ queryKey: ['members', 'paged', organizationId, searchQuery, page, pageSize]})
+    } catch (error) {
+      toast.error("Failed to refresh data")
+    }
+  }
+
+  const handleExportMembers = async () => {
+    try {
+      const hasSelection = selectedMemberIds.length > 0
+      const exportSource = hasSelection
+        ? members.filter((m) => selectedMemberIds.includes(String(m.id)))
+        : members
+
+      if (!exportSource.length) {
+        toast.warning("Tidak ada data member untuk diekspor")
+        return
+      }
+
+      if (!selectedExportFields.length) {
+        toast.error("Pilih minimal satu kolom untuk diekspor")
+        return
+      }
+
+      setExporting(true)
+      const XLSX = await import("xlsx")
+
+      const rows = exportSource.map((member: any) => {
+        const row: Record<string, any> = {}
+        // Selalu buat semua kolom, tapi isi hanya yang dipilih.
+        EXPORT_FIELDS.forEach((field) => {
+          if (selectedExportFields.includes(field.key)) {
+            row[field.label] = field.getValue(member)
+          } else {
+            row[field.label] = "" // kolom tetap ada tapi datanya kosong
+          }
+        })
+        return row
+      })
+
+      const worksheet = XLSX.utils.json_to_sheet(rows)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Members")
+
+      const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `members-${new Date().toISOString().split("T")[0]}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      toast.success("Succesfully exported members")
+      await queryClient.invalidateQueries({ queryKey: ['members']})
+    } catch (error) {
+      console.error("Export members error:", error)
+      toast.error("Gagal mengekspor data members")
+    } finally {
+      setExporting(false)
+    }
+  }
+
+
   const handleDialogOpenChange = (open: boolean) => {
     setInviteDialogOpen(open)
     if (!open) {
@@ -282,682 +468,414 @@ export default function MembersPage() {
     }
   }
 
-  const getMemberFullName = (member: any) => {
-    const user = member?.user
-    return user
-      ? [user.first_name, user.middle_name, user.last_name]
-          .filter((part: string) => part && part.trim() !== "")
-          .join(" ") ||
-        user.display_name ||
-        user.email ||
-        "No User"
-      : "No User"
-  }
-
-  const handleExportMembers = async () => {
-    if (!members.length) {
-      toast.info("Tidak ada data member untuk diexport")
-      return
-    }
-
-    try {
-      const XLSX = await import("xlsx")
-
-      const exportRows = members.map((member) => ({
-        Name: getMemberFullName(member),
-        Email: member.user?.email || "",
-        Phone: member.user?.phone || "",
-        Group: member.groupName || "",
-        Role: member.role?.name || "",
-        Status: member.is_active ? "Active" : "Inactive",
-      }))
-
-      const worksheet = XLSX.utils.json_to_sheet(exportRows)
-      const workbook = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Members")
-      const filename = `members-${new Date().toISOString().split("T")[0]}.xlsx`
-      XLSX.writeFile(workbook, filename)
-      toast.success("Berhasil mengekspor data members")
-    } catch (error) {
-      console.error("Export members error:", error)
-      toast.error("Gagal mengekspor data members")
-    }
-  }
-
-  const processImportFile = async (file: File) => {
-    setImportSummary(null)
-    setImporting(true)
-
-    try {
-      // Ensure departments are loaded before import
-      if (deptLoading) {
-        toast.error("Sedang memuat data department, silakan tunggu sebentar...")
-        return
-      }
-
-      // Fetch fresh departments data to ensure we have the latest
-      const departmentsResponse = await getAllGroups()
-      const availableDepartments = departmentsResponse.success ? departmentsResponse.data : []
-      
-      if (!availableDepartments || availableDepartments.length === 0) {
-        toast.error("Tidak ada department yang tersedia. Silakan buat department terlebih dahulu.")
-        return
-      }
-
-      // Debug: Log available departments
-      console.log("Available departments:", availableDepartments.map((d: any) => ({ id: d.id, name: d.name, code: d.code })))
-
-      const XLSX = await import("xlsx")
-      const buffer = await file.arrayBuffer()
-      const workbook = XLSX.read(buffer, { type: "array" })
-      const sheetName = workbook.SheetNames?.[0]
-      if (!sheetName) {
-        throw new Error("Tidak ada sheet di dalam file Excel")
-      }
-
-      const sheet = workbook.Sheets[sheetName]
-      if (!sheet) {
-        throw new Error("Tidak dapat menemukan sheet yang valid di file Excel")
-      }
-      const rows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { defval: "" }) as Record<
-        string,
-        string
-      >[]
-
-      if (!rows.length) {
-        toast.error("File Excel kosong atau tidak memiliki data")
-        return
-      }
-
-      if (rows.length > 200) {
-        toast.warning("Import maksimal 200 baris per file untuk menjaga performa")
-      }
-
-      const summary = { success: 0, failed: 0, errors: [] as string[] }
-
-      const findId = (
-        collection: any[],
-        value: string,
-        keys: string[]
-      ): { id?: string; notFound: boolean } => {
-        // Normalize input: trim, lowercase, and remove extra spaces
-        const normalized = value.trim().toLowerCase().replace(/\s+/g, " ")
-        if (!normalized) return { id: undefined, notFound: false }
-        
-        const match = collection.find((item: any) =>
-          keys.some((key) => {
-            const itemValue = String(item?.[key] ?? "").trim().toLowerCase().replace(/\s+/g, " ")
-            // Exact match
-            if (itemValue === normalized) return true
-            // Also try matching without special characters (for codes like "x_tkj" vs "X TKJ")
-            const normalizedNoSpecial = normalized.replace(/[^a-z0-9]/g, "")
-            const itemValueNoSpecial = itemValue.replace(/[^a-z0-9]/g, "")
-            if (normalizedNoSpecial && itemValueNoSpecial === normalizedNoSpecial) return true
-            return false
-          })
-        )
-        if (!match) return { id: undefined, notFound: true }
-        return { id: String(match.id), notFound: false }
-      }
-
-      for (let index = 0; index < rows.length; index++) {
-        const rawRow = rows[index]
-        if (!rawRow) {
-          continue
-        }
-
-        const normalizedRow = Object.entries(rawRow).reduce<Record<string, string>>(
-          (acc, [key, value]) => {
-            acc[key.toLowerCase()] = String(value ?? "")
-            return acc
-          },
-          {}
-        )
-
-        const email = String(normalizedRow["email"] || normalizedRow["email address"] || "").trim()
-        if (!email) {
-          summary.failed++
-          summary.errors.push(`Baris ${index + 2}: kolom email wajib diisi`)
-          continue
-        }
-
-        const phoneValue = String(
-          normalizedRow["phone"] ||
-            normalizedRow["phone number"] ||
-            normalizedRow["telepon"] ||
-            normalizedRow["no hp"] ||
-            normalizedRow["nomor hp"] ||
-            ""
-        ).trim()
-
-        const roleValue = String(normalizedRow["role"] || "").trim()
-        const departmentValue = String(normalizedRow["department"] || "").trim()
-        const positionValue = String(
-          normalizedRow["position"] ||
-            normalizedRow["job title"] ||
-            normalizedRow["jabatan"] ||
-            ""
-        ).trim()
-        const messageValue = String(
-          normalizedRow["message"] ||
-            normalizedRow["notes"] ||
-            normalizedRow["catatan"] ||
-            ""
-        ).trim()
-
-        const skipRole =
-          !roleValue || roleValue.toLowerCase().replace(/[^a-z0-9]/g, "") === "norole"
-
-        let roleResult: ReturnType<typeof findId> = { id: undefined, notFound: false }
-        if (!skipRole) {
-          roleResult = findId(roles ?? [], roleValue, ["name", "code", "id"])
-          if (roleResult.notFound) {
-            summary.failed++
-            summary.errors.push(`Baris ${index + 2}: role "${roleValue}" tidak ditemukan`)
-            continue
-          }
-        }
-
-        let departmentResult: ReturnType<typeof findId> = { id: undefined, notFound: false }
-        if (!departmentValue) {
-          summary.failed++
-          summary.errors.push(`Baris ${index + 2}: kolom department wajib diisi`)
-          continue
-        }
-
-        departmentResult = findId(availableDepartments ?? [], departmentValue, ["name", "code", "id"])
-        if (departmentResult.notFound) {
-          summary.failed++
-          summary.errors.push(`Baris ${index + 2}: department "${departmentValue}" tidak ditemukan`)
-          continue
-        }
-
-        let positionResult: ReturnType<typeof findId> = { id: undefined, notFound: false }
-        if (positionValue) {
-          positionResult = findId(positions ?? [], positionValue, ["title", "name", "id"])
-          if (positionResult.notFound) {
-            summary.failed++
-            summary.errors.push(`Baris ${index + 2}: position "${positionValue}" tidak ditemukan`)
-            continue
-          }
-        }
-
-        const invitationPayload: Parameters<typeof createInvitation>[0] = { email }
-        if (roleResult.id) invitationPayload.role_id = roleResult.id
-        if (departmentResult.id) invitationPayload.department_id = departmentResult.id
-        if (positionResult.id) invitationPayload.position_id = positionResult.id
-        if (messageValue) invitationPayload.message = messageValue
-        if (phoneValue) invitationPayload.phone = phoneValue
-
-        try {
-          const result = await createInvitation(invitationPayload)
-          if (result.success) {
-            summary.success++
-          } else {
-            summary.failed++
-            summary.errors.push(`Baris ${index + 2}: ${result.message || "Gagal mengirim undangan"}`)
-          }
-        } catch (error) {
-          summary.failed++
-          summary.errors.push(`Baris ${index + 2}: ${(error as Error)?.message || "Gagal mengirim undangan"}`)
-        }
-      }
-
-      setImportSummary(summary)
-      toast.success(`Import selesai. Berhasil: ${summary.success}, gagal: ${summary.failed}`)
-      fetchMembers()
-    } catch (error) {
-      console.error("Import members error:", error)
-      toast.error("Gagal mengimport file Excel")
-    } finally {
-      setImporting(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
-      }
-    }
-  }
-
-  const columns: ColumnDef<IOrganization_member>[] = [
-    {
-      id: "userFullName",
-      accessorFn: (row: any) => {
-        const user = row.user
-        const fullname = user
-          ? [user.first_name, user.middle_name, user.last_name]
-              .filter((part: any) => part && part.trim() !== "")
-              .join(" ") ||
-            user.display_name ||
-            user.email ||
-            "No User"
-          : "No User"
-        return fullname
-      },
-      header: "Members",
-      cell: ({ row }) => {
-        const user = (row.original as any).user
-        const fullname = user
-          ? [user.first_name, user.middle_name, user.last_name]
-              .filter((part: any) => part && part.trim() !== "")
-              .join(" ") ||
-            user.display_name ||
-            user.email ||
-            "No User"
-          : "No User"
-        return (
-          <div className="flex gap-2 items-center">
-            <User className="w-4 h-4" /> {fullname}
-          </div>
-        )
-      },
-    },
-    {
-      accessorFn: (row: any) => row.user?.phone || "",
-      header: "Phone Number",
-      cell: ({ row }) => (
-        <div className="text-center flex items-center justify-center min-h-[32px]">
-          {(row.original as any).user?.phone ?? "No Phone"}
-        </div>
-      ),
-    },
-    {
-      accessorFn: (row: any) => row.groupName || "",
-      header: "Group",
-      cell: ({ row }) => (
-        <div className="text-center flex items-center justify-center min-h-[32px]">
-          {(row.original as any).groupName || "-"}
-        </div>
-      ),
-    },
-    {
-      header: "Role",
-      cell: ({ row }) => {
-        const role = (row.original as any).role
-        return (
-          <div className="text-center flex items-center justify-center min-h-[32px]">
-            {role ? (
-              <Badge variant={role.code === "A001" ? "default" : "secondary"} className="flex items-center gap-1 w-fit">
-                <Shield className="w-3 h-3" />
-                {role.name}
-              </Badge>
-            ) : (
-              <Badge variant="outline">No Role</Badge>
-            )}
-          </div>
-        )
-      },
-    },
-    {
-      accessorKey: "is_active",
-      header: "Status",
-      cell: ({ row }) => {
-        const active = row.getValue("is_active") as boolean
-        return (
-          <div className="text-center flex items-center justify-center min-h-[32px]">
-            {active ? (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white">
-                <Check className="w-3 h-3 mr-1" /> Active
-              </span>
-            ) : (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 text-black">
-                <X className="w-3 h-3 mr-1" /> Inactive
-              </span>
-            )}
-          </div>
-        )
-      },
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const member = row.original
-        
-        return (
-          <div className="flex gap-2 justify-center items-center min-h-[32px]">
-            <Button
-              variant="outline"
-              size="icon"
-              className="border-0 cursor-pointer"
-              onClick={() => router.push(`/members/edit/${member.id}`)}
-            >
-              <Pencil />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="border-0 cursor-pointer"
-              onClick={() => router.push(`/members/${member.id}`)}
-            >
-              <Eye />
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="text-red-500 border-0 cursor-pointer"
-                >
-                  <Trash />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Member</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete this member? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => handleDelete(member.id)}
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        )
-      },
-    },
-  ]
-
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 w-full">
-      <div className="w-full space-y-6 min-w-0">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Members</h1>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto gap-2"
-                onClick={handleExportMembers}
-                disabled={loading || members.length === 0}
-              >
-                <FileDown className="h-4 w-4" />
-                Export Excel
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto gap-2"
-                onClick={() => handleImportDialogOpenChange(true)}
-                disabled={importing}
-              >
-                <FileUp className="h-4 w-4" />
-                {importing ? "Importing..." : "Import Excel"}
-              </Button>
-              <input
-                id="members-import-input"
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx,.xls"
-                className="hidden"
-                onChange={handleImportMembers}
-                disabled={importing}
-              />
-            </div>
-            <Dialog open={importDialogOpen} onOpenChange={handleImportDialogOpenChange}>
-              <DialogContent className="w-full max-w-[560px]" aria-describedby="import-description">
-                <DialogHeader>
-                  <DialogTitle>Import Members</DialogTitle>
-                  <DialogDescription id="import-description">
-                    Unggah file Excel untuk mengimport data members
-                  </DialogDescription>
-                </DialogHeader>
-                <div
-                  className={`
-                    mt-4 flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 text-center transition
-                    ${isDragActive ? "border-blue-500 bg-blue-50/60 text-blue-800 dark:text-blue-200" : "border-muted-foreground/40 bg-muted/10 text-muted-foreground"}
-                    ${importing ? "opacity-60 pointer-events-none" : "cursor-pointer hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-400/10"}
-                  `}
-                  onDragEnter={handleDragEnter}
-                  onDragLeave={handleDragLeave}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => !importing && fileInputRef.current?.click()}
-                  onKeyDown={(event) => {
-                    if ((event.key === "Enter" || event.key === " ") && !importing) {
-                      event.preventDefault()
-                      fileInputRef.current?.click()
-                    }
-                  }}
+    (!isHydrated || (loading && members.length === 0 && !searchQuery)) ? (
+      <MembersPageSkeleton />
+    ) : (
+    <div className="flex flex-1 flex-col gap-4 w-full">
+      <div className="w-full">
+        <div className="w-full bg-card rounded-lg shadow-sm border">
+          
+          <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center sm:justify-between" suppressHydrationWarning>
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search members..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                  disabled={false} // Search bar tidak pernah di-disable
+                />
+              </div>
+              <div className="flex gap-3 sm:gap-2 flex-wrap items-center" suppressHydrationWarning>
+                {/* Export dialog untuk memilih kolom yang akan diekspor */}
+                <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+                  <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                      <DialogTitle>Export Members</DialogTitle>
+                      <DialogDescription>
+                        Pilih kolom apa saja yang akan disertakan dalam file Excel. Jika tidak ada member yang
+                        dipilih di tabel, maka semua member akan diekspor.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                      <div className="border rounded-lg">
+                        <div className="px-3 py-2 border-b bg-muted/50 text-sm font-semibold">
+                          Field-field tersedia
+                        </div>
+                        <div className="max-h-64 overflow-y-auto">
+                          <ul className="divide-y">
+                            {EXPORT_FIELDS.filter((f) => !selectedExportFields.includes(f.key)).map(
+                              (field) => (
+                                <li
+                                  key={field.key}
+                                  className="flex items-center justify-between px-3 py-2 text-sm"
+                                >
+                                  <span>{field.label}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() =>
+                                      setSelectedExportFields((prev) => [...prev, field.key])
+                                    }
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </li>
+                              ),
+                            )}
+                          </ul>
+                        </div>
+                      </div>
+                      <div className="border rounded-lg">
+                        <div className="px-3 py-2 border-b bg-muted/50 text-sm font-semibold">
+                          Kolom untuk diekspor
+                        </div>
+                        <div className="max-h-64 overflow-y-auto">
+                          {selectedExportFields.length === 0 ? (
+                            <p className="px-3 py-4 text-sm text-muted-foreground">
+                              Belum ada kolom yang dipilih. Tambahkan dari daftar di sebelah kiri.
+                            </p>
+                          ) : (
+                            <ul className="divide-y">
+                              {selectedExportFields.map((key) => {
+                                const field = EXPORT_FIELDS.find((f) => f.key === key)
+                                if (!field) return null
+                                return (
+                                  <li
+                                    key={field.key}
+                                    className="flex items-center justify-between px-3 py-2 text-sm"
+                                  >
+                                    <span>{field.label}</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() =>
+                                        setSelectedExportFields((prev) =>
+                                          prev.filter((k) => k !== field.key),
+                                        )
+                                      }
+                                    >
+                                      <Minus className="h-4 w-4" />
+                                    </Button>
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-4">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        {selectedMemberIds.length > 0
+                          ? `${selectedMemberIds.length} member terpilih akan diekspor.`
+                          : `Tidak ada member yang dipilih di tabel, semua ${members.length} member akan diekspor.`}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setExportDialogOpen(false)}
+                          disabled={exporting}
+                        >
+                          Batal
+                        </Button>
+                        <Button
+                          onClick={async () => {
+                            await handleExportMembers()
+                            setExportDialogOpen(false)
+                          }}
+                          disabled={exporting}
+                        >
+                          {exporting ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Mengekspor...
+                            </>
+                          ) : (
+                            <>
+                              <FileSpreadsheet className="mr-2 h-4 w-4" />
+                              Ekspor
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <Button
+                  asChild
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={loading || exporting}
+                  className="whitespace-nowrap"
                 >
-                  <div className="rounded-full bg-background p-3 shadow-sm">
-                    <FileUp className="h-6 w-6 text-foreground" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-foreground">Tarik & letakkan file kamu di sini</p>
-                    <p className="text-xs">atau klik untuk memilih file dari komputer</p>
-                  </div>
-                </div>
-                <div className="mt-1 w-full text-left">
-                  <a
-                    href="/templates/members-import-template.xlsx"
-                    download
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-500"
+                  <Link 
+                    href={`/members/export${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`}
+                    prefetch={false}
+                    // onMouseEnter={(e) => {
+                    //   const href = e.currentTarget.getAttribute('href')
+                    //   if (href && router) {
+                    //     router.prefetch(href)
+                    //   }
+                    // }}
                   >
-                    Download template di sini
-                  </a>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
-              <DialogTrigger asChild>
-                <Button className="w-full sm:w-auto">
-                  Invite Member <Plus className="ml-2" />
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Export
+                  </Link>
                 </Button>
-              </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]" aria-describedby="invite-description">
-              <DialogHeader>
-                <DialogTitle>Invite New Member</DialogTitle>
-                <DialogDescription id="invite-description">
-                  Send an email invitation to add a new member to your organization
-                </DialogDescription>
-              </DialogHeader>
-
-              <Form {...inviteForm}>
-                <form onSubmit={inviteForm.handleSubmit(onSubmitInvite)} className="space-y-4">
-                  <FormField
-                    control={inviteForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email Address *</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              placeholder="john.doe@example.com"
-                              className="pl-10"
-                              {...field}
-                              disabled={submittingInvite}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={inviteForm.control}
-                    name="role_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Role (Optional)</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={submittingInvite || isLoadingInviteData}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select role..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {roles.map((role: any) => (
-                              <SelectItem key={role.id} value={String(role.id)}>
-                                <div className="flex items-center gap-2">
-                                  {role.code === "A001" ? <Shield className="w-3 h-3" /> : <User className="w-3 h-3" />}
-                                  {role.name}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={inviteForm.control}
-                    name="department_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Department (Optional)</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={submittingInvite || isLoadingInviteData}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select department..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {departments.map((dept: any) => (
-                              <SelectItem key={dept.id} value={String(dept.id)}>
-                                {dept.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={inviteForm.control}
-                    name="position_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Position (Optional)</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={submittingInvite || isLoadingInviteData}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select position..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {positions.map((pos: any) => (
-                              <SelectItem key={pos.id} value={String(pos.id)}>
-                                {pos.title}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={inviteForm.control}
-                    name="message"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Welcome Message (Optional)</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Welcome to the team!"
-                            className="resize-none"
-                            rows={3}
-                            {...field}
-                            disabled={submittingInvite}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <Button
-                    type="submit"
-                    disabled={submittingInvite || isLoadingInviteData}
-                    className="w-full"
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  className="whitespace-nowrap"
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+                <Button
+                  asChild
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isLoadingInviteData}
+                  className="whitespace-nowrap"
+                >
+                  <Link 
+                    href="/members/import-simple"
+                    prefetch={false}
+                    // onMouseEnter={(e) => {
+                    //   const href = e.currentTarget.getAttribute('href')
+                    //   if (href && router) {
+                    //     router.prefetch(href)
+                    //   }
+                    // }}
                   >
-                    {submittingInvite ? "Sending..." : "Send Invitation"}
-                  </Button>
-                </form>
-              </Form>
-            </DialogContent>
-            </Dialog>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Import
+                  </Link>
+                </Button>
+                <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="whitespace-nowrap">
+                      Invite <Plus className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]" aria-describedby="invite-description">
+                    <DialogHeader>
+                      <DialogTitle>Invite New Member</DialogTitle>
+                      <DialogDescription id="invite-description">
+                        Send an email invitation to add a new member to your organization
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Form {...inviteForm}>
+                      <form onSubmit={inviteForm.handleSubmit(onSubmitInvite)} className="space-y-4">
+                        <FormField
+                          control={inviteForm.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email Address *</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    placeholder="john.doe@example.com"
+                                    className="pl-10"
+                                    {...field}
+                                    disabled={submittingInvite}
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={inviteForm.control}
+                          name="role_id"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Role (Optional)</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                disabled={submittingInvite || isLoadingInviteData}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select role..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {roles.map((role: any) => (
+                                    <SelectItem key={role.id} value={String(role.id)}>
+                                      <div className="flex items-center gap-2">
+                                        {role.code === "A001" ? (
+                                          <Shield className="w-3 h-3" />
+                                        ) : (
+                                          <User className="w-3 h-3" />
+                                        )}
+                                        {role.name}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={inviteForm.control}
+                          name="department_id"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Department (Optional)</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                disabled={submittingInvite || isLoadingInviteData}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select department..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {departments.map((dept: any) => (
+                                    <SelectItem key={dept.id} value={String(dept.id)}>
+                                      {dept.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={inviteForm.control}
+                          name="position_id"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Position (Optional)</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                disabled={submittingInvite || isLoadingInviteData}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select position..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {positions.map((pos: any) => (
+                                    <SelectItem key={pos.id} value={String(pos.id)}>
+                                      {pos.title}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={inviteForm.control}
+                          name="message"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Welcome Message (Optional)</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="Welcome to the team!"
+                                  className="resize-none"
+                                  rows={3}
+                                  {...field}
+                                  disabled={submittingInvite}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button
+                          type="submit"
+                          disabled={submittingInvite || isLoadingInviteData}
+                          className="w-full"
+                        >
+                          {submittingInvite ? "Sending..." : "Send Invitation"}
+                        </Button>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              {loading && members.length === 0 && !searchQuery ? (
+                <TableSkeleton rows={8} columns={6} />
+              ) : isFetching && members.length === 0 ? (
+                <TableSkeleton rows={8} columns={6} />
+              ) : members.length === 0 ? (
+                <div className="mt-20">
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <User className="h-14 w-14 text-muted-foreground mx-auto" />
+                      </EmptyMedia>
+                      <EmptyTitle>No members yet</EmptyTitle>
+                      <EmptyDescription>
+                        {searchQuery 
+                          ? `No members found matching "${searchQuery}"`
+                          : "There are no members for this organization. Use the \"Invite Member\" button to add one."}
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                </div>
+              ) : (
+                <div className="min-w-full overflow-x-auto relative">
+                  {isFetching && members.length > 0 && (
+                    <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  )}
+                  <MembersTable 
+                    members={members}
+                    isLoading={false}
+                    onDelete={() => { refetch() }}
+                    showPagination={false}
+                  />
+
+                  {/* Footer Pagination (server-based) */}
+                  <PaginationFooter
+                    page={page}
+                    totalPages={totalPages || 1}
+                    onPageChange={(p) => setPage(Math.max(1, Math.min(p, Math.max(1, totalPages))))}
+                    isLoading={loading || isFetching}
+                    from={total > 0 ? (page - 1) * pageSize + 1 : 0}
+                    to={Math.min(page * pageSize, total)}
+                    total={total}
+                    pageSize={pageSize}
+                    onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+                    pageSizeOptions={[10, 50, 100]}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
-
-        {/* Table Content */}
-        {loading ? (
-          <TableSkeleton rows={8} columns={6} />
-        ) : members.length === 0 ? (
-          <div className="mt-20">
-            <Empty>
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <User className="h-14 w-14 text-muted-foreground mx-auto" />
-                </EmptyMedia>
-                <EmptyTitle>No members yet</EmptyTitle>
-                <EmptyDescription>
-                  There are no members for this organization. Use the "Invite Member" button to add one.
-                </EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <Button onClick={() => setInviteDialogOpen(true)}>Invite Member</Button>
-              </EmptyContent>
-            </Empty>
-          </div>
-        ) : (
-          <DataTable 
-            columns={columns} 
-            data={members}
-            isLoading={loading}
-          />
-        )}
-
-        {importSummary && (
-          <div className="rounded-lg border border-muted-foreground/20 bg-muted/30 p-4 text-sm space-y-2">
-            <div className="font-semibold">Import summary</div>
-            <div className="flex flex-wrap gap-3">
-              <span className="text-green-600 dark:text-green-400">Berhasil: {importSummary.success}</span>
-              <span className="text-red-600 dark:text-red-400">Gagal: {importSummary.failed}</span>
-            </div>
-            {importSummary.errors.length > 0 && (
-              <ul className="list-disc pl-4 text-muted-foreground space-y-1 max-h-40 overflow-auto text-xs">
-                {importSummary.errors.slice(0, 10).map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-                {importSummary.errors.length > 10 && (
-                  <li>...dan {importSummary.errors.length - 10} error lainnya</li>
-                )}
-              </ul>
-            )}
-          </div>
-        )}
       </div>
     </div>
-  )
+  ))
 }

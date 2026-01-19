@@ -798,7 +798,7 @@ export async function getMonthlyAttendanceStats(organizationIdParam?: number | n
 }
 
 // Get all dashboard stats at once - CONSOLIDATED
-export async function getDashboardStats(): Promise<{
+export async function getDashboardStats(organizationId?: number): Promise<{
   totalActiveMembers: number
   totalMembers: number
   todayAttendance: number
@@ -817,10 +817,14 @@ export async function getDashboardStats(): Promise<{
   monthlyTrend: Array<{ month: string; attendance: number; late: number }>
   todaySummary: { totalMembers: number; checkedIn: number; onTime: number; late: number; absent: number; attendanceRate: number }
 }> {
-  // 1. Fetch Organization ID ONCE
-  const organizationId = await getUserOrganizationId();
-  if (!organizationId) {
-     throw new Error("User does not belong to an organization");
+  // 1. Use provided organizationId or get from server
+  let finalOrgId = organizationId;
+  if (!finalOrgId) {
+    finalOrgId = await getUserOrganizationId();
+  }
+  
+  if (!finalOrgId) {
+    throw new Error("User does not belong to an organization");
   }
   
   // 2. Fetch Active Members ONCE (needed for most stats)

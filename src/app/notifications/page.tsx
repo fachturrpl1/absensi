@@ -89,9 +89,18 @@ export default function NotificationsPage() {
   const [activeCategory, setActiveCategory] = useState<NotificationFilter>("all");
   const { data: apiNotifications = [], isLoading } = useNotifications(50);
 
+  // Create a stable reference key from apiNotifications to avoid infinite loops
+  const apiNotificationsKey = useMemo(() => {
+    return JSON.stringify(apiNotifications.map(n => ({
+      id: n.id,
+      type: n.type,
+      timestamp: n.timestamp,
+    })));
+  }, [apiNotifications]);
+
   // Transform API notifications to UI notifications
-  useEffect(() => {
-    const transformedNotifications: NotificationItem[] = apiNotifications.map((apiNotif, index) => {
+  const transformedNotifications = useMemo(() => {
+    return apiNotifications.map((apiNotif, index) => {
       const relativeTime = formatRelativeTime(apiNotif.timestamp);
       
       let sender = "System";
@@ -145,14 +154,24 @@ export default function NotificationsPage() {
         snippet,
         date: relativeTime,
         category,
-        unread: true, // Mark recent notifications as unread
+        unread: true,
         selected: false,
         recipients: apiNotif.data?.recipients,
       };
     });
-
-    setNotifications(transformedNotifications);
   }, [apiNotifications]);
+
+  // Update notifications only when the actual content changes (using stable key)
+  useEffect(() => {
+    setNotifications((prev) => {
+      // Preserve selection state when updating
+      const selectionMap = new Map(prev.map(n => [n.id, n.selected]));
+      return transformedNotifications.map(notif => ({
+        ...notif,
+        selected: selectionMap.get(notif.id) ?? false,
+      }));
+    });
+  }, [apiNotificationsKey, transformedNotifications]);
 
   const filteredNotifications = useMemo(() => {
     if (activeCategory === "all") return notifications;
@@ -320,5 +339,3 @@ export default function NotificationsPage() {
     </div>
   );
 }
-
-

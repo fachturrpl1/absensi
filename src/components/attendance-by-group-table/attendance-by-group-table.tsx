@@ -88,7 +88,7 @@ export function AttendanceByGroupTable({ data, isLoading = false }: AttendanceBy
                   </TableRow>
                 ))}
               </TableHeader>
-              <TableBody>
+              <TableBody className="[&>tr:nth-child(even)]:bg-muted/50">
                 {table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>

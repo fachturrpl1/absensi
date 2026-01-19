@@ -217,7 +217,9 @@ export default function MemberProfileEnhanced({
   const [profileSearchQuery, setProfileSearchQuery] = useState<string>("")
 
   const user = member.user
-  const email = user?.email ?? (member as { email?: string }).email ?? "-"
+  const rawEmail = user?.email ?? (member as { email?: string }).email ?? ""
+  // Filter out dummy emails (ending with @dummy.local)
+  const email = rawEmail && !rawEmail.toLowerCase().endsWith('@dummy.local') ? rawEmail : "-"
   const phone = user?.mobile || user?.phone || ""
   const photoUrl = useProfilePhotoUrl(user?.profile_photo_url ?? undefined) ?? undefined
 
@@ -236,7 +238,7 @@ export default function MemberProfileEnhanced({
   const displayName = user
     ? [user.first_name, user.middle_name, user.last_name]
         .filter((part) => part && part.trim().length)
-        .join(" ") || user.email || "Name unavailable"
+        .join(" ") || (user.email && !user.email.toLowerCase().endsWith('@dummy.local') ? user.email : null) || "Name unavailable"
     : "Name unavailable"
 
   const canEmail = email && email !== "-"
@@ -439,7 +441,6 @@ export default function MemberProfileEnhanced({
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <CardTitle className="text-base font-semibold">Contact & Information</CardTitle>
-                  <CardDescription>Basic employment and contact details.</CardDescription>
                 </div>
                 <div className="relative w-[200px]">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -498,7 +499,6 @@ export default function MemberProfileEnhanced({
               <Card className="border-muted-foreground/20">
                 <CardHeader className="flex flex-col gap-0.5 pb-3">
                   <CardTitle className="text-base font-semibold">Work Schedule</CardTitle>
-                  <CardDescription>Current work schedule and hours.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center justify-between rounded-lg border bg-card/60 p-3">
@@ -673,7 +673,6 @@ export default function MemberProfileEnhanced({
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex-1">
                   <CardTitle className="text-base font-semibold">Attendance Percentage</CardTitle>
-                  <CardDescription>Attendance distribution across the evaluation period.</CardDescription>
                 </div>
                 {/* Attendance Rate with Trend */}
                 <div className="flex items-center gap-2 shrink-0">

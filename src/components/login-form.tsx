@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -54,13 +55,13 @@ export function LoginForm() {
       setError(result.message || "Login failed. Please try again.");
       setLoading(false);
     } else {
+      // Set user in auth store
       useAuthStore.getState().setUser(result.user);
       useAuthStore.getState().setPermissions(result.permissions!.map((p) => p.code));
-      // Set role from organization_members if available
-      if ('orgRole' in result && result.orgRole) {
-        useAuthStore.getState().setRole(result.orgRole);
-      }
-      router.push("/");
+      
+      // Redirect to organization
+      // Organization will fetch organizations from store or from API
+      router.push("/organization");
     }
   };
 
@@ -124,7 +125,15 @@ export function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <div className="flex items-center justify-between">
+                <FormLabel>Password</FormLabel>
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Lupa password?
+                </Link>
+              </div>
               <FormControl>
                 <Input
                   id="password"
