@@ -311,7 +311,7 @@ export function NavbarNew() {
               <DropdownMenuItem onClick={() => router.push('/organization')} className="cursor-pointer">
                 Organizations menu
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer">
+              <DropdownMenuItem onClick={() => router.push('/organization/settings')} className="cursor-pointer">
                 Organization settings
               </DropdownMenuItem>
             </DropdownMenuContent>

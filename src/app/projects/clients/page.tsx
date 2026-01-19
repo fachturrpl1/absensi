@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Plus, Search } from "lucide-react"
 import { AddClientDialog, type ClientFormData } from "@/components/projects/AddClientDialog"
 import { ClientsTable, type Client } from "@/components/projects/ClientsTable"
+import { DUMMY_CLIENTS } from "@/lib/data/dummy-clients"
 
 export default function ClientsPage() {
     const [activeTab, setActiveTab] = useState<"active" | "archived">("active")
@@ -20,16 +21,8 @@ export default function ClientsPage() {
     const [archiveOpen, setArchiveOpen] = useState(false)
     const [archiveTargets, setArchiveTargets] = useState<string[]>([])
 
-    // Demo data
-    const [clients, setClients] = useState<Client[]>([
-        {
-            id: "1",
-            name: "Patricia",
-            budget: "Budget: none",
-            autoInvoicing: false,
-            isArchived: false,
-        },
-    ])
+    // Use dummy data from file
+    const [clients, setClients] = useState<Client[]>(DUMMY_CLIENTS)
 
     const activeClients = clients.filter((c) => !c.isArchived)
     const archivedClients = clients.filter((c) => c.isArchived)

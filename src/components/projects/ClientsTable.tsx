@@ -36,7 +36,19 @@ export function ClientsTable({
     const allSelected = clients.length > 0 && selectedIds.length === clients.length
 
     return (
-        <table className="w-full min-w-[880px]">
+        <table className="w-full min-w-[880px] table-fixed">
+            <colgroup>
+                {/* Checkbox */}
+                <col className="w-10" />
+                {/* Name: samakan dengan Budget */}
+                <col className="w-64" />
+                {/* Budget: samakan dengan Name */}
+                <col className="w-64" />
+                {/* Auto Invoicing: biarkan fleksibel */}
+                <col />
+                {/* Actions */}
+                <col className="w-24" />
+            </colgroup>
             <thead className="border-b bg-muted/50">
                 <tr>
                     <th className="p-3 text-left">
@@ -81,13 +93,13 @@ export function ClientsTable({
                                     />
                                 </td>
                                 <td className="p-3">
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
                                         <Avatar className="h-8 w-8">
                                             <AvatarFallback className="bg-purple-600 text-white text-xs">
                                                 {initials}
                                             </AvatarFallback>
                                         </Avatar>
-                                        <span className="font-medium">{client.name}</span>
+                                        <span className="font-medium truncate">{client.name}</span>
                                     </div>
                                 </td>
                                 <td className="p-3 text-sm text-muted-foreground">{client.budget}</td>

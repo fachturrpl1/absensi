@@ -15,23 +15,19 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import AddProjectDialog from "@/components/projects/AddProjectDialog"
 import EditProjectDialog from "@/components/projects/EditProjectDialog"
 import type { Project, NewProjectForm } from "@/components/projects/types"
+import { DUMMY_PROJECTS } from "@/lib/data/dummy-projects"
 
-const INITIAL_DATA: Project[] = [
-  {
-    id: "p1",
-    name: "Acme Organization’s Project",
-    teams: [],
-    members: [
-      { id: "u1", name: "Alice A", avatarUrl: null },
-      { id: "u2", name: "Bob B", avatarUrl: null },
-      { id: "u3", name: "Chloe C", avatarUrl: null },
-    ],
-    todosLabel: "No to-dos",
-    budgetLabel: "Budget: none",
-    memberLimitLabel: "None",
-    archived: false,
-  },
-]
+// Convert dummy projects to component format
+const INITIAL_DATA: Project[] = DUMMY_PROJECTS.map(p => ({
+  id: p.id,
+  name: p.name,
+  teams: [],
+  members: [],
+  todosLabel: p.todosLabel,
+  budgetLabel: p.budgetLabel,
+  memberLimitLabel: p.memberLimitLabel,
+  archived: p.archived,
+}))
 
 function initialsFromName(name: string): string {
   const parts = (name || "").trim().split(/\s+/).filter(Boolean)
@@ -318,6 +314,7 @@ export default function Page() {
             initialTab={editTab}
             onSave={() => setEditing(null)}
           />
+
 
           {/* Batch Edit Projects Dialog */}
           <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
