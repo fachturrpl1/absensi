@@ -84,8 +84,8 @@ export function NavbarNew() {
         const storedId = state?.organizationId ?? null;
         const derivedName = state?.organizationName
           || (Array.isArray(state?.organizations)
-                ? state.organizations.find(o => Number(o?.id) === Number(storedId))?.name
-                : undefined);
+            ? state.organizations.find(o => Number(o?.id) === Number(storedId))?.name
+            : undefined);
 
         if (storedId && derivedName) {
           setOrganizationId(storedId, derivedName);
@@ -105,9 +105,9 @@ export function NavbarNew() {
               setOrganizationId(storedId, data.name);
               setOrgLogoUrl(data.logo_url ?? null);
             }
-          } catch {}
+          } catch { }
         }
-      } catch {}
+      } catch { }
     };
 
     if (!organizationId || !organizationName) {
@@ -127,7 +127,7 @@ export function NavbarNew() {
           .eq('id', organizationId)
           .maybeSingle();
         setOrgLogoUrl(data?.logo_url ?? null);
-      } catch {}
+      } catch { }
     };
     void loadLogo();
   }, [organizationId]);
@@ -189,7 +189,7 @@ export function NavbarNew() {
         {showActions && (
           <>
             {/* Search */}
-            
+
             {/* Quick Actions */}
             <DropdownMenu>
               <DropdownMenuContent align="end" className="w-56">
@@ -240,7 +240,9 @@ export function NavbarNew() {
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        
+
+        <Separator orientation="vertical" className="mx-2 h-6 border-b" />
+
         <div className="flex items-center">
           {/* User dropdown */}
           {/* <DropdownMenu>
@@ -281,7 +283,7 @@ export function NavbarNew() {
             </DropdownMenuContent>
           </DropdownMenu> */}
 
-          <Separator orientation="vertical" className="mx-2 h-6" />
+
 
           {/* Organization dropdown */}
           <DropdownMenu>
