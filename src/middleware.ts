@@ -18,7 +18,7 @@ const getAuthCookieNames = () => {
   const base = `sb-${projectRef}-auth-token`
   return [base, `${base}.0`, `${base}.1`]
 }
-
+  
 const isNetworkError = (error: unknown) => {
   if (!(error instanceof Error)) return false
   const message = error.message.toLowerCase()

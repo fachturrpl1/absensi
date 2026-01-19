@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
     // Fetch all notification types in parallel
-    const [attendanceResult, leavesResult] = await Promise.all([
+    const [attendanceResult, leavesResult, invitesResult] = await Promise.all([
       // Attendance notifications (last 7 days)
       supabase
         .from('attendance_records')
@@ -93,6 +93,28 @@ export async function GET(request: Request) {
         .gte('requested_at', sevenDaysAgo)
         .in('status', ['pending', 'approved', 'rejected'])
         .order('requested_at', { ascending: false })
+      .limit(limit),
+
+      // Invitation notifications (recent invites)
+      supabase
+        .from('member_invitations')
+        .select(`
+          id,
+          email,
+          status,
+          created_at,
+          accepted_at,
+          invited_by,
+          inviter:user_profiles!invited_by (
+            id,
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .eq('organization_id', organizationId)
+        .in('status', ['pending', 'accepted', 'expired', 'cancelled'])
+        .order('created_at', { ascending: false })
         .limit(limit)
     ])
 
@@ -153,6 +175,56 @@ export async function GET(request: Request) {
           }
         })
       })
+    }
+
+    // Transform invitations
+    if (invitesResult.data) {
+      for (const invite of invitesResult.data) {
+        let inviterName = "System"
+        
+        // Try to get inviter profile from relation
+        const inviterProfile = Array.isArray(invite.inviter) ? invite.inviter[0] : invite.inviter
+        
+        if (inviterProfile && typeof inviterProfile === 'object') {
+          if (inviterProfile.first_name || inviterProfile.last_name) {
+            inviterName = `${inviterProfile.first_name || ""} ${inviterProfile.last_name || ""}`.trim()
+          } else if (inviterProfile.email) {
+            // Fallback to email username if name not available
+            inviterName = inviterProfile.email.split('@')[0]
+          }
+        } else if (invite.invited_by) {
+          // If relation failed, try to fetch directly using invited_by
+          const { data: directInviter } = await supabase
+            .from('user_profiles')
+            .select('first_name, last_name, email')
+            .eq('id', invite.invited_by)
+            .maybeSingle()
+          
+          if (directInviter) {
+            if (directInviter.first_name || directInviter.last_name) {
+              inviterName = `${directInviter.first_name || ""} ${directInviter.last_name || ""}`.trim()
+            } else if (directInviter.email) {
+              inviterName = directInviter.email.split('@')[0]
+            }
+          }
+        }
+        
+        const recipients = invite.email ? [invite.email] : []
+        const timestamp = invite.status === "accepted" ? (invite.accepted_at || invite.created_at) : invite.created_at
+
+        notifications.push({
+          id: `invite-${invite.id}`,
+          type: "invites",
+          timestamp,
+          memberName: invite.email || "Unknown",
+          status: invite.status,
+          action: invite.status === "accepted" ? "accepted" : "sent",
+          data: {
+            inviterName,
+            recipients,
+          },
+        })
+      }
     }
 
     // Sort by timestamp (newest first)

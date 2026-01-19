@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
 import { ArrowRight, ChevronDown, Users, UserCheck, Clock, FileText, Calendar, Activity, BarChart3, Briefcase } from "lucide-react"
 import Link from "next/link"
 import dynamic from "next/dynamic"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useDashboardStore } from "@/store/dashboard-store";
 import { ManageWidgets } from "@/components/dashboard/manage-widgets";
 import { useEffect, useState } from "react";
@@ -96,6 +98,10 @@ const currentProjectActivity: ProjectActivity[] = [
 
 
 export default function DashboardPage() {
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    const viewParam = searchParams.get('view') || 'all'
+    
     // Get today's date in Indonesian format
     const today = new Date().toLocaleDateString("id-ID", {
         weekday: "long",
@@ -107,11 +113,30 @@ export default function DashboardPage() {
     const totalStaff = 10000
     const { visibleWidgets } = useDashboardStore();
     const [hydrated, setHydrated] = useState(false);
+    const [view, setView] = useState<'all' | 'me'>(viewParam === 'me' ? 'me' : 'all')
 
     // Prevent hydration mismatch for persisted store
     useEffect(() => {
         setHydrated(true);
     }, []);
+
+    // Sync view with URL params
+    useEffect(() => {
+        const currentView = searchParams.get('view') || 'all'
+        setView(currentView === 'me' ? 'me' : 'all')
+    }, [searchParams])
+
+    // Handle view change
+    const handleViewChange = (newView: string) => {
+        const params = new URLSearchParams(searchParams.toString())
+        if (newView === 'all') {
+            params.delete('view')
+        } else {
+            params.set('view', newView)
+        }
+        const queryString = params.toString()
+        router.push(`/attendance/dashboard${queryString ? `?${queryString}` : ''}`)
+    }
 
     if (!hydrated) {
         return <div className="p-6">Loading dashboard preferences...</div>
@@ -119,15 +144,23 @@ export default function DashboardPage() {
 
     return (
         <div className="p-4 md:p-6 space-y-6 w-full bg-muted/10 min-h-screen">
-            <div className="flex items-center justify-between mb-4">
-                <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+                <div className="flex items-center gap-4">
+                    <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+                    <Tabs value={view} onValueChange={handleViewChange} className="w-auto">
+                        <TabsList className="grid w-[200px] grid-cols-2">
+                            <TabsTrigger value="all">All</TabsTrigger>
+                            <TabsTrigger value="me">Me</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </div>
                 <ManageWidgets />
             </div>
 
             {/* Top Summary Cards */}
             {/* Top Summary Cards (Stats) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {visibleWidgets.summary_total_staff && (
+                {visibleWidgets.summary_total_staff && view === 'all' && (
                     <Card className="shadow-sm">
                         <CardContent className="p-6 flex items-center justify-between">
                             <div>
@@ -144,8 +177,12 @@ export default function DashboardPage() {
                     <Card className="shadow-sm">
                         <CardContent className="p-6 flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground mb-1">Hadir</p>
-                                <h3 className="text-2xl font-bold">142</h3>
+                                <p className="text-sm font-medium text-muted-foreground mb-1">
+                                    {view === 'me' ? 'Status Saya' : 'Hadir'}
+                                </p>
+                                <h3 className="text-2xl font-bold">
+                                    {view === 'me' ? 'Hadir' : '142'}
+                                </h3>
                             </div>
                             <div className="p-3 rounded-full text-green-600 bg-green-100">
                                 <UserCheck className="w-6 h-6" />
@@ -153,7 +190,7 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
                 )}
-                {visibleWidgets.summary_late && (
+                {visibleWidgets.summary_late && view === 'all' && (
                     <Card className="shadow-sm">
                         <CardContent className="p-6 flex items-center justify-between">
                             <div>
@@ -166,7 +203,7 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
                 )}
-                {visibleWidgets.summary_permission && (
+                {visibleWidgets.summary_permission && view === 'all' && (
                     <Card className="shadow-sm">
                         <CardContent className="p-6 flex items-center justify-between">
                             <div>
@@ -204,7 +241,14 @@ export default function DashboardPage() {
                     <Card className="lg:col-span-2 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                             <div className="space-y-1">
-                                <h2 className="text-lg font-semibold">Aktivitas Hari Ini</h2>
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-lg font-semibold">
+                                        {view === 'me' ? 'Aktivitas Saya Hari Ini' : 'Aktivitas Hari Ini'}
+                                    </h2>
+                                    <Badge variant="outline" className="text-xs">
+                                        {view === 'me' ? 'Saya' : 'Semua'}
+                                    </Badge>
+                                </div>
                                 <p className="text-muted-foreground text-base capitalize">{today}</p>
                             </div>
                             <Link href="/attendance/list">
@@ -215,47 +259,64 @@ export default function DashboardPage() {
                             </Link>
                         </CardHeader>
                         <CardContent>
-                            {/* Pagination Control */}
-                            <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
-                                <span>Menampilkan</span>
-                                <div className="relative">
-                                    <select
-                                        className="appearance-none border rounded px-3 py-1 bg-background pr-8 focus:outline-none focus:ring-1 focus:ring-ring"
-                                        defaultValue={10}
-                                    >
-                                        <option value={10}>10</option>
-                                        <option value={20}>20</option>
-                                        <option value={50}>50</option>
-                                    </select>
-                                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
+                            {/* Pagination Control - Only show for 'all' view */}
+                            {view === 'all' && (
+                                <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+                                    <span>Menampilkan</span>
+                                    <div className="relative">
+                                        <select
+                                            className="appearance-none border rounded px-3 py-1 bg-background pr-8 focus:outline-none focus:ring-1 focus:ring-ring"
+                                            defaultValue={10}
+                                        >
+                                            <option value={10}>10</option>
+                                            <option value={20}>20</option>
+                                            <option value={50}>50</option>
+                                        </select>
+                                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
+                                    </div>
+                                    <span>Baris per halaman</span>
                                 </div>
-                                <span>Baris per halaman</span>
-                            </div>
+                            )}
 
                             {/* Table */}
                             <div className="border rounded-lg overflow-hidden">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="font-semibold text-foreground">Nama Staff</TableHead>
-                                            <TableHead className="font-semibold text-foreground">Divisi</TableHead>
-                                            <TableHead className="font-semibold text-foreground">Jabatan</TableHead>
+                                            {view === 'all' && <TableHead className="font-semibold text-foreground">Nama Staff</TableHead>}
+                                            {view === 'all' && <TableHead className="font-semibold text-foreground">Divisi</TableHead>}
+                                            {view === 'all' && <TableHead className="font-semibold text-foreground">Jabatan</TableHead>}
                                             <TableHead className="font-semibold text-foreground">Aktivitas</TableHead>
+                                            {view === 'me' && <TableHead className="font-semibold text-foreground">Waktu</TableHead>}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {activityData.map((row, index) => (
-                                            <TableRow key={index} className="hover:bg-muted/50">
-                                                <TableCell>{row.name}</TableCell>
-                                                <TableCell>{row.division}</TableCell>
-                                                <TableCell>{row.position}</TableCell>
-                                                <TableCell>{row.activity}</TableCell>
-                                            </TableRow>
-                                        ))}
+                                        {view === 'all' ? (
+                                            activityData.map((row, index) => (
+                                                <TableRow key={index} className="hover:bg-muted/50">
+                                                    <TableCell>{row.name}</TableCell>
+                                                    <TableCell>{row.division}</TableCell>
+                                                    <TableCell>{row.position}</TableCell>
+                                                    <TableCell>{row.activity}</TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            // Show only current user's activity when view = 'me'
+                                            <>
+                                                <TableRow className="hover:bg-muted/50">
+                                                    <TableCell>Absen Masuk</TableCell>
+                                                    <TableCell>08:05:21</TableCell>
+                                                </TableRow>
+                                                <TableRow className="hover:bg-muted/50">
+                                                    <TableCell>Absen Keluar</TableCell>
+                                                    <TableCell>17:10:15</TableCell>
+                                                </TableRow>
+                                            </>
+                                        )}
                                         {/* Empty state padding if needed */}
-                                        {activityData.length === 0 && (
+                                        {((view === 'all' && activityData.length === 0) || (view === 'me' && false)) && (
                                             <TableRow>
-                                                <TableCell colSpan={4} className="h-24 text-center">
+                                                <TableCell colSpan={view === 'all' ? 4 : 2} className="h-24 text-center">
                                                     No activity found.
                                                 </TableCell>
                                             </TableRow>
@@ -269,8 +330,8 @@ export default function DashboardPage() {
 
                 {/* Right Panel Wrapper: Chart + Requests */}
                 <div className="space-y-6">
-                    {/* Staff Status Chart */}
-                    {visibleWidgets.staff_status_chart && (
+                    {/* Staff Status Chart - Only show for 'all' view */}
+                    {visibleWidgets.staff_status_chart && view === 'all' && (
                         <Card className="shadow-sm h-fit">
                             <CardHeader className="pb-2">
                                 <div className="flex items-center justify-between">
@@ -332,8 +393,8 @@ export default function DashboardPage() {
                         </Card>
                     )}
 
-                    {/* Permission Requests List */}
-                    {visibleWidgets.permission_requests && (
+                    {/* Permission Requests List - Only show for 'all' view */}
+                    {visibleWidgets.permission_requests && view === 'all' && (
                         <Card className="shadow-sm">
                             <CardHeader className="pb-3 border-b mb-2">
                                 <CardTitle className="text-base font-semibold flex items-center justify-between">
@@ -365,6 +426,42 @@ export default function DashboardPage() {
                                     <Button variant="ghost" size="sm" className="w-full text-xs text-blue-600 hover:text-blue-700 h-8">
                                         Lihat Semua Pengajuan
                                     </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                    
+                    {/* My Performance Card - Only show for 'me' view */}
+                    {view === 'me' && (
+                        <Card className="shadow-sm">
+                            <CardHeader className="pb-3 border-b mb-2">
+                                <CardTitle className="text-base font-semibold">Performance Saya</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4 pt-4">
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Jam Kerja Hari Ini</span>
+                                        <span className="font-semibold">8h 40m</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Jam Kerja Minggu Ini</span>
+                                        <span className="font-semibold">38h 25m</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Kehadiran Bulan Ini</span>
+                                        <span className="font-semibold">95%</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Keterlambatan</span>
+                                        <span className="font-semibold text-orange-600">2 kali</span>
+                                    </div>
+                                </div>
+                                <div className="pt-2 border-t">
+                                    <Link href="/attendance/list">
+                                        <Button variant="outline" size="sm" className="w-full text-xs text-blue-600 border-blue-200 hover:bg-blue-50">
+                                            Lihat Detail
+                                        </Button>
+                                    </Link>
                                 </div>
                             </CardContent>
                         </Card>

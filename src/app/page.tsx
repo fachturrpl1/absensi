@@ -96,25 +96,25 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>)
   return null;
 };
 
-  const EnhancedStatCard = ({ 
-    title, 
-    value, 
-    icon: Icon, 
-    trend,
-    trendValue,
-    trendLabel,
-    color = 'blue',
-    delay = 0 
-  }: {
-    title: string;
-    value: string | number;
-    icon: ComponentType<SVGProps<SVGSVGElement>>;
-    trend?: 'up' | 'down' | 'neutral';
-    trendValue?: string;
-    trendLabel?: string;
-    color?: 'blue' | 'green' | 'orange' | 'purple';
-    delay?: number;
-  }) => {
+const EnhancedStatCard = ({
+  title,
+  value,
+  icon: Icon,
+  trend,
+  trendValue,
+  trendLabel,
+  color = 'blue',
+  delay = 0
+}: {
+  title: string;
+  value: string | number;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  trend?: 'up' | 'down' | 'neutral';
+  trendValue?: string;
+  trendLabel?: string;
+  color?: 'blue' | 'green' | 'orange' | 'purple';
+  delay?: number;
+}) => {
   const iconColorClasses = {
     blue: 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
     green: 'bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400',
@@ -140,7 +140,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>)
               <Icon className="w-6 h-6" />
             </div>
           </div>
-          
+
           {trend && (
             <div className="flex items-center gap-1.5 text-sm">
               {trend === 'up' && <ArrowUp className="w-4 h-4 text-green-600 dark:text-green-400" />}
@@ -173,7 +173,7 @@ export default function ImprovedDashboard() {
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Date filter state
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
     const today = new Date();
@@ -222,10 +222,10 @@ export default function ImprovedDashboard() {
     }
   }, [orgStore.organizationId, queryClient])
 
-// Fetch data
+  // Fetch data
   useEffect(() => {
     if (!isHydrated) return;
-    
+
     const fetchData = async () => {
       try {
         setIsLoading(true);
@@ -249,7 +249,7 @@ export default function ImprovedDashboard() {
           // wait until hydration/store resolves organizationId
           return;
         }
-        
+
         console.log('[DASHBOARD] Fetching data for organization:', orgId);
 
         // Kirim filter ke API home (real-time, no-cache di server)
@@ -269,34 +269,34 @@ export default function ImprovedDashboard() {
         });
         const result = await response.json();
 
-      if (result.success && Array.isArray(result.data)) {
-        console.log('[DASHBOARD] Fetched', result.data.length, 'records for org', orgId);
+        if (result.success && Array.isArray(result.data)) {
+          console.log('[DASHBOARD] Fetched', result.data.length, 'records for org', orgId);
 
-        const toMinutes = (s?: string | null) => {
-          const str = s ?? '';
-          const hh = parseInt(str.match(/(\d+)h/)?.[1] ?? '0', 10);
-          const mm = parseInt(str.match(/(\d+)m/)?.[1] ?? '0', 10);
-          return hh * 60 + mm;
-        };
+          const toMinutes = (s?: string | null) => {
+            const str = s ?? '';
+            const hh = parseInt(str.match(/(\d+)h/)?.[1] ?? '0', 10);
+            const mm = parseInt(str.match(/(\d+)m/)?.[1] ?? '0', 10);
+            return hh * 60 + mm;
+          };
 
-        const mapped: AttendanceRecord[] = result.data.map((it: any) => ({
-          id: Number(it.id),
-          member_name: it?.member?.name ?? '',
-          department_name: it?.member?.department ?? '',
-          status: it?.status ?? '',
-          actual_check_in: it?.checkIn ?? null,
-          actual_check_out: it?.checkOut ?? null,
-          work_duration_minutes: toMinutes(it?.workHours), // fallback 0 jika tidak ada
-          scheduled_duration_minutes: 480, // opsional: default 8 jam agar metrik tidak 0 total
-          attendance_date: it?.date,
-          profile_photo_url: it?.member?.avatar ?? null,
-        }));
+          const mapped: AttendanceRecord[] = result.data.map((it: any) => ({
+            id: Number(it.id),
+            member_name: it?.member?.name ?? '',
+            department_name: it?.member?.department ?? '',
+            status: it?.status ?? '',
+            actual_check_in: it?.checkIn ?? null,
+            actual_check_out: it?.checkOut ?? null,
+            work_duration_minutes: toMinutes(it?.workHours), // fallback 0 jika tidak ada
+            scheduled_duration_minutes: 480, // opsional: default 8 jam agar metrik tidak 0 total
+            attendance_date: it?.date,
+            profile_photo_url: it?.member?.avatar ?? null,
+          }));
 
-        setAllRecords(mapped);
-      } else {
-        console.error('Failed to fetch attendance records:', result.message);
-        setAllRecords([]);
-      }
+          setAllRecords(mapped);
+        } else {
+          console.error('Failed to fetch attendance records:', result.message);
+          setAllRecords([]);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
         setAllRecords([]);
@@ -311,13 +311,13 @@ export default function ImprovedDashboard() {
   // Filter records
   const fromDateStr = dateRange.from.toISOString().split('T')[0];
   const toDateStr = dateRange.to.toISOString().split('T')[0];
-  
+
   const filteredRecords = useMemo(() => {
     if (allRecords.length === 0) return [];
 
     const fromDate = new Date(fromDateStr + 'T00:00:00');
     const toDate = new Date(toDateStr + 'T23:59:59.999');
-    
+
     return allRecords.filter(record => {
       const recordDate = new Date(record.attendance_date + 'T00:00:00');
       return recordDate >= fromDate && recordDate <= toDate;
@@ -329,7 +329,7 @@ export default function ImprovedDashboard() {
     const present = filteredRecords.filter(r => r.status === 'present' || r.status === 'late').length;
     const late = filteredRecords.filter(r => r.status === 'late').length;
     const absent = filteredRecords.filter(r => r.status === 'absent').length;
-    
+
     // Use actual duration if available, otherwise use scheduled duration (estimated)
     const totalWorkMinutes = filteredRecords.reduce((sum, r) => {
       const duration = r.work_duration_minutes || r.scheduled_duration_minutes || 0;
@@ -356,7 +356,7 @@ export default function ImprovedDashboard() {
   // Get filter period label and chart data
   const getFilterLabel = () => {
     if (!dateRange.preset) return 'Custom Range';
-    
+
     const labels: Record<string, string> = {
       'today': 'Today',
       'last7': 'Last 7 Days',
@@ -364,7 +364,7 @@ export default function ImprovedDashboard() {
       'thisYear': 'This Year',
       'lastYear': 'Last Year',
     };
-    
+
     return labels[dateRange.preset] || 'Custom Range';
   };
 
@@ -372,21 +372,21 @@ export default function ImprovedDashboard() {
   const chartData = useMemo(() => {
     const isToday = dateRange.preset === 'today';
     const isYearView = dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear';
-    
+
     if (isToday) {
       // Hourly data for today
       const hours = Array.from({ length: 24 }, (_, i) => i);
       const hourlyMap: Record<number, { present: number; late: number; absent: number }> = {};
-      
+
       hours.forEach(hour => {
         hourlyMap[hour] = { present: 0, late: 0, absent: 0 };
       });
-      
+
       filteredRecords.forEach(record => {
         if (record.actual_check_in) {
           const checkInDate = new Date(record.actual_check_in);
           const hour = checkInDate.getHours();
-          
+
           if (hourlyMap[hour]) {
             if (record.status === 'present') hourlyMap[hour].present++;
             else if (record.status === 'late') hourlyMap[hour].late++;
@@ -394,7 +394,7 @@ export default function ImprovedDashboard() {
           }
         }
       });
-      
+
       return hours.map(hour => ({
         label: `${hour.toString().padStart(2, '0')}:00`,
         present: hourlyMap[hour]?.present || 0,
@@ -405,22 +405,22 @@ export default function ImprovedDashboard() {
       // Monthly data for year views
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const monthlyMap: Record<string, { present: number; late: number; absent: number }> = {};
-      
+
       months.forEach(month => {
         monthlyMap[month] = { present: 0, late: 0, absent: 0 };
       });
-      
+
       filteredRecords.forEach(record => {
         const date = new Date(record.attendance_date);
         const monthName = months[date.getMonth()];
-        
+
         if (monthName && monthlyMap[monthName]) {
           if (record.status === 'present') monthlyMap[monthName].present++;
           else if (record.status === 'late') monthlyMap[monthName].late++;
           else if (record.status === 'absent') monthlyMap[monthName].absent++;
         }
       });
-      
+
       return months.map(month => ({
         label: month,
         present: monthlyMap[month]?.present || 0,
@@ -431,23 +431,23 @@ export default function ImprovedDashboard() {
       // Daily data for other periods
       const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       const daysMap: Record<string, { present: number; late: number; absent: number }> = {};
-      
+
       days.forEach(day => {
         daysMap[day] = { present: 0, late: 0, absent: 0 };
       });
-      
+
       filteredRecords.forEach(record => {
         const date = new Date(record.attendance_date);
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const dayName = dayNames[date.getDay()];
-        
+
         if (dayName && daysMap[dayName]) {
           if (record.status === 'present') daysMap[dayName].present++;
           else if (record.status === 'late') daysMap[dayName].late++;
           else if (record.status === 'absent') daysMap[dayName].absent++;
         }
       });
-      
+
       return days.map(day => ({
         label: day,
         present: daysMap[day]?.present || 0,
@@ -484,9 +484,9 @@ export default function ImprovedDashboard() {
             {format(currentTime, 'EEEE, MMMM dd, yyyy • HH:mm:ss')}
           </p>
         </div>
-        
-        <DateFilterBar 
-          dateRange={dateRange} 
+
+        <DateFilterBar
+          dateRange={dateRange}
           onDateRangeChange={setDateRange}
         />
       </div>
@@ -550,19 +550,19 @@ export default function ImprovedDashboard() {
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2 text-foreground">
                     <BarChart3 className="w-5 h-5 text-primary" />
-                    {dateRange.preset === 'today' 
-                      ? 'Hourly Attendance' 
+                    {dateRange.preset === 'today'
+                      ? 'Hourly Attendance'
                       : (dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear')
-                      ? 'Monthly Attendance'
-                      : 'Attendance Trend'
+                        ? 'Monthly Attendance'
+                        : 'Attendance Trend'
                     }
                   </CardTitle>
                   <CardDescription className="text-muted-foreground">
-                    {dateRange.preset === 'today' 
+                    {dateRange.preset === 'today'
                       ? 'Check-in patterns throughout the day'
                       : (dateRange.preset === 'thisYear' || dateRange.preset === 'lastYear')
-                      ? `Monthly attendance patterns for ${getFilterLabel().toLowerCase()}`
-                      : `Attendance patterns for ${getFilterLabel().toLowerCase()}`
+                        ? `Monthly attendance patterns for ${getFilterLabel().toLowerCase()}`
+                        : `Attendance patterns for ${getFilterLabel().toLowerCase()}`
                     }
                   </CardDescription>
                 </div>
@@ -574,19 +574,19 @@ export default function ImprovedDashboard() {
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="colorPresent" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={COLORS.success} stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor={COLORS.success} stopOpacity={0}/>
+                      <stop offset="5%" stopColor={COLORS.success} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={COLORS.success} stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorLate" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={COLORS.warning} stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor={COLORS.warning} stopOpacity={0}/>
+                      <stop offset="5%" stopColor={COLORS.warning} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={COLORS.warning} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
-                  <XAxis 
-                    dataKey="label" 
-                    stroke="currentColor" 
-                    opacity={0.5} 
+                  <XAxis
+                    dataKey="label"
+                    stroke="currentColor"
+                    opacity={0.5}
                     fontSize={12}
                     angle={dateRange.preset === 'today' ? -45 : 0}
                     textAnchor={dateRange.preset === 'today' ? 'end' : 'middle'}
@@ -675,8 +675,8 @@ export default function ImprovedDashboard() {
           transition={{ delay: 0.8 }}
           className="lg:col-span-1"
         >
-          <LiveAttendanceTable 
-            autoRefresh={true} 
+          <LiveAttendanceTable
+            autoRefresh={true}
             refreshInterval={60000}
             pageSize={5}
           />

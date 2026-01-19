@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useNotifications } from "@/hooks/use-notifications";
 
-type NotificationCategory = "attendance" | "leaves" | "schedule";
+type NotificationCategory = "attendance" | "leaves" | "schedule" | "invites";
 type NotificationFilter = "all" | NotificationCategory;
 
 type NotificationItem = {
@@ -25,6 +25,7 @@ type NotificationItem = {
   category: NotificationCategory;
   unread?: boolean;
   selected?: boolean;
+  recipients?: string[];
 };
 
 function formatTime(timeString: string): string {
@@ -54,6 +55,7 @@ const categoryTabs: { value: NotificationFilter; label: string }[] = [
   { value: "attendance", label: "Attendance" },
   { value: "schedule", label: "Schedule" },
   { value: "leaves", label: "Leaves" },
+  { value: "invites", label: "Invites" },
 ];
 
 const categoryBadgeMeta: Record<
@@ -74,6 +76,11 @@ const categoryBadgeMeta: Record<
     label: "Leave",
     className:
       "bg-green-50 text-green-800 border-green-200 dark:bg-green-400/10 dark:text-green-200",
+  },
+  invites: {
+    label: "Invites",
+    className:
+      "bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-400/10 dark:text-orange-200",
   },
 };
 
@@ -96,7 +103,7 @@ export default function NotificationsPage() {
     return apiNotifications.map((apiNotif, index) => {
       const relativeTime = formatRelativeTime(apiNotif.timestamp);
       
-      const sender = "System";
+      let sender = "System";
       let subject = "";
       let snippet = "";
       let category: NotificationCategory = "attendance";
@@ -125,6 +132,19 @@ export default function NotificationsPage() {
         subject = "Shift swap request";
         snippet = `${apiNotif.memberName} requested to swap shift`;
         category = "schedule";
+      } else if (apiNotif.type === "invites") {
+        const recipients =
+          apiNotif.data?.recipients && apiNotif.data.recipients.length
+            ? apiNotif.data.recipients
+            : [apiNotif.memberName];
+        const statusLabel = apiNotif.status === "accepted" ? "accepted" : "sent";
+        sender = apiNotif.data?.inviterName || "System";
+        subject = statusLabel === "accepted" ? "Invitation accepted" : "Invitation sent";
+        snippet =
+          statusLabel === "accepted"
+            ? `${recipients.join(", ")} accepted the invitation`
+            : `${recipients.join(", ")} received an invitation`;
+        category = "invites";
       }
 
       return {
@@ -136,6 +156,7 @@ export default function NotificationsPage() {
         category,
         unread: true,
         selected: false,
+        recipients: apiNotif.data?.recipients,
       };
     });
   }, [apiNotifications]);
@@ -298,6 +319,12 @@ export default function NotificationsPage() {
                     <span className="truncate text-foreground">{notification.subject}</span>
                     <span className="text-muted-foreground">— {notification.snippet}</span>
                   </p>
+                  {notification.recipients && notification.recipients.length > 0 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      <span className="font-semibold text-foreground">Recipients:</span>{" "}
+                      {notification.recipients.join(", ")}
+                    </p>
+                  )}
                 </div>
 
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
