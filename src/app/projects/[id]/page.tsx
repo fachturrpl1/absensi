@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState } from "react"
 import Link from "next/link"
-import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -98,14 +97,6 @@ function initialsFromName(name: string): string {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Projects</h1>
-         <div className="flex items-center gap-2">
-           <Button variant="outline" className="px-3 hidden md:inline-flex" onClick={() => setImportOpen(true)}>
-             Import projects
-           </Button>
-           <Button className="px-3" onClick={() => setAddOpen(true)}>
-             Add project
-           </Button>
-        </div>
       </div>
 
       {/* Tabs */}
@@ -124,10 +115,10 @@ function initialsFromName(name: string): string {
         </button>
       </div>
 
-      <Card className="border border-gray-200 shadow-sm">
-        <CardContent className="p-4 md:p-6">
+      <div>
+        <div>
           {/* Toolbar */}
-           <div className="flex items-center gap-2 flex-wrap justify-between">
+           <div className="flex items-center gap-2 py-5 flex-wrap justify-between">
              {/* Search */}
              <div className="w-full sm:w-auto min-w-[260px] max-w-[360px] relative">
                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -137,6 +128,14 @@ function initialsFromName(name: string): string {
                  onChange={(e) => setSearch(e.target.value)}
                  className="pl-10 border-gray-300"
                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" className="px-3 hidden md:inline-flex" onClick={() => setImportOpen(true)}>
+                  Import projects
+                </Button>
+                <Button className="px-3" onClick={() => setAddOpen(true)}>
+                  Add project
+                </Button>
               </div>
             </div>
 
@@ -168,8 +167,6 @@ function initialsFromName(name: string): string {
                 {selectedIds.length}/ {filtered.length} selected
               </span>
             </div>
-
-          <Separator className="my-6" />
 
           {/* Table */}
           <div className="overflow-x-auto w-full">
@@ -430,8 +427,8 @@ function initialsFromName(name: string): string {
         </DialogContent>
       </Dialog>
       
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }
