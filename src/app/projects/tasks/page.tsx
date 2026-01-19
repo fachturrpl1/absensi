@@ -111,7 +111,7 @@ export default function TasksPage() {
                         <Copy className="h-4 w-4" />
                         Duplicate project
                     </Button>
-                    <Button className="w-auto px-6 py-2.5 gap-2 bg-blue-500 text-white hover:bg-blue-600">
+                    <Button variant="outline" className="w-auto px-6 py-2.5 gap-2 border border-muted-foreground/40 bg-white text-foreground hover:border-muted-foreground">
                         <Plus className="h-4 w-4" />
                         Add
                     </Button>
