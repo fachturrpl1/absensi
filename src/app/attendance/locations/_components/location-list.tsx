@@ -44,7 +44,7 @@ export default function LocationList({
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     const result = await toggleDeviceStatus(id, !currentStatus);
     if (result.success) {
-      setDevices(devices.map(d => 
+      setDevices(devices.map(d =>
         d.id === id ? { ...d, is_active: !currentStatus } : d
       ));
       toast.success(`Location ${!currentStatus ? 'activated' : 'deactivated'}`);
@@ -70,7 +70,7 @@ export default function LocationList({
             </CardTitle>
             <Button onClick={() => router.push("/attendance/locations/new")}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Location
+              Add
             </Button>
           </div>
         </CardHeader>

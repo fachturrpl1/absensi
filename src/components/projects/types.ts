@@ -24,3 +24,18 @@ export type NewProjectForm = {
   clientId: string | null
   // Catatan: field members/teams dapat ditambah saat integrasi
 }
+
+export interface DuplicateProjectOptions {
+  name: string
+  keepTodos: boolean
+  keepTodosAssignees: boolean
+  keepTodosCompleted: boolean
+  keepAllMembers: boolean
+  keepBudget: boolean
+  keepMemberLimits: boolean
+  keepSameClient: boolean
+}
+
+export interface DuplicateProjectPayload extends DuplicateProjectOptions {
+  sourceProjectId: string
+}

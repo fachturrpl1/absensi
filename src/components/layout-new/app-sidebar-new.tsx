@@ -39,6 +39,7 @@ import {
   CalendarCheck2,
   Activity,
   Link as LinkIcon,
+  Building,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -94,13 +95,13 @@ interface NavGroup {
 
 // Helper function untuk determine menu visibility berdasarkan pathname
 const shouldShowMenuItem = (pathname: string, itemTitle: string): boolean => {
-  // Di halaman /organization, hanya tampilkan All Organizations saja
-  if (pathname.startsWith('/organization')) {
+  // Di halaman /organization kecuali /organization/settings, hanya tampilkan All Organizations saja
+  if (pathname.startsWith('/organization') && !pathname.startsWith('/organization/settings')) {
     // Hanya tampilkan All Organizations menu
     return itemTitle === 'All Organizations'
   }
 
-  // Di halaman lain, sembunyikan menu organization
+  // Di halaman lain, sembunyikan menu organization utama "All Organizations"
   if (itemTitle === 'All Organizations') {
     return false
   }
@@ -188,7 +189,6 @@ const getSidebarGroups = (): NavGroup[] => [
           { title: 'Time & activity', url: '/reports/time-activity', icon: ClockPlus },
           { title: 'Activity', url: '/reports/activity-report', icon: Activity },
           { title: 'Daily totals', url: '/reports/daily-totals', icon: CalendarCheck2 },
-          { title: 'Project management', url: '/reports/project-reports', icon: Folder },
           { title: 'All reports', url: '/reports/all', icon: Notebook },
           { title: 'Customized reports', url: '/reports/custom', icon: LucideNotebookText },
         ]
@@ -209,9 +209,12 @@ const getSidebarGroups = (): NavGroup[] => [
         ],
       },
       {
-        title: 'Settings',
-        url: '/settings',
+        title: 'Configuration',
         icon: Settings,
+        subItems: [
+          { title: 'Feature Settings', url: '/settings', icon: Settings },
+          { title: 'Organization Settings', url: '/organization/settings', icon: Building },
+        ],
       },
     ],
   },

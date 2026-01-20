@@ -365,11 +365,9 @@ export default function WorkScheduleDetailsPage() {
         return
       }
 
-      // Jadwal berhasil disimpan → lanjut batch assign (opsional)
       if (selectedMemberIds.length > 0) {
         if (!effectiveDate) {
-          // efficient date empty, do nothing or warn? 
-          // considering user might just want to save schedule details
+
         } else {
           const bulk = await createMemberSchedulesBulk(String(scheduleId), selectedMemberIds, effectiveDate)
           if (!bulk.success) {
