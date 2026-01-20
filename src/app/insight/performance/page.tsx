@@ -33,19 +33,17 @@ const EmptyState = ({ title, subtitle }: { title: string; subtitle?: string }) =
 export default function PerformancePage() {
   const timezone = useTimezone()
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({ type: "members", all: true })
+  const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({ type: "members", all: false, id: "1" })
   const [dateRange, setDateRange] = useState<DateRange>({
     startDate: new Date(new Date().setDate(new Date().getDate() - 6)),
     endDate: new Date(),
   })
-  const [showBenchmarks, setShowBenchmarks] = useState(false)
 
   const members: PickerItem[] = useMemo(() => DUMMY_MEMBERS, [])
   const teams: PickerItem[] = useMemo(() => DUMMY_TEAMS, [])
 
   // Get selected member/team ID
   const selectedId = useMemo(() => {
-    if (selectedFilter.all) return null
     // Direct ID mapping since dummy data now matches dropdown IDs
     if (selectedFilter.id) return selectedFilter.id
     return null
@@ -302,21 +300,6 @@ export default function PerformancePage() {
       <div className="flex">
         {/* Left Content */}
         <div className="flex-1 min-w-0 p-6 space-y-6">
-          {/* Benchmarks Toggle */}
-          <div className="flex items-center gap-3">
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={showBenchmarks}
-                onChange={(e) => setShowBenchmarks(e.target.checked)}
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
-            <span className="text-sm font-medium text-gray-700">Benchmarks</span>
-            <span className="text-sm text-gray-500">Other industry average</span>
-          </div>
-
           {/* Row 1: Utilization + Work Time Classification */}
           <div className="grid grid-cols-2 gap-6">
             {/* UTILIZATION */}
@@ -465,7 +448,7 @@ export default function PerformancePage() {
                     <div key={idx} className="flex-1 flex flex-col items-center gap-1">
                       <div className="w-full h-40 flex flex-col justify-end">
                         <div
-                          className="w-full bg-blue-500 rounded-t"
+                          className="w-full bg-zinc-900 rounded-t"
                           style={{ height: `${activePercent}%`, minHeight: '4px' }}
                         ></div>
                       </div>
@@ -480,7 +463,7 @@ export default function PerformancePage() {
               </div>
               <div className="mt-4 flex items-center justify-center gap-4 text-xs">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                  <div className="w-3 h-3 bg-zinc-900 rounded"></div>
                   <span className="text-gray-600">Active</span>
                 </div>
               </div>
@@ -666,7 +649,13 @@ export default function PerformancePage() {
         </div>
 
         {/* Right Sidebar */}
-        <InsightsRightSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
+        <InsightsRightSidebar
+          open={sidebarOpen}
+          onOpenChange={setSidebarOpen}
+          members={DUMMY_MEMBERS}
+          selectedFilter={selectedFilter}
+          onSelectedFilterChange={setSelectedFilter}
+        />
       </div>
     </div>
   )

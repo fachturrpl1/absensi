@@ -290,11 +290,11 @@ export function InsightsHeader({
           <DropdownMenuContent align="start" className="w-80 p-3">
             <div className="flex items-center gap-2 mb-3">
               <button
-                className={`px-3 py-1 rounded-full text-sm border ${filterTab === "members" ? "bg-blue-50 border-blue-500 text-blue-600" : "bg-white border-gray-300"}`}
+                className={`px-3 py-1 rounded-full text-sm border ${filterTab === "members" ? "bg-zinc-100 border-zinc-900 text-zinc-900" : "bg-white border-gray-300"}`}
                 onClick={() => { setFilterTab("members"); setFilterSearch("") }}
               >Members</button>
               <button
-                className={`px-3 py-1 rounded-full text-sm border ${filterTab === "teams" ? "bg-blue-50 border-blue-500 text-blue-600" : "bg-white border-gray-300"}`}
+                className={`px-3 py-1 rounded-full text-sm border ${filterTab === "teams" ? "bg-zinc-100 border-zinc-900 text-zinc-900" : "bg-white border-gray-300"}`}
                 onClick={() => { setFilterTab("teams"); setFilterSearch("") }}
               >Teams</button>
             </div>
@@ -316,23 +316,17 @@ export function InsightsHeader({
             </div>
 
             <div className="max-h-64 overflow-auto">
-              <button
-                className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${tempFilter.all && tempFilter.type === filterTab ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"}`}
-                onClick={() => setTempFilter({ type: filterTab, all: true })}
-              >
-                <span className={`inline-block w-2 h-2 rounded-full border ${tempFilter.all && tempFilter.type === filterTab ? "bg-blue-600 border-blue-600" : "border-gray-400"}`} />
-                {filterTab === "members" ? "All Members" : "All Teams"}
-              </button>
+
 
               {filtered.map(it => {
                 const isActive = !tempFilter.all && tempFilter.type === filterTab && tempFilter.id === it.id
                 return (
                   <button
                     key={it.id}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"}`}
+                    className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${isActive ? "bg-zinc-100 text-zinc-900" : "hover:bg-gray-50"}`}
                     onClick={() => setTempFilter({ type: filterTab, all: false, id: it.id })}
                   >
-                    <span className={`inline-block w-2 h-2 rounded-full border ${isActive ? "bg-blue-600 border-blue-600" : "border-gray-400"}`} />
+                    <span className={`inline-block w-2 h-2 rounded-full border ${isActive ? "bg-zinc-900 border-zinc-900" : "border-gray-400"}`} />
                     {it.name}
                   </button>
                 )
@@ -368,35 +362,35 @@ export function InsightsHeader({
             <div className="flex">
               <div className="w-40 border-r border-gray-200 p-3 space-y-1">
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'today' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'today' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("today")}
                 >Today</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'yesterday' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'yesterday' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("yesterday")}
                 >Yesterday</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_week' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_week' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("this_week")}
                 >This week</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_7_days' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_7_days' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("last_7_days")}
                 >Last 7 days</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_week' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_week' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("last_week")}
                 >Last week</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_2_weeks' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_2_weeks' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("last_2_weeks")}
                 >Last 2 weeks</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_month' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_month' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("this_month")}
                 >This month</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_month' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_month' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("last_month")}
                 >Last month</button>
               </div>
@@ -418,7 +412,7 @@ export function InsightsHeader({
                           <polyline points="15 18 9 12 15 6" />
                         </svg>
                       </button>
-                      <span className="font-semibold text-blue-600">
+                      <span className="font-semibold text-zinc-900">
                         {leftMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                       </span>
                       <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveLeftMonth(1)}>
@@ -429,13 +423,13 @@ export function InsightsHeader({
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-                      <div className="font-semibold p-1 text-blue-600">Mo</div>
-                      <div className="font-semibold p-1 text-blue-600">Tu</div>
-                      <div className="font-semibold p-1 text-blue-600">We</div>
-                      <div className="font-semibold p-1 text-blue-600">Th</div>
-                      <div className="font-semibold p-1 text-blue-600">Fr</div>
-                      <div className="font-semibold p-1 text-blue-600">Sa</div>
-                      <div className="font-semibold p-1 text-blue-600">Su</div>
+                      <div className="font-semibold p-1 text-zinc-900">Mo</div>
+                      <div className="font-semibold p-1 text-zinc-900">Tu</div>
+                      <div className="font-semibold p-1 text-zinc-900">We</div>
+                      <div className="font-semibold p-1 text-zinc-900">Th</div>
+                      <div className="font-semibold p-1 text-zinc-900">Fr</div>
+                      <div className="font-semibold p-1 text-zinc-900">Sa</div>
+                      <div className="font-semibold p-1 text-zinc-900">Su</div>
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center text-sm">
@@ -446,8 +440,8 @@ export function InsightsHeader({
                           <button
                             key={i}
                             onClick={() => handleDateClick(d.day, leftMonth, d.isCurrentMonth)}
-                            className={`p-2 rounded ${isEdge ? "bg-blue-500 text-white hover:bg-blue-600" :
-                              inRange ? "bg-blue-100 hover:bg-blue-200" :
+                            className={`p-2 rounded ${isEdge ? "bg-zinc-900 text-white hover:bg-zinc-800" :
+                              inRange ? "bg-zinc-100 hover:bg-zinc-200" :
                                 d.isCurrentMonth ? "hover:bg-gray-100" : "text-gray-400"}`}
                           >
                             {d.day}
@@ -465,7 +459,7 @@ export function InsightsHeader({
                           <polyline points="15 18 9 12 15 6" />
                         </svg>
                       </button>
-                      <span className="font-semibold text-blue-600">
+                      <span className="font-semibold text-zinc-900">
                         {rightMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                       </span>
                       <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveRightMonth(1)}>
@@ -476,13 +470,13 @@ export function InsightsHeader({
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-                      <div className="font-semibold p-1 text-blue-600">Mo</div>
-                      <div className="font-semibold p-1 text-blue-600">Tu</div>
-                      <div className="font-semibold p-1 text-blue-600">We</div>
-                      <div className="font-semibold p-1 text-blue-600">Th</div>
-                      <div className="font-semibold p-1 text-blue-600">Fr</div>
-                      <div className="font-semibold p-1 text-blue-600">Sa</div>
-                      <div className="font-semibold p-1 text-blue-600">Su</div>
+                      <div className="font-semibold p-1 text-zinc-900">Mo</div>
+                      <div className="font-semibold p-1 text-zinc-900">Tu</div>
+                      <div className="font-semibold p-1 text-zinc-900">We</div>
+                      <div className="font-semibold p-1 text-zinc-900">Th</div>
+                      <div className="font-semibold p-1 text-zinc-900">Fr</div>
+                      <div className="font-semibold p-1 text-zinc-900">Sa</div>
+                      <div className="font-semibold p-1 text-zinc-900">Su</div>
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center text-sm">
@@ -493,8 +487,8 @@ export function InsightsHeader({
                           <button
                             key={i}
                             onClick={() => handleDateClick(d.day, rightMonth, d.isCurrentMonth)}
-                            className={`p-2 rounded ${isEdge ? "bg-blue-500 text-white hover:bg-blue-600" :
-                              inRange ? "bg-blue-100 hover:bg-blue-200" :
+                            className={`p-2 rounded ${isEdge ? "bg-zinc-900 text-white hover:bg-zinc-800" :
+                              inRange ? "bg-zinc-100 hover:bg-zinc-200" :
                                 d.isCurrentMonth ? "hover:bg-gray-100" : "text-gray-400"}`}
                           >
                             {d.day}
