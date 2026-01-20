@@ -1,1 +1,0 @@
-﻿src/app/finger/page.tsx(101,9): error TS6133: 'lastLogRef' is declared but its value is never read.

@@ -15,14 +15,9 @@ export interface Team {
     members: string[] // member IDs
 }
 
-export interface UnusualActivity {
-    date: string
-    memberId: string
-    memberName: string
-    instanceType: string
-    description: string
-    duration: number // in minutes
-}
+// Re-export the UnusualActivityEntry type from the dedicated file
+export type { UnusualActivityEntry as UnusualActivity } from './dummy-unusual-activity'
+
 
 export interface SmartNotification {
     id: string
@@ -50,31 +45,36 @@ export const DUMMY_MEMBERS: Member[] = [
         id: "m1",
         name: "Antonio Galih",
         email: "antonio@example.com",
-        activityScore: 85
+        activityScore: 85,
+        avatar: "https://i.pravatar.cc/150?u=m1"
     },
     {
         id: "m2",
         name: "Lave Lavael",
         email: "lave@example.com",
-        activityScore: 92
+        activityScore: 92,
+        avatar: "https://i.pravatar.cc/150?u=m2"
     },
     {
         id: "m3",
         name: "Sarah Johnson",
         email: "sarah@example.com",
-        activityScore: 78
+        activityScore: 78,
+        avatar: "https://i.pravatar.cc/150?u=m3"
     },
     {
         id: "m4",
         name: "Michael Chen",
         email: "michael@example.com",
-        activityScore: 88
+        activityScore: 88,
+        avatar: "https://i.pravatar.cc/150?u=m4"
     },
     {
         id: "m5",
         name: "Emma Rodriguez",
         email: "emma@example.com",
-        activityScore: 95
+        activityScore: 95,
+        avatar: "https://i.pravatar.cc/150?u=m5"
     }
 ]
 
@@ -99,25 +99,6 @@ export const DUMMY_TEAMS: Team[] = [
         engagement: 75,
         memberCount: 4,
         members: ["m1", "m3", "m4", "m5"]
-    }
-]
-
-export const DUMMY_UNUSUAL_ACTIVITIES: UnusualActivity[] = [
-    {
-        date: "2026-01-19",
-        memberId: "m3",
-        memberName: "Sarah Johnson",
-        instanceType: "late_activity",
-        description: "Activity detected at unusual hours (2:00 AM - 4:00 AM)",
-        duration: 120
-    },
-    {
-        date: "2026-01-18",
-        memberId: "m1",
-        memberName: "Antonio Galih",
-        instanceType: "high_idle_time",
-        description: "Extended idle period during work hours (3 hours)",
-        duration: 180
     }
 ]
 
@@ -164,3 +145,22 @@ export const DUMMY_BEHAVIOR_CHANGES: BehaviorChange[] = [
         detectedAt: "2026-01-18"
     }
 ]
+
+export const DUMMY_ROLES = [
+    { id: 'admin', name: 'Administrator' },
+    { id: 'manager', name: 'Manager' },
+    { id: 'lead', name: 'Team Lead' },
+    { id: 'hr', name: 'Human Resources' },
+    { id: 'employee', name: 'Employee' },
+];
+
+export const DUMMY_JOB_TYPES = [
+    { id: 'full-time', name: 'Full-time' },
+    { id: 'part-time', name: 'Part-time' },
+    { id: 'contractor', name: 'Contractor' },
+    { id: 'intern', name: 'Intern' },
+];
+
+// Re-export unusual activities from the dedicated file to maintain consistency
+// This allows both highlights page and unusual-activity page to use the same data
+export { DUMMY_UNUSUAL_ACTIVITIES } from './dummy-unusual-activity'

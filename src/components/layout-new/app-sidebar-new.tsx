@@ -31,7 +31,7 @@ import {
   Gauge,
   History,
   Bell,
-  SquareArrowOutUpRight,
+  // SquareArrowOutUpRight,
   MousePointer2,
   ClockPlus,
   Notebook,
@@ -154,7 +154,7 @@ const getSidebarGroups = (): NavGroup[] => [
           { title: 'Timeline', url: '/insight/timeline', icon: History },
           { title: 'Unusual Activity', url: '/insight/unusual-activity', icon: Activity },
           { title: 'Smart Notifications', url: '/insight/smart-notifications', icon: Bell },
-          { title: 'Output', url: '/insight/output', icon: SquareArrowOutUpRight },
+          // { title: 'Output', url: '/insight/output', icon: SquareArrowOutUpRight },
         ]
       },
       {

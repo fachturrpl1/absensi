@@ -6,16 +6,15 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/compon
 import { Input } from "@/components/ui/input"
 import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_UNUSUAL_ACTIVITIES, DUMMY_SMART_NOTIFICATIONS, DUMMY_BEHAVIOR_CHANGES } from "@/lib/data/dummy-insights"
 import { useTimezone } from "@/components/timezone-provider"
+import { InsightsRightSidebar } from "@/components/insights/InsightsRightSidebar"
 
 export default function HighlightsPage() {
     const timezone = useTimezone()
     const [sidebarOpen, setSidebarOpen] = useState(true)
-    const [teamsOpen, setTeamsOpen] = useState(false)
-    const [membersOpen, setMembersOpen] = useState(false)
     const [filterTab, setFilterTab] = useState<"members" | "teams">("members")
     const [filterSearch, setFilterSearch] = useState("")
     const [selectedFilter, setSelectedFilter] = useState<{ type: "members" | "teams"; all: boolean; id?: string }>(
-        { type: "members", all: true }
+        { type: "members", all: false, id: "1" }
     )
 
     // Date range state
@@ -267,13 +266,13 @@ export default function HighlightsPage() {
                                 <DropdownMenuContent align="start" className="w-80 p-3">
                                     <div className="flex items-center gap-2 mb-3">
                                         <button
-                                            className={`px-3 py-1 rounded-full text-sm border ${filterTab === "members" ? "bg-blue-50 border-blue-500 text-blue-600" : "bg-white border-gray-300"}`}
+                                            className={`px-3 py-1 rounded-full text-sm border ${filterTab === "members" ? "bg-zinc-100 border-zinc-900 text-zinc-900" : "bg-white border-gray-300"}`}
                                             onClick={() => { setFilterTab("members"); setFilterSearch("") }}
                                         >
                                             Members
                                         </button>
                                         <button
-                                            className={`px-3 py-1 rounded-full text-sm border ${filterTab === "teams" ? "bg-blue-50 border-blue-500 text-blue-600" : "bg-white border-gray-300"}`}
+                                            className={`px-3 py-1 rounded-full text-sm border ${filterTab === "teams" ? "bg-zinc-100 border-zinc-900 text-zinc-900" : "bg-white border-gray-300"}`}
                                             onClick={() => { setFilterTab("teams"); setFilterSearch("") }}
                                         >
                                             Teams
@@ -298,23 +297,16 @@ export default function HighlightsPage() {
                                             )}
                                         </div>
                                     </div>
-                                    <div className="max-h-64 overflow-auto">
-                                        <button
-                                            className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${selectedFilter.all && selectedFilter.type === filterTab ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"}`}
-                                            onClick={() => setSelectedFilter({ type: filterTab, all: true })}
-                                        >
-                                            <span className={`inline-block w-2 h-2 rounded-full border ${selectedFilter.all && selectedFilter.type === filterTab ? "bg-blue-600 border-blue-600" : "border-gray-400"}`} />
-                                            {filterTab === "members" ? "All Members" : "All Teams"}
-                                        </button>
+                                    <div className="max-h-64 overflow-auto pt-2">
                                         {(filterTab === "members" ? demoMembers : demoTeams)
                                             .filter(it => it.name.toLowerCase().includes(filterSearch.toLowerCase()))
                                             .map(it => (
                                                 <button
                                                     key={it.id}
-                                                    className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${(!selectedFilter.all && selectedFilter.type === filterTab && selectedFilter.id === it.id) ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"}`}
+                                                    className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${(!selectedFilter.all && selectedFilter.type === filterTab && selectedFilter.id === it.id) ? "bg-zinc-100 text-zinc-900" : "hover:bg-gray-50"}`}
                                                     onClick={() => setSelectedFilter({ type: filterTab, all: false, id: it.id })}
                                                 >
-                                                    <span className={`inline-block w-2 h-2 rounded-full border ${(!selectedFilter.all && selectedFilter.type === filterTab && selectedFilter.id === it.id) ? "bg-blue-600 border-blue-600" : "border-gray-400"}`} />
+                                                    <span className={`inline-block w-2 h-2 rounded-full border ${(!selectedFilter.all && selectedFilter.type === filterTab && selectedFilter.id === it.id) ? "bg-zinc-900 border-zinc-900" : "border-gray-400"}`} />
                                                     {it.name}
                                                 </button>
                                             ))}
@@ -341,49 +333,49 @@ export default function HighlightsPage() {
                                         {/* Left Presets */}
                                         <div className="w-40 border-r border-gray-200 p-3 space-y-1">
                                             <button
-                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'today' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'today' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                                                 onClick={() => applyDatePreset('today')}
                                             >
                                                 Today
                                             </button>
                                             <button
-                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'yesterday' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'yesterday' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                                                 onClick={() => applyDatePreset('yesterday')}
                                             >
                                                 Yesterday
                                             </button>
                                             <button
-                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_week' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_week' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                                                 onClick={() => applyDatePreset('this_week')}
                                             >
                                                 This week
                                             </button>
                                             <button
-                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_7_days' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_7_days' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                                                 onClick={() => applyDatePreset('last_7_days')}
                                             >
                                                 Last 7 days
                                             </button>
                                             <button
-                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_week' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_week' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                                                 onClick={() => applyDatePreset('last_week')}
                                             >
                                                 Last week
                                             </button>
                                             <button
-                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_2_weeks' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_2_weeks' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                                                 onClick={() => applyDatePreset('last_2_weeks')}
                                             >
                                                 Last 2 weeks
                                             </button>
                                             <button
-                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_month' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_month' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                                                 onClick={() => applyDatePreset('this_month')}
                                             >
                                                 This month
                                             </button>
                                             <button
-                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_month' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-gray-100'}`}
+                                                className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_month' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
                                                 onClick={() => applyDatePreset('last_month')}
                                             >
                                                 Last month
@@ -399,7 +391,7 @@ export default function HighlightsPage() {
                                                             <polyline points="15 18 9 12 15 6" />
                                                         </svg>
                                                     </button>
-                                                    <span className="font-semibold text-blue-600">
+                                                    <span className="font-semibold text-zinc-900">
                                                         {calendarMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                                                     </span>
                                                     <button className="p-1 hover:bg-gray-100 rounded" onClick={() => setCalendarMonth(new Date(calendarMonth.setMonth(calendarMonth.getMonth() + 1)))}>
@@ -409,13 +401,13 @@ export default function HighlightsPage() {
                                                     </button>
                                                 </div>
                                                 <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-                                                    <div className="font-semibold p-1 text-blue-600">Mo</div>
-                                                    <div className="font-semibold p-1 text-blue-600">Tu</div>
-                                                    <div className="font-semibold p-1 text-blue-600">We</div>
-                                                    <div className="font-semibold p-1 text-blue-600">Th</div>
-                                                    <div className="font-semibold p-1 text-blue-600">Fr</div>
-                                                    <div className="font-semibold p-1 text-blue-600">Sa</div>
-                                                    <div className="font-semibold p-1 text-blue-600">Su</div>
+                                                    <div className="font-semibold p-1 text-zinc-900">Mo</div>
+                                                    <div className="font-semibold p-1 text-zinc-900">Tu</div>
+                                                    <div className="font-semibold p-1 text-zinc-900">We</div>
+                                                    <div className="font-semibold p-1 text-zinc-900">Th</div>
+                                                    <div className="font-semibold p-1 text-zinc-900">Fr</div>
+                                                    <div className="font-semibold p-1 text-zinc-900">Sa</div>
+                                                    <div className="font-semibold p-1 text-zinc-900">Su</div>
                                                 </div>
                                                 <div className="grid grid-cols-7 gap-1 text-center text-sm">
                                                     {generateCalendarDays(calendarMonth).map((dayObj, i) => {
@@ -425,8 +417,8 @@ export default function HighlightsPage() {
                                                             <button
                                                                 key={i}
                                                                 onClick={() => handleDateClick(dayObj.day, calendarMonth, dayObj.isCurrentMonth)}
-                                                                className={`p-2 rounded ${isStartEnd ? 'bg-blue-500 text-white hover:bg-blue-600' :
-                                                                    isInRange ? 'bg-blue-100 hover:bg-blue-200' :
+                                                                className={`p-2 rounded ${isStartEnd ? 'bg-zinc-900 text-white hover:bg-zinc-800' :
+                                                                    isInRange ? 'bg-zinc-100 hover:bg-zinc-200' :
                                                                         dayObj.isCurrentMonth ? 'hover:bg-gray-100' : 'text-gray-400'
                                                                     }`}
                                                             >
@@ -461,7 +453,7 @@ export default function HighlightsPage() {
 
                         {/* Right Actions */}
                         <div className="flex items-center gap-2">
-                            <button className="px-4 py-2 border border-blue-500 text-blue-500 rounded-md text-sm hover:bg-blue-50">
+                            <button className="px-4 py-2 border border-zinc-200 text-zinc-700 rounded-md text-sm hover:bg-zinc-50">
                                 🔔 Smart notifications
                             </button>
                             <button className="p-2 hover:bg-gray-100 rounded">
@@ -486,52 +478,72 @@ export default function HighlightsPage() {
                 <div className="flex-1 p-6 space-y-6">
                     {/* UNUSUAL ACTIVITY Section */}
                     <section>
-                        <div className="flex items-center gap-2 mb-3">
-                            <h2 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                                Unusual Activity
-                            </h2>
-                            <Info className="w-4 h-4 text-gray-400" />
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                                <h2 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                                    Unusual Activity
+                                </h2>
+                                <Info className="w-4 h-4 text-gray-400" />
+                            </div>
+                            <a
+                                href="/insight/unusual-activity"
+                                className="text-sm text-zinc-600 hover:text-zinc-900 flex items-center gap-1 font-medium"
+                            >
+                                View all
+                                <ChevronRight className="w-4 h-4" />
+                            </a>
                         </div>
 
-                        <div className="border border-gray-200 rounded-lg p-6">
-                            <div className="flex gap-6">
-                                {/* Left Stats Column */}
-                                <div className="space-y-4 min-w-[120px]">
-                                    <div className="border border-gray-200 rounded-lg p-4 bg-white">
-                                        <div className="text-3xl font-bold">{filteredUnusualActivities.length}</div>
-                                        <div className="text-sm text-gray-600 mt-1">Members</div>
+                        <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+                            <div className="p-6">
+                                <div className="flex gap-6">
+                                    {/* Left Stats Column */}
+                                    <div className="space-y-4 min-w-[120px]">
+                                        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                            <div className="text-3xl font-bold">{new Set(filteredUnusualActivities.map(a => a.memberId)).size}</div>
+                                            <div className="text-sm text-gray-600 mt-1">Members</div>
+                                        </div>
+
+                                        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                            <div className="text-3xl font-bold">{filteredUnusualActivities.length}</div>
+                                            <div className="text-sm text-gray-600 mt-1">Instances</div>
+                                        </div>
+
+                                        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                            <div className="text-3xl font-bold">{Math.floor(filteredUnusualActivities.reduce((acc, a) => acc + a.duration, 0) / 60)}:{(filteredUnusualActivities.reduce((acc, a) => acc + a.duration, 0) % 60).toString().padStart(2, '0')}</div>
+                                            <div className="text-sm text-gray-600 mt-1">Total time (h:m)</div>
+                                        </div>
                                     </div>
 
-                                    <div className="border border-gray-200 rounded-lg p-4 bg-white">
-                                        <div className="text-3xl font-bold">{filteredUnusualActivities.length}</div>
-                                        <div className="text-sm text-gray-600 mt-1">Instances</div>
-                                    </div>
-
-                                    <div className="border border-gray-200 rounded-lg p-4 bg-white">
-                                        <div className="text-3xl font-bold">{Math.floor(filteredUnusualActivities.reduce((acc, a) => acc + a.duration, 0) / 60)}:{(filteredUnusualActivities.reduce((acc, a) => acc + a.duration, 0) % 60).toString().padStart(2, '0')}</div>
-                                        <div className="text-sm text-gray-600 mt-1">Total time (h:m)</div>
-                                    </div>
-                                </div>
-
-                                {/* Right Activity List */}
-                                <div className="flex-1">
-                                    <div className="space-y-3">
-                                        {filteredUnusualActivities.map((activity, idx) => (
-                                            <div key={idx} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                                                <div className="flex items-start justify-between">
-                                                    <div className="flex-1">
-                                                        <div className="font-semibold text-sm mb-1">{activity.memberName}</div>
-                                                        <div className="text-sm text-gray-600 mb-2">{activity.description}</div>
-                                                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                            <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded">{activity.instanceType}</span>
-                                                            <span>{activity.date}</span>
-                                                            <span>•</span>
-                                                            <span>{activity.duration} minutes</span>
+                                    {/* Right Activity List - Max 4 recent */}
+                                    <div className="flex-1">
+                                        <div className="space-y-3">
+                                            {filteredUnusualActivities.slice(0, 4).map((activity, idx) => (
+                                                <div key={idx} className="flex items-start gap-3 text-sm hover:bg-gray-50 p-2 rounded-md -mx-2 transition-colors cursor-pointer">
+                                                    <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${activity.severity === 'highly_unusual' ? 'bg-red-500' :
+                                                        activity.severity === 'unusual' ? 'bg-orange-500' :
+                                                            'bg-yellow-500'
+                                                        }`} />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <span className="font-medium text-gray-900">{activity.memberName}</span>
+                                                            <span className="text-xs text-gray-500 flex-shrink-0">{new Date(activity.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                                        </div>
+                                                        <div className="text-gray-600 mt-0.5">
+                                                            <span className="font-medium">{activity.activityType}:</span> {activity.description}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 mt-1">
+                                                            Duration: {Math.floor(activity.duration / 60)}h {activity.duration % 60}m
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                            {filteredUnusualActivities.length === 0 && (
+                                                <div className="text-center py-8 text-gray-500">
+                                                    No unusual activity detected
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -616,80 +628,13 @@ export default function HighlightsPage() {
                         </div>
                     </section>
                 </div>
-
-                {/* Right Sidebar (animated, rail when collapsed) */}
-                <div className={`border-l border-gray-200 overflow-hidden transition-[width] duration-300 ease-in-out ${sidebarOpen ? "w-80" : "w-10"}`}>
-                    {sidebarOpen ? (
-                        <aside className="p-6 h-full flex flex-col">
-
-                            <div className="space-y-6 flex-1">
-                                {/* Teams (collapsible) */}
-                                <div className="border border-gray-200 rounded-md">
-                                    <button
-                                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50"
-                                        onClick={() => setTeamsOpen(o => !o)}
-                                        aria-expanded={teamsOpen}
-                                        aria-controls="teams-section"
-                                    >
-                                        <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Teams</span>
-                                        <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${teamsOpen ? 'rotate-90' : ''}`} />
-                                    </button>
-                                    {teamsOpen && (
-                                        <div id="teams-section" className="px-4 py-4">
-                                            <div className="flex items-center justify-between mb-3">
-                                                <span className="text-xs text-gray-600">Engagement</span>
-                                            </div>
-                                            <div className="flex flex-col items-center text-center">
-                                                <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center mb-4">
-                                                    <div className="w-12 h-12 bg-gray-200 rounded"></div>
-                                                </div>
-                                                <h4 className="font-semibold mb-2">No teams to display</h4>
-                                                <p className="text-sm text-gray-600 mb-4">
-                                                    Add teams to your organization to view metrics about their performance
-                                                </p>
-                                                <button className="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 font-medium">
-                                                    Add team
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Members (collapsible) */}
-                                <div className="border border-gray-200 rounded-md">
-                                    <button
-                                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50"
-                                        onClick={() => setMembersOpen(o => !o)}
-                                        aria-expanded={membersOpen}
-                                        aria-controls="members-section"
-                                    >
-                                        <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Members</span>
-                                        <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${membersOpen ? 'rotate-90' : ''}`} />
-                                    </button>
-                                    {membersOpen && (
-                                        <div id="members-section" className="px-4 py-4">
-                                            <div className="text-sm text-gray-600">No members to display</div>
-                                            <button className="mt-3 w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 font-medium">
-                                                Add member
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </aside>
-                    ) : (
-                        <div className="h-full flex items-center justify-center">
-                            <button
-                                className="p-2 rounded hover:bg-gray-100"
-                                onClick={() => setSidebarOpen(true)}
-                                aria-label="Show sidebar"
-                                title="Show sidebar"
-                            >
-                                <ChevronRight className="w-4 h-4 text-gray-600" />
-                            </button>
-                        </div>
-                    )}
-                </div>
+                <InsightsRightSidebar
+                    open={sidebarOpen}
+                    onOpenChange={setSidebarOpen}
+                    members={DUMMY_MEMBERS}
+                    selectedFilter={selectedFilter as any}
+                    onSelectedFilterChange={setSelectedFilter as any}
+                />
             </div>
         </div>
     )
