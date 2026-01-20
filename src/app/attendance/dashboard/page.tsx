@@ -13,7 +13,7 @@ import dynamic from "next/dynamic"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useDashboardStore } from "@/store/dashboard-store";
 import { ManageWidgets } from "@/components/dashboard/manage-widgets";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const DashboardMap = dynamic(() => import("@/components/dashboard/map-section"), {
     ssr: false,
@@ -114,6 +114,9 @@ export default function DashboardPage() {
     const { visibleWidgets } = useDashboardStore();
     const [hydrated, setHydrated] = useState(false);
     const [view, setView] = useState<'all' | 'me'>(viewParam === 'me' ? 'me' : 'all')
+    const addButtonRef = useRef<HTMLButtonElement | null>(null)
+    const addMenuRef = useRef<HTMLDivElement | null>(null)
+    const [isAddMenuOpen, setIsAddMenuOpen] = useState(false)
 
     // Prevent hydration mismatch for persisted store
     useEffect(() => {
@@ -138,6 +141,20 @@ export default function DashboardPage() {
         router.push(`/attendance/dashboard${queryString ? `?${queryString}` : ''}`)
     }
 
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (
+                isAddMenuOpen &&
+                !addMenuRef.current?.contains(event.target as Node) &&
+                !addButtonRef.current?.contains(event.target as Node)
+            ) {
+                setIsAddMenuOpen(false)
+            }
+        }
+        window.addEventListener("click", handleClickOutside)
+        return () => window.removeEventListener("click", handleClickOutside)
+    }, [isAddMenuOpen])
+
     if (!hydrated) {
         return <div className="p-6">Loading dashboard preferences...</div>
     }
@@ -154,7 +171,34 @@ export default function DashboardPage() {
                         </TabsList>
                     </Tabs>
                 </div>
-                <ManageWidgets />
+                <div className="flex items-center gap-3 relative">
+                    <ManageWidgets />
+                    <div className="relative">
+                        <Button
+                            ref={addButtonRef}
+                            className="rounded-full bg-blue-500 px-4 py-2 text-white shadow-lg hover:bg-blue-600 focus-visible:ring focus-visible:ring-blue-200 flex items-center gap-2"
+                            onClick={() => setIsAddMenuOpen((prev) => !prev)}
+                        >
+                            <span className="flex items-center gap-2">
+                                <ArrowRight className="h-4 w-4" />
+                                Add
+                            </span>
+                        </Button>
+                        {isAddMenuOpen && (
+                            <div
+                                ref={addMenuRef}
+                                className="absolute right-0 z-20 mt-2 w-44 rounded-md border border-border bg-white shadow-lg"
+                            >
+                                <button className="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/50">
+                                    Add to-do
+                                </button>
+                                <button className="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/50">
+                                    Add global to-do
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Top Summary Cards */}
@@ -224,7 +268,7 @@ export default function DashboardPage() {
                 {visibleWidgets.worked_week && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Worked this week</p><h3 className="text-2xl font-bold">38h 25m</h3></div><div className="p-3 rounded-full bg-emerald-100 text-emerald-600"><Clock className="w-6 h-6" /></div></CardContent></Card>}
                 {visibleWidgets.worked_today && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Worked today</p><h3 className="text-2xl font-bold">6h 40m</h3></div><div className="p-3 rounded-full bg-emerald-100 text-emerald-600"><Clock className="w-6 h-6" /></div></CardContent></Card>}
                 {visibleWidgets.projects_worked && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Projects worked</p><h3 className="text-2xl font-bold">5</h3></div><div className="p-3 rounded-full bg-purple-100 text-purple-600"><Briefcase className="w-6 h-6" /></div></CardContent></Card>}
-                {visibleWidgets.activity_today && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Today's activity</p><h3 className="text-2xl font-bold">Normal</h3></div><div className="p-3 rounded-full bg-cyan-100 text-cyan-600"><Activity className="w-6 h-6" /></div></CardContent></Card>}
+                {visibleWidgets.activity_today && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Today&apos;s activity</p><h3 className="text-2xl font-bold">Normal</h3></div><div className="p-3 rounded-full bg-cyan-100 text-cyan-600"><Activity className="w-6 h-6" /></div></CardContent></Card>}
                 {visibleWidgets.activity_week && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Weekly activity</p><h3 className="text-2xl font-bold">↑ 12%</h3></div><div className="p-3 rounded-full bg-cyan-100 text-cyan-600"><Activity className="w-6 h-6" /></div></CardContent></Card>}
             </div>
 
