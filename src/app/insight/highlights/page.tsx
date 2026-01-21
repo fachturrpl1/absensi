@@ -17,7 +17,7 @@ export default function HighlightsPage() {
     const [selectedFilter, setSelectedFilter] = useState<{ type: "members" | "teams"; all: boolean; id?: string }>(
         { type: "members", all: false, id: "m1" }
     )
-    const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>(["m1"]) // Track selected member IDs
+    const [dropdownOpen, setDropdownOpen] = useState(false)
 
     // Date range state
     const [dateRangeOpen, setDateRangeOpen] = useState(false)
@@ -175,10 +175,6 @@ export default function HighlightsPage() {
     // Use dummy data from file
     const demoMembers = useMemo(() => DUMMY_MEMBERS, [])
     const demoTeams = useMemo(() => DUMMY_TEAMS, [])
-    
-    // Debug logging
-    console.log('Current selectedFilter:', selectedFilter)
-    console.log('Current selectedMemberIds:', selectedMemberIds)
 
     const filterLabel = useMemo(() => {
         if (selectedFilter.all) return selectedFilter.type === "members" ? "All Members" : "All Teams"
@@ -263,7 +259,7 @@ export default function HighlightsPage() {
                     {/* Filter Bar */}
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <DropdownMenu>
+                            <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                                 <DropdownMenuTrigger asChild>
                                     <button className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 min-w-[150px] text-left">
                                         {filterLabel}
@@ -309,12 +305,14 @@ export default function HighlightsPage() {
                                             className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm mb-2 ${(selectedFilter.all && selectedFilter.type === filterTab) ? "bg-zinc-100 text-zinc-900" : "hover:bg-gray-50"}`}
                                             onClick={() => {
                                                 setSelectedFilter({ type: filterTab, all: true })
-                                                if (filterTab === "members") {
-                                                    setSelectedMemberIds(demoMembers.map(m => m.id))
-                                                }
+                                                setTimeout(() => setDropdownOpen(false), 100)
                                             }}
                                         >
-                                            <span className={`inline-block w-2 h-2 rounded-full border ${(selectedFilter.all && selectedFilter.type === filterTab) ? "bg-zinc-900 border-zinc-900" : "border-gray-400"}`} />
+                                            <div className={`w-3 h-3 rounded-full flex items-center justify-center border-2 transition-all ${(selectedFilter.all && selectedFilter.type === filterTab) ? "border-zinc-900 bg-zinc-900" : "border-gray-400 bg-white"}`}>
+                                                {(selectedFilter.all && selectedFilter.type === filterTab) && (
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                                )}
+                                            </div>
                                             All {filterTab === "members" ? "Members" : "Teams"}
                                         </button>
                                         <div className="border-t border-gray-200 pt-2" />
@@ -322,37 +320,28 @@ export default function HighlightsPage() {
                                             .filter(it => it.name.toLowerCase().includes(filterSearch.toLowerCase()))
                                             .map(it => {
                                                 // Determine if this item is selected
-                                                let isSelected = false
-                                                if (filterTab === "members") {
-                                                    // For members: check if "All Members" is selected OR if this member ID is in selectedMemberIds
-                                                    isSelected = (selectedFilter.all && selectedFilter.type === "members") || selectedMemberIds.includes(it.id)
-                                                    console.log(`Member ${it.name} (${it.id}):`, {
-                                                        'selectedFilter.all': selectedFilter.all,
-                                                        'selectedFilter.type': selectedFilter.type,
-                                                        'selectedMemberIds': selectedMemberIds,
-                                                        'includes': selectedMemberIds.includes(it.id),
-                                                        'isSelected': isSelected
-                                                    })
-                                                } else {
-                                                    // For teams: check if this specific team is selected
-                                                    isSelected = !selectedFilter.all && selectedFilter.type === filterTab && selectedFilter.id === it.id
-                                                }
+                                                // If "All" is selected, show all as selected
+                                                // If not "All", check if this specific item matches selectedFilter.id
+                                                const isSelected = (selectedFilter.type === filterTab) && 
+                                                    (selectedFilter.all || selectedFilter.id === it.id)
+                                                
+                                                console.log(`Render ${it.name}:`, { isSelected, all: selectedFilter.all, selectedId: selectedFilter.id, itemId: it.id })
                                                 
                                                 return (
                                                     <button
                                                         key={it.id}
                                                         className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${isSelected ? "bg-zinc-100 text-zinc-900" : "hover:bg-gray-50"}`}
                                                         onClick={() => {
-                                                            console.log('Clicked member:', it.name, 'ID:', it.id)
-                                                            // When clicking individual member, deselect "All" and select only this one
+                                                            console.log('Clicked:', it.name, 'Setting filter to:', { type: filterTab, all: false, id: it.id })
                                                             setSelectedFilter({ type: filterTab, all: false, id: it.id })
-                                                            if (filterTab === "members") {
-                                                                setSelectedMemberIds([it.id])
-                                                                console.log('Updated selectedMemberIds to:', [it.id])
-                                                            }
+                                                            setTimeout(() => setDropdownOpen(false), 100)
                                                         }}
                                                     >
-                                                        <span className={`inline-block w-2 h-2 rounded-full border ${isSelected ? "bg-zinc-900 border-zinc-900" : "border-gray-400"}`} />
+                                                        <div className={`w-3 h-3 rounded-full flex items-center justify-center border-2 transition-all ${isSelected ? "border-zinc-900 bg-zinc-900" : "border-gray-400 bg-white"}`}>
+                                                            {isSelected && (
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                                            )}
+                                                        </div>
                                                         {it.name}
                                                     </button>
                                                 )
