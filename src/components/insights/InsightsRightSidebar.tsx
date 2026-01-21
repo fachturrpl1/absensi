@@ -2,7 +2,7 @@
 import { useState, useMemo } from "react"
 import { ChevronRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import type { Member } from "@/lib/data/dummy-insights"
+import type { Member } from "@/lib/data/dummy-data"
 import type { SelectedFilter } from "@/components/insights/types"
 
 interface Props {

@@ -4,7 +4,7 @@ import { Info, Settings, Menu, ChevronRight } from "lucide-react"
 import { useState, useMemo } from "react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_UNUSUAL_ACTIVITIES, DUMMY_SMART_NOTIFICATIONS, DUMMY_BEHAVIOR_CHANGES } from "@/lib/data/dummy-insights"
+import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_UNUSUAL_ACTIVITIES, DUMMY_SMART_NOTIFICATIONS, DUMMY_BEHAVIOR_CHANGES } from "@/lib/data/dummy-data"
 import { useTimezone } from "@/components/timezone-provider"
 import { InsightsRightSidebar } from "@/components/insights/InsightsRightSidebar"
 

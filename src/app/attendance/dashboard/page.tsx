@@ -14,51 +14,53 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useDashboardStore } from "@/store/dashboard-store";
 import { ManageWidgets } from "@/components/dashboard/manage-widgets";
 import { useEffect, useRef, useState } from "react";
+import {
+    DUMMY_DASHBOARD_ACTIVITIES,
+    DUMMY_MY_ACTIVITIES,
+    DUMMY_STAFF_STATUS,
+    DUMMY_PENDING_REQUESTS,
+    DUMMY_LATE_MISSED_SHIFTS,
+    DUMMY_MANUAL_TIME,
+    DUMMY_DASHBOARD_STATS,
+    DUMMY_MY_STATS,
+    DUMMY_MY_PERFORMANCE
+} from "@/lib/data/dummy-data"
 
 const DashboardMap = dynamic(() => import("@/components/dashboard/map-section"), {
     ssr: false,
     loading: () => <div className="w-full h-[500px] bg-muted/10 rounded-lg animate-pulse flex items-center justify-center text-muted-foreground">Loading Map...</div>,
 })
 
-// Dummy Data for Activity Table
-const activityData = Array(5).fill({
-    name: "Diah",
-    division: "Design",
-    position: "Owner",
-    activity: "Absen Masuk (08 : 05 : 21)",
-})
+// Helper functions to format activity display
+const formatActivityText = (activityType: string, timestamp: string) => {
+    const time = new Date(timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    const activityMap: Record<string, string> = {
+        'check_in': `Absen Masuk (${time})`,
+        'check_out': `Absen Keluar (${time})`,
+        'break_start': `Mulai Istirahat (${time})`,
+        'break_end': `Selesai Istirahat (${time})`
+    }
+    return activityMap[activityType] || activityType
+}
 
-// Dummy Data for Staff Status Chart
-const staffStatusData = [
-    { name: "Staff Tetap", value: 10, color: "#00C49F" },    // Green
-    { name: "Staff Kontrak", value: 3, color: "#FFBB28" },   // Orange/Yellow
-    { name: "Staff Magang", value: 2, color: "#A78BFA" },    // Purple
-]
+const formatRequestType = (type: string) => {
+    const typeMap: Record<string, string> = {
+        'annual_leave': 'Cuti Tahunan',
+        'sick_leave': 'Izin Sakit',
+        'overtime': 'Lembur',
+        'permission': 'Izin'
+    }
+    return typeMap[type] || type
+}
 
-// Dummy Data for Pending Requests
-const pendingRequests = [
-    { name: "Budi Santoso", type: "Cuti Tahunan", date: "15 Jan 2026", status: "Pending" },
-    { name: "Siti Aminah", type: "Izin Sakit", date: "14 Jan 2026", status: "Pending" },
-    { name: "Rudi Hermawan", type: "Lembur", date: "14 Jan 2026", status: "Pending" },
-]
+// Convert staff status to chart format
+const staffStatusChartData = DUMMY_STAFF_STATUS.map(s => ({
+    name: s.type === 'permanent' ? 'Staff Tetap' : s.type === 'contract' ? 'Staff Kontrak' : 'Staff Magang',
+    value: s.count,
+    color: s.type === 'permanent' ? '#00C49F' : s.type === 'contract' ? '#FFBB28' : '#A78BFA'
+}))
 
-// Small Widgets (dummy)
-
-
-// Large Widgets (dummy)
-type LateMissedItem = { name: string; shift: string; issue: string; lateBy?: string; missed?: boolean }
-const lateMissedShifts: LateMissedItem[] = [
-    { name: "Anisa Putri", shift: "15 Jan, 08:00–17:00", issue: "Late", lateBy: "15m" },
-    { name: "Bagus Wibowo", shift: "15 Jan, 08:00–17:00", issue: "Missed", missed: true },
-    { name: "Citra Lestari", shift: "15 Jan, 08:00–17:00", issue: "Late", lateBy: "7m" },
-]
-
-type ManualTimeItem = { name: string; date: string; change: string; note: string }
-const manualTime: ManualTimeItem[] = [
-    { name: "Dimas Pratama", date: "15 Jan", change: "+0:30", note: "Add meeting" },
-    { name: "Eka Sari", date: "15 Jan", change: "-0:10", note: "Trim break" },
-]
-
+// Payments, time off, todos, timesheets - keep static for now
 type PaymentItem = { date: string; method: string; amount: string; status: "Paid" | "Processing" }
 const payments: PaymentItem[] = [
     { date: "15 Jan", method: "Bank Transfer", amount: "Rp 12.500.000", status: "Paid" },
@@ -101,7 +103,9 @@ export default function DashboardPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const viewParam = searchParams.get('view') || 'all'
-    
+
+    const [view, setView] = useState<'all' | 'me'>(viewParam === 'me' ? 'me' : 'all')
+
     // Get today's date in Indonesian format
     const today = new Date().toLocaleDateString("id-ID", {
         weekday: "long",
@@ -110,10 +114,11 @@ export default function DashboardPage() {
         year: "numeric",
     })
 
-    const totalStaff = 10000
+    const stats = view === 'me' ? DUMMY_MY_STATS : DUMMY_DASHBOARD_STATS
+    const activities = view === 'me' ? DUMMY_MY_ACTIVITIES : DUMMY_DASHBOARD_ACTIVITIES
+    const totalStaff = DUMMY_DASHBOARD_STATS.totalStaff
     const { visibleWidgets } = useDashboardStore();
     const [hydrated, setHydrated] = useState(false);
-    const [view, setView] = useState<'all' | 'me'>(viewParam === 'me' ? 'me' : 'all')
     const addButtonRef = useRef<HTMLButtonElement | null>(null)
     const addMenuRef = useRef<HTMLDivElement | null>(null)
     const [isAddMenuOpen, setIsAddMenuOpen] = useState(false)
@@ -209,7 +214,7 @@ export default function DashboardPage() {
                         <CardContent className="p-6 flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground mb-1">Total Pegawai</p>
-                                <h3 className="text-2xl font-bold">156</h3>
+                                <h3 className="text-2xl font-bold">{stats.totalStaff}</h3>
                             </div>
                             <div className="p-3 rounded-full text-blue-600 bg-blue-100">
                                 <Users className="w-6 h-6" />
@@ -225,7 +230,7 @@ export default function DashboardPage() {
                                     {view === 'me' ? 'Status Saya' : 'Hadir'}
                                 </p>
                                 <h3 className="text-2xl font-bold">
-                                    {view === 'me' ? 'Hadir' : '142'}
+                                    {view === 'me' ? DUMMY_MY_PERFORMANCE.status : stats.present}
                                 </h3>
                             </div>
                             <div className="p-3 rounded-full text-green-600 bg-green-100">
@@ -239,7 +244,7 @@ export default function DashboardPage() {
                         <CardContent className="p-6 flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground mb-1">Terlambat</p>
-                                <h3 className="text-2xl font-bold">8</h3>
+                                <h3 className="text-2xl font-bold">{stats.late}</h3>
                             </div>
                             <div className="p-3 rounded-full text-orange-600 bg-orange-100">
                                 <Clock className="w-6 h-6" />
@@ -252,7 +257,7 @@ export default function DashboardPage() {
                         <CardContent className="p-6 flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground mb-1">Izin / Sakit</p>
-                                <h3 className="text-2xl font-bold">4</h3>
+                                <h3 className="text-2xl font-bold">{stats.permission}</h3>
                             </div>
                             <div className="p-3 rounded-full text-purple-600 bg-purple-100">
                                 <FileText className="w-6 h-6" />
@@ -263,13 +268,13 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {visibleWidgets.earned_week && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Earned this week</p><h3 className="text-2xl font-bold">Rp 3.450.000</h3></div><div className="p-3 rounded-full bg-blue-100 text-blue-600"><BarChart3 className="w-6 h-6" /></div></CardContent></Card>}
-                {visibleWidgets.earned_today && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Earned today</p><h3 className="text-2xl font-bold">Rp 550.000</h3></div><div className="p-3 rounded-full bg-blue-100 text-blue-600"><BarChart3 className="w-6 h-6" /></div></CardContent></Card>}
-                {visibleWidgets.worked_week && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Worked this week</p><h3 className="text-2xl font-bold">38h 25m</h3></div><div className="p-3 rounded-full bg-emerald-100 text-emerald-600"><Clock className="w-6 h-6" /></div></CardContent></Card>}
-                {visibleWidgets.worked_today && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Worked today</p><h3 className="text-2xl font-bold">6h 40m</h3></div><div className="p-3 rounded-full bg-emerald-100 text-emerald-600"><Clock className="w-6 h-6" /></div></CardContent></Card>}
-                {visibleWidgets.projects_worked && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Projects worked</p><h3 className="text-2xl font-bold">5</h3></div><div className="p-3 rounded-full bg-purple-100 text-purple-600"><Briefcase className="w-6 h-6" /></div></CardContent></Card>}
-                {visibleWidgets.activity_today && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Today&apos;s activity</p><h3 className="text-2xl font-bold">Normal</h3></div><div className="p-3 rounded-full bg-cyan-100 text-cyan-600"><Activity className="w-6 h-6" /></div></CardContent></Card>}
-                {visibleWidgets.activity_week && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Weekly activity</p><h3 className="text-2xl font-bold">↑ 12%</h3></div><div className="p-3 rounded-full bg-cyan-100 text-cyan-600"><Activity className="w-6 h-6" /></div></CardContent></Card>}
+                {visibleWidgets.earned_week && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Earned this week</p><h3 className="text-2xl font-bold">{stats.earnedWeek}</h3></div><div className="p-3 rounded-full bg-blue-100 text-blue-600"><BarChart3 className="w-6 h-6" /></div></CardContent></Card>}
+                {visibleWidgets.earned_today && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Earned today</p><h3 className="text-2xl font-bold">{stats.earnedToday}</h3></div><div className="p-3 rounded-full bg-blue-100 text-blue-600"><BarChart3 className="w-6 h-6" /></div></CardContent></Card>}
+                {visibleWidgets.worked_week && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Worked this week</p><h3 className="text-2xl font-bold">{stats.workedWeek}</h3></div><div className="p-3 rounded-full bg-emerald-100 text-emerald-600"><Clock className="w-6 h-6" /></div></CardContent></Card>}
+                {visibleWidgets.worked_today && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Worked today</p><h3 className="text-2xl font-bold">{stats.workedToday}</h3></div><div className="p-3 rounded-full bg-emerald-100 text-emerald-600"><Clock className="w-6 h-6" /></div></CardContent></Card>}
+                {visibleWidgets.projects_worked && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Projects worked</p><h3 className="text-2xl font-bold">{stats.projectsWorked}</h3></div><div className="p-3 rounded-full bg-purple-100 text-purple-600"><Briefcase className="w-6 h-6" /></div></CardContent></Card>}
+                {visibleWidgets.activity_today && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Today&apos;s activity</p><h3 className="text-2xl font-bold">{stats.activityToday}</h3></div><div className="p-3 rounded-full bg-cyan-100 text-cyan-600"><Activity className="w-6 h-6" /></div></CardContent></Card>}
+                {visibleWidgets.activity_week && <Card className="shadow-sm"><CardContent className="p-6 flex justify-between"><div><p className="text-sm text-muted-foreground">Weekly activity</p><h3 className="text-2xl font-bold">{stats.activityWeek}</h3></div><div className="p-3 rounded-full bg-cyan-100 text-cyan-600"><Activity className="w-6 h-6" /></div></CardContent></Card>}
             </div>
 
             {/* Map Section */}
@@ -336,29 +341,27 @@ export default function DashboardPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {view === 'all' ? (
-                                            activityData.map((row, index) => (
-                                                <TableRow key={index} className="hover:bg-muted/50">
-                                                    <TableCell>{row.name}</TableCell>
-                                                    <TableCell>{row.division}</TableCell>
-                                                    <TableCell>{row.position}</TableCell>
-                                                    <TableCell>{row.activity}</TableCell>
+                                            activities.map((activity) => (
+                                                <TableRow key={activity.id} className="hover:bg-muted/50">
+                                                    <TableCell>{activity.memberName}</TableCell>
+                                                    <TableCell>{activity.division}</TableCell>
+                                                    <TableCell>{activity.position}</TableCell>
+                                                    <TableCell>{formatActivityText(activity.activityType, activity.timestamp)}</TableCell>
                                                 </TableRow>
                                             ))
                                         ) : (
                                             // Show only current user's activity when view = 'me'
                                             <>
-                                                <TableRow className="hover:bg-muted/50">
-                                                    <TableCell>Absen Masuk</TableCell>
-                                                    <TableCell>08:05:21</TableCell>
-                                                </TableRow>
-                                                <TableRow className="hover:bg-muted/50">
-                                                    <TableCell>Absen Keluar</TableCell>
-                                                    <TableCell>17:10:15</TableCell>
-                                                </TableRow>
+                                                {activities.map((activity) => (
+                                                    <TableRow key={activity.id} className="hover:bg-muted/50">
+                                                        <TableCell>{formatActivityText(activity.activityType, activity.timestamp)}</TableCell>
+                                                        <TableCell>{new Date(activity.timestamp).toLocaleTimeString('id-ID')}</TableCell>
+                                                    </TableRow>
+                                                ))}
                                             </>
                                         )}
                                         {/* Empty state padding if needed */}
-                                        {((view === 'all' && activityData.length === 0) || (view === 'me' && false)) && (
+                                        {((view === 'all' && activities.length === 0) || (view === 'me' && activities.length === 0)) && (
                                             <TableRow>
                                                 <TableCell colSpan={view === 'all' ? 4 : 2} className="h-24 text-center">
                                                     No activity found.
@@ -391,7 +394,7 @@ export default function DashboardPage() {
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie
-                                                data={staffStatusData}
+                                                data={staffStatusChartData}
                                                 cx="50%"
                                                 cy="50%"
                                                 innerRadius={60}
@@ -400,7 +403,7 @@ export default function DashboardPage() {
                                                 dataKey="value"
                                                 stroke="none"
                                             >
-                                                {staffStatusData.map((entry, index) => (
+                                                {staffStatusChartData.map((entry, index) => (
                                                     <Cell key={`cell-${index}`} fill={entry.color} />
                                                 ))}
                                             </Pie>
@@ -420,7 +423,7 @@ export default function DashboardPage() {
                                 {/* Custom Legend */}
                                 <div className="w-full space-y-3 mt-4 self-start pl-4">
                                     <h4 className="font-semibold text-sm mb-2">Keterangan:</h4>
-                                    {staffStatusData.map((item) => (
+                                    {staffStatusChartData.map((item) => (
                                         <div key={item.name} className="flex items-center justify-between text-sm">
                                             <div className="flex items-center gap-2">
                                                 <span
@@ -448,19 +451,19 @@ export default function DashboardPage() {
                             </CardHeader>
                             <CardContent className="p-0">
                                 <div className="divide-y">
-                                    {pendingRequests.map((req, idx) => (
-                                        <div key={idx} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                                    {DUMMY_PENDING_REQUESTS.map((req) => (
+                                        <div key={req.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
                                             <div className="space-y-1">
-                                                <p className="text-sm font-medium leading-none">{req.name}</p>
-                                                <p className="text-xs text-muted-foreground">{req.type}</p>
+                                                <p className="text-sm font-medium leading-none">{req.memberName}</p>
+                                                <p className="text-xs text-muted-foreground">{formatRequestType(req.requestType)}</p>
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-xs font-medium bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full inline-block mb-1">
-                                                    {req.status}
+                                                    {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
                                                 </div>
                                                 <div className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end">
                                                     <Calendar className="w-3 h-3" />
-                                                    {req.date}
+                                                    {new Date(req.requestDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                                 </div>
                                             </div>
                                         </div>
@@ -474,7 +477,7 @@ export default function DashboardPage() {
                             </CardContent>
                         </Card>
                     )}
-                    
+
                     {/* My Performance Card - Only show for 'me' view */}
                     {view === 'me' && (
                         <Card className="shadow-sm">
@@ -485,19 +488,19 @@ export default function DashboardPage() {
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between text-sm">
                                         <span className="text-muted-foreground">Jam Kerja Hari Ini</span>
-                                        <span className="font-semibold">8h 40m</span>
+                                        <span className="font-semibold">{DUMMY_MY_STATS.workedToday}</span>
                                     </div>
                                     <div className="flex items-center justify-between text-sm">
                                         <span className="text-muted-foreground">Jam Kerja Minggu Ini</span>
-                                        <span className="font-semibold">38h 25m</span>
+                                        <span className="font-semibold">{DUMMY_MY_STATS.workedWeek}</span>
                                     </div>
                                     <div className="flex items-center justify-between text-sm">
                                         <span className="text-muted-foreground">Kehadiran Bulan Ini</span>
-                                        <span className="font-semibold">95%</span>
+                                        <span className="font-semibold">{DUMMY_MY_PERFORMANCE.attendanceRate}</span>
                                     </div>
                                     <div className="flex items-center justify-between text-sm">
                                         <span className="text-muted-foreground">Keterlambatan</span>
-                                        <span className="font-semibold text-orange-600">2 kali</span>
+                                        <span className="font-semibold text-orange-600">{DUMMY_MY_PERFORMANCE.lateCount} kali</span>
                                     </div>
                                 </div>
                                 <div className="pt-2 border-t">
@@ -524,15 +527,15 @@ export default function DashboardPage() {
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-3">
-                                    {lateMissedShifts.map((it, idx) => (
-                                        <div key={idx} className="flex items-center justify-between text-sm">
+                                    {DUMMY_LATE_MISSED_SHIFTS.map((it) => (
+                                        <div key={it.id} className="flex items-center justify-between text-sm">
                                             <div>
-                                                <div className="font-medium">{it.name}</div>
-                                                <div className="text-muted-foreground">{it.shift}</div>
+                                                <div className="font-medium">{it.memberName}</div>
+                                                <div className="text-muted-foreground">{new Date(it.shiftDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}, {it.shiftTime}</div>
                                             </div>
                                             <div className="text-right">
-                                                <Badge variant={it.missed ? "destructive" : "secondary"} className={it.missed ? "" : "bg-orange-100 text-orange-700"}>
-                                                    {it.missed ? "Missed" : `Late ${it.lateBy ?? ""}`}
+                                                <Badge variant={it.issue === 'missed' ? "destructive" : "secondary"} className={it.issue === 'missed' ? "" : "bg-orange-100 text-orange-700"}>
+                                                    {it.issue === 'missed' ? "Missed" : `Late ${it.lateBy ?? ""}`}
                                                 </Badge>
                                             </div>
                                         </div>
@@ -550,13 +553,13 @@ export default function DashboardPage() {
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-3">
-                                    {manualTime.map((it, idx) => (
-                                        <div key={idx} className="flex items-center justify-between text-sm">
+                                    {DUMMY_MANUAL_TIME.map((it) => (
+                                        <div key={it.id} className="flex items-center justify-between text-sm">
                                             <div>
-                                                <div className="font-medium">{it.name}</div>
+                                                <div className="font-medium">{it.memberName}</div>
                                                 <div className="text-muted-foreground">{it.date} • {it.note}</div>
                                             </div>
-                                            <div className="font-medium">{it.change}</div>
+                                            <div className="font-medium">{it.timeChange}</div>
                                         </div>
                                     ))}
                                 </div>

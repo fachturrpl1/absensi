@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import { InsightsRightSidebar } from "@/components/insights/InsightsRightSidebar"
 import type { DateRange, PickerItem, SelectedFilter } from "@/components/insights/types"
-import { DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-insights"
+import { DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
 import { useTimezone } from "@/components/timezone-provider"
 import { Info } from "lucide-react"
 import {
@@ -15,7 +15,7 @@ import {
   DUMMY_WORK_TIME_CLASSIFICATION,
   DUMMY_DAILY_FOCUS,
   DUMMY_ACTIVITY
-} from "@/lib/data/dummy-performance"
+} from "@/lib/data/dummy-data"
 
 // Empty State Component
 const EmptyState = ({ title, subtitle }: { title: string; subtitle?: string }) => (
@@ -85,7 +85,7 @@ export default function PerformancePage() {
         // Let's mimic Average Daily Hours
         targetHours: totalTarget / filtered.length,
         avgDailyTarget: avgTarget,
-        date: (filtered[0]?.date) || '2026-01-19', 
+        date: (filtered[0]?.date) || '2026-01-19',
         memberId: 'aggregate'
       } as any // Cast to any to avoid type issues with dummy data structure
     }

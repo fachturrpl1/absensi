@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react"
 import { X, TrendingUp, Clock, TrendingDown, BarChart3, Briefcase, AlertTriangle, Share2, Package, Bot, Film, Pause, Hand } from "lucide-react"
-import { NOTIFICATION_TEMPLATES } from "@/lib/data/dummy-smart-notifications"
+import { NOTIFICATION_TEMPLATES } from "@/lib/data/dummy-data"
 
 interface TemplateSelectionDialogProps {
     isOpen: boolean

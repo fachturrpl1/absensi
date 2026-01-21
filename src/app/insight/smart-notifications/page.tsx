@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Pencil, Trash2, Bell, Clock, TrendingUp, TrendingDown, BarChart3, Briefcase, AlertTriangle, Share2, Package, Bot, Film, Pause, Hand, Grid3x3 } from "lucide-react"
-import { NOTIFICATION_TEMPLATES, DUMMY_NOTIFICATIONS } from "@/lib/data/dummy-smart-notifications"
+import { NOTIFICATION_TEMPLATES, DUMMY_NOTIFICATIONS } from "@/lib/data/dummy-data"
 
 
 // Dialog Components

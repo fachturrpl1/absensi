@@ -15,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import AddProjectDialog from "@/components/projects/AddProjectDialog"
 import EditProjectDialog from "@/components/projects/EditProjectDialog"
 import type { Project, NewProjectForm } from "@/components/projects/types"
-import { DUMMY_PROJECTS } from "@/lib/data/dummy-projects"
+import { DUMMY_PROJECTS } from "@/lib/data/dummy-data"
 
 // Convert dummy projects to component format
 const INITIAL_DATA: Project[] = DUMMY_PROJECTS.map(p => ({
