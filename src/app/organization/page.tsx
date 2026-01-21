@@ -7,12 +7,10 @@ import { useAuthStore } from "@/store/user-store"
 import { Organization } from "@/lib/types/organization"
 import { getUserOrganizations } from "@/action/auth-multi-org"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   AlertCircle,
-  ChevronRight,
   Plus,
   Grid3x3,
   List,
@@ -20,6 +18,8 @@ import {
 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
+import { OrganizationCard } from "@/components/organization/organization-card"
+import { OrganizationCardSkeleton } from "@/components/organization/organization-card-skeleton"
 
 export default function OrganizationPage() {
   const router = useRouter()
@@ -33,7 +33,6 @@ export default function OrganizationPage() {
   const [isHydrated, setIsHydrated] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [orgCount] = useState(3); // Default to 3, will be updated
 
   // Load organizations
   useEffect(() => {
@@ -181,21 +180,10 @@ export default function OrganizationPage() {
 
       <div className="space-y-6 px-4 md:px-6 pb-6">
         {loading ? (
-          <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: orgCount }).map((_, i) => (
-                <Card key={i}>
-                  <CardHeader>
-                    <Skeleton className="h-6 w-32" />
-                    <Skeleton className="h-4 w-24 mt-2" />
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-8 w-full mt-4" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <OrganizationCardSkeleton key={i} />
+            ))}
           </div>
         ) : error ? (
           <Alert variant="destructive">
@@ -212,35 +200,11 @@ export default function OrganizationPage() {
         ) : viewMode === "grid" ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredOrganizations.map((org) => (
-              <Card
+              <OrganizationCard
                 key={org.id}
-                className="transition-all"
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle>{org.name}</CardTitle>
-                      <CardDescription>{org.code}</CardDescription>
-                    </div>
-                    <Badge variant="outline">{org.country_code}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">{org.timezone}</p>
-                  <Button
-                    className="w-full cursor-pointer hover:shadow-lg"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      handleSelectOrganization(org)
-                    }}
-                  >
-                    Select
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </CardContent>
-              </Card>
+                organization={org}
+                onSelect={handleSelectOrganization}
+              />
             ))}
           </div>
         ) : (

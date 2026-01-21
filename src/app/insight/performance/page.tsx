@@ -41,6 +41,8 @@ export default function PerformancePage() {
 
   const members: PickerItem[] = useMemo(() => DUMMY_MEMBERS, [])
   const teams: PickerItem[] = useMemo(() => DUMMY_TEAMS, [])
+  const demoMembers = useMemo(() => DUMMY_MEMBERS, [])
+  const demoTeams = useMemo(() => DUMMY_TEAMS, [])
 
   // Get selected member/team ID
   const selectedId = useMemo(() => {
@@ -476,7 +478,7 @@ export default function PerformancePage() {
             </div>
           </div>
 
-          {/* MEETINGS */}
+          {/* MEETINGS
           <div className="border border-gray-200 rounded-lg p-6">
             <div className="flex items-center gap-2 mb-4">
               <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">MEETINGS</h3>
@@ -523,7 +525,7 @@ export default function PerformancePage() {
               </svg>
               <span>Benchmark coming soon</span>
             </div>
-          </div>
+          </div> */}
 
           {/* WORK TIME EXPENDITURE */}
           <div className="border border-gray-200 rounded-lg p-6">
@@ -540,7 +542,7 @@ export default function PerformancePage() {
           {/*  Row 3: Team Collaboration + Top Apps & URLs */}
           <div className="grid grid-cols-2 gap-6">
             {/* TEAM COLLABORATION */}
-            <div className="border border-gray-200 rounded-lg p-6">
+            {/* <div className="border border-gray-200 rounded-lg p-6">
               <div className="flex items-center gap-2 mb-4">
                 <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">TEAM COLLABORATION</h3>
                 <Info className="w-4 h-4 text-gray-400" />
@@ -557,7 +559,7 @@ export default function PerformancePage() {
                 </svg>
                 Sign in with Microsoft
               </button>
-            </div>
+            </div> */}
 
             {/* TOP APPS & URLS */}
             <div className="border border-gray-200 rounded-lg p-6">
@@ -648,11 +650,11 @@ export default function PerformancePage() {
           </div>
         </div>
 
-        {/* Right Sidebar */}
         <InsightsRightSidebar
           open={sidebarOpen}
           onOpenChange={setSidebarOpen}
-          members={DUMMY_MEMBERS}
+          members={demoMembers}
+          teams={demoTeams}
           selectedFilter={selectedFilter}
           onSelectedFilterChange={setSelectedFilter}
         />

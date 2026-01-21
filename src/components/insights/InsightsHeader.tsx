@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useMemo, useState } from "react"
-import { Menu } from "lucide-react"
+import { Menu, Search } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import type { DateRange, FilterTab, PickerItem, SelectedFilter } from "./types"
@@ -283,50 +283,60 @@ export function InsightsHeader({
         {/* Members/Teams filter */}
         <DropdownMenu open={filterDropdownOpen} onOpenChange={setFilterDropdownOpen}>
           <DropdownMenuTrigger asChild>
-            <button className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 min-w-[150px] text-left">
+            <button className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 min-w-[150px] text-left text-gray-800">
               {filterLabel}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-80 p-3">
             <div className="flex items-center gap-2 mb-3">
               <button
-                className={`px-3 py-1 rounded-full text-sm border ${filterTab === "members" ? "bg-zinc-100 border-zinc-900 text-zinc-900" : "bg-white border-gray-300"}`}
+                className={`px-3 py-1 rounded-full text-sm border ${filterTab === "members" ? "bg-gray-100 border-black text-black" : "bg-white border-gray-300 text-gray-700"}`}
                 onClick={() => { setFilterTab("members"); setFilterSearch("") }}
               >Members</button>
+
               <button
-                className={`px-3 py-1 rounded-full text-sm border ${filterTab === "teams" ? "bg-zinc-100 border-zinc-900 text-zinc-900" : "bg-white border-gray-300"}`}
+                className={`px-3 py-1 rounded-full text-sm border ${filterTab === "teams" ? "bg-gray-100 border-black text-black" : "bg-white border-gray-300 text-gray-700"}`}
                 onClick={() => { setFilterTab("teams"); setFilterSearch("") }}
               >Teams</button>
             </div>
 
             <div className="mb-3 relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 placeholder="Search items"
                 value={filterSearch}
                 onChange={(e) => setFilterSearch(e.target.value)}
-                className="pr-8"
+                className="pl-8 pr-8"
               />
               {filterSearch && (
                 <button
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600"
                   onClick={() => setFilterSearch("")}
                   aria-label="Clear"
                 >×</button>
               )}
             </div>
 
+            <div className="mb-2 pb-2 border-b border-gray-200">
+              <button
+                className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${tempFilter.all && tempFilter.type === filterTab ? "bg-gray-100 text-black" : "hover:bg-gray-50 text-gray-700"}`}
+                onClick={() => setTempFilter({ type: filterTab, all: true })}
+              >
+                <span className={`inline-block w-2 h-2 rounded-full border ${tempFilter.all && tempFilter.type === filterTab ? "bg-black border-black" : "border-gray-400"}`} />
+                All {filterTab === "members" ? "Members" : "Teams"}
+              </button>
+            </div>
+
             <div className="max-h-64 overflow-auto">
-
-
               {filtered.map(it => {
                 const isActive = !tempFilter.all && tempFilter.type === filterTab && tempFilter.id === it.id
                 return (
                   <button
                     key={it.id}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${isActive ? "bg-zinc-100 text-zinc-900" : "hover:bg-gray-50"}`}
+                    className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${isActive ? "bg-gray-100 text-black" : "hover:bg-gray-50 text-gray-700"}`}
                     onClick={() => setTempFilter({ type: filterTab, all: false, id: it.id })}
                   >
-                    <span className={`inline-block w-2 h-2 rounded-full border ${isActive ? "bg-zinc-900 border-zinc-900" : "border-gray-400"}`} />
+                    <span className={`inline-block w-2 h-2 rounded-full border ${isActive ? "bg-black border-black" : "border-gray-400"}`} />
                     {it.name}
                   </button>
                 )
@@ -335,7 +345,7 @@ export function InsightsHeader({
 
             {/* Apply/Cancel Buttons */}
             <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
-              <button className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 font-medium" onClick={applyFilter}>
+              <button className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 font-medium" onClick={applyFilter}>
                 Apply
               </button>
               <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50" onClick={cancelFilter}>
@@ -348,7 +358,7 @@ export function InsightsHeader({
         {/* Date range */}
         <DropdownMenu open={dateRangeOpen} onOpenChange={setDateRangeOpen}>
           <DropdownMenuTrigger asChild>
-            <button className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 flex items-center gap-2">
+            <button className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 flex items-center gap-2 text-gray-800">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                 <line x1="16" y1="2" x2="16" y2="6" />
@@ -362,35 +372,35 @@ export function InsightsHeader({
             <div className="flex">
               <div className="w-40 border-r border-gray-200 p-3 space-y-1">
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'today' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'today' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("today")}
                 >Today</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'yesterday' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'yesterday' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("yesterday")}
                 >Yesterday</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_week' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_week' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("this_week")}
                 >This week</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_7_days' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_7_days' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("last_7_days")}
                 >Last 7 days</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_week' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_week' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("last_week")}
                 >Last week</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_2_weeks' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_2_weeks' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("last_2_weeks")}
                 >Last 2 weeks</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_month' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_month' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("this_month")}
                 >This month</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_month' ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_month' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                   onClick={() => applyPreset("last_month")}
                 >Last month</button>
               </div>
@@ -399,7 +409,7 @@ export function InsightsHeader({
                 {timezone && (
                   <div className="flex justify-end mb-2">
                     <span className="text-xs text-gray-500">
-                      {timezone}{tzOffset ? ` (${tzOffset})` : ""} 🌐
+                      {timezone}{tzOffset ? ` (${tzOffset})` : ""}
                     </span>
                   </div>
                 )}
@@ -412,7 +422,7 @@ export function InsightsHeader({
                           <polyline points="15 18 9 12 15 6" />
                         </svg>
                       </button>
-                      <span className="font-semibold text-zinc-900">
+                      <span className="font-semibold text-gray-900">
                         {leftMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                       </span>
                       <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveLeftMonth(1)}>
@@ -423,13 +433,13 @@ export function InsightsHeader({
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-                      <div className="font-semibold p-1 text-zinc-900">Mo</div>
-                      <div className="font-semibold p-1 text-zinc-900">Tu</div>
-                      <div className="font-semibold p-1 text-zinc-900">We</div>
-                      <div className="font-semibold p-1 text-zinc-900">Th</div>
-                      <div className="font-semibold p-1 text-zinc-900">Fr</div>
-                      <div className="font-semibold p-1 text-zinc-900">Sa</div>
-                      <div className="font-semibold p-1 text-zinc-900">Su</div>
+                      <div className="font-semibold p-1 text-gray-900">Mo</div>
+                      <div className="font-semibold p-1 text-gray-900">Tu</div>
+                      <div className="font-semibold p-1 text-gray-900">We</div>
+                      <div className="font-semibold p-1 text-gray-900">Th</div>
+                      <div className="font-semibold p-1 text-gray-900">Fr</div>
+                      <div className="font-semibold p-1 text-gray-900">Sa</div>
+                      <div className="font-semibold p-1 text-gray-900">Su</div>
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center text-sm">
@@ -440,9 +450,9 @@ export function InsightsHeader({
                           <button
                             key={i}
                             onClick={() => handleDateClick(d.day, leftMonth, d.isCurrentMonth)}
-                            className={`p-2 rounded ${isEdge ? "bg-zinc-900 text-white hover:bg-zinc-800" :
-                              inRange ? "bg-zinc-100 hover:bg-zinc-200" :
-                                d.isCurrentMonth ? "hover:bg-gray-100" : "text-gray-400"}`}
+                            className={`p-2 rounded ${isEdge ? "bg-black text-white hover:bg-gray-800" :
+                              inRange ? "bg-gray-100 hover:bg-gray-200 text-black" :
+                                d.isCurrentMonth ? "text-gray-800 hover:bg-gray-100" : "text-gray-400"}`}
                           >
                             {d.day}
                           </button>
@@ -459,7 +469,7 @@ export function InsightsHeader({
                           <polyline points="15 18 9 12 15 6" />
                         </svg>
                       </button>
-                      <span className="font-semibold text-zinc-900">
+                      <span className="font-semibold text-gray-900">
                         {rightMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                       </span>
                       <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveRightMonth(1)}>
@@ -470,13 +480,13 @@ export function InsightsHeader({
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-                      <div className="font-semibold p-1 text-zinc-900">Mo</div>
-                      <div className="font-semibold p-1 text-zinc-900">Tu</div>
-                      <div className="font-semibold p-1 text-zinc-900">We</div>
-                      <div className="font-semibold p-1 text-zinc-900">Th</div>
-                      <div className="font-semibold p-1 text-zinc-900">Fr</div>
-                      <div className="font-semibold p-1 text-zinc-900">Sa</div>
-                      <div className="font-semibold p-1 text-zinc-900">Su</div>
+                      <div className="font-semibold p-1 text-gray-900">Mo</div>
+                      <div className="font-semibold p-1 text-gray-900">Tu</div>
+                      <div className="font-semibold p-1 text-gray-900">We</div>
+                      <div className="font-semibold p-1 text-gray-900">Th</div>
+                      <div className="font-semibold p-1 text-gray-900">Fr</div>
+                      <div className="font-semibold p-1 text-gray-900">Sa</div>
+                      <div className="font-semibold p-1 text-gray-900">Su</div>
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center text-sm">
@@ -487,8 +497,8 @@ export function InsightsHeader({
                           <button
                             key={i}
                             onClick={() => handleDateClick(d.day, rightMonth, d.isCurrentMonth)}
-                            className={`p-2 rounded ${isEdge ? "bg-zinc-900 text-white hover:bg-zinc-800" :
-                              inRange ? "bg-zinc-100 hover:bg-zinc-200" :
+                            className={`p-2 rounded ${isEdge ? "bg-black text-white hover:bg-gray-800" :
+                              inRange ? "bg-gray-100 hover:bg-gray-200" :
                                 d.isCurrentMonth ? "hover:bg-gray-100" : "text-gray-400"}`}
                           >
                             {d.day}
@@ -500,11 +510,11 @@ export function InsightsHeader({
                 </div>
 
                 {/* Footer tanggal terpilih + aksi */}
-                <div className="text-xs text-center text-gray-500 mt-2">
+                <div className="text-xs text-center text-gray-600 mt-2">
                   {fmt(tempStartDate)} - {fmt(tempEndDate)}
                 </div>
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
-                  <button className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 font-medium" onClick={applyDateRange}>
+                  <button className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 font-medium" onClick={applyDateRange}>
                     Apply
                   </button>
                   <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50" onClick={cancelDateRange}>
@@ -519,8 +529,8 @@ export function InsightsHeader({
         {/* Timezone label opsional */}
         {timezone && (
           <div className="flex justify-end mb-2">
-            <span className="text-xs text-gray-500">
-              {timezone}{tzOffset ? ` (${tzOffset})` : ""} 🌐
+            <span className="text-xs text-gray-600">
+              {timezone}{tzOffset ? ` (${tzOffset})` : ""}
             </span>
           </div>
         )}
