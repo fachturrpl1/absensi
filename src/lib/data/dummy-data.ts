@@ -1418,5 +1418,104 @@ export function getDashboardActivitiesByMember(memberId: string) {
     return DUMMY_DASHBOARD_ACTIVITIES.filter(a => a.memberId === memberId)
 }
 
+
+// ============================================================================
+// REPORTS - TIME & ACTIVITY
+// ============================================================================
+
+export interface ReportActivityEntry {
+    id: string
+    date: string
+    clientName: string
+    projectName: string
+    teamName: string
+    memberName: string
+    todoName: string
+    regularHours: number
+    totalHours: number
+    activityPercent: number
+    totalSpent: number
+    regularSpent: number
+    currency: string
+}
+
+export const DUMMY_REPORT_ACTIVITIES: ReportActivityEntry[] = [
+    {
+        id: 'ra1',
+        date: '2026-01-21',
+        clientName: 'Patricia',
+        projectName: 'Website Redesign',
+        teamName: 'Team Alpha',
+        memberName: 'Antonio Galih',
+        todoName: 'Homepage Layout',
+        regularHours: 4.5,
+        totalHours: 4.5,
+        activityPercent: 82,
+        totalSpent: 450000,
+        regularSpent: 450000,
+        currency: 'Rp'
+    },
+    {
+        id: 'ra2',
+        date: '2026-01-21',
+        clientName: 'Tech Corp',
+        projectName: 'Mobile App',
+        teamName: 'Team Beta',
+        memberName: 'Lave Lavael',
+        todoName: 'API Integration',
+        regularHours: 6.2,
+        totalHours: 6.2,
+        activityPercent: 91,
+        totalSpent: 620000,
+        regularSpent: 620000,
+        currency: 'Rp'
+    },
+    {
+        id: 'ra3',
+        date: '2026-01-21',
+        clientName: 'Creative Agency',
+        projectName: 'Marketing Camp',
+        teamName: 'Team Gamma',
+        memberName: 'Sarah Johnson',
+        todoName: 'Ad Creatives',
+        regularHours: 3.5,
+        totalHours: 3.5,
+        activityPercent: 75,
+        totalSpent: 350000,
+        regularSpent: 350000,
+        currency: 'Rp'
+    },
+    {
+        id: 'ra4',
+        date: '2026-01-20',
+        clientName: 'Patricia',
+        projectName: 'Website Redesign',
+        teamName: 'Team Alpha',
+        memberName: 'Michael Chen',
+        todoName: 'Database Setup',
+        regularHours: 5.0,
+        totalHours: 8.0, // 3 hours overtime perhaps implied
+        activityPercent: 88,
+        totalSpent: 800000,
+        regularSpent: 500000,
+        currency: 'Rp'
+    },
+    {
+        id: 'ra5',
+        date: '2026-01-20',
+        clientName: 'Startup Inc',
+        projectName: 'MVP Build',
+        teamName: 'Team Beta',
+        memberName: 'Emma Rodriguez',
+        todoName: 'User Auth',
+        regularHours: 7.0,
+        totalHours: 7.0,
+        activityPercent: 94,
+        totalSpent: 700000,
+        regularSpent: 700000,
+        currency: 'Rp'
+    }
+]
+
 // Type aliases for backwards compatibility
 export type { UnusualActivityEntry as UnusualActivity }
