@@ -37,7 +37,7 @@ export default function Every10MinPage() {
   return (
     <>
       {/* How Activity Works Section */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">
           <LineChart className="h-4 w-4" />
           How activity works
@@ -54,7 +54,7 @@ export default function Every10MinPage() {
             </div>
           </div>
         </div>
-        <div className="relative w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="relative w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mt-6">
           <div className="absolute top-0 z-10 -translate-y-1/2" style={{ right: '1.5rem' }}>
             <Button variant="outline" size="sm" className="rounded-full border border-slate-200 bg-white px-4 text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500 shadow-sm">
               Insights

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -319,18 +319,21 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
     return undefined;
   }, [autoRefresh, refreshInterval, fetchAttendanceRecords, activeOrgId]);
 
-  const totalPages = Math.ceil(records.length / pageSize);
-  const paginatedRecords = records.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  const paginatedRecords = useMemo(() => {
+    return records.slice(
+      (currentPage - 1) * pageSize,
+      currentPage * pageSize
+    );
+  }, [records, currentPage, pageSize]);
 
-  const stats = {
+  const totalPages = useMemo(() => Math.ceil(records.length / pageSize), [records.length, pageSize]);
+
+  const stats = useMemo(() => ({
     total: records.length,
     present: records.filter(r => r.status === 'present').length,
     late: records.filter(r => r.status === 'late').length,
     absent: records.filter(r => r.status === 'absent').length,
-  };
+  }), [records]);
 
   return (
     <Card className="border-border bg-card">

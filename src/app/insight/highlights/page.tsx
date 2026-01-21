@@ -1,7 +1,8 @@
 "use client"
 
-import { Info, Settings, Menu, ChevronRight } from "lucide-react"
+import { Info, Settings, Menu, ChevronRight, Bell } from "lucide-react"
 import { useState, useMemo } from "react"
+import Link from "next/link"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_UNUSUAL_ACTIVITIES, DUMMY_SMART_NOTIFICATIONS, DUMMY_BEHAVIOR_CHANGES } from "@/lib/data/dummy-insights"
@@ -14,8 +15,9 @@ export default function HighlightsPage() {
     const [filterTab, setFilterTab] = useState<"members" | "teams">("members")
     const [filterSearch, setFilterSearch] = useState("")
     const [selectedFilter, setSelectedFilter] = useState<{ type: "members" | "teams"; all: boolean; id?: string }>(
-        { type: "members", all: false, id: "1" }
+        { type: "members", all: false, id: "m1" }
     )
+    const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>(["m1"]) // Track selected member IDs
 
     // Date range state
     const [dateRangeOpen, setDateRangeOpen] = useState(false)
@@ -173,6 +175,10 @@ export default function HighlightsPage() {
     // Use dummy data from file
     const demoMembers = useMemo(() => DUMMY_MEMBERS, [])
     const demoTeams = useMemo(() => DUMMY_TEAMS, [])
+    
+    // Debug logging
+    console.log('Current selectedFilter:', selectedFilter)
+    console.log('Current selectedMemberIds:', selectedMemberIds)
 
     const filterLabel = useMemo(() => {
         if (selectedFilter.all) return selectedFilter.type === "members" ? "All Members" : "All Teams"
@@ -298,18 +304,59 @@ export default function HighlightsPage() {
                                         </div>
                                     </div>
                                     <div className="max-h-64 overflow-auto pt-2">
+                                        {/* All Members/Teams Toggle */}
+                                        <button
+                                            className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm mb-2 ${(selectedFilter.all && selectedFilter.type === filterTab) ? "bg-zinc-100 text-zinc-900" : "hover:bg-gray-50"}`}
+                                            onClick={() => {
+                                                setSelectedFilter({ type: filterTab, all: true })
+                                                if (filterTab === "members") {
+                                                    setSelectedMemberIds(demoMembers.map(m => m.id))
+                                                }
+                                            }}
+                                        >
+                                            <span className={`inline-block w-2 h-2 rounded-full border ${(selectedFilter.all && selectedFilter.type === filterTab) ? "bg-zinc-900 border-zinc-900" : "border-gray-400"}`} />
+                                            All {filterTab === "members" ? "Members" : "Teams"}
+                                        </button>
+                                        <div className="border-t border-gray-200 pt-2" />
                                         {(filterTab === "members" ? demoMembers : demoTeams)
                                             .filter(it => it.name.toLowerCase().includes(filterSearch.toLowerCase()))
-                                            .map(it => (
-                                                <button
-                                                    key={it.id}
-                                                    className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${(!selectedFilter.all && selectedFilter.type === filterTab && selectedFilter.id === it.id) ? "bg-zinc-100 text-zinc-900" : "hover:bg-gray-50"}`}
-                                                    onClick={() => setSelectedFilter({ type: filterTab, all: false, id: it.id })}
-                                                >
-                                                    <span className={`inline-block w-2 h-2 rounded-full border ${(!selectedFilter.all && selectedFilter.type === filterTab && selectedFilter.id === it.id) ? "bg-zinc-900 border-zinc-900" : "border-gray-400"}`} />
-                                                    {it.name}
-                                                </button>
-                                            ))}
+                                            .map(it => {
+                                                // Determine if this item is selected
+                                                let isSelected = false
+                                                if (filterTab === "members") {
+                                                    // For members: check if "All Members" is selected OR if this member ID is in selectedMemberIds
+                                                    isSelected = (selectedFilter.all && selectedFilter.type === "members") || selectedMemberIds.includes(it.id)
+                                                    console.log(`Member ${it.name} (${it.id}):`, {
+                                                        'selectedFilter.all': selectedFilter.all,
+                                                        'selectedFilter.type': selectedFilter.type,
+                                                        'selectedMemberIds': selectedMemberIds,
+                                                        'includes': selectedMemberIds.includes(it.id),
+                                                        'isSelected': isSelected
+                                                    })
+                                                } else {
+                                                    // For teams: check if this specific team is selected
+                                                    isSelected = !selectedFilter.all && selectedFilter.type === filterTab && selectedFilter.id === it.id
+                                                }
+                                                
+                                                return (
+                                                    <button
+                                                        key={it.id}
+                                                        className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${isSelected ? "bg-zinc-100 text-zinc-900" : "hover:bg-gray-50"}`}
+                                                        onClick={() => {
+                                                            console.log('Clicked member:', it.name, 'ID:', it.id)
+                                                            // When clicking individual member, deselect "All" and select only this one
+                                                            setSelectedFilter({ type: filterTab, all: false, id: it.id })
+                                                            if (filterTab === "members") {
+                                                                setSelectedMemberIds([it.id])
+                                                                console.log('Updated selectedMemberIds to:', [it.id])
+                                                            }
+                                                        }}
+                                                    >
+                                                        <span className={`inline-block w-2 h-2 rounded-full border ${isSelected ? "bg-zinc-900 border-zinc-900" : "border-gray-400"}`} />
+                                                        {it.name}
+                                                    </button>
+                                                )
+                                            })}
                                     </div>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -453,9 +500,12 @@ export default function HighlightsPage() {
 
                         {/* Right Actions */}
                         <div className="flex items-center gap-2">
-                            <button className="px-4 py-2 border border-zinc-200 text-zinc-700 rounded-md text-sm hover:bg-zinc-50">
-                                🔔 Smart notifications
-                            </button>
+                            <Link href="/insight/smart-notifications">
+                                <button className="px-4 py-2 border border-zinc-200 text-zinc-700 rounded-md text-sm hover:bg-zinc-50 flex items-center gap-2">
+                                    <Bell className="w-4 h-4" />
+                                    Smart notifications
+                                </button>
+                            </Link>
                             <button className="p-2 hover:bg-gray-100 rounded">
                                 <Settings className="w-5 h-5 text-gray-600" />
                             </button>

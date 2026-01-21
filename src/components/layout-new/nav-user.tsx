@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
+import { useAuthStore } from '@/store/user-store';
 
 function getInitials(name: string) {
   return name
@@ -37,8 +38,8 @@ interface UserProfile {
 }
 
 export const NavUser = memo(function NavUser() {
-  // const MemoizedNavUser = useMemo (() => <NavUser />, []);
   const { isMobile } = useSidebar();
+  const storeUser = useAuthStore((state) => state.user);
   const [user, setUser] = useState<UserProfile>({
     name: 'Loading...',
     email: '',
@@ -46,74 +47,60 @@ export const NavUser = memo(function NavUser() {
   });
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // Sync with store user (already fetched server-side)
   useEffect(() => {
+    if (storeUser) {
+      const displayName = storeUser.display_name || 
+        [storeUser.first_name, storeUser.middle_name, storeUser.last_name]
+          .filter(Boolean)
+          .join(' ') || 
+        'User';
+
+      setUser({
+        name: displayName,
+        email: storeUser.email || '',
+        avatar: storeUser.profile_photo_url || null,
+      });
+    }
+  }, [storeUser]);
+
+  // Setup real-time subscription for profile changes only
+  useEffect(() => {
+    if (!storeUser?.id) return;
+
     const supabase = createClient();
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+    
+    const channel = supabase
+      .channel('user-profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_profiles',
+          filter: `id=eq.${storeUser.id}`,
+        },
+        async (payload: any) => {
+          if (payload.new) {
+            const newProfile = payload.new as any;
 
-    const setupProfileAndSubscription = async () => {
-      // Fetch current user
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+            const { getUserDisplayName } = await import('@/utils/user-display-name');
+            const displayName = getUserDisplayName(newProfile);
 
-      if (!authUser) return;
-
-      // Fetch user profile
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('first_name, middle_name, last_name, display_name, email, profile_photo_url')
-        .eq('id', authUser.id)
-        .single();
-
-      if (profile) {
-        // Import utility for consistent display name logic
-        const { getUserDisplayName } = await import('@/utils/user-display-name');
-        const displayName = getUserDisplayName(profile);
-
-        setUser({
-          name: displayName,
-          email: profile.email || authUser.email || '',
-          avatar: profile.profile_photo_url,
-        });
-      }
-
-      // Setup real-time subscription for profile changes
-      channel = supabase
-        .channel('user-profile-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'user_profiles',
-            filter: `id=eq.${authUser.id}`,
-          },
-          async (payload: any) => {
-            if (payload.new) {
-              const newProfile = payload.new as any;
-
-              // Import utility for consistent display name logic
-              const { getUserDisplayName } = await import('@/utils/user-display-name');
-              const displayName = getUserDisplayName(newProfile);
-
-              setUser({
-                name: displayName,
-                email: newProfile.email || authUser.email || '',
-                avatar: newProfile.profile_photo_url,
-              });
-            }
+            setUser({
+              name: displayName,
+              email: newProfile.email || storeUser.email || '',
+              avatar: newProfile.profile_photo_url,
+            });
           }
-        )
-        .subscribe();
-    };
+        }
+      )
+      .subscribe();
 
-    setupProfileAndSubscription();
-
-    // Cleanup on unmount
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      supabase.removeChannel(channel);
     };
-  }, []);
+  }, [storeUser?.id, storeUser?.email]);
 
   const handleLogout = async () => {
     if (isLoggingOut) return;

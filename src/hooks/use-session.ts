@@ -1,27 +1,34 @@
-import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/utils/supabase/client'
+import { useAuthStore } from '@/store/user-store'
 import { User } from '@supabase/supabase-js'
 
 /**
  * Centralized session hook - single source of truth for current user
- * All other hooks should use this instead of calling auth.getUser() directly
+ * Uses auth store populated from server-side to avoid duplicate fetches
  */
 export function useSession() {
-  return useQuery({
-    queryKey: ['session', 'user'],
-    queryFn: async (): Promise<User | null> => {
-      const supabase = createClient()
-      const { data: { user }, error } = await supabase.auth.getUser()
-      
-      if (error) {
-        throw error
-      }
-      
-      return user
+  const storeUser = useAuthStore((state) => state.user)
+  
+  // Convert store user to Supabase User format
+  const user: User | null = storeUser ? {
+    id: storeUser.id,
+    email: storeUser.email || '',
+    app_metadata: {},
+    user_metadata: {
+      first_name: storeUser.first_name,
+      middle_name: storeUser.middle_name,
+      last_name: storeUser.last_name,
+      display_name: storeUser.display_name,
+      profile_photo_url: storeUser.profile_photo_url,
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
-    retry: false,
-    refetchOnWindowFocus: false,
-  })
+    aud: 'authenticated',
+    created_at: '',
+  } as User : null
+  
+  return {
+    data: user,
+    isLoading: false,
+    isSuccess: !!user,
+    isError: false,
+    error: null,
+  }
 }

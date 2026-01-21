@@ -1,6 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/utils/supabase/client'
-import { useSession } from './use-session'
+import { useAuthStore } from '@/store/user-store'
 
 interface UserProfile {
   first_name?: string
@@ -13,33 +11,25 @@ interface UserProfile {
 
 /**
  * Centralized user profile hook
- * Fetches user profile data from user_profiles table
+ * Uses auth store populated from server-side to avoid duplicate fetches
  */
 export function useUserProfile() {
-  const { data: user } = useSession()
+  const storeUser = useAuthStore((state) => state.user)
 
-  return useQuery({
-    queryKey: ['user-profile', user?.id],
-    queryFn: async (): Promise<UserProfile | null> => {
-      if (!user?.id) return null
+  const profile: UserProfile | null = storeUser ? {
+    first_name: storeUser.first_name,
+    middle_name: storeUser.middle_name,
+    last_name: storeUser.last_name,
+    display_name: storeUser.display_name,
+    profile_photo_url: storeUser.profile_photo_url,
+    employee_code: storeUser.employee_code,
+  } : null
 
-      const supabase = createClient()
-
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('first_name, middle_name, last_name, display_name, profile_photo_url, employee_code')
-        .eq('id', user.id)
-        .maybeSingle()
-
-      if (error) throw error
-
-      return data
-    },
-    enabled: !!user?.id,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
-    retry: 1,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-  })
+  return {
+    data: profile,
+    isLoading: false,
+    isSuccess: !!profile,
+    isError: false,
+    error: null,
+  }
 }
