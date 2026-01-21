@@ -85,7 +85,7 @@ export default function PerformancePage() {
         // Let's mimic Average Daily Hours
         targetHours: totalTarget / filtered.length,
         avgDailyTarget: avgTarget,
-        date: (filtered[0]?.date) || '2026-01-19', // representative
+        date: (filtered[0]?.date) || '2026-01-19', 
         memberId: 'aggregate'
       } as any // Cast to any to avoid type issues with dummy data structure
     }
