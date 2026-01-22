@@ -18,6 +18,19 @@ export interface Client {
     createdAt: string
 }
 
+// Members assigned per project (dummy)
+export const PROJECT_MEMBER_MAP: Record<string, string[]> = {
+  "proj-1": ["m1", "m2", "m3"],
+  "proj-2": ["m4", "m5"],
+  "proj-3": ["m1", "m5"],
+  "proj-4": ["m2"],
+  "proj-5": ["m3", "m4"],
+}
+
+export function getProjectMemberIds(projectId: string): string[] {
+  return PROJECT_MEMBER_MAP[projectId] ?? []
+}
+
 export const DUMMY_CLIENTS: Client[] = [
     {
         id: "client-1",
@@ -1389,24 +1402,17 @@ export const DUMMY_DASHBOARD_STATS: DashboardStats = {
 // "Me" view data (for current user - Antonio Galih / m1)
 export const DUMMY_MY_ACTIVITIES: DashboardActivity[] = DUMMY_DASHBOARD_ACTIVITIES.filter(a => a.memberId === 'm1')
 
-export const DUMMY_MY_STATS: DashboardStats = {
-    totalStaff: 1, // Not applicable for 'me' view but needed for type compatibility
-    present: 1,
-    late: 2,
-    permission: 0,
-    earnedWeek: 'Rp 3.450.000',
-    earnedToday: 'Rp 550.000',
-    workedWeek: '38h 25m',
+export const DUMMY_MY_STATS = {
+    status: 'Hadir',
     workedToday: '8h 40m',
+    workedWeek: '38h 25m',
+    attendanceRate: '95%',
+    lateCount: 2,
+    earnedToday: 'Rp 550.000',
+    earnedWeek: 'Rp 3.450.000',
     projectsWorked: 5,
     activityToday: 'Normal',
     activityWeek: '↑ 12%'
-}
-
-export const DUMMY_MY_PERFORMANCE = {
-    status: 'Hadir',
-    attendanceRate: '95%',
-    lateCount: 2
 }
 
 export function getDashboardActivitiesByDate(date: Date) {
@@ -1418,17 +1424,71 @@ export function getDashboardActivitiesByMember(memberId: string) {
     return DUMMY_DASHBOARD_ACTIVITIES.filter(a => a.memberId === memberId)
 }
 
+// Type aliases for backwards compatibility
+export type { UnusualActivityEntry as UnusualActivity }
 
 // ============================================================================
-// REPORTS - TIME & ACTIVITY
+// APP ACTIVITIES
+// ============================================================================
+
+export interface AppActivityEntry {
+    id: string
+    projectId: string
+    projectName: string
+    memberId: string
+    appName: string
+    timeSpent: number // in hours
+    sessions: number
+    date: string
+}
+
+export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
+    {
+        id: "aa1",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m1",
+        appName: "VS Code",
+        timeSpent: 4.5,
+        sessions: 12,
+        date: "2026-01-21"
+    },
+    {
+        id: "aa2",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m1",
+        appName: "Chrome",
+        timeSpent: 2.1,
+        sessions: 25,
+        date: "2026-01-21"
+    },
+    {
+        id: "aa3",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m2",
+        appName: "Android Studio",
+        timeSpent: 6.0,
+        sessions: 5,
+        date: "2026-01-21"
+    }
+]
+
+// ============================================================================
+// REPORT ACTIVITIES
 // ============================================================================
 
 export interface ReportActivityEntry {
     id: string
     date: string
+    clientId: string
     clientName: string
+    projectId: string
     projectName: string
+    teamId: string
     teamName: string
+    memberId: string
     memberName: string
     todoName: string
     regularHours: number
@@ -1436,86 +1496,60 @@ export interface ReportActivityEntry {
     activityPercent: number
     totalSpent: number
     regularSpent: number
-    currency: string
 }
 
 export const DUMMY_REPORT_ACTIVITIES: ReportActivityEntry[] = [
     {
-        id: 'ra1',
-        date: '2026-01-21',
-        clientName: 'Patricia',
-        projectName: 'Website Redesign',
-        teamName: 'Team Alpha',
-        memberName: 'Antonio Galih',
-        todoName: 'Homepage Layout',
-        regularHours: 4.5,
-        totalHours: 4.5,
-        activityPercent: 82,
-        totalSpent: 450000,
-        regularSpent: 450000,
-        currency: 'Rp'
+        id: "ra1",
+        date: "2026-01-20",
+        clientId: "client-1",
+        clientName: "Patricia",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        teamId: "t1",
+        teamName: "Team Alpha",
+        memberId: "m1",
+        memberName: "Antonio Galih",
+        todoName: "Homepage Layout",
+        regularHours: 8.0,
+        totalHours: 8.5,
+        activityPercent: 92,
+        totalSpent: 1500000,
+        regularSpent: 1400000
     },
     {
-        id: 'ra2',
-        date: '2026-01-21',
-        clientName: 'Tech Corp',
-        projectName: 'Mobile App',
-        teamName: 'Team Beta',
-        memberName: 'Lave Lavael',
-        todoName: 'API Integration',
-        regularHours: 6.2,
-        totalHours: 6.2,
-        activityPercent: 91,
-        totalSpent: 620000,
-        regularSpent: 620000,
-        currency: 'Rp'
-    },
-    {
-        id: 'ra3',
-        date: '2026-01-21',
-        clientName: 'Creative Agency',
-        projectName: 'Marketing Camp',
-        teamName: 'Team Gamma',
-        memberName: 'Sarah Johnson',
-        todoName: 'Ad Creatives',
-        regularHours: 3.5,
-        totalHours: 3.5,
-        activityPercent: 75,
-        totalSpent: 350000,
-        regularSpent: 350000,
-        currency: 'Rp'
-    },
-    {
-        id: 'ra4',
-        date: '2026-01-20',
-        clientName: 'Patricia',
-        projectName: 'Website Redesign',
-        teamName: 'Team Alpha',
-        memberName: 'Michael Chen',
-        todoName: 'Database Setup',
-        regularHours: 5.0,
-        totalHours: 8.0, // 3 hours overtime perhaps implied
+        id: "ra2",
+        date: "2026-01-21",
+        clientId: "client-2",
+        clientName: "Tech Corp",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        teamId: "t2",
+        teamName: "Team Beta",
+        memberId: "m4",
+        memberName: "Michael Chen",
+        todoName: "API Integration",
+        regularHours: 7.5,
+        totalHours: 7.5,
         activityPercent: 88,
-        totalSpent: 800000,
-        regularSpent: 500000,
-        currency: 'Rp'
-    },
-    {
-        id: 'ra5',
-        date: '2026-01-20',
-        clientName: 'Startup Inc',
-        projectName: 'MVP Build',
-        teamName: 'Team Beta',
-        memberName: 'Emma Rodriguez',
-        todoName: 'User Auth',
-        regularHours: 7.0,
-        totalHours: 7.0,
-        activityPercent: 94,
-        totalSpent: 700000,
-        regularSpent: 700000,
-        currency: 'Rp'
+        totalSpent: 1200000,
+        regularSpent: 1200000
     }
 ]
 
-// Type aliases for backwards compatibility
-export type { UnusualActivityEntry as UnusualActivity }
+// ============================================================================
+// PERFORMANCE DASHBOARD
+// ============================================================================
+
+export const DUMMY_MY_PERFORMANCE = {
+    status: "Present",
+    workedToday: "08:30",
+    workedWeek: "32:15",
+    attendanceRate: "95%",
+    lateCount: 1,
+    earnedToday: "Rp 450.000",
+    earnedWeek: "Rp 2.250.000",
+    projectsWorked: 3,
+    activityToday: "87%",
+    activityWeek: "85%"
+}

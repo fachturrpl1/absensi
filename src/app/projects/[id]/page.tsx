@@ -15,19 +15,29 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import AddProjectDialog from "@/components/projects/AddProjectDialog"
 import EditProjectDialog from "@/components/projects/EditProjectDialog"
 import type { Project, NewProjectForm } from "@/components/projects/types"
-import { DUMMY_PROJECTS } from "@/lib/data/dummy-data"
+import { DUMMY_PROJECTS, DUMMY_MEMBERS, PROJECT_MEMBER_MAP } from "@/lib/data/dummy-data"
 
 // Convert dummy projects to component format
-const INITIAL_DATA: Project[] = DUMMY_PROJECTS.map(p => ({
-  id: p.id,
-  name: p.name,
-  teams: [],
-  members: [],
-  todosLabel: p.todosLabel,
-  budgetLabel: p.budgetLabel,
-  memberLimitLabel: p.memberLimitLabel,
-  archived: p.archived,
-}))
+const INITIAL_DATA: Project[] = DUMMY_PROJECTS.map(p => {
+  const memberIds = PROJECT_MEMBER_MAP[p.id] ?? []
+  const members: Project["members"] = memberIds
+    .map(mid => {
+      const m = DUMMY_MEMBERS.find(x => x.id === mid)
+      return m ? { id: m.id, name: m.name, avatarUrl: m.avatar ?? null } : null
+    })
+    .filter((x): x is NonNullable<typeof x> => Boolean(x))
+
+  return {
+    id: p.id,
+    name: p.name,
+    teams: [], // isi jika diperlukan
+    members,
+    todosLabel: p.todosLabel,
+    budgetLabel: p.budgetLabel,
+    memberLimitLabel: p.memberLimitLabel,
+    archived: p.archived,
+  }
+})
 
 function initialsFromName(name: string): string {
   const parts = (name || "").trim().split(/\s+/).filter(Boolean)
@@ -182,7 +192,7 @@ export default function Page() {
                   <th className="p-3 text-left text-xs font-medium">Name</th>
                   <th className="p-3 text-left text-xs font-medium">Teams</th>
                   <th className="p-3 text-left text-xs font-medium">Members</th>
-                  <th className="p-3 text-left text-xs font-medium">To-dos</th>
+                  <th className="p-3 text-left text-xs font-medium">Tasks</th>
                   <th className="p-3 text-left text-xs font-medium">Budget</th>
                   <th className="p-3 text-left text-xs font-medium">Member limits</th>
                   <th className="p-3 text-left text-xs font-medium">Actions</th>
@@ -213,9 +223,9 @@ export default function Page() {
                             <AvatarFallback>{initialsFromName(p.name)}</AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
-                            <Link href={`/projects/${p.id}`} className="font-medium text-sm hover:underline block truncate">
-                              {p.name}
-                            </Link>
+                          <Link href={`/projects/${p.id}/member`} className="font-medium text-sm hover:underline block truncate">
+                            {p.name}
+                          </Link>
                           </div>
                         </div>
                       </td>

@@ -214,7 +214,7 @@ export default function DashboardPage() {
                         <CardContent className="p-6 flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground mb-1">Total Pegawai</p>
-                                <h3 className="text-2xl font-bold">{stats.totalStaff}</h3>
+                                <h3 className="text-2xl font-bold">{totalStaff}</h3>
                             </div>
                             <div className="p-3 rounded-full text-blue-600 bg-blue-100">
                                 <Users className="w-6 h-6" />
@@ -230,7 +230,7 @@ export default function DashboardPage() {
                                     {view === 'me' ? 'Status Saya' : 'Hadir'}
                                 </p>
                                 <h3 className="text-2xl font-bold">
-                                    {view === 'me' ? DUMMY_MY_PERFORMANCE.status : stats.present}
+                                    {view === 'me' ? DUMMY_MY_PERFORMANCE.status : DUMMY_DASHBOARD_STATS.present}
                                 </h3>
                             </div>
                             <div className="p-3 rounded-full text-green-600 bg-green-100">
@@ -244,7 +244,7 @@ export default function DashboardPage() {
                         <CardContent className="p-6 flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground mb-1">Terlambat</p>
-                                <h3 className="text-2xl font-bold">{stats.late}</h3>
+                                <h3 className="text-2xl font-bold">{DUMMY_DASHBOARD_STATS.late}</h3>
                             </div>
                             <div className="p-3 rounded-full text-orange-600 bg-orange-100">
                                 <Clock className="w-6 h-6" />
@@ -257,7 +257,7 @@ export default function DashboardPage() {
                         <CardContent className="p-6 flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground mb-1">Izin / Sakit</p>
-                                <h3 className="text-2xl font-bold">{stats.permission}</h3>
+                                <h3 className="text-2xl font-bold">{DUMMY_DASHBOARD_STATS.permission}</h3>
                             </div>
                             <div className="p-3 rounded-full text-purple-600 bg-purple-100">
                                 <FileText className="w-6 h-6" />
