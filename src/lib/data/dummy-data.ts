@@ -197,6 +197,84 @@ export const DUMMY_PROJECTS: Project[] = [
 ]
 
 // ============================================================================
+// TASKS
+// ============================================================================
+
+export interface TaskItem {
+    id: string
+    title: string
+    assignee: string
+    type: string
+    created: string
+    project: string
+    status: "task" | "todo" | "in_progress"
+    completed: boolean
+}
+
+export const DUMMY_TASKS: TaskItem[] = [
+    {
+        id: "task-1",
+        title: "Design Homepage Concept",
+        assignee: "Antonio Galih",
+        type: "Task",
+        created: "Mon, Jan 19, 2026 9:16 am",
+        project: "Website Redesign",
+        status: "task",
+        completed: false
+    },
+    {
+        id: "task-2",
+        title: "User Research Summary",
+        assignee: "Sarah Johnson",
+        type: "Task",
+        created: "Mon, Jan 19, 2026 10:30 am",
+        project: "Marketing Campaign",
+        status: "task",
+        completed: true
+    },
+    {
+        id: "task-3",
+        title: "Prototype Mobile Flow",
+        assignee: "Lave Lavael",
+        type: "Task",
+        created: "Mon, Jan 19, 2026 1:15 pm",
+        project: "Mobile App Development",
+        status: "in_progress",
+        completed: false
+    },
+    {
+        id: "task-4",
+        title: "Setup Analytics",
+        assignee: "Michael Chen",
+        type: "Task",
+        created: "Tue, Jan 20, 2026 9:05 am",
+        project: "Mobile App Development",
+        status: "task",
+        completed: false
+    },
+    {
+        id: "task-5",
+        title: "Review Sprint Backlog",
+        assignee: "Emma Rodriguez",
+        type: "Task",
+        created: "Tue, Jan 20, 2026 11:45 am",
+        project: "Marketing Campaign",
+        status: "todo",
+        completed: true
+    },
+    {
+        id: "task-6",
+        title: "QA Regression Testing",
+        assignee: "Antonio Galih",
+        type: "Task",
+        created: "Wed, Jan 21, 2026 8:30 am",
+        project: "Website Redesign",
+        status: "task",
+        completed: false
+    }
+]
+
+// ============================================================================
 // INSIGHTS - MEMBERS & TEAMS
 // ============================================================================
 

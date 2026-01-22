@@ -128,7 +128,7 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
   }, [showCalendarPicker])
 
   return (
-    <div className="flex min-h-screen flex-col gap-6 bg-slate-50 px-6 py-8 text-slate-800">
+    <div className="flex min-h-screen flex-col gap-6 bg-white px-6 py-8 text-slate-800">
       {/* Header */}
       <div className="relative flex w-full items-center justify-between gap-4">
         <div className="flex-1 min-w-[220px]">
@@ -143,24 +143,24 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
         {/* Tab Navigation */}
         <div className="absolute left-1/2 flex -translate-x-1/2 transform">
           <div
-            className="flex min-w-[250px] justify-center gap-0 rounded-full px-1 py-1 shadow-sm"
+            className="flex min-w-[250px] justify-center gap-1 rounded-full px-1 py-1 shadow-sm"
             style={{ backgroundColor: "#A9A9A9" }}
           >
             <button
               onClick={() => router.push("/activity/screenshots/10min")}
-              className={`rounded-full px-5 py-1.5 text-sm font-normal transition-all ${isEvery10Min
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "bg-slate-300/80 text-slate-600 hover:text-slate-900"
-                }`}
+              className={`rounded-full px-5 py-1.5 text-sm font-normal transition-all focus-visible:outline-none focus-visible:ring-0 ${isEvery10Min
+                ? "bg-white text-slate-900 shadow-sm"
+                : "bg-transparent text-slate-900 hover:bg-white/40"
+              }`}
             >
               Every 10 min
             </button>
             <button
               onClick={() => router.push("/activity/screenshots/all")}
-              className={`rounded-full px-5 py-1.5 text-sm font-normal transition-all ${isAllScreenshots
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "bg-slate-300/80 text-slate-600 hover:text-slate-900"
-                }`}
+              className={`rounded-full px-5 py-1.5 text-sm font-normal transition-all focus-visible:outline-none focus-visible:ring-0 ${isAllScreenshots
+                ? "bg-white text-slate-900 shadow-sm"
+                : "bg-transparent text-slate-900 hover:bg-white/40"
+              }`}
             >
               All screenshots
             </button>

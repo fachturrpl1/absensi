@@ -48,15 +48,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
+import { PaginationFooter } from "@/components/pagination-footer"
 
 import type { IShiftAssignment } from "@/interface"
 import {
@@ -168,25 +160,6 @@ const colorFromString = (input?: string) => {
 
 const isHexColor = (v?: string) => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v)
 
-const getPaginationItems = (totalPages: number, currentPage: number) => {
-  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
-
-  const items: Array<number | "ellipsis"> = []
-  const clamped = Math.min(Math.max(1, currentPage), totalPages)
-
-  items.push(1)
-
-  const start = Math.max(2, clamped - 1)
-  const end = Math.min(totalPages - 1, clamped + 1)
-
-  if (start > 2) items.push("ellipsis")
-  for (let p = start; p <= end; p++) items.push(p)
-  if (end < totalPages - 1) items.push("ellipsis")
-
-  items.push(totalPages)
-  return items
-}
-
 export default function ShiftAssignmentClient({
   organizationId,
   initialAssignments,
@@ -221,7 +194,7 @@ export default function ShiftAssignmentClient({
 
   const shiftsById = React.useMemo(() => {
     const m = new Map<string, ShiftOption>()
-    for (const s of shifts) m.set(s.id, s)
+    for (const s of shifts) m.set(String(s.id), s)
     return m
   }, [shifts])
 
@@ -472,10 +445,6 @@ export default function ShiftAssignmentClient({
 
   const membersTotalPages = Math.max(1, Math.ceil((membersTotal >= 0 ? membersTotal : 0) / (membersPageSize || 1)))
   const currentMembersPage = membersPageIndex + 1
-  const membersPaginationItems = getPaginationItems(membersTotalPages, currentMembersPage)
-
-  const canPrevMembersPage = currentMembersPage > 1
-  const canNextMembersPage = currentMembersPage < membersTotalPages
 
   return (
     <div className="w-full h-full">
@@ -694,12 +663,20 @@ export default function ShiftAssignmentClient({
                                 >
                                   <FormControl>
                                     <SelectTrigger>
-                                      <SelectValue placeholder="Select shift" />
+                                      {field.value ? (
+                                        (() => {
+                                          const selectedShift = shiftsById.get(String(field.value)) || shifts.find((x) => String(x.id) === String(field.value))
+                                          if (!selectedShift) return <SelectValue placeholder="Select shift" />
+                                          return <span className="truncate">{toShiftLabel(selectedShift)}</span>
+                                        })()
+                                      ) : (
+                                        <SelectValue placeholder="Select shift" />
+                                      )}
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
                                     {shifts.map((s) => (
-                                      <SelectItem key={s.id} value={s.id}>
+                                      <SelectItem key={String(s.id)} value={String(s.id)}>
                                         {toShiftLabel(s)}
                                       </SelectItem>
                                     ))}
@@ -1050,90 +1027,28 @@ export default function ShiftAssignmentClient({
                     : `Showing ${membersData.length} member(s)`}
                 </span>
               </div>
-
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <Select
-                  value={String(membersPageSize)}
-                  onValueChange={(v) => {
-                    const next = Math.max(1, Number(v) || 10)
-                    setMembersPageSize(next)
-                  }}
-                  disabled={membersLoading}
-                >
-                  <SelectTrigger className="w-[110px]">
-                    <SelectValue placeholder="Page size" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[10, 20, 50, 100].map((n) => (
-                      <SelectItem key={n} value={String(n)}>
-                        {n} / page
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Pagination className="justify-end">
-                  <PaginationContent className="flex-wrap justify-end">
-                    <PaginationItem>
-                      <PaginationPrevious
-                        href="#"
-                        size="default"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          if (membersLoading) return
-                          if (!canPrevMembersPage) return
-                          setMembersPageIndex((p) => Math.max(0, p - 1))
-                        }}
-                        className={!canPrevMembersPage || membersLoading ? "pointer-events-none opacity-50" : ""}
-                      />
-                    </PaginationItem>
-
-                    {membersPaginationItems.map((it, idx) => {
-                      if (it === "ellipsis") {
-                        return (
-                          <PaginationItem key={`ellipsis-${idx}`}>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                        )
-                      }
-
-                      const pageNum = it
-                      const active = pageNum === currentMembersPage
-                      return (
-                        <PaginationItem key={pageNum}>
-                          <PaginationLink
-                            href="#"
-                            isActive={active}
-                            onClick={(e) => {
-                              e.preventDefault()
-                              if (membersLoading) return
-                              if (active) return
-                              setMembersPageIndex(pageNum - 1)
-                            }}
-                          >
-                            {pageNum}
-                          </PaginationLink>
-                        </PaginationItem>
-                      )
-                    })}
-
-                    <PaginationItem>
-                      <PaginationNext
-                        href="#"
-                        size="default"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          if (membersLoading) return
-                          if (!canNextMembersPage) return
-                          setMembersPageIndex((p) => p + 1)
-                        }}
-                        className={!canNextMembersPage || membersLoading ? "pointer-events-none opacity-50" : ""}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
             </div>
+
+            <PaginationFooter
+              page={currentMembersPage}
+              totalPages={membersTotalPages}
+              onPageChange={(p) => {
+                if (membersLoading) return
+                const clamped = Math.max(1, Math.min(p, membersTotalPages))
+                setMembersPageIndex(clamped - 1)
+              }}
+              isLoading={membersLoading}
+              from={membersTotal > 0 ? membersPageIndex * membersPageSize + (membersData.length === 0 ? 0 : 1) : 0}
+              to={membersTotal > 0 ? Math.min((membersPageIndex + 1) * membersPageSize, membersTotal) : 0}
+              total={Math.max(0, membersTotal)}
+              pageSize={membersPageSize}
+              onPageSizeChange={(size) => {
+                if (membersLoading) return
+                setMembersPageSize(size)
+                setMembersPageIndex(0)
+              }}
+              pageSizeOptions={[10, 20, 50, 100]}
+            />
           </div>
         </CardContent>
       </Card>
