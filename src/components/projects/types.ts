@@ -7,9 +7,9 @@ export type Member = {
 export type Project = {
   id: string
   name: string
+  clientName?: string | null
   teams: string[]
   members: Member[]
-  todosLabel: string
   budgetLabel: string
   memberLimitLabel: string
   archived: boolean
@@ -27,9 +27,9 @@ export type NewProjectForm = {
 
 export interface DuplicateProjectOptions {
   name: string
-  keepTodos: boolean
-  keepTodosAssignees: boolean
-  keepTodosCompleted: boolean
+  keepTasks: boolean
+  keepTasksAssignees: boolean
+  keepTasksCompleted: boolean
   keepAllMembers: boolean
   keepBudget: boolean
   keepMemberLimits: boolean

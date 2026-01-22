@@ -4,8 +4,8 @@ interface UserProfile {
   first_name?: string
   middle_name?: string
   last_name?: string
-  display_name?: string
-  profile_photo_url?: string
+  display_name?: string | null
+  profile_photo_url?: string | null
   employee_code?: string
 }
 

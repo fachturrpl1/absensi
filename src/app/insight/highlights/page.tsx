@@ -1,7 +1,8 @@
 "use client"
 
-import { ChevronRight, Info } from "lucide-react"
-import { useMemo, useState } from "react"
+import { Info, ChevronRight } from "lucide-react"
+import { useMemo, useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { DUMMY_BEHAVIOR_CHANGES, DUMMY_MEMBERS, DUMMY_SMART_NOTIFICATIONS, DUMMY_TEAMS, DUMMY_UNUSUAL_ACTIVITIES } from "@/lib/data/dummy-data"
 import { useTimezone } from "@/components/timezone-provider"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
@@ -10,12 +11,67 @@ import type { DateRange, SelectedFilter } from "@/components/insights/types"
 
 export default function HighlightsPage() {
   const timezone = useTimezone()
+  const searchParams = useSearchParams()
+  const memberIdFromUrl = searchParams.get("memberId")
+  
+  // Get initial memberId: URL > sessionStorage > default
+  const getInitialMemberId = (): string => {
+    // Try to read from window.location.search first (more reliable on initial render)
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search)
+      const memberIdFromLocation = urlParams.get("memberId")
+      if (memberIdFromLocation) {
+        console.log("Initial state: Using memberId from window.location:", memberIdFromLocation)
+        return memberIdFromLocation
+      }
+    }
+    // Fallback to useSearchParams
+    if (memberIdFromUrl) {
+      console.log("Initial state: Using memberId from useSearchParams:", memberIdFromUrl)
+      return memberIdFromUrl
+    }
+    // Fallback to sessionStorage
+    if (typeof window !== "undefined") {
+      const savedMemberId = sessionStorage.getItem("screenshotSelectedMemberId")
+      if (savedMemberId) {
+        console.log("Initial state: Using memberId from sessionStorage:", savedMemberId)
+        return savedMemberId
+      }
+    }
+    console.log("Initial state: Using default memberId: m1")
+    return "m1"
+  }
+  
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({
     type: "members",
     all: false,
-    id: "m1",
+    id: getInitialMemberId(),
   })
+  
+  // Update filter when memberId from URL changes
+  useEffect(() => {
+    console.log("useEffect triggered - memberIdFromUrl:", memberIdFromUrl)
+    // Priority: URL > sessionStorage > keep current
+    if (memberIdFromUrl && memberIdFromUrl !== selectedFilter.id) {
+      console.log("Setting filter from URL memberId:", memberIdFromUrl)
+      setSelectedFilter({
+        type: "members",
+        all: false,
+        id: memberIdFromUrl,
+      })
+    } else if (!memberIdFromUrl && typeof window !== "undefined") {
+      const savedMemberId = sessionStorage.getItem("screenshotSelectedMemberId")
+      if (savedMemberId && savedMemberId !== selectedFilter.id) {
+        console.log("Setting filter from sessionStorage memberId:", savedMemberId)
+        setSelectedFilter({
+          type: "members",
+          all: false,
+          id: savedMemberId,
+        })
+      }
+    }
+  }, [memberIdFromUrl, selectedFilter.id])
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const end = new Date()
     const start = new Date()

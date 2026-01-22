@@ -7,25 +7,56 @@ import {
   ArrowLeft,
   ArrowRight,
   Calendar,
-  Clock,
   Search,
-  Settings,
+  // Settings,
   User,
 } from "lucide-react"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
 import { DownloadDialog } from "@/components/activity/DownloadDialog"
+import { SelectedMemberProvider } from "./selected-member-context"
 
 export default function ScreenshotsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const memberIdFromUrl = searchParams.get("memberId")
+  
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false)
   const [showCalendarPicker, setShowCalendarPicker] = useState(false)
   const [memberSearch, setMemberSearch] = useState("")
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(() => DUMMY_MEMBERS[0]?.id ?? null)
-  const [pendingMemberId, setPendingMemberId] = useState<string | null>(() => DUMMY_MEMBERS[0]?.id ?? null)
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(() => {
+    // Prioritize memberId from URL, then sessionStorage, fallback to first member
+    if (typeof window !== "undefined") {
+      const savedMemberId = sessionStorage.getItem("screenshotSelectedMemberId")
+      return memberIdFromUrl || savedMemberId || (DUMMY_MEMBERS[0]?.id ?? null)
+    }
+    return memberIdFromUrl || (DUMMY_MEMBERS[0]?.id ?? null)
+  })
+  const [pendingMemberId, setPendingMemberId] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      const savedMemberId = sessionStorage.getItem("screenshotSelectedMemberId")
+      return memberIdFromUrl || savedMemberId || (DUMMY_MEMBERS[0]?.id ?? null)
+    }
+    return memberIdFromUrl || (DUMMY_MEMBERS[0]?.id ?? null)
+  })
+  
+  // Update selectedMemberId when URL changes (e.g., coming back from highlight page)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedMemberId = sessionStorage.getItem("screenshotSelectedMemberId")
+      const memberToUse = memberIdFromUrl || savedMemberId
+      if (memberToUse && memberToUse !== selectedMemberId) {
+        setSelectedMemberId(memberToUse)
+        setPendingMemberId(memberToUse)
+      }
+    } else if (memberIdFromUrl && memberIdFromUrl !== selectedMemberId) {
+      setSelectedMemberId(memberIdFromUrl)
+      setPendingMemberId(memberIdFromUrl)
+    }
+  }, [memberIdFromUrl, selectedMemberId])
 
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date()
@@ -76,7 +107,8 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
   const selectedMember = useMemo(
     () =>
       DUMMY_MEMBERS.find((member) => member.id === selectedMemberId) ??
-      DUMMY_MEMBERS[0],
+      DUMMY_MEMBERS[0] ??
+      null,
     [selectedMemberId]
   )
 
@@ -90,6 +122,14 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
   const applyMemberSelection = () => {
     if (pendingMemberId) {
       setSelectedMemberId(pendingMemberId)
+      // Save to sessionStorage for persistence
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("screenshotSelectedMemberId", pendingMemberId)
+      }
+      // Update URL with memberId
+      const params = new URLSearchParams(searchParams.toString())
+      params.set("memberId", pendingMemberId)
+      router.push(`${pathname}?${params.toString()}`)
     }
     setIsUserMenuOpen(false)
   }
@@ -165,22 +205,19 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
   }, [showCalendarPicker])
 
   return (
-    <div className="flex min-h-screen flex-col gap-6 bg-white px-6 py-8 text-slate-800">
+    <SelectedMemberProvider value={{ selectedMemberId, selectedMember, selectedDate }}>
+      <div className="flex min-h-screen flex-col gap-6 bg-white px-6 py-8 text-slate-800">
       <DownloadDialog
         isOpen={isDownloadDialogOpen}
         onClose={() => setIsDownloadDialogOpen(false)}
       />
 
       {/* Header */}
-      {/*<div className="relative flex w-full items-center justify-between gap-4">
+      <div className="relative flex w-full items-center justify-between gap-4">
+        {/* Screenshot Title */}
         <div className="flex-1 min-w-[220px]">
-          <h1 className="text-4xl font-semibold tracking-tight">Screenshots</h1>
-          <p className="mt-1 flex items-center gap-2 text-base text-slate-600">
-            <Clock className="h-4 w-4 text-slate-500" />
-            Your team has not tracked any time.{" "}
-            <span className="text-blue-600 underline underline-offset-2">Get Started</span>
-          </p>
-        </div>*/}
+          <h1 className="text-4xl font-semibold tracking-tight text-slate-900">Screenshot</h1>
+        </div>
 
         {/* Tab Navigation */}
         <div className="absolute left-1/2 flex -translate-x-1/2 transform">
@@ -210,12 +247,14 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
         </div>
 
         {/* Settings Button */}
-        <div className="flex min-w-[160px] justify-end">
+        {/* <div className="flex min-w-[160px] justify-end">
           <Button variant="outline" className="flex items-center gap-2 rounded-full border border-slate-200 px-4 text-sm font-medium text-slate-700">
             <Settings className="h-4 w-4 text-slate-700" />
             Settings
           </Button>
-        </div>
+        </div> */}
+      </div>
+
       {/* Date & User Controls */}
       <div className="flex w-full items-center justify-between gap-4">
         <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1 text-sm font-medium text-slate-700">
@@ -326,14 +365,6 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
                 ref={userMenuRef}
                 className="absolute right-0 z-10 mt-3 min-w-[300px] rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_15px_35px_rgba(15,23,42,0.15)]"
               >
-                <div className="flex gap-2">
-                  <button className="flex-1 rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600">
-                    Tracked time
-                  </button>
-                  <button className="flex-1 rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600">
-                    No time tracked
-                  </button>
-                </div>
                 <div className="mt-3 flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
                   <Search className="h-4 w-4" />
                   <input
@@ -353,7 +384,7 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
                     </button>
                   )}
                 </div>
-          <div className="mt-4 space-y-2 rounded-2xl bg-slate-100 px-3 py-3">
+          <div className="mt-4 space-y-2 rounded-2xl bg-white px-3 py-3">
             {filteredMembers.length === 0 ? (
               <div className="text-center text-xs text-slate-500">No members match the search</div>
             ) : (
@@ -364,22 +395,20 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
                     key={member.id}
                     className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left text-sm font-semibold transition ${
                       isActive
-                        ? "border-blue-500 bg-blue-50 text-slate-900"
-                        : "border-transparent bg-white text-slate-700 hover:border-slate-200 hover:bg-white/80"
+                        ? "border-slate-300 bg-white text-slate-900 shadow-sm"
+                        : "border-transparent bg-white text-slate-700 hover:border-slate-200 hover:bg-white"
                     }`}
                     type="button"
                     onClick={() => setPendingMemberId(member.id)}
                     aria-pressed={isActive}
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600">
                       <User className="h-4 w-4" />
                     </div>
                     <div className="flex-1">
                       <div>{member.name}</div>
                     </div>
-                    <div className={`text-xs ${isActive ? "text-blue-600" : "text-blue-500"}`}>
-                      {member.activityScore ?? "—"}%
-                    </div>
+                    {/* percentage intentionally hidden per request */}
                   </button>
                 )
               })
@@ -387,8 +416,10 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
           </div>
           <div className="mt-3 flex gap-2">
             <button
-              className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold text-white transition ${
-                canApplyMemberSelection ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-300 cursor-not-allowed"
+              className={`flex-1 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold transition ${
+                canApplyMemberSelection
+                  ? "bg-white text-slate-700 hover:bg-slate-50"
+                  : "bg-slate-100 text-slate-400 cursor-not-allowed"
               }`}
               type="button"
               onClick={applyMemberSelection}
@@ -486,5 +517,6 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
         </>
       )}
     </div>
+    </SelectedMemberProvider>
   )
 }

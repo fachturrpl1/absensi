@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { loadGeoCountry } from "@/lib/geo/loader";
 
 export async function GET(
-  _request: Request,
+  _req: Request,
   { params }: { params: Promise<{ country: string }> },
 ) {
   const { country } = await params;

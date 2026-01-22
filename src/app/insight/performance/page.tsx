@@ -352,11 +352,11 @@ export default function PerformancePage() {
               </div>
               {/* Progress Bar */}
               <div className="mt-6">
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <div className="flex justify-between text-xs mb-1">
                   <span>0h</span>
                   <span>200%</span>
                 </div>
-                <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-1 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-blue-500 rounded-full"
                     style={{ width: `${Math.min(utilizationPercentage, 100)}%` }}
@@ -441,7 +441,7 @@ export default function PerformancePage() {
             <div className="border border-gray-200 rounded-lg p-6">
               <div className="flex items-center gap-2 mb-4">
                 <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">ACTIVITY</h3>
-                <Info className="w-4 h-4 text-gray-400" />
+                <Info className="w-4 h-4 text-gray-100" />
               </div>
               <div className="h-48 flex items-end justify-between gap-1">
                 {filteredActivity.length > 0 ? filteredActivity.slice(0, 10).map((activity, idx) => {
@@ -454,7 +454,7 @@ export default function PerformancePage() {
                           style={{ height: `${activePercent}%`, minHeight: '4px' }}
                         ></div>
                       </div>
-                      <span className="text-xs text-gray-500 text-center" style={{ fontSize: '10px' }}>
+                      <span className="text-xs text-gray-100 text-center" style={{ fontSize: '10px' }}>
                         {activity.hour.replace(':00', '')}
                       </span>
                     </div>
@@ -599,7 +599,7 @@ export default function PerformancePage() {
                 {filteredLeaderboard.length > 0 ? filteredLeaderboard.map((person, idx) => (
                   <div key={idx} className="flex items-center gap-3">
                     <div className="w-6 text-sm font-semibold text-gray-500">#{person.rank}</div>
-                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 text-sm font-semibold">
                       {person.avatar}
                     </div>
                     <div className="flex-1">

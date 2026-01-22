@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Search, Pencil, Plus } from "lucide-react"
 import {
@@ -15,19 +15,29 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import AddProjectDialog from "@/components/projects/AddProjectDialog"
 import EditProjectDialog from "@/components/projects/EditProjectDialog"
 import type { Project, NewProjectForm } from "@/components/projects/types"
-import { DUMMY_PROJECTS } from "@/lib/data/dummy-data"
+import { DUMMY_PROJECTS, DUMMY_MEMBERS, PROJECT_MEMBER_MAP, getTaskCountFromTasksPageByProjectId, getTeamNamesByProjectId } from "@/lib/data/dummy-data"
 
 // Convert dummy projects to component format
-const INITIAL_DATA: Project[] = DUMMY_PROJECTS.map(p => ({
+const INITIAL_DATA: Project[] = DUMMY_PROJECTS.map(p => {
+  const memberIds = PROJECT_MEMBER_MAP[p.id] ?? []
+  const members: Project["members"] = memberIds
+    .map(mid => {
+      const m = DUMMY_MEMBERS.find(x => x.id === mid)
+      return m ? { id: m.id, name: m.name, avatarUrl: m.avatar ?? null } : null
+    })
+    .filter((x): x is NonNullable<typeof x> => Boolean(x))
+
+return {
   id: p.id,
   name: p.name,
-  teams: [],
-  members: [],
-  todosLabel: p.todosLabel,
+  clientName: p.clientName ?? null,
+  teams: getTeamNamesByProjectId(p.id),
+  members,
   budgetLabel: p.budgetLabel,
   memberLimitLabel: p.memberLimitLabel,
   archived: p.archived,
-}))
+}
+})
 
 function initialsFromName(name: string): string {
   const parts = (name || "").trim().split(/\s+/).filter(Boolean)
@@ -180,11 +190,11 @@ export default function Page() {
                     />
                   </th>
                   <th className="p-3 text-left text-xs font-medium">Name</th>
+                  <th className="p-3 text-left text-xs font-medium">Client</th>
                   <th className="p-3 text-left text-xs font-medium">Teams</th>
                   <th className="p-3 text-left text-xs font-medium">Members</th>
-                  <th className="p-3 text-left text-xs font-medium">To-dos</th>
+                  <th className="p-3 text-left text-xs font-medium">Tasks</th>
                   <th className="p-3 text-left text-xs font-medium">Budget</th>
-                  <th className="p-3 text-left text-xs font-medium">Member limits</th>
                   <th className="p-3 text-left text-xs font-medium">Actions</th>
                 </tr>
               </thead>
@@ -209,15 +219,17 @@ export default function Page() {
                       <td className="p-3">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={undefined} />
-                            <AvatarFallback>{initialsFromName(p.name)}</AvatarFallback>
+                            <AvatarFallback className="bg-gray-100 text-gray-700">{initialsFromName(p.name)}</AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
-                            <Link href={`/projects/${p.id}`} className="font-medium text-sm hover:underline block truncate">
+                            <Link href={`/projects/${p.id}/member`} className="font-medium text-sm hover:underline block truncate">
                               {p.name}
                             </Link>
                           </div>
                         </div>
+                      </td>
+                      <td className="p-3 text-sm text-muted-foreground">
+                        {p.clientName ?? "—"}
                       </td>
                       <td className="p-3 text-sm text-muted-foreground">
                         {p.teams.length === 0 ? "None" : p.teams.join(", ")}
@@ -226,8 +238,7 @@ export default function Page() {
                         <div className="flex -space-x-2">
                           {p.members.slice(0, 3).map((m) => (
                             <Avatar key={m.id} className="h-6 w-6 ring-2 ring-background">
-                              <AvatarImage src={m.avatarUrl ?? undefined} />
-                              <AvatarFallback className="text-[10px]">
+                              <AvatarFallback className="text-[10px] bg-gray-100 text-gray-700">
                                 {initialsFromName(m.name)}
                               </AvatarFallback>
                             </Avatar>
@@ -239,9 +250,11 @@ export default function Page() {
                           )}
                         </div>
                       </td>
-                      <td className="p-3 text-sm text-muted-foreground">{p.todosLabel}</td>
+                      <td className="p-3 text-sm text-muted-foreground">
+                        {getTaskCountFromTasksPageByProjectId(p.id)}
+                      </td>
                       <td className="p-3 text-sm text-muted-foreground">{p.budgetLabel}</td>
-                      <td className="p-3 text-sm text-muted-foreground">{p.memberLimitLabel}</td>
+                      {/* <td className="p-3 text-sm text-muted-foreground">{p.memberLimitLabel}</td> */}
                       <td className="p-3">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

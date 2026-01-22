@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
-import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_REPORT_ACTIVITIES, DUMMY_PROJECTS, DUMMY_CLIENTS } from "@/lib/data/dummy-data"
+import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_REPORT_ACTIVITIES, DUMMY_PROJECTS, DUMMY_CLIENTS, ReportActivityEntry } from "@/lib/data/dummy-data"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -66,7 +66,7 @@ export default function TimeActivityPage() {
             const end = new Date(dateRange.endDate)
             end.setHours(23, 59, 59, 999)
 
-            data = data.filter(item => {
+            data = data.filter((item: ReportActivityEntry) => {
                 const itemDate = new Date(item.date)
                 return itemDate >= start && itemDate <= end
             })
@@ -77,12 +77,12 @@ export default function TimeActivityPage() {
             if (selectedFilter.type === 'members') {
                 const selectedMember = DUMMY_MEMBERS.find(m => m.id === selectedFilter.id)
                 if (selectedMember) {
-                    data = data.filter(item => item.memberName === selectedMember.name)
+                    data = data.filter((item: ReportActivityEntry) => item.memberName === selectedMember.name)
                 }
             } else if (selectedFilter.type === 'teams') {
                 const selectedTeam = DUMMY_TEAMS.find(t => t.id === selectedFilter.id)
                 if (selectedTeam) {
-                    data = data.filter(item => item.teamName === selectedTeam.name)
+                    data = data.filter((item: ReportActivityEntry) => item.teamName === selectedTeam.name)
                 }
             }
         }
@@ -91,13 +91,13 @@ export default function TimeActivityPage() {
         if (sidebarFilters.project !== 'all') {
             const proj = DUMMY_PROJECTS.find(p => p.id === sidebarFilters.project)
             if (proj) {
-                data = data.filter(item => item.projectName === proj.name)
+                data = data.filter((item: ReportActivityEntry) => item.projectName === proj.name)
             }
         }
         if (sidebarFilters.client !== 'all') {
             const client = DUMMY_CLIENTS.find(c => c.id === sidebarFilters.client)
             if (client) {
-                data = data.filter(item => item.clientName === client.name)
+                data = data.filter((item: ReportActivityEntry) => item.clientName === client.name)
             }
         }
         // Task filtering (assuming task == todoName for simplicity in dummy data)
@@ -107,7 +107,7 @@ export default function TimeActivityPage() {
         // Our dummy data doesn't have status. We will ignore task status filtering for now 
         // or check if 'todo' grouping was meant.
         if (sidebarFilters.task !== 'all') {
-            data = data.filter(item => item.todoName === sidebarFilters.task);
+            data = data.filter((item: ReportActivityEntry) => item.todoName === sidebarFilters.task);
         }
 
         // 4. Sort/Group by logic
@@ -133,9 +133,9 @@ export default function TimeActivityPage() {
     }, [dateRange, selectedFilter, sidebarFilters, groupBy])
 
     const stats = useMemo(() => {
-        const totalHours = filteredData.reduce((acc, curr) => acc + curr.totalHours, 0)
-        const totalSpent = filteredData.reduce((acc, curr) => acc + curr.totalSpent, 0)
-        const avgActivity = filteredData.length > 0 ? filteredData.reduce((acc, curr) => acc + curr.activityPercent, 0) / filteredData.length : 0
+        const totalHours = filteredData.reduce((acc: number, curr: ReportActivityEntry) => acc + curr.totalHours, 0)
+        const totalSpent = filteredData.reduce((acc: number, curr: ReportActivityEntry) => acc + curr.totalSpent, 0)
+        const avgActivity = filteredData.length > 0 ? filteredData.reduce((acc: number, curr: ReportActivityEntry) => acc + curr.activityPercent, 0) / filteredData.length : 0
 
         return {
             totalHours,
@@ -195,7 +195,7 @@ export default function TimeActivityPage() {
                         <div className="mt-6 mb-2">
                             <label className="text-xs font-bold text-gray-400 uppercase mb-1 block">Data grouped by</label>
                             <Select value={groupBy} onValueChange={setGroupBy}>
-                                <SelectTrigger className="w-[180px] h-9 border-blue-300 text-gray-700 font-medium ring-offset-0 focus:ring-0">
+                                <SelectTrigger className="w-[180px] h-9 border-gray-300 text-gray-700 font-medium ring-offset-0 focus:ring-0">
                                     <SelectValue placeholder="Group by" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -284,7 +284,7 @@ export default function TimeActivityPage() {
                                 <tbody className="divide-y divide-gray-100">
                                     {filteredData.length > 0 ? (
                                         filteredData.map(item => (
-                                            <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                            <tr key={item.id} className="even:bg-gray-50 hover:bg-gray-50 transition-colors">
                                                 <td className="px-4 py-3 text-gray-900">{new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                                                 <td className="px-4 py-3 text-gray-600">{item.clientName}</td>
                                                 <td className="px-4 py-3 text-gray-900 font-medium">{item.projectName}</td>
@@ -305,8 +305,7 @@ export default function TimeActivityPage() {
                                                     <div className="w-48 h-32 bg-gray-100 mb-4 rounded flex items-center justify-center text-gray-400">
                                                         <span className="text-4xl text-gray-300">?</span>
                                                     </div>
-                                                    <h3 className="text-lg font-medium text-gray-900">Nothing to report</h3>
-                                                    <p className="text-sm text-gray-500 mt-1">Expecting to see something? Try adjusting the report.</p>
+                                                    <h3 className="text-sm font-semibold text-gray-900">Nothing to report</h3>
                                                 </div>
                                             </td>
                                         </tr>
