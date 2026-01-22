@@ -73,7 +73,7 @@ export default function TasksLayout({ children }: { children: React.ReactNode })
             </div>
 
             <div className="w-full">
-                {children}
+            {children}
             </div>
         </div>
     )
