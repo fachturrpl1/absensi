@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Plus, Search } from "lucide-react"
 import { AddClientDialog, type ClientFormData } from "@/components/projects/AddClientDialog"
 import { ClientsTable, type Client } from "@/components/projects/ClientsTable"
-import { DUMMY_CLIENTS } from "@/lib/data/dummy-clients"
+import { DUMMY_CLIENTS } from "@/lib/data/dummy-data"
 
 export default function ClientsPage() {
     const [activeTab, setActiveTab] = useState<"active" | "archived">("active")

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
@@ -22,24 +22,89 @@ import {
     DialogDescription,
     DialogTitle,
 } from "@/components/ui/dialog"
-
-const todos = [
-    {
-        id: 1,
-        title: "m",
-        assignee: "Muhammad Ma&apos;Arif",
-        type: "Task",
-        created: "Mon, Jan 19, 2026 9:16 am",
-    },
-]
+import { DUMMY_MEMBERS, DUMMY_PROJECTS, DUMMY_TASKS } from "@/lib/data/dummy-data"
+type TaskRow = typeof DUMMY_TASKS[number]
 
 export default function ListView() {
+    const [tasks, setTasks] = useState<TaskRow[]>(DUMMY_TASKS)
     const [showCompleted, setShowCompleted] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
     const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false)
     const [isGlobalTaskDialogOpen, setIsGlobalTaskDialogOpen] = useState(false)
-    const [taskToDelete, setTaskToDelete] = useState<typeof todos[number] | null>(null)
-    const [editingTask, setEditingTask] = useState<typeof todos[number] | null>(null)
+    const [taskToDelete, setTaskToDelete] = useState<TaskRow | null>(null)
+    const [editingTask, setEditingTask] = useState<TaskRow | null>(null)
+    const [editedTitle, setEditedTitle] = useState("")
+    const [editedAssignee, setEditedAssignee] = useState("")
+    const [selectedProject, setSelectedProject] = useState("all")
+    const [selectedAssignee, setSelectedAssignee] = useState("all")
+    const [newTaskTitle, setNewTaskTitle] = useState("")
+    const [newTaskAssignee, setNewTaskAssignee] = useState("")
+    const [currentPage, setCurrentPage] = useState(1)
+    const itemsPerPage = 10
+    const projectOptions = useMemo(() => DUMMY_PROJECTS.map((project) => project.name).filter(Boolean), [])
+    const uniqueAssignees = useMemo(() => {
+        const taskNames = tasks.map((task) => task.assignee)
+        const memberNames = DUMMY_MEMBERS.map((member) => member.name)
+        return Array.from(new Set([...memberNames, ...taskNames].filter(Boolean)))
+    }, [tasks])
+
+    const displayedTasks = useMemo(() => {
+        const filtered = tasks.filter((task) => {
+            if (selectedProject !== "all" && task.project !== selectedProject) {
+                return false
+            }
+            if (selectedAssignee !== "all" && task.assignee !== selectedAssignee) {
+                return false
+            }
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase()
+                const matchesTitle = task.title.toLowerCase().includes(query)
+                const matchesAssignee = task.assignee.toLowerCase().includes(query)
+                if (!matchesTitle && !matchesAssignee) {
+                    return false
+                }
+            }
+            if (!showCompleted && task.completed) {
+                return false
+            }
+            return true
+        })
+
+        // Apply pagination
+        const startIndex = (currentPage - 1) * itemsPerPage
+        const endIndex = startIndex + itemsPerPage
+        return filtered.slice(startIndex, endIndex)
+    }, [tasks, selectedProject, selectedAssignee, searchQuery, showCompleted, currentPage, itemsPerPage])
+
+    const totalFilteredTasks = useMemo(() => {
+        return tasks.filter((task) => {
+            if (selectedProject !== "all" && task.project !== selectedProject) {
+                return false
+            }
+            if (selectedAssignee !== "all" && task.assignee !== selectedAssignee) {
+                return false
+            }
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase()
+                const matchesTitle = task.title.toLowerCase().includes(query)
+                const matchesAssignee = task.assignee.toLowerCase().includes(query)
+                if (!matchesTitle && !matchesAssignee) {
+                    return false
+                }
+            }
+            if (!showCompleted && task.completed) {
+                return false
+            }
+            return true
+        }).length
+    }, [tasks, selectedProject, selectedAssignee, searchQuery, showCompleted])
+
+    const totalPages = Math.ceil(totalFilteredTasks / itemsPerPage)
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [selectedProject, selectedAssignee, searchQuery, showCompleted])
 
     return (
         <div className="flex flex-col gap-4">
@@ -47,35 +112,43 @@ export default function ListView() {
                 <div className="flex items-end gap-6">
                     <div className="flex flex-col gap-1">
                         <span className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Project</span>
-                        <Select defaultValue="muhammads-org">
+                        <Select value={selectedProject} onValueChange={(value) => setSelectedProject(value)}>
                             <SelectTrigger className="rounded-lg bg-white px-4 py-2">
-                                <SelectValue placeholder="Muhammad&apos;s Organization" />
+                                <SelectValue placeholder="All projects" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="muhammads-org">Muhammad&apos;s Organization</SelectItem>
-                                <SelectItem value="project-2">Project 2</SelectItem>
+                                <SelectItem value="all">All projects</SelectItem>
+                                {projectOptions.map((projectName) => (
+                                    <SelectItem key={projectName} value={projectName}>
+                                        {projectName}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
                     <div className="flex flex-col gap-1">
                         <span className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Assignee</span>
-                        <Select>
+                        <Select value={selectedAssignee} onValueChange={(value) => setSelectedAssignee(value)}>
                             <SelectTrigger className="rounded-lg bg-white px-4 py-2">
                                 <SelectValue placeholder="Select assignee" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="muhammad">Muhammad Ma&apos;Arif</SelectItem>
-                                <SelectItem value="user-2">User 2</SelectItem>
+                                <SelectItem value="all">All assignees</SelectItem>
+                                {uniqueAssignees.map((assignee) => (
+                                    <SelectItem key={assignee} value={assignee}>
+                                        {assignee}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" className="rounded-lg px-5 py-2 text-sm gap-1">
+                    {/* <Button variant="outline" className="rounded-lg px-5 py-2 text-sm gap-1">
                         <Copy className="h-4 w-4" />
                         Duplicate project
-                    </Button>
+                    </Button> */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button
@@ -115,17 +188,24 @@ export default function ListView() {
                     <div className="space-y-4">
                         <div className="space-y-1">
                             <label className="text-xs uppercase tracking-[0.4em] text-muted-foreground">Task*</label>
-                            <Input placeholder="Enter task" />
+                            <Input
+                                placeholder="Enter task"
+                                value={newTaskTitle}
+                                onChange={(e) => setNewTaskTitle(e.target.value)}
+                            />
                         </div>
                         <div className="space-y-1">
                             <label className="text-xs uppercase tracking-[0.4em] text-muted-foreground">Assignee</label>
-                            <Select>
+                            <Select value={newTaskAssignee} onValueChange={setNewTaskAssignee}>
                                 <SelectTrigger className="rounded-lg bg-white px-4 py-2 text-base">
                                     <SelectValue placeholder="Select assignee" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="muhammad">Muhammad Ma&apos;Arif</SelectItem>
-                                    <SelectItem value="user-2">User 2</SelectItem>
+                                    {uniqueAssignees.map((assignee) => (
+                                        <SelectItem key={assignee} value={assignee}>
+                                            {assignee}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -148,7 +228,28 @@ export default function ListView() {
                                 Cancel
                             </Button>
                         </DialogClose>
-                        <Button className="w-full sm:w-auto">Save</Button>
+                        <Button
+                            className="w-full sm:w-auto"
+                            onClick={() => {
+                                if (newTaskTitle.trim()) {
+                                    const newTask: TaskRow = {
+                                        id: `task-${Date.now()}`,
+                                        title: newTaskTitle,
+                                        assignee: newTaskAssignee || uniqueAssignees[0],
+                                        project: selectedProject !== "all" ? selectedProject : projectOptions[0] || "Default Project",
+                                        type: "Task",
+                                        created: new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+                                        completed: false
+                                    }
+                                    setTasks([...tasks, newTask])
+                                    setNewTaskTitle("")
+                                    setNewTaskAssignee("")
+                                    setIsNewTaskDialogOpen(false)
+                                }
+                            }}
+                        >
+                            Save
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -193,9 +294,8 @@ export default function ListView() {
                     <button
                         type="button"
                         onClick={() => setShowCompleted(!showCompleted)}
-                        className={`relative inline-flex h-7 w-14 items-center rounded-full border transition-all duration-300 focus:outline-none ${
-                            showCompleted ? "bg-gray-800 border-gray-800" : "bg-gray-200 border-gray-300"
-                        }`}
+                        className={`relative inline-flex h-7 w-14 items-center rounded-full border transition-all duration-300 focus:outline-none ${showCompleted ? "bg-gray-800 border-gray-800" : "bg-gray-200 border-gray-300"
+                            }`}
                     >
                         <span
                             className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-md transition-all duration-300 ease-in-out"
@@ -212,14 +312,16 @@ export default function ListView() {
                     </button>
                 </div>
                 <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center">
+                        <Search className="h-4 w-4 text-muted-foreground" />
+                    </div>
                     <Input
                         type="search"
                         placeholder="Search tasks"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="rounded-full border border-border bg-white py-2 pl-16 pr-4 text-sm focus:ring-2 focus:ring-primary"
-                        style={{ textIndent: "2.5rem" }}
+                        className="rounded-full border border-border bg-white py-2 pr-4 text-sm focus:ring-2 focus:ring-primary w-full"
+                        style={{ paddingLeft: '3rem' }}
                     />
                 </div>
             </div>
@@ -236,13 +338,13 @@ export default function ListView() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {todos.map((todo) => (
+                        {displayedTasks.map((todo) => (
                             <TableRow key={todo.id} className="bg-white border-b">
                                 <TableCell className="px-6 py-4 text-left font-medium text-foreground">{todo.title}</TableCell>
                                 <TableCell className="px-6 py-4 text-left text-muted-foreground">
                                     <div className="flex items-center gap-3">
                                         <Avatar className="h-6 w-6 bg-gray-200 text-gray-500">
-                                            <AvatarFallback>MM</AvatarFallback>
+                                            <AvatarFallback>{todo.assignee.split(" ").map((w) => w[0]).join("")}</AvatarFallback>
                                         </Avatar>
                                         <span>{todo.assignee}</span>
                                     </div>
@@ -255,7 +357,11 @@ export default function ListView() {
                                             variant="outline"
                                             size="icon"
                                             className="h-8 w-8 p-0"
-                                            onClick={() => setEditingTask(todo)}
+                                            onClick={() => {
+                                                setEditingTask(todo)
+                                                setEditedTitle(todo.title)
+                                                setEditedAssignee(todo.assignee)
+                                            }}
                                         >
                                             <Pencil className="h-4 w-4" />
                                         </Button>
@@ -275,71 +381,129 @@ export default function ListView() {
                 </Table>
             </div>
 
-        <Dialog open={Boolean(taskToDelete)} onOpenChange={(open) => !open && setTaskToDelete(null)}>
-            <DialogContent className="max-w-md space-y-6">
-                <DialogHeader>
-                    <DialogTitle>Delete task</DialogTitle>
-                    <DialogDescription className="text-sm text-muted-foreground">
-                        Are you sure you want to delete{taskToDelete ? ` "${taskToDelete.title}"` : ""}? This action cannot be undone.
-                    </DialogDescription>
-                </DialogHeader>
-                <DialogFooter className="flex flex-col gap-2 sm:flex-row">
-                    <DialogClose asChild>
-                        <Button variant="outline" className="w-full sm:w-auto">
-                            Cancel
+            <Dialog open={Boolean(taskToDelete)} onOpenChange={(open) => !open && setTaskToDelete(null)}>
+                <DialogContent className="max-w-md space-y-6">
+                    <DialogHeader>
+                        <DialogTitle>Delete task</DialogTitle>
+                        <DialogDescription className="text-sm text-muted-foreground">
+                            Are you sure you want to delete{taskToDelete ? ` "${taskToDelete.title}"` : ""}? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="flex flex-col gap-2 sm:flex-row">
+                        <DialogClose asChild>
+                            <Button variant="outline" className="w-full sm:w-auto">
+                                Cancel
+                            </Button>
+                        </DialogClose>
+                        <Button
+                            className="w-full sm:w-auto"
+                            onClick={() => {
+                                if (taskToDelete) {
+                                    setTasks(tasks.filter(task => task.id !== taskToDelete.id))
+                                }
+                                setTaskToDelete(null)
+                            }}
+                        >
+                            Delete
                         </Button>
-                    </DialogClose>
-                    <Button
-                        className="w-full sm:w-auto"
-                        onClick={() => {
-                            setTaskToDelete(null)
-                        }}
-                    >
-                        Delete
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
-        <Dialog open={Boolean(editingTask)} onOpenChange={(open) => !open && setEditingTask(null)}>
-            <DialogContent className="max-w-md space-y-6">
-                <DialogHeader>
-                    <DialogTitle>Edit task</DialogTitle>
-                    <DialogDescription className="text-sm text-muted-foreground">
-                        Update the fields below before saving your changes.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                    <div className="space-y-1">
-                        <label className="text-xs uppercase tracking-[0.4em] text-muted-foreground">Task*</label>
-                        <Input defaultValue={editingTask?.title} />
+            <Dialog open={Boolean(editingTask)} onOpenChange={(open) => !open && setEditingTask(null)}>
+                <DialogContent className="max-w-md space-y-6">
+                    <DialogHeader>
+                        <DialogTitle>Edit task</DialogTitle>
+                        <DialogDescription className="text-sm text-muted-foreground">
+                            Update the fields below before saving your changes.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="space-y-1">
+                            <label className="text-xs uppercase tracking-[0.4em] text-muted-foreground">Task*</label>
+                            <Input value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)} />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs uppercase tracking-[0.4em] text-muted-foreground">Assignee</label>
+                            <Select value={editedAssignee} onValueChange={(value) => setEditedAssignee(value)}>
+                                <SelectTrigger className="rounded-lg bg-white px-4 py-2 text-base">
+                                    <SelectValue placeholder="Select assignee" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {uniqueAssignees.map((assignee) => (
+                                        <SelectItem key={assignee} value={assignee}>
+                                            {assignee}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
-                    <div className="space-y-1">
-                        <label className="text-xs uppercase tracking-[0.4em] text-muted-foreground">Assignee</label>
-                        <Select defaultValue="muhammad">
-                            <SelectTrigger className="rounded-lg bg-white px-4 py-2 text-base">
-                                <SelectValue placeholder={editingTask?.assignee ?? "Select assignee"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="muhammad">Muhammad Ma&apos;Arif</SelectItem>
-                                <SelectItem value="user-2">User 2</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    <DialogFooter className="flex flex-col gap-2 sm:flex-row">
+                        <DialogClose asChild>
+                            <Button variant="outline" className="w-full sm:w-auto">
+                                Cancel
+                            </Button>
+                        </DialogClose>
+                        <Button
+                            className="w-full sm:w-auto"
+                            onClick={() => {
+                                if (!editingTask) return
+                                setTasks((prev) =>
+                                    prev.map((task) =>
+                                        task.id === editingTask.id
+                                            ? { ...task, title: editedTitle, assignee: editedAssignee }
+                                            : task
+                                    )
+                                )
+                                setEditingTask(null)
+                            }}
+                        >
+                            Save
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+                <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                    Showing {displayedTasks.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} - {Math.min(currentPage * itemsPerPage, totalFilteredTasks)} of {totalFilteredTasks} tasks
                 </div>
-                <DialogFooter className="flex flex-col gap-2 sm:flex-row">
-                    <DialogClose asChild>
-                        <Button variant="outline" className="w-full sm:w-auto">
-                            Cancel
+                {totalPages > 1 && (
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="h-8 w-20"
+                        >
+                            Previous
                         </Button>
-                    </DialogClose>
-                    <Button className="w-full sm:w-auto">Save</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-
-            <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
-                Showing {todos.length} of {todos.length} tasks
+                        <div className="flex items-center gap-1">
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                <Button
+                                    key={page}
+                                    variant={currentPage === page ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setCurrentPage(page)}
+                                    className="h-8 w-8 p-0"
+                                >
+                                    {page}
+                                </Button>
+                            ))}
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className="h-8 w-20"
+                        >
+                            Next
+                        </Button>
+                    </div>
+                )}
             </div>
         </div>
     )

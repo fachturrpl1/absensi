@@ -3,15 +3,7 @@
 import { useTransition } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { ChevronDown } from "lucide-react"
 
 const tabs = [
     { value: "list", label: "List", href: "/projects/tasks/list" },
@@ -36,11 +28,11 @@ export default function TasksLayout({ children }: { children: React.ReactNode })
         }
 
     return (
-        <div className="flex flex-1 flex-col gap-6 p-6 md:p-10 w-full bg-slate-50 min-h-screen">
-            <div className="flex flex-col gap-6">
-                <div className="flex items-center justify-between">
+        <div className="flex flex-1 flex-col gap-6 px-6 py-6 bg-white min-h-screen md:px-16">
+            <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
+                <div className="flex items-center justify-between gap-4">
                     <h1 className="text-4xl font-light tracking-tight text-foreground">Tasks</h1>
-                    <DropdownMenu>
+                    {/* <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="gap-2 px-5 py-2">
                                 Add integration
@@ -51,7 +43,7 @@ export default function TasksLayout({ children }: { children: React.ReactNode })
                             <DropdownMenuItem>Integration 1</DropdownMenuItem>
                             <DropdownMenuItem>Integration 2</DropdownMenuItem>
                         </DropdownMenuContent>
-                    </DropdownMenu>
+                    </DropdownMenu> */}
                 </div>
 
                 <div className="flex items-center justify-center">
@@ -80,7 +72,9 @@ export default function TasksLayout({ children }: { children: React.ReactNode })
                 </div>
             </div>
 
-            {children}
+            <div className="w-full">
+                {children}
+            </div>
         </div>
     )
 }

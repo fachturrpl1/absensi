@@ -1,11 +1,13 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Info,
   LineChart,
   Pencil,
 } from "lucide-react"
+import { ActivityDialog } from "@/components/activity-dialog"
 
 const insightCards = [
   {
@@ -34,14 +36,19 @@ const insightCards = [
 ]
 
 export default function Every10MinPage() {
+  const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false)
+
   return (
     <>
       {/* How Activity Works Section */}
       <div className="space-y-4">
-        <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">
+        <button
+          onClick={() => setIsActivityDialogOpen(true)}
+          className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
+        >
           <LineChart className="h-4 w-4" />
           How activity works
-        </div>
+        </button>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex gap-6">
             <div className="flex flex-1 flex-col justify-between">
@@ -66,42 +73,42 @@ export default function Every10MinPage() {
                 key={card.title}
                 className={`flex flex-1 flex-col justify-between gap-4 px-4 py-2 ${idx > 0 ? "border-l border-slate-200" : ""} ${idx === 1 ? "border-r border-slate-200" : ""}`}
               >
-              <div className="flex items-center gap-4">
-                <div
-                  className={`flex aspect-square h-14 flex-none items-center justify-center rounded-full border-4 ${card.circleBorder}`}
-                >
-                  <span className="text-2xl font-semibold text-slate-600">?</span>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">
-                    {card.title}
-                    <Info className="h-3.5 w-3.5 text-slate-400" />
+                <div className="flex items-center gap-4">
+                  <div
+                    className={`flex aspect-square h-14 flex-none items-center justify-center rounded-full border-4 ${card.circleBorder}`}
+                  >
+                    <span className="text-2xl font-semibold text-slate-600">?</span>
                   </div>
-                  {card.description && (
-                    <p className="text-sm text-slate-600">{card.description}</p>
-                  )}
-                  {card.bullets && (
-                    <ul className="space-y-1 text-sm text-slate-600">
-                      {card.bullets.map((item) => (
-                        <li key={`${card.title}-${item.text}`} className="flex items-center gap-2">
-                          <span className={`inline-block h-2 w-2 rounded-full ${item.color}`} />
-                          {item.text}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">
+                      {card.title}
+                      <Info className="h-3.5 w-3.5 text-slate-400" />
+                    </div>
+                    {card.description && (
+                      <p className="text-sm text-slate-600">{card.description}</p>
+                    )}
+                    {card.bullets && (
+                      <ul className="space-y-1 text-sm text-slate-600">
+                        {card.bullets.map((item) => (
+                          <li key={`${card.title}-${item.text}`} className="flex items-center gap-2">
+                            <span className={`inline-block h-2 w-2 rounded-full ${item.color}`} />
+                            {item.text}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-auto">
+                  <Button
+                    variant="ghost"
+                    className="w-full rounded-full border border-blue-400 bg-blue-500 px-5 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white"
+                  >
+                    Find out more
+                  </Button>
                 </div>
               </div>
-              <div className="mt-auto">
-                <Button
-                  variant="ghost"
-                  className="w-full rounded-full border border-blue-400 bg-blue-500 px-5 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white"
-                >
-                  Find out more
-                </Button>
-              </div>
-            </div>
-          ))}
+            ))}
           </div>
           <div className="absolute z-10" style={{ bottom: '0', left: 'calc(50% + 0.5rem)', transform: 'translateX(-50%) translateY(50%)' }}>
             <Button variant="outline" className="rounded-full border border-slate-200 bg-white px-6 text-sm font-medium text-slate-700 shadow-sm">
@@ -148,14 +155,14 @@ export default function Every10MinPage() {
                   </div>
                   <div className="space-y-1">
                     <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                      <div 
+                      <div
                         className="h-full rounded-full"
-                        style={{ 
+                        style={{
                           width: `${item.progress}%`,
                           backgroundColor: item.progress < 30 ? '#facc15' :
-                                         item.progress < 50 ? '#fb923c' :
-                                         item.progress < 70 ? '#a3e635' :
-                                         '#22c55e'
+                            item.progress < 50 ? '#fb923c' :
+                              item.progress < 70 ? '#a3e635' :
+                                '#22c55e'
                         }}
                       />
                     </div>
@@ -208,14 +215,14 @@ export default function Every10MinPage() {
                   </div>
                   <div className="space-y-1">
                     <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                      <div 
+                      <div
                         className="h-full rounded-full"
-                        style={{ 
+                        style={{
                           width: `${item.progress}%`,
                           backgroundColor: item.progress < 30 ? '#facc15' :
-                                         item.progress < 50 ? '#fb923c' :
-                                         item.progress < 70 ? '#a3e635' :
-                                         '#22c55e'
+                            item.progress < 50 ? '#fb923c' :
+                              item.progress < 70 ? '#a3e635' :
+                                '#22c55e'
                         }}
                       />
                     </div>
@@ -229,6 +236,12 @@ export default function Every10MinPage() {
           </div>
         </div>
       </div>
+
+      {/* Activity Dialog */}
+      <ActivityDialog
+        open={isActivityDialogOpen}
+        onOpenChange={setIsActivityDialogOpen}
+      />
     </>
   )
 }

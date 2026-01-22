@@ -2,36 +2,46 @@
 import { useState, useMemo } from "react"
 import { ChevronRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import type { Member } from "@/lib/data/dummy-insights"
+import type { Member, Team } from "@/lib/data/dummy-data"
 import type { SelectedFilter } from "@/components/insights/types"
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   members?: Member[]
+  teams?: Team[]
   selectedFilter?: SelectedFilter
   onSelectedFilterChange?: (filter: SelectedFilter) => void
 }
 
-export function InsightsRightSidebar({ open, onOpenChange, members, selectedFilter, onSelectedFilterChange }: Props) {
-  const [teamsOpen, setTeamsOpen] = useState(false)
-  const [membersOpen, setMembersOpen] = useState(false)
+export function InsightsRightSidebar({ open, onOpenChange, members, teams, selectedFilter, onSelectedFilterChange }: Props) {
+  const [teamsOpen, setTeamsOpen] = useState(true)
+  const [membersOpen, setMembersOpen] = useState(true)
   const [memberQuery, setMemberQuery] = useState("")
+  const [teamQuery, setTeamQuery] = useState("")
+
   const filteredMembers = useMemo(
     () => (members ?? []).filter(m => m.name.toLowerCase().includes(memberQuery.toLowerCase())),
     [members, memberQuery]
   )
+
+  const filteredTeams = useMemo(
+    () => (teams ?? []).filter(t => t.name.toLowerCase().includes(teamQuery.toLowerCase())),
+    [teams, teamQuery]
+  )
+
   const activeMemberId = selectedFilter?.type === "members" && !selectedFilter.all ? selectedFilter.id : undefined
+  const activeTeamId = selectedFilter?.type === "teams" && !selectedFilter.all ? selectedFilter.id : undefined
 
   return (
     <div className={`border-l border-gray-200 overflow-hidden transition-[width] duration-300 ease-in-out ${open ? "w-80" : "w-10"}`}>
       {open ? (
         <aside className="p-6 h-full flex flex-col">
-          <div className="space-y-6 flex-1">
+          <div className="space-y-6 flex-1 overflow-y-auto custom-scrollbar pr-2">
             {/* Teams */}
             <div className="border border-gray-200 rounded-md">
               <button
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50"
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 bg-gray-50/50"
                 onClick={() => setTeamsOpen(o => !o)}
                 aria-expanded={teamsOpen}
                 aria-controls="teams-section"
@@ -40,18 +50,39 @@ export function InsightsRightSidebar({ open, onOpenChange, members, selectedFilt
                 <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${teamsOpen ? "rotate-90" : ""}`} />
               </button>
               {teamsOpen && (
-                <div id="teams-section" className="px-4 py-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs text-gray-600">Engagement</span>
-                  </div>
-                  <div className="flex flex-col items-center text-center">
-                    <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center mb-4">
-                      <div className="w-12 h-12 bg-gray-200 rounded" />
-                    </div>
-                    <h4 className="font-semibold mb-2">No teams to display</h4>
-                    <p className="text-sm text-gray-600 mb-4">Add teams to your organization to view metrics about their performance</p>
-                    <button className="w-full px-4 py-2 bg-zinc-900 text-white rounded-md hover:bg-zinc-800 font-medium">Add team</button>
-                  </div>
+                <div id="teams-section" className="px-4 py-4 space-y-3">
+                  <Input
+                    placeholder="Search teams"
+                    value={teamQuery}
+                    onChange={(e) => setTeamQuery(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+
+                  {filteredTeams.length > 0 ? (
+                    <ul className="space-y-1">
+                      {filteredTeams.map(t => {
+                        const active = activeTeamId === t.id
+                        return (
+                          <li key={t.id}>
+                            <button
+                              className={`w-full flex items-center justify-between px-2 py-2 rounded ${active ? "bg-zinc-100 text-zinc-900" : "hover:bg-gray-50"}`}
+                              onClick={() => onSelectedFilterChange?.({ type: "teams", all: false, id: t.id })}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-6 h-6 rounded bg-gray-200 flex items-center justify-center text-[10px] font-semibold text-gray-700">
+                                  {t.name.substring(0, 2).toUpperCase()}
+                                </div>
+                                <span className="text-sm truncate">{t.name}</span>
+                              </div>
+                              <span className="text-xs text-gray-500">{t.members.length} members</span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  ) : (
+                    <div className="text-sm text-gray-500 text-center py-2">No teams found</div>
+                  )}
                 </div>
               )}
             </div>
@@ -59,7 +90,7 @@ export function InsightsRightSidebar({ open, onOpenChange, members, selectedFilt
             {/* Members */}
             <div className="border border-gray-200 rounded-md">
               <button
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50"
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 bg-gray-50/50"
                 onClick={() => setMembersOpen(o => !o)}
                 aria-expanded={membersOpen}
                 aria-controls="members-section"
@@ -73,13 +104,11 @@ export function InsightsRightSidebar({ open, onOpenChange, members, selectedFilt
                     placeholder="Search members"
                     value={memberQuery}
                     onChange={(e) => setMemberQuery(e.target.value)}
-                    className="h-8"
+                    className="h-8 text-xs"
                   />
 
-
-
                   {filteredMembers.length > 0 ? (
-                    <ul className="space-y-2">
+                    <ul className="space-y-1">
                       {filteredMembers.map(m => {
                         const initials = m.name.split(" ").map(s => s[0]).slice(0, 2).join("")
                         const active = activeMemberId === m.id
@@ -95,7 +124,7 @@ export function InsightsRightSidebar({ open, onOpenChange, members, selectedFilt
                                 </div>
                                 <span className="text-sm truncate">{m.name}</span>
                               </div>
-                              <span className="text-xs text-gray-500">{m.activityScore}</span>
+                              <span className="text-xs text-gray-500">{m.activityScore}%</span>
                             </button>
                           </li>
                         )
@@ -110,7 +139,7 @@ export function InsightsRightSidebar({ open, onOpenChange, members, selectedFilt
           </div>
         </aside>
       ) : (
-        <div className="h-full flex items-center justify-center">
+        <div className="h-full flex items-start pt-6 justify-center">
           <button
             className="p-2 rounded hover:bg-gray-100"
             onClick={() => onOpenChange(true)}

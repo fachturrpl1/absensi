@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { X, Info, Check, ChevronDown } from "lucide-react"
-import { DUMMY_MEMBERS, DUMMY_ROLES, DUMMY_TEAMS, DUMMY_JOB_TYPES } from "@/lib/data/dummy-insights"
+import { DUMMY_MEMBERS, DUMMY_ROLES, DUMMY_TEAMS, DUMMY_JOB_TYPES } from "@/lib/data/dummy-data"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 interface CustomNotificationDialogProps {
