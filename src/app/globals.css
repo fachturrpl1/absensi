@@ -46,9 +46,11 @@
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
-:root {
-  --pulse-animation: pulse 1s infinite;
-}
+
+  :root {
+    --pulse-animation: pulse 1s infinite;
+  }
+
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -162,6 +164,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -172,18 +175,21 @@
   position: absolute;
   left: 50%;
   top: 50%;
- 
+
   width: 50px;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: 
-    radial-gradient(farthest-side,#bbbbbb 94%,#0000) top/8px 8px no-repeat,
-    conic-gradient(#0000 30%,#b7b7b7);
-  -webkit-mask: radial-gradient(farthest-side,#0000 calc(100% - 8px),#000 0);
+  background:
+    radial-gradient(farthest-side, #bbbbbb 94%, #0000) top/8px 8px no-repeat,
+    conic-gradient(#0000 30%, #b7b7b7);
+  -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
   animation: l13 1s infinite linear;
 }
-@keyframes l13{ 
-  100%{transform: rotate(1turn)}
+
+@keyframes l13 {
+  100% {
+    transform: rotate(1turn)
+  }
 }
 
 /* Custom animations for not-found page */
@@ -192,6 +198,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -199,15 +206,24 @@
 }
 
 @keyframes bounceSlow {
-  0%, 20%, 53%, 80%, 100% {
+
+  0%,
+  20%,
+  53%,
+  80%,
+  100% {
     transform: translate3d(0, 0, 0);
   }
-  40%, 43% {
+
+  40%,
+  43% {
     transform: translate3d(0, -5px, 0);
   }
+
   70% {
     transform: translate3d(0, -2px, 0);
   }
+
   90% {
     transform: translate3d(0, -1px, 0);
   }
@@ -226,6 +242,7 @@
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(100%);
   }
@@ -241,10 +258,12 @@
     left: "-35%";
     right: 100%;
   }
+
   60% {
     left: 100%;
     right: -90%;
   }
+
   100% {
     left: 100%;
     right: -90%;
@@ -261,3 +280,57 @@
   border-radius: inherit;
 }
 
+/* Pigeon Maps - Override marker color to black and cursor to grab */
+div[style*="position: absolute"][style*="transform"] svg[viewBox="0 0 61 85"] {
+  fill: #000000 !important;
+}
+
+div[style*="position: absolute"][style*="transform"] path {
+  fill: #000000 !important;
+}
+
+/* Pigeon Maps container cursor */
+div[style*="position: relative"] {
+  cursor: grab !important;
+}
+
+div[style*="position: relative"]:active {
+  cursor: grabbing !important;
+}
+
+/* Map wrapper cursor override */
+.pigeon-map-container,
+.pigeon-map-container * {
+  cursor: grab !important;
+}
+
+.pigeon-map-container:active,
+.pigeon-map-container:active * {
+  cursor: grabbing !important;
+}
+
+/* Thin scrollbar for invite form dialog */
+.invite-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.invite-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.invite-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  /* gray-300 */
+  border-radius: 10px;
+}
+
+.invite-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+  /* gray-400 */
+}
+
+/* Firefox scrollbar */
+.invite-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}

@@ -148,7 +148,7 @@ export default function ClientsPage() {
             <div>
                 <div className="space-y-6">
                     {/* Toolbar */}
-                    <div className="flex items-center justify-between flex-gap-3">
+                    <div className="flex items-center justify-between gap-3">
                         {/* Search */}
                         <div className="w-full sm:w-auto min-w-[260px] max-w-[360px] relative">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -196,7 +196,7 @@ export default function ClientsPage() {
                     <Separator className="my-8" />
 
                     {/* Table */}
-                    <div className="overflow-x-auto w-full">
+                    <div className="w-full rounded-lg border overflow-x-auto">
                         <ClientsTable
                             clients={filteredClients}
                             selectedIds={selectedIds}

@@ -54,24 +54,24 @@ export function ClientsTable({
                 {/* Actions */}
                 <col className="w-24" />
             </colgroup>
-            <thead className="border-b bg-muted/50">
-                <tr>
-                    <th className="p-3 text-left">
-                        <input
-                            type="checkbox"
-                            checked={allSelected}
-                            onChange={(e) => onSelectAll(e.target.checked)}
-                            className="rounded border-gray-300"
-                        />
-                    </th>
-                    <th className="p-3 text-left text-xs font-medium">Name</th>
-                    <th className="p-3 text-left text-xs font-medium">Projects</th>
-                    <th className="p-3 text-left text-xs font-medium">Tasks</th>
-                    <th className="p-3 text-left text-xs font-medium">Budget</th>
-                    <th className="p-3 text-left text-xs font-medium">Auto Invoicing</th>
-                    <th className="p-3 text-left text-xs font-medium">Actions</th>
-                </tr>
-            </thead>
+                <thead className="border-b bg-muted/50">
+                    <tr>
+                        <th className="px-4 py-3 text-left">
+                            <input
+                                type="checkbox"
+                                checked={allSelected}
+                                onChange={(e) => onSelectAll(e.target.checked)}
+                                className="h-4 w-4 rounded border-gray-300"
+                            />
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Projects</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Tasks</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Budget</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Auto Invoicing</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Actions</th>
+                    </tr>
+                </thead>
             <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
                 {clients.length === 0 ? (
                     <tr>
@@ -98,7 +98,7 @@ export function ClientsTable({
                                         type="checkbox"
                                         checked={isSelected}
                                         onChange={(e) => onSelectClient(client.id, e.target.checked)}
-                                        className="rounded border-gray-300"
+                                        className="h-4 w-4 rounded border-gray-300"
                                     />
                                 </td>
                                 <td className="p-3">
