@@ -9,7 +9,6 @@ import z from "zod"
 
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -287,195 +286,191 @@ export default function ShiftManagementClient({
 
   return (
     <div className="w-full h-full">
-      <Card className="h-full border-0 shadow-none">
-        <CardContent className="p-0">
-          <DataTable
-            columns={columns}
-            data={shifts}
-            isLoading={isLoading}
-            showGlobalFilter={true}
-            showFilters={true}
-            showColumnToggle={false}
-            layout="card"
-            globalFilterPlaceholder="Search shifts..."
-            manualPagination={typeof pageIndex === "number" && typeof pageSize === "number"}
-            pageIndex={pageIndex}
-            pageSize={pageSize}
-            totalRecords={totalRecords}
-            onPageIndexChange={onPageIndexChange}
-            onPageSizeChange={onPageSizeChange}
-            toolbarRight={
-              <Dialog
-                open={open}
-                onOpenChange={(isOpen) => {
-                  if (!isOpen) closeDialog()
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button onClick={() => openDialog()} className="gap-2 whitespace-nowrap">
-                    <Plus className="h-4 w-4" />
-                    New
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{editing ? "Edit Shift" : "Add Shift"}</DialogTitle>
-                  </DialogHeader>
+      <DataTable
+        columns={columns}
+        data={shifts}
+        isLoading={isLoading}
+        showGlobalFilter={true}
+        showFilters={true}
+        showColumnToggle={false}
+        layout="card"
+        globalFilterPlaceholder="Search shifts..."
+        manualPagination={typeof pageIndex === "number" && typeof pageSize === "number"}
+        pageIndex={pageIndex}
+        pageSize={pageSize}
+        totalRecords={totalRecords}
+        onPageIndexChange={onPageIndexChange}
+        onPageSizeChange={onPageSizeChange}
+        toolbarRight={
+          <Dialog
+            open={open}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) closeDialog()
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button onClick={() => openDialog()} className="gap-2 whitespace-nowrap">
+                <Plus className="h-4 w-4" />
+                New
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editing ? "Edit Shift" : "Add Shift"}</DialogTitle>
+              </DialogHeader>
 
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Morning Shift" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Morning Shift" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                        <FormField
-                          control={form.control}
-                          name="code"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Code (optional)</FormLabel>
-                              <FormControl>
-                                <Input placeholder="MORNING" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                    <FormField
+                      control={form.control}
+                      name="code"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Code (optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="MORNING" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                        <FormField
-                          control={form.control}
-                          name="start_time"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Start Time</FormLabel>
-                              <FormControl>
-                                <Input type="time" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                    <FormField
+                      control={form.control}
+                      name="start_time"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Start Time</FormLabel>
+                          <FormControl>
+                            <Input type="time" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                        <FormField
-                          control={form.control}
-                          name="end_time"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>End Time</FormLabel>
-                              <FormControl>
-                                <Input type="time" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                    <FormField
+                      control={form.control}
+                      name="end_time"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>End Time</FormLabel>
+                          <FormControl>
+                            <Input type="time" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                        <FormField
-                          control={form.control}
-                          name="break_duration_minutes"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Break Duration (minutes)</FormLabel>
-                              <FormControl>
-                                <Input type="number" min={0} {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                    <FormField
+                      control={form.control}
+                      name="break_duration_minutes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Break Duration (minutes)</FormLabel>
+                          <FormControl>
+                            <Input type="number" min={0} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                        <FormField
-                          control={form.control}
-                          name="color_code"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Color</FormLabel>
-                              <FormControl>
-                                <Input type="color" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                    <FormField
+                      control={form.control}
+                      name="color_code"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Color</FormLabel>
+                          <FormControl>
+                            <Input type="color" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-                      <FormField
-                        control={form.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <FormControl>
-                              <Textarea rows={3} placeholder="Optional description" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea rows={3} placeholder="Optional description" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                      <div className="flex flex-col gap-3">
-                        <FormField
-                          control={form.control}
-                          name="overnight"
-                          render={({ field }) => (
-                            <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                              <div className="space-y-0.5">
-                                <FormLabel>Overnight</FormLabel>
-                                <div className="text-sm text-muted-foreground">
-                                  If shift ends on the next day.
-                                </div>
-                              </div>
-                              <FormControl>
-                                <Switch checked={!!field.value} onCheckedChange={field.onChange} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
+                  <div className="flex flex-col gap-3">
+                    <FormField
+                      control={form.control}
+                      name="overnight"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>Overnight</FormLabel>
+                            <div className="text-sm text-muted-foreground">
+                              If shift ends on the next day.
+                            </div>
+                          </div>
+                          <FormControl>
+                            <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
 
-                        <FormField
-                          control={form.control}
-                          name="is_active"
-                          render={({ field }) => (
-                            <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                              <div className="space-y-0.5">
-                                <FormLabel>Status</FormLabel>
-                                <div className="text-sm text-muted-foreground">Enable/disable this shift.</div>
-                              </div>
-                              <FormControl>
-                                <Switch checked={!!field.value} onCheckedChange={field.onChange} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                    <FormField
+                      control={form.control}
+                      name="is_active"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>Status</FormLabel>
+                            <div className="text-sm text-muted-foreground">Enable/disable this shift.</div>
+                          </div>
+                          <FormControl>
+                            <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-                      <div className="flex justify-end gap-2">
-                        <Button type="button" variant="outline" onClick={closeDialog}>
-                          Cancel
-                        </Button>
-                        <Button type="submit">{editing ? "Save Changes" : "Create"}</Button>
-                      </div>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={closeDialog}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">{editing ? "Save Changes" : "Create"}</Button>
+                  </div>
 
-                      <input type="hidden" {...form.register("organization_id")} />
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            }
-          />
-        </CardContent>
-      </Card>
+                  <input type="hidden" {...form.register("organization_id")} />
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        }
+      />
     </div>
   )
 }

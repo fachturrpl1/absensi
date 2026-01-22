@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useMemo, useState } from "react"
-import { Menu, Search } from "lucide-react"
+import { Menu, Search, ChevronDown } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import type { DateRange, FilterTab, PickerItem, SelectedFilter } from "./types"
@@ -19,6 +19,8 @@ interface Props {
   onToggleSidebar?: () => void
 
   timezone?: string
+
+  children?: React.ReactNode
 }
 
 export function InsightsHeader({
@@ -31,6 +33,7 @@ export function InsightsHeader({
   sidebarOpen,
   onToggleSidebar,
   timezone,
+  children,
 }: Props) {
   // STATE UNTUK KALENDER
   const [tempStartDate, setTempStartDate] = useState<Date>(dateRange.startDate)
@@ -283,8 +286,9 @@ export function InsightsHeader({
         {/* Members/Teams filter */}
         <DropdownMenu open={filterDropdownOpen} onOpenChange={setFilterDropdownOpen}>
           <DropdownMenuTrigger asChild>
-            <button className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 min-w-[150px] text-left text-gray-800">
+            <button className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 min-w-[150px] text-left text-gray-800 flex items-center justify-between">
               {filterLabel}
+              <ChevronDown className="w-4 h-4 opacity-50 ml-2" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-80 p-3">
@@ -538,6 +542,7 @@ export function InsightsHeader({
 
       {/* Right cluster (ikon dsb) */}
       <div className="flex items-center gap-2">
+        {children}
         {onToggleSidebar && (
           <button
             className="p-2 hover:bg-gray-100 rounded"

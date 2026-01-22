@@ -1,66 +1,336 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useMemo } from "react"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
-import { InsightsRightSidebar } from "@/components/insights/InsightsRightSidebar"
-import { DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
+import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_REPORT_ACTIVITIES, DUMMY_PROJECTS, DUMMY_CLIENTS } from "@/lib/data/dummy-data"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+    //  Download,
+    //  Share2,
+    Clock,
+    Filter,
+    Save,
+    //  Columns 
+} from "lucide-react"
+import { TimeActivityFilterSidebar } from "@/components/report/TimeActivityFilterSidebar"
+import { SaveReportDialog } from "@/components/report/SaveReportDialog"
+import { useTimezone } from "@/components/timezone-provider"
 
 export default function TimeActivityPage() {
-    // State
+    const timezone = useTimezone()
+    const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({ type: "members", all: true, id: "all" })
     const [dateRange, setDateRange] = useState<DateRange>({
-        startDate: new Date(2025, 0, 20),
-        endDate: new Date(2025, 0, 21),
+        startDate: new Date(2026, 0, 19),
+        endDate: new Date(2026, 0, 25)
+    })
+    const [groupBy, setGroupBy] = useState("day")
+    const [filterSidebarOpen, setFilterSidebarOpen] = useState(false)
+    const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+
+    // Additional Sidebar Filters
+    const [sidebarFilters, setSidebarFilters] = useState({
+        project: "all",
+        client: "all",
+        task: "all"
     })
 
-    const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({
-        type: 'members',
-        all: false,
-        id: 'm1',
-    })
+    const handleSidebarApply = (filters: { member: string, team: string, project: string, client: string, task: string }) => {
+        // Sync Member/Team filter from sidebar if changed (optional, but requested "force change")
+        if (filters.member && filters.member !== 'all') {
+            setSelectedFilter({ type: 'members', id: filters.member, all: false })
+        } else if (filters.team && filters.team !== 'all') {
+            setSelectedFilter({ type: 'teams', id: filters.team, all: false })
+        } else if (filters.member === 'all' && filters.team === 'all') {
+            // If both reset to all, reset header too
+            setSelectedFilter({ type: 'members', id: 'all', all: true })
+        }
 
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+        setSidebarFilters({
+            project: filters.project || "all",
+            client: filters.client || "all",
+            task: filters.task || "all"
+        })
+        setFilterSidebarOpen(false)
+    }
 
-    // Derived state
-    const selectedMember = selectedFilter.type === 'members'
-        ? DUMMY_MEMBERS.find(m => m.id === selectedFilter.id)
-        : undefined
+    // Derived Data
+    const filteredData = useMemo(() => {
+        let data = DUMMY_REPORT_ACTIVITIES
 
-    const handleFilterChange = (filter: SelectedFilter) => {
-        setSelectedFilter(filter)
+        // 1. Filter by Date Range
+        if (dateRange.startDate && dateRange.endDate) {
+            const start = new Date(dateRange.startDate)
+            start.setHours(0, 0, 0, 0)
+            const end = new Date(dateRange.endDate)
+            end.setHours(23, 59, 59, 999)
+
+            data = data.filter(item => {
+                const itemDate = new Date(item.date)
+                return itemDate >= start && itemDate <= end
+            })
+        }
+
+        // 2. Filter by Member/Team (Header)
+        if (!selectedFilter.all && selectedFilter.id !== 'all') {
+            if (selectedFilter.type === 'members') {
+                const selectedMember = DUMMY_MEMBERS.find(m => m.id === selectedFilter.id)
+                if (selectedMember) {
+                    data = data.filter(item => item.memberName === selectedMember.name)
+                }
+            } else if (selectedFilter.type === 'teams') {
+                const selectedTeam = DUMMY_TEAMS.find(t => t.id === selectedFilter.id)
+                if (selectedTeam) {
+                    data = data.filter(item => item.teamName === selectedTeam.name)
+                }
+            }
+        }
+
+        // 3. Filter by Sidebar Filters
+        if (sidebarFilters.project !== 'all') {
+            const proj = DUMMY_PROJECTS.find(p => p.id === sidebarFilters.project)
+            if (proj) {
+                data = data.filter(item => item.projectName === proj.name)
+            }
+        }
+        if (sidebarFilters.client !== 'all') {
+            const client = DUMMY_CLIENTS.find(c => c.id === sidebarFilters.client)
+            if (client) {
+                data = data.filter(item => item.clientName === client.name)
+            }
+        }
+        // Task filtering (assuming task == todoName for simplicity in dummy data)
+        // Dummy data doesn't have task IDs, so strictly speaking this might be limited, 
+        // but let's assume filtering by status is what was meant or just ignore if no data.
+        // Actually, sidebar has "Active/Completed" for tasks. 
+        // Our dummy data doesn't have status. We will ignore task status filtering for now 
+        // or check if 'todo' grouping was meant.
+        if (sidebarFilters.task !== 'all') {
+            data = data.filter(item => item.todoName === sidebarFilters.task);
+        }
+
+        // 4. Sort/Group by logic
+        if (groupBy && groupBy !== 'none') {
+            data = [...data].sort((a, b) => {
+                if (groupBy === 'member') {
+                    return a.memberName.localeCompare(b.memberName)
+                }
+                if (groupBy === 'project') {
+                    return a.projectName.localeCompare(b.projectName)
+                }
+                if (groupBy === 'week' || groupBy === 'day') {
+                    return new Date(a.date).getTime() - new Date(b.date).getTime()
+                }
+                if (groupBy === 'task') { // Renamed from todo
+                    return a.todoName.localeCompare(b.todoName)
+                }
+                return 0
+            })
+        }
+
+        return data
+    }, [dateRange, selectedFilter, sidebarFilters, groupBy])
+
+    const stats = useMemo(() => {
+        const totalHours = filteredData.reduce((acc, curr) => acc + curr.totalHours, 0)
+        const totalSpent = filteredData.reduce((acc, curr) => acc + curr.totalSpent, 0)
+        const avgActivity = filteredData.length > 0 ? filteredData.reduce((acc, curr) => acc + curr.activityPercent, 0) / filteredData.length : 0
+
+        return {
+            totalHours,
+            totalSpent,
+            avgActivity
+        }
+    }, [filteredData])
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)
     }
 
     return (
-        <div className="flex h-screen overflow-hidden bg-background">
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                <InsightsHeader
-                selectedFilter={selectedFilter}
-                onSelectedFilterChange={handleFilterChange}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-                members={DUMMY_MEMBERS}
-                teams={DUMMY_TEAMS}
-                />
+        <div className="flex h-screen overflow-hidden bg-white">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+                {/* Header Section */}
+                <div className="border-b border-gray-200 bg-white">
+                    <div className="px-6 py-4">
+                        <h1 className="text-2xl font-normal text-gray-800 mb-4">Time and activity report</h1>
 
-                <main className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-                    <div className="max-w-[1600px] mx-auto space-y-6">
-                        {/* Placeholder for future Time & Activity content */}
-                        <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed rounded-lg border-muted">
-                            <h3 className="text-lg font-medium">Time & Activity Report</h3>
-                            <p className="text-muted-foreground mt-2">
-                                Activity data for {selectedFilter.type === 'members' ? selectedMember?.name : 'Team'} will appear here.
-                            </p>
+                        <InsightsHeader
+                            selectedFilter={selectedFilter}
+                            onSelectedFilterChange={setSelectedFilter}
+                            dateRange={dateRange}
+                            onDateRangeChange={setDateRange}
+                            members={DUMMY_MEMBERS}
+                            teams={DUMMY_TEAMS}
+                            timezone={timezone}
+                        >
+                            <div className="flex items-center gap-2">
+                                {/* <Button variant="outline" size="icon" className="h-9 w-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50">
+                                    <Download className="w-4 h-4" />
+                                </Button>
+                                <Button variant="outline" size="icon" className="h-9 w-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50">
+                                    <Share2 className="w-4 h-4" />
+                                </Button>
+                                <Button variant="outline" size="icon" className="h-9 w-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50">
+                                    <Clock className="w-4 h-4" />
+                                </Button> */}
+                                <Button
+                                    variant="outline"
+                                    className="h-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50 font-medium"
+                                    onClick={() => setFilterSidebarOpen(true)}
+                                >
+                                    <Filter className="w-4 h-4 mr-2" /> Filter
+                                </Button>
+                                <Button
+                                    className="h-9 bg-gray-900 hover:bg-gray-800 text-white font-medium"
+                                    onClick={() => setSaveDialogOpen(true)}
+                                >
+                                    <Save className="w-4 h-4 mr-2" /> Save
+                                </Button>
+                            </div>
+                        </InsightsHeader>
+
+                        {/* Data Grouped By */}
+                        <div className="mt-6 mb-2">
+                            <label className="text-xs font-bold text-gray-400 uppercase mb-1 block">Data grouped by</label>
+                            <Select value={groupBy} onValueChange={setGroupBy}>
+                                <SelectTrigger className="w-[180px] h-9 border-blue-300 text-gray-700 font-medium ring-offset-0 focus:ring-0">
+                                    <SelectValue placeholder="Group by" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">None</SelectItem>
+                                    <SelectItem value="day">Date per day</SelectItem>
+                                    <SelectItem value="week">Date per week</SelectItem>
+                                    <SelectItem value="project">Project</SelectItem>
+                                    <SelectItem value="member">Member</SelectItem>
+                                    <SelectItem value="task">Tasks</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                </div>
+
+                <main className="flex-1 overflow-y-auto bg-gray-50/50 p-6">
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col justify-between h-24 relative overflow-hidden group hover:shadow-md transition-shadow">
+                            <div className="flex items-start gap-3 relative z-10">
+                                <div className="p-2 bg-gray-100 rounded-md">
+                                    <Clock className="w-5 h-5 text-gray-700" />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-500">Total time</p>
+                                    <p className="text-xl font-bold text-gray-900 mt-1">{stats.totalHours.toFixed(1)}h</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col justify-between h-24 relative overflow-hidden group hover:shadow-md transition-shadow">
+                            <div className="flex items-start gap-3 relative z-10">
+                                <div className="p-2 bg-gray-100 rounded-md">
+                                    <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-500">Average activity</p>
+                                    <p className="text-xl font-bold text-gray-900 mt-1">{stats.avgActivity.toFixed(1)}%</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col justify-between h-24 relative overflow-hidden group hover:shadow-md transition-shadow">
+                            <div className="flex items-start gap-3 relative z-10">
+                                <div className="p-2 bg-gray-100 rounded-md">
+                                    <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <rect x="2" y="5" width="20" height="14" rx="2" />
+                                        <line x1="2" y1="10" x2="22" y2="10" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-500">Total spent</p>
+                                    <p className="text-xl font-bold text-gray-900 mt-1">{formatCurrency(stats.totalSpent)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Table Section */}
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                        {/* <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                            <h2 className="font-semibold text-gray-700">Table</h2>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-600 border border-gray-300 rounded hover:bg-gray-50">
+                                <Columns className="w-4 h-4" />
+                            </Button>
+                        </div> */}
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200">
+                                    <tr>
+                                        <th className="px-4 py-3 min-w-[100px]">Date</th>
+                                        <th className="px-4 py-3 min-w-[120px]">Client</th>
+                                        <th className="px-4 py-3 min-w-[140px]">Project</th>
+                                        <th className="px-4 py-3 min-w-[120px]">Team</th>
+                                        <th className="px-4 py-3 min-w-[150px]">To-do</th>
+                                        <th className="px-4 py-3 text-right">Regular hours</th>
+                                        <th className="px-4 py-3 text-right">Total hours</th>
+                                        <th className="px-4 py-3 text-right">Activity %</th>
+                                        <th className="px-4 py-3 text-right">Total spent</th>
+                                        <th className="px-4 py-3 text-right">Regular spent</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {filteredData.length > 0 ? (
+                                        filteredData.map(item => (
+                                            <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-4 py-3 text-gray-900">{new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                                                <td className="px-4 py-3 text-gray-600">{item.clientName}</td>
+                                                <td className="px-4 py-3 text-gray-900 font-medium">{item.projectName}</td>
+                                                <td className="px-4 py-3 text-gray-600">{item.teamName}</td>
+                                                <td className="px-4 py-3 text-gray-600">{item.todoName}</td>
+                                                <td className="px-4 py-3 text-right text-gray-600">{item.regularHours.toFixed(1)}</td>
+                                                <td className="px-4 py-3 text-right text-gray-900 font-medium">{item.totalHours.toFixed(1)}</td>
+                                                <td className="px-4 py-3 text-right text-green-600 font-medium">{item.activityPercent}%</td>
+                                                <td className="px-4 py-3 text-right text-gray-900">{formatCurrency(item.totalSpent)}</td>
+                                                <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.regularSpent)}</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={10} className="px-4 py-12 text-center">
+                                                <div className="flex flex-col items-center justify-center">
+                                                    {/* Illustration placeholder - simple one for now or detailed if image tool allowed */}
+                                                    <div className="w-48 h-32 bg-gray-100 mb-4 rounded flex items-center justify-center text-gray-400">
+                                                        <span className="text-4xl text-gray-300">?</span>
+                                                    </div>
+                                                    <h3 className="text-lg font-medium text-gray-900">Nothing to report</h3>
+                                                    <p className="text-sm text-gray-500 mt-1">Expecting to see something? Try adjusting the report.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </main>
             </div>
 
-            <InsightsRightSidebar
-                open={isSidebarOpen}
-                onOpenChange={setIsSidebarOpen}
-                members={DUMMY_MEMBERS}
-                selectedFilter={selectedFilter}
-                onSelectedFilterChange={handleFilterChange}
+            <TimeActivityFilterSidebar
+                open={filterSidebarOpen}
+                onOpenChange={setFilterSidebarOpen}
+                onApply={handleSidebarApply}
+            />
+
+            <SaveReportDialog
+                open={saveDialogOpen}
+                onOpenChange={setSaveDialogOpen}
+                onSave={(name) => {
+                    console.log("Saving report:", name)
+                    setSaveDialogOpen(false)
+                }}
             />
         </div>
     )
