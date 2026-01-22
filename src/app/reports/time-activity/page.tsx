@@ -195,7 +195,7 @@ export default function TimeActivityPage() {
                         <div className="mt-6 mb-2">
                             <label className="text-xs font-bold text-gray-400 uppercase mb-1 block">Data grouped by</label>
                             <Select value={groupBy} onValueChange={setGroupBy}>
-                                <SelectTrigger className="w-[180px] h-9 border-blue-300 text-gray-700 font-medium ring-offset-0 focus:ring-0">
+                                <SelectTrigger className="w-[180px] h-9 border-gray-300 text-gray-700 font-medium ring-offset-0 focus:ring-0">
                                     <SelectValue placeholder="Group by" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -305,8 +305,7 @@ export default function TimeActivityPage() {
                                                     <div className="w-48 h-32 bg-gray-100 mb-4 rounded flex items-center justify-center text-gray-400">
                                                         <span className="text-4xl text-gray-300">?</span>
                                                     </div>
-                                                    <h3 className="text-lg font-medium text-gray-900">Nothing to report</h3>
-                                                    <p className="text-sm text-gray-500 mt-1">Expecting to see something? Try adjusting the report.</p>
+                                                    <h3 className="text-sm font-semibold text-gray-900">Nothing to report</h3>
                                                 </div>
                                             </td>
                                         </tr>

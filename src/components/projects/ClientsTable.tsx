@@ -2,6 +2,7 @@
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ClientActionsDropdown } from "./ClientActionsDropdown"
+import { getProjectCountByClientId, getTaskCountByClientId } from "@/lib/data/dummy-data"
 
 export interface Client {
     id: string
@@ -40,11 +41,15 @@ export function ClientsTable({
             <colgroup>
                 {/* Checkbox */}
                 <col className="w-10" />
-                {/* Name: samakan dengan Budget */}
-                <col className="w-64" />
-                {/* Budget: samakan dengan Name */}
-                <col className="w-64" />
-                {/* Auto Invoicing: biarkan fleksibel */}
+                {/* Name */}
+                <col className="w-48" />
+                {/* Projects */}
+                <col className="w-24" />
+                {/* Tasks */}
+                <col className="w-24" />
+                {/* Budget */}
+                <col className="w-40" />
+                {/* Auto Invoicing */}
                 <col />
                 {/* Actions */}
                 <col className="w-24" />
@@ -60,6 +65,8 @@ export function ClientsTable({
                         />
                     </th>
                     <th className="p-3 text-left text-xs font-medium">Name</th>
+                    <th className="p-3 text-left text-xs font-medium">Projects</th>
+                    <th className="p-3 text-left text-xs font-medium">Tasks</th>
                     <th className="p-3 text-left text-xs font-medium">Budget</th>
                     <th className="p-3 text-left text-xs font-medium">Auto Invoicing</th>
                     <th className="p-3 text-left text-xs font-medium">Actions</th>
@@ -68,7 +75,7 @@ export function ClientsTable({
             <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
                 {clients.length === 0 ? (
                     <tr>
-                        <td colSpan={5} className="p-6 text-center text-muted-foreground">
+                        <td colSpan={7} className="p-6 text-center text-muted-foreground">
                             No clients found
                         </td>
                     </tr>
@@ -81,9 +88,11 @@ export function ClientsTable({
                             .join("")
                             .toUpperCase()
                             .slice(0, 2)
+                        const projectCount = getProjectCountByClientId(client.id)
+                        const taskCount = getTaskCountByClientId(client.id)
 
                         return (
-                            <tr key={client.id} className="border-b">
+                            <tr key={client.id} className="border-b hover:bg-muted/30 transition-colors">
                                 <td className="p-3 align-top">
                                     <input
                                         type="checkbox"
@@ -95,12 +104,18 @@ export function ClientsTable({
                                 <td className="p-3">
                                     <div className="flex items-center gap-3 min-w-0">
                                         <Avatar className="h-8 w-8">
-                                            <AvatarFallback className="bg-purple-600 text-white text-xs">
+                                            <AvatarFallback className="bg-gray-100 text-gray-700 text-xs">
                                                 {initials}
                                             </AvatarFallback>
                                         </Avatar>
-                                        <span className="font-medium truncate">{client.name}</span>
+                                        <span className="text-sm font-semibold">{client.name}</span>
                                     </div>
+                                </td>
+                                <td className="p-3 text-sm text-muted-foreground">
+                                    {projectCount} project{projectCount !== 1 ? "s" : ""}
+                                </td>
+                                <td className="p-3 text-sm text-muted-foreground">
+                                    {taskCount} task{taskCount !== 1 ? "s" : ""}
                                 </td>
                                 <td className="p-3 text-sm text-muted-foreground">{client.budget}</td>
                                 <td className="p-3 text-sm text-muted-foreground">
@@ -122,3 +137,4 @@ export function ClientsTable({
         </table>
     )
 }
+

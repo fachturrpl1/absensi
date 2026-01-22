@@ -146,7 +146,7 @@ export function TimeActivityFilterSidebar({ open, onOpenChange, onApply, classNa
                     {/* Custom Filters */}
                     <div className="space-y-2">
                         <Label className="text-xs font-semibold text-gray-500 uppercase">Custom Filters</Label>
-                        <button className="flex items-center gap-1 text-sm text-blue-500 hover:underline">
+                        <button className="flex items-center gap-1 text-sm text-gray-500 hover:underline cursor-pointer">
                             <Plus className="w-4 h-4" /> Add custom filters
                         </button>
                     </div>

@@ -169,9 +169,9 @@ export default function ClientsPage() {
                                     {activeTab === "active" ? "Archive" : "Restore"} ({selectedIds.length})
                                 </Button>
                             )}
-                            <Button variant="outline" className="px-3 hidden md:inline-flex">
+                            {/* <Button variant="outline" className="px-3 hidden md:inline-flex">
                                 Import clients
-                            </Button>
+                            </Button> */}
                             <Button
                                 className="px-3"
                                 onClick={() => {

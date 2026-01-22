@@ -43,9 +43,9 @@ export default function DuplicateProjectDialog({ open, projectName, onOpenChange
     if (!name.trim()) return
     const payload: DuplicateProjectOptions = {
       name: name.trim(),
-      keepTodos,
-      keepTodosAssignees,
-      keepTodosCompleted,
+      keepTasks: keepTodos,
+      keepTasksAssignees: keepTodosAssignees,
+      keepTasksCompleted: keepTodosCompleted,
       keepAllMembers,
       keepBudget,
       keepMemberLimits,
@@ -79,7 +79,7 @@ export default function DuplicateProjectDialog({ open, projectName, onOpenChange
             <label className="flex items-start gap-3 py-1">
               <Checkbox checked={keepTodos} onCheckedChange={(v) => setKeepTodos(Boolean(v))} />
               <div>
-                <div>To-dos (does not include global to-dos)</div>
+                <div>Tasks (does not include global tasks)</div>
                 <div className="pl-6 pt-1 space-y-2">
                   <label className="flex items-center gap-3">
                     <Checkbox
@@ -95,7 +95,7 @@ export default function DuplicateProjectDialog({ open, projectName, onOpenChange
                       onCheckedChange={(v) => setKeepTodosCompleted(Boolean(v))}
                       disabled={!keepTodos}
                     />
-                    <span>Completed To-dos</span>
+                    <span>Completed Tasks</span>
                   </label>
                 </div>
               </div>

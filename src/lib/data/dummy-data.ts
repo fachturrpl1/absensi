@@ -18,17 +18,138 @@ export interface Client {
     createdAt: string
 }
 
+// ===== PROJECT TASKS (DUMMY) =====
+export type TaskStatus = "todo" | "in_progress" | "done"
+
+export interface ProjectTask {
+    id: string
+    title: string
+    projectId: string
+    assigneeId: string
+    status: TaskStatus
+}
+
+export const DUMMY_PROJECT_TASKS: ProjectTask[] = [
+    { id: "t-1", title: "Setup repository", projectId: "proj-1", assigneeId: "m1", status: "done" },
+    { id: "t-2", title: "Create design system", projectId: "proj-1", assigneeId: "m2", status: "in_progress" },
+    { id: "t-3", title: "Landing page hero", projectId: "proj-1", assigneeId: "m3", status: "todo" },
+    { id: "t-4", title: "API contracts", projectId: "proj-2", assigneeId: "m4", status: "in_progress" },
+    { id: "t-5", title: "Auth flow", projectId: "proj-2", assigneeId: "m5", status: "todo" },
+    { id: "t-6", title: "Campaign brief", projectId: "proj-3", assigneeId: "m1", status: "done" },
+    { id: "t-7", title: "Asset preparation", projectId: "proj-3", assigneeId: "m5", status: "in_progress" },
+    { id: "t-8", title: "Legacy audit", projectId: "proj-4", assigneeId: "m2", status: "in_progress" },
+    { id: "t-9", title: "Data migration", projectId: "proj-5", assigneeId: "m3", status: "todo" },
+    { id: "t-10", title: "Performance profiling", projectId: "proj-5", assigneeId: "m4", status: "done" },
+    { id: "t-11", title: "Accessibility fixes", projectId: "proj-5", assigneeId: "m3", status: "in_progress" },
+]
+
+export function getTasksByProjectMembers(projectId: string): ProjectTask[] {
+    const memberIds = PROJECT_MEMBER_MAP[projectId] ?? []
+    return DUMMY_PROJECT_TASKS.filter(
+        (t) => t.projectId === projectId && memberIds.includes(t.assigneeId)
+    )
+}
+
+export function getTaskCountByProjectMembers(projectId: string): number {
+    return getTasksByProjectMembers(projectId).length
+}
+
+// Hitung jumlah tasks dari halaman Tasks (berdasarkan nama project)
+export function getTaskCountFromTasksPageByProjectName(projectName: string): number {
+    return DUMMY_TASKS.filter((t) => t.project === projectName).length
+}
+
+// Versi by projectId: map id -> nama project, lalu gunakan helper di atas
+export function getTaskCountFromTasksPageByProjectId(projectId: string): number {
+    const p = DUMMY_PROJECTS.find((x) => x.id === projectId)
+    if (!p) return 0
+    return getTaskCountFromTasksPageByProjectName(p.name)
+}
+
 // Members assigned per project (dummy)
 export const PROJECT_MEMBER_MAP: Record<string, string[]> = {
-  "proj-1": ["m1", "m2", "m3"],
-  "proj-2": ["m4", "m5"],
-  "proj-3": ["m1", "m5"],
-  "proj-4": ["m2"],
-  "proj-5": ["m3", "m4"],
+    "proj-1": ["m1", "m2", "m3"],
+    "proj-2": ["m4", "m5"],
+    "proj-3": ["m1", "m5"],
+    "proj-4": ["m2"],
+    "proj-5": ["m3", "m4"],
 }
 
 export function getProjectMemberIds(projectId: string): string[] {
   return PROJECT_MEMBER_MAP[projectId] ?? []
+}
+
+// Teams by project (derived from project members)
+// Explicit mapping: project -> team IDs
+export const PROJECT_TEAM_MAP: Record<string, string[]> = {
+  "proj-1": ["t1"], // Website Redesign -> Team Alpha
+  "proj-2": ["t3"], // Mobile App Development -> Team Gamma
+  "proj-3": ["t2"], // Marketing Campaign -> Team Beta
+  // Tambahkan mapping lain jika diperlukan
+}
+
+export function getTeamsByProjectId(projectId: string): Team[] {
+  const explicitTeamIds = PROJECT_TEAM_MAP[projectId]
+  if (explicitTeamIds && explicitTeamIds.length > 0) {
+    const idSet = new Set(explicitTeamIds)
+    return DUMMY_TEAMS.filter((t) => idSet.has(t.id))
+  }
+
+  // Fallback: turunkan dari irisan member (legacy behavior)
+  const memberIds = PROJECT_MEMBER_MAP[projectId] ?? []
+  const result: Team[] = []
+  const seen = new Set<string>()
+  for (const t of DUMMY_TEAMS) {
+    if (t.members.some((m) => memberIds.includes(m)) && !seen.has(t.id)) {
+      seen.add(t.id)
+      result.push(t)
+    }
+  }
+  return result
+}
+
+export function getTeamNamesByProjectId(projectId: string): string[] {
+  return getTeamsByProjectId(projectId).map((t) => t.name)
+}
+
+// ============================================================================
+// CLIENT-PROJECT-TASK INTEGRATION HELPERS
+// ============================================================================
+
+// Get all projects linked to a specific client
+export function getProjectsByClientId(clientId: string): Project[] {
+    return DUMMY_PROJECTS.filter((p) => p.clientId === clientId)
+}
+
+// Get project count for a client
+export function getProjectCountByClientId(clientId: string): number {
+    return getProjectsByClientId(clientId).length
+}
+
+// Get all tasks for a client (via their projects)
+export function getTasksByClientId(clientId: string): TaskItem[] {
+    const clientProjects = getProjectsByClientId(clientId)
+    const projectNames = clientProjects.map((p) => p.name)
+    return DUMMY_TASKS.filter((t) => projectNames.includes(t.project))
+}
+
+// Get task count for a client
+export function getTaskCountByClientId(clientId: string): number {
+    return getTasksByClientId(clientId).length
+}
+
+// Get client by project ID
+export function getClientByProjectId(projectId: string): Client | null {
+    const project = DUMMY_PROJECTS.find((p) => p.id === projectId)
+    if (!project || !project.clientId) return null
+    return DUMMY_CLIENTS.find((c) => c.id === project.clientId) ?? null
+}
+
+// Get client name by project name (for Tasks page)
+export function getClientNameByProjectName(projectName: string): string | null {
+    const project = DUMMY_PROJECTS.find((p) => p.name === projectName)
+    if (!project || !project.clientName) return null
+    return project.clientName
 }
 
 export const DUMMY_CLIENTS: Client[] = [
@@ -1481,7 +1602,7 @@ export const DUMMY_DASHBOARD_STATS: DashboardStats = {
 export const DUMMY_MY_ACTIVITIES: DashboardActivity[] = DUMMY_DASHBOARD_ACTIVITIES.filter(a => a.memberId === 'm1')
 
 export const DUMMY_MY_STATS = {
-    status: 'Hadir',
+    status: 'Attend',
     workedToday: '8h 40m',
     workedWeek: '38h 25m',
     attendanceRate: '95%',
