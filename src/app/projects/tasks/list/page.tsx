@@ -25,6 +25,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { DUMMY_MEMBERS, DUMMY_PROJECTS, DUMMY_TASKS, getClientNameByProjectName } from "@/lib/data/dummy-data"
+import { PaginationFooter } from "@/components/pagination-footer"
 
 // Helper for initials
 function initialsFromName(name: string): string {
@@ -58,7 +59,7 @@ export default function ListView() {
     const [selectedAssignee, setSelectedAssignee] = useState("all")
 
     const [currentPage, setCurrentPage] = useState(1)
-    const itemsPerPage = 10
+    const [pageSize, setPageSize] = useState(10)
 
     const projectOptions = useMemo(() => DUMMY_PROJECTS.map((project) => project.name).filter(Boolean), [])
     const uniqueAssignees = useMemo(() => {
@@ -89,12 +90,12 @@ export default function ListView() {
     }, [tasks, activeTab, selectedProject, selectedAssignee, searchQuery])
 
     const paginatedTasks = useMemo(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage
-        const endIndex = startIndex + itemsPerPage
+        const startIndex = (currentPage - 1) * pageSize
+        const endIndex = startIndex + pageSize
         return filteredTasks.slice(startIndex, endIndex)
-    }, [filteredTasks, currentPage, itemsPerPage])
+    }, [filteredTasks, currentPage, pageSize])
 
-    const totalPages = Math.ceil(filteredTasks.length / itemsPerPage)
+    const totalPages = Math.ceil(filteredTasks.length / pageSize)
 
     const allSelected = paginatedTasks.length > 0 && paginatedTasks.every(t => selectedIds.includes(t.id))
 
@@ -164,7 +165,7 @@ export default function ListView() {
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex items-center gap-3 flex-1">
                         {/* Search */}
-                        <div className="relative w-full max-w-[300px]">
+                            <div className="relative w-full sm:w-auto min-w-[260px] max-w-[360px]">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                             <Input
                                 placeholder="Search tasks"
@@ -172,7 +173,7 @@ export default function ListView() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-10 border-gray-300"
                             />
-                        </div>
+                            </div>
 
                         {/* Filters inline with search for better density */}
                         <Select value={selectedProject} onValueChange={(value) => setSelectedProject(value)}>
@@ -201,10 +202,6 @@ export default function ListView() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {/* <Button variant="outline" className="px-3" disabled>
-                            <Download className="w-4 h-4 mr-2" />
-                            Import tasks
-                        </Button> */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button className="px-3">
@@ -231,13 +228,18 @@ export default function ListView() {
                                 Batch actions
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-48">
-                            <DropdownMenuItem onSelect={() => {
-                                // Dummy complete
-                                setTasks(prev => prev.map(t => selectedIds.includes(t.id) ? { ...t, completed: true } : t))
+                            <DropdownMenuContent align="start" className="w-48">
+                            <DropdownMenuItem
+                                onSelect={() => {
+                                if (activeTab === "active") {
+                                    setTasks(prev => prev.map(t => selectedIds.includes(t.id) ? { ...t, completed: true } : t))
+                                } else {
+                                    setTasks(prev => prev.map(t => selectedIds.includes(t.id) ? { ...t, completed: false } : t))
+                                }
                                 setSelectedIds([])
-                            }}>
-                                Mark as completed
+                                }}
+                            >
+                                {activeTab === "active" ? "Mark as completed" : "Mark as active"}
                             </DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => {
                                 // Dummy delete
@@ -339,43 +341,17 @@ export default function ListView() {
                     </Table>
                 </div>
 
-                {/* Pagination Footer */}
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <div>
-                        Showing {paginatedTasks.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} - {Math.min(currentPage * itemsPerPage, filteredTasks.length)} of {filteredTasks.length} tasks
-                    </div>
-                    {totalPages > 1 && (
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                disabled={currentPage === 1}
-                            >
-                                Previous
-                            </Button>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                <Button
-                                    key={page}
-                                    variant={currentPage === page ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => setCurrentPage(page)}
-                                    className="w-8 h-8 p-0"
-                                >
-                                    {page}
-                                </Button>
-                            ))}
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                disabled={currentPage === totalPages}
-                            >
-                                Next
-                            </Button>
-                        </div>
-                    )}
-                </div>
+                <PaginationFooter
+                    page={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    isLoading={false}
+                    from={paginatedTasks.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
+                    to={Math.min(currentPage * pageSize, filteredTasks.length)}
+                    total={filteredTasks.length}
+                    pageSize={pageSize}
+                    onPageSizeChange={setPageSize}
+                />
             </div>
 
             {/* DIALOGS (Preserved) */}

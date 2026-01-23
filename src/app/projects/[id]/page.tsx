@@ -16,6 +16,7 @@ import AddProjectDialog from "@/components/projects/AddProjectDialog"
 import EditProjectDialog from "@/components/projects/EditProjectDialog"
 import type { Project, NewProjectForm } from "@/components/projects/types"
 import { DUMMY_PROJECTS, DUMMY_MEMBERS, PROJECT_MEMBER_MAP, getTaskCountFromTasksPageByProjectId, getTeamNamesByProjectId } from "@/lib/data/dummy-data"
+import { PaginationFooter } from "@/components/pagination-footer"
 
 // Convert dummy projects to component format
 const INITIAL_DATA: Project[] = DUMMY_PROJECTS.map(p => {
@@ -51,6 +52,8 @@ export default function Page() {
   const [search, setSearch] = useState("")
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [data, setData] = useState<Project[]>(INITIAL_DATA)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // dialogs
   const [addOpen, setAddOpen] = useState(false)
@@ -87,11 +90,24 @@ export default function Page() {
     return byTab.filter(p => p.name.toLowerCase().includes(q))
   }, [activeTab, data, search])
 
-  const allSelected = filtered.length > 0 && selectedIds.length === filtered.length
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    const end = start + pageSize
+    return filtered.slice(start, end)
+  }, [filtered, currentPage, pageSize])
+
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1
+
+  const allSelected = paginated.length > 0 && paginated.every(p => selectedIds.includes(p.id))
 
   const toggleSelectAll = () => {
-    if (allSelected) setSelectedIds([])
-    else setSelectedIds(filtered.map(p => p.id))
+    if (allSelected) {
+      setSelectedIds(prev => prev.filter(id => !paginated.find(p => p.id === id)))
+    } else {
+      const newIds = [...selectedIds]
+      paginated.forEach(p => { if (!newIds.includes(p.id)) newIds.push(p.id) })
+      setSelectedIds(newIds)
+    }
   }
 
   const toggleSelect = (id: string) => {
@@ -136,9 +152,9 @@ export default function Page() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" className="px-3 hidden md:inline-flex" onClick={() => setImportOpen(true)}>
+              {/* <Button variant="outline" className="px-3 hidden md:inline-flex" onClick={() => setImportOpen(true)}>
                 Import projects
-              </Button>
+              </Button> */}
               <Button className="px-3" onClick={() => setAddOpen(true)}>
                 <Plus />Add
               </Button>
@@ -206,7 +222,7 @@ export default function Page() {
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((p) => (
+                  paginated.map((p) => (
                     <tr key={p.id} className="border-b">
                       <td className="p-3 align-top">
                         <input
@@ -306,10 +322,17 @@ export default function Page() {
             </table>
           </div>
 
-          {/* Footer summary */}
-          <div className="text-sm text-muted-foreground mt-4">
-            Showing {filtered.length} of {filtered.length} project{filtered.length !== 1 ? "s" : ""}
-          </div>
+          <PaginationFooter
+            page={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            isLoading={false}
+            from={paginated.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
+            to={Math.min(currentPage * pageSize, filtered.length)}
+            total={filtered.length}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
 
           {/* New Project Dialog (refactored) */}
           <AddProjectDialog
