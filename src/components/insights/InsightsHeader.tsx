@@ -21,6 +21,9 @@ interface Props {
   timezone?: string
 
   children?: React.ReactNode
+
+  hideAllOption?: boolean // Untuk menyembunyikan opsi "All Members" / "All Teams"
+  hideTeamsTab?: boolean // Untuk menyembunyikan tab "Teams"
 }
 
 export function InsightsHeader({
@@ -34,6 +37,8 @@ export function InsightsHeader({
   onToggleSidebar,
   timezone,
   children,
+  hideAllOption = false,
+  hideTeamsTab = false,
 }: Props) {
   // STATE UNTUK KALENDER
   const [tempStartDate, setTempStartDate] = useState<Date>(dateRange.startDate)
@@ -99,10 +104,11 @@ export function InsightsHeader({
   useEffect(() => {
     if (filterDropdownOpen) {
       setTempFilter(selectedFilter)
-      setFilterTab(selectedFilter.type)
+      // Jika hideTeamsTab true, paksa ke "members"
+      setFilterTab(hideTeamsTab ? "members" : selectedFilter.type)
       setFilterSearch("")
     }
-  }, [filterDropdownOpen, selectedFilter])
+  }, [filterDropdownOpen, selectedFilter, hideTeamsTab])
 
   const generateCalendarDays = (month: Date) => {
     const year = month.getFullYear()
@@ -277,7 +283,9 @@ export function InsightsHeader({
     setSelectingStart(true)
   }
 
-  const source = filterTab === "members" ? members : teams
+  // Jika hideTeamsTab true, paksa filterTab ke "members"
+  const effectiveFilterTab = hideTeamsTab ? "members" : filterTab
+  const source = effectiveFilterTab === "members" ? members : teams
   const filtered = source.filter(it => it.name.toLowerCase().includes(filterSearch.toLowerCase()))
 
   return (
@@ -292,17 +300,19 @@ export function InsightsHeader({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-80 p-3">
-            <div className="flex items-center gap-2 mb-3">
-              <button
-                className={`px-3 py-1 rounded-full text-sm border ${filterTab === "members" ? "bg-gray-100 border-black text-black" : "bg-white border-gray-300 text-gray-700"}`}
-                onClick={() => { setFilterTab("members"); setFilterSearch("") }}
-              >Members</button>
+            {!hideTeamsTab && (
+              <div className="flex items-center gap-2 mb-3">
+                <button
+                  className={`px-3 py-1 rounded-full text-sm border ${filterTab === "members" ? "bg-gray-100 border-black text-black" : "bg-white border-gray-300 text-gray-700"}`}
+                  onClick={() => { setFilterTab("members"); setFilterSearch("") }}
+                >Members</button>
 
-              <button
-                className={`px-3 py-1 rounded-full text-sm border ${filterTab === "teams" ? "bg-gray-100 border-black text-black" : "bg-white border-gray-300 text-gray-700"}`}
-                onClick={() => { setFilterTab("teams"); setFilterSearch("") }}
-              >Teams</button>
-            </div>
+                <button
+                  className={`px-3 py-1 rounded-full text-sm border ${filterTab === "teams" ? "bg-gray-100 border-black text-black" : "bg-white border-gray-300 text-gray-700"}`}
+                  onClick={() => { setFilterTab("teams"); setFilterSearch("") }}
+                >Teams</button>
+              </div>
+            )}
 
             <div className="mb-3 relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -321,24 +331,26 @@ export function InsightsHeader({
               )}
             </div>
 
-            <div className="mb-2 pb-2 border-b border-gray-200">
-              <button
-                className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${tempFilter.all && tempFilter.type === filterTab ? "bg-gray-100 text-black" : "hover:bg-gray-50 text-gray-700"}`}
-                onClick={() => setTempFilter({ type: filterTab, all: true })}
-              >
-                <span className={`inline-block w-2 h-2 rounded-full border ${tempFilter.all && tempFilter.type === filterTab ? "bg-black border-black" : "border-gray-400"}`} />
-                All {filterTab === "members" ? "Members" : "Teams"}
-              </button>
-            </div>
+            {!hideAllOption && (
+              <div className="mb-2 pb-2 border-b border-gray-200">
+                <button
+                  className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${tempFilter.all && tempFilter.type === effectiveFilterTab ? "bg-gray-100 text-black" : "hover:bg-gray-50 text-gray-700"}`}
+                  onClick={() => setTempFilter({ type: effectiveFilterTab, all: true })}
+                >
+                  <span className={`inline-block w-2 h-2 rounded-full border ${tempFilter.all && tempFilter.type === effectiveFilterTab ? "bg-black border-black" : "border-gray-400"}`} />
+                  All {effectiveFilterTab === "members" ? "Members" : "Teams"}
+                </button>
+              </div>
+            )}
 
             <div className="max-h-64 overflow-auto">
               {filtered.map(it => {
-                const isActive = !tempFilter.all && tempFilter.type === filterTab && tempFilter.id === it.id
+                const isActive = !tempFilter.all && tempFilter.type === effectiveFilterTab && tempFilter.id === it.id
                 return (
                   <button
                     key={it.id}
                     className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${isActive ? "bg-gray-100 text-black" : "hover:bg-gray-50 text-gray-700"}`}
-                    onClick={() => setTempFilter({ type: filterTab, all: false, id: it.id })}
+                    onClick={() => setTempFilter({ type: effectiveFilterTab, all: false, id: it.id })}
                   >
                     <span className={`inline-block w-2 h-2 rounded-full border ${isActive ? "bg-black border-black" : "border-gray-400"}`} />
                     {it.name}

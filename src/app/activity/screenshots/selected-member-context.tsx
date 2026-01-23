@@ -2,11 +2,12 @@
 
 import { createContext, ReactNode, useContext } from "react"
 import type { Member } from "@/lib/data/dummy-data"
+import type { DateRange } from "@/components/insights/types"
 
 export interface SelectedMemberContextValue {
   selectedMemberId: string | null
   selectedMember: Member | null
-  selectedDate: Date
+  dateRange: DateRange
 }
 
 const SelectedMemberContext = createContext<SelectedMemberContextValue | undefined>(undefined)
@@ -31,5 +32,11 @@ export function SelectedMemberProvider({
       {children}
     </SelectedMemberContext.Provider>
   )
+}
+
+// Backward compatibility: selectedDate is now dateRange.startDate
+export function useSelectedDate() {
+  const context = useSelectedMemberContext()
+  return context.dateRange.startDate
 }
 

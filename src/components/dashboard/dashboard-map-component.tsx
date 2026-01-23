@@ -1,5 +1,6 @@
 "use client";
 
+// @ts-ignore - pigeon-maps may not have type definitions
 import { Map, Marker } from "pigeon-maps";
 import { useState } from "react";
 
@@ -33,7 +34,7 @@ export default function DashboardMapComponent() {
                 height={500}
                 center={center}
                 zoom={zoom}
-                onBoundsChanged={({ center, zoom }) => {
+                onBoundsChanged={({ center, zoom }: { center: [number, number]; zoom: number }) => {
                     setCenter(center);
                     setZoom(zoom);
                 }}

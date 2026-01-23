@@ -1,0 +1,389 @@
+"use client"
+
+import { useEffect, useMemo, useState } from "react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import type { DateRange } from "./types"
+
+interface Props {
+  dateRange: DateRange
+  onDateRangeChange: (next: DateRange) => void
+  timezone?: string
+}
+
+export function DateRangePicker({
+  dateRange,
+  onDateRangeChange,
+  timezone,
+}: Props) {
+  const [tempStartDate, setTempStartDate] = useState<Date>(dateRange.startDate)
+  const [tempEndDate, setTempEndDate] = useState<Date>(dateRange.endDate)
+  const [leftMonth, setLeftMonth] = useState<Date>(new Date(dateRange.startDate))
+  const [rightMonth, setRightMonth] = useState<Date>(new Date(new Date(dateRange.startDate).setMonth(new Date(dateRange.startDate).getMonth() + 1)))
+  const [selectingStart, setSelectingStart] = useState(true)
+  const [dateRangeOpen, setDateRangeOpen] = useState(false)
+  const [selectedPreset, setSelectedPreset] = useState<string>("last_7_days")
+
+  const fmt = (d: Date) =>
+    d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: timezone || "UTC" })
+
+  const tzOffset = useMemo((): string => {
+    if (!timezone) return ""
+    try {
+      const now = new Date()
+      const parts = new Intl.DateTimeFormat("en-US", { timeZone: timezone, timeZoneName: "short" }).formatToParts(now)
+      const name = parts.find(p => p.type === "timeZoneName")?.value ?? ""
+      const m = name.match(/GMT([+-]\d{1,2})(?::(\d{2}))?/)
+      if (m) {
+        const raw = m[1] ?? ""
+        const sign = raw.startsWith("-") ? "-" : "+"
+        let hours = raw.replace(/[+-]/, "")
+        if (hours.length === 0) hours = "00"
+        else if (hours.length === 1) hours = `0${hours}`
+        const minutes = m[2] ?? "00"
+        return minutes !== "00" ? `${sign}${hours}:${minutes}` : `${sign}${hours}`
+      }
+    } catch { }
+    return ""
+  }, [timezone])
+
+  useEffect(() => {
+    if (dateRangeOpen) {
+      setTempStartDate(dateRange.startDate)
+      setTempEndDate(dateRange.endDate)
+      const lm = new Date(dateRange.startDate)
+      const rm = new Date(lm)
+      rm.setMonth(rm.getMonth() + 1)
+      setLeftMonth(lm)
+      setRightMonth(rm)
+      setSelectingStart(true)
+    }
+  }, [dateRangeOpen, dateRange])
+
+  const generateCalendarDays = (month: Date) => {
+    const year = month.getFullYear()
+    const monthIndex = month.getMonth()
+    const firstDay = new Date(year, monthIndex, 1)
+    const lastDay = new Date(year, monthIndex + 1, 0)
+    let startDay = firstDay.getDay() - 1
+    if (startDay < 0) startDay = 6
+    const days: { day: number; isCurrentMonth: boolean }[] = []
+    const prevMonthLastDay = new Date(year, monthIndex, 0).getDate()
+    for (let i = startDay - 1; i >= 0; i--) days.push({ day: prevMonthLastDay - i, isCurrentMonth: false })
+    for (let i = 1; i <= lastDay.getDate(); i++) days.push({ day: i, isCurrentMonth: true })
+    const remaining = 42 - days.length
+    for (let i = 1; i <= remaining; i++) days.push({ day: i, isCurrentMonth: false })
+    return days
+  }
+
+  const handleDateClick = (day: number, month: Date, isCurrentMonth: boolean) => {
+    if (!isCurrentMonth) return
+    const selectedDate = new Date(month.getFullYear(), month.getMonth(), day)
+    selectedDate.setHours(0, 0, 0, 0)
+    if (selectingStart) {
+      setTempStartDate(selectedDate)
+      setTempEndDate(selectedDate)
+      setSelectingStart(false)
+    } else {
+      if (selectedDate < tempStartDate) {
+        setTempEndDate(tempStartDate)
+        setTempStartDate(selectedDate)
+      } else {
+        setTempEndDate(selectedDate)
+      }
+      setSelectingStart(true)
+    }
+  }
+
+  const isDateInRange = (day: number, month: Date) => {
+    const date = new Date(month.getFullYear(), month.getMonth(), day)
+    date.setHours(0, 0, 0, 0)
+    const start = new Date(tempStartDate); start.setHours(0, 0, 0, 0)
+    const end = new Date(tempEndDate); end.setHours(0, 0, 0, 0)
+    return date >= start && date <= end
+  }
+
+  const isStartOrEndDate = (day: number, month: Date) => {
+    const date = new Date(month.getFullYear(), month.getMonth(), day)
+    date.setHours(0, 0, 0, 0)
+    const start = new Date(tempStartDate); start.setHours(0, 0, 0, 0)
+    const end = new Date(tempEndDate); end.setHours(0, 0, 0, 0)
+    return date.getTime() === start.getTime() || date.getTime() === end.getTime()
+  }
+
+  const moveLeftMonth = (delta: number) => {
+    const lm = new Date(leftMonth)
+    lm.setMonth(lm.getMonth() + delta)
+    const rm = new Date(lm); rm.setMonth(rm.getMonth() + 1)
+    setLeftMonth(lm); setRightMonth(rm)
+  }
+  const moveRightMonth = (delta: number) => {
+    const rm = new Date(rightMonth)
+    rm.setMonth(rm.getMonth() + delta)
+    const lm = new Date(rm); lm.setMonth(lm.getMonth() - 1)
+    setLeftMonth(lm); setRightMonth(rm)
+  }
+
+  const applyDateRange = () => {
+    onDateRangeChange({ startDate: tempStartDate, endDate: tempEndDate })
+    setDateRangeOpen(false)
+  }
+  const cancelDateRange = () => {
+    setTempStartDate(dateRange.startDate)
+    setTempEndDate(dateRange.endDate)
+    setDateRangeOpen(false)
+  }
+
+  const applyPreset = (preset: string) => {
+    setSelectedPreset(preset)
+    const now = new Date()
+    let start = new Date()
+    let end = new Date()
+
+    switch (preset) {
+      case "today": {
+        start = new Date(now)
+        start.setHours(0, 0, 0, 0)
+        end = new Date(now)
+        end.setHours(23, 59, 59, 999)
+        break
+      }
+      case "yesterday": {
+        start = new Date(now)
+        start.setDate(start.getDate() - 1)
+        start.setHours(0, 0, 0, 0)
+        end = new Date(start)
+        end.setHours(23, 59, 59, 999)
+        break
+      }
+      case "this_week": {
+        const dayOfWeek = now.getDay()
+        const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+        start = new Date(now)
+        start.setDate(start.getDate() - diff)
+        start.setHours(0, 0, 0, 0)
+        end = new Date(now)
+        end.setHours(23, 59, 59, 999)
+        break
+      }
+      case "last_7_days": {
+        start = new Date(now)
+        start.setDate(start.getDate() - 6)
+        start.setHours(0, 0, 0, 0)
+        end = new Date(now)
+        end.setHours(23, 59, 59, 999)
+        break
+      }
+      case "last_week": {
+        const lastWeekEnd = new Date(now)
+        lastWeekEnd.setDate(lastWeekEnd.getDate() - lastWeekEnd.getDay())
+        lastWeekEnd.setHours(23, 59, 59, 999)
+        const lastWeekStart = new Date(lastWeekEnd)
+        lastWeekStart.setDate(lastWeekStart.getDate() - 6)
+        lastWeekStart.setHours(0, 0, 0, 0)
+        start = lastWeekStart
+        end = lastWeekEnd
+        break
+      }
+      case "last_2_weeks": {
+        start = new Date(now)
+        start.setDate(start.getDate() - 13)
+        start.setHours(0, 0, 0, 0)
+        end = new Date(now)
+        end.setHours(23, 59, 59, 999)
+        break
+      }
+      case "this_month": {
+        start = new Date(now.getFullYear(), now.getMonth(), 1)
+        start.setHours(0, 0, 0, 0)
+        end = new Date(now)
+        end.setHours(23, 59, 59, 999)
+        break
+      }
+      case "last_month": {
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        start.setHours(0, 0, 0, 0)
+        end = new Date(now.getFullYear(), now.getMonth(), 0)
+        end.setHours(23, 59, 59, 999)
+        break
+      }
+    }
+
+    setTempStartDate(start)
+    setTempEndDate(end)
+
+    const lm = new Date(start)
+    const rm = new Date(lm); rm.setMonth(rm.getMonth() + 1)
+    setLeftMonth(lm)
+    setRightMonth(rm)
+    setSelectingStart(true)
+  }
+
+  return (
+    <DropdownMenu open={dateRangeOpen} onOpenChange={setDateRangeOpen}>
+      <DropdownMenuTrigger asChild>
+        <button className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 flex items-center gap-2 text-gray-800">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+          {fmt(dateRange.startDate)} - {fmt(dateRange.endDate)}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-auto p-0">
+        <div className="flex">
+          <div className="w-40 border-r border-gray-200 p-3 space-y-1">
+            <button
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'today' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              onClick={() => applyPreset("today")}
+            >Today</button>
+            <button
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'yesterday' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              onClick={() => applyPreset("yesterday")}
+            >Yesterday</button>
+            <button
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_week' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              onClick={() => applyPreset("this_week")}
+            >This week</button>
+            <button
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_7_days' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              onClick={() => applyPreset("last_7_days")}
+            >Last 7 days</button>
+            <button
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_week' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              onClick={() => applyPreset("last_week")}
+            >Last week</button>
+            <button
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_2_weeks' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              onClick={() => applyPreset("last_2_weeks")}
+            >Last 2 weeks</button>
+            <button
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_month' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              onClick={() => applyPreset("this_month")}
+            >This month</button>
+            <button
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_month' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              onClick={() => applyPreset("last_month")}
+            >Last month</button>
+          </div>
+          <div className="p-4">
+            {timezone && (
+              <div className="flex justify-end mb-2">
+                <span className="text-xs text-gray-500">
+                  {timezone}{tzOffset ? ` (${tzOffset})` : ""}
+                </span>
+              </div>
+            )}
+            <div className="flex gap-4">
+              <div className="w-64">
+                <div className="flex items-center justify-between mb-4">
+                  <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveLeftMonth(-1)}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                  </button>
+                  <span className="font-semibold text-gray-900">
+                    {leftMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                  </span>
+                  <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveLeftMonth(1)}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
+                  <div className="font-semibold p-1 text-gray-900">Mo</div>
+                  <div className="font-semibold p-1 text-gray-900">Tu</div>
+                  <div className="font-semibold p-1 text-gray-900">We</div>
+                  <div className="font-semibold p-1 text-gray-900">Th</div>
+                  <div className="font-semibold p-1 text-gray-900">Fr</div>
+                  <div className="font-semibold p-1 text-gray-900">Sa</div>
+                  <div className="font-semibold p-1 text-gray-900">Su</div>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 text-center text-sm">
+                  {generateCalendarDays(leftMonth).map((d, i) => {
+                    const inRange = d.isCurrentMonth && isDateInRange(d.day, leftMonth)
+                    const isEdge = d.isCurrentMonth && isStartOrEndDate(d.day, leftMonth)
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handleDateClick(d.day, leftMonth, d.isCurrentMonth)}
+                        className={`p-2 rounded ${isEdge ? "bg-black text-white hover:bg-gray-800" :
+                          inRange ? "bg-gray-100 hover:bg-gray-200 text-black" :
+                            d.isCurrentMonth ? "text-gray-800 hover:bg-gray-100" : "text-gray-400"}`}
+                      >
+                        {d.day}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="w-64">
+                <div className="flex items-center justify-between mb-4">
+                  <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveRightMonth(-1)}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                  </button>
+                  <span className="font-semibold text-gray-900">
+                    {rightMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                  </span>
+                  <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveRightMonth(1)}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
+                  <div className="font-semibold p-1 text-gray-900">Mo</div>
+                  <div className="font-semibold p-1 text-gray-900">Tu</div>
+                  <div className="font-semibold p-1 text-gray-900">We</div>
+                  <div className="font-semibold p-1 text-gray-900">Th</div>
+                  <div className="font-semibold p-1 text-gray-900">Fr</div>
+                  <div className="font-semibold p-1 text-gray-900">Sa</div>
+                  <div className="font-semibold p-1 text-gray-900">Su</div>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 text-center text-sm">
+                  {generateCalendarDays(rightMonth).map((d, i) => {
+                    const inRange = d.isCurrentMonth && isDateInRange(d.day, rightMonth)
+                    const isEdge = d.isCurrentMonth && isStartOrEndDate(d.day, rightMonth)
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handleDateClick(d.day, rightMonth, d.isCurrentMonth)}
+                        className={`p-2 rounded ${isEdge ? "bg-black text-white hover:bg-gray-800" :
+                          inRange ? "bg-gray-100 hover:bg-gray-200" :
+                            d.isCurrentMonth ? "hover:bg-gray-100" : "text-gray-400"}`}
+                      >
+                        {d.day}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="text-xs text-center text-gray-600 mt-2">
+              {fmt(tempStartDate)} - {fmt(tempEndDate)}
+            </div>
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
+              <button className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 font-medium" onClick={applyDateRange}>
+                Apply
+              </button>
+              <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50" onClick={cancelDateRange}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
