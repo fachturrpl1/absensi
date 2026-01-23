@@ -1,64 +1,104 @@
 "use client"
 
-import { Info, ChevronRight, Bell } from "lucide-react"
-import { useMemo, useState } from "react"
-import Link from "next/link"
+import { Info, ChevronRight } from "lucide-react"
+import { useMemo, useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
+import { DUMMY_BEHAVIOR_CHANGES, DUMMY_MEMBERS, DUMMY_SMART_NOTIFICATIONS, DUMMY_TEAMS, DUMMY_UNUSUAL_ACTIVITIES } from "@/lib/data/dummy-data"
+import { useTimezone } from "@/components/timezone-provider"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import { InsightsRightSidebar } from "@/components/insights/InsightsRightSidebar"
-import type { DateRange, PickerItem, SelectedFilter } from "@/components/insights/types"
-import {
-  DUMMY_BEHAVIOR_CHANGES,
-  DUMMY_MEMBERS,
-  DUMMY_SMART_NOTIFICATIONS,
-  DUMMY_TEAMS,
-  DUMMY_UNUSUAL_ACTIVITIES,
-} from "@/lib/data/dummy-data"
-import type { Member, Team } from "@/lib/data/dummy-data"
-import { useTimezone } from "@/components/timezone-provider"
+import type { DateRange, SelectedFilter } from "@/components/insights/types"
 
 export default function HighlightsPage() {
-    const timezone = useTimezone()
-    const [sidebarOpen, setSidebarOpen] = useState(true)
+  const timezone = useTimezone()
+  const searchParams = useSearchParams()
+  const memberIdFromUrl = searchParams.get("memberId")
+  
+  // Get initial memberId: URL > sessionStorage > default
+  const getInitialMemberId = (): string => {
+    // Try to read from window.location.search first (more reliable on initial render)
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search)
+      const memberIdFromLocation = urlParams.get("memberId")
+      if (memberIdFromLocation) {
+        console.log("Initial state: Using memberId from window.location:", memberIdFromLocation)
+        return memberIdFromLocation
+      }
+    }
+    // Fallback to useSearchParams
+    if (memberIdFromUrl) {
+      console.log("Initial state: Using memberId from useSearchParams:", memberIdFromUrl)
+      return memberIdFromUrl
+    }
+    // Fallback to sessionStorage
+    if (typeof window !== "undefined") {
+      const savedMemberId = sessionStorage.getItem("screenshotSelectedMemberId")
+      if (savedMemberId) {
+        console.log("Initial state: Using memberId from sessionStorage:", savedMemberId)
+        return savedMemberId
+      }
+    }
+    console.log("Initial state: Using default memberId: m1")
+    return "m1"
+  }
+  
+  const [sidebarOpen, setSidebarOpen] = useState(true)
   const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({
     type: "members",
     all: false,
-    id: "m1",
+    id: getInitialMemberId(),
   })
-  const [dateRange, setDateRange] = useState<DateRange>({
-    startDate: new Date(new Date().setDate(new Date().getDate() - 6)),
-    endDate: new Date(),
+  
+  // Update filter when memberId from URL changes
+  useEffect(() => {
+    console.log("useEffect triggered - memberIdFromUrl:", memberIdFromUrl)
+    // Priority: URL > sessionStorage > keep current
+    if (memberIdFromUrl && memberIdFromUrl !== selectedFilter.id) {
+      console.log("Setting filter from URL memberId:", memberIdFromUrl)
+      setSelectedFilter({
+        type: "members",
+        all: false,
+        id: memberIdFromUrl,
+      })
+    } else if (!memberIdFromUrl && typeof window !== "undefined") {
+      const savedMemberId = sessionStorage.getItem("screenshotSelectedMemberId")
+      if (savedMemberId && savedMemberId !== selectedFilter.id) {
+        console.log("Setting filter from sessionStorage memberId:", savedMemberId)
+        setSelectedFilter({
+          type: "members",
+          all: false,
+          id: savedMemberId,
+        })
+      }
+    }
+  }, [memberIdFromUrl, selectedFilter.id])
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    const end = new Date()
+    const start = new Date()
+    start.setDate(end.getDate() - 6)
+    start.setHours(0, 0, 0, 0)
+    end.setHours(0, 0, 0, 0)
+    return { startDate: start, endDate: end }
   })
 
-const members: PickerItem[] = useMemo(
-  () => DUMMY_MEMBERS.map((m: Member) => ({ id: m.id, name: m.name })),
-  []
-)
-const teams: PickerItem[] = useMemo(
-  () => DUMMY_TEAMS.map((t: Team) => ({ id: t.id, name: t.name })),
-  []
-)
+  const demoMembers = useMemo(() => DUMMY_MEMBERS, [])
+  const demoTeams = useMemo(() => DUMMY_TEAMS, [])
 
   const filteredUnusualActivities = useMemo(() => {
     let filtered = DUMMY_UNUSUAL_ACTIVITIES
 
     if (!selectedFilter.all) {
       if (selectedFilter.type === "members" && selectedFilter.id) {
-        filtered = filtered.filter((a) => a.memberId === selectedFilter.id)
+        filtered = filtered.filter((activity) => activity.memberId === selectedFilter.id)
       } else if (selectedFilter.type === "teams" && selectedFilter.id) {
         const team = DUMMY_TEAMS.find((t) => t.id === selectedFilter.id)
-        filtered = filtered.filter((a) => team?.members.includes(a.memberId))
+        filtered = filtered.filter((activity) => team?.members.includes(activity.memberId))
       }
     }
 
-    const start = new Date(dateRange.startDate)
-    start.setHours(0, 0, 0, 0)
-    const end = new Date(dateRange.endDate)
-    end.setHours(0, 0, 0, 0)
-
-    return filtered.filter((a) => {
-      const activityDate = new Date(a.date)
-      activityDate.setHours(0, 0, 0, 0)
-      return activityDate >= start && activityDate <= end
+    return filtered.filter((activity) => {
+      const activityDate = new Date(activity.date)
+      return activityDate >= dateRange.startDate && activityDate <= dateRange.endDate
     })
   }, [selectedFilter, dateRange])
 
@@ -67,22 +107,16 @@ const teams: PickerItem[] = useMemo(
 
     if (!selectedFilter.all) {
       if (selectedFilter.type === "members" && selectedFilter.id) {
-        filtered = filtered.filter((n) => n.memberId === selectedFilter.id)
+        filtered = filtered.filter((notification) => notification.memberId === selectedFilter.id)
       } else if (selectedFilter.type === "teams" && selectedFilter.id) {
         const team = DUMMY_TEAMS.find((t) => t.id === selectedFilter.id)
-        filtered = filtered.filter((n) => team?.members.includes(n.memberId))
+        filtered = filtered.filter((notification) => team?.members.includes(notification.memberId))
       }
     }
 
-    const start = new Date(dateRange.startDate)
-        start.setHours(0, 0, 0, 0)
-    const end = new Date(dateRange.endDate)
-        end.setHours(0, 0, 0, 0)
-
-    return filtered.filter((n) => {
-      const notifDate = new Date(n.timestamp)
-      notifDate.setHours(0, 0, 0, 0)
-      return notifDate >= start && notifDate <= end
+    return filtered.filter((notification) => {
+      const notifDate = new Date(notification.timestamp)
+      return notifDate >= dateRange.startDate && notifDate <= dateRange.endDate
     })
   }, [selectedFilter, dateRange])
 
@@ -91,61 +125,46 @@ const teams: PickerItem[] = useMemo(
 
     if (!selectedFilter.all) {
       if (selectedFilter.type === "members" && selectedFilter.id) {
-        filtered = filtered.filter((c) => c.memberId === selectedFilter.id)
+        filtered = filtered.filter((change) => change.memberId === selectedFilter.id)
       } else if (selectedFilter.type === "teams" && selectedFilter.id) {
         const team = DUMMY_TEAMS.find((t) => t.id === selectedFilter.id)
-        filtered = filtered.filter((c) => team?.members.includes(c.memberId))
+        filtered = filtered.filter((change) => team?.members.includes(change.memberId))
       }
     }
 
-    const start = new Date(dateRange.startDate)
-        start.setHours(0, 0, 0, 0)
-    const end = new Date(dateRange.endDate)
-        end.setHours(0, 0, 0, 0)
-
-    return filtered.filter((c) => {
-      const changeDate = new Date(c.detectedAt)
-      changeDate.setHours(0, 0, 0, 0)
-      return changeDate >= start && changeDate <= end
+    return filtered.filter((change) => {
+      const changeDate = new Date(change.detectedAt)
+      return changeDate >= dateRange.startDate && changeDate <= dateRange.endDate
     })
   }, [selectedFilter, dateRange])
+
+  const totalUnusualMinutes = filteredUnusualActivities.reduce((sum, activity) => sum + activity.duration, 0)
 
   return (
     <div className="min-h-screen bg-white">
       <div className="border-b border-gray-200">
-        <div className="px-6 py-4 space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <h1 className="text-xl font-semibold">Highlights</h1>
-            <Link href="/insight/smart-notifications">
-              <button className="px-4 py-2 border border-zinc-200 text-zinc-700 rounded-md text-sm hover:bg-zinc-50 flex items-center gap-2">
-                <Bell className="w-4 h-4" />
-                Smart notifications
-              </button>
-            </Link>
-          </div>
-
+        <div className="py-4 px-6">
+          <h1 className="text-xl font-semibold mb-5">Highlights</h1>
           <InsightsHeader
             selectedFilter={selectedFilter}
             onSelectedFilterChange={setSelectedFilter}
             dateRange={dateRange}
             onDateRangeChange={setDateRange}
-            members={members}
-            teams={teams}
+            members={demoMembers}
+            teams={demoTeams}
             sidebarOpen={sidebarOpen}
-            onToggleSidebar={() => setSidebarOpen((o) => !o)}
+            onToggleSidebar={() => setSidebarOpen((open) => !open)}
             timezone={timezone}
           />
         </div>
       </div>
 
       <div className="flex">
-        <div className="flex-1 min-w-0 p-6 space-y-6">
+        <div className="flex-1 p-6 space-y-6">
           <section>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <h2 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                  Unusual Activity
-                </h2>
+                <h2 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Unusual Activity</h2>
                 <Info className="w-4 h-4 text-gray-400" />
               </div>
               <a
@@ -163,7 +182,7 @@ const teams: PickerItem[] = useMemo(
                   <div className="space-y-4 min-w-[120px]">
                     <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                       <div className="text-3xl font-bold">
-                        {new Set(filteredUnusualActivities.map((a) => a.memberId)).size}
+                        {new Set(filteredUnusualActivities.map((activity) => activity.memberId)).size}
                       </div>
                       <div className="text-sm text-gray-600 mt-1">Members</div>
                     </div>
@@ -175,13 +194,8 @@ const teams: PickerItem[] = useMemo(
 
                     <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                       <div className="text-3xl font-bold">
-                        {Math.floor(
-                          filteredUnusualActivities.reduce((acc, a) => acc + a.duration, 0) / 60
-                        )}
-                        :
-                        {(filteredUnusualActivities.reduce((acc, a) => acc + a.duration, 0) % 60)
-                          .toString()
-                          .padStart(2, "0")}
+                        {Math.floor(totalUnusualMinutes / 60)}:
+                        {(totalUnusualMinutes % 60).toString().padStart(2, "0")}
                       </div>
                       <div className="text-sm text-gray-600 mt-1">Total time (h:m)</div>
                     </div>
@@ -189,9 +203,9 @@ const teams: PickerItem[] = useMemo(
 
                   <div className="flex-1">
                     <div className="space-y-3">
-                      {filteredUnusualActivities.slice(0, 4).map((activity, idx) => (
+                      {filteredUnusualActivities.slice(0, 4).map((activity) => (
                         <div
-                          key={idx}
+                          key={activity.id}
                           className="flex items-start gap-3 text-sm hover:bg-gray-50 p-2 rounded-md -mx-2 transition-colors cursor-pointer"
                         >
                           <div
@@ -224,9 +238,7 @@ const teams: PickerItem[] = useMemo(
                         </div>
                       ))}
                       {filteredUnusualActivities.length === 0 && (
-                        <div className="text-center py-8 text-gray-500">
-                          No unusual activity detected
-                        </div>
+                        <div className="text-center py-6 text-gray-500">No unusual activity detected</div>
                       )}
                     </div>
                   </div>
@@ -237,40 +249,34 @@ const teams: PickerItem[] = useMemo(
 
           <section>
             <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                Smart Notifications
-              </h2>
+              <h2 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Smart Notifications</h2>
               <Info className="w-4 h-4 text-gray-400" />
             </div>
 
             <div className="border border-gray-200 rounded-lg p-6">
               <div className="space-y-3">
-                {filteredNotifications.map((notif) => (
-                  <div key={notif.id} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                {filteredNotifications.map((notification) => (
+                  <div key={notification.id} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="font-semibold text-sm">{notif.memberName}</span>
+                          <span className="font-semibold text-sm">{notification.memberName}</span>
                           <span
                             className={`px-2 py-1 text-xs rounded ${
-                              notif.severity === "high"
+                              notification.severity === "high"
                                 ? "bg-red-100 text-red-700"
-                                : notif.severity === "medium"
+                                : notification.severity === "medium"
                                   ? "bg-orange-100 text-orange-700"
                                   : "bg-yellow-100 text-yellow-700"
                             }`}
                           >
-                            {notif.severity}
+                            {notification.severity}
                           </span>
                         </div>
-                        <div className="text-sm text-gray-600 mb-2">{notif.message}</div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(notif.timestamp).toLocaleString()}
-                        </div>
+                        <div className="text-sm text-gray-600 mb-2">{notification.message}</div>
+                        <div className="text-xs text-gray-500">{new Date(notification.timestamp).toLocaleString()}</div>
                       </div>
-                      <button className="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50">
-                        View Details
-                      </button>
+                      <button className="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50">View Details</button>
                     </div>
                   </div>
                 ))}
@@ -280,16 +286,14 @@ const teams: PickerItem[] = useMemo(
 
           <section>
             <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                Significant Changes in Behavior
-              </h2>
+              <h2 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Significant Changes in Behavior</h2>
               <Info className="w-4 h-4 text-gray-400" />
             </div>
 
             <div className="border border-gray-200 rounded-lg p-6">
               <div className="space-y-3">
-                {filteredBehaviorChanges.map((change, idx) => (
-                  <div key={idx} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                {filteredBehaviorChanges.map((change) => (
+                  <div key={`${change.memberId}-${change.detectedAt}`} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
@@ -307,15 +311,11 @@ const teams: PickerItem[] = useMemo(
                           </span>
                         </div>
                         <div className="text-sm text-gray-600 mb-2">{change.description}</div>
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
                           <span>Previous: {change.previousValue}</span>
                           <span>→</span>
                           <span>Current: {change.currentValue}</span>
-                          <span
-                            className={`font-semibold ${
-                              change.changePercent > 0 ? "text-green-600" : "text-red-600"
-                            }`}
-                          >
+                          <span className={`font-semibold ${change.changePercent > 0 ? "text-green-600" : "text-red-600"}`}>
                             {change.changePercent > 0 ? "+" : ""}
                             {change.changePercent.toFixed(1)}%
                           </span>
@@ -330,15 +330,15 @@ const teams: PickerItem[] = useMemo(
             </div>
           </section>
         </div>
-
-                <InsightsRightSidebar
-                    open={sidebarOpen}
-                    onOpenChange={setSidebarOpen}
-                    members={DUMMY_MEMBERS}
+        <InsightsRightSidebar
+          open={sidebarOpen}
+          onOpenChange={setSidebarOpen}
+          members={demoMembers}
+          teams={demoTeams}
           selectedFilter={selectedFilter}
           onSelectedFilterChange={setSelectedFilter}
-                />
-            </div>
-        </div>
-    )
+        />
+      </div>
+    </div>
+  )
 }

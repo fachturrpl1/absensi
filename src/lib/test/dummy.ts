@@ -18,140 +18,6 @@ export interface Client {
     createdAt: string
 }
 
-// ===== PROJECT TASKS (DUMMY) =====
-export type TaskStatus = "todo" | "in_progress" | "done"
-
-export interface ProjectTask {
-    id: string
-    title: string
-    projectId: string
-    assigneeId: string
-    status: TaskStatus
-}
-
-export const DUMMY_PROJECT_TASKS: ProjectTask[] = [
-    { id: "t-1", title: "Setup repository", projectId: "proj-1", assigneeId: "m1", status: "done" },
-    { id: "t-2", title: "Create design system", projectId: "proj-1", assigneeId: "m2", status: "in_progress" },
-    { id: "t-3", title: "Landing page hero", projectId: "proj-1", assigneeId: "m3", status: "todo" },
-    { id: "t-4", title: "API contracts", projectId: "proj-2", assigneeId: "m4", status: "in_progress" },
-    { id: "t-5", title: "Auth flow", projectId: "proj-2", assigneeId: "m5", status: "todo" },
-    { id: "t-6", title: "Campaign brief", projectId: "proj-3", assigneeId: "m1", status: "done" },
-    { id: "t-7", title: "Asset preparation", projectId: "proj-3", assigneeId: "m5", status: "in_progress" },
-    { id: "t-8", title: "Legacy audit", projectId: "proj-4", assigneeId: "m2", status: "in_progress" },
-    { id: "t-9", title: "Data migration", projectId: "proj-5", assigneeId: "m3", status: "todo" },
-    { id: "t-10", title: "Performance profiling", projectId: "proj-5", assigneeId: "m4", status: "done" },
-    { id: "t-11", title: "Accessibility fixes", projectId: "proj-5", assigneeId: "m3", status: "in_progress" },
-]
-
-export function getTasksByProjectMembers(projectId: string): ProjectTask[] {
-    const memberIds = PROJECT_MEMBER_MAP[projectId] ?? []
-    return DUMMY_PROJECT_TASKS.filter(
-        (t) => t.projectId === projectId && memberIds.includes(t.assigneeId)
-    )
-}
-
-export function getTaskCountByProjectMembers(projectId: string): number {
-    return getTasksByProjectMembers(projectId).length
-}
-
-// Hitung jumlah tasks dari halaman Tasks (berdasarkan nama project)
-export function getTaskCountFromTasksPageByProjectName(projectName: string): number {
-    return DUMMY_TASKS.filter((t) => t.project === projectName).length
-}
-
-// Versi by projectId: map id -> nama project, lalu gunakan helper di atas
-export function getTaskCountFromTasksPageByProjectId(projectId: string): number {
-    const p = DUMMY_PROJECTS.find((x) => x.id === projectId)
-    if (!p) return 0
-    return getTaskCountFromTasksPageByProjectName(p.name)
-}
-
-// Members assigned per project (dummy)
-export const PROJECT_MEMBER_MAP: Record<string, string[]> = {
-    "proj-1": ["m1", "m2", "m3"],
-    "proj-2": ["m4", "m5"],
-    "proj-3": ["m1", "m5"],
-    "proj-4": ["m2"],
-    "proj-5": ["m3", "m4"],
-}
-
-export function getProjectMemberIds(projectId: string): string[] {
-  return PROJECT_MEMBER_MAP[projectId] ?? []
-}
-
-// Teams by project (derived from project members)
-// Explicit mapping: project -> team IDs
-export const PROJECT_TEAM_MAP: Record<string, string[]> = {
-  "proj-1": ["t1"], // Website Redesign -> Team Alpha
-  "proj-2": ["t3"], // Mobile App Development -> Team Gamma
-  "proj-3": ["t2"], // Marketing Campaign -> Team Beta
-  // Tambahkan mapping lain jika diperlukan
-}
-
-export function getTeamsByProjectId(projectId: string): Team[] {
-  const explicitTeamIds = PROJECT_TEAM_MAP[projectId]
-  if (explicitTeamIds && explicitTeamIds.length > 0) {
-    const idSet = new Set(explicitTeamIds)
-    return DUMMY_TEAMS.filter((t) => idSet.has(t.id))
-  }
-
-  // Fallback: turunkan dari irisan member (legacy behavior)
-  const memberIds = PROJECT_MEMBER_MAP[projectId] ?? []
-  const result: Team[] = []
-  const seen = new Set<string>()
-  for (const t of DUMMY_TEAMS) {
-    if (t.members.some((m) => memberIds.includes(m)) && !seen.has(t.id)) {
-      seen.add(t.id)
-      result.push(t)
-    }
-  }
-  return result
-}
-
-export function getTeamNamesByProjectId(projectId: string): string[] {
-  return getTeamsByProjectId(projectId).map((t) => t.name)
-}
-
-// ============================================================================
-// CLIENT-PROJECT-TASK INTEGRATION HELPERS
-// ============================================================================
-
-// Get all projects linked to a specific client
-export function getProjectsByClientId(clientId: string): Project[] {
-    return DUMMY_PROJECTS.filter((p) => p.clientId === clientId)
-}
-
-// Get project count for a client
-export function getProjectCountByClientId(clientId: string): number {
-    return getProjectsByClientId(clientId).length
-}
-
-// Get all tasks for a client (via their projects)
-export function getTasksByClientId(clientId: string): TaskItem[] {
-    const clientProjects = getProjectsByClientId(clientId)
-    const projectNames = clientProjects.map((p) => p.name)
-    return DUMMY_TASKS.filter((t) => projectNames.includes(t.project))
-}
-
-// Get task count for a client
-export function getTaskCountByClientId(clientId: string): number {
-    return getTasksByClientId(clientId).length
-}
-
-// Get client by project ID
-export function getClientByProjectId(projectId: string): Client | null {
-    const project = DUMMY_PROJECTS.find((p) => p.id === projectId)
-    if (!project || !project.clientId) return null
-    return DUMMY_CLIENTS.find((c) => c.id === project.clientId) ?? null
-}
-
-// Get client name by project name (for Tasks page)
-export function getClientNameByProjectName(projectName: string): string | null {
-    const project = DUMMY_PROJECTS.find((p) => p.name === projectName)
-    if (!project || !project.clientName) return null
-    return project.clientName
-}
-
 export const DUMMY_CLIENTS: Client[] = [
     {
         id: "client-1",
@@ -1463,146 +1329,6 @@ export const DUMMY_SCREENSHOTS: Screenshot[] = [
     { id: 'ss15', memberId: 'm5', timestamp: '2026-01-21T11:20:00', date: '2026-01-21', timeRange: '11:20 AM - 11:30 AM', projectName: 'Website Redesign', todosLabel: 'No to-dos', imageUrl: '/Screenshoot/Screenshot 2026-01-12 222910.png', screenCount: 1, activityProgress: 72, minutes: 10 },
 ]
 
-export interface MemberScreenshotItem {
-    id: string
-    time: string
-    progress: number
-    minutes: number
-    image: string
-    noActivity?: boolean
-    seconds?: boolean
-    screenCount?: number
-}
-
-export interface MemberInsightSummary {
-    memberId: string
-    totalWorkedTime: string
-    focusTime: string
-    focusDescription: string
-    avgActivity: string
-    unusualCount: number
-    unusualMessage: string
-    classificationLabel: string
-    classificationSummary: string
-    classificationPercent: number
-}
-
-export const DUMMY_MEMBER_SCREENSHOTS: Record<string, MemberScreenshotItem[]> = {
-    m1: [
-        { id: "m1-1", time: "9:00 am - 9:10 am", progress: 68, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-08 094631.png", screenCount: 1 },
-        { id: "m1-2", time: "9:10 am - 9:20 am", progress: 72, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-11 204654.png", screenCount: 1 },
-        { id: "m1-3", time: "9:20 am - 9:30 am", progress: 65, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-04 220750.png", screenCount: 1 },
-        { id: "m1-4", time: "9:30 am - 9:40 am", progress: 58, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-25 191532.png", screenCount: 1 },
-        { id: "m1-5", time: "9:40 am - 9:50 am", progress: 62, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-04 204028.png", screenCount: 1 },
-        { id: "m1-6", time: "9:50 am - 10:00 am", progress: 77, minutes: 10, image: "/Screenshoot/Screenshot 2025-11-28 162344.png", screenCount: 1 },
-        { id: "m1-7", time: "11:00 am - 11:10 am", progress: 64, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-08 094631.png", screenCount: 1 },
-        { id: "m1-8", time: "11:10 am - 11:20 am", progress: 55, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-11 204654.png", screenCount: 1 },
-    ],
-    m2: [
-        { id: "m2-1", time: "2:00 pm - 2:10 pm", progress: 53, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-12 222910.png", screenCount: 1 },
-        { id: "m2-2", time: "2:10 pm - 2:20 pm", progress: 77, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-20 161303.png", screenCount: 1 },
-        { id: "m2-3", time: "2:20 pm - 2:30 pm", progress: 81, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-20 161319.png", screenCount: 1 },
-        { id: "m2-4", time: "2:30 pm - 2:40 pm", progress: 68, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-25 191532.png", screenCount: 1 },
-        { id: "m2-5", time: "2:40 pm - 2:50 pm", progress: 59, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-04 220750.png", screenCount: 1 },
-        { id: "m2-6", time: "2:50 pm - 3:00 pm", progress: 52, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-08 094631.png", screenCount: 1 },
-        { id: "m2-7", time: "3:00 pm - 3:10 pm", progress: 44, minutes: 10, image: "/Screenshoot/Screenshot 2025-11-18 155809.png", screenCount: 1 },
-        { id: "m2-8", time: "3:10 pm - 3:20 pm", progress: 0, minutes: 0, image: "", noActivity: true, screenCount: 0 },
-    ],
-    m3: [
-        { id: "m3-1", time: "10:00 am - 10:10 am", progress: 45, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-08 094631.png", screenCount: 1 },
-        { id: "m3-2", time: "10:10 am - 10:20 am", progress: 52, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-11 204654.png", screenCount: 1 },
-        { id: "m3-3", time: "10:20 am - 10:30 am", progress: 38, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-09 101315.png", screenCount: 1 },
-        { id: "m3-4", time: "10:30 am - 10:40 am", progress: 40, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-04 222401.png", screenCount: 1 },
-        { id: "m3-5", time: "10:40 am - 10:50 am", progress: 60, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-04 204028.png", screenCount: 1 },
-        { id: "m3-6", time: "10:50 am - 11:00 am", progress: 38, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-25 191532.png", screenCount: 1 },
-        { id: "m3-7", time: "11:00 am - 11:10 am", progress: 34, minutes: 10, image: "/Screenshoot/Screenshot 2025-11-18 155809.png", screenCount: 1 },
-        { id: "m3-8", time: "11:10 am - 11:20 am", progress: 0, minutes: 0, image: "", noActivity: true, screenCount: 0 },
-    ],
-    m4: [
-        { id: "m4-1", time: "4:00 pm - 4:10 pm", progress: 71, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-12 222910.png", screenCount: 1 },
-        { id: "m4-2", time: "4:10 pm - 4:20 pm", progress: 66, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-20 161303.png", screenCount: 1 },
-        { id: "m4-3", time: "4:20 pm - 4:30 pm", progress: 58, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-20 161319.png", seconds: true, screenCount: 1 },
-        { id: "m4-4", time: "4:30 pm - 4:40 pm", progress: 63, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-25 191532.png", screenCount: 1 },
-        { id: "m4-5", time: "4:40 pm - 4:50 pm", progress: 45, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-04 220750.png", screenCount: 1 },
-        { id: "m4-6", time: "4:50 pm - 5:00 pm", progress: 52, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-11 204654.png", screenCount: 1 },
-        { id: "m4-7", time: "5:00 pm - 5:10 pm", progress: 47, minutes: 10, image: "/Screenshoot/Screenshot 2025-11-28 162344.png", screenCount: 1 },
-        { id: "m4-8", time: "5:10 pm - 5:20 pm", progress: 0, minutes: 0, image: "", noActivity: true, screenCount: 0 },
-    ],
-    m5: [
-        { id: "m5-1", time: "11:00 am - 11:10 am", progress: 79, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-20 161303.png", screenCount: 1 },
-        { id: "m5-2", time: "11:10 am - 11:20 am", progress: 84, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-25 191532.png", screenCount: 1 },
-        { id: "m5-3", time: "11:20 am - 11:30 am", progress: 72, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-04 204028.png", screenCount: 1 },
-        { id: "m5-4", time: "11:30 am - 11:40 am", progress: 66, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-04 220750.png", screenCount: 1 },
-        { id: "m5-5", time: "11:40 am - 11:50 am", progress: 58, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-11 204654.png", screenCount: 1 },
-        { id: "m5-6", time: "11:50 am - 12:00 pm", progress: 66, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-25 191532.png", screenCount: 1 },
-        { id: "m5-7", time: "12:00 pm - 12:10 pm", progress: 48, minutes: 10, image: "/Screenshoot/Screenshot 2025-11-18 155809.png", screenCount: 1 },
-        { id: "m5-8", time: "12:10 pm - 12:20 pm", progress: 0, minutes: 0, image: "", noActivity: true, screenCount: 0 },
-    ],
-}
-
-export const DUMMY_MEMBER_INSIGHTS: Record<string, MemberInsightSummary> = {
-    m1: {
-        memberId: "m1",
-        totalWorkedTime: "3h 24m",
-        focusTime: "1h 22m",
-        focusDescription: "Stable focus with a fresh start before lunch.",
-        avgActivity: "83%",
-        unusualCount: 1,
-        unusualMessage: "- Late-night spike after 10 pm.",
-        classificationLabel: "Productive",
-        classificationSummary: "Maintains high focus on the morning stretch.",
-        classificationPercent: 78,
-    },
-    m2: {
-        memberId: "m2",
-        totalWorkedTime: "4h 05m",
-        focusTime: "1h 40m",
-        focusDescription: "Deep work streak right after lunch.",
-        avgActivity: "76%",
-        unusualCount: 2,
-        unusualMessage: "- Two idle checks interrupted the flow.\n- The app switched quickly before returning to work.",
-        classificationLabel: "Balanced",
-        classificationSummary: "Punctuated focus with controlled rest.",
-        classificationPercent: 64,
-    },
-    m3: {
-        memberId: "m3",
-        totalWorkedTime: "3h 48m",
-        focusTime: "1h 10m",
-        focusDescription: "Creative tasks keep the pace steady.",
-        avgActivity: "69%",
-        unusualCount: 1,
-        unusualMessage: "- Weekend-style hours detected midweek.",
-        classificationLabel: "Creative",
-        classificationSummary: "Switches between design and research calmly.",
-        classificationPercent: 71,
-    },
-    m4: {
-        memberId: "m4",
-        totalWorkedTime: "3h 10m",
-        focusTime: "1h 05m",
-        focusDescription: "Quick bursts of energy in the afternoon.",
-        avgActivity: "71%",
-        unusualCount: 3,
-        unusualMessage: "- Idle stretch followed by a sprint.\n- Brief break before diving back into API fixes.\n- Finished with a quick review of the dashboard.",
-        classificationLabel: "Recovery",
-        classificationSummary: "Rebounds strong after a short lull.",
-        classificationPercent: 59,
-    },
-    m5: {
-        memberId: "m5",
-        totalWorkedTime: "3h 55m",
-        focusTime: "1h 25m",
-        focusDescription: "Consistent energy with quick updates.",
-        avgActivity: "80%",
-        unusualCount: 0,
-        unusualMessage: "- No unusual activity this session.",
-        classificationLabel: "High focus",
-        classificationSummary: "Keeps steady pace through late morning.",
-        classificationPercent: 85,
-    },
-}
-
 export function getScreenshotsByMember(memberId: string) {
     return DUMMY_SCREENSHOTS.filter(s => s.memberId === memberId)
 }
@@ -1741,17 +1467,24 @@ export const DUMMY_DASHBOARD_STATS: DashboardStats = {
 // "Me" view data (for current user - Antonio Galih / m1)
 export const DUMMY_MY_ACTIVITIES: DashboardActivity[] = DUMMY_DASHBOARD_ACTIVITIES.filter(a => a.memberId === 'm1')
 
-export const DUMMY_MY_STATS = {
-    status: 'Attend',
-    workedToday: '8h 40m',
-    workedWeek: '38h 25m',
-    attendanceRate: '95%',
-    lateCount: 2,
-    earnedToday: 'Rp 550.000',
+export const DUMMY_MY_STATS: DashboardStats = {
+    totalStaff: 1, // Not applicable for 'me' view but needed for type compatibility
+    present: 1,
+    late: 2,
+    permission: 0,
     earnedWeek: 'Rp 3.450.000',
+    earnedToday: 'Rp 550.000',
+    workedWeek: '38h 25m',
+    workedToday: '8h 40m',
     projectsWorked: 5,
     activityToday: 'Normal',
     activityWeek: '↑ 12%'
+}
+
+export const DUMMY_MY_PERFORMANCE = {
+    status: 'Hadir',
+    attendanceRate: '95%',
+    lateCount: 2
 }
 
 export function getDashboardActivitiesByDate(date: Date) {
@@ -1763,71 +1496,17 @@ export function getDashboardActivitiesByMember(memberId: string) {
     return DUMMY_DASHBOARD_ACTIVITIES.filter(a => a.memberId === memberId)
 }
 
-// Type aliases for backwards compatibility
-export type { UnusualActivityEntry as UnusualActivity }
 
 // ============================================================================
-// APP ACTIVITIES
-// ============================================================================
-
-export interface AppActivityEntry {
-    id: string
-    projectId: string
-    projectName: string
-    memberId: string
-    appName: string
-    timeSpent: number // in hours
-    sessions: number
-    date: string
-}
-
-export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
-    {
-        id: "aa1",
-        projectId: "proj-1",
-        projectName: "Website Redesign",
-        memberId: "m1",
-        appName: "VS Code",
-        timeSpent: 4.5,
-        sessions: 12,
-        date: "2026-01-21"
-    },
-    {
-        id: "aa2",
-        projectId: "proj-1",
-        projectName: "Website Redesign",
-        memberId: "m1",
-        appName: "Chrome",
-        timeSpent: 2.1,
-        sessions: 25,
-        date: "2026-01-21"
-    },
-    {
-        id: "aa3",
-        projectId: "proj-2",
-        projectName: "Mobile App Development",
-        memberId: "m2",
-        appName: "Android Studio",
-        timeSpent: 6.0,
-        sessions: 5,
-        date: "2026-01-21"
-    }
-]
-
-// ============================================================================
-// REPORT ACTIVITIES
+// REPORTS - TIME & ACTIVITY
 // ============================================================================
 
 export interface ReportActivityEntry {
     id: string
     date: string
-    clientId: string
     clientName: string
-    projectId: string
     projectName: string
-    teamId: string
     teamName: string
-    memberId: string
     memberName: string
     todoName: string
     regularHours: number
@@ -1835,60 +1514,86 @@ export interface ReportActivityEntry {
     activityPercent: number
     totalSpent: number
     regularSpent: number
+    currency: string
 }
 
 export const DUMMY_REPORT_ACTIVITIES: ReportActivityEntry[] = [
     {
-        id: "ra1",
-        date: "2026-01-20",
-        clientId: "client-1",
-        clientName: "Patricia",
-        projectId: "proj-1",
-        projectName: "Website Redesign",
-        teamId: "t1",
-        teamName: "Team Alpha",
-        memberId: "m1",
-        memberName: "Antonio Galih",
-        todoName: "Homepage Layout",
-        regularHours: 8.0,
-        totalHours: 8.5,
-        activityPercent: 92,
-        totalSpent: 1500000,
-        regularSpent: 1400000
+        id: 'ra1',
+        date: '2026-01-21',
+        clientName: 'Patricia',
+        projectName: 'Website Redesign',
+        teamName: 'Team Alpha',
+        memberName: 'Antonio Galih',
+        todoName: 'Homepage Layout',
+        regularHours: 4.5,
+        totalHours: 4.5,
+        activityPercent: 82,
+        totalSpent: 450000,
+        regularSpent: 450000,
+        currency: 'Rp'
     },
     {
-        id: "ra2",
-        date: "2026-01-21",
-        clientId: "client-2",
-        clientName: "Tech Corp",
-        projectId: "proj-2",
-        projectName: "Mobile App Development",
-        teamId: "t2",
-        teamName: "Team Beta",
-        memberId: "m4",
-        memberName: "Michael Chen",
-        todoName: "API Integration",
-        regularHours: 7.5,
-        totalHours: 7.5,
+        id: 'ra2',
+        date: '2026-01-21',
+        clientName: 'Tech Corp',
+        projectName: 'Mobile App',
+        teamName: 'Team Beta',
+        memberName: 'Lave Lavael',
+        todoName: 'API Integration',
+        regularHours: 6.2,
+        totalHours: 6.2,
+        activityPercent: 91,
+        totalSpent: 620000,
+        regularSpent: 620000,
+        currency: 'Rp'
+    },
+    {
+        id: 'ra3',
+        date: '2026-01-21',
+        clientName: 'Creative Agency',
+        projectName: 'Marketing Camp',
+        teamName: 'Team Gamma',
+        memberName: 'Sarah Johnson',
+        todoName: 'Ad Creatives',
+        regularHours: 3.5,
+        totalHours: 3.5,
+        activityPercent: 75,
+        totalSpent: 350000,
+        regularSpent: 350000,
+        currency: 'Rp'
+    },
+    {
+        id: 'ra4',
+        date: '2026-01-20',
+        clientName: 'Patricia',
+        projectName: 'Website Redesign',
+        teamName: 'Team Alpha',
+        memberName: 'Michael Chen',
+        todoName: 'Database Setup',
+        regularHours: 5.0,
+        totalHours: 8.0, // 3 hours overtime perhaps implied
         activityPercent: 88,
-        totalSpent: 1200000,
-        regularSpent: 1200000
+        totalSpent: 800000,
+        regularSpent: 500000,
+        currency: 'Rp'
+    },
+    {
+        id: 'ra5',
+        date: '2026-01-20',
+        clientName: 'Startup Inc',
+        projectName: 'MVP Build',
+        teamName: 'Team Beta',
+        memberName: 'Emma Rodriguez',
+        todoName: 'User Auth',
+        regularHours: 7.0,
+        totalHours: 7.0,
+        activityPercent: 94,
+        totalSpent: 700000,
+        regularSpent: 700000,
+        currency: 'Rp'
     }
 ]
 
-// ============================================================================
-// PERFORMANCE DASHBOARD
-// ============================================================================
-
-export const DUMMY_MY_PERFORMANCE = {
-    status: "Present",
-    workedToday: "08:30",
-    workedWeek: "32:15",
-    attendanceRate: "95%",
-    lateCount: 1,
-    earnedToday: "Rp 450.000",
-    earnedWeek: "Rp 2.250.000",
-    projectsWorked: 3,
-    activityToday: "87%",
-    activityWeek: "85%"
-}
+// Type aliases for backwards compatibility
+export type { UnusualActivityEntry as UnusualActivity }
