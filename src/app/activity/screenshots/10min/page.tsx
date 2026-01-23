@@ -2,13 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { createPortal } from "react-dom"
-import { useRouter, usePathname, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
   ChevronLeft,
   ChevronRight,
   Info,
-  Pencil,
   X,
 } from "lucide-react"
 import {
@@ -19,6 +18,7 @@ import {
   MemberScreenshotItem,
 } from "@/lib/data/dummy-data"
 import { useSelectedMemberContext } from "../selected-member-context"
+import { MemberScreenshotCard } from "@/components/activity/MemberScreenshotCard"
 // import { ActivityDialog } from "@/components/activity/ActivityDialog"
 
 const formatDuration = (totalMinutes: number) => {
@@ -66,10 +66,46 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
     const chunk = sorted.slice(i, i + chunkSize)
     const totalMinutes = chunk.reduce((sum, item) => sum + (item.minutes ?? 0), 0)
     const summary = `Total time worked: ${formatDuration(totalMinutes)}`
-    // Use the first item's time range start and last item's time range end for label
-    const firstTime = chunk[0]?.time.split(" - ")[0] ?? ""
-    const lastTime = chunk[chunk.length - 1]?.time.split(" - ")[1] ?? ""
-    const label = firstTime && lastTime ? `${firstTime} - ${lastTime}` : chunk[0]?.time ?? `Block ${Math.floor(i / chunkSize) + 1}`
+    
+    // Calculate 1-hour range from first item's start time
+    const firstTimeStr = chunk[0]?.time.split(" - ")[0] ?? ""
+    if (!firstTimeStr) {
+      blocks.push({ label: chunk[0]?.time ?? `Block ${Math.floor(i / chunkSize) + 1}`, summary, items: chunk })
+      continue
+    }
+    
+    // Parse first time and add 1 hour for end time
+    const parseTime = (timeStr: string): { hours: number; minutes: number; period: string } => {
+      const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i)
+      if (!match || !match[1] || !match[2] || !match[3]) return { hours: 0, minutes: 0, period: 'am' }
+      let hours = parseInt(match[1], 10)
+      const minutes = parseInt(match[2], 10)
+      const period = match[3].toLowerCase()
+      if (period === 'pm' && hours !== 12) hours += 12
+      if (period === 'am' && hours === 12) hours = 0
+      return { hours, minutes, period: match[3] }
+    }
+    
+    const formatTime = (hours: number, minutes: number): string => {
+      let displayHours = hours
+      let period = 'am'
+      if (hours >= 12) {
+        period = 'pm'
+        if (hours > 12) displayHours = hours - 12
+      }
+      if (displayHours === 0) displayHours = 12
+      return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`
+    }
+    
+    const firstTime = parseTime(firstTimeStr)
+    let endHours = firstTime.hours + 1
+    const endMinutes = firstTime.minutes
+    if (endHours >= 24) endHours = endHours - 24
+    
+    const startTimeFormatted = firstTimeStr
+    const endTimeFormatted = formatTime(endHours, endMinutes)
+    const label = `${startTimeFormatted} - ${endTimeFormatted}`
+    
     blocks.push({ label, summary, items: chunk })
   }
 
@@ -78,18 +114,14 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
 
 export default function Every10MinPage() {
   const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const { selectedMemberId, selectedDate } = useSelectedMemberContext()
+  const { selectedMemberId, dateRange } = useSelectedMemberContext()
   const fallbackMemberId = DUMMY_MEMBERS[0]?.id ?? null
   const activeMemberId = selectedMemberId ?? fallbackMemberId
-
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalIndex, setModalIndex] = useState(0)
   const [isMounted, setIsMounted] = useState(false)
 
-  // Check if selected date is today or 1 day before, and determine which date it is
+  // Check date range validity and determine data display strategy
   const dateStatus = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -97,35 +129,143 @@ export default function Every10MinPage() {
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
     
-    const selected = new Date(selectedDate)
-    selected.setHours(0, 0, 0, 0)
+    const start = new Date(dateRange.startDate)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(dateRange.endDate)
+    end.setHours(23, 59, 59, 999)
     
-    // Check if selected date is today or yesterday
-    const isToday = selected.getTime() === today.getTime()
-    const isYesterday = selected.getTime() === yesterday.getTime()
+    // Check if range is completely in the future (start > today and end > today)
+    if (start > today && end > today) {
+      return { isValid: false, isToday: false, isYesterday: false, isRange: false }
+    }
     
-    if (isToday) return { isValid: true, isToday: true, isYesterday: false }
-    if (isYesterday) return { isValid: true, isToday: false, isYesterday: true }
-    return { isValid: false, isToday: false, isYesterday: false }
-  }, [selectedDate])
+    // Check if range is more than 30 days ago (both start and end are more than 30 days ago)
+    const thirtyDaysAgo = new Date(today)
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    if (end < thirtyDaysAgo && start < thirtyDaysAgo) {
+      return { isValid: false, isToday: false, isYesterday: false, isRange: false }
+    }
+    
+    // Check if start date is today (range includes today)
+    const isToday = start.getTime() === today.getTime()
+    
+    // Check if start date is yesterday
+    const isYesterday = start.getTime() === yesterday.getTime() && end.getTime() <= today.getTime()
+    
+    // Check if it's a range (more than 1 day)
+    const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+    const isRange = daysDiff > 1
+    
+    // If range includes today or overlaps with today, it's valid
+    const includesToday = start <= today && end >= today
+    
+    // If range is within last 30 days or includes today, it's valid
+    const isWithinValidRange = (start <= today && end >= thirtyDaysAgo) || includesToday
+    
+    if (isToday) return { isValid: true, isToday: true, isYesterday: false, isRange: isRange }
+    if (isYesterday) return { isValid: true, isToday: false, isYesterday: true, isRange: false }
+    if (isRange && isWithinValidRange) {
+      // Valid range: this week, last 7 days, last week, last 2 weeks, this month, last month
+      return { isValid: true, isToday: false, isYesterday: false, isRange: true }
+    }
+    
+    // Single date that's not today or yesterday but within 30 days or includes today
+    if (isWithinValidRange && !isToday && !isYesterday) {
+      return { isValid: true, isToday: false, isYesterday: false, isRange: false }
+    }
+    
+    // Default: if range includes today or overlaps with valid range, show data
+    if (includesToday || isWithinValidRange) {
+      return { isValid: true, isToday: includesToday || isToday, isYesterday: false, isRange: isRange }
+    }
+    
+    return { isValid: false, isToday: false, isYesterday: false, isRange: false }
+  }, [dateRange])
+
+  // Struktur untuk menyimpan blocks per tanggal
+  interface DateGroupedBlocks {
+    date: string
+    dateLabel: string
+    blocks: Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>
+  }
 
   const memberTimeBlocks = useMemo(() => {
     if (!activeMemberId || !dateStatus.isValid) return []
-    const items = DUMMY_MEMBER_SCREENSHOTS[activeMemberId] ?? []
+    const baseItems = DUMMY_MEMBER_SCREENSHOTS[activeMemberId] ?? []
     
     // Jika kemarin, ambil subset data yang berbeda (misalnya ambil 6 item pertama untuk variasi)
-    // Jika hari ini, ambil semua data
-    const filteredItems = dateStatus.isYesterday 
-      ? items.slice(0, Math.min(6, items.length)) // Ambil 6 item pertama untuk kemarin
-      : items // Ambil semua untuk hari ini
+    if (dateStatus.isYesterday) {
+      const filteredItems = baseItems.slice(0, Math.min(6, baseItems.length))
+      return buildMemberTimeBlocks(filteredItems, 6) // 6 items = 1 jam (6 x 10 menit)
+    }
     
-    return buildMemberTimeBlocks(filteredItems)
-  }, [activeMemberId, dateStatus])
+    // Jika range (this week, last 7 days, dll), pisahkan berdasarkan tanggal
+    // Hanya gunakan data yang ada: today dan yesterday
+    if (dateStatus.isRange && dateRange) {
+      const dateGroupedBlocks: DateGroupedBlocks[] = []
+      
+      // Hanya ambil data untuk today dan yesterday
+      // Today: gunakan semua data dari member
+      const today = new Date(dateRange.endDate)
+      const todayLabel = today.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+      })
+      const todayBlocks = buildMemberTimeBlocks(baseItems, 6)
+      if (todayBlocks.length > 0) {
+        const todayStr = today.toISOString().split('T')[0]
+        if (todayStr) {
+          dateGroupedBlocks.push({
+            date: todayStr,
+            dateLabel: todayLabel,
+            blocks: todayBlocks
+          })
+        }
+      }
+      
+      // Yesterday: gunakan subset data (6 item pertama untuk variasi)
+      const yesterday = new Date(dateRange.endDate)
+      yesterday.setDate(yesterday.getDate() - 1)
+      const yesterdayLabel = yesterday.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+      })
+      const yesterdayItems = baseItems.slice(0, Math.min(6, baseItems.length))
+      const yesterdayBlocks = buildMemberTimeBlocks(yesterdayItems, 6)
+      if (yesterdayBlocks.length > 0) {
+        const yesterdayStr = yesterday.toISOString().split('T')[0]
+        if (yesterdayStr) {
+          dateGroupedBlocks.push({
+            date: yesterdayStr,
+            dateLabel: yesterdayLabel,
+            blocks: yesterdayBlocks
+          })
+        }
+      }
+      
+      // Return struktur khusus untuk range (akan di-handle berbeda di rendering)
+      return dateGroupedBlocks as unknown as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>
+    }
+    
+    // Hari ini atau single date - ambil semua data yang ada
+    return buildMemberTimeBlocks(baseItems, 6) // 6 items = 1 jam (6 x 10 menit)
+  }, [activeMemberId, dateStatus, dateRange])
 
-  const flattenedScreenshots = useMemo(
-    () => memberTimeBlocks.flatMap((block) => block.items),
-    [memberTimeBlocks]
-  )
+  const flattenedScreenshots = useMemo(() => {
+    // Jika range, flatten dari struktur dateGroupedBlocks
+    if (dateStatus.isRange && Array.isArray(memberTimeBlocks) && memberTimeBlocks.length > 0) {
+      const firstBlock = memberTimeBlocks[0]
+      if (firstBlock && 'date' in (firstBlock as any)) {
+        return (memberTimeBlocks as unknown as DateGroupedBlocks[]).flatMap((dateGroup) =>
+          dateGroup.blocks.flatMap((block) => block.items)
+        )
+      }
+    }
+    // Normal case: array of blocks
+    return (memberTimeBlocks as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>).flatMap((block) => block.items)
+  }, [memberTimeBlocks, dateStatus])
   const currentScreenshot = flattenedScreenshots[modalIndex]
 
   useEffect(() => {
@@ -157,7 +297,7 @@ export default function Every10MinPage() {
   }
 
   const memberSummary: MemberInsightSummary = useMemo(() => {
-    // Jika tanggal tidak valid (lebih dari 1 hari sebelumnya), return data kosong
+    // Jika tanggal tidak valid (lebih dari 30 hari sebelumnya atau di masa depan), return data kosong
     if (!dateStatus.isValid) {
       return {
         memberId: "",
@@ -170,6 +310,159 @@ export default function Every10MinPage() {
         classificationLabel: "No data",
         classificationSummary: "No data available for this date.",
         classificationPercent: 0,
+      }
+    }
+    
+    // Jika range (this week, last 7 days, dll), gabungkan data dari semua hari dalam range
+    if (dateStatus.isRange) {
+      // Untuk range, gabungkan data dari member yang berbeda untuk variasi hari
+      // Misalnya: m1 (today) + m2 (yesterday) + m3 (2 hari lalu) dll
+      const memberIds = ["m1", "m2", "m3", "m4", "m5"]
+      const currentIndex = memberIds.indexOf(activeMemberId ?? "m1")
+      
+      // Ambil data dari beberapa member untuk menggambarkan variasi hari dalam range
+      const summariesToCombine: MemberInsightSummary[] = []
+      
+      // Ambil data dari member saat ini (today)
+      const todaySummary = activeMemberId ? DUMMY_MEMBER_INSIGHTS[activeMemberId] : undefined
+      if (todaySummary) summariesToCombine.push(todaySummary)
+      
+      // Ambil data dari member lain untuk variasi (yesterday, 2 hari lalu, dll)
+      // Untuk range pendek seperti "this week", ambil 1 member tambahan (yesterday)
+      // Untuk range panjang seperti "this month", ambil lebih banyak
+      const daysDiff = dateRange ? Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
+      const maxAdditionalMembers = daysDiff > 14 ? 3 : 1
+      for (let i = 1; i <= Math.min(maxAdditionalMembers, memberIds.length - 1); i++) {
+        const alternateIndex = (currentIndex + i) % memberIds.length
+        const alternateMemberId = memberIds[alternateIndex]
+        if (alternateMemberId) {
+          const alternateSummary = DUMMY_MEMBER_INSIGHTS[alternateMemberId]
+          if (alternateSummary && !summariesToCombine.find(s => s.memberId === alternateSummary.memberId)) {
+            summariesToCombine.push(alternateSummary)
+          }
+        }
+      }
+      
+      if (summariesToCombine.length === 0) {
+        // Fallback ke base summary jika tidak ada data
+        const baseSummary = activeMemberId ? DUMMY_MEMBER_INSIGHTS[activeMemberId] : (fallbackMemberId ? DUMMY_MEMBER_INSIGHTS[fallbackMemberId] : undefined)
+        if (baseSummary) summariesToCombine.push(baseSummary)
+      }
+      
+      // Gabungkan data dari semua summary
+      let totalWorkedMinutes = 0
+      let totalFocusMinutes = 0
+      let totalActivity = 0
+      let totalUnusualCount = 0
+      const allUnusualMessages: string[] = []
+      
+      summariesToCombine.forEach(summary => {
+        // Parse worked time
+        const workedMatch = summary.totalWorkedTime.match(/(\d+)h\s*(\d+)m|(\d+)m/)
+        if (workedMatch) {
+          const hours = parseInt(workedMatch[1] || "0", 10)
+          const minutes = parseInt(workedMatch[2] || workedMatch[3] || "0", 10)
+          totalWorkedMinutes += hours * 60 + minutes
+        }
+        
+        // Parse focus time
+        const focusMatch = summary.focusTime.match(/(\d+)h\s*(\d+)m|(\d+)m/)
+        if (focusMatch) {
+          const hours = parseInt(focusMatch[1] || "0", 10)
+          const minutes = parseInt(focusMatch[2] || focusMatch[3] || "0", 10)
+          totalFocusMinutes += hours * 60 + minutes
+        }
+        
+        // Parse avg activity
+        const activityMatch = summary.avgActivity.match(/(\d+)%/)
+        if (activityMatch && activityMatch[1]) {
+          totalActivity += parseInt(activityMatch[1], 10)
+        }
+        
+        // Gabungkan unusual count
+        totalUnusualCount += summary.unusualCount
+        
+        // Gabungkan unusual messages
+        if (summary.unusualMessage && summary.unusualMessage !== "- No unusual activity detected.") {
+          const messages = summary.unusualMessage.split("\n").filter(m => m.trim())
+          allUnusualMessages.push(...messages)
+        }
+      })
+      
+      const totalWorkedTime = formatDuration(totalWorkedMinutes)
+      const focusTime = formatDuration(totalFocusMinutes)
+      const avgActivity = `${Math.round(totalActivity / summariesToCombine.length)}%`
+      const unusualActivities = totalUnusualCount
+      
+      // Buat pesan unusual activity dari gabungan
+      let unusualMessage = "- No unusual activity detected."
+      if (unusualActivities > 0) {
+        // Ambil pesan dari semua summary yang digabungkan
+        if (allUnusualMessages.length > 0) {
+          unusualMessage = allUnusualMessages.slice(0, unusualActivities).join("\n")
+        } else {
+          // Jika tidak ada pesan, buat berdasarkan count
+          const messages: string[] = []
+          if (unusualActivities === 1) {
+            messages.push("- Brief break before diving back into work.")
+          } else if (unusualActivities === 2) {
+            messages.push("- The app switched quickly before returning to work.")
+            messages.push("- Consistent pattern of idle periods detected.")
+          } else if (unusualActivities === 3) {
+            messages.push("- Idle stretch followed by a sprint.")
+            messages.push("- Activity pattern shows frequent interruptions.")
+            messages.push("- Brief break before diving back into work.")
+          } else {
+            // 4 atau lebih
+            messages.push("- Extended breaks interrupted the work flow.")
+            messages.push("- Multiple activity shifts throughout the session.")
+            messages.push("- Work pattern shows frequent interruptions.")
+            while (messages.length < unusualActivities) {
+              messages.push("- Additional unusual activity pattern detected.")
+            }
+          }
+          unusualMessage = messages.slice(0, unusualActivities).join("\n")
+        }
+      }
+      
+      // Classification berdasarkan total worked time
+      let classificationLabel = "Balanced"
+      let classificationPercent = 60
+      let classificationSummary = "Maintains consistent work pace."
+      
+      if (totalWorkedMinutes >= 480) { // 8+ hours
+        classificationLabel = "High focus"
+        classificationPercent = 85
+        classificationSummary = "Sustained high productivity throughout the period."
+      } else if (totalWorkedMinutes >= 360) { // 6+ hours
+        classificationLabel = "Productive"
+        classificationPercent = 75
+        classificationSummary = "Maintains high focus on work tasks."
+      } else if (totalWorkedMinutes >= 240) { // 4+ hours
+        classificationLabel = "Balanced"
+        classificationPercent = 65
+        classificationSummary = "Punctuated focus with controlled rest."
+      } else if (totalWorkedMinutes >= 120) { // 2+ hours
+        classificationLabel = "Recovery"
+        classificationPercent = 55
+        classificationSummary = "Rebounds strong after periods of rest."
+      } else {
+        classificationLabel = "Creative"
+        classificationPercent = 50
+        classificationSummary = "Switches between tasks calmly."
+      }
+      
+      return {
+        memberId: activeMemberId ?? "",
+        totalWorkedTime,
+        focusTime,
+        focusDescription: `Total focus time across ${summariesToCombine.length} day${summariesToCombine.length > 1 ? 's' : ''}.`,
+        avgActivity,
+        unusualCount: unusualActivities,
+        unusualMessage,
+        classificationLabel,
+        classificationSummary,
+        classificationPercent,
       }
     }
     
@@ -205,7 +498,7 @@ export default function Every10MinPage() {
     
     // Hari ini, return data asli
     return baseSummary
-  }, [activeMemberId, fallbackMemberId, dateStatus])
+  }, [activeMemberId, fallbackMemberId, dateStatus, dateRange])
 
   let runningIndex = 0
 
@@ -345,7 +638,7 @@ export default function Every10MinPage() {
                 </div>
                 <div className="flex-1">
                   <div className="text-sm text-slate-700">
-                    {memberSummary.unusualMessage.split("\n").map((line, index, arr) => (
+                    {memberSummary.unusualMessage.split("\n").map((line, index) => (
                       <p
                         key={`${activeMemberId}-${index}`}
                         className="text-left leading-snug"
@@ -391,8 +684,44 @@ export default function Every10MinPage() {
           <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-12 text-center text-sm text-slate-500 shadow-sm">
             No screenshots were captured for this member yet.
           </div>
+        ) : dateStatus.isRange && Array.isArray(memberTimeBlocks) && memberTimeBlocks.length > 0 && 'date' in (memberTimeBlocks[0] as any) ? (
+          // Render dengan pemisahan berdasarkan tanggal untuk range
+          (memberTimeBlocks as unknown as DateGroupedBlocks[]).map((dateGroup) => (
+            <div key={dateGroup.date} className="space-y-6">
+              {/* Tanggal Header */}
+              <div className="text-base font-semibold text-slate-700">
+                {dateGroup.dateLabel}
+              </div>
+              {/* Time Blocks untuk tanggal ini */}
+              {dateGroup.blocks.map((block) => {
+                const blockStart = runningIndex
+                runningIndex += block.items.length
+                return (
+                  <div key={`${dateGroup.date}-${block.label}-${blockStart}`} className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <span className="font-medium">{block.label}</span>
+                      <span className="text-slate-400">{block.summary}</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                      {block.items.map((item, index) => {
+                        const globalIndex = blockStart + index
+                        return (
+                          <MemberScreenshotCard
+                            key={item.id}
+                            item={item}
+                            onImageClick={() => openModal(globalIndex)}
+                          />
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ))
         ) : (
-          memberTimeBlocks.map((block) => {
+          // Render normal (bukan range)
+          (memberTimeBlocks as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>).map((block) => {
             const blockStart = runningIndex
             runningIndex += block.items.length
             return (
@@ -405,61 +734,11 @@ export default function Every10MinPage() {
                   {block.items.map((item, index) => {
                     const globalIndex = blockStart + index
                     return (
-                      <div key={item.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                        <div className="p-3">
-                          <div className="mb-2 flex items-start justify-between">
-                            <div className="flex-1">
-                              <h3 className="truncate text-xs font-medium text-slate-700">PT Aman Sejahtera...</h3>
-                              <p className="text-[10px] text-slate-400">No to-dos</p>
-                            </div>
-                          </div>
-                          {item.noActivity ? (
-                            <div className="mb-2 flex aspect-video items-center justify-center rounded border border-slate-200 bg-slate-50 text-xs text-slate-400">
-                              No activity
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => openModal(globalIndex)}
-                              className="relative mb-2 aspect-video w-full overflow-hidden rounded border border-slate-200 bg-slate-50 text-left"
-                            >
-                              <img src={item.image} alt="Screenshot" className="h-full w-full object-cover" />
-                            </button>
-                          )}
-                          <div className="mb-2 text-center text-xs font-medium text-blue-600">
-                            {item.screenCount
-                              ? `${item.screenCount} screen${item.screenCount > 1 ? "s" : ""}`
-                              : "No screens"}
-                          </div>
-                          <div className="mb-2 flex items-center justify-between text-xs">
-                            <span className="text-slate-600">{item.time}</span>
-                            <button className="text-slate-400 hover:text-slate-600">
-                              <Pencil className="h-3 w-3" />
-                            </button>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                              <div
-                                className="h-full rounded-full"
-                                style={{
-                                  width: `${item.progress}%`,
-                                  backgroundColor:
-                                    item.progress < 30
-                                      ? "#facc15"
-                                      : item.progress < 50
-                                      ? "#fb923c"
-                                      : item.progress < 70
-                                      ? "#a3e635"
-                                      : "#22c55e",
-                                }}
-                              />
-                            </div>
-                            <p className="text-[10px] text-slate-500">
-                              {item.progress}% of {item.seconds ? `${item.minutes} seconds` : `${item.minutes} minutes`}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+                      <MemberScreenshotCard
+                        key={item.id}
+                        item={item}
+                        onImageClick={() => openModal(globalIndex)}
+                      />
                     )
                   })}
                 </div>
