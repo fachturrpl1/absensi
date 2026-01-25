@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 // import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -27,7 +28,7 @@ import {
 import { DUMMY_MEMBERS, DUMMY_PROJECTS, DUMMY_TASKS, getClientNameByProjectName } from "@/lib/data/dummy-data"
 import { DataTable } from "@/components/data-table"
 import { ColumnDef } from "@tanstack/react-table"
-// import { PaginationFooter } from "@/components/pagination-footer" // Handled by DataTable
+import type { RowSelectionState } from "@tanstack/react-table"
 
 // Helper for initials
 function initialsFromName(name: string): string {
@@ -40,12 +41,15 @@ function initialsFromName(name: string): string {
 type TaskRow = typeof DUMMY_TASKS[number]
 
 export default function ListView() {
+    const searchParams = useSearchParams()
+    const initialProject = searchParams.get("project")
+
     const [tasks, setTasks] = useState<TaskRow[]>(DUMMY_TASKS)
     const [activeTab, setActiveTab] = useState<"active" | "completed">("active")
     const [searchQuery, setSearchQuery] = useState("")
 
-    // Controlled Selection State for DataTable
-    const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
+
+    const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
     const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false)
     const [isGlobalTaskDialogOpen, setIsGlobalTaskDialogOpen] = useState(false)
@@ -59,7 +63,7 @@ export default function ListView() {
     const [newTaskAssignee, setNewTaskAssignee] = useState("")
 
     // Filter states
-    const [selectedProject, setSelectedProject] = useState("all")
+    const [selectedProject, setSelectedProject] = useState(initialProject || "all")
     const [selectedAssignee, setSelectedAssignee] = useState("all")
 
     const projectOptions = useMemo(() => DUMMY_PROJECTS.map((project) => project.name).filter(Boolean), [])

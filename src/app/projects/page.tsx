@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import { Search, Pencil, Plus } from "lucide-react"
+import { Search, Pencil, Plus, Upload } from "lucide-react"
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
 } from "@/components/ui/dialog"
@@ -58,6 +58,7 @@ export default function ProjectsPage() {
     // dialogs
     const [addOpen, setAddOpen] = useState(false)
     const [importOpen, setImportOpen] = useState(false)
+    const [importFile, setImportFile] = useState<File | null>(null)
 
     // add project form state
     const [form, setForm] = useState<NewProjectForm>({
@@ -152,9 +153,10 @@ export default function ProjectsPage() {
                             />
                         </div>
                         <div className="flex items-center gap-2">
-                            {/* <Button variant="outline" className="px-3 hidden md:inline-flex" onClick={() => setImportOpen(true)}>
-                Import projects
-              </Button> */}
+                            <Button variant="outline" className="px-3 hidden md:inline-flex" onClick={() => setImportOpen(true)}>
+                                <Upload/>
+                                Import
+                            </Button>
                             <Button className="px-3" onClick={() => setAddOpen(true)}>
                                 <Plus />Add
                             </Button>
@@ -415,51 +417,56 @@ export default function ProjectsPage() {
                         </DialogContent>
                     </Dialog>
 
-                    {/* Import Projects Dialog */}
-                    <Dialog open={importOpen} onOpenChange={setImportOpen}>
-                        <DialogContent className="max-w-xl">
-                            <DialogHeader>
-                                <DialogTitle>Import projects</DialogTitle>
-                                <DialogDescription />
-                            </DialogHeader>
+                    <Dialog open={importOpen} onOpenChange={(o) => { setImportOpen(o); if (!o) setImportFile(null) }}>
+                    <DialogContent className="max-w-xl">
+                        <DialogHeader>
+                        <DialogTitle>Import projects</DialogTitle>
+                        <DialogDescription />
+                        </DialogHeader>
 
-                            <div className="space-y-3">
-                                <div className="border-2 border-dashed rounded-md p-6 grid place-items-center bg-muted/30">
-                                    <div className="space-y-2 text-center">
-                                        {/* <input
-                  id="projects-file"
-                  type="file"
-                  accept=\".csv,.xls,.xlsx\"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files && e.target.files[0] ? e.target.files[0] : null
-                    // Anda bisa menyimpan ke state bila perlu
-                    // setImportFile(f)
-                  }}
-                /> */}
-                                        <Button variant="outline" onClick={() => document.getElementById("projects-file")?.click()}>
-                                            Browse files
-                                        </Button>
-                                        <div className="text-xs text-muted-foreground">
-                                            Accepted file formats: <span className="font-medium">.CSV, .XLS, .XLSX</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    className="text-sm text-primary underline underline-offset-4"
-                                    onClick={() => { /* download template */ }}
-                                >
-                                    Download the template here
-                                </button>
+                        <div className="space-y-3">
+                        <div className="border-2 border-dashed rounded-md p-6 grid place-items-center bg-muted/30">
+                            <div className="space-y-2 text-center">
+                            <input
+                                id="projects-file"
+                                type="file"
+                                accept=".csv,.xls,.xlsx"
+                                className="hidden"
+                                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                            />
+                            <Button variant="outline" onClick={() => document.getElementById("projects-file")?.click()}>
+                                Browse files
+                            </Button>
+                            <div className="text-xs text-muted-foreground">
+                                Accepted file formats: <span className="font-medium">.CSV, .XLS, .XLSX</span>
                             </div>
+                            {importFile && (
+                                <div className="text-xs text-foreground">
+                                Selected: <span className="font-medium">{importFile.name}</span>
+                                </div>
+                            )}
+                            </div>
+                        </div>
 
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => setImportOpen(false)}>Cancel</Button>
-                                <Button onClick={() => setImportOpen(false)}>Import</Button>
-                            </DialogFooter>
-                        </DialogContent>
+                        <button
+                            type="button"
+                            className="text-sm text-primary hover:cursor-pointer hover:underline underline-offset-4"
+                            onClick={() => {}}
+                        >
+                            Download the template here
+                        </button>
+                        </div>
+
+                        <DialogFooter>
+                        <Button variant="outline" onClick={() => { setImportOpen(false); setImportFile(null) }}>Cancel</Button>
+                        <Button
+                            onClick={() => { setImportOpen(false); setImportFile(null) }}
+                            disabled={!importFile}
+                        >
+                            Import
+                        </Button>
+                        </DialogFooter>
+                    </DialogContent>
                     </Dialog>
 
                 </div>

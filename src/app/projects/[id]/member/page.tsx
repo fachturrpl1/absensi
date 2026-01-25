@@ -1,7 +1,8 @@
 "use client"
 
 import { useMemo, useState, use } from "react"
-import { DUMMY_MEMBERS, DUMMY_PROJECTS, PROJECT_MEMBER_MAP, type Member } from "@/lib/data/dummy-data"
+import Link from "next/link"
+import { DUMMY_MEMBERS, DUMMY_PROJECTS, PROJECT_MEMBER_MAP, getTaskCountFromTasksPageByProjectId, type Member } from "@/lib/data/dummy-data"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
@@ -18,6 +19,8 @@ export default function ProjectMembersPage({ params }: { params: Promise<{ id: s
   const project = useMemo(() => DUMMY_PROJECTS.find(p => p.id === id), [id])
   const [activeTab, setActiveTab] = useState<"members" | "teams">("members")
 
+  const taskCount = useMemo(() => project ? getTaskCountFromTasksPageByProjectId(project.id) : 0, [project])
+
   const memberIds = PROJECT_MEMBER_MAP[id] ?? []
   const assignedMembers: Member[] = useMemo(() => {
     return DUMMY_MEMBERS.filter(m => memberIds.includes(m.id))
@@ -32,7 +35,16 @@ export default function ProjectMembersPage({ params }: { params: Promise<{ id: s
           <div>Client: <span className="font-medium">{project?.clientName ?? "N/A"}</span></div>
           <div>Status: <span className="font-medium text-green-600">Active</span></div>
           <div>Budget: <span className="font-medium">{project?.budgetLabel ?? "N/A"}</span></div>
-          <div>Tasks: <span className="font-medium">{project?.todosLabel ?? "0"}</span></div>
+          <div className="flex items-center gap-1">
+            Tasks:
+            <Link
+              href={`/projects/tasks/list?project=${encodeURIComponent(project?.name ?? "")}`}
+              target="_blank"
+              className="font-medium hover:underline text-primary cursor-pointer"
+            >
+              {taskCount} tasks
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -40,8 +52,8 @@ export default function ProjectMembersPage({ params }: { params: Promise<{ id: s
       <div className="flex items-center gap-6 text-sm border-b">
         <button
           className={`pb-3 border-b-2 font-medium ${activeTab === "members"
-              ? "border-gray-900 text-gray-900"
-              : "border-transparent text-gray-500 hover:text-gray-900"
+            ? "border-gray-900 text-gray-900"
+            : "border-transparent text-gray-500 hover:text-gray-900"
             }`}
           onClick={() => setActiveTab("members")}
         >
@@ -49,8 +61,8 @@ export default function ProjectMembersPage({ params }: { params: Promise<{ id: s
         </button>
         <button
           className={`pb-3 border-b-2 font-medium ${activeTab === "teams"
-              ? "border-gray-900 text-gray-900"
-              : "border-transparent text-gray-500 hover:text-gray-900"
+            ? "border-gray-900 text-gray-900"
+            : "border-transparent text-gray-500 hover:text-gray-900"
             }`}
           onClick={() => setActiveTab("teams")}
         >
