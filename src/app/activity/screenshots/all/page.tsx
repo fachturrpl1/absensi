@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import {
   ChevronLeft,
@@ -15,6 +15,8 @@ import {
 import { useSelectedMemberContext } from "../selected-member-context"
 import { MemberScreenshotCard } from "@/components/activity/MemberScreenshotCard"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { ScreenshotCardSkeleton } from "@/components/activity/ScreenshotCardSkeleton"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const formatDuration = (totalMinutes: number) => {
   const hours = Math.floor(totalMinutes / 60)
@@ -125,6 +127,10 @@ export default function AllScreenshotsPage() {
   // State untuk dialog konfirmasi hapus
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [screenshotToDelete, setScreenshotToDelete] = useState<string | null>(null)
+  // State untuk loading
+  const [isLoading, setIsLoading] = useState(true)
+  // Ref untuk track apakah ini mount pertama kali
+  const isFirstMount = useRef(true)
 
   // Check date range validity and determine data display strategy
   const dateStatus = useMemo(() => {
@@ -175,6 +181,8 @@ export default function AllScreenshotsPage() {
   }, [dateRange])
 
   const memberTimeBlocks = useMemo(() => {
+    // Jika masih loading, return empty array agar skeleton muncul
+    if (isLoading) return []
     if (!activeMemberId || !dateStatus.isValid) return []
     const baseItems = DUMMY_MEMBER_SCREENSHOTS[activeMemberId] ?? []
 
@@ -221,7 +229,7 @@ export default function AllScreenshotsPage() {
     }
 
     return buildMemberTimeBlocks(baseItems, 6);
-  }, [activeMemberId, dateStatus, dateRange]);
+  }, [activeMemberId, dateStatus, dateRange, isLoading]);
 
   const flattenedScreenshots = useMemo(() => {
     let allItems: MemberScreenshotItem[] = []
@@ -240,6 +248,12 @@ export default function AllScreenshotsPage() {
 
   useEffect(() => {
     setIsMounted(true)
+    // Simulate loading saat pertama kali halaman dibuka
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+      isFirstMount.current = false
+    }, 1500) // Tambah delay lebih lama agar skeleton terlihat jelas
+    return () => clearTimeout(timer)
   }, [])
 
   useEffect(() => {
@@ -247,7 +261,23 @@ export default function AllScreenshotsPage() {
     setModalOpen(false)
     // Reset deleted screenshots saat member berubah
     setDeletedScreenshots(new Set())
+    // Reset loading saat member berubah
+    setIsLoading(true)
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+    return () => clearTimeout(timer)
   }, [activeMemberId])
+
+  // Reset loading saat dateRange berubah (tapi skip saat mount pertama)
+  useEffect(() => {
+    if (isFirstMount.current) return // Skip saat mount pertama
+    setIsLoading(true)
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [dateRange.startDate.getTime(), dateRange.endDate.getTime()])
 
   const openModal = (index: number) => {
     setModalIndex(index)
@@ -337,7 +367,29 @@ export default function AllScreenshotsPage() {
     <>
       {/* Screenshots Grid */}
       <div className="space-y-6">
-        {!memberTimeBlocks.length ? (
+        {isLoading ? (
+          // Loading skeleton
+          <div className="space-y-6">
+            {[...Array(2)].map((_, dateIdx) => (
+              <div key={dateIdx} className="space-y-6">
+                <Skeleton className="h-5 w-32" />
+                {[...Array(2)].map((_, blockIdx) => (
+                  <div key={blockIdx} className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-4 w-48" />
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                      {[...Array(6)].map((_, cardIdx) => (
+                        <ScreenshotCardSkeleton key={cardIdx} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : !memberTimeBlocks.length ? (
           <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-12 text-center text-sm text-slate-500 shadow-sm">
             No screenshots were captured for this member yet.
           </div>

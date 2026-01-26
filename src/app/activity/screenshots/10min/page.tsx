@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -20,6 +20,8 @@ import {
 import { useSelectedMemberContext } from "../selected-member-context"
 import { MemberScreenshotCard } from "@/components/activity/MemberScreenshotCard"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { ScreenshotCardSkeleton } from "@/components/activity/ScreenshotCardSkeleton"
+import { Skeleton } from "@/components/ui/skeleton"
 // import { ActivityDialog } from "@/components/activity/ActivityDialog"
 
 const formatDuration = (totalMinutes: number) => {
@@ -126,6 +128,10 @@ export default function Every10MinPage() {
   // State untuk dialog konfirmasi hapus
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [screenshotToDelete, setScreenshotToDelete] = useState<string | null>(null)
+  // State untuk loading
+  const [isLoading, setIsLoading] = useState(true)
+  // Ref untuk track apakah ini mount pertama kali
+  const isFirstMount = useRef(true)
 
   // Check date range validity and determine data display strategy
   const dateStatus = useMemo(() => {
@@ -196,6 +202,8 @@ export default function Every10MinPage() {
   }
 
   const memberTimeBlocks = useMemo(() => {
+    // Jika masih loading, return empty array agar skeleton muncul
+    if (isLoading) return []
     if (!activeMemberId || !dateStatus.isValid) return []
     const baseItems = DUMMY_MEMBER_SCREENSHOTS[activeMemberId] ?? []
     
@@ -257,7 +265,7 @@ export default function Every10MinPage() {
     
     // Hari ini atau single date - ambil semua data yang ada
     return buildMemberTimeBlocks(baseItems, 6) // 6 items = 1 jam (6 x 10 menit)
-  }, [activeMemberId, dateStatus, dateRange])
+  }, [activeMemberId, dateStatus, dateRange, isLoading])
 
   const flattenedScreenshots = useMemo(() => {
     let allItems: MemberScreenshotItem[] = []
@@ -280,12 +288,34 @@ export default function Every10MinPage() {
 
   useEffect(() => {
     setIsMounted(true)
+    // Simulate loading saat pertama kali halaman dibuka
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+      isFirstMount.current = false
+    }, 1500) // Tambah delay lebih lama agar skeleton terlihat jelas
+    return () => clearTimeout(timer)
   }, [])
 
   useEffect(() => {
     setModalIndex(0)
     setModalOpen(false)
+    // Reset loading saat member berubah
+    setIsLoading(true)
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+    return () => clearTimeout(timer)
   }, [activeMemberId])
+
+  // Reset loading saat dateRange berubah (tapi skip saat mount pertama)
+  useEffect(() => {
+    if (isFirstMount.current) return // Skip saat mount pertama
+    setIsLoading(true)
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [dateRange.startDate.getTime(), dateRange.endDate.getTime()])
 
   const openModal = (index: number) => {
     setModalIndex(index)
@@ -582,133 +612,218 @@ export default function Every10MinPage() {
 
       {/* How Activity Works Section */}
       <div className="space-y-4">
-        {/* <button
-          onClick={() => setIsDialogOpen(true)}
-          className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-        >
-          <LineChart className="h-4 w-4" />
-          How activity works
-        </button> */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex gap-6">
-            <div className="flex flex-1 flex-col justify-between">
-              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Worked time</p>
-              <h2 className="text-3xl font-semibold text-slate-900">{memberSummary.totalWorkedTime}</h2>
-            </div>
-            <div className="flex flex-1 flex-col justify-between border-l border-slate-200 pl-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Avg. activity</p>
-              <span className="text-3xl font-semibold text-slate-700">{memberSummary.avgActivity}</span>
-            </div>
-          </div>
-        </div>
-        <div className="relative w-full rounded-t-2xl border-t border-l border-r border-slate-200 bg-white p-6 pb-10 shadow-sm mt-6 overflow-visible" style={{ borderBottom: 'none' }}>
-          {/* Garis horizontal penuh yang melewati tengah tombol */}
-          <div className="absolute left-0 right-0 bottom-0 flex items-center justify-center" style={{ transform: 'translateY(50%)' }}>
-            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-slate-200" />
-            <div className="relative z-10 bg-white">
-              <Button
-                variant="outline"
-                className="rounded-full border border-slate-200 bg-white px-6 py-2 text-sm font-medium text-slate-700 shadow-sm"
-                onClick={() => {
-                  console.log("View all clicked - activeMemberId:", activeMemberId)
-                  console.log("selectedMemberId from context:", selectedMemberId)
-                  if (activeMemberId) {
-                    // Save memberId to sessionStorage for persistence
-                    sessionStorage.setItem("screenshotSelectedMemberId", activeMemberId)
-                    const url = `/insight/highlights?memberId=${encodeURIComponent(activeMemberId)}`
-                    console.log("Navigating to:", url)
-                    // Navigate to highlight page with memberId
-                    router.push(url)
-                  } else {
-                    console.log("No activeMemberId, navigating without memberId")
-                    router.push("/insight/highlights")
-                  }
-                }}
-              >
-                View all
-              </Button>
-            </div>
-          </div>
-          {/* <div className="absolute top-0 z-10 -translate-y-1/2" style={{ right: '1.5rem' }}>
-            <Button variant="outline" size="sm" className="rounded-full border border-slate-200 bg-white px-4 text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500 shadow-sm">
-              Insights
-            </Button>
-          </div> */}
-          <div className="flex flex-col md:flex-row">
-            {/* Focus Time */}
-            <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
-              <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
-                Focus time
-                <Info className="h-3.5 w-3.5 text-slate-400" />
-              </div>
-              <div className="flex flex-col items-center justify-center gap-3 py-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
-                  <svg className="h-8 w-8 text-blue-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
+        {isLoading ? (
+          <>
+            {/* Skeleton untuk Header (Worked time & Avg. activity) */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex gap-6">
+                <div className="flex flex-1 flex-col justify-between">
+                  <Skeleton className="h-3 w-24 mb-2" />
+                  <Skeleton className="h-9 w-20" />
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900">{memberSummary.focusTime}</h3>
-                <p className="text-center text-xs text-slate-500 max-w-[180px]">
-                  {memberSummary.focusDescription}
-                </p>
+                <div className="flex flex-1 flex-col justify-between border-l border-slate-200 pl-6">
+                  <Skeleton className="h-3 w-28 mb-2" />
+                  <Skeleton className="h-9 w-16" />
+                </div>
               </div>
             </div>
-
-            {/* Unusual Activity Instances */}
-            <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
-              <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
-                Unusual activity instances
-                <Info className="h-3.5 w-3.5 text-slate-400" />
-              </div>
-              <div className="flex w-full flex-row items-center justify-center gap-4 py-8">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border-4 border-slate-100 bg-white text-slate-700">
-                  <span className="text-lg font-semibold">{memberSummary.unusualCount}</span>
+            {/* Skeleton untuk Summary Cards */}
+            <div className="relative w-full rounded-t-2xl border-t border-l border-r border-slate-200 bg-white p-6 pb-10 shadow-sm mt-6 overflow-visible" style={{ borderBottom: 'none' }}>
+              <div className="absolute left-0 right-0 bottom-0 flex items-center justify-center" style={{ transform: 'translateY(50%)' }}>
+                <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-slate-200" />
+                <div className="relative z-10 bg-white">
+                  <Skeleton className="h-9 w-24 rounded-full" />
                 </div>
-                <div className="flex-1">
-                  <div className="text-sm text-slate-700">
-                    {memberSummary.unusualMessage.split("\n").map((line, index) => (
-                      <p
-                        key={`${activeMemberId}-${index}`}
-                        className="text-left leading-snug"
-                      >
-                        {line}
-                      </p>
-                    ))}
+              </div>
+              <div className="flex flex-col md:flex-row">
+                {/* Focus Time Skeleton */}
+                <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
+                  <Skeleton className="h-3 w-24" />
+                  <div className="flex flex-col items-center justify-center gap-3 py-4">
+                    <Skeleton className="h-14 w-14 rounded-full" />
+                    <Skeleton className="h-7 w-16" />
+                    <Skeleton className="h-4 w-40" />
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Work Time Classification */}
-            <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6">
-              <div className="flex w-full flex-col gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
-                <span className="flex items-center gap-1">Work time classification</span>
-                <span className="flex items-center gap-1">
-                  <Info className="h-3.5 w-3.5 text-slate-400" /> {memberSummary.classificationLabel}
-                </span>
-              </div>
-              <div className="flex flex-col items-center justify-center gap-2 py-4">
-                <div className="w-full max-w-[180px] rounded-full bg-slate-100">
-                  <div
-                    className="h-2 rounded-full bg-blue-500 transition-all"
-                    style={{ width: `${memberSummary.classificationPercent}%` }}
-                  />
+                {/* Unusual Activity Instances Skeleton */}
+                <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
+                  <Skeleton className="h-3 w-40" />
+                  <div className="flex w-full flex-row items-center justify-center gap-4 py-8">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div className="flex-1">
+                      <Skeleton className="h-4 w-full mb-2" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </div>
+                  </div>
                 </div>
-                <p className="text-center text-xs text-slate-500 max-w-[200px]">
-                  {memberSummary.classificationSummary}
-                </p>
+                {/* Work Time Classification Skeleton */}
+                <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6">
+                  <div className="w-full space-y-2">
+                    <Skeleton className="h-3 w-36" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <div className="flex flex-col items-center justify-center gap-2 py-4 w-full">
+                    <Skeleton className="h-2 w-full max-w-[180px] rounded-full" />
+                    <Skeleton className="h-4 w-48" />
+                  </div>
+                  <Skeleton className="h-3 w-32" />
+                </div>
               </div>
-              <span className="text-[10px] text-slate-400">
-                {memberSummary.classificationPercent}% of classification goal
-              </span>
             </div>
-          </div>
-        </div>
+          </>
+        ) : (
+          <>
+            {/* <button
+              onClick={() => setIsDialogOpen(true)}
+              className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+            >
+              <LineChart className="h-4 w-4" />
+              How activity works
+            </button> */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex gap-6">
+                <div className="flex flex-1 flex-col justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Worked time</p>
+                  <h2 className="text-3xl font-semibold text-slate-900">{memberSummary.totalWorkedTime}</h2>
+                </div>
+                <div className="flex flex-1 flex-col justify-between border-l border-slate-200 pl-6">
+                  <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Avg. activity</p>
+                  <span className="text-3xl font-semibold text-slate-700">{memberSummary.avgActivity}</span>
+                </div>
+              </div>
+            </div>
+            <div className="relative w-full rounded-t-2xl border-t border-l border-r border-slate-200 bg-white p-6 pb-10 shadow-sm mt-6 overflow-visible" style={{ borderBottom: 'none' }}>
+              {/* Garis horizontal penuh yang melewati tengah tombol */}
+              <div className="absolute left-0 right-0 bottom-0 flex items-center justify-center" style={{ transform: 'translateY(50%)' }}>
+                <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-slate-200" />
+                <div className="relative z-10 bg-white">
+                  <Button
+                    variant="outline"
+                    className="rounded-full border border-slate-200 bg-white px-6 py-2 text-sm font-medium text-slate-700 shadow-sm"
+                    onClick={() => {
+                      console.log("View all clicked - activeMemberId:", activeMemberId)
+                      console.log("selectedMemberId from context:", selectedMemberId)
+                      if (activeMemberId) {
+                        // Save memberId to sessionStorage for persistence
+                        sessionStorage.setItem("screenshotSelectedMemberId", activeMemberId)
+                        const url = `/insight/highlights?memberId=${encodeURIComponent(activeMemberId)}`
+                        console.log("Navigating to:", url)
+                        // Navigate to highlight page with memberId
+                        router.push(url)
+                      } else {
+                        console.log("No activeMemberId, navigating without memberId")
+                        router.push("/insight/highlights")
+                      }
+                    }}
+                  >
+                    View all
+                  </Button>
+                </div>
+              </div>
+              {/* <div className="absolute top-0 z-10 -translate-y-1/2" style={{ right: '1.5rem' }}>
+                <Button variant="outline" size="sm" className="rounded-full border border-slate-200 bg-white px-4 text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500 shadow-sm">
+                  Insights
+                </Button>
+              </div> */}
+              <div className="flex flex-col md:flex-row">
+                {/* Focus Time */}
+                <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
+                  <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
+                    Focus time
+                    <Info className="h-3.5 w-3.5 text-slate-400" />
+                  </div>
+                  <div className="flex flex-col items-center justify-center gap-3 py-4">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+                      <svg className="h-8 w-8 text-blue-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-semibold text-slate-900">{memberSummary.focusTime}</h3>
+                    <p className="text-center text-xs text-slate-500 max-w-[180px]">
+                      {memberSummary.focusDescription}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Unusual Activity Instances */}
+                <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
+                  <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
+                    Unusual activity instances
+                    <Info className="h-3.5 w-3.5 text-slate-400" />
+                  </div>
+                  <div className="flex w-full flex-row items-center justify-center gap-4 py-8">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full border-4 border-slate-100 bg-white text-slate-700">
+                      <span className="text-lg font-semibold">{memberSummary.unusualCount}</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm text-slate-700">
+                        {memberSummary.unusualMessage.split("\n").map((line, index) => (
+                          <p
+                            key={`${activeMemberId}-${index}`}
+                            className="text-left leading-snug"
+                          >
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Work Time Classification */}
+                <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6">
+                  <div className="flex w-full flex-col gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
+                    <span className="flex items-center gap-1">Work time classification</span>
+                    <span className="flex items-center gap-1">
+                      <Info className="h-3.5 w-3.5 text-slate-400" /> {memberSummary.classificationLabel}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center justify-center gap-2 py-4">
+                    <div className="w-full max-w-[180px] rounded-full bg-slate-100">
+                      <div
+                        className="h-2 rounded-full bg-blue-500 transition-all"
+                        style={{ width: `${memberSummary.classificationPercent}%` }}
+                      />
+                    </div>
+                    <p className="text-center text-xs text-slate-500 max-w-[200px]">
+                      {memberSummary.classificationSummary}
+                    </p>
+                  </div>
+                  <span className="text-[10px] text-slate-400">
+                    {memberSummary.classificationPercent}% of classification goal
+                  </span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Screenshots Grid */}
       <div className="space-y-6">
-        {!memberTimeBlocks.length ? (
+        {isLoading ? (
+          // Loading skeleton
+          <div className="space-y-6">
+            {[...Array(2)].map((_, dateIdx) => (
+              <div key={dateIdx} className="space-y-6">
+                <Skeleton className="h-5 w-32" />
+                {[...Array(2)].map((_, blockIdx) => (
+                  <div key={blockIdx} className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-4 w-48" />
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                      {[...Array(6)].map((_, cardIdx) => (
+                        <ScreenshotCardSkeleton key={cardIdx} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : !memberTimeBlocks.length ? (
           <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-12 text-center text-sm text-slate-500 shadow-sm">
             No screenshots were captured for this member yet.
           </div>
