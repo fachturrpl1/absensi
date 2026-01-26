@@ -11,6 +11,7 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table"
+import type { RowSelectionState, OnChangeFn } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -58,6 +59,8 @@ type DataTableProps<TData, TValue> = {
   pageSize?: number
   pageCount?: number
   totalRecords?: number
+  rowSelection?: RowSelectionState
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>
   onPageIndexChange?: (pageIndex: number) => void
   onPageSizeChange?: (pageSize: number) => void
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -9,6 +9,7 @@ import { Plus, Search } from "lucide-react"
 import { AddClientDialog, type ClientFormData } from "@/components/projects/AddClientDialog"
 import { ClientsTable, type Client } from "@/components/projects/ClientsTable"
 import { DUMMY_CLIENTS } from "@/lib/data/dummy-data"
+import { PaginationFooter } from "@/components/pagination-footer"
 
 export default function ClientsPage() {
     const [activeTab, setActiveTab] = useState<"active" | "archived">("active")
@@ -24,6 +25,10 @@ export default function ClientsPage() {
     // Use dummy data from file
     const [clients, setClients] = useState<Client[]>(DUMMY_CLIENTS)
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
+
     const activeClients = clients.filter((c) => !c.isArchived)
     const archivedClients = clients.filter((c) => c.isArchived)
     const displayedClients = activeTab === "active" ? activeClients : archivedClients
@@ -33,6 +38,14 @@ export default function ClientsPage() {
             c.name.toLowerCase().includes(searchQuery.toLowerCase())
         )
         : displayedClients
+
+    const paginatedClients = useMemo(() => {
+        const start = (currentPage - 1) * pageSize
+        const end = start + pageSize
+        return filteredClients.slice(start, end)
+    }, [filteredClients, currentPage, pageSize])
+
+    const totalPages = Math.ceil(filteredClients.length / pageSize) || 1
 
     const handleAddClient = (formData: ClientFormData) => {
         const newClient: Client = {
@@ -198,7 +211,7 @@ export default function ClientsPage() {
                     {/* Table */}
                     <div className="w-full rounded-lg border overflow-x-auto">
                         <ClientsTable
-                            clients={filteredClients}
+                            clients={paginatedClients}
                             selectedIds={selectedIds}
                             onSelectClient={(id, selected) => {
                                 setSelectedIds(
@@ -206,7 +219,7 @@ export default function ClientsPage() {
                                 )
                             }}
                             onSelectAll={(selected) => {
-                                setSelectedIds(selected ? filteredClients.map((c) => c.id) : [])
+                                setSelectedIds(selected ? paginatedClients.map((c) => c.id) : [])
                             }}
                             onEdit={handleEditClient}
                             onArchive={handleArchive}
@@ -214,11 +227,17 @@ export default function ClientsPage() {
                         />
                     </div>
 
-                    {/* Footer summary */}
-                    <div className="text-sm text-muted-foreground mt-4">
-                        Showing {filteredClients.length} of {filteredClients.length} client
-                        {filteredClients.length !== 1 ? "s" : ""}
-                    </div>
+                    <PaginationFooter
+                        page={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={(p) => setCurrentPage(p)}
+                        isLoading={false}
+                        from={paginatedClients.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
+                        to={Math.min(currentPage * pageSize, filteredClients.length)}
+                        total={filteredClients.length}
+                        pageSize={pageSize}
+                        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+                    />
                 </div>
             </div>
 

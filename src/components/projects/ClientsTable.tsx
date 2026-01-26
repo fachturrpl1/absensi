@@ -69,10 +69,10 @@ export function ClientsTable({
                         <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Tasks</th>
                         <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Budget</th>
                         <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Auto Invoicing</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Actions</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Actions</th>
                     </tr>
                 </thead>
-            <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
+            <tbody className="[&>tr:nth-child(even)]:bg-muted/40">
                 {clients.length === 0 ? (
                     <tr>
                         <td colSpan={7} className="p-6 text-center text-muted-foreground">
@@ -93,7 +93,7 @@ export function ClientsTable({
 
                         return (
                             <tr key={client.id} className="border-b hover:bg-muted/30 transition-colors">
-                                <td className="p-3 align-top">
+                                <td className="px-4 p-3 align-top">
                                     <input
                                         type="checkbox"
                                         checked={isSelected}
@@ -101,7 +101,7 @@ export function ClientsTable({
                                         className="h-4 w-4 rounded border-gray-300"
                                     />
                                 </td>
-                                <td className="p-3">
+                                <td className="px-4 py-3">
                                     <div className="flex items-center gap-3 min-w-0">
                                         <Avatar className="h-8 w-8">
                                             <AvatarFallback className="bg-gray-100 text-gray-700 text-xs">
@@ -111,17 +111,17 @@ export function ClientsTable({
                                         <span className="text-sm font-semibold">{client.name}</span>
                                     </div>
                                 </td>
-                                <td className="p-3 text-sm text-muted-foreground">
+                                <td className="px-4 py-3 text-sm text-muted-foreground">
                                     {projectCount} project{projectCount !== 1 ? "s" : ""}
                                 </td>
-                                <td className="p-3 text-sm text-muted-foreground">
+                                <td className="px-4 py-3 text-sm text-muted-foreground">
                                     {taskCount} task{taskCount !== 1 ? "s" : ""}
                                 </td>
-                                <td className="p-3 text-sm text-muted-foreground">{client.budget}</td>
-                                <td className="p-3 text-sm text-muted-foreground">
+                                <td className="px-4 py-3 text-sm text-muted-foreground">{client.budget}</td>
+                                <td className="px-4 py-3 text-sm text-muted-foreground">
                                     {client.autoInvoicing ? "On" : "Off"}
                                 </td>
-                                <td className="p-3">
+                                <td className="px-4 py-3 text-right">
                                     <ClientActionsDropdown
                                         isArchived={client.isArchived}
                                         onEdit={() => onEdit(client)}
