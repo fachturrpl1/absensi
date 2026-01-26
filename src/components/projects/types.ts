@@ -22,7 +22,8 @@ export type NewProjectForm = {
   allowTracking: boolean
   disableIdle: boolean
   clientId: string | null
-  // Catatan: field members/teams dapat ditambah saat integrasi
+  members: string[]
+  teams: string[]
 }
 
 export interface DuplicateProjectOptions {

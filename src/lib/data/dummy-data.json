@@ -1,0 +1,272 @@
+{
+  "clients": [
+    {
+      "id": "client-1",
+      "name": "Patricia",
+      "budget": "Budget: none",
+      "autoInvoicing": false,
+      "isArchived": false,
+      "address": "123 Main St, Jakarta",
+      "phone": "+62 812-3456-7890",
+      "emails": ["patricia@example.com"],
+      "website": "https://patricia.com",
+      "createdAt": "2025-01-05"
+    },
+    {
+      "id": "client-2",
+      "name": "Tech Corp",
+      "budget": "Budget: $50,000/month",
+      "autoInvoicing": true,
+      "isArchived": false,
+      "address": "456 Technology Blvd, Surabaya",
+      "phone": "+62 821-9876-5432",
+      "emails": ["contact@techcorp.com", "billing@techcorp.com"],
+      "website": "https://techcorp.co.id",
+      "createdAt": "2025-01-10"
+    },
+    {
+      "id": "client-3",
+      "name": "Creative Agency",
+      "budget": "Budget: $15,000/month",
+      "autoInvoicing": false,
+      "isArchived": false,
+      "address": "789 Design Ave, Bandung",
+      "phone": "+62 813-5555-6666",
+      "emails": ["hello@creativeagency.com"],
+      "website": "https://creativeagency.studio",
+      "createdAt": "2025-01-12"
+    },
+    {
+      "id": "client-4",
+      "name": "Startup Inc",
+      "budget": "Budget: $5,000/month",
+      "autoInvoicing": true,
+      "isArchived": false,
+      "address": "321 Innovation Street, Bali",
+      "phone": "+62 814-7777-8888",
+      "emails": ["team@startup.inc"],
+      "createdAt": "2025-01-18"
+    },
+    {
+      "id": "client-5",
+      "name": "Old Client Ltd",
+      "budget": "Budget: none",
+      "autoInvoicing": false,
+      "isArchived": true,
+      "address": "999 Legacy Road, Yogyakarta",
+      "phone": "+62 815-1111-2222",
+      "emails": ["info@oldclient.com"],
+      "createdAt": "2024-11-20"
+    }
+  ],
+  "projects": [
+    {
+      "id": "proj-1",
+      "name": "Website Redesign",
+      "clientId": "client-1",
+      "clientName": "Patricia",
+      "billable": true,
+      "disableActivity": false,
+      "allowTracking": true,
+      "disableIdle": false,
+      "archived": false,
+      "color": "#3B82F6",
+      "budgetLabel": "$10,000",
+      "memberLimitLabel": "5 members",
+      "todosLabel": "12 tasks",
+      "createdAt": "2025-01-10"
+    },
+    {
+      "id": "proj-2",
+      "name": "Mobile App Development",
+      "clientId": "client-2",
+      "clientName": "Tech Corp",
+      "billable": true,
+      "disableActivity": false,
+      "allowTracking": true,
+      "disableIdle": false,
+      "archived": false,
+      "color": "#10B981",
+      "budgetLabel": "$25,000",
+      "memberLimitLabel": "8 members",
+      "todosLabel": "24 tasks",
+      "createdAt": "2025-01-05"
+    },
+    {
+      "id": "proj-3",
+      "name": "Marketing Campaign",
+      "clientId": "client-1",
+      "clientName": "Patricia",
+      "billable": false,
+      "disableActivity": false,
+      "allowTracking": true,
+      "disableIdle": false,
+      "archived": false,
+      "color": "#F59E0B",
+      "budgetLabel": "No budget",
+      "memberLimitLabel": "3 members",
+      "todosLabel": "8 tasks",
+      "createdAt": "2025-01-15"
+    },
+    {
+      "id": "proj-4",
+      "name": "Old Website",
+      "clientId": null,
+      "clientName": null,
+      "billable": true,
+      "disableActivity": false,
+      "allowTracking": true,
+      "disableIdle": false,
+      "archived": true,
+      "color": "#6B7280",
+      "budgetLabel": "$5,000",
+      "memberLimitLabel": "2 members",
+      "todosLabel": "0 tasks",
+      "createdAt": "2024-12-01"
+    },
+    {
+      "id": "proj-5",
+      "name": "Legacy System",
+      "clientId": "client-3",
+      "clientName": "Old Client",
+      "billable": false,
+      "disableActivity": false,
+      "allowTracking": true,
+      "disableIdle": false,
+      "archived": true,
+      "color": "#6B7280",
+      "budgetLabel": "No budget",
+      "memberLimitLabel": "1 member",
+      "todosLabel": "0 tasks",
+      "createdAt": "2024-11-15"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-1",
+      "title": "Design Homepage Concept",
+      "assignee": "Antonio Galih",
+      "type": "Task",
+      "created": "Mon, Jan 19, 2026 9:16 am",
+      "project": "Website Redesign",
+      "status": "task",
+      "completed": false
+    },
+    {
+      "id": "task-2",
+      "title": "User Research Summary",
+      "assignee": "Sarah Johnson",
+      "type": "Task",
+      "created": "Mon, Jan 19, 2026 10:30 am",
+      "project": "Marketing Campaign",
+      "status": "task",
+      "completed": true
+    },
+    {
+      "id": "task-3",
+      "title": "Prototype Mobile Flow",
+      "assignee": "Lave Lavael",
+      "type": "Task",
+      "created": "Mon, Jan 19, 2026 1:15 pm",
+      "project": "Mobile App Development",
+      "status": "in_progress",
+      "completed": false
+    },
+    {
+      "id": "task-4",
+      "title": "Setup Analytics",
+      "assignee": "Michael Chen",
+      "type": "Task",
+      "created": "Tue, Jan 20, 2026 9:05 am",
+      "project": "Mobile App Development",
+      "status": "task",
+      "completed": false
+    },
+    {
+      "id": "task-5",
+      "title": "Review Sprint Backlog",
+      "assignee": "Emma Rodriguez",
+      "type": "Task",
+      "created": "Tue, Jan 20, 2026 11:45 am",
+      "project": "Marketing Campaign",
+      "status": "todo",
+      "completed": true
+    },
+    {
+      "id": "task-6",
+      "title": "QA Regression Testing",
+      "assignee": "Antonio Galih",
+      "type": "Task",
+      "created": "Wed, Jan 21, 2026 8:30 am",
+      "project": "Website Redesign",
+      "status": "task",
+      "completed": false
+    }
+  ],
+  "members": [
+    {
+      "id": "m1",
+      "name": "Antonio Galih",
+      "email": "antonio@example.com",
+      "activityScore": 85,
+      "avatar": "https://i.pravatar.cc/150?u=m1"
+    },
+    {
+      "id": "m2",
+      "name": "Lave Lavael",
+      "email": "lave@example.com",
+      "activityScore": 92,
+      "avatar": "https://i.pravatar.cc/150?u=m2"
+    },
+    {
+      "id": "m3",
+      "name": "Sarah Johnson",
+      "email": "sarah@example.com",
+      "activityScore": 78,
+      "avatar": "https://i.pravatar.cc/150?u=m3"
+    },
+    {
+      "id": "m4",
+      "name": "Michael Chen",
+      "email": "michael@example.com",
+      "activityScore": 88,
+      "avatar": "https://i.pravatar.cc/150?u=m4"
+    },
+    {
+      "id": "m5",
+      "name": "Emma Rodriguez",
+      "email": "emma@example.com",
+      "activityScore": 95,
+      "avatar": "https://i.pravatar.cc/150?u=m5"
+    }
+  ],
+  "teams": [
+    {
+      "id": "t1",
+      "name": "Team Alpha",
+      "engagement": 87,
+      "memberCount": 3,
+      "members": ["m1", "m2", "m3"]
+    },
+    {
+      "id": "t2",
+      "name": "Team Beta",
+      "engagement": 92,
+      "memberCount": 2,
+      "members": ["m4", "m5"]
+    },
+    {
+      "id": "t3",
+      "name": "Team Gamma",
+      "engagement": 75,
+      "memberCount": 4,
+      "members": ["m1", "m3", "m4", "m5"]
+    }
+  ],
+  "globalTasks": [
+    { "id": "global-1", "title": "Monthly Report" },
+    { "id": "global-2", "title": "Weekly Sync" },
+    { "id": "global-3", "title": "Client Feedback" },
+    { "id": "global-4", "title": "Security Audit" }
+  ]
+}

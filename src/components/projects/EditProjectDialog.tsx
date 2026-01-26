@@ -8,6 +8,9 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { DUMMY_TEAMS } from "@/lib/data/dummy-data"
 import type { NewProjectForm, Project } from "./types"
 
 type EditProjectDialogProps = {
@@ -27,12 +30,19 @@ export default function EditProjectDialog(props: EditProjectDialogProps) {
     allowTracking: true,
     disableIdle: false,
     clientId: null,
+    members: [],
+    teams: [],
   })
   const [tab, setTab] = useState<"general" | "members" | "budget" | "teams">("general")
 
   useEffect(() => {
     if (project) {
-      setForm((s) => ({ ...s, names: project.name }))
+      setForm((s) => ({
+        ...s,
+        names: project.name,
+        members: project.members?.map(m => m.id) || [],
+        teams: project.teams || []
+      }))
     } else {
       setForm({
         names: "",
@@ -41,6 +51,8 @@ export default function EditProjectDialog(props: EditProjectDialogProps) {
         allowTracking: true,
         disableIdle: false,
         clientId: null,
+        members: [],
+        teams: []
       })
     }
   }, [project])
@@ -135,11 +147,42 @@ export default function EditProjectDialog(props: EditProjectDialogProps) {
           <TabsContent value="budget">
             <div className="text-sm text-muted-foreground">Budget & Limits tab (coming soon)</div>
           </TabsContent>
-          <TabsContent value="teams">
-            <div className="text-sm text-muted-foreground">Teams tab (coming soon)</div>
+          <TabsContent value="teams" className="space-y-6">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">TEAMS</div>
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-blue-600"
+                  onClick={() => setForm(s => ({ ...s, teams: DUMMY_TEAMS.map(t => t.id) }))}
+                >
+                  Select all
+                </Button>
+              </div>
+            </div>
+            <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+              <div className="space-y-4">
+                {DUMMY_TEAMS.map((team) => (
+                  <div key={team.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`team-${team.id}`}
+                      checked={!!form.teams?.includes(team.id)}
+                      onCheckedChange={(checked) => {
+                        const current = new Set(form.teams || [])
+                        if (checked) current.add(team.id); else current.delete(team.id)
+                        setForm(prev => ({ ...prev, teams: Array.from(current) }))
+                      }}
+                    />
+                    <label htmlFor={`team-${team.id}`} className="text-sm font-medium leading-none">
+                      {team.name} <span className="text-muted-foreground">({team.memberCount} members)</span>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
           </TabsContent>
         </Tabs>
-        
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={onSave}>Save</Button>

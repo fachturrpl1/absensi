@@ -76,40 +76,40 @@ export const PROJECT_MEMBER_MAP: Record<string, string[]> = {
 }
 
 export function getProjectMemberIds(projectId: string): string[] {
-  return PROJECT_MEMBER_MAP[projectId] ?? []
+    return PROJECT_MEMBER_MAP[projectId] ?? []
 }
 
 // Teams by project (derived from project members)
 // Explicit mapping: project -> team IDs
 export const PROJECT_TEAM_MAP: Record<string, string[]> = {
-  "proj-1": ["t1"], // Website Redesign -> Team Alpha
-  "proj-2": ["t3"], // Mobile App Development -> Team Gamma
-  "proj-3": ["t2"], // Marketing Campaign -> Team Beta
-  // Tambahkan mapping lain jika diperlukan
+    "proj-1": ["t1"], // Website Redesign -> Team Alpha
+    "proj-2": ["t3"], // Mobile App Development -> Team Gamma
+    "proj-3": ["t2"], // Marketing Campaign -> Team Beta
+    // Tambahkan mapping lain jika diperlukan
 }
 
 export function getTeamsByProjectId(projectId: string): Team[] {
-  const explicitTeamIds = PROJECT_TEAM_MAP[projectId]
-  if (explicitTeamIds && explicitTeamIds.length > 0) {
-    const idSet = new Set(explicitTeamIds)
-    return DUMMY_TEAMS.filter((t) => idSet.has(t.id))
-  }
-
-  // Fallback: turunkan dari irisan member (legacy behavior)
-  const memberIds = PROJECT_MEMBER_MAP[projectId] ?? []
-  const result: Team[] = []
-  const seen = new Set<string>()
-  for (const t of DUMMY_TEAMS) {
-    if (t.members.some((m) => memberIds.includes(m)) && !seen.has(t.id)) {
-      seen.add(t.id)
-      result.push(t)
+    const explicitTeamIds = PROJECT_TEAM_MAP[projectId]
+    if (explicitTeamIds && explicitTeamIds.length > 0) {
+        const idSet = new Set(explicitTeamIds)
+        return DUMMY_TEAMS.filter((t) => idSet.has(t.id))
     }
-  }
-  return result
+
+    // Fallback: turunkan dari irisan member (legacy behavior)
+    const memberIds = PROJECT_MEMBER_MAP[projectId] ?? []
+    const result: Team[] = []
+    const seen = new Set<string>()
+    for (const t of DUMMY_TEAMS) {
+        if (t.members.some((m) => memberIds.includes(m)) && !seen.has(t.id)) {
+            seen.add(t.id)
+            result.push(t)
+        }
+    }
+    return result
 }
 
 export function getTeamNamesByProjectId(projectId: string): string[] {
-  return getTeamsByProjectId(projectId).map((t) => t.name)
+    return getTeamsByProjectId(projectId).map((t) => t.name)
 }
 
 // ============================================================================
@@ -315,6 +315,17 @@ export const DUMMY_PROJECTS: Project[] = [
         todosLabel: "0 tasks",
         createdAt: "2024-11-15"
     }
+]
+
+// ============================================================================
+// GLOBAL TASKS
+// ============================================================================
+
+export const DUMMY_GLOBAL_TASKS = [
+    { id: "global-1", title: "Monthly Report" },
+    { id: "global-2", title: "Weekly Sync" },
+    { id: "global-3", title: "Client Feedback" },
+    { id: "global-4", title: "Security Audit" },
 ]
 
 // ============================================================================

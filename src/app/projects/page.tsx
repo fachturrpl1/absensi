@@ -12,6 +12,14 @@ import {
 } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
 import AddProjectDialog from "@/components/projects/AddProjectDialog"
 import EditProjectDialog from "@/components/projects/EditProjectDialog"
 import type { Project, NewProjectForm } from "@/components/projects/types"
@@ -67,7 +75,9 @@ export default function ProjectsPage() {
         disableActivity: false,
         allowTracking: true,
         disableIdle: false,
-        clientId: null
+        clientId: null,
+        members: [],
+        teams: []
     })
 
     // edit dialog state
@@ -154,7 +164,7 @@ export default function ProjectsPage() {
                         </div>
                         <div className="flex items-center gap-2">
                             <Button variant="outline" className="px-3 hidden md:inline-flex" onClick={() => setImportOpen(true)}>
-                                <Upload/>
+                                <Upload />
                                 Import
                             </Button>
                             <Button className="px-3" onClick={() => setAddOpen(true)}>
@@ -195,46 +205,45 @@ export default function ProjectsPage() {
                     <Separator className="my-8" />
 
                     {/* Table */}
-                    <div className="overflow-x-auto w-full mt-4 md:mt-6">
-                        <table className="w-full min-w-[880px]">
-                            <thead className="border-b bg-muted/50">
-                                <tr>
-                                    <th className="p-3 text-left">
+                    <div className="mt-4 md:mt-6">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-10">
                                         <input
                                             type="checkbox"
                                             checked={allSelected}
                                             onChange={toggleSelectAll}
                                             className="rounded border-gray-300"
                                         />
-                                    </th>
-                                    <th className="p-3 text-left text-xs font-medium">Name</th>
-                                    <th className="p-3 text-left text-xs font-medium">Client</th>
-                                    <th className="p-3 text-left text-xs font-medium">Teams</th>
-                                    <th className="p-3 text-left text-xs font-medium">Members</th>
-                                    <th className="p-3 text-left text-xs font-medium">Tasks</th>
-                                    <th className="p-3 text-left text-xs font-medium">Budget</th>
-                                    <th className="p-3 text-left text-xs font-medium">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
+                                    </TableHead>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Client</TableHead>
+                                    <TableHead>Teams</TableHead>
+                                    <TableHead>Members</TableHead>
+                                    <TableHead>Tasks</TableHead>
+                                    <TableHead>Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
                                 {filtered.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={8} className="p-6 text-center text-muted-foreground">
+                                    <TableRow>
+                                        <TableCell colSpan={7} className="text-center text-muted-foreground py-6">
                                             No projects found
-                                        </td>
-                                    </tr>
+                                        </TableCell>
+                                    </TableRow>
                                 ) : (
                                     paginated.map((p) => (
-                                        <tr key={p.id} className="border-b">
-                                            <td className="p-3 align-top">
+                                        <TableRow key={p.id}>
+                                            <TableCell className="align-top">
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedIds.includes(p.id)}
                                                     onChange={() => toggleSelect(p.id)}
                                                     className="rounded border-gray-300"
                                                 />
-                                            </td>
-                                            <td className="p-3">
+                                            </TableCell>
+                                            <TableCell>
                                                 <div className="flex items-center gap-3">
                                                     <Avatar className="h-8 w-8">
                                                         <AvatarFallback className="bg-gray-100 text-gray-700">{initialsFromName(p.name)}</AvatarFallback>
@@ -245,14 +254,14 @@ export default function ProjectsPage() {
                                                         </Link>
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td className="p-3 text-sm text-muted-foreground">
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground">
                                                 {p.clientName ?? "—"}
-                                            </td>
-                                            <td className="p-3 text-sm text-muted-foreground">
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground">
                                                 {p.teams.length === 0 ? "None" : p.teams.join(", ")}
-                                            </td>
-                                            <td className="p-3">
+                                            </TableCell>
+                                            <TableCell>
                                                 <div className="flex -space-x-2">
                                                     {p.members.slice(0, 3).map((m) => (
                                                         <Avatar key={m.id} className="h-6 w-6 ring-2 ring-background">
@@ -267,13 +276,12 @@ export default function ProjectsPage() {
                                                         </div>
                                                     )}
                                                 </div>
-                                            </td>
-                                            <td className="p-3 text-sm text-muted-foreground">
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground">
                                                 {getTaskCountFromTasksPageByProjectId(p.id)}
-                                            </td>
-                                            <td className="p-3 text-sm text-muted-foreground">{p.budgetLabel}</td>
-                                            {/* <td className="p-3 text-sm text-muted-foreground">{p.memberLimitLabel}</td> */}
-                                            <td className="p-3">
+                                            </TableCell>
+                                            {/* <TableCell className="text-muted-foreground">{p.memberLimitLabel}</TableCell> */}
+                                            <TableCell>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="outline" size="sm" className="px-3">
@@ -316,12 +324,12 @@ export default function ProjectsPage() {
                                                         )}
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
-                                            </td>
-                                        </tr>
+                                            </TableCell>
+                                        </TableRow>
                                     ))
                                 )}
-                            </tbody>
-                        </table>
+                            </TableBody>
+                        </Table>
                     </div>
 
                     <PaginationFooter
@@ -418,55 +426,55 @@ export default function ProjectsPage() {
                     </Dialog>
 
                     <Dialog open={importOpen} onOpenChange={(o) => { setImportOpen(o); if (!o) setImportFile(null) }}>
-                    <DialogContent className="max-w-xl">
-                        <DialogHeader>
-                        <DialogTitle>Import projects</DialogTitle>
-                        <DialogDescription />
-                        </DialogHeader>
+                        <DialogContent className="max-w-xl">
+                            <DialogHeader>
+                                <DialogTitle>Import projects</DialogTitle>
+                                <DialogDescription />
+                            </DialogHeader>
 
-                        <div className="space-y-3">
-                        <div className="border-2 border-dashed rounded-md p-6 grid place-items-center bg-muted/30">
-                            <div className="space-y-2 text-center">
-                            <input
-                                id="projects-file"
-                                type="file"
-                                accept=".csv,.xls,.xlsx"
-                                className="hidden"
-                                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
-                            />
-                            <Button variant="outline" onClick={() => document.getElementById("projects-file")?.click()}>
-                                Browse files
-                            </Button>
-                            <div className="text-xs text-muted-foreground">
-                                Accepted file formats: <span className="font-medium">.CSV, .XLS, .XLSX</span>
-                            </div>
-                            {importFile && (
-                                <div className="text-xs text-foreground">
-                                Selected: <span className="font-medium">{importFile.name}</span>
+                            <div className="space-y-3">
+                                <div className="border-2 border-dashed rounded-md p-6 grid place-items-center bg-muted/30">
+                                    <div className="space-y-2 text-center">
+                                        <input
+                                            id="projects-file"
+                                            type="file"
+                                            accept=".csv,.xls,.xlsx"
+                                            className="hidden"
+                                            onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                                        />
+                                        <Button variant="outline" onClick={() => document.getElementById("projects-file")?.click()}>
+                                            Browse files
+                                        </Button>
+                                        <div className="text-xs text-muted-foreground">
+                                            Accepted file formats: <span className="font-medium">.CSV, .XLS, .XLSX</span>
+                                        </div>
+                                        {importFile && (
+                                            <div className="text-xs text-foreground">
+                                                Selected: <span className="font-medium">{importFile.name}</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            )}
+
+                                <button
+                                    type="button"
+                                    className="text-sm text-primary hover:cursor-pointer hover:underline underline-offset-4"
+                                    onClick={() => { }}
+                                >
+                                    Download the template here
+                                </button>
                             </div>
-                        </div>
 
-                        <button
-                            type="button"
-                            className="text-sm text-primary hover:cursor-pointer hover:underline underline-offset-4"
-                            onClick={() => {}}
-                        >
-                            Download the template here
-                        </button>
-                        </div>
-
-                        <DialogFooter>
-                        <Button variant="outline" onClick={() => { setImportOpen(false); setImportFile(null) }}>Cancel</Button>
-                        <Button
-                            onClick={() => { setImportOpen(false); setImportFile(null) }}
-                            disabled={!importFile}
-                        >
-                            Import
-                        </Button>
-                        </DialogFooter>
-                    </DialogContent>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => { setImportOpen(false); setImportFile(null) }}>Cancel</Button>
+                                <Button
+                                    onClick={() => { setImportOpen(false); setImportFile(null) }}
+                                    disabled={!importFile}
+                                >
+                                    Import
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
                     </Dialog>
 
                 </div>

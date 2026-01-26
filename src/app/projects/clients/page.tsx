@@ -4,7 +4,7 @@ import { useState, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { Plus, Search } from "lucide-react"
 import { AddClientDialog, type ClientFormData } from "@/components/projects/AddClientDialog"
 import { ClientsTable, type Client } from "@/components/projects/ClientsTable"
@@ -21,6 +21,7 @@ export default function ClientsPage() {
     // Archive confirmation dialog
     const [archiveOpen, setArchiveOpen] = useState(false)
     const [archiveTargets, setArchiveTargets] = useState<string[]>([])
+    const [clientToDelete, setClientToDelete] = useState<string | null>(null)
 
     // Use dummy data from file
     const [clients, setClients] = useState<Client[]>(DUMMY_CLIENTS)
@@ -109,6 +110,19 @@ export default function ClientsPage() {
         )
         setSelectedIds([])
         setActiveTab("active")
+        setActiveTab("active")
+    }
+
+    const handleDelete = (id: string) => {
+        setClientToDelete(id)
+    }
+
+    const confirmDelete = () => {
+        if (clientToDelete) {
+            setClients(clients.filter(c => c.id !== clientToDelete))
+            setSelectedIds(selectedIds.filter(sid => sid !== clientToDelete))
+            setClientToDelete(null)
+        }
     }
 
     const confirmArchive = () => {
@@ -209,7 +223,7 @@ export default function ClientsPage() {
                     <Separator className="my-8" />
 
                     {/* Table */}
-                    <div className="w-full rounded-lg border overflow-x-auto">
+                    <div className="overflow-x-auto w-full mt-4 md:mt-6">
                         <ClientsTable
                             clients={paginatedClients}
                             selectedIds={selectedIds}
@@ -224,6 +238,7 @@ export default function ClientsPage() {
                             onEdit={handleEditClient}
                             onArchive={handleArchive}
                             onRestore={handleRestore}
+                            onDelete={handleDelete}
                         />
                     </div>
 
@@ -258,6 +273,7 @@ export default function ClientsPage() {
                             phoneCountry: "id",
                             emails: editingClient.emails?.join(", ") || "",
                             projects: [],
+                            teams: []
                         }
                         : undefined
                 }
@@ -295,6 +311,26 @@ export default function ClientsPage() {
                         </Button>
                         <Button variant="destructive" onClick={confirmArchive}>
                             Archive
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={!!clientToDelete} onOpenChange={(open) => !open && setClientToDelete(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Delete client</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete this client? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-3">
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button variant="destructive" onClick={confirmDelete}>
+                            Delete
                         </Button>
                     </DialogFooter>
                 </DialogContent>

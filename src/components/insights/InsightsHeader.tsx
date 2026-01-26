@@ -49,29 +49,29 @@ export function InsightsHeader({
   const [filterTab, setFilterTab] = useState<FilterTab>("members")
   const [filterSearch, setFilterSearch] = useState("")
   const [dateRangeOpen, setDateRangeOpen] = useState(false)
-  
+
   // Fungsi untuk mendeteksi preset dari dateRange
   const detectPreset = (start: Date, end: Date): string | null => {
     const now = new Date()
     now.setHours(23, 59, 59, 999)
     const today = new Date(now)
     today.setHours(0, 0, 0, 0)
-    
+
     const startDate = new Date(start)
     startDate.setHours(0, 0, 0, 0)
     const endDate = new Date(end)
     endDate.setHours(23, 59, 59, 999)
-    
+
     const startTime = startDate.getTime()
     const endTime = endDate.getTime()
     const todayTime = today.getTime()
     const nowTime = now.getTime()
-    
+
     // Today - harus start dan end sama dengan today
     if (startTime === todayTime && endTime === nowTime) {
       return "today"
     }
-    
+
     // Yesterday
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
@@ -80,7 +80,7 @@ export function InsightsHeader({
     if (startTime === yesterday.getTime() && endTime === yesterdayEnd.getTime()) {
       return "yesterday"
     }
-    
+
     // Last 7 days
     const last7Start = new Date(today)
     last7Start.setDate(last7Start.getDate() - 6)
@@ -88,7 +88,7 @@ export function InsightsHeader({
     if (startTime === last7Start.getTime() && endTime === nowTime) {
       return "last_7_days"
     }
-    
+
     // This week
     const dayOfWeek = now.getDay()
     const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1
@@ -98,7 +98,7 @@ export function InsightsHeader({
     if (startTime === thisWeekStart.getTime() && endTime === nowTime) {
       return "this_week"
     }
-    
+
     // Last week
     const lastWeekEnd = new Date(today)
     lastWeekEnd.setDate(lastWeekEnd.getDate() - lastWeekEnd.getDay())
@@ -109,7 +109,7 @@ export function InsightsHeader({
     if (startTime === lastWeekStart.getTime() && endTime === lastWeekEnd.getTime()) {
       return "last_week"
     }
-    
+
     // Last 2 weeks
     const last2WeeksStart = new Date(today)
     last2WeeksStart.setDate(last2WeeksStart.getDate() - 13)
@@ -117,14 +117,14 @@ export function InsightsHeader({
     if (startTime === last2WeeksStart.getTime() && endTime === nowTime) {
       return "last_2_weeks"
     }
-    
+
     // This month
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     thisMonthStart.setHours(0, 0, 0, 0)
     if (startTime === thisMonthStart.getTime() && endTime === nowTime) {
       return "this_month"
     }
-    
+
     // Last month
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     lastMonthStart.setHours(0, 0, 0, 0)
@@ -133,17 +133,17 @@ export function InsightsHeader({
     if (startTime === lastMonthStart.getTime() && endTime === lastMonthEnd.getTime()) {
       return "last_month"
     }
-    
+
     return null
   }
-  
+
   const [selectedPreset, setSelectedPreset] = useState<string | null>(() => {
     return detectPreset(dateRange.startDate, dateRange.endDate)
   })
 
   // STATE UNTUK FILTER MEMBER/TEAM (pending sebelum di-apply)
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false)
-  const [tempFilter, setTempFilter] = useState<SelectedFilter>(selectedFilter)
+  // const [tempFilter, setTempFilter] = useState<SelectedFilter>(selectedFilter) // Removed tempFilter for immediate apply
 
   const filterLabel = useMemo(() => {
     if (selectedFilter.all) return selectedFilter.type === "members" ? "All Members" : "All Teams"
@@ -200,10 +200,10 @@ export function InsightsHeader({
     }
   }, [dateRangeOpen, dateRange])
 
-  // Sync tempFilter when dropdown opens
+  // Sync tempFilter when dropdown opens (Removed logic as we auto-apply now)
   useEffect(() => {
     if (filterDropdownOpen) {
-      setTempFilter(selectedFilter)
+      // setTempFilter(selectedFilter)
       // Jika hideTeamsTab true, paksa ke "members"
       setFilterTab(hideTeamsTab ? "members" : selectedFilter.type)
       setFilterSearch("")
@@ -298,15 +298,13 @@ export function InsightsHeader({
     setDateRangeOpen(false)
   }
 
-  const applyFilter = () => {
-    onSelectedFilterChange(tempFilter)
+  // Helper to auto apply filter
+  const handleFilterSelect = (filter: SelectedFilter) => {
+    onSelectedFilterChange(filter)
     setFilterDropdownOpen(false)
   }
 
-  const cancelFilter = () => {
-    setTempFilter(selectedFilter)
-    setFilterDropdownOpen(false)
-  }
+  // Removed manual applyFilter and cancelFilter functions
 
   // presets (mengikuti pola highlights: update temp state + highlight, commit saat Apply)
   const applyPreset = (preset: string) => {
@@ -384,11 +382,21 @@ export function InsightsHeader({
       }
     }
 
-    // Update tanggal sementara, biar user bisa review di kalender lalu Apply/Cancel
+    // Update tanggal sementara untuk display
     setTempStartDate(start)
     setTempEndDate(end)
 
-    // Jaga tampilan kalender tetap relevan
+    // Deteksi preset dan apply IMMEDIATELY
+    // const detectedPreset = detectPreset(start, end)
+    // setSelectedPreset(detectedPreset)
+    // onDateRangeChange({ startDate: start, endDate: end })
+    // setDateRangeOpen(false)
+
+    // IMPORTANT: Wait for state update or just call parent directly
+    onDateRangeChange({ startDate: start, endDate: end })
+    setDateRangeOpen(false)
+
+    // We also need to update calendar view states just in case
     const lm = new Date(start)
     const rm = new Date(lm); rm.setMonth(rm.getMonth() + 1)
     setLeftMonth(lm)
@@ -447,10 +455,10 @@ export function InsightsHeader({
             {!hideAllOption && (
               <div className="mb-2 pb-2 border-b border-gray-200">
                 <button
-                  className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${tempFilter.all && tempFilter.type === effectiveFilterTab ? "bg-gray-100 text-black" : "hover:bg-gray-50 text-gray-700"}`}
-                  onClick={() => setTempFilter({ type: effectiveFilterTab, all: true })}
+                  className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${selectedFilter.all && selectedFilter.type === effectiveFilterTab ? "bg-gray-100 text-black" : "hover:bg-gray-50 text-gray-700"}`}
+                  onClick={() => handleFilterSelect({ type: effectiveFilterTab, all: true })}
                 >
-                  <span className={`inline-block w-2 h-2 rounded-full border ${tempFilter.all && tempFilter.type === effectiveFilterTab ? "bg-black border-black" : "border-gray-400"}`} />
+                  <span className={`inline-block w-2 h-2 rounded-full border ${selectedFilter.all && selectedFilter.type === effectiveFilterTab ? "bg-black border-black" : "border-gray-400"}`} />
                   All {effectiveFilterTab === "members" ? "Members" : "Teams"}
                 </button>
               </div>
@@ -458,12 +466,12 @@ export function InsightsHeader({
 
             <div className="max-h-64 overflow-auto">
               {filtered.map(it => {
-                const isActive = !tempFilter.all && tempFilter.type === effectiveFilterTab && tempFilter.id === it.id
+                const isActive = !selectedFilter.all && selectedFilter.type === effectiveFilterTab && selectedFilter.id === it.id
                 return (
                   <button
                     key={it.id}
                     className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${isActive ? "bg-gray-100 text-black" : "hover:bg-gray-50 text-gray-700"}`}
-                    onClick={() => setTempFilter({ type: effectiveFilterTab, all: false, id: it.id })}
+                    onClick={() => handleFilterSelect({ type: effectiveFilterTab, all: false, id: it.id })}
                   >
                     <span className={`inline-block w-2 h-2 rounded-full border ${isActive ? "bg-black border-black" : "border-gray-400"}`} />
                     {it.name}
@@ -472,15 +480,15 @@ export function InsightsHeader({
               })}
             </div>
 
-            {/* Apply/Cancel Buttons */}
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
+            {/* Apply/Cancel Buttons removed for Auto-Apply */}
+            {/* <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
               <button className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 font-medium" onClick={applyFilter}>
                 Apply
               </button>
               <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50" onClick={cancelFilter}>
                 Cancel
               </button>
-            </div>
+            </div> */}
           </DropdownMenuContent>
         </DropdownMenu>
 

@@ -9,9 +9,10 @@ interface ClientActionsDropdownProps {
     onEdit: () => void
     onArchive?: () => void
     onRestore?: () => void
+    onDelete?: () => void
 }
 
-export function ClientActionsDropdown({ isArchived, onEdit, onArchive, onRestore }: ClientActionsDropdownProps) {
+export function ClientActionsDropdown({ isArchived, onEdit, onArchive, onRestore, onDelete }: ClientActionsDropdownProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -32,6 +33,9 @@ export function ClientActionsDropdown({ isArchived, onEdit, onArchive, onRestore
                         Archive
                     </DropdownMenuItem>
                 )}
+                <DropdownMenuItem onClick={onDelete} className="text-destructive">
+                    Delete
+                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     )
