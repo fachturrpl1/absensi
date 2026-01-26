@@ -69,7 +69,6 @@ export default function ProjectMembersPage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="flex flex-col gap-6 p-4 pt-0">
-      {/* Project Header */}
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">{project?.name ?? "Project"}</h1>
         <div className="flex gap-4 text-sm text-muted-foreground">
