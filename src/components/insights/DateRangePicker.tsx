@@ -21,7 +21,17 @@ export function DateRangePicker({
   const [rightMonth, setRightMonth] = useState<Date>(new Date(new Date(dateRange.startDate).setMonth(new Date(dateRange.startDate).getMonth() + 1)))
   const [selectingStart, setSelectingStart] = useState(true)
   const [dateRangeOpen, setDateRangeOpen] = useState(false)
-  const [selectedPreset, setSelectedPreset] = useState<string>("last_7_days")
+  // Initialize selectedPreset dengan null, akan di-update oleh useEffect
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null)
+
+  // Deteksi preset saat pertama kali mount dan saat dateRange berubah
+  useEffect(() => {
+    // Selalu update preset berdasarkan dateRange, baik modal terbuka atau tidak
+    // Tapi jika modal terbuka, preset akan di-override oleh useEffect yang lain
+    const detectedPreset = detectPreset(dateRange.startDate, dateRange.endDate)
+    setSelectedPreset(detectedPreset)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateRange.startDate.getTime(), dateRange.endDate.getTime()])
 
   const fmt = (d: Date) =>
     d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: timezone || "UTC" })
@@ -46,6 +56,95 @@ export function DateRangePicker({
     return ""
   }, [timezone])
 
+  // Fungsi untuk mendeteksi apakah date range sesuai dengan preset
+  const detectPreset = (start: Date, end: Date): string | null => {
+    const now = new Date()
+    now.setHours(23, 59, 59, 999)
+    const today = new Date(now)
+    today.setHours(0, 0, 0, 0)
+    
+    // Normalize dates untuk perbandingan - pastikan hanya membandingkan tanggal, bukan waktu
+    const startDate = new Date(start)
+    startDate.setHours(0, 0, 0, 0)
+    const endDate = new Date(end)
+    endDate.setHours(23, 59, 59, 999)
+    
+    const startTime = startDate.getTime()
+    const endTime = endDate.getTime()
+    const todayTime = today.getTime()
+    const nowTime = now.getTime()
+    
+    // Today - harus start dan end sama dengan today
+    if (startTime === todayTime && endTime === nowTime) {
+      return "today"
+    }
+    
+    // Yesterday
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayEnd = new Date(yesterday)
+    yesterdayEnd.setHours(23, 59, 59, 999)
+    if (startTime === yesterday.getTime() && endTime === yesterdayEnd.getTime()) {
+      return "yesterday"
+    }
+    
+    // Last 7 days - harus dari 6 hari yang lalu sampai hari ini
+    const last7Start = new Date(today)
+    last7Start.setDate(last7Start.getDate() - 6)
+    last7Start.setHours(0, 0, 0, 0)
+    if (startTime === last7Start.getTime() && endTime === nowTime) {
+      return "last_7_days"
+    }
+    
+    // This week
+    const dayOfWeek = now.getDay()
+    const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+    const thisWeekStart = new Date(today)
+    thisWeekStart.setDate(thisWeekStart.getDate() - diff)
+    thisWeekStart.setHours(0, 0, 0, 0)
+    if (startTime === thisWeekStart.getTime() && endTime === nowTime) {
+      return "this_week"
+    }
+    
+    // Last week
+    const lastWeekEnd = new Date(today)
+    lastWeekEnd.setDate(lastWeekEnd.getDate() - lastWeekEnd.getDay())
+    lastWeekEnd.setHours(23, 59, 59, 999)
+    const lastWeekStart = new Date(lastWeekEnd)
+    lastWeekStart.setDate(lastWeekStart.getDate() - 6)
+    lastWeekStart.setHours(0, 0, 0, 0)
+    if (startTime === lastWeekStart.getTime() && endTime === lastWeekEnd.getTime()) {
+      return "last_week"
+    }
+    
+    // Last 2 weeks
+    const last2WeeksStart = new Date(today)
+    last2WeeksStart.setDate(last2WeeksStart.getDate() - 13)
+    last2WeeksStart.setHours(0, 0, 0, 0)
+    if (startTime === last2WeeksStart.getTime() && endTime === nowTime) {
+      return "last_2_weeks"
+    }
+    
+    // This month
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    thisMonthStart.setHours(0, 0, 0, 0)
+    if (startTime === thisMonthStart.getTime() && endTime === nowTime) {
+      return "this_month"
+    }
+    
+    // Last month
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    lastMonthStart.setHours(0, 0, 0, 0)
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
+    lastMonthEnd.setHours(23, 59, 59, 999)
+    if (startTime === lastMonthStart.getTime() && endTime === lastMonthEnd.getTime()) {
+      return "last_month"
+    }
+    
+    // Jika tidak sesuai dengan preset manapun, return null
+    return null
+  }
+
   useEffect(() => {
     if (dateRangeOpen) {
       setTempStartDate(dateRange.startDate)
@@ -56,8 +155,27 @@ export function DateRangePicker({
       setLeftMonth(lm)
       setRightMonth(rm)
       setSelectingStart(true)
+      // Deteksi preset berdasarkan dateRange yang ada saat modal dibuka
+      const detectedPreset = detectPreset(dateRange.startDate, dateRange.endDate)
+      setSelectedPreset(detectedPreset)
     }
-  }, [dateRangeOpen, dateRange])
+  }, [dateRangeOpen, dateRange.startDate, dateRange.endDate])
+
+  // Update preset saat tempStartDate atau tempEndDate berubah (saat user memilih tanggal manual)
+  useEffect(() => {
+    if (!dateRangeOpen) return
+    
+    // Jika range sudah selesai dipilih (selectingStart = true)
+    if (selectingStart) {
+      // Deteksi preset berdasarkan tempStartDate dan tempEndDate
+      const detectedPreset = detectPreset(tempStartDate, tempEndDate)
+      setSelectedPreset(detectedPreset)
+    } 
+    // Jika sedang memilih start date (klik pertama), reset preset
+    else {
+      setSelectedPreset(null)
+    }
+  }, [dateRangeOpen, tempStartDate, tempEndDate, selectingStart])
 
   const generateCalendarDays = (month: Date) => {
     const year = month.getFullYear()
@@ -79,18 +197,23 @@ export function DateRangePicker({
     if (!isCurrentMonth) return
     const selectedDate = new Date(month.getFullYear(), month.getMonth(), day)
     selectedDate.setHours(0, 0, 0, 0)
+    
     if (selectingStart) {
+      // Klik pertama - reset preset dan set start date
+      setSelectedPreset(null)
       setTempStartDate(selectedDate)
       setTempEndDate(selectedDate)
       setSelectingStart(false)
     } else {
+      // Klik kedua - selesaikan range
       if (selectedDate < tempStartDate) {
-        setTempEndDate(tempStartDate)
         setTempStartDate(selectedDate)
+        setTempEndDate(tempStartDate)
       } else {
         setTempEndDate(selectedDate)
       }
       setSelectingStart(true)
+      // Preset akan di-detect oleh useEffect
     }
   }
 
@@ -124,6 +247,9 @@ export function DateRangePicker({
   }
 
   const applyDateRange = () => {
+    // Deteksi preset berdasarkan tanggal yang dipilih sebelum apply
+    const detectedPreset = detectPreset(tempStartDate, tempEndDate)
+    setSelectedPreset(detectedPreset)
     onDateRangeChange({ startDate: tempStartDate, endDate: tempEndDate })
     setDateRangeOpen(false)
   }

@@ -19,6 +19,7 @@ import {
 } from "@/lib/data/dummy-data"
 import { useSelectedMemberContext } from "../selected-member-context"
 import { MemberScreenshotCard } from "@/components/activity/MemberScreenshotCard"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 // import { ActivityDialog } from "@/components/activity/ActivityDialog"
 
 const formatDuration = (totalMinutes: number) => {
@@ -120,6 +121,11 @@ export default function Every10MinPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [modalIndex, setModalIndex] = useState(0)
   const [isMounted, setIsMounted] = useState(false)
+  // State untuk menyimpan daftar screenshot yang dihapus (berdasarkan item.id)
+  const [deletedScreenshots, setDeletedScreenshots] = useState<Set<string>>(new Set())
+  // State untuk dialog konfirmasi hapus
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [screenshotToDelete, setScreenshotToDelete] = useState<string | null>(null)
 
   // Check date range validity and determine data display strategy
   const dateStatus = useMemo(() => {
@@ -254,18 +260,22 @@ export default function Every10MinPage() {
   }, [activeMemberId, dateStatus, dateRange])
 
   const flattenedScreenshots = useMemo(() => {
+    let allItems: MemberScreenshotItem[] = []
     // Jika range, flatten dari struktur dateGroupedBlocks
     if (dateStatus.isRange && Array.isArray(memberTimeBlocks) && memberTimeBlocks.length > 0) {
       const firstBlock = memberTimeBlocks[0]
       if (firstBlock && 'date' in (firstBlock as any)) {
-        return (memberTimeBlocks as unknown as DateGroupedBlocks[]).flatMap((dateGroup) =>
+        allItems = (memberTimeBlocks as unknown as DateGroupedBlocks[]).flatMap((dateGroup) =>
           dateGroup.blocks.flatMap((block) => block.items)
         )
       }
+    } else {
+      // Normal case: array of blocks
+      allItems = (memberTimeBlocks as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>).flatMap((block) => block.items)
     }
-    // Normal case: array of blocks
-    return (memberTimeBlocks as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>).flatMap((block) => block.items)
-  }, [memberTimeBlocks, dateStatus])
+    // Filter out deleted screenshots untuk modal (tapi card tetap ditampilkan)
+    return allItems.filter(item => !deletedScreenshots.has(item.id))
+  }, [memberTimeBlocks, dateStatus, deletedScreenshots])
   const currentScreenshot = flattenedScreenshots[modalIndex]
 
   useEffect(() => {
@@ -294,6 +304,24 @@ export default function Every10MinPage() {
       return
     }
     setModalIndex((prev) => (prev - 1 + flattenedScreenshots.length) % flattenedScreenshots.length)
+  }
+
+  // Handler untuk membuka dialog konfirmasi hapus
+  const handleDeleteClick = (screenshotId: string) => {
+    setScreenshotToDelete(screenshotId)
+    setDeleteConfirmOpen(true)
+  }
+
+  // Handler untuk konfirmasi hapus
+  const handleConfirmDelete = () => {
+    if (screenshotToDelete) {
+      setDeletedScreenshots((prev) => new Set(prev).add(screenshotToDelete))
+      // Close modal if the deleted screenshot was the one currently open
+      if (currentScreenshot?.id === screenshotToDelete) {
+        setModalOpen(false)
+      }
+      setScreenshotToDelete(null)
+    }
   }
 
   const memberSummary: MemberInsightSummary = useMemo(() => {
@@ -698,26 +726,29 @@ export default function Every10MinPage() {
                 runningIndex += block.items.length
                 return (
                   <div key={`${dateGroup.date}-${block.label}-${blockStart}`} className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-slate-500">
+          <div className="flex items-center gap-2 text-sm text-slate-500">
                       <span className="font-medium">{block.label}</span>
                       <span className="text-slate-400">{block.summary}</span>
-                    </div>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                       {block.items.map((item, index) => {
                         const globalIndex = blockStart + index
+                        const isDeleted = deletedScreenshots.has(item.id)
                         return (
                           <MemberScreenshotCard
                             key={item.id}
                             item={item}
                             onImageClick={() => openModal(globalIndex)}
+                            onDelete={() => handleDeleteClick(item.id)}
+                            isDeleted={isDeleted}
                           />
                         )
                       })}
-                    </div>
                   </div>
+                </div>
                 )
               })}
-            </div>
+              </div>
           ))
         ) : (
           // Render normal (bukan range)
@@ -726,27 +757,30 @@ export default function Every10MinPage() {
             runningIndex += block.items.length
             return (
               <div key={`${block.label}-${blockStart}`} className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-slate-500">
+          <div className="flex items-center gap-2 text-sm text-slate-500">
                   <span className="font-medium">{block.label}</span>
                   <span className="text-slate-400">{block.summary}</span>
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                   {block.items.map((item, index) => {
                     const globalIndex = blockStart + index
+                    const isDeleted = deletedScreenshots.has(item.id)
                     return (
                       <MemberScreenshotCard
                         key={item.id}
                         item={item}
                         onImageClick={() => openModal(globalIndex)}
+                        onDelete={() => handleDeleteClick(item.id)}
+                        isDeleted={isDeleted}
                       />
                     )
                   })}
-                </div>
-              </div>
+                    </div>
+                  </div>
             )
           })
         )}
-      </div>
+                  </div>
 
       {isMounted && modalOpen && currentScreenshot && createPortal(
         <>
@@ -767,7 +801,7 @@ export default function Every10MinPage() {
           <div 
             id="screenshot-modal-overlay"
             className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center gap-4 p-8" 
-            style={{ 
+                        style={{
               position: 'fixed', 
               top: 0, 
               left: 0, 
@@ -818,13 +852,13 @@ export default function Every10MinPage() {
                 ) : (
                   <div className="flex items-center justify-center h-full w-full text-slate-400">
                     No image available
-                  </div>
+                    </div>
                 )}
-              </div>
+                  </div>
               <div className="flex items-center justify-center text-sm text-slate-600 shrink-0">
                 <span>{currentScreenshot.time}</span>
+                </div>
               </div>
-            </div>
 
             {/* Tombol Next - Kanan */}
             <button
@@ -842,6 +876,16 @@ export default function Every10MinPage() {
         </>,
         document.body
       )}
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={handleConfirmDelete}
+        title="Hapus Screenshot"
+        description="Apakah anda yakin ingin menghapusnya?"
+        confirmText="Hapus"
+        cancelText="Batal"
+        destructive={true}
+      />
     </>
   )
 }
