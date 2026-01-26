@@ -1,92 +1,250 @@
 "use client"
 
-import React, { useState, useMemo } from "react"
-import { ActivityHeader } from "@/components/activity/ActivityHeader"
-import { EmptyState } from "@/components/activity/EmptyState"
-import { DUMMY_APP_ACTIVITIES, AppActivityEntry } from "@/lib/data/dummy-data"
-import { Settings } from "lucide-react"
+import React, { useMemo, useState, useEffect } from "react"
+import { DUMMY_APP_ACTIVITIES, DUMMY_MEMBERS, DUMMY_PROJECTS, DUMMY_TEAMS, type AppActivityEntry } from "@/lib/data/dummy-data"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useTimezone } from "@/components/timezone-provider"
+import { InsightsHeader } from "@/components/insights/InsightsHeader"
+import type { DateRange, SelectedFilter } from "@/components/insights/types"
+import { useRouter, useSearchParams } from "next/navigation"
 
-export default function AppActivityPage() {
-    const [dateRange, setDateRange] = useState<{ startDate: Date, endDate: Date }>({
-        startDate: new Date(2026, 0, 21),
-        endDate: new Date(2026, 0, 21)
-    })
-    const [project, setProject] = useState("all")
-    const [member, setMember] = useState("all")
+export default function AppsPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const memberIdFromUrl = searchParams.get("memberId")
+  const timezone = useTimezone()
+  
+  // Get initial memberId: URL > sessionStorage > default
+  const getInitialMemberId = (): string => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search)
+      const memberIdFromLocation = urlParams.get("memberId")
+      if (memberIdFromLocation) return memberIdFromLocation
+    }
+    if (memberIdFromUrl) return memberIdFromUrl
+    if (typeof window !== "undefined") {
+      const savedMemberId = sessionStorage.getItem("appSelectedMemberId")
+      if (savedMemberId) return savedMemberId
+    }
+    return DUMMY_MEMBERS[0]?.id ?? "m1"
+  }
 
-    // Filter Data
-    const filteredData = useMemo(() => {
-        let data = DUMMY_APP_ACTIVITIES
-
-        // 1. Filter by Date Range
-        const startOfDay = new Date(dateRange.startDate)
-        startOfDay.setHours(0, 0, 0, 0)
-        const endOfDay = new Date(dateRange.endDate)
-        endOfDay.setHours(23, 59, 59, 999)
-
-        data = data.filter((item: AppActivityEntry) => {
-            const itemDate = new Date(item.date)
-            return itemDate >= startOfDay && itemDate <= endOfDay
+  const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({
+    type: "members",
+    all: false,
+    id: getInitialMemberId(),
+  })
+  
+  // Update filter when memberId from URL changes
+  useEffect(() => {
+    if (memberIdFromUrl && memberIdFromUrl !== selectedFilter.id) {
+      setSelectedFilter({
+        type: "members",
+        all: false,
+        id: memberIdFromUrl,
+      })
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("appSelectedMemberId", memberIdFromUrl)
+      }
+    } else if (!memberIdFromUrl && typeof window !== "undefined") {
+      const savedMemberId = sessionStorage.getItem("appSelectedMemberId")
+      if (savedMemberId && savedMemberId !== selectedFilter.id) {
+        setSelectedFilter({
+          type: "members",
+          all: false,
+          id: savedMemberId,
         })
+      }
+    }
+  }, [memberIdFromUrl, selectedFilter.id])
+  
+  // Sync selectedFilter changes to sessionStorage and URL
+  const handleFilterChange = (filter: SelectedFilter) => {
+    // Jika all: true (tidak seharusnya terjadi karena hideAllOption), ubah ke member pertama
+    if (filter.all) {
+      const firstMemberId = DUMMY_MEMBERS[0]?.id ?? "m1"
+      const newFilter: SelectedFilter = {
+        type: "members",
+        all: false,
+        id: firstMemberId,
+      }
+      setSelectedFilter(newFilter)
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("appSelectedMemberId", firstMemberId)
+        const params = new URLSearchParams(searchParams.toString())
+        params.set("memberId", firstMemberId)
+        router.push(`/activity/apps?${params.toString()}`)
+      }
+      return
+    }
+    
+    setSelectedFilter(filter)
+    if (!filter.all && filter.id && typeof window !== "undefined") {
+      sessionStorage.setItem("appSelectedMemberId", filter.id)
+      const params = new URLSearchParams(searchParams.toString())
+      params.set("memberId", filter.id)
+      router.push(`/activity/apps?${params.toString()}`)
+    }
+  }
 
-        // 2. Filter by Project
-        if (project !== 'all') {
-            data = data.filter((item: AppActivityEntry) => item.projectId === project)
-        }
+  const selectedMemberId = selectedFilter.all ? null : (selectedFilter.id ?? null)
+  
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const end = new Date()
+    end.setHours(23, 59, 59, 999)
+    return { startDate: today, endDate: end }
+  })
+  const [selectedProject, setSelectedProject] = useState<string>("all")
 
-        // 3. Filter by Member
-        if (member !== 'all') {
-            data = data.filter((item: AppActivityEntry) => item.memberId === member)
-        }
+  // Format time spent dari hours ke format H:MM:SS (seperti 0:01:17)
+  const formatTimeSpent = (hours: number): string => {
+    const totalSeconds = Math.floor(hours * 3600)
+    const h = Math.floor(totalSeconds / 3600)
+    const m = Math.floor((totalSeconds % 3600) / 60)
+    const s = totalSeconds % 60
+    // Format selalu H:MM:SS (termasuk 0:01:17)
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  }
 
-        return data
-    }, [dateRange, project, member])
+  // Filter dan group data berdasarkan date
+  const groupedData = useMemo(() => {
+    let filtered = [...DUMMY_APP_ACTIVITIES]
 
-    return (
-        <div className="flex flex-col h-screen bg-white">
-            {/* Top Title Bar - Simplified to match screenshot "App activity | Settings" */}
-            <div className="flex items-center justify-between px-6 py-3 bg-white">
-                <h1 className="text-xl font-normal text-gray-800">App activity</h1>
-                <button className="text-sm text-gray-700 hover:underline flex items-center gap-1">
-                    <Settings className="w-4 h-4" /> Settings
-                </button>
-            </div>
+    // Filter by project
+    if (selectedProject !== "all") {
+      filtered = filtered.filter(item => item.projectId === selectedProject)
+    }
 
-            <ActivityHeader
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-                project={project}
-                onProjectChange={setProject}
-                member={member}
-                onMemberChange={setMember}
-            />
+    // Filter by member
+    if (selectedMemberId) {
+      filtered = filtered.filter(item => item.memberId === selectedMemberId)
+    }
 
-            <div className="flex-1 overflow-auto bg-white p-6">
-                {filteredData.length > 0 ? (
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-gray-200 text-xs font-semibold text-gray-900 uppercase">
-                                <th className="py-3 px-2 font-medium">Project</th>
-                                <th className="py-3 px-2 font-medium">App name</th>
-                                <th className="py-3 px-2 font-medium">Time spent (hrs)</th>
-                                <th className="py-3 px-2 font-medium text-right">Sessions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredData.map(item => (
-                                <tr key={item.id} className="border-b border-gray-100 even:bg-gray-50 hover:bg-gray-50 text-sm text-gray-700">
-                                    <td className="py-3 px-2">{item.projectName}</td>
-                                    <td className="py-3 px-2 text-gray-900 font-medium">{item.appName}</td>
-                                    <td className="py-3 px-2">{item.timeSpent.toFixed(2)}h</td>
-                                    <td className="py-3 px-2 text-right">{item.sessions}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                ) : (
-                    <EmptyState message="No data for this date range" />
-                )}
-            </div>
+    // Filter by date range
+    const start = new Date(dateRange.startDate)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(dateRange.endDate)
+    end.setHours(23, 59, 59, 999)
+
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.date)
+      itemDate.setHours(0, 0, 0, 0)
+      return itemDate >= start && itemDate <= end
+    })
+
+    // Group by date
+    const grouped: Record<string, AppActivityEntry[]> = {}
+    filtered.forEach(item => {
+      const dateKey = item.date || ""
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = []
+      }
+      grouped[dateKey].push(item)
+    })
+
+    // Convert to array and sort by date descending
+    return Object.entries(grouped)
+      .map(([date, items]) => ({
+        date,
+        items: items.sort((a, b) => {
+          // Sort by time spent descending, then by app name
+          if (b.timeSpent !== a.timeSpent) {
+            return b.timeSpent - a.timeSpent
+          }
+          return a.appName.localeCompare(b.appName)
+        })
+      }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  }, [selectedProject, selectedMemberId, dateRange])
+
+
+
+
+  return (
+    <div className="flex flex-col min-h-screen bg-white">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4">
+        <h1 className="text-xl font-semibold text-gray-900">App activity</h1>
+        {/* <a href="/activity/apps/settings" className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
+          <Settings className="w-4 h-4" />
+          Settings
+        </a> */}
+      </div>
+
+      {/* Date & User Controls */}
+      <div className="flex w-full items-center justify-between gap-4 px-6 py-3">
+        <InsightsHeader
+          selectedFilter={selectedFilter}
+          onSelectedFilterChange={handleFilterChange}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          members={DUMMY_MEMBERS}
+          teams={DUMMY_TEAMS}
+          timezone={timezone}
+          hideAllOption={true}
+          hideTeamsTab={true}
+        />
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-4 px-6 py-4">
+        <div className="flex flex-col">
+          <span className="text-[10px] text-gray-400 font-bold uppercase mb-1">PROJECT</span>
+          <Select value={selectedProject} onValueChange={setSelectedProject}>
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue placeholder="All projects" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All projects</SelectItem>
+              {DUMMY_PROJECTS.map(p => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-    )
+      </div>
+
+      {/* Table */}
+      <div className="flex-1 overflow-auto">
+        <table className="w-full">
+          <thead className="border-b border-gray-200">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Project</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">App name</th>
+              <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Time spent (hrs)</th>
+              <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Sessions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {groupedData.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-6 py-12 text-center text-sm text-gray-500">
+                  No app activity data available for the selected filters.
+                </td>
+              </tr>
+            ) : (
+              groupedData.map((group) => (
+                <React.Fragment key={group.date}>
+                 
+                  {/* Data Rows */}
+                  {group.items.map((item) => (
+                    <tr key={item.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-3 text-sm text-gray-900">{item.projectName}</td>
+                      <td className="px-6 py-3 text-sm text-gray-900">{item.appName}</td>
+                      <td className="px-6 py-3 text-sm text-gray-900 text-right">{formatTimeSpent(item.timeSpent)}</td>
+                      <td className="px-6 py-3 text-sm text-gray-900 text-right">{item.sessions}</td>
+                    </tr>
+                  ))}
+                </React.Fragment>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
 }
+
+ 

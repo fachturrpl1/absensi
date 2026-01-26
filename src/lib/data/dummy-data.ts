@@ -76,40 +76,40 @@ export const PROJECT_MEMBER_MAP: Record<string, string[]> = {
 }
 
 export function getProjectMemberIds(projectId: string): string[] {
-    return PROJECT_MEMBER_MAP[projectId] ?? []
+  return PROJECT_MEMBER_MAP[projectId] ?? []
 }
 
 // Teams by project (derived from project members)
 // Explicit mapping: project -> team IDs
 export const PROJECT_TEAM_MAP: Record<string, string[]> = {
-    "proj-1": ["t1"], // Website Redesign -> Team Alpha
-    "proj-2": ["t3"], // Mobile App Development -> Team Gamma
-    "proj-3": ["t2"], // Marketing Campaign -> Team Beta
-    // Tambahkan mapping lain jika diperlukan
+  "proj-1": ["t1"], // Website Redesign -> Team Alpha
+  "proj-2": ["t3"], // Mobile App Development -> Team Gamma
+  "proj-3": ["t2"], // Marketing Campaign -> Team Beta
+  // Tambahkan mapping lain jika diperlukan
 }
 
 export function getTeamsByProjectId(projectId: string): Team[] {
-    const explicitTeamIds = PROJECT_TEAM_MAP[projectId]
-    if (explicitTeamIds && explicitTeamIds.length > 0) {
-        const idSet = new Set(explicitTeamIds)
-        return DUMMY_TEAMS.filter((t) => idSet.has(t.id))
-    }
+  const explicitTeamIds = PROJECT_TEAM_MAP[projectId]
+  if (explicitTeamIds && explicitTeamIds.length > 0) {
+    const idSet = new Set(explicitTeamIds)
+    return DUMMY_TEAMS.filter((t) => idSet.has(t.id))
+  }
 
-    // Fallback: turunkan dari irisan member (legacy behavior)
-    const memberIds = PROJECT_MEMBER_MAP[projectId] ?? []
-    const result: Team[] = []
-    const seen = new Set<string>()
-    for (const t of DUMMY_TEAMS) {
-        if (t.members.some((m) => memberIds.includes(m)) && !seen.has(t.id)) {
-            seen.add(t.id)
-            result.push(t)
-        }
+  // Fallback: turunkan dari irisan member (legacy behavior)
+  const memberIds = PROJECT_MEMBER_MAP[projectId] ?? []
+  const result: Team[] = []
+  const seen = new Set<string>()
+  for (const t of DUMMY_TEAMS) {
+    if (t.members.some((m) => memberIds.includes(m)) && !seen.has(t.id)) {
+      seen.add(t.id)
+      result.push(t)
     }
-    return result
+  }
+  return result
 }
 
 export function getTeamNamesByProjectId(projectId: string): string[] {
-    return getTeamsByProjectId(projectId).map((t) => t.name)
+  return getTeamsByProjectId(projectId).map((t) => t.name)
 }
 
 // ============================================================================
@@ -1506,8 +1506,8 @@ export const DUMMY_MEMBER_SCREENSHOTS: Record<string, MemberScreenshotItem[]> = 
         { id: "m1-4", time: "9:30 am - 9:40 am", progress: 58, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-25 191532.png", screenCount: 1 },
         { id: "m1-5", time: "9:40 am - 9:50 am", progress: 62, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-04 204028.png", screenCount: 1 },
         { id: "m1-6", time: "9:50 am - 10:00 am", progress: 77, minutes: 10, image: "/Screenshoot/Screenshot 2025-11-28 162344.png", screenCount: 1 },
-        { id: "m1-7", time: "11:00 am - 11:10 am", progress: 64, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-08 094631.png", screenCount: 1 },
-        { id: "m1-8", time: "11:10 am - 11:20 am", progress: 55, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-11 204654.png", screenCount: 1 },
+        { id: "m1-7", time: "1:00 pm - 1:10 pm", progress: 44, minutes: 10, image: "/Screenshoot/Screenshot 2025-11-18 155809.png", screenCount: 1 },
+        { id: "m1-8", time: "1:10 pm - 1:20 pm", progress: 0, minutes: 0, image: "", noActivity: true, screenCount: 0 },
     ],
     m2: [
         { id: "m2-1", time: "2:00 pm - 2:10 pm", progress: 53, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-12 222910.png", screenCount: 1 },
@@ -1822,7 +1822,595 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
         timeSpent: 6.0,
         sessions: 5,
         date: "2026-01-21"
+    },
+    {
+        id: "aa4",
+        projectId: "proj-1",
+        projectName: "hans",
+        memberId: "m1",
+        appName: "Hubstaff",
+        timeSpent: 0.0214, // 0:01:17 in hours (77 seconds / 3600)
+        sessions: 2,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa5",
+        projectId: "proj-1",
+        projectName: "hans",
+        memberId: "m1",
+        appName: "Microsoft Edge",
+        timeSpent: 0.0169, // 0:01:01 in hours (61 seconds / 3600)
+        sessions: 1,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa6",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m1",
+        appName: "VS Code",
+        timeSpent: 2.5,
+        sessions: 8,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa7",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m1",
+        appName: "Chrome",
+        timeSpent: 1.8,
+        sessions: 15,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa8",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m2",
+        appName: "Android Studio",
+        timeSpent: 3.2,
+        sessions: 6,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa9",
+        projectId: "proj-1",
+        projectName: "hans",
+        memberId: "m1",
+        appName: "Hubstaff",
+        timeSpent: 0.015, // 0:00:54
+        sessions: 1,
+        date: "2026-01-27"
+    },
+    {
+        id: "aa10",
+        projectId: "proj-1",
+        projectName: "hans",
+        memberId: "m1",
+        appName: "Microsoft Edge",
+        timeSpent: 0.02, // 0:01:12
+        sessions: 2,
+        date: "2026-01-27"
+    },
+    // Sarah Johnson (m3) - Marketing Campaign
+    {
+        id: "aa11",
+        projectId: "proj-3",
+        projectName: "Marketing Campaign",
+        memberId: "m3",
+        appName: "Canva",
+        timeSpent: 2.5,
+        sessions: 8,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa12",
+        projectId: "proj-3",
+        projectName: "Marketing Campaign",
+        memberId: "m3",
+        appName: "Chrome",
+        timeSpent: 1.8,
+        sessions: 12,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa13",
+        projectId: "proj-3",
+        projectName: "Marketing Campaign",
+        memberId: "m3",
+        appName: "Slack",
+        timeSpent: 0.5,
+        sessions: 5,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa14",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m3",
+        appName: "Figma",
+        timeSpent: 3.2,
+        sessions: 6,
+        date: "2026-01-27"
+    },
+    // Michael Chen (m4) - Mobile App Development
+    {
+        id: "aa15",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m4",
+        appName: "Xcode",
+        timeSpent: 5.5,
+        sessions: 10,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa16",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m4",
+        appName: "VS Code",
+        timeSpent: 2.3,
+        sessions: 15,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa17",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m4",
+        appName: "Terminal",
+        timeSpent: 1.2,
+        sessions: 8,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa18",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m4",
+        appName: "Chrome",
+        timeSpent: 0.8,
+        sessions: 6,
+        date: "2026-01-27"
+    },
+    // Emma Rodriguez (m5) - Website Redesign
+    {
+        id: "aa19",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m5",
+        appName: "Figma",
+        timeSpent: 4.0,
+        sessions: 7,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa20",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m5",
+        appName: "VS Code",
+        timeSpent: 3.5,
+        sessions: 11,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa21",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m5",
+        appName: "Chrome",
+        timeSpent: 1.5,
+        sessions: 9,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa22",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m5",
+        appName: "Adobe Photoshop",
+        timeSpent: 2.0,
+        sessions: 4,
+        date: "2026-01-27"
+    },
+    // Data untuk hari kemarin (25 Januari 2026)
+    // Antonio Galih (m1) - Yesterday
+    {
+        id: "aa23",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m1",
+        appName: "VS Code",
+        timeSpent: 5.0,
+        sessions: 14,
+        date: "2026-01-25"
+    },
+    {
+        id: "aa24",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m1",
+        appName: "Chrome",
+        timeSpent: 2.5,
+        sessions: 20,
+        date: "2026-01-25"
+    },
+    {
+        id: "aa25",
+        projectId: "proj-1",
+        projectName: "hans",
+        memberId: "m1",
+        appName: "Hubstaff",
+        timeSpent: 0.03,
+        sessions: 3,
+        date: "2026-01-25"
+    },
+    // Lave Lavael (m2) - Yesterday
+    {
+        id: "aa26",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m2",
+        appName: "Android Studio",
+        timeSpent: 7.0,
+        sessions: 6,
+        date: "2026-01-25"
+    },
+    {
+        id: "aa27",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m2",
+        appName: "VS Code",
+        timeSpent: 1.5,
+        sessions: 8,
+        date: "2026-01-25"
+    },
+    {
+        id: "aa28",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m2",
+        appName: "Chrome",
+        timeSpent: 1.2,
+        sessions: 10,
+        date: "2026-01-25"
+    },
+    // Sarah Johnson (m3) - Yesterday
+    {
+        id: "aa29",
+        projectId: "proj-3",
+        projectName: "Marketing Campaign",
+        memberId: "m3",
+        appName: "Canva",
+        timeSpent: 3.0,
+        sessions: 9,
+        date: "2026-01-25"
+    },
+    {
+        id: "aa30",
+        projectId: "proj-3",
+        projectName: "Marketing Campaign",
+        memberId: "m3",
+        appName: "Chrome",
+        timeSpent: 2.0,
+        sessions: 15,
+        date: "2026-01-25"
+    },
+    {
+        id: "aa31",
+        projectId: "proj-3",
+        projectName: "Marketing Campaign",
+        memberId: "m3",
+        appName: "Slack",
+        timeSpent: 0.8,
+        sessions: 7,
+        date: "2026-01-25"
+    },
+    // Michael Chen (m4) - Yesterday
+    {
+        id: "aa32",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m4",
+        appName: "Xcode",
+        timeSpent: 6.0,
+        sessions: 11,
+        date: "2026-01-25"
+    },
+    {
+        id: "aa33",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m4",
+        appName: "VS Code",
+        timeSpent: 2.8,
+        sessions: 18,
+        date: "2026-01-25"
+    },
+    {
+        id: "aa34",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m4",
+        appName: "Terminal",
+        timeSpent: 1.5,
+        sessions: 10,
+        date: "2026-01-25"
+    },
+    // Emma Rodriguez (m5) - Yesterday
+    {
+        id: "aa35",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m5",
+        appName: "Figma",
+        timeSpent: 4.5,
+        sessions: 8,
+        date: "2026-01-25"
+    },
+    {
+        id: "aa36",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m5",
+        appName: "VS Code",
+        timeSpent: 3.8,
+        sessions: 13,
+        date: "2026-01-25"
+    },
+    {
+        id: "aa37",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m5",
+        appName: "Chrome",
+        timeSpent: 1.8,
+        sessions: 11,
+        date: "2026-01-25"
     }
+]
+
+// ============================================================================
+// URL ACTIVITIES
+// ============================================================================
+
+export interface UrlActivityDetail {
+    id: string
+    title?: string
+    url: string
+    timeSpent: number // in hours
+}
+
+export interface UrlActivityEntry {
+    id: string
+    projectId: string
+    projectName: string
+    memberId: string
+    site: string // URL atau domain
+    timeSpent: number // in hours (total dari semua details)
+    date: string
+    details?: UrlActivityDetail[] // Detail URLs untuk expand
+}
+
+export const DUMMY_URL_ACTIVITIES: UrlActivityEntry[] = [
+    // Antonio Galih (m1) - 26 Jan 2026
+    { 
+        id: "ua1", 
+        projectId: "proj-1", 
+        projectName: "hans", 
+        memberId: "m1", 
+        site: "app.hubstaff.com", 
+        timeSpent: 0.0158, 
+        date: "2026-01-26",
+        details: [
+            { id: "ua1-d1", url: "https://app.hubstaff.com/dashboard", timeSpent: 0.0104 }, // 0:00:37
+            { id: "ua1-d2", url: "https://app.hubstaff.com/reports", timeSpent: 0.0054 } // 0:00:20
+        ]
+    },
+    {
+        id: "ua1-support",
+        projectId: "proj-1",
+        projectName: "hans",
+        memberId: "m1",
+        site: "support.hubstaff.com",
+        timeSpent: 0.0656, // 0:03:56
+        date: "2026-01-26",
+        details: [
+            { id: "ua1-s1", url: "https://support.hubstaff.com/hubstaff-insights", timeSpent: 0.0431 }, // 0:02:37
+            { id: "ua1-s2", url: "https://support.hubstaff.com/hubstaff-insights/getting-started", timeSpent: 0.0225 } // 0:01:19
+        ]
+    },
+    { 
+        id: "ua2", 
+        projectId: "proj-1", 
+        projectName: "Website Redesign", 
+        memberId: "m1", 
+        site: "github.com", 
+        timeSpent: 2.5, 
+        date: "2026-01-26",
+        details: [
+            { id: "ua2-d1", url: "https://github.com/Presensi-New", timeSpent: 1.5 },
+            { id: "ua2-d2", url: "https://github.com/Fauzan-Fz/Presensi-New", timeSpent: 1.0 }
+        ]
+    },
+    { 
+        id: "ua3", 
+        projectId: "proj-1", 
+        projectName: "Website Redesign", 
+        memberId: "m1", 
+        site: "stackoverflow.com", 
+        timeSpent: 0.5, 
+        date: "2026-01-26",
+        details: [
+            { id: "ua3-d1", url: "https://stackoverflow.com/questions/12345", timeSpent: 0.3 },
+            { id: "ua3-d2", url: "https://stackoverflow.com/questions/67890", timeSpent: 0.2 }
+        ]
+    },
+    { 
+        id: "ua4", 
+        projectId: "proj-1", 
+        projectName: "Website Redesign", 
+        memberId: "m1", 
+        site: "docs.google.com", 
+        timeSpent: 1.2, 
+        date: "2026-01-26",
+        details: [
+            { id: "ua4-d1", url: "https://docs.google.com/document/d/abc123", timeSpent: 0.8 },
+            { id: "ua4-d2", url: "https://docs.google.com/spreadsheets/d/def456", timeSpent: 0.4 }
+        ]
+    },
+    // Lave Lavael (m2) - 26 Jan 2026
+    { 
+        id: "ua5", 
+        projectId: "proj-2", 
+        projectName: "Mobile App Development", 
+        memberId: "m2", 
+        site: "developer.android.com", 
+        timeSpent: 3.0, 
+        date: "2026-01-26",
+        details: [
+            { id: "ua5-d1", url: "https://developer.android.com/guide", timeSpent: 2.0 },
+            { id: "ua5-d2", url: "https://developer.android.com/training", timeSpent: 1.0 }
+        ]
+    },
+    { 
+        id: "ua6", 
+        projectId: "proj-2", 
+        projectName: "Mobile App Development", 
+        memberId: "m2", 
+        site: "github.com", 
+        timeSpent: 1.5, 
+        date: "2026-01-26",
+        details: [
+            { id: "ua6-d1", url: "https://github.com/user/mobile-app", timeSpent: 1.0 },
+            { id: "ua6-d2", url: "https://github.com/user/mobile-app/pulls", timeSpent: 0.5 }
+        ]
+    },
+    { 
+        id: "ua7", 
+        projectId: "proj-2", 
+        projectName: "Mobile App Development", 
+        memberId: "m2", 
+        site: "stackoverflow.com", 
+        timeSpent: 0.8, 
+        date: "2026-01-26",
+        details: [
+            { id: "ua7-d1", url: "https://stackoverflow.com/questions/android-123", timeSpent: 0.5 },
+            { id: "ua7-d2", url: "https://stackoverflow.com/questions/android-456", timeSpent: 0.3 }
+        ]
+    },
+    // Sarah Johnson (m3) - 26 Jan 2026
+    { 
+        id: "ua8", 
+        projectId: "proj-3", 
+        projectName: "Marketing Campaign", 
+        memberId: "m3", 
+        site: "canva.com", 
+        timeSpent: 2.5, 
+        date: "2026-01-26",
+        details: [
+            { id: "ua8-d1", url: "https://www.canva.com/design/abc123", timeSpent: 1.5 },
+            { id: "ua8-d2", url: "https://www.canva.com/design/def456", timeSpent: 1.0 }
+        ]
+    },
+    { 
+        id: "ua9", 
+        projectId: "proj-3", 
+        projectName: "Marketing Campaign", 
+        memberId: "m3", 
+        site: "facebook.com", 
+        timeSpent: 1.0, 
+        date: "2026-01-26",
+        details: [
+            { id: "ua9-d1", url: "https://www.facebook.com/business", timeSpent: 0.6 },
+            { id: "ua9-d2", url: "https://www.facebook.com/ads/manager", timeSpent: 0.4 }
+        ]
+    },
+    { 
+        id: "ua10", 
+        projectId: "proj-3", 
+        projectName: "Marketing Campaign", 
+        memberId: "m3", 
+        site: "instagram.com", 
+        timeSpent: 0.5, 
+        date: "2026-01-26",
+        details: [
+            { id: "ua10-d1", url: "https://www.instagram.com/business", timeSpent: 0.3 },
+            { id: "ua10-d2", url: "https://www.instagram.com/accounts/manager", timeSpent: 0.2 }
+        ]
+    },
+    // Michael Chen (m4) - 26 Jan 2026
+    { 
+        id: "ua11", 
+        projectId: "proj-2", 
+        projectName: "Mobile App Development", 
+        memberId: "m4", 
+        site: "developer.apple.com", 
+        timeSpent: 4.0, 
+        date: "2026-01-26",
+        details: [
+            { id: "ua11-d1", url: "https://developer.apple.com/documentation", timeSpent: 2.5 },
+            { id: "ua11-d2", url: "https://developer.apple.com/tutorials", timeSpent: 1.5 }
+        ]
+    },
+    { 
+        id: "ua12", 
+        projectId: "proj-2", 
+        projectName: "Mobile App Development", 
+        memberId: "m4", 
+        site: "github.com", 
+        timeSpent: 2.0, 
+        date: "2026-01-26",
+        details: [
+            { id: "ua12-d1", url: "https://github.com/user/ios-app", timeSpent: 1.2 },
+            { id: "ua12-d2", url: "https://github.com/user/ios-app/issues", timeSpent: 0.8 }
+        ]
+    },
+    // Emma Rodriguez (m5) - 26 Jan 2026
+    { 
+        id: "ua13", 
+        projectId: "proj-1", 
+        projectName: "Website Redesign", 
+        memberId: "m5", 
+        site: "figma.com", 
+        timeSpent: 3.5, 
+        date: "2026-01-26",
+        details: [
+            { id: "ua13-d1", url: "https://www.figma.com/design/8zCDmfpE2Rg5EEAf9KXTfb/Copy-Hubstaff?node-id=218-171&p=f&t=1MZEA6TUTTRayQX6-0", timeSpent: 2.0 },
+            { id: "ua13-d2", url: "https://www.figma.com/design/8zCDmfpE2Rg5EEAf9KXTfb/Copy-Hubstaff?node-id=218-171&p=f&t=1MZEA6TUTTRayQX6-0", timeSpent: 1.5 }
+        ]
+    },
+    { 
+        id: "ua14", 
+        projectId: "proj-1", 
+        projectName: "Website Redesign", 
+        memberId: "m5", 
+        site: "dribbble.com", 
+        timeSpent: 1.0, 
+        date: "2026-01-26",
+        details: [
+            { id: "ua14-d1", url: "https://dribbble.com/shots/12345", timeSpent: 0.6 },
+            { id: "ua14-d2", url: "https://dribbble.com/shots/67890", timeSpent: 0.4 }
+        ]
+    },
+    // Data untuk hari kemarin (25 Jan 2026)
+    { id: "ua15", projectId: "proj-1", projectName: "Website Redesign", memberId: "m1", site: "github.com", timeSpent: 4.0, date: "2026-01-25" },
+    { id: "ua16", projectId: "proj-1", projectName: "Website Redesign", memberId: "m1", site: "stackoverflow.com", timeSpent: 1.0, date: "2026-01-25" },
+    { id: "ua17", projectId: "proj-2", projectName: "Mobile App Development", memberId: "m2", site: "developer.android.com", timeSpent: 5.0, date: "2026-01-25" },
+    { id: "ua18", projectId: "proj-3", projectName: "Marketing Campaign", memberId: "m3", site: "canva.com", timeSpent: 3.0, date: "2026-01-25" },
+    { id: "ua19", projectId: "proj-2", projectName: "Mobile App Development", memberId: "m4", site: "developer.apple.com", timeSpent: 5.5, date: "2026-01-25" },
+    { id: "ua20", projectId: "proj-1", projectName: "Website Redesign", memberId: "m5", site: "figma.com", timeSpent: 4.5, date: "2026-01-25" },
+    // Data untuk 27 Jan 2026
+    { id: "ua21", projectId: "proj-1", projectName: "hans", memberId: "m1", site: "app.hubstaff.com", timeSpent: 0.02, date: "2026-01-27" },
+    { id: "ua22", projectId: "proj-1", projectName: "Website Redesign", memberId: "m1", site: "github.com", timeSpent: 3.0, date: "2026-01-27" },
+    { id: "ua23", projectId: "proj-2", projectName: "Mobile App Development", memberId: "m2", site: "developer.android.com", timeSpent: 4.5, date: "2026-01-27" },
+    { id: "ua24", projectId: "proj-3", projectName: "Marketing Campaign", memberId: "m3", site: "canva.com", timeSpent: 2.0, date: "2026-01-27" },
+    { id: "ua25", projectId: "proj-2", projectName: "Mobile App Development", memberId: "m4", site: "developer.apple.com", timeSpent: 4.5, date: "2026-01-27" },
+    { id: "ua26", projectId: "proj-1", projectName: "Website Redesign", memberId: "m5", site: "figma.com", timeSpent: 3.0, date: "2026-01-27" }
 ]
 
 // ============================================================================
