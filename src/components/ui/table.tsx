@@ -76,7 +76,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
     <td
       data-slot="table-cell"
-      className={cn("p-3 text-xs", className)}
+      className={cn("p-3 text-sm", className)}
       {...props}
     />
   )

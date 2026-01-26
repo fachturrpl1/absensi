@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Pencil, Trash2, Plus } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -25,7 +27,7 @@ import {
     DialogDescription,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { DUMMY_MEMBERS, DUMMY_PROJECTS, DUMMY_TASKS, getClientNameByProjectName } from "@/lib/data/dummy-data"
+import { DUMMY_MEMBERS, DUMMY_PROJECTS, DUMMY_TASKS, DUMMY_GLOBAL_TASKS, DUMMY_TEAMS, getClientNameByProjectName } from "@/lib/data/dummy-data"
 import { DataTable } from "@/components/data-table"
 import { ColumnDef } from "@tanstack/react-table"
 import type { RowSelectionState } from "@tanstack/react-table"
@@ -61,6 +63,8 @@ export default function ListView() {
     const [editedAssignee, setEditedAssignee] = useState("")
     const [newTaskTitle, setNewTaskTitle] = useState("")
     const [newTaskAssignee, setNewTaskAssignee] = useState("")
+    const [newTaskProject, setNewTaskProject] = useState("")
+    const [newTaskTeams, setNewTaskTeams] = useState<string[]>([])
 
     // Filter states
     const [selectedProject, setSelectedProject] = useState(initialProject || "all")
@@ -72,6 +76,17 @@ export default function ListView() {
         const memberNames = DUMMY_MEMBERS.map((member) => member.name)
         return Array.from(new Set([...memberNames, ...taskNames].filter(Boolean)))
     }, [tasks])
+
+    // Assignee list filtered by selected teams (dynamic)
+    const dynamicAssignees = useMemo(() => {
+        if (!newTaskTeams || newTaskTeams.length === 0) return uniqueAssignees
+        const memberIds = Array.from(new Set(newTaskTeams.flatMap((teamId) => {
+            const t = DUMMY_TEAMS.find((x) => x.id === teamId)
+            return t ? t.members : []
+        })))
+        const names = DUMMY_MEMBERS.filter((m) => memberIds.includes(m.id)).map((m) => m.name)
+        return names.length > 0 ? names : uniqueAssignees
+    }, [newTaskTeams, uniqueAssignees])
 
     const filteredTasks = useMemo(() => {
         return tasks.filter((task) => {
@@ -159,13 +174,13 @@ export default function ListView() {
         },
         {
             id: "actions",
-            header: () => <div className="text-right">Actions</div>,
+            header: () => <div>Actions</div>,
             cell: ({ row }) => (
-                <div className="inline-flex items-center gap-1 justify-end w-full">
+                <div className="inline-flex items-center gap-1">
                     <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-gray-500 hover:text-gray-900"
+                        variant="outline"
+                        size="sm"
+                        className="px-3"
                         onClick={() => {
                             setEditingTask(row.original)
                             setEditedTitle(row.original.title)
@@ -175,9 +190,9 @@ export default function ListView() {
                         <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-gray-500 hover:text-red-600"
+                        variant="outline"
+                        size="sm"
+                        className="px-3"
                         onClick={() => setTaskToDelete(row.original)}
                     >
                         <Trash2 className="h-4 w-4" />
@@ -323,6 +338,8 @@ export default function ListView() {
                     getRowKey={(row) => row.id} // Important for valid selection state by ID
                     showGlobalFilter={false} // We have manual search
                     showFilters={false} // We have custom filters
+                    showColumnToggle={false}
+                    rowInteractive={false}
                 />
             </div>
 
@@ -335,37 +352,91 @@ export default function ListView() {
                             Fill in the details below to create a new task and assign it immediately.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <div className="text-sm font-medium">TASK*</div>
-                            <Input
-                                className="px-4"
-                                placeholder="Enter task"
-                                value={newTaskTitle}
-                                onChange={(e) => setNewTaskTitle(e.target.value)}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <div className="text-sm font-medium">ASSIGNEE</div>
-                            <Select value={newTaskAssignee} onValueChange={setNewTaskAssignee}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select assignee" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {uniqueAssignees.map((assignee) => (
-                                        <SelectItem key={assignee} value={assignee}>
-                                            {assignee}
-                                        </SelectItem>
+                    <Tabs defaultValue="general" className="space-y-4 py-2">
+                        <TabsList className="mb-2">
+                            <TabsTrigger value="general">GENERAL</TabsTrigger>
+                            <TabsTrigger value="teams">TEAMS</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="general">
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <div className="text-sm font-medium">TASK*</div>
+                                    <Input
+                                        className="px-4"
+                                        placeholder="Enter task"
+                                        value={newTaskTitle}
+                                        onChange={(e) => setNewTaskTitle(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="text-sm font-medium">ASSIGNEE</div>
+                                    <Select value={newTaskAssignee} onValueChange={setNewTaskAssignee}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select assignee" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {dynamicAssignees.map((assignee) => (
+                                                <SelectItem key={assignee} value={assignee}>
+                                                    {assignee}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="text-sm font-medium">PROJECT</div>
+                                    <Select
+                                        value={newTaskProject || (selectedProject !== "all" ? selectedProject : projectOptions[0])}
+                                        onValueChange={setNewTaskProject}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select project" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {projectOptions.map((project) => (
+                                                <SelectItem key={project} value={project}>
+                                                    {project}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="rounded-md bg-muted p-4 text-sm text-muted-foreground">
+                                    <p>
+                                        An agile project management tool with automated workflows.
+                                    </p>
+                                </div>
+                            </div>
+                        </TabsContent>
+                        <TabsContent value="teams" className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="text-sm font-medium">TEAMS</div>
+                                <Button variant="link" className="h-auto p-0 text-blue-600" onClick={() => setNewTaskTeams(DUMMY_TEAMS.map(t => t.id))}>Select all</Button>
+                            </div>
+                            <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+                                <div className="space-y-3">
+                                    {DUMMY_TEAMS.map((team) => (
+                                        <div key={team.id} className="flex items-center space-x-2">
+                                            <Checkbox
+                                                id={`task-team-${team.id}`}
+                                                checked={newTaskTeams.includes(team.id)}
+                                                onCheckedChange={(checked) => {
+                                                    setNewTaskTeams((prev) => {
+                                                        const set = new Set(prev)
+                                                        if (checked) set.add(team.id); else set.delete(team.id)
+                                                        return Array.from(set)
+                                                    })
+                                                }}
+                                            />
+                                            <label htmlFor={`task-team-${team.id}`} className="text-sm font-medium leading-none">
+                                                {team.name} <span className="text-muted-foreground">({team.memberCount} members)</span>
+                                            </label>
+                                        </div>
                                     ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="rounded-md bg-muted p-4 text-sm text-muted-foreground">
-                            <p>
-                                An agile project management tool with automated workflows.
-                            </p>
-                        </div>
-                    </div>
+                                </div>
+                            </ScrollArea>
+                        </TabsContent>
+                    </Tabs>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsNewTaskDialogOpen(false)}>
                             Cancel
@@ -377,7 +448,7 @@ export default function ListView() {
                                         id: `task-${Date.now()}`,
                                         title: newTaskTitle,
                                         assignee: newTaskAssignee || uniqueAssignees[0] || DUMMY_MEMBERS[0]?.name || "Unassigned",
-                                        project: selectedProject !== "all" ? selectedProject : projectOptions[0] || "Default Project",
+                                        project: newTaskProject || (selectedProject !== "all" ? selectedProject : projectOptions[0] || "Default Project"),
                                         type: "Task",
                                         created: new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
                                         status: "task",
@@ -414,8 +485,9 @@ export default function ListView() {
                                     <SelectValue placeholder="Select global task" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="global-1">Global task 1</SelectItem>
-                                    <SelectItem value="global-2">Global task 2</SelectItem>
+                                    {DUMMY_GLOBAL_TASKS.map(task => (
+                                        <SelectItem key={task.id} value={task.id}>{task.title}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>

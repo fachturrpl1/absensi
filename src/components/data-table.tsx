@@ -51,6 +51,7 @@ type DataTableProps<TData, TValue> = {
   initialSorting?: SortingState
   getRowKey?: (row: TData, index: number) => string
   layout?: "default" | "card"
+  rowInteractive?: boolean
   toolbarRight?: React.ReactNode
   globalFilterPlaceholder?: string
   emptyState?: React.ReactNode
@@ -75,6 +76,7 @@ export function DataTable<TData, TValue>({
   showFilters = false,
   getRowKey,
   layout = "default",
+  rowInteractive = true,
   toolbarRight,
   globalFilterPlaceholder,
   emptyState,
@@ -422,7 +424,7 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={getRowKey ? getRowKey(row.original, index) : row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="transition-colors custom-hover-row cursor-pointer"
+                  className={cn(rowInteractive ? "transition-colors cursor-pointer" : "cursor-default hover:bg-transparent")}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
@@ -472,34 +474,6 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      <style jsx global>{`
-        /* Zebra striping */
-        html body .custom-hover-row:nth-child(even) {
-          background-color: #f3f4f6;
-        }
-        html body .dark .custom-hover-row:nth-child(even) {
-          background-color: #1f2937;
-        }
-
-        /* Hover effect */
-        html body .custom-hover-row:hover,
-        html body .custom-hover-row:hover > td {
-          background-color: #d1d5db !important; /* dark gray hover */
-        }
-        html body .dark .custom-hover-row:hover,
-        html body .dark .custom-hover-row:hover > td {
-          background-color: #374151 !important;
-        }
-        /* Override potential blue selected state */
-        html body .custom-hover-row[data-state="selected"],
-        html body .custom-hover-row[data-state="selected"] > td {
-          background-color: #f3f4f6 !important;
-        }
-        html body .dark .custom-hover-row[data-state="selected"],
-        html body .dark .custom-hover-row[data-state="selected"] > td {
-          background-color: #374151 !important;
-        }
-      `}</style>
       {layout === "card" ? (
         <>
           <Card>
