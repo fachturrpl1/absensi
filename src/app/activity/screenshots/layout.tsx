@@ -35,7 +35,7 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
     }
     return DUMMY_MEMBERS[0]?.id ?? "m1"
   }
-  
+
   const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({
     type: "members",
     all: false,
@@ -91,23 +91,142 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
       const params = new URLSearchParams(searchParams.toString())
       params.set("memberId", filter.id)
       router.push(`${pathname}?${params.toString()}`)
+      }
     }
-  }
-  
+
   const selectedMemberId = selectedFilter.all ? null : (selectedFilter.id ?? null)
 
   const filterPanelRef = useRef<HTMLDivElement>(null)
   const timezone = useTimezone()
-  const [dateRange, setDateRange] = useState<DateRange>(() => {
-    const end = new Date()
-    const start = new Date()
-    start.setHours(0, 0, 0, 0)
-    end.setHours(23, 59, 59, 999)
-    return { startDate: start, endDate: end }
-  })
-
+  
   const isAllScreenshots = pathname?.includes("/all")
   const isEvery10Min = !isAllScreenshots
+  
+  // Get initial date range: sessionStorage > default (Today untuk 10min, Last 7 days untuk all)
+  const getInitialDateRange = (): DateRange => {
+    if (typeof window !== "undefined") {
+      // Gunakan sessionStorage terpisah untuk setiap halaman
+      const storageKey = isAllScreenshots ? "screenshotDateRangeAll" : "screenshotDateRange10min"
+      const savedDateRange = sessionStorage.getItem(storageKey)
+      if (savedDateRange) {
+        try {
+          const parsed = JSON.parse(savedDateRange)
+          return {
+            startDate: new Date(parsed.startDate),
+            endDate: new Date(parsed.endDate),
+          }
+        } catch (e) {
+          // Jika parsing gagal, gunakan default
+        }
+      }
+    }
+    // Default berdasarkan halaman
+    if (isAllScreenshots) {
+      // Default untuk all screenshots: Last 7 days
+      const end = new Date()
+      end.setHours(23, 59, 59, 999)
+      const start = new Date()
+      start.setDate(start.getDate() - 6)
+      start.setHours(0, 0, 0, 0)
+      return { startDate: start, endDate: end }
+    } else {
+      // Default untuk 10min: Today
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const end = new Date()
+      end.setHours(23, 59, 59, 999)
+      return { startDate: today, endDate: end }
+    }
+  }
+  
+  const [dateRange, setDateRange] = useState<DateRange>(getInitialDateRange)
+  
+  // Update date range saat pathname berubah (pindah antara 10min dan all)
+  useEffect(() => {
+    const currentIsAll = pathname?.includes("/all")
+    const storageKey = currentIsAll ? "screenshotDateRangeAll" : "screenshotDateRange10min"
+    
+    if (typeof window !== "undefined") {
+      const savedDateRange = sessionStorage.getItem(storageKey)
+      if (savedDateRange) {
+        try {
+          const parsed = JSON.parse(savedDateRange)
+          setDateRange({
+            startDate: new Date(parsed.startDate),
+            endDate: new Date(parsed.endDate),
+          })
+        } catch (e) {
+          // Jika parsing gagal, set default
+          if (currentIsAll) {
+            const end = new Date()
+            end.setHours(23, 59, 59, 999)
+            const start = new Date()
+            start.setDate(start.getDate() - 6)
+            start.setHours(0, 0, 0, 0)
+            setDateRange({ startDate: start, endDate: end })
+          } else {
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            const end = new Date()
+            end.setHours(23, 59, 59, 999)
+            setDateRange({ startDate: today, endDate: end })
+          }
+        }
+      } else {
+        // Jika tidak ada saved date range, set default berdasarkan halaman
+        if (currentIsAll) {
+          // Default untuk all screenshots: Last 7 days
+          const end = new Date()
+          end.setHours(23, 59, 59, 999)
+          const start = new Date()
+          start.setDate(start.getDate() - 6)
+          start.setHours(0, 0, 0, 0)
+          const newDateRange = { startDate: start, endDate: end }
+          setDateRange(newDateRange)
+          sessionStorage.setItem(storageKey, JSON.stringify({
+            startDate: newDateRange.startDate.toISOString(),
+            endDate: newDateRange.endDate.toISOString(),
+          }))
+        } else {
+          // Default untuk 10min: Today
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          const end = new Date()
+          end.setHours(23, 59, 59, 999)
+          const newDateRange = { startDate: today, endDate: end }
+          setDateRange(newDateRange)
+          sessionStorage.setItem(storageKey, JSON.stringify({
+            startDate: newDateRange.startDate.toISOString(),
+            endDate: newDateRange.endDate.toISOString(),
+          }))
+        }
+      }
+    }
+  }, [pathname])
+  
+  // Handler untuk update date range dengan persistensi
+  const handleDateRangeChange = (newDateRange: DateRange) => {
+    setDateRange(newDateRange)
+    if (typeof window !== "undefined") {
+      // Gunakan sessionStorage terpisah untuk setiap halaman
+      const storageKey = isAllScreenshots ? "screenshotDateRangeAll" : "screenshotDateRange10min"
+      sessionStorage.setItem(storageKey, JSON.stringify({
+        startDate: newDateRange.startDate.toISOString(),
+        endDate: newDateRange.endDate.toISOString(),
+      }))
+    }
+  }
+  
+  // Persist date range ke sessionStorage saat berubah (backup)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storageKey = isAllScreenshots ? "screenshotDateRangeAll" : "screenshotDateRange10min"
+      sessionStorage.setItem(storageKey, JSON.stringify({
+        startDate: dateRange.startDate.toISOString(),
+        endDate: dateRange.endDate.toISOString(),
+      }))
+    }
+  }, [dateRange, isAllScreenshots])
 
   const demoMembers = useMemo(() => DUMMY_MEMBERS, [])
   const demoTeams = useMemo(() => DUMMY_TEAMS, [])
@@ -143,7 +262,7 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
 
   return (
     <SelectedMemberProvider value={{ selectedMemberId, selectedMember, dateRange }}>
-      <div className="flex min-h-screen flex-col gap-6 bg-white px-6 py-8 text-slate-800">
+    <div className="flex min-h-screen flex-col gap-6 bg-white px-6 py-8 text-slate-800">
       <DownloadDialog
         isOpen={isDownloadDialogOpen}
         onClose={() => setIsDownloadDialogOpen(false)}
@@ -155,7 +274,7 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
         <div className="flex-1 min-w-[220px]">
           <h1 className="text-xl font-semibold mb-5">Screenshot</h1>
         </div>
-    
+
         {/* Tab Navigation */}
         <div className="absolute left-1/2 flex -translate-x-1/2 transform">
           <div
@@ -191,14 +310,14 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
         </div>
         */}
       </div>
-        
+
       {/* Date & User Controls */}
       <div className="flex w-full items-center justify-between gap-4">
         <InsightsHeader
           selectedFilter={selectedFilter}
           onSelectedFilterChange={handleFilterChange}
           dateRange={dateRange}
-          onDateRangeChange={setDateRange}
+          onDateRangeChange={handleDateRangeChange}
           members={demoMembers}
           teams={demoTeams}
           timezone={timezone}
@@ -212,10 +331,10 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
 
       {isFilterOpen && (
         <>
-      <div
+          <div
         className="pointer-events-auto fixed inset-x-0 top-[220px] bottom-0 bg-slate-900/10"
-        onClick={() => setIsFilterOpen(false)}
-      />
+            onClick={() => setIsFilterOpen(false)}
+          />
           <div className="pointer-events-none fixed top-[220px] right-0 bottom-0 z-30 flex max-w-[320px] flex-col px-6 py-8">
             <div
               className="pointer-events-auto flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white text-slate-800 shadow-[0_25px_40px_rgba(15,23,42,0.18)]"

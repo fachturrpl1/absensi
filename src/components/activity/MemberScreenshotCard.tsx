@@ -1,20 +1,24 @@
 "use client"
 
-import { Pencil } from "lucide-react"
+import { Trash2 } from "lucide-react"
 import type { MemberScreenshotItem } from "@/lib/data/dummy-data"
 
 interface MemberScreenshotCardProps {
   item: MemberScreenshotItem
   onImageClick?: () => void
+  onDelete?: () => void
+  isDeleted?: boolean
 }
 
-export function MemberScreenshotCard({ item, onImageClick }: MemberScreenshotCardProps) {
+export function MemberScreenshotCard({ item, onImageClick, onDelete, isDeleted = false }: MemberScreenshotCardProps) {
   const getProgressColor = (progress: number) => {
     if (progress < 30) return "#facc15"
     if (progress < 50) return "#fb923c"
     if (progress < 70) return "#a3e635"
     return "#22c55e"
   }
+
+  const showNoActivity = isDeleted || item.noActivity
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -25,7 +29,7 @@ export function MemberScreenshotCard({ item, onImageClick }: MemberScreenshotCar
             <p className="text-[10px] text-slate-400">No to-dos</p>
           </div>
         </div>
-        {item.noActivity ? (
+        {showNoActivity ? (
           <div className="mb-2 flex aspect-video items-center justify-center rounded border border-slate-200 bg-slate-50 text-xs text-slate-400">
             No activity
           </div>
@@ -45,14 +49,21 @@ export function MemberScreenshotCard({ item, onImageClick }: MemberScreenshotCar
           </button>
         )}
         <div className="mb-2 text-center text-xs font-medium text-blue-600">
-          {item.screenCount
+          {showNoActivity ? "No screens" : (item.screenCount
             ? `${item.screenCount} screen${item.screenCount > 1 ? "s" : ""}`
-            : "No screens"}
+            : "No screens")}
         </div>
         <div className="mb-2 flex items-center justify-between text-xs">
           <span className="text-slate-600">{item.time}</span>
-          <button className="text-slate-400 hover:text-slate-600">
-            <Pencil className="h-3 w-3" />
+          <button 
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete?.()
+            }}
+            className="text-slate-400 hover:text-red-600 transition-colors"
+            aria-label="Delete screenshot"
+          >
+            <Trash2 className="h-3 w-3" />
           </button>
         </div>
         <div className="space-y-1">
@@ -60,13 +71,13 @@ export function MemberScreenshotCard({ item, onImageClick }: MemberScreenshotCar
             <div
               className="h-full rounded-full"
               style={{
-                width: `${item.progress}%`,
-                backgroundColor: getProgressColor(item.progress),
+                width: `${showNoActivity ? 0 : item.progress}%`,
+                backgroundColor: showNoActivity ? "#e5e7eb" : getProgressColor(item.progress),
               }}
             />
           </div>
           <p className="text-[10px] text-slate-500">
-            {item.progress}% of {item.seconds ? `${item.minutes} seconds` : `${item.minutes} minutes`}
+            {showNoActivity ? "0% of 0 minutes" : `${item.progress}% of ${item.seconds ? `${item.minutes} seconds` : `${item.minutes} minutes`}`}
           </p>
         </div>
       </div>

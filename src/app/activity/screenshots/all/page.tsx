@@ -1,242 +1,520 @@
 "use client"
 
-import { Pencil } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { createPortal } from "react-dom"
+import {
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react"
+import {
+  DUMMY_MEMBER_SCREENSHOTS,
+  DUMMY_MEMBERS,
+  MemberScreenshotItem,
+} from "@/lib/data/dummy-data"
+import { useSelectedMemberContext } from "../selected-member-context"
+import { MemberScreenshotCard } from "@/components/activity/MemberScreenshotCard"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+
+const formatDuration = (totalMinutes: number) => {
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  if (hours === 0) {
+    return `${minutes}m`
+  }
+  return `${hours}h ${minutes.toString().padStart(2, "0")}m`
+}
+
+// Parse time string like "9:00 am - 9:10 am" to get start time for sorting
+const parseTimeForSort = (timeStr: string): number => {
+  const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i)
+  if (!match || !match[1] || !match[2] || !match[3]) return 0
+  
+  let hours = parseInt(match[1], 10)
+  const minutes = parseInt(match[2], 10)
+  const period = match[3].toLowerCase()
+  
+  // Convert to 24-hour format
+  if (period === "pm" && hours !== 12) {
+    hours += 12
+  } else if (period === "am" && hours === 12) {
+    hours = 0
+  }
+  
+  return hours * 60 + minutes // Return total minutes for easy comparison
+}
+
+const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => {
+  if (!items.length) {
+    return []
+  }
+
+  // Sort items by time instead of shuffling
+  const sorted = [...items].sort((a, b) => {
+    const timeA = parseTimeForSort(a.time)
+    const timeB = parseTimeForSort(b.time)
+    return timeA - timeB
+  })
+  
+  const blocks = []
+  for (let i = 0; i < sorted.length; i += chunkSize) {
+    const chunk = sorted.slice(i, i + chunkSize)
+    const totalMinutes = chunk.reduce((sum, item) => sum + (item.minutes ?? 0), 0)
+    const summary = `Total time worked: ${formatDuration(totalMinutes)}`
+    
+    // Calculate 1-hour range from first item's start time
+    const firstTimeStr = chunk[0]?.time.split(" - ")[0] ?? ""
+    if (!firstTimeStr) {
+      blocks.push({ label: chunk[0]?.time ?? `Block ${Math.floor(i / chunkSize) + 1}`, summary, items: chunk })
+      continue
+    }
+    
+    // Parse first time and add 1 hour for end time
+    const parseTime = (timeStr: string): { hours: number; minutes: number; period: string } => {
+      const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i)
+      if (!match || !match[1] || !match[2] || !match[3]) return { hours: 0, minutes: 0, period: 'am' }
+      let hours = parseInt(match[1], 10)
+      const minutes = parseInt(match[2], 10)
+      const period = match[3].toLowerCase()
+      if (period === 'pm' && hours !== 12) hours += 12
+      if (period === 'am' && hours === 12) hours = 0
+      return { hours, minutes, period: match[3] }
+    }
+    
+    const formatTime = (hours: number, minutes: number): string => {
+      let displayHours = hours
+      let period = 'am'
+      if (hours >= 12) {
+        period = 'pm'
+        if (hours > 12) displayHours = hours - 12
+      }
+      if (displayHours === 0) displayHours = 12
+      return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`
+    }
+    
+    const firstTime = parseTime(firstTimeStr)
+    let endHours = firstTime.hours + 1
+    const endMinutes = firstTime.minutes
+    if (endHours >= 24) endHours = endHours - 24
+    
+    const startTimeFormatted = firstTimeStr
+    const endTimeFormatted = formatTime(endHours, endMinutes)
+    const label = `${startTimeFormatted} - ${endTimeFormatted}`
+    
+    blocks.push({ label, summary, items: chunk })
+  }
+
+  return blocks
+}
+
+interface DateGroupedBlocks {
+  date: string
+  dateLabel: string
+  blocks: Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>
+}
 
 export default function AllScreenshotsPage() {
+  const { selectedMemberId, dateRange } = useSelectedMemberContext()
+  const fallbackMemberId = DUMMY_MEMBERS[0]?.id ?? null
+  const activeMemberId = selectedMemberId ?? fallbackMemberId
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalIndex, setModalIndex] = useState(0)
+  const [isMounted, setIsMounted] = useState(false)
+  // State untuk menyimpan daftar screenshot yang dihapus (berdasarkan item.id)
+  const [deletedScreenshots, setDeletedScreenshots] = useState<Set<string>>(new Set())
+  // State untuk dialog konfirmasi hapus
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [screenshotToDelete, setScreenshotToDelete] = useState<string | null>(null)
+
+  // Check date range validity and determine data display strategy
+  const dateStatus = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    
+    const start = new Date(dateRange.startDate)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(dateRange.endDate)
+    end.setHours(23, 59, 59, 999)
+    
+    // Check if range is completely in the future (start > today and end > today)
+    if (start > today && end > today) {
+      return { isValid: false, isToday: false, isYesterday: false, isRange: false }
+    }
+    
+    // Check if range is more than 30 days ago (both start and end are more than 30 days ago)
+    const thirtyDaysAgo = new Date(today)
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    if (end < thirtyDaysAgo && start < thirtyDaysAgo) {
+      return { isValid: false, isToday: false, isYesterday: false, isRange: false }
+    }
+    
+    // Check if start date is today (range is today)
+    // end harus dalam range hari ini (00:00:00 sampai 23:59:59.999)
+    const todayEnd = new Date(today)
+    todayEnd.setHours(23, 59, 59, 999)
+    const isToday = start.getTime() === today.getTime() && end.getTime() <= todayEnd.getTime()
+    
+    // Check if start date is yesterday (range is yesterday)
+    const yesterdayEnd = new Date(yesterday)
+    yesterdayEnd.setHours(23, 59, 59, 999)
+    const isYesterday = start.getTime() === yesterday.getTime() && end.getTime() <= yesterdayEnd.getTime()
+    
+    // Check if it's a range (multiple days)
+    const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+    const isRange = daysDiff > 1
+    
+    return {
+      isValid: true,
+      isToday,
+      isYesterday,
+      isRange: isRange && !isToday && !isYesterday,
+    }
+  }, [dateRange])
+
+  const memberTimeBlocks = useMemo(() => {
+    if (!activeMemberId || !dateStatus.isValid) return []
+    const baseItems = DUMMY_MEMBER_SCREENSHOTS[activeMemberId] ?? []
+
+    if (dateStatus.isYesterday) {
+      const filteredItems = baseItems.slice(0, Math.min(6, baseItems.length))
+      return buildMemberTimeBlocks(filteredItems, 6)
+    }
+
+    if (dateStatus.isRange && dateRange) {
+      const dateGroupedBlocks: DateGroupedBlocks[] = []
+      const start = new Date(dateRange.startDate);
+      const end = new Date(dateRange.endDate);
+      const numDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+      for (let dayOffset = 0; dayOffset < numDays; dayOffset++) {
+        const currentDate = new Date(end);
+        currentDate.setDate(end.getDate() - dayOffset);
+
+        // Filter baseItems by currentDate if they had a date property
+        // Since DUMMY_MEMBER_SCREENSHOTS items don't have a date, we'll just use the baseItems for each day
+        // This simulates having data for each day.
+        const itemsForDay = baseItems; // Using baseItems for each day as per user's request to not create new data
+
+        const dateLabel = currentDate.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+
+        const blocks = buildMemberTimeBlocks(itemsForDay, 6);
+
+        if (blocks.length > 0) {
+          const dateStr = currentDate.toISOString().split('T')[0]
+          if (dateStr) {
+            dateGroupedBlocks.push({
+              date: dateStr,
+              dateLabel,
+              blocks
+            });
+          }
+        }
+      }
+      return dateGroupedBlocks as unknown as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>;
+    }
+
+    return buildMemberTimeBlocks(baseItems, 6);
+  }, [activeMemberId, dateStatus, dateRange]);
+
+  const flattenedScreenshots = useMemo(() => {
+    let allItems: MemberScreenshotItem[] = []
+    if (dateStatus.isRange && Array.isArray(memberTimeBlocks) && memberTimeBlocks.length > 0 && 'date' in (memberTimeBlocks[0] as unknown as DateGroupedBlocks)) {
+      allItems = (memberTimeBlocks as unknown as DateGroupedBlocks[]).flatMap((dateGroup) =>
+        dateGroup.blocks.flatMap((block) => block.items)
+      );
+    } else {
+      allItems = (memberTimeBlocks as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>).flatMap((block) => block.items);
+    }
+    // Filter out deleted screenshots untuk modal (tapi card tetap ditampilkan)
+    return allItems.filter(item => !deletedScreenshots.has(item.id));
+  }, [memberTimeBlocks, dateStatus, deletedScreenshots]);
+  
+  const currentScreenshot = flattenedScreenshots[modalIndex]
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  useEffect(() => {
+    setModalIndex(0)
+    setModalOpen(false)
+    // Reset deleted screenshots saat member berubah
+    setDeletedScreenshots(new Set())
+  }, [activeMemberId])
+
+  const openModal = (index: number) => {
+    setModalIndex(index)
+    setModalOpen(true)
+  }
+
+  const closeModal = () => setModalOpen(false)
+  const goNext = useCallback(() => {
+    if (!flattenedScreenshots.length) {
+      return
+    }
+    setModalIndex((prev) => (prev + 1) % flattenedScreenshots.length)
+  }, [flattenedScreenshots.length])
+  const goPrev = useCallback(() => {
+    if (!flattenedScreenshots.length) {
+      return
+    }
+    setModalIndex((prev) => (prev - 1 + flattenedScreenshots.length) % flattenedScreenshots.length)
+  }, [flattenedScreenshots.length])
+
+  // Handler untuk membuka dialog konfirmasi hapus
+  const handleDeleteClick = (screenshotId: string) => {
+    setScreenshotToDelete(screenshotId)
+    setDeleteConfirmOpen(true)
+  }
+
+  // Handler untuk konfirmasi hapus
+  const handleConfirmDelete = () => {
+    if (screenshotToDelete) {
+      setDeletedScreenshots((prev) => new Set(prev).add(screenshotToDelete))
+      // Close modal if the deleted screenshot was the one currently open
+      if (currentScreenshot?.id === screenshotToDelete) {
+        setModalOpen(false)
+      }
+      setScreenshotToDelete(null)
+    }
+  }
+
+  useEffect(() => {
+    if (!modalOpen) return
+
+    // Save original styles
+    const originalBodyOverflow = document.body.style.overflow
+    const originalHtmlOverflow = document.documentElement.style.overflow
+    const originalPosition = document.body.style.position
+    const originalWidth = document.body.style.width
+    
+    // Hide scrollbar and prevent scrolling
+    document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.width = '100%'
+    document.body.style.top = '0'
+    document.documentElement.style.overflow = 'hidden'
+    
+    // Prevent touch move on mobile
+    const preventScroll = (e: TouchEvent) => {
+      e.preventDefault()
+    }
+    
+    document.body.addEventListener('touchmove', preventScroll, { passive: false })
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeModal()
+      } else if (event.key === "ArrowRight") {
+        goNext()
+      } else if (event.key === "ArrowLeft") {
+        goPrev()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+      document.body.removeEventListener('touchmove', preventScroll)
+      document.body.style.overflow = originalBodyOverflow
+      document.body.style.position = originalPosition
+      document.body.style.width = originalWidth
+      document.body.style.top = ''
+      document.documentElement.style.overflow = originalHtmlOverflow
+    }
+  }, [modalOpen, goNext, goPrev])
+
+  let runningIndex = 0
+
   return (
     <>
       {/* Screenshots Grid */}
       <div className="space-y-6">
-        {/* Time Block 1: 9:00 am - 10:00 am */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <span className="font-medium">9:00 am - 10:00 am</span>
-            <span className="text-slate-400">Total time worked: 2:57:24</span>
+        {!memberTimeBlocks.length ? (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-12 text-center text-sm text-slate-500 shadow-sm">
+            No screenshots were captured for this member yet.
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-            {[
-              { time: "9:03 am", progress: 28, minutes: 7, image: "/Screenshoot/Screenshot 2025-12-08 094631.png" },
-              { time: "9:16 am", progress: 57, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-04 222401.png" },
-              { time: "9:35 am", progress: 74, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-09 101315.png" },
-              { time: "9:31 am", progress: 64, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-12 222910.png" },
-              { time: "9:45 am", progress: 51, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-20 161303.png" },
-              { time: "9:50 am", progress: 74, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-20 161319.png" },
-            ].map((item, idx) => (
-              <div key={idx} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div className="p-3">
-                  <div className="mb-2 flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="truncate text-xs font-medium text-slate-700">PT Aman Sejahtera...</h3>
-                      <p className="text-[10px] text-slate-400">No to-dos</p>
+        ) : dateStatus.isRange && Array.isArray(memberTimeBlocks) && memberTimeBlocks.length > 0 && 'date' in (memberTimeBlocks[0] as unknown as DateGroupedBlocks) ? (
+          // Render dengan pemisahan berdasarkan tanggal untuk range
+          (memberTimeBlocks as unknown as DateGroupedBlocks[]).map((dateGroup) => (
+            <div key={dateGroup.date} className="space-y-6">
+              {/* Tanggal Header */}
+              <div className="text-base font-semibold text-slate-700">
+                {dateGroup.dateLabel}
+              </div>
+              {/* Time Blocks untuk tanggal ini */}
+              {dateGroup.blocks.map((block) => {
+                const blockStart = runningIndex
+                runningIndex += block.items.length
+                return (
+                  <div key={`${dateGroup.date}-${block.label}-${blockStart}`} className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <span className="font-medium">{block.label}</span>
+                      <span className="text-slate-400">{block.summary}</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                      {block.items.map((item, index) => {
+                        const globalIndex = blockStart + index
+                        const isDeleted = deletedScreenshots.has(item.id)
+                        return (
+                          <MemberScreenshotCard
+                            key={item.id}
+                            item={item}
+                            onImageClick={() => openModal(globalIndex)}
+                            onDelete={() => handleDeleteClick(item.id)}
+                            isDeleted={isDeleted}
+                          />
+                        )
+                      })}
                     </div>
                   </div>
-                  <div className="relative mb-2 aspect-video overflow-hidden rounded border border-slate-200 bg-slate-50">
-                    <img src={item.image} alt="Screenshot" className="h-full w-full object-cover" />
-                  </div>
-                  <div className="mb-2 text-center text-xs font-medium text-blue-600">1 screen</div>
-                  <div className="mb-2 flex items-center justify-between text-xs">
-                    <span className="text-slate-600">{item.time}</span>
-                    <button className="text-slate-400 hover:text-slate-600">
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                      <div 
-                        className="h-full rounded-full"
-                        style={{ 
-                          width: `${item.progress}%`,
-                          backgroundColor: item.progress < 30 ? '#facc15' :
-                                         item.progress < 50 ? '#fb923c' :
-                                         item.progress < 70 ? '#a3e635' :
-                                         '#22c55e'
-                        }}
+                )
+              })}
+            </div>
+          ))
+        ) : (
+          // Render normal (bukan range)
+          (memberTimeBlocks as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>).map((block) => {
+            const blockStart = runningIndex
+            runningIndex += block.items.length
+            return (
+              <div key={`${block.label}-${blockStart}`} className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <span className="font-medium">{block.label}</span>
+                  <span className="text-slate-400">{block.summary}</span>
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                  {block.items.map((item, index) => {
+                    const globalIndex = blockStart + index
+                    const isDeleted = deletedScreenshots.has(item.id)
+                    return (
+                      <MemberScreenshotCard
+                        key={item.id}
+                        item={item}
+                        onImageClick={() => openModal(globalIndex)}
+                        onDelete={() => handleDeleteClick(item.id)}
+                        isDeleted={isDeleted}
                       />
-                    </div>
-                    <p className="text-[10px] text-slate-500">{item.progress}% of {item.minutes} minutes</p>
-                  </div>
+                    )
+                  })}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Time Block 2: 10:00 am - 11:00 am */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <span className="font-medium">10:00 am - 11:00 am</span>
-            <span className="text-slate-400">Total time worked: 0:39:23</span>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-            {[
-              { time: "10:07 am", progress: 53, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-08 094631.png" },
-              { time: "10:12 am", progress: 39, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-04 222401.png" },
-              { time: "10:22 am", progress: 31, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-09 101315.png" },
-              { time: "10:37 am", progress: 3, minutes: 39, seconds: true, image: "/Screenshoot/Screenshot 2026-01-12 222910.png" },
-              { time: "10:40 am", progress: 0, minutes: 0, noActivity: true },
-              { time: "10:50 am", progress: 2, minutes: 8, image: "/Screenshoot/Screenshot 2026-01-20 161303.png" },
-            ].map((item, idx) => (
-              <div key={idx} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div className="p-3">
-                  <div className="mb-2 flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="truncate text-xs font-medium text-slate-700">PT Aman Sejahtera...</h3>
-                      <p className="text-[10px] text-slate-400">No to-dos</p>
-                    </div>
-                  </div>
-                  {item.noActivity ? (
-                    <div className="mb-2 flex aspect-video items-center justify-center rounded border border-slate-200 bg-slate-50 text-xs text-slate-400">
-                      No activity
-                    </div>
-                  ) : (
-                    <div className="relative mb-2 aspect-video overflow-hidden rounded border border-slate-200 bg-slate-50">
-                      <img src={item.image} alt="Screenshot" className="h-full w-full object-cover" />
-                    </div>
-                  )}
-                  <div className="mb-2 text-center text-xs font-medium text-blue-600">1 screen</div>
-                  <div className="mb-2 flex items-center justify-between text-xs">
-                    <span className="text-slate-600">{item.time}</span>
-                    <button className="text-slate-400 hover:text-slate-600">
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                      <div 
-                        className="h-full rounded-full"
-                        style={{ 
-                          width: `${item.progress}%`,
-                          backgroundColor: item.progress < 30 ? '#facc15' :
-                                         item.progress < 50 ? '#fb923c' :
-                                         item.progress < 70 ? '#a3e635' :
-                                         '#22c55e'
-                        }}
-                      />
-                    </div>
-                    <p className="text-[10px] text-slate-500">
-                      {item.progress}% of {item.minutes} {item.seconds ? 'seconds' : 'minutes'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Time Block 3: 11:00 am - 12:00 pm */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <span className="font-medium">11:00 am - 12:00 pm</span>
-            <span className="text-slate-400">Total time worked: 0:48:33</span>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-            {[
-              { time: "11:04 am", progress: 72, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-09 101315.png" },
-              { time: "11:17 am", progress: 45, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-04 222401.png" },
-              { time: "11:21 am", progress: 68, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-12 222910.png" },
-              { time: "11:34 am", progress: 52, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-08 094631.png" },
-              { time: "11:43 am", progress: 0, minutes: 0, noActivity: true },
-              { time: "11:53 am", progress: 15, minutes: 8, image: "/Screenshoot/Screenshot 2026-01-20 161319.png" },
-            ].map((item, idx) => (
-              <div key={idx} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div className="p-3">
-                  <div className="mb-2 flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="truncate text-xs font-medium text-slate-700">PT Aman Sejahtera...</h3>
-                      <p className="text-[10px] text-slate-400">No to-dos</p>
-                    </div>
-                  </div>
-                  {item.noActivity ? (
-                    <div className="mb-2 flex aspect-video items-center justify-center rounded border border-slate-200 bg-slate-50 text-xs text-slate-400">
-                      No activity
-                    </div>
-                  ) : (
-                    <div className="relative mb-2 aspect-video overflow-hidden rounded border border-slate-200 bg-slate-50">
-                      <img src={item.image} alt="Screenshot" className="h-full w-full object-cover" />
-                    </div>
-                  )}
-                  <div className="mb-2 text-center text-xs font-medium text-blue-600">1 screen</div>
-                  <div className="mb-2 flex items-center justify-between text-xs">
-                    <span className="text-slate-600">{item.time}</span>
-                    <button className="text-slate-400 hover:text-slate-600">
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                      <div 
-                        className="h-full rounded-full"
-                        style={{ 
-                          width: `${item.progress}%`,
-                          backgroundColor: item.progress < 30 ? '#facc15' :
-                                         item.progress < 50 ? '#fb923c' :
-                                         item.progress < 70 ? '#a3e635' :
-                                         '#22c55e'
-                        }}
-                      />
-                    </div>
-                    <p className="text-[10px] text-slate-500">
-                      {item.progress}% of {item.minutes} minutes
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Time Block 4: 12:00 pm - 1:00 pm */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <span className="font-medium">12:00 pm - 1:00 pm</span>
-            <span className="text-slate-400">Total time worked: 0:37:47</span>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-            {[
-              { time: "12:05 pm", progress: 58, minutes: 10, image: "/Screenshoot/Screenshot 2025-12-08 094631.png" },
-              { time: "12:25 pm", progress: 42, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-20 161303.png" },
-              { time: "12:33 pm", progress: 35, minutes: 10, image: "/Screenshoot/Screenshot 2026-01-09 101315.png" },
-              { time: "12:49 pm", progress: 18, minutes: 7, image: "/Screenshoot/Screenshot 2026-01-04 222401.png" },
-            ].map((item, idx) => (
-              <div key={idx} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div className="p-3">
-                  <div className="mb-2 flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="truncate text-xs font-medium text-slate-700">PT Aman Sejahtera...</h3>
-                      <p className="text-[10px] text-slate-400">No to-dos</p>
-                    </div>
-                  </div>
-                  <div className="relative mb-2 aspect-video overflow-hidden rounded border border-slate-200 bg-slate-50">
-                    <img src={item.image} alt="Screenshot" className="h-full w-full object-cover" />
-                  </div>
-                  <div className="mb-2 text-center text-xs font-medium text-blue-600">1 screen</div>
-                  <div className="mb-2 flex items-center justify-between text-xs">
-                    <span className="text-slate-600">{item.time}</span>
-                    <button className="text-slate-400 hover:text-slate-600">
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                      <div 
-                        className="h-full rounded-full"
-                        style={{ 
-                          width: `${item.progress}%`,
-                          backgroundColor: item.progress < 30 ? '#facc15' :
-                                         item.progress < 50 ? '#fb923c' :
-                                         item.progress < 70 ? '#a3e635' :
-                                         '#22c55e'
-                        }}
-                      />
-                    </div>
-                    <p className="text-[10px] text-slate-500">{item.progress}% of {item.minutes} minutes</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+            )
+          })
+        )}
       </div>
+
+      {isMounted && modalOpen && currentScreenshot && createPortal(
+        <>
+          <style dangerouslySetInnerHTML={{
+            __html: `
+              body:has(#screenshot-modal-overlay) {
+                overflow: hidden !important;
+              }
+              #screenshot-modal-overlay {
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+              }
+              #screenshot-modal-overlay::-webkit-scrollbar {
+                display: none;
+              }
+            `
+          }} />
+          <div 
+            id="screenshot-modal-overlay"
+            className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center gap-4 p-8" 
+            style={{ 
+              position: 'fixed', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0, 
+              width: '100vw', 
+              height: '100vh',
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              backdropFilter: 'blur(2px)',
+              overflow: 'hidden',
+              zIndex: 99999 
+            }} 
+            onClick={closeModal}
+          >
+            {/* Tombol Previous - Kiri */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                goPrev()
+              }}
+              aria-label="Previous screenshot"
+              className="rounded-full bg-white p-4 shadow-2xl hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all border-2 border-slate-200"
+              disabled={flattenedScreenshots.length <= 1}
+            >
+              <ChevronLeft className="h-8 w-8 text-slate-900" />
+            </button>
+
+            {/* Kotak Putih Modal */}
+            <div className="relative flex flex-col max-w-6xl w-full max-h-[90vh] rounded-3xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              {/* Tombol Close - Pojok Kanan Atas Kotak Putih */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  closeModal()
+                }}
+                aria-label="Close screenshot"
+                className="absolute right-4 top-4 rounded-full bg-white p-3 shadow-2xl hover:bg-slate-100 z-20 border-2 border-slate-200 transition-all"
+              >
+                <X className="h-5 w-5 text-slate-900" />
+              </button>
+              <div className="flex items-center justify-center flex-1 min-h-0 mb-4 overflow-hidden">
+                {currentScreenshot.image ? (
+                  <img
+                    src={currentScreenshot.image}
+                    alt={currentScreenshot.time}
+                    className="max-h-full max-w-full rounded-2xl object-contain"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full w-full text-slate-400">
+                    No image available
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center justify-center text-sm text-slate-600 shrink-0">
+                <span>{currentScreenshot.time}</span>
+              </div>
+            </div>
+
+            {/* Tombol Next - Kanan */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                goNext()
+              }}
+              aria-label="Next screenshot"
+              className="rounded-full bg-white p-4 shadow-2xl hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all border-2 border-slate-200"
+              disabled={flattenedScreenshots.length <= 1}
+            >
+              <ChevronRight className="h-8 w-8 text-slate-900" />
+            </button>
+          </div>
+        </>,
+        document.body
+      )}
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={handleConfirmDelete}
+        title="Hapus Screenshot"
+        description="Apakah anda yakin ingin menghapusnya?"
+        confirmText="Hapus"
+        cancelText="Batal"
+        destructive={true}
+      />
     </>
   )
 }
