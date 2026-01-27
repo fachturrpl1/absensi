@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { ChevronLeft, Columns, Download, Clock, Send, BarChart2 } from "lucide-react"
+import { Columns, Download, Clock, Send, BarChart2 } from "lucide-react"
 import {
     AreaChart,
     Area,
@@ -105,6 +105,7 @@ export default function DailyTotalsPage() {
     // Dynamic Data Generation
     const { tableRows, dailyTotalsStr, totalWorkedStr, totalBreakStr, avgHoursStr, avgActivity, totalAmountStr, chartData } = useMemo(() => {
         // Filter Logic
+        
         let filteredMembers = DUMMY_MEMBERS;
         if (!selectedFilter.all && selectedFilter.id) {
             if (selectedFilter.type === "members") {
