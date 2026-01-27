@@ -1903,3 +1903,85 @@ export const DUMMY_MY_PERFORMANCE = {
     activityToday: "87%",
     activityWeek: "85%"
 }
+
+// ============================================================================
+// CUSTOM REPORTS
+// ============================================================================
+
+// ============================================================================
+// CUSTOM REPORTS
+// ============================================================================
+
+export interface CustomReport {
+    id: string
+    name: string
+    type: string
+    lastModified: string
+    scheduleDetails: string
+    scheduleMeta: string // e.g., "Weekly | Mon | PDF"
+    nextSchedule: string // e.g., "Next: Mon, Feb 2, 2026 9:00 am"
+    status: 'Active' | 'Paused'
+
+    // Detailed Schedule Data
+    emails: string
+    message: string
+    fileType: 'pdf' | 'csv' | 'xls'
+    dateRange: 'last-week' | 'last-month' | 'custom'
+    frequency: 'daily' | 'weekly' | 'monthly'
+    deliveryTime: string
+    deliveryDays: string[]
+}
+
+export const DUMMY_CUSTOM_REPORTS: CustomReport[] = [
+    {
+        id: "cr-1",
+        name: "Time and Activity",
+        type: "Time & activity",
+        lastModified: "Mon, Jan 26, 2026 11:51 am",
+        scheduleDetails: "Weekly | Mon | PDF",
+        scheduleMeta: "Weekly | Mon | PDF",
+        nextSchedule: "Next: Mon, Feb 2, 2026 9:00 am",
+        status: "Active",
+        emails: "lavelavael@gmail.com",
+        message: "We've prepared your latest report. Contact support if you have any questions or need assistance.",
+        fileType: "pdf",
+        dateRange: "last-week",
+        frequency: "weekly",
+        deliveryTime: "09:00",
+        deliveryDays: ["Mo"]
+    },
+    {
+        id: "cr-2",
+        name: "Weekly Project Budget",
+        type: "Project Budget",
+        lastModified: "Fri, Jan 23, 2026 4:30 pm",
+        scheduleDetails: "Weekly | Fri | CSV",
+        scheduleMeta: "Weekly | Fri | CSV",
+        nextSchedule: "Next: Fri, Jan 30, 2026 5:00 pm",
+        status: "Active",
+        emails: "finance@ubig.co.id",
+        message: "Weekly budget overview attached.",
+        fileType: "csv",
+        dateRange: "last-week",
+        frequency: "weekly",
+        deliveryTime: "17:00",
+        deliveryDays: ["Fr"]
+    },
+    {
+        id: "cr-3",
+        name: "Monthly Attendance",
+        type: "Attendance",
+        lastModified: "Jan 1, 2026 10:00 am",
+        scheduleDetails: "Monthly | 1st | PDF",
+        scheduleMeta: "Monthly | 1st | PDF",
+        nextSchedule: "Next: Sun, Feb 1, 2026 9:00 am",
+        status: "Paused",
+        emails: "hr@ubig.co.id",
+        message: "Monthly attendance report.",
+        fileType: "pdf",
+        dateRange: "last-month",
+        frequency: "monthly",
+        deliveryTime: "09:00",
+        deliveryDays: ["Mo"]
+    }
+]
