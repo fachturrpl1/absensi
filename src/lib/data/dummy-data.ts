@@ -76,40 +76,40 @@ export const PROJECT_MEMBER_MAP: Record<string, string[]> = {
 }
 
 export function getProjectMemberIds(projectId: string): string[] {
-  return PROJECT_MEMBER_MAP[projectId] ?? []
+    return PROJECT_MEMBER_MAP[projectId] ?? []
 }
 
 // Teams by project (derived from project members)
 // Explicit mapping: project -> team IDs
 export const PROJECT_TEAM_MAP: Record<string, string[]> = {
-  "proj-1": ["t1"], // Website Redesign -> Team Alpha
-  "proj-2": ["t3"], // Mobile App Development -> Team Gamma
-  "proj-3": ["t2"], // Marketing Campaign -> Team Beta
-  // Tambahkan mapping lain jika diperlukan
+    "proj-1": ["t1"], // Website Redesign -> Team Alpha
+    "proj-2": ["t3"], // Mobile App Development -> Team Gamma
+    "proj-3": ["t2"], // Marketing Campaign -> Team Beta
+    // Tambahkan mapping lain jika diperlukan
 }
 
 export function getTeamsByProjectId(projectId: string): Team[] {
-  const explicitTeamIds = PROJECT_TEAM_MAP[projectId]
-  if (explicitTeamIds && explicitTeamIds.length > 0) {
-    const idSet = new Set(explicitTeamIds)
-    return DUMMY_TEAMS.filter((t) => idSet.has(t.id))
-  }
-
-  // Fallback: turunkan dari irisan member (legacy behavior)
-  const memberIds = PROJECT_MEMBER_MAP[projectId] ?? []
-  const result: Team[] = []
-  const seen = new Set<string>()
-  for (const t of DUMMY_TEAMS) {
-    if (t.members.some((m) => memberIds.includes(m)) && !seen.has(t.id)) {
-      seen.add(t.id)
-      result.push(t)
+    const explicitTeamIds = PROJECT_TEAM_MAP[projectId]
+    if (explicitTeamIds && explicitTeamIds.length > 0) {
+        const idSet = new Set(explicitTeamIds)
+        return DUMMY_TEAMS.filter((t) => idSet.has(t.id))
     }
-  }
-  return result
+
+    // Fallback: turunkan dari irisan member (legacy behavior)
+    const memberIds = PROJECT_MEMBER_MAP[projectId] ?? []
+    const result: Team[] = []
+    const seen = new Set<string>()
+    for (const t of DUMMY_TEAMS) {
+        if (t.members.some((m) => memberIds.includes(m)) && !seen.has(t.id)) {
+            seen.add(t.id)
+            result.push(t)
+        }
+    }
+    return result
 }
 
 export function getTeamNamesByProjectId(projectId: string): string[] {
-  return getTeamsByProjectId(projectId).map((t) => t.name)
+    return getTeamsByProjectId(projectId).map((t) => t.name)
 }
 
 // ============================================================================
@@ -2198,13 +2198,13 @@ export interface UrlActivityEntry {
 
 export const DUMMY_URL_ACTIVITIES: UrlActivityEntry[] = [
     // Antonio Galih (m1) - 26 Jan 2026
-    { 
-        id: "ua1", 
-        projectId: "proj-1", 
-        projectName: "hans", 
-        memberId: "m1", 
-        site: "app.hubstaff.com", 
-        timeSpent: 0.0158, 
+    {
+        id: "ua1",
+        projectId: "proj-1",
+        projectName: "hans",
+        memberId: "m1",
+        site: "app.hubstaff.com",
+        timeSpent: 0.0158,
         date: "2026-01-26",
         details: [
             { id: "ua1-d1", url: "https://app.hubstaff.com/dashboard", timeSpent: 0.0104 }, // 0:00:37
@@ -2224,39 +2224,39 @@ export const DUMMY_URL_ACTIVITIES: UrlActivityEntry[] = [
             { id: "ua1-s2", url: "https://support.hubstaff.com/hubstaff-insights/getting-started", timeSpent: 0.0225 } // 0:01:19
         ]
     },
-    { 
-        id: "ua2", 
-        projectId: "proj-1", 
-        projectName: "Website Redesign", 
-        memberId: "m1", 
-        site: "github.com", 
-        timeSpent: 2.5, 
+    {
+        id: "ua2",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m1",
+        site: "github.com",
+        timeSpent: 2.5,
         date: "2026-01-26",
         details: [
             { id: "ua2-d1", url: "https://github.com/Presensi-New", timeSpent: 1.5 },
             { id: "ua2-d2", url: "https://github.com/Fauzan-Fz/Presensi-New", timeSpent: 1.0 }
         ]
     },
-    { 
-        id: "ua3", 
-        projectId: "proj-1", 
-        projectName: "Website Redesign", 
-        memberId: "m1", 
-        site: "stackoverflow.com", 
-        timeSpent: 0.5, 
+    {
+        id: "ua3",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m1",
+        site: "stackoverflow.com",
+        timeSpent: 0.5,
         date: "2026-01-26",
         details: [
             { id: "ua3-d1", url: "https://stackoverflow.com/questions/12345", timeSpent: 0.3 },
             { id: "ua3-d2", url: "https://stackoverflow.com/questions/67890", timeSpent: 0.2 }
         ]
     },
-    { 
-        id: "ua4", 
-        projectId: "proj-1", 
-        projectName: "Website Redesign", 
-        memberId: "m1", 
-        site: "docs.google.com", 
-        timeSpent: 1.2, 
+    {
+        id: "ua4",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m1",
+        site: "docs.google.com",
+        timeSpent: 1.2,
         date: "2026-01-26",
         details: [
             { id: "ua4-d1", url: "https://docs.google.com/document/d/abc123", timeSpent: 0.8 },
@@ -2264,39 +2264,39 @@ export const DUMMY_URL_ACTIVITIES: UrlActivityEntry[] = [
         ]
     },
     // Lave Lavael (m2) - 26 Jan 2026
-    { 
-        id: "ua5", 
-        projectId: "proj-2", 
-        projectName: "Mobile App Development", 
-        memberId: "m2", 
-        site: "developer.android.com", 
-        timeSpent: 3.0, 
+    {
+        id: "ua5",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m2",
+        site: "developer.android.com",
+        timeSpent: 3.0,
         date: "2026-01-26",
         details: [
             { id: "ua5-d1", url: "https://developer.android.com/guide", timeSpent: 2.0 },
             { id: "ua5-d2", url: "https://developer.android.com/training", timeSpent: 1.0 }
         ]
     },
-    { 
-        id: "ua6", 
-        projectId: "proj-2", 
-        projectName: "Mobile App Development", 
-        memberId: "m2", 
-        site: "github.com", 
-        timeSpent: 1.5, 
+    {
+        id: "ua6",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m2",
+        site: "github.com",
+        timeSpent: 1.5,
         date: "2026-01-26",
         details: [
             { id: "ua6-d1", url: "https://github.com/user/mobile-app", timeSpent: 1.0 },
             { id: "ua6-d2", url: "https://github.com/user/mobile-app/pulls", timeSpent: 0.5 }
         ]
     },
-    { 
-        id: "ua7", 
-        projectId: "proj-2", 
-        projectName: "Mobile App Development", 
-        memberId: "m2", 
-        site: "stackoverflow.com", 
-        timeSpent: 0.8, 
+    {
+        id: "ua7",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m2",
+        site: "stackoverflow.com",
+        timeSpent: 0.8,
         date: "2026-01-26",
         details: [
             { id: "ua7-d1", url: "https://stackoverflow.com/questions/android-123", timeSpent: 0.5 },
@@ -2304,39 +2304,39 @@ export const DUMMY_URL_ACTIVITIES: UrlActivityEntry[] = [
         ]
     },
     // Sarah Johnson (m3) - 26 Jan 2026
-    { 
-        id: "ua8", 
-        projectId: "proj-3", 
-        projectName: "Marketing Campaign", 
-        memberId: "m3", 
-        site: "canva.com", 
-        timeSpent: 2.5, 
+    {
+        id: "ua8",
+        projectId: "proj-3",
+        projectName: "Marketing Campaign",
+        memberId: "m3",
+        site: "canva.com",
+        timeSpent: 2.5,
         date: "2026-01-26",
         details: [
             { id: "ua8-d1", url: "https://www.canva.com/design/abc123", timeSpent: 1.5 },
             { id: "ua8-d2", url: "https://www.canva.com/design/def456", timeSpent: 1.0 }
         ]
     },
-    { 
-        id: "ua9", 
-        projectId: "proj-3", 
-        projectName: "Marketing Campaign", 
-        memberId: "m3", 
-        site: "facebook.com", 
-        timeSpent: 1.0, 
+    {
+        id: "ua9",
+        projectId: "proj-3",
+        projectName: "Marketing Campaign",
+        memberId: "m3",
+        site: "facebook.com",
+        timeSpent: 1.0,
         date: "2026-01-26",
         details: [
             { id: "ua9-d1", url: "https://www.facebook.com/business", timeSpent: 0.6 },
             { id: "ua9-d2", url: "https://www.facebook.com/ads/manager", timeSpent: 0.4 }
         ]
     },
-    { 
-        id: "ua10", 
-        projectId: "proj-3", 
-        projectName: "Marketing Campaign", 
-        memberId: "m3", 
-        site: "instagram.com", 
-        timeSpent: 0.5, 
+    {
+        id: "ua10",
+        projectId: "proj-3",
+        projectName: "Marketing Campaign",
+        memberId: "m3",
+        site: "instagram.com",
+        timeSpent: 0.5,
         date: "2026-01-26",
         details: [
             { id: "ua10-d1", url: "https://www.instagram.com/business", timeSpent: 0.3 },
@@ -2344,26 +2344,26 @@ export const DUMMY_URL_ACTIVITIES: UrlActivityEntry[] = [
         ]
     },
     // Michael Chen (m4) - 26 Jan 2026
-    { 
-        id: "ua11", 
-        projectId: "proj-2", 
-        projectName: "Mobile App Development", 
-        memberId: "m4", 
-        site: "developer.apple.com", 
-        timeSpent: 4.0, 
+    {
+        id: "ua11",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m4",
+        site: "developer.apple.com",
+        timeSpent: 4.0,
         date: "2026-01-26",
         details: [
             { id: "ua11-d1", url: "https://developer.apple.com/documentation", timeSpent: 2.5 },
             { id: "ua11-d2", url: "https://developer.apple.com/tutorials", timeSpent: 1.5 }
         ]
     },
-    { 
-        id: "ua12", 
-        projectId: "proj-2", 
-        projectName: "Mobile App Development", 
-        memberId: "m4", 
-        site: "github.com", 
-        timeSpent: 2.0, 
+    {
+        id: "ua12",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m4",
+        site: "github.com",
+        timeSpent: 2.0,
         date: "2026-01-26",
         details: [
             { id: "ua12-d1", url: "https://github.com/user/ios-app", timeSpent: 1.2 },
@@ -2371,26 +2371,26 @@ export const DUMMY_URL_ACTIVITIES: UrlActivityEntry[] = [
         ]
     },
     // Emma Rodriguez (m5) - 26 Jan 2026
-    { 
-        id: "ua13", 
-        projectId: "proj-1", 
-        projectName: "Website Redesign", 
-        memberId: "m5", 
-        site: "figma.com", 
-        timeSpent: 3.5, 
+    {
+        id: "ua13",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m5",
+        site: "figma.com",
+        timeSpent: 3.5,
         date: "2026-01-26",
         details: [
             { id: "ua13-d1", url: "https://www.figma.com/design/8zCDmfpE2Rg5EEAf9KXTfb/Copy-Hubstaff?node-id=218-171&p=f&t=1MZEA6TUTTRayQX6-0", timeSpent: 2.0 },
             { id: "ua13-d2", url: "https://www.figma.com/design/8zCDmfpE2Rg5EEAf9KXTfb/Copy-Hubstaff?node-id=218-171&p=f&t=1MZEA6TUTTRayQX6-0", timeSpent: 1.5 }
         ]
     },
-    { 
-        id: "ua14", 
-        projectId: "proj-1", 
-        projectName: "Website Redesign", 
-        memberId: "m5", 
-        site: "dribbble.com", 
-        timeSpent: 1.0, 
+    {
+        id: "ua14",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m5",
+        site: "dribbble.com",
+        timeSpent: 1.0,
         date: "2026-01-26",
         details: [
             { id: "ua14-d1", url: "https://dribbble.com/shots/12345", timeSpent: 0.6 },
@@ -2434,46 +2434,107 @@ export interface ReportActivityEntry {
     activityPercent: number
     totalSpent: number
     regularSpent: number
+    ptoHours: number
+    holidayHours: number
 }
 
-export const DUMMY_REPORT_ACTIVITIES: ReportActivityEntry[] = [
-    {
-        id: "ra1",
-        date: "2026-01-20",
-        clientId: "client-1",
-        clientName: "Patricia",
-        projectId: "proj-1",
-        projectName: "Website Redesign",
-        teamId: "t1",
-        teamName: "Team Alpha",
-        memberId: "m1",
-        memberName: "Antonio Galih",
-        todoName: "Homepage Layout",
-        regularHours: 8.0,
-        totalHours: 8.5,
-        activityPercent: 92,
-        totalSpent: 1500000,
-        regularSpent: 1400000
-    },
-    {
-        id: "ra2",
-        date: "2026-01-21",
-        clientId: "client-2",
-        clientName: "Tech Corp",
-        projectId: "proj-2",
-        projectName: "Mobile App Development",
-        teamId: "t2",
-        teamName: "Team Beta",
-        memberId: "m4",
-        memberName: "Michael Chen",
-        todoName: "API Integration",
-        regularHours: 7.5,
-        totalHours: 7.5,
-        activityPercent: 88,
-        totalSpent: 1200000,
-        regularSpent: 1200000
+// Helper to deterministically generate report data
+function generateReportData(): ReportActivityEntry[] {
+    const data: ReportActivityEntry[] = [];
+    const startDate = new Date(2026, 0, 1); // Jan 1 2026
+    const endDate = new Date(2026, 1, 28); // Feb 28 2026 (approx)
+
+    // Seeded random for consistency across reloads (simple LCG)
+    let seed = 12345;
+    const random = () => {
+        const x = Math.sin(seed++) * 10000;
+        return x - Math.floor(x);
+    };
+
+    const projectRates: Record<string, number> = {
+        "proj-1": 150000, "proj-2": 200000, "proj-3": 175000, "proj-4": 160000, "proj-5": 190000
+    };
+
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        if (d.getDay() === 0 || d.getDay() === 6) continue; // Skip weekends
+
+        const dateStr = d.toISOString().split('T')[0];
+
+        // Ensure every member has some data most days
+        for (const member of DUMMY_MEMBERS) {
+            // 10% chance of absence
+            if (random() > 0.9) continue;
+
+            const baseHours = 4 + random() * 5; // 4 to 9 hours
+            const activityPct = 40 + Math.floor(random() * 55); // 40-95%
+
+            // Assign to a primary project for this day (simplification)
+            // Ideally could be multiple, but we'll create 1 entry per member/day/project to keep it simpler for now,
+            // or maybe 2 entries if they split time.
+
+            // Let's split time between 1 or 2 projects
+            const numEntries = random() > 0.7 ? 2 : 1;
+
+            for (let i = 0; i < numEntries; i++) {
+                // Pick random project
+                const proj = DUMMY_PROJECTS[Math.floor(random() * DUMMY_PROJECTS.length)];
+                if (!proj) continue; // Should not happen
+
+                // Get Client
+                const client = DUMMY_CLIENTS.find(c => c.id === proj.clientId);
+                if (!client) continue;
+
+                // Get Team (first team found for project or member)
+                // Fallback to "All Teams" or specific team logic if needed
+                // For simplicity, pick a random team that the member belongs to, OR the project map.
+                // We'll use DUMMY_TEAMS finding.
+                const team = DUMMY_TEAMS.find(t => t.members.includes(member.id));
+                const teamId = team ? team.id : "t1";
+                const teamName = team ? team.name : "Team Alpha";
+
+                const entryHours = (baseHours / numEntries) * (0.8 + random() * 0.4); // Add variance
+                // We will just store the hours here. Aggregation logic handles OT.
+                // But `ReportActivityEntry` has `regularHours` field. We'll approximate.
+
+                const rate = projectRates[proj.id] || 100000;
+
+                data.push({
+                    id: `ra-${dateStr}-${member.id}-${i}`,
+                    date: dateStr || "",
+                    clientId: client.id,
+                    clientName: client.name || "Client",
+                    projectId: proj.id,
+                    projectName: proj.name || "Project",
+                    teamId: teamId,
+                    teamName: teamName,
+                    memberId: member.id,
+                    memberName: member.name,
+
+                    todoName: (() => {
+                        // Find tasks for this project
+                        const projTasks = DUMMY_PROJECT_TASKS.filter(t => t.projectId === proj.id);
+                        if (projTasks.length > 0) {
+                            // Pick predictable random task based on seed
+                            const taskIndex = Math.floor(random() * projTasks.length);
+                            return projTasks[taskIndex]?.title || "Task";
+                        }
+                        return i === 0 ? "Development" : "Meeting/Review";
+                    })(),
+                    regularHours: parseFloat(entryHours.toFixed(2)), // Approx
+                    totalHours: parseFloat(entryHours.toFixed(2)),
+                    activityPercent: activityPct,
+                    totalSpent: Math.floor(entryHours * rate),
+                    regularSpent: Math.floor(entryHours * rate),
+                    ptoHours: random() > 0.95 ? 8 : 0, // 5% chance of PTO
+                    holidayHours: 0 // Default to 0, could add specific dates if needed
+                });
+            }
+        }
     }
-]
+    return data;
+}
+
+export const DUMMY_REPORT_ACTIVITIES: ReportActivityEntry[] = generateReportData();
 
 // ============================================================================
 // PERFORMANCE DASHBOARD
