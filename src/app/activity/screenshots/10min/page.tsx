@@ -9,11 +9,14 @@ import {
   ChevronRight,
   Info,
   X,
+  Lightbulb,
 } from "lucide-react"
 import {
   DUMMY_MEMBER_INSIGHTS,
   DUMMY_MEMBER_SCREENSHOTS,
   DUMMY_MEMBERS,
+  DUMMY_URL_ACTIVITIES,
+  DUMMY_APP_ACTIVITIES,
   MemberInsightSummary,
   MemberScreenshotItem,
 } from "@/lib/data/dummy-data"
@@ -573,6 +576,128 @@ export default function Every10MinPage() {
     return baseSummary
   }, [activeMemberId, fallbackMemberId, dateStatus, dateRange])
 
+  // Calculate work classification data from URL and App activities
+  const workClassificationData = useMemo(() => {
+    if (!activeMemberId || !dateStatus.isValid) {
+      return {
+        coreWork: { percentage: 0, items: [] },
+        nonCoreWork: { percentage: 0, items: [] },
+        unproductive: { percentage: 0, items: [] },
+      }
+    }
+
+    // Filter by member and date range
+    const start = new Date(dateRange.startDate)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(dateRange.endDate)
+    end.setHours(23, 59, 59, 999)
+
+    // Core work apps/sites (development tools)
+    const coreWorkApps = ['VS Code', 'Android Studio', 'IntelliJ IDEA', 'Xcode', 'Sublime Text']
+    const coreWorkSites = ['github.com', 'stackoverflow.com', 'gitlab.com', 'bitbucket.org']
+
+    // Non-core work apps/sites (browsing, documentation)
+    const nonCoreWorkApps = ['Chrome', 'Microsoft Edge', 'Firefox', 'Safari']
+    const nonCoreWorkSites = ['docs.google.com', 'notion.so', 'confluence', 'jira.com']
+
+    // Unproductive apps/sites (social media, entertainment)
+    const unproductiveApps = ['Discord', 'Slack', 'WhatsApp', 'Telegram', 'Spotify', 'YouTube']
+    const unproductiveSites = ['facebook.com', 'twitter.com', 'instagram.com', 'tiktok.com', 'youtube.com', 'reddit.com']
+
+    // Track time and items per category
+    const coreWorkItems: Record<string, number> = {}
+    const nonCoreWorkItems: Record<string, number> = {}
+    const unproductiveItems: Record<string, number> = {}
+
+    let coreWorkTime = 0
+    let nonCoreWorkTime = 0
+    let unproductiveTime = 0
+
+    // Process URL activities
+    DUMMY_URL_ACTIVITIES.forEach(activity => {
+      if (activity.memberId !== activeMemberId) return
+      const activityDate = new Date(activity.date)
+      activityDate.setHours(0, 0, 0, 0)
+      if (activityDate < start || activityDate > end) return
+
+      const site = activity.site.toLowerCase()
+      const siteName = activity.site
+      
+      if (coreWorkSites.some(s => site.includes(s))) {
+        coreWorkTime += activity.timeSpent
+        coreWorkItems[siteName] = (coreWorkItems[siteName] || 0) + activity.timeSpent
+      } else if (nonCoreWorkSites.some(s => site.includes(s))) {
+        nonCoreWorkTime += activity.timeSpent
+        nonCoreWorkItems[siteName] = (nonCoreWorkItems[siteName] || 0) + activity.timeSpent
+      } else if (unproductiveSites.some(s => site.includes(s))) {
+        unproductiveTime += activity.timeSpent
+        unproductiveItems[siteName] = (unproductiveItems[siteName] || 0) + activity.timeSpent
+      } else {
+        // Default to non-core work for unknown sites
+        nonCoreWorkTime += activity.timeSpent
+        nonCoreWorkItems[siteName] = (nonCoreWorkItems[siteName] || 0) + activity.timeSpent
+      }
+    })
+
+    // Process App activities
+    DUMMY_APP_ACTIVITIES.forEach(activity => {
+      if (activity.memberId !== activeMemberId) return
+      const activityDate = new Date(activity.date)
+      activityDate.setHours(0, 0, 0, 0)
+      if (activityDate < start || activityDate > end) return
+
+      const appName = activity.appName
+      
+      if (coreWorkApps.includes(appName)) {
+        coreWorkTime += activity.timeSpent
+        coreWorkItems[appName] = (coreWorkItems[appName] || 0) + activity.timeSpent
+      } else if (nonCoreWorkApps.includes(appName)) {
+        nonCoreWorkTime += activity.timeSpent
+        nonCoreWorkItems[appName] = (nonCoreWorkItems[appName] || 0) + activity.timeSpent
+      } else if (unproductiveApps.includes(appName)) {
+        unproductiveTime += activity.timeSpent
+        unproductiveItems[appName] = (unproductiveItems[appName] || 0) + activity.timeSpent
+      } else {
+        // Default to non-core work for unknown apps
+        nonCoreWorkTime += activity.timeSpent
+        nonCoreWorkItems[appName] = (nonCoreWorkItems[appName] || 0) + activity.timeSpent
+      }
+    })
+
+    const totalTime = coreWorkTime + nonCoreWorkTime + unproductiveTime
+    const coreWorkPercentage = totalTime > 0 ? Math.round((coreWorkTime / totalTime) * 100) : 0
+    const nonCoreWorkPercentage = totalTime > 0 ? Math.round((nonCoreWorkTime / totalTime) * 100) : 0
+    const unproductivePercentage = totalTime > 0 ? Math.round((unproductiveTime / totalTime) * 100) : 0
+
+    // Convert items to array with percentages
+    const formatItems = (items: Record<string, number>, categoryTime: number) => {
+      return Object.entries(items)
+        .map(([name, time]) => ({
+          name,
+          percentage: categoryTime > 0 ? Math.round((time / categoryTime) * 100) : 0,
+          time,
+        }))
+        .sort((a, b) => b.time - a.time) // Sort by time descending
+    }
+
+    return {
+      coreWork: {
+        percentage: coreWorkPercentage,
+        items: formatItems(coreWorkItems, coreWorkTime),
+      },
+      nonCoreWork: {
+        percentage: nonCoreWorkPercentage,
+        items: formatItems(nonCoreWorkItems, nonCoreWorkTime),
+      },
+      unproductive: {
+        percentage: unproductivePercentage,
+        items: formatItems(unproductiveItems, unproductiveTime),
+      },
+    }
+  }, [activeMemberId, dateRange, dateStatus.isValid])
+
+  const [hoveredSegment, setHoveredSegment] = useState<string | null>(null)
+
   let runningIndex = 0
 
   useEffect(() => {
@@ -673,15 +798,29 @@ export default function Every10MinPage() {
                 </div>
                 {/* Work Time Classification Skeleton */}
                 <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6">
-                  <div className="w-full space-y-2">
+                  <div className="flex w-full items-center justify-between mb-2">
                     <Skeleton className="h-3 w-36" />
-                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
                   </div>
-                  <div className="flex flex-col items-center justify-center gap-2 py-4 w-full">
-                    <Skeleton className="h-2 w-full max-w-[180px] rounded-full" />
-                    <Skeleton className="h-4 w-48" />
+                  <div className="flex items-start justify-between w-full mb-3">
+                    <div className="flex flex-col gap-2">
+                      <Skeleton className="h-8 w-16" />
+                      <Skeleton className="h-4 w-20" />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
                   </div>
-                  <Skeleton className="h-3 w-32" />
+                  <Skeleton className="h-4 w-full rounded-full mb-2" />
+                  <div className="flex justify-between w-full mb-2">
+                    <Skeleton className="h-3 w-8" />
+                    <Skeleton className="h-3 w-8" />
+                    <Skeleton className="h-3 w-8" />
+                    <Skeleton className="h-3 w-8" />
+                    <Skeleton className="h-3 w-8" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -787,29 +926,159 @@ export default function Every10MinPage() {
 
             {/* Work Time Classification */}
             <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6">
-                  <div className="flex w-full flex-col gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
-                    <span className="flex items-center gap-1">Work time classification</span>
-                    <span className="flex items-center gap-1">
-                      <Info className="h-3.5 w-3.5 text-slate-400" /> {memberSummary.classificationLabel}
-                    </span>
+              <div className="flex w-full items-center justify-between mb-2">
+                <div className="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
+                Work time classification
+                <Info className="h-3.5 w-3.5 text-slate-400" />
               </div>
-              <div className="flex flex-col items-center justify-center gap-2 py-4">
-                    <div className="w-full max-w-[180px] rounded-full bg-slate-100">
-                      <div
-                        className="h-2 rounded-full bg-blue-500 transition-all"
-                        style={{ width: `${memberSummary.classificationPercent}%` }}
-                      />
                 </div>
-                    <p className="text-center text-xs text-slate-500 max-w-[200px]">
-                      {memberSummary.classificationSummary}
-                </p>
+
+              <div className="flex items-start justify-between w-full mb-3">
+                {/* Left: Core work percentage */}
+                <div className="flex flex-col">
+                  <span className="text-3xl font-semibold text-gray-900">{workClassificationData.coreWork.percentage}%</span>
+                  <span className="text-sm text-gray-600 mt-1">Core work</span>
               </div>
-                  <span className="text-[10px] text-slate-400">
-                    {memberSummary.classificationPercent}% of classification goal
-                  </span>
+
+                {/* Right: Legend */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span className="text-sm text-gray-700">{workClassificationData.coreWork.percentage}% Core work</span>
+            </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-gray-400"></div>
+                    <span className="text-sm text-gray-700">{workClassificationData.nonCoreWork.percentage}% Non-core work</span>
+          </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                    <span className="text-sm text-gray-700">{workClassificationData.unproductive.percentage}% Unproductive</span>
           </div>
         </div>
-            </div>
+      </div>
+
+              {/* Bar chart */}
+              <div className="mb-2 relative w-full">
+                <div className="h-4 rounded-full bg-gray-100 overflow-visible flex relative mb-3">
+                  {/* Core work segment */}
+                  <div
+                    className="bg-green-500 relative group cursor-pointer transition-opacity hover:opacity-90"
+                    style={{ width: `${workClassificationData.coreWork.percentage}%` }}
+                    onMouseEnter={() => setHoveredSegment('core')}
+                    onMouseLeave={() => setHoveredSegment(null)}
+                  />
+                  {/* Non-core work segment */}
+                  <div
+                    className="bg-gray-400 relative group cursor-pointer transition-opacity hover:opacity-90"
+                    style={{ width: `${workClassificationData.nonCoreWork.percentage}%` }}
+                    onMouseEnter={() => setHoveredSegment('noncore')}
+                    onMouseLeave={() => setHoveredSegment(null)}
+                  />
+                  {/* Unproductive segment */}
+                  <div
+                    className="bg-orange-500 relative group cursor-pointer transition-opacity hover:opacity-90"
+                    style={{ width: `${workClassificationData.unproductive.percentage}%` }}
+                    onMouseEnter={() => setHoveredSegment('unproductive')}
+                    onMouseLeave={() => setHoveredSegment(null)}
+                  />
+                </div>
+                {/* Vertical lines connecting percentage labels to bar chart */}
+                <div className="absolute top-3 left-0 right-0 flex justify-between pointer-events-none">
+                  <div className="bg-black" style={{ width: '2px', height: '16px', marginTop: '16px' }}></div>
+                  <div className="bg-black" style={{ width: '2px', height: '16px', marginTop: '16px' }}></div>
+                  <div className="bg-black" style={{ width: '2px', height: '16px', marginTop: '16px' }}></div>
+                  <div className="bg-black" style={{ width: '2px', height: '16px', marginTop: '16px' }}></div>
+                  <div className="bg-black" style={{ width: '2px', height: '16px', marginTop: '16px' }}></div>
+                </div>
+                {/* Tooltip - positioned above the bar chart */}
+                {hoveredSegment === 'core' && workClassificationData.coreWork.percentage > 0 && (
+                  <div 
+                    className="absolute px-3 py-2 bg-gray-800 text-white text-xs rounded shadow-lg z-50 min-w-[200px] pointer-events-none opacity-90"
+                    style={{ 
+                      bottom: 'calc(100% + 8px)',
+                      left: `${workClassificationData.coreWork.percentage / 2}%`,
+                      transform: 'translateX(-50%)'
+                    }}
+                  >
+                    <div className="space-y-1">
+                      {workClassificationData.coreWork.items.length > 0 ? (
+                        workClassificationData.coreWork.items.map((item, idx) => (
+                          <div key={idx} className="text-white">
+                            {item.percentage}% {item.name}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-gray-400">No data</div>
+                      )}
+          </div>
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                      <div className="w-2 h-2 bg-gray-800 transform rotate-45"></div>
+                    </div>
+                  </div>
+                )}
+                {hoveredSegment === 'noncore' && workClassificationData.nonCoreWork.percentage > 0 && (
+                  <div 
+                    className="absolute px-3 py-2 bg-gray-800 text-white text-xs rounded shadow-lg z-50 min-w-[200px] pointer-events-none opacity-90"
+                    style={{ 
+                      bottom: 'calc(100% + 8px)',
+                      left: `${workClassificationData.coreWork.percentage + (workClassificationData.nonCoreWork.percentage / 2)}%`,
+                      transform: 'translateX(-50%)'
+                    }}
+                  >
+                    <div className="space-y-1">
+                      {workClassificationData.nonCoreWork.items.length > 0 ? (
+                        workClassificationData.nonCoreWork.items.map((item, idx) => (
+                          <div key={idx} className="text-white">
+                            {item.percentage}% {item.name}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-gray-400">No data</div>
+                      )}
+                    </div>
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                      <div className="w-2 h-2 bg-gray-800 transform rotate-45"></div>
+                  </div>
+                  </div>
+                )}
+                {hoveredSegment === 'unproductive' && workClassificationData.unproductive.percentage > 0 && (
+                      <div
+                    className="absolute px-3 py-2 bg-gray-800 text-white text-xs rounded shadow-lg z-50 min-w-[200px] pointer-events-none opacity-90"
+                        style={{
+                      bottom: 'calc(100% + 8px)',
+                      left: `${workClassificationData.coreWork.percentage + workClassificationData.nonCoreWork.percentage + (workClassificationData.unproductive.percentage / 2)}%`,
+                      transform: 'translateX(-50%)'
+                    }}
+                  >
+                    <div className="space-y-1">
+                      {workClassificationData.unproductive.items.length > 0 ? (
+                        workClassificationData.unproductive.items.map((item, idx) => (
+                          <div key={idx} className="text-white">
+                            {item.percentage}% {item.name}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-gray-400">No data</div>
+                      )}
+                    </div>
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                      <div className="w-2 h-2 bg-gray-800 transform rotate-45"></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Axis labels */}
+              <div className="flex justify-between text-xs text-gray-500 w-full mb-2">
+                <span>0%</span>
+                <span>25%</span>
+                <span>50%</span>
+                <span>75%</span>
+                <span>100%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
           </>
         )}
       </div>
@@ -831,9 +1100,9 @@ export default function Every10MinPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                       {[...Array(6)].map((_, cardIdx) => (
                         <ScreenshotCardSkeleton key={cardIdx} />
-                      ))}
-                </div>
-              </div>
+            ))}
+          </div>
+        </div>
             ))}
           </div>
             ))}

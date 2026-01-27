@@ -2196,222 +2196,382 @@ export interface UrlActivityEntry {
     details?: UrlActivityDetail[] // Detail URLs untuk expand
 }
 
-export const DUMMY_URL_ACTIVITIES: UrlActivityEntry[] = [
-    // Antonio Galih (m1) - 26 Jan 2026
-    { 
-        id: "ua1", 
-        projectId: "proj-1", 
-        projectName: "hans", 
-        memberId: "m1", 
-        site: "app.hubstaff.com", 
-        timeSpent: 0.0158, 
-        date: "2026-01-26",
-        details: [
-            { id: "ua1-d1", url: "https://app.hubstaff.com/dashboard", timeSpent: 0.0104 }, // 0:00:37
-            { id: "ua1-d2", url: "https://app.hubstaff.com/reports", timeSpent: 0.0054 } // 0:00:20
-        ]
-    },
-    {
-        id: "ua1-support",
-        projectId: "proj-1",
-        projectName: "hans",
-        memberId: "m1",
-        site: "support.hubstaff.com",
-        timeSpent: 0.0656, // 0:03:56
-        date: "2026-01-26",
-        details: [
-            { id: "ua1-s1", url: "https://support.hubstaff.com/hubstaff-insights", timeSpent: 0.0431 }, // 0:02:37
-            { id: "ua1-s2", url: "https://support.hubstaff.com/hubstaff-insights/getting-started", timeSpent: 0.0225 } // 0:01:19
-        ]
-    },
-    { 
-        id: "ua2", 
-        projectId: "proj-1", 
-        projectName: "Website Redesign", 
-        memberId: "m1", 
-        site: "github.com", 
-        timeSpent: 2.5, 
-        date: "2026-01-26",
-        details: [
-            { id: "ua2-d1", url: "https://github.com/Presensi-New", timeSpent: 1.5 },
-            { id: "ua2-d2", url: "https://github.com/Fauzan-Fz/Presensi-New", timeSpent: 1.0 }
-        ]
-    },
-    { 
-        id: "ua3", 
-        projectId: "proj-1", 
-        projectName: "Website Redesign", 
-        memberId: "m1", 
-        site: "stackoverflow.com", 
-        timeSpent: 0.5, 
-        date: "2026-01-26",
-        details: [
-            { id: "ua3-d1", url: "https://stackoverflow.com/questions/12345", timeSpent: 0.3 },
-            { id: "ua3-d2", url: "https://stackoverflow.com/questions/67890", timeSpent: 0.2 }
-        ]
-    },
-    { 
-        id: "ua4", 
-        projectId: "proj-1", 
-        projectName: "Website Redesign", 
-        memberId: "m1", 
-        site: "docs.google.com", 
-        timeSpent: 1.2, 
-        date: "2026-01-26",
-        details: [
-            { id: "ua4-d1", url: "https://docs.google.com/document/d/abc123", timeSpent: 0.8 },
-            { id: "ua4-d2", url: "https://docs.google.com/spreadsheets/d/def456", timeSpent: 0.4 }
-        ]
-    },
-    // Lave Lavael (m2) - 26 Jan 2026
-    { 
-        id: "ua5", 
-        projectId: "proj-2", 
-        projectName: "Mobile App Development", 
-        memberId: "m2", 
-        site: "developer.android.com", 
-        timeSpent: 3.0, 
-        date: "2026-01-26",
-        details: [
-            { id: "ua5-d1", url: "https://developer.android.com/guide", timeSpent: 2.0 },
-            { id: "ua5-d2", url: "https://developer.android.com/training", timeSpent: 1.0 }
-        ]
-    },
-    { 
-        id: "ua6", 
-        projectId: "proj-2", 
-        projectName: "Mobile App Development", 
-        memberId: "m2", 
-        site: "github.com", 
-        timeSpent: 1.5, 
-        date: "2026-01-26",
-        details: [
-            { id: "ua6-d1", url: "https://github.com/user/mobile-app", timeSpent: 1.0 },
-            { id: "ua6-d2", url: "https://github.com/user/mobile-app/pulls", timeSpent: 0.5 }
-        ]
-    },
-    { 
-        id: "ua7", 
-        projectId: "proj-2", 
-        projectName: "Mobile App Development", 
-        memberId: "m2", 
-        site: "stackoverflow.com", 
-        timeSpent: 0.8, 
-        date: "2026-01-26",
-        details: [
-            { id: "ua7-d1", url: "https://stackoverflow.com/questions/android-123", timeSpent: 0.5 },
-            { id: "ua7-d2", url: "https://stackoverflow.com/questions/android-456", timeSpent: 0.3 }
-        ]
-    },
-    // Sarah Johnson (m3) - 26 Jan 2026
-    { 
-        id: "ua8", 
-        projectId: "proj-3", 
-        projectName: "Marketing Campaign", 
-        memberId: "m3", 
-        site: "canva.com", 
-        timeSpent: 2.5, 
-        date: "2026-01-26",
-        details: [
-            { id: "ua8-d1", url: "https://www.canva.com/design/abc123", timeSpent: 1.5 },
-            { id: "ua8-d2", url: "https://www.canva.com/design/def456", timeSpent: 1.0 }
-        ]
-    },
-    { 
-        id: "ua9", 
-        projectId: "proj-3", 
-        projectName: "Marketing Campaign", 
-        memberId: "m3", 
-        site: "facebook.com", 
-        timeSpent: 1.0, 
-        date: "2026-01-26",
-        details: [
-            { id: "ua9-d1", url: "https://www.facebook.com/business", timeSpent: 0.6 },
-            { id: "ua9-d2", url: "https://www.facebook.com/ads/manager", timeSpent: 0.4 }
-        ]
-    },
-    { 
-        id: "ua10", 
-        projectId: "proj-3", 
-        projectName: "Marketing Campaign", 
-        memberId: "m3", 
-        site: "instagram.com", 
-        timeSpent: 0.5, 
-        date: "2026-01-26",
-        details: [
-            { id: "ua10-d1", url: "https://www.instagram.com/business", timeSpent: 0.3 },
-            { id: "ua10-d2", url: "https://www.instagram.com/accounts/manager", timeSpent: 0.2 }
-        ]
-    },
-    // Michael Chen (m4) - 26 Jan 2026
-    { 
-        id: "ua11", 
-        projectId: "proj-2", 
-        projectName: "Mobile App Development", 
-        memberId: "m4", 
-        site: "developer.apple.com", 
-        timeSpent: 4.0, 
-        date: "2026-01-26",
-        details: [
-            { id: "ua11-d1", url: "https://developer.apple.com/documentation", timeSpent: 2.5 },
-            { id: "ua11-d2", url: "https://developer.apple.com/tutorials", timeSpent: 1.5 }
-        ]
-    },
-    { 
-        id: "ua12", 
-        projectId: "proj-2", 
-        projectName: "Mobile App Development", 
-        memberId: "m4", 
-        site: "github.com", 
-        timeSpent: 2.0, 
-        date: "2026-01-26",
-        details: [
-            { id: "ua12-d1", url: "https://github.com/user/ios-app", timeSpent: 1.2 },
-            { id: "ua12-d2", url: "https://github.com/user/ios-app/issues", timeSpent: 0.8 }
-        ]
-    },
-    // Emma Rodriguez (m5) - 26 Jan 2026
-    { 
-        id: "ua13", 
-        projectId: "proj-1", 
-        projectName: "Website Redesign", 
-        memberId: "m5", 
-        site: "figma.com", 
-        timeSpent: 3.5, 
-        date: "2026-01-26",
-        details: [
-            { id: "ua13-d1", url: "https://www.figma.com/design/8zCDmfpE2Rg5EEAf9KXTfb/Copy-Hubstaff?node-id=218-171&p=f&t=1MZEA6TUTTRayQX6-0", timeSpent: 2.0 },
-            { id: "ua13-d2", url: "https://www.figma.com/design/8zCDmfpE2Rg5EEAf9KXTfb/Copy-Hubstaff?node-id=218-171&p=f&t=1MZEA6TUTTRayQX6-0", timeSpent: 1.5 }
-        ]
-    },
-    { 
-        id: "ua14", 
-        projectId: "proj-1", 
-        projectName: "Website Redesign", 
-        memberId: "m5", 
-        site: "dribbble.com", 
-        timeSpent: 1.0, 
-        date: "2026-01-26",
-        details: [
-            { id: "ua14-d1", url: "https://dribbble.com/shots/12345", timeSpent: 0.6 },
-            { id: "ua14-d2", url: "https://dribbble.com/shots/67890", timeSpent: 0.4 }
-        ]
-    },
-    // Data untuk hari kemarin (25 Jan 2026)
-    { id: "ua15", projectId: "proj-1", projectName: "Website Redesign", memberId: "m1", site: "github.com", timeSpent: 4.0, date: "2026-01-25" },
-    { id: "ua16", projectId: "proj-1", projectName: "Website Redesign", memberId: "m1", site: "stackoverflow.com", timeSpent: 1.0, date: "2026-01-25" },
-    { id: "ua17", projectId: "proj-2", projectName: "Mobile App Development", memberId: "m2", site: "developer.android.com", timeSpent: 5.0, date: "2026-01-25" },
-    { id: "ua18", projectId: "proj-3", projectName: "Marketing Campaign", memberId: "m3", site: "canva.com", timeSpent: 3.0, date: "2026-01-25" },
-    { id: "ua19", projectId: "proj-2", projectName: "Mobile App Development", memberId: "m4", site: "developer.apple.com", timeSpent: 5.5, date: "2026-01-25" },
-    { id: "ua20", projectId: "proj-1", projectName: "Website Redesign", memberId: "m5", site: "figma.com", timeSpent: 4.5, date: "2026-01-25" },
-    // Data untuk 27 Jan 2026
-    { id: "ua21", projectId: "proj-1", projectName: "hans", memberId: "m1", site: "app.hubstaff.com", timeSpent: 0.02, date: "2026-01-27" },
-    { id: "ua22", projectId: "proj-1", projectName: "Website Redesign", memberId: "m1", site: "github.com", timeSpent: 3.0, date: "2026-01-27" },
-    { id: "ua23", projectId: "proj-2", projectName: "Mobile App Development", memberId: "m2", site: "developer.android.com", timeSpent: 4.5, date: "2026-01-27" },
-    { id: "ua24", projectId: "proj-3", projectName: "Marketing Campaign", memberId: "m3", site: "canva.com", timeSpent: 2.0, date: "2026-01-27" },
-    { id: "ua25", projectId: "proj-2", projectName: "Mobile App Development", memberId: "m4", site: "developer.apple.com", timeSpent: 4.5, date: "2026-01-27" },
-    { id: "ua26", projectId: "proj-1", projectName: "Website Redesign", memberId: "m5", site: "figma.com", timeSpent: 3.0, date: "2026-01-27" }
-]
+// Helper function to get dynamic dates
+function getDateString(daysAgo: number): string {
+    const date = new Date()
+    date.setDate(date.getDate() - daysAgo)
+    return date.toISOString().split('T')[0]!
+}
+
+// Generate dynamic URL activities data
+function generateUrlActivities(): UrlActivityEntry[] {
+    const today = getDateString(0)
+    const yesterday = getDateString(1)
+    const twoDaysAgo = getDateString(2)
+
+    return [
+        // Antonio Galih (m1) - Today
+        {
+            id: "ua1",
+            projectId: "proj-1",
+            projectName: "hans",
+            memberId: "m1",
+            site: "app.hubstaff.com",
+            timeSpent: 0.0158,
+            date: today,
+            details: [
+                { id: "ua1-d1", title: "Dashboard - Hubstaff", url: "https://app.hubstaff.com/dashboard", timeSpent: 0.0104 },
+                { id: "ua1-d2", title: "Reports - Hubstaff", url: "https://app.hubstaff.com/reports", timeSpent: 0.0054 }
+            ]
+        },
+        {
+            id: "ua1-support",
+            projectId: "proj-1",
+            projectName: "hans",
+            memberId: "m1",
+            site: "support.hubstaff.com",
+            timeSpent: 0.0656,
+            date: today,
+            details: [
+                { id: "ua1-s1", title: "Hubstaff Insights Guide", url: "https://support.hubstaff.com/hubstaff-insights", timeSpent: 0.0431 },
+                { id: "ua1-s2", title: "Getting Started", url: "https://support.hubstaff.com/hubstaff-insights/getting-started", timeSpent: 0.0225 }
+            ]
+        },
+        {
+            id: "ua2",
+            projectId: "proj-1",
+            projectName: "Website Redesign",
+            memberId: "m1",
+            site: "github.com",
+            timeSpent: 2.5,
+            date: today,
+            details: [
+                { id: "ua2-d1", title: "Presensi-New Repository", url: "https://github.com/Presensi-New", timeSpent: 1.5 },
+                { id: "ua2-d2", title: "Fauzan-Fz/Presensi-New", url: "https://github.com/Fauzan-Fz/Presensi-New", timeSpent: 1.0 }
+            ]
+        },
+        {
+            id: "ua3",
+            projectId: "proj-1",
+            projectName: "Website Redesign",
+            memberId: "m1",
+            site: "stackoverflow.com",
+            timeSpent: 0.5,
+            date: today,
+            details: [
+                { id: "ua3-d1", title: "React useEffect question", url: "https://stackoverflow.com/questions/12345", timeSpent: 0.3 },
+                { id: "ua3-d2", title: "TypeScript generics", url: "https://stackoverflow.com/questions/67890", timeSpent: 0.2 }
+            ]
+        },
+        {
+            id: "ua4",
+            projectId: "proj-1",
+            projectName: "Website Redesign",
+            memberId: "m1",
+            site: "docs.google.com",
+            timeSpent: 1.2,
+            date: today,
+            details: [
+                { id: "ua4-d1", title: "Project Documentation", url: "https://docs.google.com/document/d/abc123", timeSpent: 0.8 },
+                { id: "ua4-d2", title: "Sprint Planning Sheet", url: "https://docs.google.com/spreadsheets/d/def456", timeSpent: 0.4 }
+            ]
+        },
+        // Lave Lavael (m2) - Today
+        {
+            id: "ua5",
+            projectId: "proj-2",
+            projectName: "Mobile App Development",
+            memberId: "m2",
+            site: "developer.android.com",
+            timeSpent: 3.0,
+            date: today,
+            details: [
+                { id: "ua5-d1", title: "Android Developer Guide", url: "https://developer.android.com/guide", timeSpent: 2.0 },
+                { id: "ua5-d2", title: "Android Training", url: "https://developer.android.com/training", timeSpent: 1.0 }
+            ]
+        },
+        {
+            id: "ua6",
+            projectId: "proj-2",
+            projectName: "Mobile App Development",
+            memberId: "m2",
+            site: "github.com",
+            timeSpent: 1.5,
+            date: today,
+            details: [
+                { id: "ua6-d1", title: "Mobile App Repository", url: "https://github.com/user/mobile-app", timeSpent: 1.0 },
+                { id: "ua6-d2", title: "Pull Requests", url: "https://github.com/user/mobile-app/pulls", timeSpent: 0.5 }
+            ]
+        },
+        {
+            id: "ua7",
+            projectId: "proj-2",
+            projectName: "Mobile App Development",
+            memberId: "m2",
+            site: "stackoverflow.com",
+            timeSpent: 0.8,
+            date: today,
+            details: [
+                { id: "ua7-d1", title: "Android RecyclerView issue", url: "https://stackoverflow.com/questions/android-123", timeSpent: 0.5 },
+                { id: "ua7-d2", title: "Kotlin coroutines", url: "https://stackoverflow.com/questions/android-456", timeSpent: 0.3 }
+            ]
+        },
+        // Sarah Johnson (m3) - Today
+        {
+            id: "ua8",
+            projectId: "proj-3",
+            projectName: "Marketing Campaign",
+            memberId: "m3",
+            site: "canva.com",
+            timeSpent: 2.5,
+            date: today,
+            details: [
+                { id: "ua8-d1", title: "Social Media Banner", url: "https://www.canva.com/design/abc123", timeSpent: 1.5 },
+                { id: "ua8-d2", title: "Email Template", url: "https://www.canva.com/design/def456", timeSpent: 1.0 }
+            ]
+        },
+        {
+            id: "ua9",
+            projectId: "proj-3",
+            projectName: "Marketing Campaign",
+            memberId: "m3",
+            site: "facebook.com",
+            timeSpent: 1.0,
+            date: today,
+            details: [
+                { id: "ua9-d1", title: "Facebook Business Suite", url: "https://www.facebook.com/business", timeSpent: 0.6 },
+                { id: "ua9-d2", title: "Ads Manager", url: "https://www.facebook.com/ads/manager", timeSpent: 0.4 }
+            ]
+        },
+        {
+            id: "ua10",
+            projectId: "proj-3",
+            projectName: "Marketing Campaign",
+            memberId: "m3",
+            site: "instagram.com",
+            timeSpent: 0.5,
+            date: today,
+            details: [
+                { id: "ua10-d1", title: "Instagram Business", url: "https://www.instagram.com/business", timeSpent: 0.3 },
+                { id: "ua10-d2", title: "Account Manager", url: "https://www.instagram.com/accounts/manager", timeSpent: 0.2 }
+            ]
+        },
+        // Michael Chen (m4) - Today
+        {
+            id: "ua11",
+            projectId: "proj-2",
+            projectName: "Mobile App Development",
+            memberId: "m4",
+            site: "developer.apple.com",
+            timeSpent: 4.0,
+            date: today,
+            details: [
+                { id: "ua11-d1", title: "Apple Developer Documentation", url: "https://developer.apple.com/documentation", timeSpent: 2.5 },
+                { id: "ua11-d2", title: "SwiftUI Tutorials", url: "https://developer.apple.com/tutorials", timeSpent: 1.5 }
+            ]
+        },
+        {
+            id: "ua12",
+            projectId: "proj-2",
+            projectName: "Mobile App Development",
+            memberId: "m4",
+            site: "github.com",
+            timeSpent: 2.0,
+            date: today,
+            details: [
+                { id: "ua12-d1", title: "iOS App Repository", url: "https://github.com/user/ios-app", timeSpent: 1.2 },
+                { id: "ua12-d2", title: "Issues & Bugs", url: "https://github.com/user/ios-app/issues", timeSpent: 0.8 }
+            ]
+        },
+        // Emma Rodriguez (m5) - Today
+        {
+            id: "ua13",
+            projectId: "proj-1",
+            projectName: "Website Redesign",
+            memberId: "m5",
+            site: "figma.com",
+            timeSpent: 3.5,
+            date: today,
+            details: [
+                { id: "ua13-d1", title: "Hubstaff Copy - Main Design", url: "https://www.figma.com/design/8zCDmfpE2Rg5EEAf9KXTfb/Copy-Hubstaff?node-id=218-171&p=f&t=1MZEA6TUTTRayQX6-0", timeSpent: 2.0 },
+                { id: "ua13-d2", title: "Hubstaff Copy - Components", url: "https://www.figma.com/design/8zCDmfpE2Rg5EEAf9KXTfb/Copy-Hubstaff?node-id=218-171&p=f&t=1MZEA6TUTTRayQX6-0", timeSpent: 1.5 }
+            ]
+        },
+        {
+            id: "ua14",
+            projectId: "proj-1",
+            projectName: "Website Redesign",
+            memberId: "m5",
+            site: "dribbble.com",
+            timeSpent: 1.0,
+            date: today,
+            details: [
+                { id: "ua14-d1", title: "UI Inspiration 1", url: "https://dribbble.com/shots/12345", timeSpent: 0.6 },
+                { id: "ua14-d2", title: "Dashboard Designs", url: "https://dribbble.com/shots/67890", timeSpent: 0.4 }
+            ]
+        },
+        // Data untuk hari kemarin (Yesterday)
+        {
+            id: "ua15",
+            projectId: "proj-1",
+            projectName: "Website Redesign",
+            memberId: "m1",
+            site: "github.com",
+            timeSpent: 4.0,
+            date: yesterday,
+            details: [
+                { id: "ua15-d1", title: "Code Review", url: "https://github.com/Presensi-New/pull/123", timeSpent: 2.5 },
+                { id: "ua15-d2", title: "Merge Conflicts", url: "https://github.com/Presensi-New/pull/124", timeSpent: 1.5 }
+            ]
+        },
+        {
+            id: "ua16",
+            projectId: "proj-1",
+            projectName: "Website Redesign",
+            memberId: "m1",
+            site: "stackoverflow.com",
+            timeSpent: 1.0,
+            date: yesterday,
+            details: [
+                { id: "ua16-d1", title: "Next.js routing question", url: "https://stackoverflow.com/questions/nextjs-1", timeSpent: 0.6 },
+                { id: "ua16-d2", title: "Tailwind CSS issue", url: "https://stackoverflow.com/questions/tailwind-2", timeSpent: 0.4 }
+            ]
+        },
+        {
+            id: "ua17",
+            projectId: "proj-2",
+            projectName: "Mobile App Development",
+            memberId: "m2",
+            site: "developer.android.com",
+            timeSpent: 5.0,
+            date: yesterday,
+            details: [
+                { id: "ua17-d1", title: "Jetpack Compose", url: "https://developer.android.com/jetpack/compose", timeSpent: 3.0 },
+                { id: "ua17-d2", title: "Material Design 3", url: "https://developer.android.com/develop/ui/compose/designsystems/material3", timeSpent: 2.0 }
+            ]
+        },
+        {
+            id: "ua18",
+            projectId: "proj-3",
+            projectName: "Marketing Campaign",
+            memberId: "m3",
+            site: "canva.com",
+            timeSpent: 3.0,
+            date: yesterday,
+            details: [
+                { id: "ua18-d1", title: "Poster Design", url: "https://www.canva.com/design/poster123", timeSpent: 2.0 },
+                { id: "ua18-d2", title: "Logo Variations", url: "https://www.canva.com/design/logo456", timeSpent: 1.0 }
+            ]
+        },
+        {
+            id: "ua19",
+            projectId: "proj-2",
+            projectName: "Mobile App Development",
+            memberId: "m4",
+            site: "developer.apple.com",
+            timeSpent: 5.5,
+            date: yesterday,
+            details: [
+                { id: "ua19-d1", title: "Swift Concurrency", url: "https://developer.apple.com/documentation/swift/concurrency", timeSpent: 3.5 },
+                { id: "ua19-d2", title: "App Store Guidelines", url: "https://developer.apple.com/app-store/review/guidelines", timeSpent: 2.0 }
+            ]
+        },
+        {
+            id: "ua20",
+            projectId: "proj-1",
+            projectName: "Website Redesign",
+            memberId: "m5",
+            site: "figma.com",
+            timeSpent: 4.5,
+            date: yesterday,
+            details: [
+                { id: "ua20-d1", title: "Mobile Responsive Design", url: "https://www.figma.com/design/mobile-responsive", timeSpent: 2.5 },
+                { id: "ua20-d2", title: "Icon Set", url: "https://www.figma.com/design/icons", timeSpent: 2.0 }
+            ]
+        },
+        // Data untuk 2 hari yang lalu (Two Days Ago)
+        {
+            id: "ua21",
+            projectId: "proj-1",
+            projectName: "hans",
+            memberId: "m1",
+            site: "app.hubstaff.com",
+            timeSpent: 0.02,
+            date: twoDaysAgo,
+            details: [
+                { id: "ua21-d1", title: "Time Tracking", url: "https://app.hubstaff.com/time", timeSpent: 0.012 },
+                { id: "ua21-d2", title: "Activity Summary", url: "https://app.hubstaff.com/activity", timeSpent: 0.008 }
+            ]
+        },
+        {
+            id: "ua22",
+            projectId: "proj-1",
+            projectName: "Website Redesign",
+            memberId: "m1",
+            site: "github.com",
+            timeSpent: 3.0,
+            date: twoDaysAgo,
+            details: [
+                { id: "ua22-d1", title: "Feature Branch", url: "https://github.com/Presensi-New/tree/feature", timeSpent: 2.0 },
+                { id: "ua22-d2", title: "Actions Workflow", url: "https://github.com/Presensi-New/actions", timeSpent: 1.0 }
+            ]
+        },
+        {
+            id: "ua23",
+            projectId: "proj-2",
+            projectName: "Mobile App Development",
+            memberId: "m2",
+            site: "developer.android.com",
+            timeSpent: 4.5,
+            date: twoDaysAgo,
+            details: [
+                { id: "ua23-d1", title: "Room Database", url: "https://developer.android.com/training/data-storage/room", timeSpent: 2.5 },
+                { id: "ua23-d2", title: "WorkManager", url: "https://developer.android.com/topic/libraries/architecture/workmanager", timeSpent: 2.0 }
+            ]
+        },
+        {
+            id: "ua24",
+            projectId: "proj-3",
+            projectName: "Marketing Campaign",
+            memberId: "m3",
+            site: "canva.com",
+            timeSpent: 2.0,
+            date: twoDaysAgo,
+            details: [
+                { id: "ua24-d1", title: "Newsletter Template", url: "https://www.canva.com/design/newsletter", timeSpent: 1.2 },
+                { id: "ua24-d2", title: "Infographic", url: "https://www.canva.com/design/infographic", timeSpent: 0.8 }
+            ]
+        },
+        {
+            id: "ua25",
+            projectId: "proj-2",
+            projectName: "Mobile App Development",
+            memberId: "m4",
+            site: "developer.apple.com",
+            timeSpent: 4.5,
+            date: twoDaysAgo,
+            details: [
+                { id: "ua25-d1", title: "Core Data", url: "https://developer.apple.com/documentation/coredata", timeSpent: 2.5 },
+                { id: "ua25-d2", title: "CloudKit", url: "https://developer.apple.com/documentation/cloudkit", timeSpent: 2.0 }
+            ]
+        },
+        {
+            id: "ua26",
+            projectId: "proj-1",
+            projectName: "Website Redesign",
+            memberId: "m5",
+            site: "figma.com",
+            timeSpent: 3.0,
+            date: twoDaysAgo,
+            details: [
+                { id: "ua26-d1", title: "Dark Mode Design", url: "https://www.figma.com/design/dark-mode", timeSpent: 1.8 },
+                { id: "ua26-d2", title: "Color System", url: "https://www.figma.com/design/colors", timeSpent: 1.2 }
+            ]
+        }
+    ]
+}
+
+export const DUMMY_URL_ACTIVITIES: UrlActivityEntry[] = generateUrlActivities()
 
 // ============================================================================
 // REPORT ACTIVITIES

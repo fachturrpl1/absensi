@@ -98,10 +98,10 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
 
   const filterPanelRef = useRef<HTMLDivElement>(null)
   const timezone = useTimezone()
-  
+
   const isAllScreenshots = pathname?.includes("/all")
   const isEvery10Min = !isAllScreenshots
-  
+
   // Get initial date range: sessionStorage > default (Today untuk 10min, Last 7 days untuk all)
   const getInitialDateRange = (): DateRange => {
     if (typeof window !== "undefined") {
@@ -138,7 +138,7 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
       return { startDate: today, endDate: end }
     }
   }
-  
+
   const [dateRange, setDateRange] = useState<DateRange>(getInitialDateRange)
   
   // Update date range saat pathname berubah (pindah antara 10min dan all)
