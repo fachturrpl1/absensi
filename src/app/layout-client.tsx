@@ -52,6 +52,18 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
       if (e.button !== 0) return // only left click
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return // allow new tab/window behavior
 
+      // Skip if clicking on a button or input element
+      let target = e.target as Element | null
+      while (target) {
+        if (target instanceof HTMLButtonElement || 
+            target instanceof HTMLInputElement ||
+            target.tagName === 'BUTTON' ||
+            target.tagName === 'INPUT') {
+          return // Don't intercept button clicks
+        }
+        target = target.parentElement
+      }
+
       let node = e.target as Element | null
       while (node && !(node instanceof HTMLAnchorElement)) {
         node = node.parentElement

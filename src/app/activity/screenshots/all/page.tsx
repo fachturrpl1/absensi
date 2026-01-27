@@ -146,6 +146,8 @@ export default function AllScreenshotsPage() {
   const [isLoading, setIsLoading] = useState(true)
   // Ref untuk track apakah ini mount pertama kali
   const isFirstMount = useRef(true)
+  // Ref untuk menyimpan scroll position sebelum modal dibuka
+  const scrollPositionRef = useRef<number>(0)
 
   // Check date range validity and determine data display strategy
   const dateStatus = useMemo(() => {
@@ -295,11 +297,20 @@ export default function AllScreenshotsPage() {
   }, [dateRange.startDate.getTime(), dateRange.endDate.getTime()])
 
   const openModal = (index: number) => {
+    // Simpan scroll position sebelum membuka modal
+    scrollPositionRef.current = window.scrollY || window.pageYOffset || document.documentElement.scrollTop
     setModalIndex(index)
     setModalOpen(true)
   }
 
-  const closeModal = () => setModalOpen(false)
+  const closeModal = () => {
+    setModalOpen(false)
+    // Kembalikan scroll position setelah modal ditutup
+    // Gunakan setTimeout untuk memastikan DOM sudah di-update
+    setTimeout(() => {
+      window.scrollTo(0, scrollPositionRef.current)
+    }, 0)
+  }
   const goNext = useCallback(() => {
     if (!flattenedScreenshots.length) {
       return
@@ -339,12 +350,17 @@ export default function AllScreenshotsPage() {
     const originalHtmlOverflow = document.documentElement.style.overflow
     const originalPosition = document.body.style.position
     const originalWidth = document.body.style.width
+    const originalTop = document.body.style.top
+    
+    // Simpan scroll position sebelum mengubah style
+    const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop
+    scrollPositionRef.current = scrollY
     
     // Hide scrollbar and prevent scrolling
     document.body.style.overflow = 'hidden'
     document.body.style.position = 'fixed'
     document.body.style.width = '100%'
-    document.body.style.top = '0'
+    document.body.style.top = `-${scrollY}px`
     document.documentElement.style.overflow = 'hidden'
     
     // Prevent touch move on mobile
@@ -371,8 +387,13 @@ export default function AllScreenshotsPage() {
       document.body.style.overflow = originalBodyOverflow
       document.body.style.position = originalPosition
       document.body.style.width = originalWidth
-      document.body.style.top = ''
+      document.body.style.top = originalTop
       document.documentElement.style.overflow = originalHtmlOverflow
+      
+      // Kembalikan scroll position setelah style di-reset
+      setTimeout(() => {
+        window.scrollTo(0, scrollPositionRef.current)
+      }, 0)
     }
   }, [modalOpen, goNext, goPrev])
 
@@ -438,6 +459,7 @@ export default function AllScreenshotsPage() {
                               key={item.id}
                               item={item}
                               isDeleted={false}
+                              memberId={activeMemberId || undefined}
                             />
                           )
                         }
@@ -451,6 +473,7 @@ export default function AllScreenshotsPage() {
                             onImageClick={() => openModal(globalIndex)}
                             onDelete={() => handleDeleteClick(item.id)}
                             isDeleted={isDeleted}
+                            memberId={activeMemberId || undefined}
                           />
                         )
                       })}
@@ -483,6 +506,7 @@ export default function AllScreenshotsPage() {
                           key={item.id}
                           item={item}
                           isDeleted={false}
+                          memberId={activeMemberId || undefined}
                         />
                       )
                     }
@@ -490,13 +514,14 @@ export default function AllScreenshotsPage() {
                     itemIndex++
                     const isDeleted = deletedScreenshots.has(item.id)
                     return (
-                      <MemberScreenshotCard
-                        key={item.id}
-                        item={item}
-                        onImageClick={() => openModal(globalIndex)}
-                        onDelete={() => handleDeleteClick(item.id)}
-                        isDeleted={isDeleted}
-                      />
+                        <MemberScreenshotCard
+                          key={item.id}
+                          item={item}
+                          onImageClick={() => openModal(globalIndex)}
+                          onDelete={() => handleDeleteClick(item.id)}
+                          isDeleted={isDeleted}
+                          memberId={selectedMemberId || undefined}
+                        />
                     )
                   })}
                 </div>
