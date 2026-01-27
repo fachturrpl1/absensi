@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { X, Plus } from "lucide-react"
+import { X } from "lucide-react"
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -141,14 +141,6 @@ export function TimeActivityFilterSidebar({ open, onOpenChange, onApply, classNa
                                 <SelectItem value="all">All members</SelectItem>
                             </SelectContent>
                         </Select>
-                    </div>
-
-                    {/* Custom Filters */}
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-gray-500 uppercase">Custom Filters</Label>
-                        <button className="flex items-center gap-1 text-sm text-gray-500 hover:underline cursor-pointer">
-                            <Plus className="w-4 h-4" /> Add custom filters
-                        </button>
                     </div>
 
                     {/* Settings */}

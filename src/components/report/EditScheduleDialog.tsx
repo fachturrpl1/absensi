@@ -68,13 +68,13 @@ export function EditScheduleDialog({ open, onOpenChange, initialData, onSave }: 
                     {/* Name */}
                     <div className="space-y-2">
                         <Label className="text-xs font-bold text-gray-500 uppercase">NAME *</Label>
-                        <Input className="bg-gray-100/50" defaultValue={initialData?.name || "Time and Activity"} />
+                        <Input className="pl-3 bg-gray-100/50" defaultValue={initialData?.name || "Time and Activity"} />
                     </div>
 
                     {/* Emails */}
                     <div className="space-y-2">
                         <Label className="text-xs font-bold text-gray-500 uppercase">EMAIL ADDRESSES *</Label>
-                        <Input defaultValue={data.emails || ""} />
+                        <Input className="pl-3 bg-gray-100/50" defaultValue={data.emails || ""} />
                         <p className="text-xs text-muted-foreground">Separate email addresses with commas</p>
                     </div>
 
