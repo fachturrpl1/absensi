@@ -67,13 +67,28 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
   const blocks = []
   for (let i = 0; i < sorted.length; i += chunkSize) {
     const chunk = sorted.slice(i, i + chunkSize)
+    
+    // Pastikan chunk selalu memiliki 6 item, jika kurang tambahkan "No activity" placeholder
+    const paddedChunk = [...chunk]
+    while (paddedChunk.length < chunkSize) {
+      paddedChunk.push({
+        id: `placeholder-${i}-${paddedChunk.length}`,
+        time: "",
+        progress: 0,
+        minutes: 0,
+        image: "",
+        noActivity: true,
+        screenCount: 0
+      })
+    }
+    
     const totalMinutes = chunk.reduce((sum, item) => sum + (item.minutes ?? 0), 0)
     const summary = `Total time worked: ${formatDuration(totalMinutes)}`
     
     // Calculate 1-hour range from first item's start time
     const firstTimeStr = chunk[0]?.time.split(" - ")[0] ?? ""
     if (!firstTimeStr) {
-      blocks.push({ label: chunk[0]?.time ?? `Block ${Math.floor(i / chunkSize) + 1}`, summary, items: chunk })
+      blocks.push({ label: chunk[0]?.time ?? `Block ${Math.floor(i / chunkSize) + 1}`, summary, items: paddedChunk })
       continue
     }
     
@@ -109,7 +124,7 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
     const endTimeFormatted = formatTime(endHours, endMinutes)
     const label = `${startTimeFormatted} - ${endTimeFormatted}`
     
-    blocks.push({ label, summary, items: chunk })
+    blocks.push({ label, summary, items: paddedChunk })
   }
 
   return blocks
@@ -673,25 +688,25 @@ export default function Every10MinPage() {
           </>
         ) : (
           <>
-            {/* <button
-              onClick={() => setIsDialogOpen(true)}
-              className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-            >
-              <LineChart className="h-4 w-4" />
-              How activity works
-            </button> */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex gap-6">
-                <div className="flex flex-1 flex-col justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Worked time</p>
+        {/* <button
+          onClick={() => setIsDialogOpen(true)}
+          className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+        >
+          <LineChart className="h-4 w-4" />
+          How activity works
+        </button> */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex gap-6">
+            <div className="flex flex-1 flex-col justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Worked time</p>
                   <h2 className="text-3xl font-semibold text-slate-900">{memberSummary.totalWorkedTime}</h2>
-                </div>
-                <div className="flex flex-1 flex-col justify-between border-l border-slate-200 pl-6">
-                  <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Avg. activity</p>
-                  <span className="text-3xl font-semibold text-slate-700">{memberSummary.avgActivity}</span>
-                </div>
-              </div>
             </div>
+            <div className="flex flex-1 flex-col justify-between border-l border-slate-200 pl-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Avg. activity</p>
+                  <span className="text-3xl font-semibold text-slate-700">{memberSummary.avgActivity}</span>
+            </div>
+          </div>
+        </div>
             <div className="relative w-full rounded-t-2xl border-t border-l border-r border-slate-200 bg-white p-6 pb-10 shadow-sm mt-6 overflow-visible" style={{ borderBottom: 'none' }}>
               {/* Garis horizontal penuh yang melewati tengah tombol */}
               <div className="absolute left-0 right-0 bottom-0 flex items-center justify-center" style={{ transform: 'translateY(50%)' }}>
@@ -720,38 +735,38 @@ export default function Every10MinPage() {
                   </Button>
                 </div>
               </div>
-              {/* <div className="absolute top-0 z-10 -translate-y-1/2" style={{ right: '1.5rem' }}>
-                <Button variant="outline" size="sm" className="rounded-full border border-slate-200 bg-white px-4 text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500 shadow-sm">
-                  Insights
-                </Button>
-              </div> */}
-              <div className="flex flex-col md:flex-row">
-                {/* Focus Time */}
-                <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
-                  <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
-                    Focus time
-                    <Info className="h-3.5 w-3.5 text-slate-400" />
-                  </div>
+          {/* <div className="absolute top-0 z-10 -translate-y-1/2" style={{ right: '1.5rem' }}>
+            <Button variant="outline" size="sm" className="rounded-full border border-slate-200 bg-white px-4 text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500 shadow-sm">
+              Insights
+            </Button>
+          </div> */}
+          <div className="flex flex-col md:flex-row">
+            {/* Focus Time */}
+            <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
+              <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
+                Focus time
+                <Info className="h-3.5 w-3.5 text-slate-400" />
+              </div>
                   <div className="flex flex-col items-center justify-center gap-3 py-4">
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
-                      <svg className="h-8 w-8 text-blue-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                      </svg>
-                    </div>
-                    <h3 className="text-xl font-semibold text-slate-900">{memberSummary.focusTime}</h3>
-                    <p className="text-center text-xs text-slate-500 max-w-[180px]">
-                      {memberSummary.focusDescription}
-                    </p>
-                  </div>
+                  <svg className="h-8 w-8 text-blue-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
                 </div>
+                    <h3 className="text-xl font-semibold text-slate-900">{memberSummary.focusTime}</h3>
+                <p className="text-center text-xs text-slate-500 max-w-[180px]">
+                      {memberSummary.focusDescription}
+                </p>
+              </div>
+            </div>
 
-                {/* Unusual Activity Instances */}
-                <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
-                  <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
-                    Unusual activity instances
-                    <Info className="h-3.5 w-3.5 text-slate-400" />
-                  </div>
-                  <div className="flex w-full flex-row items-center justify-center gap-4 py-8">
+            {/* Unusual Activity Instances */}
+            <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
+              <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
+                Unusual activity instances
+                <Info className="h-3.5 w-3.5 text-slate-400" />
+              </div>
+              <div className="flex w-full flex-row items-center justify-center gap-4 py-8">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full border-4 border-slate-100 bg-white text-slate-700">
                       <span className="text-lg font-semibold">{memberSummary.unusualCount}</span>
                     </div>
@@ -766,34 +781,34 @@ export default function Every10MinPage() {
                           </p>
                         ))}
                       </div>
-                    </div>
-                  </div>
                 </div>
+              </div>
+            </div>
 
-                {/* Work Time Classification */}
-                <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6">
+            {/* Work Time Classification */}
+            <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6">
                   <div className="flex w-full flex-col gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
                     <span className="flex items-center gap-1">Work time classification</span>
                     <span className="flex items-center gap-1">
                       <Info className="h-3.5 w-3.5 text-slate-400" /> {memberSummary.classificationLabel}
                     </span>
-                  </div>
-                  <div className="flex flex-col items-center justify-center gap-2 py-4">
+              </div>
+              <div className="flex flex-col items-center justify-center gap-2 py-4">
                     <div className="w-full max-w-[180px] rounded-full bg-slate-100">
                       <div
                         className="h-2 rounded-full bg-blue-500 transition-all"
                         style={{ width: `${memberSummary.classificationPercent}%` }}
                       />
-                    </div>
+                </div>
                     <p className="text-center text-xs text-slate-500 max-w-[200px]">
                       {memberSummary.classificationSummary}
-                    </p>
-                  </div>
+                </p>
+              </div>
                   <span className="text-[10px] text-slate-400">
                     {memberSummary.classificationPercent}% of classification goal
                   </span>
-                </div>
-              </div>
+          </div>
+        </div>
             </div>
           </>
         )}
@@ -812,15 +827,15 @@ export default function Every10MinPage() {
                     <div className="flex items-center gap-2">
                       <Skeleton className="h-4 w-40" />
                       <Skeleton className="h-4 w-48" />
-                    </div>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                       {[...Array(6)].map((_, cardIdx) => (
                         <ScreenshotCardSkeleton key={cardIdx} />
                       ))}
-                    </div>
-                  </div>
-                ))}
+                </div>
               </div>
+            ))}
+          </div>
             ))}
           </div>
         ) : !memberTimeBlocks.length ? (
@@ -834,11 +849,14 @@ export default function Every10MinPage() {
               {/* Tanggal Header */}
               <div className="text-base font-semibold text-slate-700">
                 {dateGroup.dateLabel}
-              </div>
+        </div>
               {/* Time Blocks untuk tanggal ini */}
               {dateGroup.blocks.map((block) => {
                 const blockStart = runningIndex
-                runningIndex += block.items.length
+                // Hanya hitung item yang bukan placeholder untuk runningIndex
+                const realItemsCount = block.items.filter(item => !(item.noActivity && !item.time)).length
+                runningIndex += realItemsCount
+                let itemIndex = 0
                 return (
                   <div key={`${dateGroup.date}-${block.label}-${blockStart}`} className="space-y-3">
           <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -846,8 +864,19 @@ export default function Every10MinPage() {
                       <span className="text-slate-400">{block.summary}</span>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-                      {block.items.map((item, index) => {
-                        const globalIndex = blockStart + index
+                      {block.items.map((item) => {
+                        // Skip placeholder items yang tidak memiliki time (untuk menghindari error di modal)
+                        if (item.noActivity && !item.time) {
+                          return (
+                            <MemberScreenshotCard
+                              key={item.id}
+                              item={item}
+                              isDeleted={false}
+                            />
+                          )
+                        }
+                        const globalIndex = blockStart + itemIndex
+                        itemIndex++
                         const isDeleted = deletedScreenshots.has(item.id)
                         return (
                           <MemberScreenshotCard
@@ -859,17 +888,20 @@ export default function Every10MinPage() {
                           />
                         )
                       })}
+                    </div>
                   </div>
-                </div>
                 )
               })}
-              </div>
+                    </div>
           ))
         ) : (
           // Render normal (bukan range)
           (memberTimeBlocks as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>).map((block) => {
             const blockStart = runningIndex
-            runningIndex += block.items.length
+            // Hanya hitung item yang bukan placeholder untuk runningIndex
+            const realItemsCount = block.items.filter(item => !(item.noActivity && !item.time)).length
+            runningIndex += realItemsCount
+            let itemIndex = 0
             return (
               <div key={`${block.label}-${blockStart}`} className="space-y-3">
           <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -877,8 +909,19 @@ export default function Every10MinPage() {
                   <span className="text-slate-400">{block.summary}</span>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-                  {block.items.map((item, index) => {
-                    const globalIndex = blockStart + index
+                  {block.items.map((item) => {
+                    // Skip placeholder items yang tidak memiliki time (untuk menghindari error di modal)
+                    if (item.noActivity && !item.time) {
+                      return (
+                        <MemberScreenshotCard
+                          key={item.id}
+                          item={item}
+                          isDeleted={false}
+                        />
+                      )
+                    }
+                    const globalIndex = blockStart + itemIndex
+                    itemIndex++
                     const isDeleted = deletedScreenshots.has(item.id)
                     return (
                       <MemberScreenshotCard
@@ -891,7 +934,7 @@ export default function Every10MinPage() {
                     )
                   })}
                     </div>
-                  </div>
+                    </div>
             )
           })
         )}

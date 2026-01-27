@@ -18,8 +18,18 @@ export function MemberScreenshotCard({ item, onImageClick, onDelete, isDeleted =
     return "#22c55e"
   }
 
-  const showNoActivity = isDeleted || item.noActivity
+  const showNoActivity = isDeleted || item.noActivity || !item.image
 
+  // Jika tidak ada activity DAN bukan dari delete (placeholder), hanya tampilkan block sederhana
+  if (showNoActivity && !isDeleted && (!item.time || item.time === "")) {
+    return (
+      <div className="flex aspect-video items-center justify-center rounded border border-slate-200 bg-slate-50 text-xs text-slate-400">
+        No activity
+      </div>
+    )
+  }
+
+  // Jika dihapus atau tidak ada activity, tampilkan card lengkap tapi gambar diganti "No activity"
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="p-3">
@@ -39,13 +49,7 @@ export function MemberScreenshotCard({ item, onImageClick, onDelete, isDeleted =
             onClick={onImageClick}
             className="relative mb-2 aspect-video w-full overflow-hidden rounded border border-slate-200 bg-slate-50 text-left"
           >
-            {item.image ? (
-              <img src={item.image} alt="Screenshot" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
-                No image available
-              </div>
-            )}
+            <img src={item.image} alt="Screenshot" className="h-full w-full object-cover" />
           </button>
         )}
         <div className="mb-2 text-center text-xs font-medium text-blue-600">

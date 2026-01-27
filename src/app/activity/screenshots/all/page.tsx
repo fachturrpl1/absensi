@@ -61,13 +61,28 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
   const blocks = []
   for (let i = 0; i < sorted.length; i += chunkSize) {
     const chunk = sorted.slice(i, i + chunkSize)
+    
+    // Pastikan chunk selalu memiliki 6 item, jika kurang tambahkan "No activity" placeholder
+    const paddedChunk = [...chunk]
+    while (paddedChunk.length < chunkSize) {
+      paddedChunk.push({
+        id: `placeholder-${i}-${paddedChunk.length}`,
+        time: "",
+        progress: 0,
+        minutes: 0,
+        image: "",
+        noActivity: true,
+        screenCount: 0
+      })
+    }
+    
     const totalMinutes = chunk.reduce((sum, item) => sum + (item.minutes ?? 0), 0)
     const summary = `Total time worked: ${formatDuration(totalMinutes)}`
     
     // Calculate 1-hour range from first item's start time
     const firstTimeStr = chunk[0]?.time.split(" - ")[0] ?? ""
     if (!firstTimeStr) {
-      blocks.push({ label: chunk[0]?.time ?? `Block ${Math.floor(i / chunkSize) + 1}`, summary, items: chunk })
+      blocks.push({ label: chunk[0]?.time ?? `Block ${Math.floor(i / chunkSize) + 1}`, summary, items: paddedChunk })
       continue
     }
     
@@ -103,7 +118,7 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
     const endTimeFormatted = formatTime(endHours, endMinutes)
     const label = `${startTimeFormatted} - ${endTimeFormatted}`
     
-    blocks.push({ label, summary, items: chunk })
+    blocks.push({ label, summary, items: paddedChunk })
   }
 
   return blocks
@@ -404,7 +419,10 @@ export default function AllScreenshotsPage() {
               {/* Time Blocks untuk tanggal ini */}
               {dateGroup.blocks.map((block) => {
                 const blockStart = runningIndex
-                runningIndex += block.items.length
+                // Hanya hitung item yang bukan placeholder untuk runningIndex
+                const realItemsCount = block.items.filter(item => !(item.noActivity && !item.time)).length
+                runningIndex += realItemsCount
+                let itemIndex = 0
                 return (
                   <div key={`${dateGroup.date}-${block.label}-${blockStart}`} className="space-y-3">
                     <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -412,8 +430,19 @@ export default function AllScreenshotsPage() {
                       <span className="text-slate-400">{block.summary}</span>
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-                      {block.items.map((item, index) => {
-                        const globalIndex = blockStart + index
+                      {block.items.map((item) => {
+                        // Skip placeholder items yang tidak memiliki time (untuk menghindari error di modal)
+                        if (item.noActivity && !item.time) {
+                          return (
+                            <MemberScreenshotCard
+                              key={item.id}
+                              item={item}
+                              isDeleted={false}
+                            />
+                          )
+                        }
+                        const globalIndex = blockStart + itemIndex
+                        itemIndex++
                         const isDeleted = deletedScreenshots.has(item.id)
                         return (
                           <MemberScreenshotCard
@@ -435,7 +464,10 @@ export default function AllScreenshotsPage() {
           // Render normal (bukan range)
           (memberTimeBlocks as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>).map((block) => {
             const blockStart = runningIndex
-            runningIndex += block.items.length
+            // Hanya hitung item yang bukan placeholder untuk runningIndex
+            const realItemsCount = block.items.filter(item => !(item.noActivity && !item.time)).length
+            runningIndex += realItemsCount
+            let itemIndex = 0
             return (
               <div key={`${block.label}-${blockStart}`} className="space-y-3">
                 <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -443,8 +475,19 @@ export default function AllScreenshotsPage() {
                   <span className="text-slate-400">{block.summary}</span>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-                  {block.items.map((item, index) => {
-                    const globalIndex = blockStart + index
+                  {block.items.map((item) => {
+                    // Skip placeholder items yang tidak memiliki time (untuk menghindari error di modal)
+                    if (item.noActivity && !item.time) {
+                      return (
+                        <MemberScreenshotCard
+                          key={item.id}
+                          item={item}
+                          isDeleted={false}
+                        />
+                      )
+                    }
+                    const globalIndex = blockStart + itemIndex
+                    itemIndex++
                     const isDeleted = deletedScreenshots.has(item.id)
                     return (
                       <MemberScreenshotCard
