@@ -43,6 +43,9 @@ export function DashboardLayoutWrapper({
   // Check if navbar should be hidden
   const hideNavbar = hideNavbarPaths.some(path => pathname?.startsWith(path));
 
+  // Check if current path is settings page (should have no padding)
+  const isSettingsPage = pathname?.includes('/activity/screenshots/setting');
+
   // If public path, render children without layout
   if (isPublicPath) {
     return <>{children}</>;
@@ -56,7 +59,7 @@ export function DashboardLayoutWrapper({
       <AppSidebarNew />
       <SidebarInset className="flex flex-col min-w-0">
         {!hideNavbar && <NavbarNew />}
-        <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6 w-full min-w-0">
+        <div className={`flex flex-1 flex-col w-full min-w-0 ${isSettingsPage ? '' : 'gap-4 p-4 md:gap-6 md:p-6'}`}>
           {children}
         </div>
       </SidebarInset>

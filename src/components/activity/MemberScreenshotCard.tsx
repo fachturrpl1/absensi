@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Trash2 } from "lucide-react"
 import type { MemberScreenshotItem } from "@/lib/data/dummy-data"
 
@@ -9,10 +9,72 @@ interface MemberScreenshotCardProps {
   onImageClick?: () => void
   onDelete?: () => void
   isDeleted?: boolean
+  memberId?: string
 }
 
-export function MemberScreenshotCard({ item, onImageClick, onDelete, isDeleted = false }: MemberScreenshotCardProps) {
+export function MemberScreenshotCard({ item, onImageClick, onDelete, isDeleted = false, memberId }: MemberScreenshotCardProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const [shouldBlur, setShouldBlur] = useState(false)
+  
+  // Get blur setting for this member and listen for changes
+  useEffect(() => {
+    if (typeof window === "undefined" || !memberId) {
+      setShouldBlur(false)
+      return
+    }
+
+    const checkBlurSetting = () => {
+      try {
+        const saved = localStorage.getItem("screenshotBlurSettings")
+        if (saved) {
+          const blurSettings = JSON.parse(saved)
+          console.log("Blur settings for memberId:", memberId, blurSettings)
+          if (blurSettings.memberBlurs && blurSettings.memberBlurs[memberId] !== undefined) {
+            const blurValue = blurSettings.memberBlurs[memberId]
+            console.log("Member blur setting:", memberId, "=", blurValue)
+            setShouldBlur(blurValue)
+          } else {
+            const globalValue = blurSettings.globalBlur || false
+            console.log("Using global blur:", globalValue)
+            setShouldBlur(globalValue)
+          }
+        } else {
+          setShouldBlur(false)
+        }
+      } catch (e) {
+        console.error("Error reading blur settings:", e)
+        setShouldBlur(false)
+      }
+    }
+
+    // Check immediately
+    checkBlurSetting()
+
+    // Listen for storage changes (when blur setting is updated in another tab/component)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "screenshotBlurSettings") {
+        checkBlurSetting()
+      }
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+
+    // Also listen for custom event (for same-tab updates)
+    const handleCustomStorageChange = () => {
+      checkBlurSetting()
+    }
+
+    window.addEventListener("blurSettingsChanged", handleCustomStorageChange)
+
+    // Poll for changes (fallback if events don't work)
+    const interval = setInterval(checkBlurSetting, 500)
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener("blurSettingsChanged", handleCustomStorageChange)
+      clearInterval(interval)
+    }
+  }, [memberId])
 
   const getProgressColor = (progress: number) => {
     if (progress < 30) return "#facc15"
@@ -68,7 +130,15 @@ export function MemberScreenshotCard({ item, onImageClick, onDelete, isDeleted =
             onClick={onImageClick}
             className="relative mb-2 aspect-video w-full overflow-hidden rounded border border-slate-200 bg-slate-50 text-left"
           >
-            <img src={item.image} alt="Screenshot" className="h-full w-full object-cover" />
+            <img 
+              src={item.image} 
+              alt="Screenshot" 
+              className={`h-full w-full object-cover transition-all duration-200 ${shouldBlur ? "blur-md" : ""}`}
+              style={{
+                filter: shouldBlur ? "blur(8px)" : "none",
+                WebkitFilter: shouldBlur ? "blur(8px)" : "none"
+              }}
+            />
           </button>
         )}
         <div className="mb-2 text-center text-xs font-medium text-blue-600">
