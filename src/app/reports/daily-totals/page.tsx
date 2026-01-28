@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Columns, Download, Clock, Send, BarChart2 } from "lucide-react"
+
 import {
     AreaChart,
     Area,
@@ -19,7 +19,8 @@ import { format, eachDayOfInterval, startOfWeek, endOfWeek } from "date-fns"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 
-import { DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
+import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_REPORT_ACTIVITIES } from "@/lib/data/dummy-data"
+import { BarChart2 } from "lucide-react"
 
 // Filter Data derived from global dummy data
 const MEMBERS_PICKER = DUMMY_MEMBERS.map(m => ({ id: m.id, name: m.name, type: "member" as const }))
@@ -105,7 +106,7 @@ export default function DailyTotalsPage() {
     // Dynamic Data Generation
     const { tableRows, dailyTotalsStr, totalWorkedStr, totalBreakStr, avgHoursStr, avgActivity, totalAmountStr, chartData } = useMemo(() => {
         // Filter Logic
-        
+
         let filteredMembers = DUMMY_MEMBERS;
         if (!selectedFilter.all && selectedFilter.id) {
             if (selectedFilter.type === "members") {
@@ -118,11 +119,7 @@ export default function DailyTotalsPage() {
             }
         }
 
-        // Deterministic RNG helper
-        const seededRand = (seed: number) => {
-            const x = Math.sin(seed) * 10000;
-            return x - Math.floor(x);
-        };
+
         const toTime = (secs: number) => {
             const h = Math.floor(secs / 3600);
             const m = Math.floor((secs % 3600) / 60);
@@ -130,56 +127,27 @@ export default function DailyTotalsPage() {
         };
 
         const rows = filteredMembers.map((member, _mIndex) => {
-            // Base logic params (using original index mIndex relative to filtered array for stability?)
-            // Actually better to use member.id hash for stability if filtering changes order.
-            // But for simplicity use mIndex.
 
-            // To ensure variance behaves consistently even when filtered, use member.id for seeding
-            const seedBase = member.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+            const memberActivities = DUMMY_REPORT_ACTIVITIES.filter(a => a.memberId === member.id);
 
-            const baseHours = 5 + (seedBase % 3);
-            const baseMins = 10 * ((seedBase % 5) + 1);
-            const totalSecondsBase = baseHours * 3600 + baseMins * 60;
+            const periodActivitiesForStats = memberActivities.filter(a => {
+                const aDate = new Date(a.date);
+                aDate.setHours(0, 0, 0, 0);
+                return aDate >= dateRange.startDate && aDate <= dateRange.endDate;
+            });
+            const activitySum = periodActivitiesForStats.reduce((sum, a) => sum + a.activityPercent, 0);
+            const avgActivity = periodActivitiesForStats.length > 0 ? Math.round(activitySum / periodActivitiesForStats.length) : 0;
 
-            const breakMins = (seedBase * 15) % 60;
-            const payRate = 15 + (seedBase % 10) * 2;
-
-            // Generate columns for each date
-            const daysRaw = dateArray.map((date, _) => {
-                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                if (isWeekend) return 0; // Assume no work on weekends for dummy
-
-                // Base variance with more chaos to prevent "layer cake" look
-                // Use date.getTime() combined with member ID hash for unique per-member-per-day randomness
-                const dateSeed = date.getTime();
-                const mixedSeed = seedBase ^ dateSeed; // XOR for mixing
-
-                const rand1 = seededRand(mixedSeed);
-                const rand2 = seededRand(mixedSeed + 1337);
-
-                // 20% chance of being very low/zero (simulating leave or partial day) to break the stack uniformity
-                if (rand1 < 0.2) {
-                    return Math.floor(totalSecondsBase * rand1 * 0.5); // 0 to 10% of base
-                }
-
-                // Wider variance: 0.5 to 1.5 multiplier
-                const variance = 0.5 + rand2;
-                let seconds = Math.floor(totalSecondsBase * variance);
-
-                // Specific override for specific members if needed, but random is fine.
-                // Keep "User 4" (Michael Chen m4) high for consistency if he's in list.
-                if (member.id === 'm4') {
-                    seconds = Math.floor((9 * 3600 + 15 * 60) * variance);
-                }
-
-                return seconds;
+            const daysRaw = dateArray.map((date) => {
+                const dateStr = format(date, 'yyyy-MM-dd');
+                const dayActivities = memberActivities.filter(a => a.date === dateStr);
+                const dayHours = dayActivities.reduce((sum, a) => sum + a.totalHours, 0);
+                return Math.floor(dayHours * 3600);
             });
 
-            // Format Columns
             const days = daysRaw.map(s => s > 0 ? toTime(s) : "-");
 
-            // Row Totals
-            const rowTotalSeconds = daysRaw.reduce((a, b) => a + b, 0);
+            const visibleTotalSeconds = daysRaw.reduce((a, b) => a + b, 0);
 
             let regularSum = 0;
             let overtimeSum = 0;
@@ -190,7 +158,12 @@ export default function DailyTotalsPage() {
                 overtimeSum += ot;
             });
 
-            const amountEarned = (rowTotalSeconds / 3600) * payRate;
+            const periodActivities = memberActivities.filter(a => {
+                const d = new Date(a.date);
+                d.setHours(0, 0, 0, 0);
+                return d >= dateRange.startDate && d <= dateRange.endDate;
+            });
+            const periodSpent = periodActivities.reduce((sum, a) => sum + a.totalSpent, 0);
 
             return {
                 id: member.id,
@@ -198,14 +171,15 @@ export default function DailyTotalsPage() {
                 days,
                 daysRaw,
                 timeOff: "-",
-                totalWorked: formatSecondsToTime(rowTotalSeconds),
+                totalWorked: formatSecondsToTime(visibleTotalSeconds),
                 regular: formatSecondsToTime(regularSum),
                 overtime: formatSecondsToTime(overtimeSum),
-                breakTime: breakMins > 0 ? `0:00:${breakMins}` : "-",
-                activity: `${member.activityScore}%`,
-                amount: `$${amountEarned.toFixed(2)}`,
-                rawBreakSeconds: breakMins * 60,
-                rawAmount: amountEarned
+                breakTime: "-",
+                activity: `${avgActivity}%`,
+                // Use IDR formatting
+                amount: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(periodSpent),
+                rawBreakSeconds: 0,
+                rawAmount: periodSpent
             };
         });
 
@@ -238,6 +212,8 @@ export default function DailyTotalsPage() {
             return dataPoint;
         });
 
+        const totalAmountStr = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalAmountValue);
+
         return {
             tableRows: rows,
             dailyTotalsStr: dailyTotalSecondsArr.map(formatSecondsToTime),
@@ -245,7 +221,7 @@ export default function DailyTotalsPage() {
             totalBreakStr: formatSecondsToTime(totalBreakSecondsValue),
             avgHoursStr: formatSecondsToTime(avgSecondsValue),
             avgActivity: avgActivityValue,
-            totalAmountStr: `$${totalAmountValue.toFixed(2)}`,
+            totalAmountStr,
             chartData: chartDataPoints
         };
 
@@ -259,7 +235,7 @@ export default function DailyTotalsPage() {
             {/* Top Toolbar */}
             <div className="flex flex-col gap-4 p-6 pb-2">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-normal text-gray-700">Daily totals report (Weekly)</h1>
+                    <h1 className="text-xl font-semibold mb-5">Daily totals report (Weekly)</h1>
                 </div>
 
                 <div className="w-full">
@@ -369,18 +345,20 @@ export default function DailyTotalsPage() {
 
             {/* Table Section */}
             <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between mb-8">
+                    <style jsx global>{`
+                        html body .custom-hover-row:hover,
+                        html body .custom-hover-row:hover > td {
+                            background-color: #d1d5db !important; /* dark gray hover */
+                        }
+                        html body.dark .custom-hover-row:hover,
+                        html body.dark .custom-hover-row:hover > td {
+                            background-color: #374151 !important;
+                        }
+                    `}</style>
+                    <div className="flex flex-col gap-2">
                         <h2 className="text-xl text-gray-700">Lave's Organization2</h2>
                         <span className="text-sm text-gray-400">Asia - Bangkok</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <button className="flex items-center hover:underline"><Send className="w-4 h-4 mr-1" /> Send</button>
-                        <button className="flex items-center hover:underline"><Clock className="w-4 h-4 mr-1" /> Schedule</button>
-                        <button className="flex items-center hover:underline"><Download className="w-4 h-4 mr-1" /> Export</button>
-                        <button className="flex items-center text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-2 py-1 rounded border border-transparent hover:border-gray-200">
-                            <Columns className="w-4 h-4 mr-1" /> Columns
-                        </button>
                     </div>
                 </div>
 
@@ -404,8 +382,12 @@ export default function DailyTotalsPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {tableRows.map((row) => (
-                                <tr key={row.id} className="group hover:bg-gray-50/50">
+                            {tableRows.map((row, idx) => (
+                                <tr
+                                    key={row.id}
+                                    style={{ backgroundColor: idx % 2 === 1 ? '#f1f5f9' : '#ffffff' }}
+                                    className="group transition-colors custom-hover-row"
+                                >
                                     <td className="py-4 px-4 text-gray-700">{row.member}</td>
                                     {row.days.map((day, i) => (
                                         <td key={i} className="py-4 px-4 text-right text-gray-500">{day}</td>

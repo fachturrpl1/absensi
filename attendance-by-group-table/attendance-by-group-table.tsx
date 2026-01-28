@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { attendanceByGroupColumns, AttendanceByGroupRow } from "@/components/attendance-by-group-table/attendance-by-group-columns"
+import { attendanceByGroupColumns, AttendanceByGroupRow } from "./attendance-by-group-columns"
 
 interface AttendanceByGroupTableProps {
   data: AttendanceByGroupRow[] | null

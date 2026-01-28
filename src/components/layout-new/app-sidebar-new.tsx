@@ -187,7 +187,7 @@ const getSidebarGroups = (): NavGroup[] => [
         icon: ClipboardList,
         subItems: [
           { title: 'Time & activity', url: '/reports/time-activity', icon: ClockPlus },
-          { title: 'Activity', url: '/reports/activity-report', icon: Activity },
+
           { title: 'Daily totals', url: '/reports/daily-totals', icon: CalendarCheck2 },
           { title: 'All reports', url: '/reports/all', icon: Notebook },
           { title: 'Customized reports', url: '/reports/custom', icon: LucideNotebookText },

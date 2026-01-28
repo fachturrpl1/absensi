@@ -136,7 +136,7 @@ export default function UnusualActivityPage() {
                 {/* Konten kiri */}
                 <div className="flex-1 min-w-0 p-6">
                     <div className="flex items-center justify-between mb-6">
-                        <h1 className="text-2xl font-semibold">Unusual activity</h1>
+                        <h1 className="text-xl font-semibold mb-5">Unusual activity</h1>
                         <div className="flex items-center gap-2">
                             <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-zinc-900 border border-zinc-200 hover:bg-zinc-50 rounded-md">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

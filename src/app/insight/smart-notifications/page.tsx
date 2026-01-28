@@ -158,7 +158,7 @@ export default function SmartNotificationsPage() {
         <div className="min-h-screen bg-white">
             <div className="flex">
                 <div className="flex-1 min-w-0 p-6">
-                    <h1 className="text-2xl font-semibold mb-6">Smart Notifications</h1>
+                    <h1 className="text-xl font-semibold mb-5">Smart Notifications</h1>
                     <section className="mb-8">
                         <h2 className="text-sm font-semibold text-gray-700 mb-3">Recommended notifications</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
