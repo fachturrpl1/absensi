@@ -9,7 +9,7 @@ import {
   ChevronRight,
   Info,
   X,
-  Lightbulb,
+  ArrowUpDown,
 } from "lucide-react"
 import {
   DUMMY_MEMBER_INSIGHTS,
@@ -152,6 +152,8 @@ export default function Every10MinPage() {
   const isFirstMount = useRef(true)
   // Ref untuk menyimpan scroll position sebelum modal dibuka
   const scrollPositionRef = useRef<number>(0)
+  // State untuk sort order (ascending = true, descending = false)
+  const [sortAscending, setSortAscending] = useState(true)
 
   // Check date range validity and determine data display strategy
   const dateStatus = useMemo(() => {
@@ -227,15 +229,16 @@ export default function Every10MinPage() {
     if (!activeMemberId || !dateStatus.isValid) return []
     const baseItems = DUMMY_MEMBER_SCREENSHOTS[activeMemberId] ?? []
     
+    let blocks: Array<{ label: string; summary: string; items: MemberScreenshotItem[] }> = []
+    
     // Jika kemarin, ambil subset data yang berbeda (misalnya ambil 6 item pertama untuk variasi)
     if (dateStatus.isYesterday) {
       const filteredItems = baseItems.slice(0, Math.min(6, baseItems.length))
-      return buildMemberTimeBlocks(filteredItems, 6) // 6 items = 1 jam (6 x 10 menit)
+      blocks = buildMemberTimeBlocks(filteredItems, 6) // 6 items = 1 jam (6 x 10 menit)
     }
-    
     // Jika range (this week, last 7 days, dll), pisahkan berdasarkan tanggal
     // Hanya gunakan data yang ada: today dan yesterday
-    if (dateStatus.isRange && dateRange) {
+    else if (dateStatus.isRange && dateRange) {
       const dateGroupedBlocks: DateGroupedBlocks[] = []
       
       // Hanya ambil data untuk today dan yesterday
@@ -246,7 +249,11 @@ export default function Every10MinPage() {
         day: 'numeric',
         year: 'numeric'
       })
-      const todayBlocks = buildMemberTimeBlocks(baseItems, 6)
+      let todayBlocks = buildMemberTimeBlocks(baseItems, 6)
+      // Apply sort order untuk today blocks
+      if (!sortAscending) {
+        todayBlocks = [...todayBlocks].reverse()
+      }
       if (todayBlocks.length > 0) {
         const todayStr = today.toISOString().split('T')[0]
         if (todayStr) {
@@ -267,7 +274,11 @@ export default function Every10MinPage() {
         year: 'numeric'
       })
       const yesterdayItems = baseItems.slice(0, Math.min(6, baseItems.length))
-      const yesterdayBlocks = buildMemberTimeBlocks(yesterdayItems, 6)
+      let yesterdayBlocks = buildMemberTimeBlocks(yesterdayItems, 6)
+      // Apply sort order untuk yesterday blocks
+      if (!sortAscending) {
+        yesterdayBlocks = [...yesterdayBlocks].reverse()
+      }
       if (yesterdayBlocks.length > 0) {
         const yesterdayStr = yesterday.toISOString().split('T')[0]
         if (yesterdayStr) {
@@ -282,10 +293,18 @@ export default function Every10MinPage() {
       // Return struktur khusus untuk range (akan di-handle berbeda di rendering)
       return dateGroupedBlocks as unknown as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>
     }
-    
     // Hari ini atau single date - ambil semua data yang ada
-    return buildMemberTimeBlocks(baseItems, 6) // 6 items = 1 jam (6 x 10 menit)
-  }, [activeMemberId, dateStatus, dateRange, isLoading])
+    else {
+      blocks = buildMemberTimeBlocks(baseItems, 6) // 6 items = 1 jam (6 x 10 menit)
+    }
+    
+    // Apply sort order: reverse jika descending
+    if (!sortAscending) {
+      blocks = [...blocks].reverse()
+    }
+    
+    return blocks
+  }, [activeMemberId, dateStatus, dateRange, isLoading, sortAscending])
 
   const flattenedScreenshots = useMemo(() => {
     let allItems: MemberScreenshotItem[] = []
@@ -1106,6 +1125,23 @@ export default function Every10MinPage() {
 
       {/* Screenshots Grid */}
       <div className="space-y-6">
+        {/* Sort Toggle Button */}
+        {!isLoading && memberTimeBlocks.length > 0 && (
+          <div className="flex items-center justify-start">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setSortAscending(!sortAscending)}
+              className="flex items-center gap-2 border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              <ArrowUpDown className="h-4 w-4" />
+              <span className="text-sm">
+                {sortAscending ? "Ascending" : "Descending"}
+              </span>
+            </Button>
+          </div>
+        )}
         {isLoading ? (
           // Loading skeleton
           <div className="space-y-6">

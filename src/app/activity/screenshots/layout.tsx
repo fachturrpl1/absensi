@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
   User,
+  Settings,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
 import { DownloadDialog } from "@/components/activity/DownloadDialog"
@@ -11,7 +13,7 @@ import { SelectedMemberProvider } from "./selected-member-context"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { DateRange, SelectedFilter } from "@/components/insights/types"
 import { useTimezone } from "@/components/timezone-provider"
-import { BlurProvider } from "./setting/blur-context"
+import { BlurProvider } from "@/app/settings/screenshot/blur-context"
 
 export default function ScreenshotsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -119,7 +121,7 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
           }
         } catch (e) {
           // Jika parsing gagal, gunakan default
-        }
+      }
       }
     }
     // Default berdasarkan halaman
@@ -276,48 +278,50 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
         <>
           <div className="relative flex w-full items-center justify-between gap-4">
             {/* Screenshot Title */}
-            <div className="flex-1 min-w-[220px]">
+        <div className="flex-1 min-w-[220px]">
               <h1 className="text-xl font-semibold mb-5">Screenshot</h1>
             </div>
 
-            {/* Tab Navigation */}
-            <div className="absolute left-1/2 flex -translate-x-1/2 transform">
-              <div
-                className="flex min-w-[250px] justify-center gap-1 rounded-full px-1 py-1 shadow-sm"
-                style={{ backgroundColor: "#A9A9A9" }}
-              >
-                <button
-                  onClick={() => router.push("/activity/screenshots/10min")}
-                  className={`rounded-full px-5 py-1.5 text-sm font-normal transition-all focus-visible:outline-none focus-visible:ring-0 ${isEvery10Min
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "bg-transparent text-slate-900 hover:bg-white/40"
-                    }`}
-                >
-                  Every 10 min
-                </button>
-                <button
-                  onClick={() => router.push("/activity/screenshots/all")}
-                  className={`rounded-full px-5 py-1.5 text-sm font-normal transition-all focus-visible:outline-none focus-visible:ring-0 ${isAllScreenshots
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "bg-transparent text-slate-900 hover:bg-white/40"
-                    }`}
-                >
-                  All screenshots
-                </button>
-              </div>
-            </div>
-            {/*
+        {/* Tab Navigation */}
+        <div className="absolute left-1/2 flex -translate-x-1/2 transform">
+          <div
+            className="flex min-w-[250px] justify-center gap-1 rounded-full px-1 py-1 shadow-sm"
+            style={{ backgroundColor: "#A9A9A9" }}
+          >
+            <button
+              onClick={() => router.push("/activity/screenshots/10min")}
+              className={`rounded-full px-5 py-1.5 text-sm font-normal transition-all focus-visible:outline-none focus-visible:ring-0 ${isEvery10Min
+                ? "bg-white text-slate-900 shadow-sm"
+                : "bg-transparent text-slate-900 hover:bg-white/40"
+                }`}
+            >
+              Every 10 min
+            </button>
+            <button
+              onClick={() => router.push("/activity/screenshots/all")}
+              className={`rounded-full px-5 py-1.5 text-sm font-normal transition-all focus-visible:outline-none focus-visible:ring-0 ${isAllScreenshots
+                ? "bg-white text-slate-900 shadow-sm"
+                : "bg-transparent text-slate-900 hover:bg-white/40"
+                }`}
+            >
+              All screenshots
+            </button>
+          </div>
+        </div>
             <div className="flex min-w-[160px] justify-end">
-              <Button variant="outline" className="flex items-center gap-2 rounded-full border border-slate-200 px-4 text-sm font-medium text-slate-700">
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2 rounded-full border border-slate-200 px-4 text-sm font-medium text-slate-700"
+                onClick={() => router.push("/settings/screenshot")}
+              >
                 <Settings className="h-4 w-4 text-slate-700" />
                 Settings
               </Button>
             </div>
-            */}
-          </div>
+      </div>
 
-          {/* Date & User Controls */}
-          <div className="flex w-full items-center justify-between gap-4">
+      {/* Date & User Controls */}
+      <div className="flex w-full items-center justify-between gap-4">
             <InsightsHeader
               selectedFilter={selectedFilter}
               onSelectedFilterChange={handleFilterChange}

@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  ArrowUpDown,
 } from "lucide-react"
 import {
   DUMMY_MEMBER_SCREENSHOTS,
@@ -17,6 +18,7 @@ import { MemberScreenshotCard } from "@/components/activity/MemberScreenshotCard
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ScreenshotCardSkeleton } from "@/components/activity/ScreenshotCardSkeleton"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Button } from "@/components/ui/button"
 
 const formatDuration = (totalMinutes: number) => {
   const hours = Math.floor(totalMinutes / 60)
@@ -148,6 +150,8 @@ export default function AllScreenshotsPage() {
   const isFirstMount = useRef(true)
   // Ref untuk menyimpan scroll position sebelum modal dibuka
   const scrollPositionRef = useRef<number>(0)
+  // State untuk sort order (ascending = true, descending = false)
+  const [sortAscending, setSortAscending] = useState(true)
 
   // Check date range validity and determine data display strategy
   const dateStatus = useMemo(() => {
@@ -203,12 +207,13 @@ export default function AllScreenshotsPage() {
     if (!activeMemberId || !dateStatus.isValid) return []
     const baseItems = DUMMY_MEMBER_SCREENSHOTS[activeMemberId] ?? []
 
+    let blocks: Array<{ label: string; summary: string; items: MemberScreenshotItem[] }> = []
+
     if (dateStatus.isYesterday) {
       const filteredItems = baseItems.slice(0, Math.min(6, baseItems.length))
-      return buildMemberTimeBlocks(filteredItems, 6)
+      blocks = buildMemberTimeBlocks(filteredItems, 6)
     }
-
-    if (dateStatus.isRange && dateRange) {
+    else if (dateStatus.isRange && dateRange) {
       const dateGroupedBlocks: DateGroupedBlocks[] = []
       const start = new Date(dateRange.startDate);
       const end = new Date(dateRange.endDate);
@@ -229,24 +234,36 @@ export default function AllScreenshotsPage() {
           year: 'numeric'
         });
 
-        const blocks = buildMemberTimeBlocks(itemsForDay, 6);
+        let blocksForDay = buildMemberTimeBlocks(itemsForDay, 6);
+        // Apply sort order untuk blocks per hari
+        if (!sortAscending) {
+          blocksForDay = [...blocksForDay].reverse()
+        }
 
-        if (blocks.length > 0) {
+        if (blocksForDay.length > 0) {
           const dateStr = currentDate.toISOString().split('T')[0]
           if (dateStr) {
             dateGroupedBlocks.push({
               date: dateStr,
               dateLabel,
-              blocks
+              blocks: blocksForDay
             });
           }
         }
       }
       return dateGroupedBlocks as unknown as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>;
     }
+    else {
+      blocks = buildMemberTimeBlocks(baseItems, 6);
+    }
 
-    return buildMemberTimeBlocks(baseItems, 6);
-  }, [activeMemberId, dateStatus, dateRange, isLoading]);
+    // Apply sort order: reverse jika descending
+    if (!sortAscending) {
+      blocks = [...blocks].reverse()
+    }
+
+    return blocks;
+  }, [activeMemberId, dateStatus, dateRange, isLoading, sortAscending]);
 
   const flattenedScreenshots = useMemo(() => {
     let allItems: MemberScreenshotItem[] = []
@@ -403,6 +420,23 @@ export default function AllScreenshotsPage() {
     <>
       {/* Screenshots Grid */}
       <div className="space-y-6">
+        {/* Sort Toggle Button */}
+        {!isLoading && memberTimeBlocks.length > 0 && (
+          <div className="flex items-center justify-start">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setSortAscending(!sortAscending)}
+              className="flex items-center gap-2 border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              <ArrowUpDown className="h-4 w-4" />
+              <span className="text-sm">
+                {sortAscending ? "Ascending" : "Descending"}
+              </span>
+            </Button>
+          </div>
+        )}
         {isLoading ? (
           // Loading skeleton
           <div className="space-y-6">
