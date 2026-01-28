@@ -68,13 +68,13 @@ export function EditScheduleDialog({ open, onOpenChange, initialData, onSave }: 
                     {/* Name */}
                     <div className="space-y-2">
                         <Label className="text-xs font-bold text-gray-500 uppercase">NAME *</Label>
-                        <Input className="pl-3 bg-gray-100/50" defaultValue={initialData?.name || "Time and Activity"} />
+                        <Input className="pl-3" defaultValue={initialData?.name || "Time and Activity"} />
                     </div>
 
                     {/* Emails */}
                     <div className="space-y-2">
                         <Label className="text-xs font-bold text-gray-500 uppercase">EMAIL ADDRESSES *</Label>
-                        <Input className="pl-3 bg-gray-100/50" defaultValue={data.emails || ""} />
+                        <Input className="pl-3" defaultValue={data.emails || ""} />
                         <p className="text-xs text-muted-foreground">Separate email addresses with commas</p>
                     </div>
 
@@ -155,8 +155,8 @@ export function EditScheduleDialog({ open, onOpenChange, initialData, onSave }: 
                                     onClick={() => toggleDay(day.id)}
                                     // Disabled style if daily (since all are forced selected)
                                     className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors border ${selectedDays.includes(day.id)
-                                            ? "bg-gray-500 text-white border-gray-500"
-                                            : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                                        ? "bg-gray-800 text-white border-gray-800"
+                                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                                         } ${frequency === 'daily' ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
                                     {day.label}
@@ -170,15 +170,15 @@ export function EditScheduleDialog({ open, onOpenChange, initialData, onSave }: 
                 </div>
 
                 <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
-                    <Button variant="ghost" className="text-gray-500 hover:text-gray-600 hover:bg-gray-50 px-0 flex items-center gap-2">
+                    <Button variant="ghost" className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-0 flex items-center gap-2">
                         <Trash2 className="w-4 h-4" />
                         Clear schedule
                     </Button>
                     <div className="flex gap-2">
                         <DialogClose asChild>
-                            <Button variant="outline" className="border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-600">Cancel</Button>
+                            <Button variant="outline" className="border-gray-200 text-gray-700 hover:bg-gray-50">Cancel</Button>
                         </DialogClose>
-                        <Button className="bg-gray-500 hover:bg-gray-600 text-white" onClick={() => {
+                        <Button className="bg-gray-900 hover:bg-black text-white" onClick={() => {
                             onSave({
                                 frequency,
                                 dateRange,

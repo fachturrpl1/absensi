@@ -60,12 +60,6 @@ export default function AllReportsPage() {
             title: "General",
             items: [
                 {
-                    title: "Time & activity (Legacy)",
-                    description: "See team members' time worked, activity levels, and amounts earned per project or to-do",
-                    href: "/reports/time-activity-legacy",
-                    isStarred: true
-                },
-                {
                     title: "Work sessions",
                     description: "See the start and stop times for team members",
                     href: "/reports/work-sessions"
@@ -165,7 +159,7 @@ export default function AllReportsPage() {
     const customizedReports = DUMMY_CUSTOM_REPORTS.slice(0, 2)
 
     return (
-        <div className="flex flex-1 flex-col gap-8 p-6 pt-2 max-w-[1600px] mx-auto">
+        <div className="flex flex-1 flex-col gap-10 p-6 pt-2 max-w-[1600px] mx-auto">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-gray-700">Reports</h1>
@@ -182,7 +176,7 @@ export default function AllReportsPage() {
 
             {/* Customized Reports Section - Only show if no search term */}
             {!searchTerm && (
-                <section className="space-y-4">
+                <section className="space-y-6">
                     <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Customized reports</h2>
 
 
@@ -208,9 +202,9 @@ export default function AllReportsPage() {
             )}
 
             {/* Main Reports Grid */}
-            <div className="space-y-10 pb-10">
+            <div className="space-y-16 pb-16">
                 {filteredSections.map((section, idx) => (
-                    <section key={idx} className="space-y-4">
+                    <section key={idx} className="space-y-6">
                         <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{section.title}</h2>
 
                         <div className={cn(

@@ -1,47 +1,67 @@
 "use client"
 
 import React, { useState, useMemo } from "react"
-import { ReportPageLayout } from "@/components/report/report-page-layout"
 import { Button } from "@/components/ui/button"
-import { Download, CalendarIcon } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { format } from "date-fns"
-import { DateRange } from "react-day-picker"
-import { PaginationFooter } from "@/components/pagination-footer"
-import { Input } from "@/components/ui/input"
+import { Download, SlidersHorizontal, Send, Calendar as CalendarIcon } from "lucide-react"
+import { InsightsHeader } from "@/components/insights/InsightsHeader"
+import type { SelectedFilter, DateRange } from "@/components/insights/types"
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { exportToCSV, generateFilename, formatCurrencyForExport, formatHoursForExport } from "@/lib/export-utils"
+import { PaginationFooter } from "@/components/pagination-footer"
 import { toast } from "sonner"
-import { cn } from "@/lib/utils"
-import { DUMMY_AMOUNTS_OWED } from "@/lib/data/dummy-data"
+import { DUMMY_AMOUNTS_OWED, DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
+import { useTimezone } from "@/components/timezone-provider"
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer
+} from "recharts"
+import { format } from "date-fns"
 
 export default function AmountsOwedPage() {
-    // Filters
-    const [date, setDate] = useState<DateRange | undefined>({
-        from: new Date(2026, 0, 1),
-        to: new Date(2026, 0, 31),
+    const timezone = useTimezone()
+    const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({ type: "members", all: true, id: "all" })
+    const [dateRange, setDateRange] = useState<DateRange>({
+        startDate: new Date(2025, 11, 29),
+        endDate: new Date(2026, 0, 29),
     })
-    const [teamFilter, setTeamFilter] = useState("all")
-    const [statusFilter, setStatusFilter] = useState("all")
-    const [search, setSearch] = useState("")
 
-    // Pagination
+    const [visibleCols, setVisibleCols] = useState({
+        member: true,
+        currentRate: true,
+        totalHours: true,
+        amount: true,
+    })
+
+    const toggleCol = (key: keyof typeof visibleCols, value: boolean) => {
+        setVisibleCols(prev => ({ ...prev, [key]: value }))
+    }
+
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
 
-    // Derived Logic
+    // Filter Logic
     const filteredData = useMemo(() => {
-        return DUMMY_AMOUNTS_OWED.filter(item => {
-            const matchesTeam = teamFilter === "all" || item.team === teamFilter
-            const matchesStatus = statusFilter === "all" || item.paymentStatus === statusFilter
-            const matchesSearch = search === "" ||
-                item.name.toLowerCase().includes(search.toLowerCase()) ||
-                item.email.toLowerCase().includes(search.toLowerCase())
+        let data = DUMMY_AMOUNTS_OWED
 
-            return matchesTeam && matchesStatus && matchesSearch
-        })
-    }, [teamFilter, statusFilter, search])
+        // Member/Team Filter
+        if (!selectedFilter.all && selectedFilter.id !== 'all') {
+            if (selectedFilter.type === 'members') {
+                data = data.filter(item => item.name === DUMMY_MEMBERS.find(m => m.id === selectedFilter.id)?.name)
+            } else if (selectedFilter.type === 'teams') {
+                // Simplified matching for dummy data
+                data = data.filter(item => item.team === DUMMY_TEAMS.find(t => t.id === selectedFilter.id)?.name)
+            }
+        }
+
+        // Search Filter (if implemented)
+
+        return data
+    }, [selectedFilter])
 
     const paginatedData = useMemo(() => {
         const start = (page - 1) * pageSize
@@ -50,7 +70,38 @@ export default function AmountsOwedPage() {
 
     const totalPages = Math.ceil(filteredData.length / pageSize)
 
-    // Aggregates
+    // Grouping for Chart (Daily data)
+    const chartData = useMemo(() => {
+        const days: { date: string; amount: number }[] = []
+        if (dateRange.startDate && dateRange.endDate) {
+            const curr = new Date(dateRange.startDate)
+            const end = new Date(dateRange.endDate)
+
+            // Map of date string to total amount
+            const amountsByDate: Record<string, number> = {}
+            filteredData.forEach(item => {
+                // Mock: distribute amount randomly across the date range for demo purposes
+                // creating a pseudo-deterministic distribution based on name length
+                const daysInRange = Math.floor((end.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24))
+                const offset = item.name.length % (daysInRange + 1)
+                const date = new Date(curr)
+                date.setDate(date.getDate() + offset)
+                const key = format(date, 'MMM dd')
+                amountsByDate[key] = (amountsByDate[key] || 0) + (item.amountOwed / 5) // Split amount for smoother chart
+            })
+
+            while (curr <= end) {
+                const dateStr = format(curr, 'MMM dd')
+                days.push({
+                    date: dateStr,
+                    amount: amountsByDate[dateStr] || 0
+                })
+                curr.setDate(curr.getDate() + 1)
+            }
+        }
+        return days
+    }, [dateRange, filteredData])
+
     const totalOwed = filteredData.reduce((sum, item) => sum + item.amountOwed, 0)
     const totalHours = filteredData.reduce((sum, item) => sum + item.totalHours, 0)
 
@@ -64,7 +115,6 @@ export default function AmountsOwedPage() {
                 { key: 'hourlyRate', label: 'Hourly Rate', format: (v) => formatCurrencyForExport(v) },
                 { key: 'totalHours', label: 'Total Hours', format: (v) => formatHoursForExport(v) },
                 { key: 'amountOwed', label: 'Amount Owed', format: (v) => formatCurrencyForExport(v) },
-                { key: 'paymentStatus', label: 'Status' }
             ],
             data: filteredData
         })
@@ -72,204 +122,192 @@ export default function AmountsOwedPage() {
     }
 
     return (
-        <ReportPageLayout
-            title="Amounts owed"
-            breadcrumbs={[
-                { label: "Reports", href: "/reports/all" },
-                { label: "Amounts owed" }
-            ]}
-            actions={
-                <Button onClick={handleExport} variant="outline" className="gap-2">
-                    <Download className="w-4 h-4" />
-                    Export
-                </Button>
-            }
-            filters={
-                <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-3 flex-wrap">
-                        {/* Member Search */}
-                        <div className="relative w-[240px]">
-                            <Input
-                                placeholder="Search member..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="bg-white"
-                            />
-                        </div>
-
-                        {/* Team Filter */}
-                        <Select value={teamFilter} onValueChange={setTeamFilter}>
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="All Teams" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Teams</SelectItem>
-                                <SelectItem value="Team Alpha">Team Alpha</SelectItem>
-                                <SelectItem value="Team Beta">Team Beta</SelectItem>
-                            </SelectContent>
-                        </Select>
-
-                        {/* Status Filter */}
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="All Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Status</SelectItem>
-                                <SelectItem value="Unpaid">Unpaid</SelectItem>
-                                <SelectItem value="Processing">Processing</SelectItem>
-                                <SelectItem value="Paid">Paid</SelectItem>
-                            </SelectContent>
-                        </Select>
-
-                        {/* Date Picker */}
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-[240px] justify-start text-left font-normal",
-                                        !date && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {date?.from ? (
-                                        date.to ? (
-                                            <>
-                                                {format(date.from, "LLL dd, y")} -{" "}
-                                                {format(date.to, "LLL dd, y")}
-                                            </>
-                                        ) : (
-                                            format(date.from, "LLL dd, y")
-                                        )
-                                    ) : (
-                                        <span>Pick a date</span>
-                                    )}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    initialFocus
-                                    mode="range"
-                                    defaultMonth={date?.from}
-                                    selected={date}
-                                    onSelect={setDate}
-                                    numberOfMonths={2}
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                </div>
-            }
-        >
+        <div className="flex flex-col min-h-screen bg-white">
             <style jsx global>{`
                 html body .custom-hover-row:hover,
                 html body .custom-hover-row:hover > td {
-                    background-color: #d1d5db !important;
-                }
-                html body.dark .custom-hover-row:hover,
-                html body.dark .custom-hover-row:hover > td {
-                    background-color: #374151 !important;
+                    background-color: #f9fafb !important;
                 }
             `}</style>
 
-            <div className="bg-white border rounded-lg shadow-sm">
+            <div className="border-b border-gray-200 bg-white">
+                <div className="px-6 py-4">
+                    <h1 className="text-xl font-semibold mb-5">Amounts owed report</h1>
+
+                    <InsightsHeader
+                        selectedFilter={selectedFilter}
+                        onSelectedFilterChange={setSelectedFilter}
+                        dateRange={dateRange}
+                        onDateRangeChange={setDateRange}
+                        members={DUMMY_MEMBERS}
+                        teams={DUMMY_TEAMS}
+                        timezone={timezone}
+                    >
+                        <div className="flex items-center gap-2 ml-2">
+                            <Button variant="outline" className="h-9 text-gray-700">
+                                <Send className="w-4 h-4 mr-2" /> Send
+                            </Button>
+                            <Button variant="outline" className="h-9 text-gray-700">
+                                <CalendarIcon className="w-4 h-4 mr-2" /> Schedule
+                            </Button>
+                            <Button variant="outline" className="h-9 text-white bg-gray-900 hover:bg-gray-900 hover:text-white hover:cursor-pointer" onClick={handleExport}>
+                                <Download className="w-4 h-4 mr-2" /> Export
+                            </Button>
+                        </div>
+                    </InsightsHeader>
+                </div>
+            </div>
+
+            <main className="flex-1 bg-gray-50/50 p-6">
+
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x border-b bg-gray-50/50">
-                    <div className="p-4">
-                        <p className="text-sm font-medium text-gray-500">Total Owed</p>
-                        <p className="text-2xl font-bold text-gray-900">
-                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalOwed)}
-                        </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                        <p className="text-xs font-bold text-gray-800 uppercase tracking-wider mb-1">HOURS</p>
+                        <p className="text-3xl font-medium text-gray-800">{formatHoursForExport(totalHours)}</p>
                     </div>
-                    <div className="p-4">
-                        <p className="text-sm font-medium text-gray-500">Total Hours</p>
-                        <p className="text-2xl font-bold text-gray-900">{totalHours.toFixed(1)} h</p>
+                    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm flex items-start justify-between">
+                        <div>
+                            <p className="text-xs font-bold text-gray-800 uppercase tracking-wider mb-1">AMOUNT</p>
+                            <p className="text-3xl font-medium text-gray-800">
+                                {totalOwed > 0 ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalOwed) : '—'}
+                            </p>
+                        </div>
+                        <div className="h-10 w-10 bg-[#2196F3] rounded flex items-center justify-center">
+                            <span className="text-white font-bold text-xl">$</span>
+                        </div>
                     </div>
-                    <div className="p-4">
-                        <p className="text-sm font-medium text-gray-500">Active Members</p>
-                        <p className="text-2xl font-bold text-gray-900">{filteredData.length}</p>
+                </div>
+
+                {/* Chart */}
+                {/* Chart */}
+                <div className="bg-white p-6 rounded-lg border border-gray-900 shadow-sm mb-6">
+                    <p className="font-semibold text-gray-800 mb-4">Total amount per day</p>
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                <XAxis
+                                    dataKey="date"
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                                    dy={10}
+                                />
+                                <YAxis
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                                />
+                                <Tooltip />
+                                <Line
+                                    type="monotone"
+                                    dataKey="amount"
+                                    stroke="#6B7280"
+                                    strokeWidth={2}
+                                    dot={{ fill: '#6B7280', r: 3 }}
+                                    activeDot={{ r: 5 }}
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Table Header Controls */}
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-medium text-gray-800">
+                        {selectedFilter.type === 'members' && !selectedFilter.all
+                            ? DUMMY_MEMBERS.find(m => m.id === selectedFilter.id)?.name
+                            : selectedFilter.type === 'teams' && !selectedFilter.all
+                                ? DUMMY_TEAMS.find(t => t.id === selectedFilter.id)?.name
+                                : "All Members"}
+                        <span className="text-gray-400 text-sm font-normal ml-2">{timezone}</span>
+                    </h2>
+                    <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 h-8 text-sm px-3 border-l ml-1 rounded-none">
+                                    <SlidersHorizontal className="w-4 h-4 mr-2" /> Columns
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuCheckboxItem checked={visibleCols.member} onCheckedChange={(v) => toggleCol('member', !!v)}>Member</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={visibleCols.currentRate} onCheckedChange={(v) => toggleCol('currentRate', !!v)}>Current rate</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={visibleCols.totalHours} onCheckedChange={(v) => toggleCol('totalHours', !!v)}>Total hours</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={visibleCols.amount} onCheckedChange={(v) => toggleCol('amount', !!v)}>Amount</DropdownMenuCheckboxItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
 
                 {/* Table */}
-                <div className="overflow-x-auto">
+                <div className="bg-white border rounded-lg shadow-sm">
+                    <div className="bg-gray-50 px-4 py-2 border-b font-medium text-sm text-gray-900">
+                        {format(new Date(), "EEE, MMM dd, yyyy")}
+                    </div>
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-600 font-medium border-b">
+                        <thead className="text-gray-500 font-medium border-b border-gray-100">
                             <tr>
-                                <th className="p-4">Member</th>
-                                <th className="p-4">Team</th>
-                                <th className="p-4 text-right">Hourly Rate</th>
-                                <th className="p-4 text-right">Regular (h)</th>
-                                <th className="p-4 text-right">Overtime (h)</th>
-                                <th className="p-4 text-right">Total (h)</th>
-                                <th className="p-4 text-right">Amount Owed</th>
-                                <th className="p-4 text-center">Status</th>
+                                {visibleCols.member && <th className="p-4 font-semibold">Member</th>}
+                                {visibleCols.currentRate && <th className="p-4 font-semibold text-right">Current rate</th>}
+                                {visibleCols.totalHours && <th className="p-4 font-semibold text-right">Total hours</th>}
+                                {visibleCols.amount && <th className="p-4 font-semibold text-right">Amount</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {paginatedData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={8} className="p-8 text-center text-gray-500">
-                                        No data found for the selected filters
-                                    </td>
-                                </tr>
-                            ) : (
-                                paginatedData.map((item, idx) => (
-                                    <tr
-                                        key={item.id}
-                                        style={{ backgroundColor: idx % 2 === 1 ? '#f1f5f9' : '#ffffff' }}
-                                        className="transition-colors custom-hover-row"
-                                    >
-                                        <td className="p-4 font-medium text-gray-900">
-                                            <div className="flex flex-col">
-                                                <span>{item.name}</span>
-                                                <span className="text-xs text-gray-500">{item.email}</span>
+                            {paginatedData.map((item, idx) => (
+                                <tr key={idx} className="hover:bg-gray-50 transition-colors custom-hover-row">
+                                    {visibleCols.member && (
+                                        <td className="p-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 border border-gray-200">
+                                                    {item.name.charAt(0)}
+                                                </div>
+                                                <span className="font-medium text-gray-700">{item.name}</span>
                                             </div>
                                         </td>
-                                        <td className="p-4 text-gray-600">{item.team}</td>
-                                        <td className="p-4 text-right text-gray-600">
-                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.hourlyRate)}
-                                            <span className="text-xs text-gray-400">/hr</span>
+                                    )}
+                                    {visibleCols.currentRate && (
+                                        <td className="p-4 text-right text-gray-500">
+                                            {item.hourlyRate > 0 ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.hourlyRate) + '/hr' : 'No rate set'}
                                         </td>
-                                        <td className="p-4 text-right text-gray-600">{item.regularHours}</td>
-                                        <td className="p-4 text-right text-gray-600">{item.overtimeHours}</td>
-                                        <td className="p-4 text-right font-medium text-gray-900">{item.totalHours}</td>
-                                        <td className="p-4 text-right font-bold text-gray-900">
+                                    )}
+                                    {visibleCols.totalHours && (
+                                        <td className="p-4 text-right text-gray-700">{formatHoursForExport(item.totalHours)}</td>
+                                    )}
+                                    {visibleCols.amount && (
+                                        <td className="p-4 text-right text-gray-900 font-medium">
                                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(item.amountOwed)}
                                         </td>
-                                        <td className="p-4 text-center">
-                                            <span className={cn(
-                                                "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-                                                item.paymentStatus === 'Paid' && "bg-green-100 text-green-800",
-                                                item.paymentStatus === 'Unpaid' && "bg-red-100 text-red-800",
-                                                item.paymentStatus === 'Processing' && "bg-yellow-100 text-yellow-800",
-                                            )}>
-                                                {item.paymentStatus}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
+                                    )}
+                                </tr>
+                            ))}
+
+                            {/* Total Row */}
+                            <tr className="bg-white font-semibold border-t">
+                                {visibleCols.member && <td className="p-4 text-gray-900">Total</td>}
+                                {visibleCols.currentRate && <td className="p-4"></td>}
+                                {visibleCols.totalHours && <td className="p-4 text-right text-gray-900">{formatHoursForExport(totalHours)}</td>}
+                                {visibleCols.amount && <td className="p-4 text-right text-gray-900">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalOwed)}</td>}
+                            </tr>
                         </tbody>
                     </table>
+                    <div className="border-t">
+                        <PaginationFooter
+                            page={page}
+                            totalPages={totalPages}
+                            onPageChange={setPage}
+                            from={filteredData.length > 0 ? (page - 1) * pageSize + 1 : 0}
+                            to={Math.min(page * pageSize, filteredData.length)}
+                            total={filteredData.length}
+                            pageSize={pageSize}
+                            onPageSizeChange={setPageSize}
+                            className="bg-transparent shadow-none border-none"
+                        />
+                    </div>
                 </div>
 
-                {/* Pagination */}
-                <div className="border-t">
-                    <PaginationFooter
-                        page={page}
-                        totalPages={totalPages}
-                        onPageChange={setPage}
-                        from={filteredData.length > 0 ? (page - 1) * pageSize + 1 : 0}
-                        to={Math.min(page * pageSize, filteredData.length)}
-                        total={filteredData.length}
-                        pageSize={pageSize}
-                        onPageSizeChange={setPageSize}
-                        className="bg-transparent shadow-none border-none"
-                    />
-                </div>
-            </div>
-        </ReportPageLayout>
+            </main>
+        </div>
     )
 }

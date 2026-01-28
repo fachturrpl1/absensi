@@ -238,7 +238,7 @@ export default function TimeActivityPage() {
 
         // Default: Daily view (groupBy === 'day', 'week', 'none')
         const days = [];
-        let curr = new Date(dateRange.startDate);
+        const curr = new Date(dateRange.startDate);
         const end = new Date(dateRange.endDate);
         curr.setHours(0, 0, 0, 0);
         end.setHours(23, 59, 59, 999);
