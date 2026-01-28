@@ -12,6 +12,7 @@ import {
     Clock,
     Filter,
     Save,
+    SlidersHorizontal,
     //  Columns 
 } from "lucide-react"
 import {
@@ -28,6 +29,7 @@ import { format } from "date-fns"
 import { TimeActivityFilterSidebar } from "@/components/report/TimeActivityFilterSidebar"
 import { SaveReportDialog } from "@/components/report/SaveReportDialog"
 import { PaginationFooter } from "@/components/pagination-footer"
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useTimezone } from "@/components/timezone-provider"
 
 const formatCurrency = (amount: number) => {
@@ -53,6 +55,28 @@ export default function TimeActivityPage() {
     const [groupBy, setGroupBy] = useState("day")
     const [filterSidebarOpen, setFilterSidebarOpen] = useState(false)
     const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+
+    // Column visibility state
+    const [visibleCols, setVisibleCols] = useState({
+        date: true,
+        client: true,
+        project: true,
+        team: true,
+        tasks: true,
+        regularHours: true,
+        totalHours: true,
+        activityPercent: true,
+        totalSpent: true,
+        regularSpent: true,
+        pto: true,
+        holiday: true,
+    })
+
+    const toggleCol = (key: keyof typeof visibleCols, value: boolean) => {
+        setVisibleCols((prev) => ({ ...prev, [key]: value }))
+    }
+
+    const colCount = useMemo(() => Object.values(visibleCols).filter(Boolean).length, [visibleCols])
 
     // Additional Sidebar Filters
     const [sidebarFilters, setSidebarFilters] = useState({
@@ -388,29 +412,48 @@ export default function TimeActivityPage() {
 
                 {/* Table Section */}
                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                    {/* <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-                            <h2 className="font-semibold text-gray-700">Table</h2>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-600 border border-gray-300 rounded hover:bg-gray-50">
-                                <Columns className="w-4 h-4" />
-                            </Button>
-                        </div> */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                        <h2 className="font-semibold text-gray-700">Table</h2>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-8 text-gray-700 border-gray-300 bg-white hover:bg-gray-50">
+                                    <SlidersHorizontal className="w-4 h-4 mr-2" />
+                                    Columns
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuCheckboxItem checked={visibleCols.date} onCheckedChange={(v) => toggleCol('date', !!v)}>Date</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={visibleCols.client} onCheckedChange={(v) => toggleCol('client', !!v)}>Client</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={visibleCols.project} onCheckedChange={(v) => toggleCol('project', !!v)}>Project</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={visibleCols.team} onCheckedChange={(v) => toggleCol('team', !!v)}>Team</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={visibleCols.tasks} onCheckedChange={(v) => toggleCol('tasks', !!v)}>Tasks</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={visibleCols.regularHours} onCheckedChange={(v) => toggleCol('regularHours', !!v)}>Regular hours</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={visibleCols.totalHours} onCheckedChange={(v) => toggleCol('totalHours', !!v)}>Total hours</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={visibleCols.activityPercent} onCheckedChange={(v) => toggleCol('activityPercent', !!v)}>Activity %</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={visibleCols.totalSpent} onCheckedChange={(v) => toggleCol('totalSpent', !!v)}>Total spent</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={visibleCols.regularSpent} onCheckedChange={(v) => toggleCol('regularSpent', !!v)}>Regular spent</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={visibleCols.pto} onCheckedChange={(v) => toggleCol('pto', !!v)}>PTO</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={visibleCols.holiday} onCheckedChange={(v) => toggleCol('holiday', !!v)}>Holiday</DropdownMenuCheckboxItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
                             <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200">
                                 <tr>
-                                    <th className="px-4 py-3 min-w-[100px]">Date</th>
-                                    <th className="px-4 py-3 min-w-[120px]">Client</th>
-                                    <th className="px-4 py-3 min-w-[140px]">Project</th>
-                                    <th className="px-4 py-3 min-w-[120px]">Team</th>
-                                    <th className="px-4 py-3 min-w-[150px]">Tasks</th>
-                                    <th className="px-4 py-3 text-right">Regular hours</th>
-                                    <th className="px-4 py-3 text-right">Total hours</th>
-                                    <th className="px-4 py-3 text-right">Activity %</th>
-                                    <th className="px-4 py-3 text-right">Total spent</th>
-                                    <th className="px-4 py-3 text-right">Regular spent</th>
-                                    <th className="px-4 py-3 text-right">PTO</th>
-                                    <th className="px-4 py-3 text-right">Holiday</th>
+                                    {visibleCols.date && (<th className="px-4 py-3 min-w-[100px]">Date</th>)}
+                                    {visibleCols.client && (<th className="px-4 py-3 min-w-[120px]">Client</th>)}
+                                    {visibleCols.project && (<th className="px-4 py-3 min-w-[140px]">Project</th>)}
+                                    {visibleCols.team && (<th className="px-4 py-3 min-w-[120px]">Team</th>)}
+                                    {visibleCols.tasks && (<th className="px-4 py-3 min-w-[150px]">Tasks</th>)}
+                                    {visibleCols.regularHours && (<th className="px-4 py-3 text-right">Regular hours</th>)}
+                                    {visibleCols.totalHours && (<th className="px-4 py-3 text-right">Total hours</th>)}
+                                    {visibleCols.activityPercent && (<th className="px-4 py-3 text-right">Activity %</th>)}
+                                    {visibleCols.totalSpent && (<th className="px-4 py-3 text-right">Total spent</th>)}
+                                    {visibleCols.regularSpent && (<th className="px-4 py-3 text-right">Regular spent</th>)}
+                                    {visibleCols.pto && (<th className="px-4 py-3 text-right">PTO</th>)}
+                                    {visibleCols.holiday && (<th className="px-4 py-3 text-right">Holiday</th>)}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -421,23 +464,47 @@ export default function TimeActivityPage() {
                                             style={{ backgroundColor: idx % 2 === 1 ? '#f1f5f9' : '#ffffff' }}
                                             className="transition-colors custom-hover-row"
                                         >
-                                            <td className="px-4 py-3 text-gray-900">{new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                                            <td className="px-4 py-3 text-gray-600">{item.clientName}</td>
-                                            <td className="px-4 py-3 text-gray-900 font-medium">{item.projectName}</td>
-                                            <td className="px-4 py-3 text-gray-600">{item.teamName}</td>
-                                            <td className="px-4 py-3 text-gray-600">{item.todoName}</td>
-                                            <td className="px-4 py-3 text-right text-gray-600">{formatDecimalHours(item.regularHours)}</td>
-                                            <td className="px-4 py-3 text-right text-gray-900 font-medium">{formatDecimalHours(item.totalHours)}</td>
-                                            <td className="px-4 py-3 text-right text-green-600 font-medium">{item.activityPercent}%</td>
-                                            <td className="px-4 py-3 text-right text-gray-900">{formatCurrency(item.totalSpent)}</td>
-                                            <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.regularSpent)}</td>
-                                            <td className="px-4 py-3 text-right text-gray-600">{formatDecimalHours(item.ptoHours)}</td>
-                                            <td className="px-4 py-3 text-right text-gray-600">{formatDecimalHours(item.holidayHours)}</td>
+                                            {visibleCols.date && (
+                                                <td className="px-4 py-3 text-gray-900">{new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                                            )}
+                                            {visibleCols.client && (
+                                                <td className="px-4 py-3 text-gray-600">{item.clientName}</td>
+                                            )}
+                                            {visibleCols.project && (
+                                                <td className="px-4 py-3 text-gray-900 font-medium">{item.projectName}</td>
+                                            )}
+                                            {visibleCols.team && (
+                                                <td className="px-4 py-3 text-gray-600">{item.teamName}</td>
+                                            )}
+                                            {visibleCols.tasks && (
+                                                <td className="px-4 py-3 text-gray-600">{item.todoName}</td>
+                                            )}
+                                            {visibleCols.regularHours && (
+                                                <td className="px-4 py-3 text-right text-gray-600">{formatDecimalHours(item.regularHours)}</td>
+                                            )}
+                                            {visibleCols.totalHours && (
+                                                <td className="px-4 py-3 text-right text-gray-900 font-medium">{formatDecimalHours(item.totalHours)}</td>
+                                            )}
+                                            {visibleCols.activityPercent && (
+                                                <td className="px-4 py-3 text-right text-green-600 font-medium">{item.activityPercent}%</td>
+                                            )}
+                                            {visibleCols.totalSpent && (
+                                                <td className="px-4 py-3 text-right text-gray-900">{formatCurrency(item.totalSpent)}</td>
+                                            )}
+                                            {visibleCols.regularSpent && (
+                                                <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.regularSpent)}</td>
+                                            )}
+                                            {visibleCols.pto && (
+                                                <td className="px-4 py-3 text-right text-gray-600">{formatDecimalHours(item.ptoHours)}</td>
+                                            )}
+                                            {visibleCols.holiday && (
+                                                <td className="px-4 py-3 text-right text-gray-600">{formatDecimalHours(item.holidayHours)}</td>
+                                            )}
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={10} className="px-4 py-12 text-center">
+                                        <td colSpan={Math.max(colCount, 1)} className="px-4 py-12 text-center">
                                             <div className="flex flex-col items-center justify-center">
                                                 {/* Illustration placeholder - simple one for now or detailed if image tool allowed */}
                                                 <div className="w-48 h-32 bg-gray-100 mb-4 rounded flex items-center justify-center text-gray-400">

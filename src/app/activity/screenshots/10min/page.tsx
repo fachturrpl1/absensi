@@ -9,7 +9,6 @@ import {
   ChevronRight,
   Info,
   X,
-  Lightbulb,
 } from "lucide-react"
 import {
   DUMMY_MEMBER_INSIGHTS,
@@ -40,18 +39,18 @@ const formatDuration = (totalMinutes: number) => {
 const parseTimeForSort = (timeStr: string): number => {
   const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i)
   if (!match || !match[1] || !match[2] || !match[3]) return 0
-  
+
   let hours = parseInt(match[1], 10)
   const minutes = parseInt(match[2], 10)
   const period = match[3].toLowerCase()
-  
+
   // Convert to 24-hour format
   if (period === "pm" && hours !== 12) {
     hours += 12
   } else if (period === "am" && hours === 12) {
     hours = 0
   }
-  
+
   return hours * 60 + minutes // Return total minutes for easy comparison
 }
 
@@ -66,11 +65,11 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
     const timeB = parseTimeForSort(b.time)
     return timeA - timeB
   })
-  
+
   const blocks = []
   for (let i = 0; i < sorted.length; i += chunkSize) {
     const chunk = sorted.slice(i, i + chunkSize)
-    
+
     // Pastikan chunk selalu memiliki 6 item, jika kurang tambahkan "No activity" placeholder
     const paddedChunk = [...chunk]
     while (paddedChunk.length < chunkSize) {
@@ -84,17 +83,17 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
         screenCount: 0
       })
     }
-    
+
     const totalMinutes = chunk.reduce((sum, item) => sum + (item.minutes ?? 0), 0)
     const summary = `Total time worked: ${formatDuration(totalMinutes)}`
-    
+
     // Calculate 1-hour range from first item's start time
     const firstTimeStr = chunk[0]?.time.split(" - ")[0] ?? ""
     if (!firstTimeStr) {
       blocks.push({ label: chunk[0]?.time ?? `Block ${Math.floor(i / chunkSize) + 1}`, summary, items: paddedChunk })
       continue
     }
-    
+
     // Parse first time and add 1 hour for end time
     const parseTime = (timeStr: string): { hours: number; minutes: number; period: string } => {
       const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i)
@@ -106,7 +105,7 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
       if (period === 'am' && hours === 12) hours = 0
       return { hours, minutes, period: match[3] }
     }
-    
+
     const formatTime = (hours: number, minutes: number): string => {
       let displayHours = hours
       let period = 'am'
@@ -117,16 +116,16 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
       if (displayHours === 0) displayHours = 12
       return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`
     }
-    
+
     const firstTime = parseTime(firstTimeStr)
     let endHours = firstTime.hours + 1
     const endMinutes = firstTime.minutes
     if (endHours >= 24) endHours = endHours - 24
-    
+
     const startTimeFormatted = firstTimeStr
     const endTimeFormatted = formatTime(endHours, endMinutes)
     const label = `${startTimeFormatted} - ${endTimeFormatted}`
-    
+
     blocks.push({ label, summary, items: paddedChunk })
   }
 
@@ -157,60 +156,60 @@ export default function Every10MinPage() {
   const dateStatus = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    
+
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
-    
+
     const start = new Date(dateRange.startDate)
     start.setHours(0, 0, 0, 0)
     const end = new Date(dateRange.endDate)
     end.setHours(23, 59, 59, 999)
-    
+
     // Check if range is completely in the future (start > today and end > today)
     if (start > today && end > today) {
       return { isValid: false, isToday: false, isYesterday: false, isRange: false }
     }
-    
+
     // Check if range is more than 30 days ago (both start and end are more than 30 days ago)
     const thirtyDaysAgo = new Date(today)
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
     if (end < thirtyDaysAgo && start < thirtyDaysAgo) {
       return { isValid: false, isToday: false, isYesterday: false, isRange: false }
     }
-    
+
     // Check if start date is today (range includes today)
     const isToday = start.getTime() === today.getTime()
-    
+
     // Check if start date is yesterday
     const isYesterday = start.getTime() === yesterday.getTime() && end.getTime() <= today.getTime()
-    
+
     // Check if it's a range (more than 1 day)
     const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
     const isRange = daysDiff > 1
-    
+
     // If range includes today or overlaps with today, it's valid
     const includesToday = start <= today && end >= today
-    
+
     // If range is within last 30 days or includes today, it's valid
     const isWithinValidRange = (start <= today && end >= thirtyDaysAgo) || includesToday
-    
+
     if (isToday) return { isValid: true, isToday: true, isYesterday: false, isRange: isRange }
     if (isYesterday) return { isValid: true, isToday: false, isYesterday: true, isRange: false }
     if (isRange && isWithinValidRange) {
       // Valid range: this week, last 7 days, last week, last 2 weeks, this month, last month
       return { isValid: true, isToday: false, isYesterday: false, isRange: true }
     }
-    
+
     // Single date that's not today or yesterday but within 30 days or includes today
     if (isWithinValidRange && !isToday && !isYesterday) {
       return { isValid: true, isToday: false, isYesterday: false, isRange: false }
     }
-    
+
     // Default: if range includes today or overlaps with valid range, show data
     if (includesToday || isWithinValidRange) {
       return { isValid: true, isToday: includesToday || isToday, isYesterday: false, isRange: isRange }
     }
-    
+
     return { isValid: false, isToday: false, isYesterday: false, isRange: false }
   }, [dateRange])
 
@@ -226,23 +225,23 @@ export default function Every10MinPage() {
     if (isLoading) return []
     if (!activeMemberId || !dateStatus.isValid) return []
     const baseItems = DUMMY_MEMBER_SCREENSHOTS[activeMemberId] ?? []
-    
+
     // Jika kemarin, ambil subset data yang berbeda (misalnya ambil 6 item pertama untuk variasi)
     if (dateStatus.isYesterday) {
       const filteredItems = baseItems.slice(0, Math.min(6, baseItems.length))
       return buildMemberTimeBlocks(filteredItems, 6) // 6 items = 1 jam (6 x 10 menit)
     }
-    
+
     // Jika range (this week, last 7 days, dll), pisahkan berdasarkan tanggal
     // Hanya gunakan data yang ada: today dan yesterday
     if (dateStatus.isRange && dateRange) {
       const dateGroupedBlocks: DateGroupedBlocks[] = []
-      
+
       // Hanya ambil data untuk today dan yesterday
       // Today: gunakan semua data dari member
       const today = new Date(dateRange.endDate)
-      const todayLabel = today.toLocaleDateString('en-US', { 
-        month: 'short', 
+      const todayLabel = today.toLocaleDateString('en-US', {
+        month: 'short',
         day: 'numeric',
         year: 'numeric'
       })
@@ -257,12 +256,12 @@ export default function Every10MinPage() {
           })
         }
       }
-      
+
       // Yesterday: gunakan subset data (6 item pertama untuk variasi)
       const yesterday = new Date(dateRange.endDate)
       yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayLabel = yesterday.toLocaleDateString('en-US', { 
-        month: 'short', 
+      const yesterdayLabel = yesterday.toLocaleDateString('en-US', {
+        month: 'short',
         day: 'numeric',
         year: 'numeric'
       })
@@ -278,11 +277,11 @@ export default function Every10MinPage() {
           })
         }
       }
-      
+
       // Return struktur khusus untuk range (akan di-handle berbeda di rendering)
       return dateGroupedBlocks as unknown as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>
     }
-    
+
     // Hari ini atau single date - ambil semua data yang ada
     return buildMemberTimeBlocks(baseItems, 6) // 6 items = 1 jam (6 x 10 menit)
   }, [activeMemberId, dateStatus, dateRange, isLoading])
@@ -399,21 +398,21 @@ export default function Every10MinPage() {
         classificationPercent: 0,
       }
     }
-    
+
     // Jika range (this week, last 7 days, dll), gabungkan data dari semua hari dalam range
     if (dateStatus.isRange) {
       // Untuk range, gabungkan data dari member yang berbeda untuk variasi hari
       // Misalnya: m1 (today) + m2 (yesterday) + m3 (2 hari lalu) dll
       const memberIds = ["m1", "m2", "m3", "m4", "m5"]
       const currentIndex = memberIds.indexOf(activeMemberId ?? "m1")
-      
+
       // Ambil data dari beberapa member untuk menggambarkan variasi hari dalam range
       const summariesToCombine: MemberInsightSummary[] = []
-      
+
       // Ambil data dari member saat ini (today)
       const todaySummary = activeMemberId ? DUMMY_MEMBER_INSIGHTS[activeMemberId] : undefined
       if (todaySummary) summariesToCombine.push(todaySummary)
-      
+
       // Ambil data dari member lain untuk variasi (yesterday, 2 hari lalu, dll)
       // Untuk range pendek seperti "this week", ambil 1 member tambahan (yesterday)
       // Untuk range panjang seperti "this month", ambil lebih banyak
@@ -429,20 +428,20 @@ export default function Every10MinPage() {
           }
         }
       }
-      
+
       if (summariesToCombine.length === 0) {
         // Fallback ke base summary jika tidak ada data
         const baseSummary = activeMemberId ? DUMMY_MEMBER_INSIGHTS[activeMemberId] : (fallbackMemberId ? DUMMY_MEMBER_INSIGHTS[fallbackMemberId] : undefined)
         if (baseSummary) summariesToCombine.push(baseSummary)
       }
-      
+
       // Gabungkan data dari semua summary
       let totalWorkedMinutes = 0
       let totalFocusMinutes = 0
       let totalActivity = 0
       let totalUnusualCount = 0
       const allUnusualMessages: string[] = []
-      
+
       summariesToCombine.forEach(summary => {
         // Parse worked time
         const workedMatch = summary.totalWorkedTime.match(/(\d+)h\s*(\d+)m|(\d+)m/)
@@ -451,7 +450,7 @@ export default function Every10MinPage() {
           const minutes = parseInt(workedMatch[2] || workedMatch[3] || "0", 10)
           totalWorkedMinutes += hours * 60 + minutes
         }
-        
+
         // Parse focus time
         const focusMatch = summary.focusTime.match(/(\d+)h\s*(\d+)m|(\d+)m/)
         if (focusMatch) {
@@ -459,28 +458,28 @@ export default function Every10MinPage() {
           const minutes = parseInt(focusMatch[2] || focusMatch[3] || "0", 10)
           totalFocusMinutes += hours * 60 + minutes
         }
-        
+
         // Parse avg activity
         const activityMatch = summary.avgActivity.match(/(\d+)%/)
         if (activityMatch && activityMatch[1]) {
           totalActivity += parseInt(activityMatch[1], 10)
         }
-        
+
         // Gabungkan unusual count
         totalUnusualCount += summary.unusualCount
-        
+
         // Gabungkan unusual messages
         if (summary.unusualMessage && summary.unusualMessage !== "- No unusual activity detected.") {
           const messages = summary.unusualMessage.split("\n").filter(m => m.trim())
           allUnusualMessages.push(...messages)
         }
       })
-      
+
       const totalWorkedTime = formatDuration(totalWorkedMinutes)
       const focusTime = formatDuration(totalFocusMinutes)
       const avgActivity = `${Math.round(totalActivity / summariesToCombine.length)}%`
       const unusualActivities = totalUnusualCount
-      
+
       // Buat pesan unusual activity dari gabungan
       let unusualMessage = "- No unusual activity detected."
       if (unusualActivities > 0) {
@@ -511,12 +510,12 @@ export default function Every10MinPage() {
           unusualMessage = messages.slice(0, unusualActivities).join("\n")
         }
       }
-      
+
       // Classification berdasarkan total worked time
       let classificationLabel = "Balanced"
       let classificationPercent = 60
       let classificationSummary = "Maintains consistent work pace."
-      
+
       if (totalWorkedMinutes >= 480) { // 8+ hours
         classificationLabel = "High focus"
         classificationPercent = 85
@@ -538,7 +537,7 @@ export default function Every10MinPage() {
         classificationPercent = 50
         classificationSummary = "Switches between tasks calmly."
       }
-      
+
       return {
         memberId: activeMemberId ?? "",
         totalWorkedTime,
@@ -552,13 +551,13 @@ export default function Every10MinPage() {
         classificationPercent,
       }
     }
-    
+
     const fallbackSummary: MemberInsightSummary | undefined = fallbackMemberId ? DUMMY_MEMBER_INSIGHTS[fallbackMemberId] : undefined
-    
+
     const activeSummary: MemberInsightSummary | undefined = activeMemberId ? DUMMY_MEMBER_INSIGHTS[activeMemberId] : undefined
-    
+
     const baseSummary = activeSummary ?? fallbackSummary
-    
+
     if (!baseSummary) {
       return {
         memberId: "",
@@ -573,7 +572,7 @@ export default function Every10MinPage() {
         classificationPercent: 0,
       }
     }
-    
+
     // Jika kemarin, buat variasi data yang berbeda
     // Gunakan member yang berbeda untuk variasi (misalnya m2 untuk kemarin jika hari ini m1)
     if (dateStatus.isYesterday) {
@@ -582,7 +581,7 @@ export default function Every10MinPage() {
       const alternateSummary = DUMMY_MEMBER_INSIGHTS[alternateMemberId]
       return alternateSummary ?? baseSummary
     }
-    
+
     // Hari ini, return data asli
     return baseSummary
   }, [activeMemberId, fallbackMemberId, dateStatus, dateRange])
@@ -633,7 +632,7 @@ export default function Every10MinPage() {
 
       const site = activity.site.toLowerCase()
       const siteName = activity.site
-      
+
       if (coreWorkSites.some(s => site.includes(s))) {
         coreWorkTime += activity.timeSpent
         coreWorkItems[siteName] = (coreWorkItems[siteName] || 0) + activity.timeSpent
@@ -658,7 +657,7 @@ export default function Every10MinPage() {
       if (activityDate < start || activityDate > end) return
 
       const appName = activity.appName
-      
+
       if (coreWorkApps.includes(appName)) {
         coreWorkTime += activity.timeSpent
         coreWorkItems[appName] = (coreWorkItems[appName] || 0) + activity.timeSpent
@@ -720,23 +719,23 @@ export default function Every10MinPage() {
     const originalPosition = document.body.style.position
     const originalWidth = document.body.style.width
     const originalTop = document.body.style.top
-    
+
     // Simpan scroll position sebelum mengubah style
     const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop
     scrollPositionRef.current = scrollY
-    
+
     // Hide scrollbar and prevent scrolling
     document.body.style.overflow = 'hidden'
     document.body.style.position = 'fixed'
     document.body.style.width = '100%'
     document.body.style.top = `-${scrollY}px`
     document.documentElement.style.overflow = 'hidden'
-    
+
     // Prevent touch move on mobile
     const preventScroll = (e: TouchEvent) => {
       e.preventDefault()
     }
-    
+
     document.body.addEventListener('touchmove', preventScroll, { passive: false })
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -758,7 +757,7 @@ export default function Every10MinPage() {
       document.body.style.width = originalWidth
       document.body.style.top = originalTop
       document.documentElement.style.overflow = originalHtmlOverflow
-      
+
       // Kembalikan scroll position setelah style di-reset
       setTimeout(() => {
         window.scrollTo(0, scrollPositionRef.current)
@@ -848,25 +847,25 @@ export default function Every10MinPage() {
           </>
         ) : (
           <>
-        {/* <button
+            {/* <button
           onClick={() => setIsDialogOpen(true)}
           className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
         >
           <LineChart className="h-4 w-4" />
           How activity works
         </button> */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex gap-6">
-            <div className="flex flex-1 flex-col justify-between">
-              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Worked time</p>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex gap-6">
+                <div className="flex flex-1 flex-col justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Worked time</p>
                   <h2 className="text-3xl font-semibold text-slate-900">{memberSummary.totalWorkedTime}</h2>
-            </div>
-            <div className="flex flex-1 flex-col justify-between border-l border-slate-200 pl-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Avg. activity</p>
+                </div>
+                <div className="flex flex-1 flex-col justify-between border-l border-slate-200 pl-6">
+                  <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Avg. activity</p>
                   <span className="text-3xl font-semibold text-slate-700">{memberSummary.avgActivity}</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
             <div className="relative w-full rounded-t-2xl border-t border-l border-r border-slate-200 bg-white p-6 pb-10 shadow-sm mt-6 overflow-visible" style={{ borderBottom: 'none' }}>
               {/* Garis horizontal penuh yang melewati tengah tombol */}
               <div className="absolute left-0 right-0 bottom-0 flex items-center justify-center" style={{ transform: 'translateY(50%)' }}>
@@ -895,38 +894,38 @@ export default function Every10MinPage() {
                   </Button>
                 </div>
               </div>
-          {/* <div className="absolute top-0 z-10 -translate-y-1/2" style={{ right: '1.5rem' }}>
+              {/* <div className="absolute top-0 z-10 -translate-y-1/2" style={{ right: '1.5rem' }}>
             <Button variant="outline" size="sm" className="rounded-full border border-slate-200 bg-white px-4 text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500 shadow-sm">
               Insights
             </Button>
           </div> */}
-          <div className="flex flex-col md:flex-row">
-            {/* Focus Time */}
-            <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
-              <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
-                Focus time
-                <Info className="h-3.5 w-3.5 text-slate-400" />
-              </div>
+              <div className="flex flex-col md:flex-row">
+                {/* Focus Time */}
+                <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
+                  <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
+                    Focus time
+                    <Info className="h-3.5 w-3.5 text-slate-400" />
+                  </div>
                   <div className="flex flex-col items-center justify-center gap-3 py-4">
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
-                  <svg className="h-8 w-8 text-blue-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
-                </div>
+                      <svg className="h-8 w-8 text-blue-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                    </div>
                     <h3 className="text-xl font-semibold text-slate-900">{memberSummary.focusTime}</h3>
-                <p className="text-center text-xs text-slate-500 max-w-[180px]">
+                    <p className="text-center text-xs text-slate-500 max-w-[180px]">
                       {memberSummary.focusDescription}
-                </p>
-              </div>
-            </div>
+                    </p>
+                  </div>
+                </div>
 
-            {/* Unusual Activity Instances */}
-            <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
-              <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
-                Unusual activity instances
-                <Info className="h-3.5 w-3.5 text-slate-400" />
-              </div>
-              <div className="flex w-full flex-row items-center justify-center gap-4 py-8">
+                {/* Unusual Activity Instances */}
+                <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
+                  <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
+                    Unusual activity instances
+                    <Info className="h-3.5 w-3.5 text-slate-400" />
+                  </div>
+                  <div className="flex w-full flex-row items-center justify-center gap-4 py-8">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full border-4 border-slate-100 bg-white text-slate-700">
                       <span className="text-lg font-semibold">{memberSummary.unusualCount}</span>
                     </div>
@@ -941,165 +940,165 @@ export default function Every10MinPage() {
                           </p>
                         ))}
                       </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Work Time Classification */}
-            <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6">
-              <div className="flex w-full items-center justify-between mb-2">
-                <div className="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
-                Work time classification
-                <Info className="h-3.5 w-3.5 text-slate-400" />
-              </div>
-                </div>
-
-              <div className="flex items-start justify-between w-full mb-3">
-                {/* Left: Core work percentage */}
-                <div className="flex flex-col">
-                  <span className="text-3xl font-semibold text-gray-900">{workClassificationData.coreWork.percentage}%</span>
-                  <span className="text-sm text-gray-600 mt-1">Core work</span>
-              </div>
-
-                {/* Right: Legend */}
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    <span className="text-sm text-gray-700">{workClassificationData.coreWork.percentage}% Core work</span>
-            </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-gray-400"></div>
-                    <span className="text-sm text-gray-700">{workClassificationData.nonCoreWork.percentage}% Non-core work</span>
-          </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                    <span className="text-sm text-gray-700">{workClassificationData.unproductive.percentage}% Unproductive</span>
-          </div>
-        </div>
-      </div>
-
-              {/* Bar chart */}
-              <div className="mb-2 relative w-full">
-                <div className="h-4 rounded-full bg-gray-100 overflow-visible flex relative mb-3">
-                  {/* Core work segment */}
-                  <div
-                    className="bg-green-500 relative group cursor-pointer transition-opacity hover:opacity-90"
-                    style={{ width: `${workClassificationData.coreWork.percentage}%` }}
-                    onMouseEnter={() => setHoveredSegment('core')}
-                    onMouseLeave={() => setHoveredSegment(null)}
-                  />
-                  {/* Non-core work segment */}
-                  <div
-                    className="bg-gray-400 relative group cursor-pointer transition-opacity hover:opacity-90"
-                    style={{ width: `${workClassificationData.nonCoreWork.percentage}%` }}
-                    onMouseEnter={() => setHoveredSegment('noncore')}
-                    onMouseLeave={() => setHoveredSegment(null)}
-                  />
-                  {/* Unproductive segment */}
-                  <div
-                    className="bg-orange-500 relative group cursor-pointer transition-opacity hover:opacity-90"
-                    style={{ width: `${workClassificationData.unproductive.percentage}%` }}
-                    onMouseEnter={() => setHoveredSegment('unproductive')}
-                    onMouseLeave={() => setHoveredSegment(null)}
-                  />
-                </div>
-                {/* Vertical lines connecting percentage labels to bar chart */}
-                <div className="absolute top-3 left-0 right-0 flex justify-between pointer-events-none">
-                  <div className="bg-black" style={{ width: '2px', height: '16px', marginTop: '16px' }}></div>
-                  <div className="bg-black" style={{ width: '2px', height: '16px', marginTop: '16px' }}></div>
-                  <div className="bg-black" style={{ width: '2px', height: '16px', marginTop: '16px' }}></div>
-                  <div className="bg-black" style={{ width: '2px', height: '16px', marginTop: '16px' }}></div>
-                  <div className="bg-black" style={{ width: '2px', height: '16px', marginTop: '16px' }}></div>
-                </div>
-                {/* Tooltip - positioned above the bar chart */}
-                {hoveredSegment === 'core' && workClassificationData.coreWork.percentage > 0 && (
-                  <div 
-                    className="absolute px-3 py-2 bg-gray-800 text-white text-xs rounded shadow-lg z-50 min-w-[200px] pointer-events-none opacity-90"
-                    style={{ 
-                      bottom: 'calc(100% + 8px)',
-                      left: `${workClassificationData.coreWork.percentage / 2}%`,
-                      transform: 'translateX(-50%)'
-                    }}
-                  >
-                    <div className="space-y-1">
-                      {workClassificationData.coreWork.items.length > 0 ? (
-                        workClassificationData.coreWork.items.map((item, idx) => (
-                          <div key={idx} className="text-white">
-                            {item.percentage}% {item.name}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-gray-400">No data</div>
-                      )}
-          </div>
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
-                      <div className="w-2 h-2 bg-gray-800 transform rotate-45"></div>
                     </div>
                   </div>
-                )}
-                {hoveredSegment === 'noncore' && workClassificationData.nonCoreWork.percentage > 0 && (
-                  <div 
-                    className="absolute px-3 py-2 bg-gray-800 text-white text-xs rounded shadow-lg z-50 min-w-[200px] pointer-events-none opacity-90"
-                    style={{ 
-                      bottom: 'calc(100% + 8px)',
-                      left: `${workClassificationData.coreWork.percentage + (workClassificationData.nonCoreWork.percentage / 2)}%`,
-                      transform: 'translateX(-50%)'
-                    }}
-                  >
-                    <div className="space-y-1">
-                      {workClassificationData.nonCoreWork.items.length > 0 ? (
-                        workClassificationData.nonCoreWork.items.map((item, idx) => (
-                          <div key={idx} className="text-white">
-                            {item.percentage}% {item.name}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-gray-400">No data</div>
-                      )}
+                </div>
+
+                {/* Work Time Classification */}
+                <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6">
+                  <div className="flex w-full items-center justify-between mb-2">
+                    <div className="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
+                      Work time classification
+                      <Info className="h-3.5 w-3.5 text-slate-400" />
                     </div>
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
-                      <div className="w-2 h-2 bg-gray-800 transform rotate-45"></div>
                   </div>
+
+                  <div className="flex items-start justify-between w-full mb-3">
+                    {/* Left: Core work percentage */}
+                    <div className="flex flex-col">
+                      <span className="text-3xl font-semibold text-gray-900">{workClassificationData.coreWork.percentage}%</span>
+                      <span className="text-sm text-gray-600 mt-1">Core work</span>
+                    </div>
+
+                    {/* Right: Legend */}
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span className="text-sm text-gray-700">{workClassificationData.coreWork.percentage}% Core work</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-gray-400"></div>
+                        <span className="text-sm text-gray-700">{workClassificationData.nonCoreWork.percentage}% Non-core work</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                        <span className="text-sm text-gray-700">{workClassificationData.unproductive.percentage}% Unproductive</span>
+                      </div>
+                    </div>
                   </div>
-                )}
-                {hoveredSegment === 'unproductive' && workClassificationData.unproductive.percentage > 0 && (
+
+                  {/* Bar chart */}
+                  <div className="mb-2 relative w-full">
+                    <div className="h-4 rounded-full bg-gray-100 overflow-visible flex relative mb-3">
+                      {/* Core work segment */}
                       <div
-                    className="absolute px-3 py-2 bg-gray-800 text-white text-xs rounded shadow-lg z-50 min-w-[200px] pointer-events-none opacity-90"
+                        className="bg-green-500 relative group cursor-pointer transition-opacity hover:opacity-90"
+                        style={{ width: `${workClassificationData.coreWork.percentage}%` }}
+                        onMouseEnter={() => setHoveredSegment('core')}
+                        onMouseLeave={() => setHoveredSegment(null)}
+                      />
+                      {/* Non-core work segment */}
+                      <div
+                        className="bg-gray-400 relative group cursor-pointer transition-opacity hover:opacity-90"
+                        style={{ width: `${workClassificationData.nonCoreWork.percentage}%` }}
+                        onMouseEnter={() => setHoveredSegment('noncore')}
+                        onMouseLeave={() => setHoveredSegment(null)}
+                      />
+                      {/* Unproductive segment */}
+                      <div
+                        className="bg-orange-500 relative group cursor-pointer transition-opacity hover:opacity-90"
+                        style={{ width: `${workClassificationData.unproductive.percentage}%` }}
+                        onMouseEnter={() => setHoveredSegment('unproductive')}
+                        onMouseLeave={() => setHoveredSegment(null)}
+                      />
+                    </div>
+                    {/* Vertical lines connecting percentage labels to bar chart */}
+                    <div className="absolute top-3 left-0 right-0 flex justify-between pointer-events-none">
+                      <div className="bg-black" style={{ width: '2px', height: '16px', marginTop: '16px' }}></div>
+                      <div className="bg-black" style={{ width: '2px', height: '16px', marginTop: '16px' }}></div>
+                      <div className="bg-black" style={{ width: '2px', height: '16px', marginTop: '16px' }}></div>
+                      <div className="bg-black" style={{ width: '2px', height: '16px', marginTop: '16px' }}></div>
+                      <div className="bg-black" style={{ width: '2px', height: '16px', marginTop: '16px' }}></div>
+                    </div>
+                    {/* Tooltip - positioned above the bar chart */}
+                    {hoveredSegment === 'core' && workClassificationData.coreWork.percentage > 0 && (
+                      <div
+                        className="absolute px-3 py-2 bg-gray-800 text-white text-xs rounded shadow-lg z-50 min-w-[200px] pointer-events-none opacity-90"
                         style={{
-                      bottom: 'calc(100% + 8px)',
-                      left: `${workClassificationData.coreWork.percentage + workClassificationData.nonCoreWork.percentage + (workClassificationData.unproductive.percentage / 2)}%`,
-                      transform: 'translateX(-50%)'
-                    }}
-                  >
-                    <div className="space-y-1">
-                      {workClassificationData.unproductive.items.length > 0 ? (
-                        workClassificationData.unproductive.items.map((item, idx) => (
-                          <div key={idx} className="text-white">
-                            {item.percentage}% {item.name}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-gray-400">No data</div>
-                      )}
-                    </div>
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
-                      <div className="w-2 h-2 bg-gray-800 transform rotate-45"></div>
-                    </div>
+                          bottom: 'calc(100% + 8px)',
+                          left: `${workClassificationData.coreWork.percentage / 2}%`,
+                          transform: 'translateX(-50%)'
+                        }}
+                      >
+                        <div className="space-y-1">
+                          {workClassificationData.coreWork.items.length > 0 ? (
+                            workClassificationData.coreWork.items.map((item, idx) => (
+                              <div key={idx} className="text-white">
+                                {item.percentage}% {item.name}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-gray-400">No data</div>
+                          )}
+                        </div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                          <div className="w-2 h-2 bg-gray-800 transform rotate-45"></div>
+                        </div>
+                      </div>
+                    )}
+                    {hoveredSegment === 'noncore' && workClassificationData.nonCoreWork.percentage > 0 && (
+                      <div
+                        className="absolute px-3 py-2 bg-gray-800 text-white text-xs rounded shadow-lg z-50 min-w-[200px] pointer-events-none opacity-90"
+                        style={{
+                          bottom: 'calc(100% + 8px)',
+                          left: `${workClassificationData.coreWork.percentage + (workClassificationData.nonCoreWork.percentage / 2)}%`,
+                          transform: 'translateX(-50%)'
+                        }}
+                      >
+                        <div className="space-y-1">
+                          {workClassificationData.nonCoreWork.items.length > 0 ? (
+                            workClassificationData.nonCoreWork.items.map((item, idx) => (
+                              <div key={idx} className="text-white">
+                                {item.percentage}% {item.name}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-gray-400">No data</div>
+                          )}
+                        </div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                          <div className="w-2 h-2 bg-gray-800 transform rotate-45"></div>
+                        </div>
+                      </div>
+                    )}
+                    {hoveredSegment === 'unproductive' && workClassificationData.unproductive.percentage > 0 && (
+                      <div
+                        className="absolute px-3 py-2 bg-gray-800 text-white text-xs rounded shadow-lg z-50 min-w-[200px] pointer-events-none opacity-90"
+                        style={{
+                          bottom: 'calc(100% + 8px)',
+                          left: `${workClassificationData.coreWork.percentage + workClassificationData.nonCoreWork.percentage + (workClassificationData.unproductive.percentage / 2)}%`,
+                          transform: 'translateX(-50%)'
+                        }}
+                      >
+                        <div className="space-y-1">
+                          {workClassificationData.unproductive.items.length > 0 ? (
+                            workClassificationData.unproductive.items.map((item, idx) => (
+                              <div key={idx} className="text-white">
+                                {item.percentage}% {item.name}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-gray-400">No data</div>
+                          )}
+                        </div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                          <div className="w-2 h-2 bg-gray-800 transform rotate-45"></div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {/* Axis labels */}
-              <div className="flex justify-between text-xs text-gray-500 w-full mb-2">
-                <span>0%</span>
-                <span>25%</span>
-                <span>50%</span>
-                <span>75%</span>
-                <span>100%</span>
-                    </div>
+                  {/* Axis labels */}
+                  <div className="flex justify-between text-xs text-gray-500 w-full mb-2">
+                    <span>0%</span>
+                    <span>25%</span>
+                    <span>50%</span>
+                    <span>75%</span>
+                    <span>100%</span>
                   </div>
                 </div>
               </div>
+            </div>
           </>
         )}
       </div>
@@ -1117,15 +1116,15 @@ export default function Every10MinPage() {
                     <div className="flex items-center gap-2">
                       <Skeleton className="h-4 w-40" />
                       <Skeleton className="h-4 w-48" />
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                       {[...Array(6)].map((_, cardIdx) => (
                         <ScreenshotCardSkeleton key={cardIdx} />
-            ))}
-          </div>
-        </div>
-            ))}
-          </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             ))}
           </div>
         ) : !memberTimeBlocks.length ? (
@@ -1139,7 +1138,7 @@ export default function Every10MinPage() {
               {/* Tanggal Header */}
               <div className="text-base font-semibold text-slate-700">
                 {dateGroup.dateLabel}
-        </div>
+              </div>
               {/* Time Blocks untuk tanggal ini */}
               {dateGroup.blocks.map((block) => {
                 const blockStart = runningIndex
@@ -1149,11 +1148,11 @@ export default function Every10MinPage() {
                 let itemIndex = 0
                 return (
                   <div key={`${dateGroup.date}-${block.label}-${blockStart}`} className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-slate-500">
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
                       <span className="font-medium">{block.label}</span>
                       <span className="text-slate-400">{block.summary}</span>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                       {block.items.map((item) => {
                         // Skip placeholder items yang tidak memiliki time (untuk menghindari error di modal)
                         if (item.noActivity && !item.time) {
@@ -1183,7 +1182,7 @@ export default function Every10MinPage() {
                   </div>
                 )
               })}
-                    </div>
+            </div>
           ))
         ) : (
           // Render normal (bukan range)
@@ -1195,11 +1194,11 @@ export default function Every10MinPage() {
             let itemIndex = 0
             return (
               <div key={`${block.label}-${blockStart}`} className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-slate-500">
+                <div className="flex items-center gap-2 text-sm text-slate-500">
                   <span className="font-medium">{block.label}</span>
                   <span className="text-slate-400">{block.summary}</span>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                   {block.items.map((item) => {
                     // Skip placeholder items yang tidak memiliki time (untuk menghindari error di modal)
                     if (item.noActivity && !item.time) {
@@ -1226,12 +1225,12 @@ export default function Every10MinPage() {
                       />
                     )
                   })}
-                    </div>
-                    </div>
+                </div>
+              </div>
             )
           })
         )}
-                  </div>
+      </div>
 
       {isMounted && modalOpen && currentScreenshot && createPortal(
         <>
@@ -1249,22 +1248,22 @@ export default function Every10MinPage() {
               }
             `
           }} />
-          <div 
+          <div
             id="screenshot-modal-overlay"
-            className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center gap-4 p-8" 
-                        style={{
-              position: 'fixed', 
-              top: 0, 
-              left: 0, 
-              right: 0, 
-              bottom: 0, 
-              width: '100vw', 
+            className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center gap-4 p-8"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
               height: '100vh',
               backgroundColor: 'rgba(0, 0, 0, 0.6)',
               backdropFilter: 'blur(2px)',
               overflow: 'hidden',
-              zIndex: 99999 
-            }} 
+              zIndex: 99999
+            }}
             onClick={closeModal}
           >
             {/* Tombol Previous - Kiri */}
@@ -1303,13 +1302,13 @@ export default function Every10MinPage() {
                 ) : (
                   <div className="flex items-center justify-center h-full w-full text-slate-400">
                     No image available
-                    </div>
-                )}
                   </div>
+                )}
+              </div>
               <div className="flex items-center justify-center text-sm text-slate-600 shrink-0">
                 <span>{currentScreenshot.time}</span>
-                </div>
               </div>
+            </div>
 
             {/* Tombol Next - Kanan */}
             <button

@@ -9,7 +9,9 @@ interface ReportCardProps {
     icon?: React.ReactNode
     isPopular?: boolean
     isStarred?: boolean
+    hideStar?: boolean
     className?: string
+    target?: string
 }
 
 export function ReportCard({
@@ -19,11 +21,14 @@ export function ReportCard({
     icon,
     isPopular,
     isStarred,
-    className
+    hideStar,
+    className,
+    target
 }: ReportCardProps) {
     return (
         <Link
             href={href}
+            target={target}
             className={cn(
                 "group relative flex flex-col rounded-lg border border-gray-200 bg-white p-6 transition-all hover:border-blue-400 hover:shadow-sm",
                 isPopular && "min-h-[200px]",
@@ -44,9 +49,11 @@ export function ReportCard({
                     )}
                 </div>
 
-                <button className="text-gray-300 hover:text-yellow-400 transition-colors">
-                    <Star className={cn("h-4 w-4", isStarred && "fill-yellow-400 text-yellow-400")} />
-                </button>
+                {!hideStar && (
+                    <button className="text-gray-300 hover:text-yellow-400 transition-colors">
+                        <Star className={cn("h-4 w-4", isStarred && "fill-yellow-400 text-yellow-400")} />
+                    </button>
+                )}
             </div>
 
             {/* Title for Popular Reports (below icon) */}

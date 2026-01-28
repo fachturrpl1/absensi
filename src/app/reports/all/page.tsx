@@ -4,7 +4,7 @@ import React, { useState } from "react"
 
 import { ReportCard } from "@/components/report/report-card"
 import { Input } from "@/components/ui/input"
-import { Search, X, Activity, DollarSign, BarChart3, Star } from "lucide-react"
+import { Search, X, DollarSign, Activity, BarChart3 } from "lucide-react"
 import { DUMMY_CUSTOM_REPORTS } from "@/lib/data/dummy-data"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -62,43 +62,43 @@ export default function AllReportsPage() {
                 {
                     title: "Time & activity (Legacy)",
                     description: "See team members' time worked, activity levels, and amounts earned per project or to-do",
-                    href: "#",
+                    href: "/reports/time-activity-legacy",
                     isStarred: true
                 },
                 {
                     title: "Work sessions",
                     description: "See the start and stop times for team members",
-                    href: "#"
+                    href: "/reports/work-sessions"
                 },
                 {
                     title: "Apps & URLs",
                     description: "See team members' apps used and URLs visited while working",
-                    href: "#"
+                    href: "/reports/apps-urls"
                 },
                 {
                     title: "Manual time edits",
                     description: "See team members' time worked, project, to-do, and reason for each manual time entry",
-                    href: "#"
+                    href: "/reports/manual-time-edits"
                 },
                 {
                     title: "Timesheet approvals",
                     description: "See team member's timesheets and their status",
-                    href: "#"
+                    href: "/reports/timesheet-approvals"
                 },
                 {
                     title: "Expenses",
                     description: "See how much has been spent on expenses by member and project",
-                    href: "#"
+                    href: "/reports/expenses"
                 },
                 {
                     title: "Work breaks",
                     description: "See how many work breaks team members are taking",
-                    href: "#"
+                    href: "/reports/work-breaks"
                 },
                 {
                     title: "Audit log",
                     description: "See who changed what, when, and how (HS People add-on)",
-                    href: "#"
+                    href: "/reports/audit-log"
                 }
             ]
         },
@@ -108,7 +108,7 @@ export default function AllReportsPage() {
                 {
                     title: "Payments",
                     description: "See how much team members were paid over a given period",
-                    href: "#",
+                    href: "/reports/payments",
                     isStarred: true
                 }
             ]
@@ -116,38 +116,38 @@ export default function AllReportsPage() {
         {
             title: "Budgets and limits",
             items: [
-                { title: "Weekly limits", description: "See team members' weekly limits usage", href: "#" },
-                { title: "Daily limits", description: "See team members' daily limits usage", href: "#" },
-                { title: "Project budgets", description: "See how much of your projects' budgets have been spent", href: "#" },
-                { title: "Client budgets", description: "See how much of your clients' budgets have been spent", href: "#" }
+                { title: "Weekly limits", description: "See team members' weekly limits usage", href: "/reports/weekly-limits" },
+                { title: "Daily limits", description: "See team members' daily limits usage", href: "/reports/daily-limits" },
+                { title: "Project budgets", description: "See how much of your projects' budgets have been spent", href: "/reports/project-budgets" },
+                { title: "Client budgets", description: "See how much of your clients' budgets have been spent", href: "/reports/client-budgets" }
             ]
         },
         {
             title: "Time off",
             items: [
-                { title: "Time off balances", description: "See your team's time off balances across the organization's time off policies", href: "#" },
-                { title: "Time off transactions", description: "See your team's time off transactions across the organization's time off policies", href: "#" }
+                { title: "Time off balances", description: "See your team's time off balances across the organization's time off policies", href: "/reports/time-off-balances" },
+                { title: "Time off transactions", description: "See your team's time off transactions across the organization's time off policies", href: "/reports/time-off-transactions" }
             ]
         },
         {
             title: "Invoice",
             items: [
-                { title: "Client invoices", description: "See client invoice totals, paid, and due amounts", href: "#" },
-                { title: "Team invoices", description: "See team member invoice totals, paid, and due amounts", href: "#" },
-                { title: "Client invoices aging", description: "See outstanding and past due client invoices", href: "#" },
-                { title: "Team invoices aging", description: "See outstanding and past due team member invoices", href: "#" }
+                { title: "Client invoices", description: "See client invoice totals, paid, and due amounts", href: "/reports/client-invoices" },
+                { title: "Team invoices", description: "See team member invoice totals, paid, and due amounts", href: "/reports/team-invoices" },
+                { title: "Client invoices aging", description: "See outstanding and past due client invoices", href: "/reports/client-invoices-aging" },
+                { title: "Team invoices aging", description: "See outstanding and past due team member invoices", href: "/reports/team-invoices-aging" }
             ]
         },
         {
             title: "Schedule",
             items: [
-                { title: "Shift attendance", description: "See team members' completed, late, abandoned, and missed shifts", href: "#" }
+                { title: "Shift attendance", description: "See team members' completed, late, abandoned, and missed shifts", href: "/reports/shift-attendance" },
             ]
         },
         {
             title: "Job sites",
             items: [
-                { title: "Visits", description: "See when your team members' entered and left a job site", href: "#" }
+                { title: "Visits", description: "See when your team members' entered and left a job site", href: "/reports/visits" }
             ]
         }
     ]
@@ -197,9 +197,6 @@ export default function AllReportsPage() {
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-yellow-400">
-                                        <Star className="w-4 h-4" />
-                                    </Button>
                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500">
                                         <X className="w-4 h-4" />
                                     </Button>
@@ -217,10 +214,7 @@ export default function AllReportsPage() {
                         <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{section.title}</h2>
 
                         <div className={cn(
-                            "grid gap-6",
-                            section.title === "Popular reports"
-                                ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-                                : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                            "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
                         )}>
                             {section.items.map((item, i) => (
                                 <ReportCard
@@ -228,9 +222,8 @@ export default function AllReportsPage() {
                                     title={item.title}
                                     description={item.description}
                                     href={item.href}
-                                    icon={item.icon}
-                                    isPopular={section.title === "Popular reports"}
-                                    isStarred={item.isStarred}
+                                    hideStar
+                                    target="_blank"
                                 />
                             ))}
                         </div>

@@ -14,32 +14,7 @@ import { Input } from "@/components/ui/input"
 import { exportToCSV, generateFilename, formatCurrencyForExport, formatHoursForExport } from "@/lib/export-utils"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-
-// --- Dummy Data Local for Amounts Owed ---
-interface AmountsOwedData {
-    id: string
-    name: string
-    email: string
-    team: string
-    hourlyRate: number
-    currency: string
-    regularHours: number
-    overtimeHours: number
-    totalHours: number
-    amountOwed: number
-    paymentStatus: 'Unpaid' | 'Paid' | 'Processing'
-}
-
-const DUMMY_AMOUNTS_OWED: AmountsOwedData[] = [
-    { id: 'm1', name: 'John Doe', email: 'john@ubig.co.id', team: 'Engineering', hourlyRate: 150000, currency: 'IDR', regularHours: 160, overtimeHours: 5, totalHours: 165, amountOwed: 25500000, paymentStatus: 'Unpaid' },
-    { id: 'm2', name: 'Jane Smith', email: 'jane@ubig.co.id', team: 'Design', hourlyRate: 140000, currency: 'IDR', regularHours: 155, overtimeHours: 0, totalHours: 155, amountOwed: 21700000, paymentStatus: 'Processing' },
-    { id: 'm3', name: 'Bob Johnson', email: 'bob@ubig.co.id', team: 'Engineering', hourlyRate: 160000, currency: 'IDR', regularHours: 160, overtimeHours: 10, totalHours: 170, amountOwed: 28800000, paymentStatus: 'Paid' },
-    { id: 'm4', name: 'Alice Williams', email: 'alice@ubig.co.id', team: 'Marketing', hourlyRate: 130000, currency: 'IDR', regularHours: 140, overtimeHours: 2, totalHours: 142, amountOwed: 18720000, paymentStatus: 'Unpaid' },
-    { id: 'm5', name: 'Charlie Brown', email: 'charlie@ubig.co.id', team: 'Design', hourlyRate: 135000, currency: 'IDR', regularHours: 150, overtimeHours: 0, totalHours: 150, amountOwed: 20250000, paymentStatus: 'Unpaid' },
-    { id: 'm6', name: 'Diana Prince', email: 'diana@ubig.co.id', team: 'Product', hourlyRate: 170000, currency: 'IDR', regularHours: 158, overtimeHours: 4, totalHours: 162, amountOwed: 27880000, paymentStatus: 'Processing' },
-    { id: 'm7', name: 'Evan Wright', email: 'evan@ubig.co.id', team: 'Engineering', hourlyRate: 155000, currency: 'IDR', regularHours: 160, overtimeHours: 8, totalHours: 168, amountOwed: 26840000, paymentStatus: 'Unpaid' },
-    { id: 'm8', name: 'Fiona Green', email: 'fiona@ubig.co.id', team: 'Marketing', hourlyRate: 125000, currency: 'IDR', regularHours: 145, overtimeHours: 0, totalHours: 145, amountOwed: 18125000, paymentStatus: 'Paid' },
-]
+import { DUMMY_AMOUNTS_OWED } from "@/lib/data/dummy-data"
 
 export default function AmountsOwedPage() {
     // Filters
@@ -129,10 +104,8 @@ export default function AmountsOwedPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Teams</SelectItem>
-                                <SelectItem value="Engineering">Engineering</SelectItem>
-                                <SelectItem value="Design">Design</SelectItem>
-                                <SelectItem value="Marketing">Marketing</SelectItem>
-                                <SelectItem value="Product">Product</SelectItem>
+                                <SelectItem value="Team Alpha">Team Alpha</SelectItem>
+                                <SelectItem value="Team Beta">Team Beta</SelectItem>
                             </SelectContent>
                         </Select>
 

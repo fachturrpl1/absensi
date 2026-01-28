@@ -24,6 +24,7 @@ interface Props {
 
   hideAllOption?: boolean // Untuk menyembunyikan opsi "All Members" / "All Teams"
   hideTeamsTab?: boolean // Untuk menyembunyikan tab "Teams"
+  hideFilter?: boolean // To hide the entire filter dropdown
 }
 
 export function InsightsHeader({
@@ -39,6 +40,7 @@ export function InsightsHeader({
   children,
   hideAllOption = false,
   hideTeamsTab = false,
+  hideFilter = false,
 }: Props) {
   // STATE UNTUK KALENDER
   const [tempStartDate, setTempStartDate] = useState<Date>(dateRange.startDate)
@@ -413,75 +415,76 @@ export function InsightsHeader({
     <div className="flex items-center justify-between w-full">
       <div className="flex items-center gap-3">
         {/* Members/Teams filter */}
-        <DropdownMenu open={filterDropdownOpen} onOpenChange={setFilterDropdownOpen}>
-          <DropdownMenuTrigger asChild>
-            <button className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 min-w-[150px] text-left text-gray-800 flex items-center justify-between">
-              {filterLabel}
-              <ChevronDown className="w-4 h-4 opacity-50 ml-2" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-80 p-3">
-            {!hideTeamsTab && (
-              <div className="flex items-center gap-2 mb-3">
-                <button
-                  className={`px-3 py-1 rounded-full text-sm border ${filterTab === "members" ? "bg-gray-100 border-black text-black" : "bg-white border-gray-300 text-gray-700"}`}
-                  onClick={() => { setFilterTab("members"); setFilterSearch("") }}
-                >Members</button>
-
-                <button
-                  className={`px-3 py-1 rounded-full text-sm border ${filterTab === "teams" ? "bg-gray-100 border-black text-black" : "bg-white border-gray-300 text-gray-700"}`}
-                  onClick={() => { setFilterTab("teams"); setFilterSearch("") }}
-                >Teams</button>
-              </div>
-            )}
-
-            <div className="mb-3 relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search items"
-                value={filterSearch}
-                onChange={(e) => setFilterSearch(e.target.value)}
-                className="pl-8 pr-8"
-              />
-              {filterSearch && (
-                <button
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600"
-                  onClick={() => setFilterSearch("")}
-                  aria-label="Clear"
-                >×</button>
-              )}
-            </div>
-
-            {!hideAllOption && (
-              <div className="mb-2 pb-2 border-b border-gray-200">
-                <button
-                  className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${selectedFilter.all && selectedFilter.type === effectiveFilterTab ? "bg-gray-100 text-black" : "hover:bg-gray-50 text-gray-700"}`}
-                  onClick={() => handleFilterSelect({ type: effectiveFilterTab, all: true })}
-                >
-                  <span className={`inline-block w-2 h-2 rounded-full border ${selectedFilter.all && selectedFilter.type === effectiveFilterTab ? "bg-black border-black" : "border-gray-400"}`} />
-                  All {effectiveFilterTab === "members" ? "Members" : "Teams"}
-                </button>
-              </div>
-            )}
-
-            <div className="max-h-64 overflow-auto">
-              {filtered.map(it => {
-                const isActive = !selectedFilter.all && selectedFilter.type === effectiveFilterTab && selectedFilter.id === it.id
-                return (
+        {!hideFilter && (
+          <DropdownMenu open={filterDropdownOpen} onOpenChange={setFilterDropdownOpen}>
+            <DropdownMenuTrigger asChild>
+              <button className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 min-w-[150px] text-left text-gray-800 flex items-center justify-between">
+                {filterLabel}
+                <ChevronDown className="w-4 h-4 opacity-50 ml-2" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-80 p-3">
+              {!hideTeamsTab && (
+                <div className="flex items-center gap-2 mb-3">
                   <button
-                    key={it.id}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${isActive ? "bg-gray-100 text-black" : "hover:bg-gray-50 text-gray-700"}`}
-                    onClick={() => handleFilterSelect({ type: effectiveFilterTab, all: false, id: it.id })}
-                  >
-                    <span className={`inline-block w-2 h-2 rounded-full border ${isActive ? "bg-black border-black" : "border-gray-400"}`} />
-                    {it.name}
-                  </button>
-                )
-              })}
-            </div>
+                    className={`px-3 py-1 rounded-full text-sm border ${filterTab === "members" ? "bg-gray-100 border-black text-black" : "bg-white border-gray-300 text-gray-700"}`}
+                    onClick={() => { setFilterTab("members"); setFilterSearch("") }}
+                  >Members</button>
 
-            {/* Apply/Cancel Buttons removed for Auto-Apply */}
-            {/* <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
+                  <button
+                    className={`px-3 py-1 rounded-full text-sm border ${filterTab === "teams" ? "bg-gray-100 border-black text-black" : "bg-white border-gray-300 text-gray-700"}`}
+                    onClick={() => { setFilterTab("teams"); setFilterSearch("") }}
+                  >Teams</button>
+                </div>
+              )}
+
+              <div className="mb-3 relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search items"
+                  value={filterSearch}
+                  onChange={(e) => setFilterSearch(e.target.value)}
+                  className="pl-8 pr-8"
+                />
+                {filterSearch && (
+                  <button
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600"
+                    onClick={() => setFilterSearch("")}
+                    aria-label="Clear"
+                  >×</button>
+                )}
+              </div>
+
+              {!hideAllOption && (
+                <div className="mb-2 pb-2 border-b border-gray-200">
+                  <button
+                    className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${selectedFilter.all && selectedFilter.type === effectiveFilterTab ? "bg-gray-100 text-black" : "hover:bg-gray-50 text-gray-700"}`}
+                    onClick={() => handleFilterSelect({ type: effectiveFilterTab, all: true })}
+                  >
+                    <span className={`inline-block w-2 h-2 rounded-full border ${selectedFilter.all && selectedFilter.type === effectiveFilterTab ? "bg-black border-black" : "border-gray-400"}`} />
+                    All {effectiveFilterTab === "members" ? "Members" : "Teams"}
+                  </button>
+                </div>
+              )}
+
+              <div className="max-h-64 overflow-auto">
+                {filtered.map(it => {
+                  const isActive = !selectedFilter.all && selectedFilter.type === effectiveFilterTab && selectedFilter.id === it.id
+                  return (
+                    <button
+                      key={it.id}
+                      className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${isActive ? "bg-gray-100 text-black" : "hover:bg-gray-50 text-gray-700"}`}
+                      onClick={() => handleFilterSelect({ type: effectiveFilterTab, all: false, id: it.id })}
+                    >
+                      <span className={`inline-block w-2 h-2 rounded-full border ${isActive ? "bg-black border-black" : "border-gray-400"}`} />
+                      {it.name}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Apply/Cancel Buttons removed for Auto-Apply */}
+              {/* <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
               <button className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 font-medium" onClick={applyFilter}>
                 Apply
               </button>
@@ -489,9 +492,9 @@ export function InsightsHeader({
                 Cancel
               </button>
             </div> */}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         {/* Date range */}
         <DropdownMenu open={dateRangeOpen} onOpenChange={setDateRangeOpen}>
           <DropdownMenuTrigger asChild>

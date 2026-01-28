@@ -2879,3 +2879,444 @@ export const DUMMY_CUSTOM_REPORTS: CustomReport[] = [
         deliveryDays: ["Fr"]
     }
 ]
+
+// ============================================================================
+// TIMESHEET APPROVALS
+// ============================================================================
+
+export interface TimesheetApproval {
+    id: string
+    memberId: string
+    memberName: string
+    weekStart: string
+    weekEnd: string
+    totalHours: number
+    regularHours: number
+    overtimeHours: number
+    status: 'pending' | 'approved' | 'rejected'
+    submittedAt: string
+    approvedBy?: string
+    approvedAt?: string
+    notes?: string
+}
+
+export const DUMMY_TIMESHEET_APPROVALS: TimesheetApproval[] = [
+    { id: 'ts-1', memberId: 'm1', memberName: 'Antonio Galih', weekStart: '2026-01-13', weekEnd: '2026-01-19', totalHours: 42.5, regularHours: 40, overtimeHours: 2.5, status: 'approved', submittedAt: '2026-01-19T17:00:00', approvedBy: 'Manager', approvedAt: '2026-01-20T09:00:00' },
+    { id: 'ts-2', memberId: 'm2', memberName: 'Lave Lavael', weekStart: '2026-01-13', weekEnd: '2026-01-19', totalHours: 38.0, regularHours: 38, overtimeHours: 0, status: 'pending', submittedAt: '2026-01-19T18:30:00' },
+    { id: 'ts-3', memberId: 'm3', memberName: 'Sarah Johnson', weekStart: '2026-01-13', weekEnd: '2026-01-19', totalHours: 45.0, regularHours: 40, overtimeHours: 5, status: 'approved', submittedAt: '2026-01-19T16:00:00', approvedBy: 'Manager', approvedAt: '2026-01-20T10:00:00' },
+    { id: 'ts-4', memberId: 'm4', memberName: 'Michael Chen', weekStart: '2026-01-13', weekEnd: '2026-01-19', totalHours: 40.0, regularHours: 40, overtimeHours: 0, status: 'pending', submittedAt: '2026-01-19T17:30:00' },
+    { id: 'ts-5', memberId: 'm5', memberName: 'Emma Rodriguez', weekStart: '2026-01-13', weekEnd: '2026-01-19', totalHours: 36.0, regularHours: 36, overtimeHours: 0, status: 'rejected', submittedAt: '2026-01-19T15:00:00', notes: 'Missing project allocation' },
+    { id: 'ts-6', memberId: 'm1', memberName: 'Antonio Galih', weekStart: '2026-01-20', weekEnd: '2026-01-26', totalHours: 41.0, regularHours: 40, overtimeHours: 1, status: 'pending', submittedAt: '2026-01-26T17:00:00' },
+]
+
+// ============================================================================
+// EXPENSES
+// ============================================================================
+
+export interface ExpenseEntry {
+    id: string
+    memberId: string
+    memberName: string
+    projectId: string
+    projectName: string
+    category: 'travel' | 'equipment' | 'software' | 'meals' | 'office' | 'other'
+    description: string
+    amount: number
+    currency: string
+    date: string
+    status: 'pending' | 'approved' | 'rejected' | 'reimbursed'
+    receiptUrl?: string
+}
+
+export const DUMMY_EXPENSES: ExpenseEntry[] = [
+    { id: 'exp-1', memberId: 'm1', memberName: 'Antonio Galih', projectId: 'proj-1', projectName: 'Website Redesign', category: 'software', description: 'Adobe Creative Cloud subscription', amount: 850000, currency: 'IDR', date: '2026-01-15', status: 'approved' },
+    { id: 'exp-2', memberId: 'm2', memberName: 'Lave Lavael', projectId: 'proj-2', projectName: 'Mobile App Development', category: 'equipment', description: 'External monitor', amount: 3500000, currency: 'IDR', date: '2026-01-18', status: 'pending' },
+    { id: 'exp-3', memberId: 'm3', memberName: 'Sarah Johnson', projectId: 'proj-1', projectName: 'Website Redesign', category: 'travel', description: 'Client meeting transportation', amount: 250000, currency: 'IDR', date: '2026-01-20', status: 'reimbursed' },
+    { id: 'exp-4', memberId: 'm4', memberName: 'Michael Chen', projectId: 'proj-3', projectName: 'Marketing Campaign', category: 'meals', description: 'Team lunch meeting', amount: 450000, currency: 'IDR', date: '2026-01-19', status: 'approved' },
+    { id: 'exp-5', memberId: 'm5', memberName: 'Emma Rodriguez', projectId: 'proj-2', projectName: 'Mobile App Development', category: 'software', description: 'Testing tools license', amount: 1200000, currency: 'IDR', date: '2026-01-22', status: 'pending' },
+    { id: 'exp-6', memberId: 'm1', memberName: 'Antonio Galih', projectId: 'proj-4', projectName: 'API Integration', category: 'office', description: 'Office supplies', amount: 150000, currency: 'IDR', date: '2026-01-21', status: 'rejected' },
+]
+
+// ============================================================================
+// AUDIT LOG
+// ============================================================================
+
+export interface AuditLogEntry {
+    id: string
+    userId: string
+    userName: string
+    action: 'create' | 'update' | 'delete' | 'approve' | 'reject' | 'login' | 'logout' | 'export'
+    entityType: 'project' | 'task' | 'member' | 'timesheet' | 'expense' | 'invoice' | 'report' | 'settings'
+    entityName: string
+    changes?: string
+    timestamp: string
+    ipAddress: string
+}
+
+export const DUMMY_AUDIT_LOG: AuditLogEntry[] = [
+    { id: 'audit-1', userId: 'm1', userName: 'Antonio Galih', action: 'update', entityType: 'project', entityName: 'Website Redesign', changes: 'Updated budget from $10,000 to $12,000', timestamp: '2026-01-21T14:30:00', ipAddress: '192.168.1.100' },
+    { id: 'audit-2', userId: 'm3', userName: 'Sarah Johnson', action: 'approve', entityType: 'timesheet', entityName: 'Week 3 - Antonio Galih', timestamp: '2026-01-20T09:15:00', ipAddress: '192.168.1.102' },
+    { id: 'audit-3', userId: 'm2', userName: 'Lave Lavael', action: 'create', entityType: 'task', entityName: 'Design Homepage Mockup', timestamp: '2026-01-19T11:00:00', ipAddress: '192.168.1.101' },
+    { id: 'audit-4', userId: 'm4', userName: 'Michael Chen', action: 'export', entityType: 'report', entityName: 'Time & Activity Report', timestamp: '2026-01-19T16:45:00', ipAddress: '192.168.1.103' },
+    { id: 'audit-5', userId: 'm5', userName: 'Emma Rodriguez', action: 'delete', entityType: 'task', entityName: 'Old Bug Fix', timestamp: '2026-01-18T10:30:00', ipAddress: '192.168.1.104' },
+    { id: 'audit-6', userId: 'm1', userName: 'Antonio Galih', action: 'login', entityType: 'settings', entityName: 'System Access', timestamp: '2026-01-21T08:00:00', ipAddress: '192.168.1.100' },
+    { id: 'audit-7', userId: 'm3', userName: 'Sarah Johnson', action: 'reject', entityType: 'expense', entityName: 'Office supplies request', changes: 'Missing receipt', timestamp: '2026-01-20T15:00:00', ipAddress: '192.168.1.102' },
+]
+
+// ============================================================================
+// WEEKLY/DAILY LIMITS
+// ============================================================================
+
+export interface MemberLimit {
+    id: string
+    memberId: string
+    memberName: string
+    weeklyLimit: number
+    dailyLimit: number
+    weeklyUsed: number
+    dailyUsed: number
+    date: string
+}
+
+export const DUMMY_MEMBER_LIMITS: MemberLimit[] = [
+    { id: 'lim-1', memberId: 'm1', memberName: 'Antonio Galih', weeklyLimit: 40, dailyLimit: 8, weeklyUsed: 38.5, dailyUsed: 7.5, date: '2026-01-21' },
+    { id: 'lim-2', memberId: 'm2', memberName: 'Lave Lavael', weeklyLimit: 40, dailyLimit: 8, weeklyUsed: 42.0, dailyUsed: 9.0, date: '2026-01-21' },
+    { id: 'lim-3', memberId: 'm3', memberName: 'Sarah Johnson', weeklyLimit: 45, dailyLimit: 9, weeklyUsed: 44.0, dailyUsed: 8.5, date: '2026-01-21' },
+    { id: 'lim-4', memberId: 'm4', memberName: 'Michael Chen', weeklyLimit: 40, dailyLimit: 8, weeklyUsed: 35.0, dailyUsed: 6.0, date: '2026-01-21' },
+    { id: 'lim-5', memberId: 'm5', memberName: 'Emma Rodriguez', weeklyLimit: 35, dailyLimit: 7, weeklyUsed: 33.0, dailyUsed: 7.0, date: '2026-01-21' },
+]
+
+// ============================================================================
+// TIME OFF BALANCES
+// ============================================================================
+
+export interface TimeOffBalance {
+    id: string
+    memberId: string
+    memberName: string
+    policyName: string
+    accrued: number
+    used: number
+    pending: number
+    balance: number
+    unit: 'days' | 'hours'
+}
+
+export const DUMMY_TIME_OFF_BALANCES: TimeOffBalance[] = [
+    { id: 'tob-1', memberId: 'm1', memberName: 'Antonio Galih', policyName: 'Annual Leave', accrued: 12, used: 3, pending: 1, balance: 8, unit: 'days' },
+    { id: 'tob-2', memberId: 'm1', memberName: 'Antonio Galih', policyName: 'Sick Leave', accrued: 10, used: 1, pending: 0, balance: 9, unit: 'days' },
+    { id: 'tob-3', memberId: 'm2', memberName: 'Lave Lavael', policyName: 'Annual Leave', accrued: 12, used: 5, pending: 0, balance: 7, unit: 'days' },
+    { id: 'tob-4', memberId: 'm2', memberName: 'Lave Lavael', policyName: 'Sick Leave', accrued: 10, used: 2, pending: 0, balance: 8, unit: 'days' },
+    { id: 'tob-5', memberId: 'm3', memberName: 'Sarah Johnson', policyName: 'Annual Leave', accrued: 15, used: 2, pending: 2, balance: 11, unit: 'days' },
+    { id: 'tob-6', memberId: 'm4', memberName: 'Michael Chen', policyName: 'Annual Leave', accrued: 12, used: 0, pending: 0, balance: 12, unit: 'days' },
+    { id: 'tob-7', memberId: 'm5', memberName: 'Emma Rodriguez', policyName: 'Annual Leave', accrued: 10, used: 4, pending: 1, balance: 5, unit: 'days' },
+]
+
+// ============================================================================
+// INVOICES
+// ============================================================================
+
+export interface Invoice {
+    id: string
+    invoiceNumber: string
+    type: 'client' | 'team'
+    entityId: string
+    entityName: string
+    amount: number
+    currency: string
+    status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+    issueDate: string
+    dueDate: string
+    paidDate?: string
+    items: { description: string; hours: number; rate: number; amount: number }[]
+}
+
+export const DUMMY_INVOICES: Invoice[] = [
+    { id: 'inv-1', invoiceNumber: 'INV-2026-001', type: 'client', entityId: 'client-1', entityName: 'Patricia', amount: 15000000, currency: 'IDR', status: 'paid', issueDate: '2026-01-01', dueDate: '2026-01-15', paidDate: '2026-01-12', items: [{ description: 'Website Development', hours: 80, rate: 150000, amount: 12000000 }, { description: 'Design Services', hours: 20, rate: 150000, amount: 3000000 }] },
+    { id: 'inv-2', invoiceNumber: 'INV-2026-002', type: 'client', entityId: 'client-2', entityName: 'Tech Corp', amount: 25000000, currency: 'IDR', status: 'sent', issueDate: '2026-01-15', dueDate: '2026-01-30', items: [{ description: 'Mobile App Development', hours: 120, rate: 180000, amount: 21600000 }, { description: 'QA Testing', hours: 20, rate: 170000, amount: 3400000 }] },
+    { id: 'inv-3', invoiceNumber: 'INV-2026-003', type: 'client', entityId: 'client-3', entityName: 'Creative Agency', amount: 8500000, currency: 'IDR', status: 'overdue', issueDate: '2025-12-15', dueDate: '2025-12-30', items: [{ description: 'Marketing Campaign', hours: 50, rate: 170000, amount: 8500000 }] },
+    { id: 'inv-4', invoiceNumber: 'TM-2026-001', type: 'team', entityId: 'm1', entityName: 'Antonio Galih', amount: 6500000, currency: 'IDR', status: 'paid', issueDate: '2026-01-01', dueDate: '2026-01-10', paidDate: '2026-01-08', items: [{ description: 'January Week 1', hours: 42, rate: 155000, amount: 6500000 }] },
+    { id: 'inv-5', invoiceNumber: 'TM-2026-002', type: 'team', entityId: 'm2', entityName: 'Lave Lavael', amount: 5800000, currency: 'IDR', status: 'sent', issueDate: '2026-01-15', dueDate: '2026-01-25', items: [{ description: 'January Week 2', hours: 40, rate: 145000, amount: 5800000 }] },
+    { id: 'inv-6', invoiceNumber: 'TM-2026-003', type: 'team', entityId: 'm3', entityName: 'Sarah Johnson', amount: 7200000, currency: 'IDR', status: 'draft', issueDate: '2026-01-20', dueDate: '2026-01-30', items: [{ description: 'January Week 3', hours: 45, rate: 160000, amount: 7200000 }] },
+]
+
+// ============================================================================
+// SHIFT ATTENDANCE
+// ============================================================================
+
+export interface ShiftAttendance {
+    id: string
+    memberId: string
+    memberName: string
+    shiftDate: string
+    scheduledStart: string
+    scheduledEnd: string
+    actualStart?: string
+    actualEnd?: string
+    status: 'completed' | 'late' | 'early_leave' | 'missed' | 'upcoming'
+    lateMinutes?: number
+    earlyLeaveMinutes?: number
+}
+
+export const DUMMY_SHIFT_ATTENDANCE: ShiftAttendance[] = [
+    { id: 'shift-1', memberId: 'm1', memberName: 'Antonio Galih', shiftDate: '2026-01-21', scheduledStart: '08:00', scheduledEnd: '17:00', actualStart: '07:55', actualEnd: '17:05', status: 'completed' },
+    { id: 'shift-2', memberId: 'm2', memberName: 'Lave Lavael', shiftDate: '2026-01-21', scheduledStart: '09:00', scheduledEnd: '18:00', actualStart: '09:25', actualEnd: '18:00', status: 'late', lateMinutes: 25 },
+    { id: 'shift-3', memberId: 'm3', memberName: 'Sarah Johnson', shiftDate: '2026-01-21', scheduledStart: '08:00', scheduledEnd: '17:00', actualStart: '08:00', actualEnd: '16:30', status: 'early_leave', earlyLeaveMinutes: 30 },
+    { id: 'shift-4', memberId: 'm4', memberName: 'Michael Chen', shiftDate: '2026-01-21', scheduledStart: '10:00', scheduledEnd: '19:00', status: 'missed' },
+    { id: 'shift-5', memberId: 'm5', memberName: 'Emma Rodriguez', shiftDate: '2026-01-21', scheduledStart: '08:00', scheduledEnd: '17:00', actualStart: '08:02', actualEnd: '17:10', status: 'completed' },
+    { id: 'shift-6', memberId: 'm1', memberName: 'Antonio Galih', shiftDate: '2026-01-22', scheduledStart: '08:00', scheduledEnd: '17:00', status: 'upcoming' },
+]
+
+// ============================================================================
+// JOB SITE VISITS
+// ============================================================================
+
+export interface JobSiteVisit {
+    id: string
+    memberId: string
+    memberName: string
+    siteName: string
+    siteAddress: string
+    entryTime: string
+    exitTime?: string
+    duration?: number
+    date: string
+    projectId?: string
+    projectName?: string
+}
+
+export const DUMMY_JOB_SITE_VISITS: JobSiteVisit[] = [
+    { id: 'visit-1', memberId: 'm1', memberName: 'Antonio Galih', siteName: 'Client Office - Patricia', siteAddress: '123 Main St, Jakarta', entryTime: '09:00', exitTime: '12:30', duration: 210, date: '2026-01-21', projectId: 'proj-1', projectName: 'Website Redesign' },
+    { id: 'visit-2', memberId: 'm3', memberName: 'Sarah Johnson', siteName: 'Tech Corp HQ', siteAddress: '456 Technology Blvd, Surabaya', entryTime: '10:00', exitTime: '15:00', duration: 300, date: '2026-01-21', projectId: 'proj-2', projectName: 'Mobile App Development' },
+    { id: 'visit-3', memberId: 'm2', memberName: 'Lave Lavael', siteName: 'Creative Agency Studio', siteAddress: '789 Design Ave, Bandung', entryTime: '14:00', exitTime: '17:30', duration: 210, date: '2026-01-20', projectId: 'proj-3', projectName: 'Marketing Campaign' },
+    { id: 'visit-4', memberId: 'm4', memberName: 'Michael Chen', siteName: 'Startup Inc Office', siteAddress: '321 Innovation Street, Bali', entryTime: '08:30', exitTime: '11:00', duration: 150, date: '2026-01-20' },
+    { id: 'visit-5', memberId: 'm5', memberName: 'Emma Rodriguez', siteName: 'Client Office - Patricia', siteAddress: '123 Main St, Jakarta', entryTime: '13:00', date: '2026-01-21', projectId: 'proj-1', projectName: 'Website Redesign' },
+]
+
+// ============================================================================
+// WORK BREAKS (derived from dashboard activities)
+// ============================================================================
+
+export interface WorkBreak {
+    id: string
+    memberId: string
+    memberName: string
+    date: string
+    breakStart: string
+    breakEnd: string
+    duration: number
+    breakType: 'lunch' | 'short' | 'other'
+}
+
+export const DUMMY_WORK_BREAKS: WorkBreak[] = [
+    { id: 'break-1', memberId: 'm1', memberName: 'Antonio Galih', date: '2026-01-21', breakStart: '12:00', breakEnd: '13:00', duration: 60, breakType: 'lunch' },
+    { id: 'break-2', memberId: 'm1', memberName: 'Antonio Galih', date: '2026-01-21', breakStart: '15:30', breakEnd: '15:45', duration: 15, breakType: 'short' },
+    { id: 'break-3', memberId: 'm2', memberName: 'Lave Lavael', date: '2026-01-21', breakStart: '12:30', breakEnd: '13:30', duration: 60, breakType: 'lunch' },
+    { id: 'break-4', memberId: 'm3', memberName: 'Sarah Johnson', date: '2026-01-21', breakStart: '12:00', breakEnd: '12:45', duration: 45, breakType: 'lunch' },
+    { id: 'break-5', memberId: 'm4', memberName: 'Michael Chen', date: '2026-01-21', breakStart: '13:00', breakEnd: '14:00', duration: 60, breakType: 'lunch' },
+    { id: 'break-6', memberId: 'm4', memberName: 'Michael Chen', date: '2026-01-21', breakStart: '16:00', breakEnd: '16:20', duration: 20, breakType: 'short' },
+    { id: 'break-7', memberId: 'm5', memberName: 'Emma Rodriguez', date: '2026-01-21', breakStart: '12:15', breakEnd: '13:00', duration: 45, breakType: 'lunch' },
+]
+
+// ============================================================================
+// WORK SESSIONS (derived from dashboard activities)
+// ============================================================================
+
+export interface WorkSession {
+    id: string
+    memberId: string
+    memberName: string
+    date: string
+    startTime: string
+    endTime: string
+    duration: number
+    session?: string
+    projectId?: string
+    projectName?: string
+}
+
+export const DUMMY_WORK_SESSIONS: WorkSession[] = [
+    { id: 'session-1', memberId: 'm1', memberName: 'Antonio Galih', date: '2026-01-21', startTime: '08:00', endTime: '12:00', duration: 240, session: 'Morning', projectId: 'proj-1', projectName: 'Website Redesign' },
+    { id: 'session-2', memberId: 'm1', memberName: 'Antonio Galih', date: '2026-01-21', startTime: '13:00', endTime: '17:30', duration: 270, session: 'Afternoon', projectId: 'proj-1', projectName: 'Website Redesign' },
+    { id: 'session-3', memberId: 'm2', memberName: 'Lave Lavael', date: '2026-01-21', startTime: '09:25', endTime: '12:30', duration: 185, session: 'Morning', projectId: 'proj-2', projectName: 'Mobile App Development' },
+    { id: 'session-4', memberId: 'm2', memberName: 'Lave Lavael', date: '2026-01-21', startTime: '13:30', endTime: '18:00', duration: 270, session: 'Afternoon', projectId: 'proj-2', projectName: 'Mobile App Development' },
+    { id: 'session-5', memberId: 'm3', memberName: 'Sarah Johnson', date: '2026-01-21', startTime: '08:00', endTime: '12:00', duration: 240, session: 'Morning', projectId: 'proj-3', projectName: 'Marketing Campaign' },
+    { id: 'session-6', memberId: 'm3', memberName: 'Sarah Johnson', date: '2026-01-21', startTime: '12:45', endTime: '16:30', duration: 225, session: 'Afternoon', projectId: 'proj-3', projectName: 'Marketing Campaign' },
+    { id: 'session-7', memberId: 'm5', memberName: 'Emma Rodriguez', date: '2026-01-21', startTime: '08:02', endTime: '12:15', duration: 253, session: 'Morning', projectId: 'proj-4', projectName: 'API Integration' },
+    { id: 'session-8', memberId: 'm5', memberName: 'Emma Rodriguez', date: '2026-01-21', startTime: '13:00', endTime: '17:10', duration: 250, session: 'Afternoon', projectId: 'proj-4', projectName: 'API Integration' },
+]
+
+// ============================================================================
+// PROJECT BUDGETS
+// ============================================================================
+
+export interface ProjectBudget {
+    id: string
+    projectId: string
+    projectName: string
+    clientName: string
+    totalBudget: number
+    spentBudget: number
+    remainingBudget: number
+    currency: string
+    status: 'on_track' | 'at_risk' | 'over_budget'
+    progress: number
+    lastUpdated: string
+}
+
+export const DUMMY_PROJECT_BUDGETS: ProjectBudget[] = [
+    {
+        id: 'pb-1',
+        projectId: 'proj-1',
+        projectName: 'Website Redesign',
+        clientName: 'Patricia',
+        totalBudget: 10000,
+        spentBudget: 6500,
+        remainingBudget: 3500,
+        currency: 'USD',
+        status: 'on_track',
+        progress: 65,
+        lastUpdated: '2026-01-21'
+    },
+    {
+        id: 'pb-2',
+        projectId: 'proj-2',
+        projectName: 'Mobile App Development',
+        clientName: 'Tech Corp',
+        totalBudget: 25000,
+        spentBudget: 15000,
+        remainingBudget: 10000,
+        currency: 'USD',
+        status: 'on_track',
+        progress: 60,
+        lastUpdated: '2026-01-21'
+    },
+    {
+        id: 'pb-3',
+        projectId: 'proj-3',
+        projectName: 'Marketing Campaign',
+        clientName: 'Patricia',
+        totalBudget: 5000,
+        spentBudget: 4800,
+        remainingBudget: 200,
+        currency: 'USD',
+        status: 'at_risk',
+        progress: 96,
+        lastUpdated: '2026-01-21'
+    },
+    {
+        id: 'pb-4',
+        projectId: 'proj-4',
+        projectName: 'Old Website',
+        clientName: 'Patricia',
+        totalBudget: 5000,
+        spentBudget: 5200,
+        remainingBudget: -200,
+        currency: 'USD',
+        status: 'over_budget',
+        progress: 104,
+        lastUpdated: '2024-12-01'
+    }
+]
+
+// ============================================================================
+// CLIENT BUDGETS
+// ============================================================================
+
+export interface ClientBudget {
+    id: string
+    clientId: string
+    clientName: string
+    totalBudget: number
+    spentBudget: number
+    remainingBudget: number
+    currency: string
+    projectCount: number
+    status: 'on_track' | 'at_risk' | 'over_budget'
+    progress: number
+    lastUpdated: string
+}
+
+export const DUMMY_CLIENT_BUDGETS: ClientBudget[] = [
+    {
+        id: 'cb-1',
+        clientId: 'client-1',
+        clientName: 'Patricia',
+        totalBudget: 50000,
+        spentBudget: 11300,
+        remainingBudget: 38700,
+        currency: 'USD',
+        projectCount: 3,
+        status: 'on_track',
+        progress: 22.6,
+        lastUpdated: '2026-01-21'
+    },
+    {
+        id: 'cb-2',
+        clientId: 'client-2',
+        clientName: 'Tech Corp',
+        totalBudget: 150000, // $50k/mo * 3 months projection
+        spentBudget: 15000,
+        remainingBudget: 135000,
+        currency: 'USD',
+        projectCount: 1,
+        status: 'on_track',
+        progress: 10,
+        lastUpdated: '2026-01-21'
+    },
+    {
+        id: 'cb-3',
+        clientId: 'client-3',
+        clientName: 'Creative Agency',
+        totalBudget: 45000,
+        spentBudget: 25000,
+        remainingBudget: 20000,
+        currency: 'USD',
+        projectCount: 2,
+        status: 'on_track',
+        progress: 55.5,
+        lastUpdated: '2026-01-21'
+    },
+    {
+        id: 'cb-4',
+        clientId: 'client-4',
+        clientName: 'Startup Inc',
+        totalBudget: 15000,
+        spentBudget: 20000,
+        remainingBudget: -5000,
+        currency: 'USD',
+        projectCount: 1,
+        status: 'over_budget',
+        progress: 133.3,
+        lastUpdated: '2026-01-21'
+    }
+]
+
+// ============================================================================
+// AMOUNTS OWED
+// ============================================================================
+
+export interface AmountsOwedData {
+    id: string
+    memberId: string
+    name: string
+    email: string
+    team: string
+    hourlyRate: number
+    currency: string
+    regularHours: number
+    overtimeHours: number
+    totalHours: number
+    amountOwed: number
+    paymentStatus: 'Unpaid' | 'Paid' | 'Processing'
+}
+
+export const DUMMY_AMOUNTS_OWED: AmountsOwedData[] = [
+    { id: 'ao-1', memberId: 'm1', name: 'Antonio Galih', email: 'antonio@example.com', team: 'Team Alpha', hourlyRate: 150000, currency: 'IDR', regularHours: 160, overtimeHours: 5, totalHours: 165, amountOwed: 25500000, paymentStatus: 'Unpaid' },
+    { id: 'ao-2', memberId: 'm2', name: 'Lave Lavael', email: 'lave@example.com', team: 'Team Alpha', hourlyRate: 140000, currency: 'IDR', regularHours: 155, overtimeHours: 0, totalHours: 155, amountOwed: 21700000, paymentStatus: 'Processing' },
+    { id: 'ao-3', memberId: 'm3', name: 'Sarah Johnson', email: 'sarah@example.com', team: 'Team Alpha', hourlyRate: 160000, currency: 'IDR', regularHours: 160, overtimeHours: 10, totalHours: 170, amountOwed: 28800000, paymentStatus: 'Paid' },
+    { id: 'ao-4', memberId: 'm4', name: 'Michael Chen', email: 'michael@example.com', team: 'Team Beta', hourlyRate: 130000, currency: 'IDR', regularHours: 140, overtimeHours: 2, totalHours: 142, amountOwed: 18720000, paymentStatus: 'Unpaid' },
+    { id: 'ao-5', memberId: 'm5', name: 'Emma Rodriguez', email: 'emma@example.com', team: 'Team Beta', hourlyRate: 135000, currency: 'IDR', regularHours: 150, overtimeHours: 0, totalHours: 150, amountOwed: 20250000, paymentStatus: 'Unpaid' },
+]
+
+

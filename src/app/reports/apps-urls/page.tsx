@@ -1,0 +1,226 @@
+"use client"
+
+import { useState, useMemo } from "react"
+import { InsightsHeader } from "@/components/insights/InsightsHeader"
+import type { SelectedFilter, DateRange } from "@/components/insights/types"
+import { DUMMY_TOP_APPS, DUMMY_URL_ACTIVITIES, DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
+import { Button } from "@/components/ui/button"
+import { Download } from "lucide-react"
+import { format } from "date-fns"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { PaginationFooter } from "@/components/pagination-footer"
+import { useTimezone } from "@/components/timezone-provider"
+
+export default function AppsUrlsPage() {
+    const timezone = useTimezone()
+    const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({ type: "members", all: true, id: "all" })
+    const [dateRange, setDateRange] = useState<DateRange>({
+        startDate: new Date(2026, 0, 19),
+        endDate: new Date(2026, 0, 25)
+    })
+    const [activeTab, setActiveTab] = useState<'apps' | 'urls'>('apps')
+    const [page, setPage] = useState(1)
+    const pageSize = 10
+
+    // Filter apps data
+    const filteredApps = useMemo(() => {
+        let data = DUMMY_TOP_APPS
+
+        if (dateRange.startDate && dateRange.endDate) {
+            const startStr = format(dateRange.startDate, 'yyyy-MM-dd')
+            const endStr = format(dateRange.endDate, 'yyyy-MM-dd')
+            data = data.filter(item => item.date >= startStr && item.date <= endStr)
+        }
+
+        if (!selectedFilter.all && selectedFilter.id !== 'all') {
+            if (selectedFilter.type === 'members') {
+                data = data.filter(item => item.memberId === selectedFilter.id)
+            }
+        }
+
+        return data
+    }, [dateRange, selectedFilter])
+
+    // Filter URLs data
+    const filteredUrls = useMemo(() => {
+        let data = DUMMY_URL_ACTIVITIES
+
+        if (dateRange.startDate && dateRange.endDate) {
+            const startStr = format(dateRange.startDate, 'yyyy-MM-dd')
+            const endStr = format(dateRange.endDate, 'yyyy-MM-dd')
+            data = data.filter(item => item.date >= startStr && item.date <= endStr)
+        }
+
+        if (!selectedFilter.all && selectedFilter.id !== 'all') {
+            if (selectedFilter.type === 'members') {
+                data = data.filter(item => item.memberId === selectedFilter.id)
+            }
+        }
+
+        return data
+    }, [dateRange, selectedFilter])
+
+    const appsSummary = useMemo(() => {
+        const totalTime = filteredApps.reduce((sum, app) => sum + app.timeSpent, 0)
+        const uniqueApps = new Set(filteredApps.map(a => a.name)).size
+        return { totalTime, uniqueApps }
+    }, [filteredApps])
+
+    const urlsSummary = useMemo(() => {
+        const totalTime = filteredUrls.reduce((sum, url) => sum + url.timeSpent, 0)
+        const uniqueSites = new Set(filteredUrls.map(u => u.site)).size
+        return { totalTime, uniqueSites }
+    }, [filteredUrls])
+
+    const currentData = activeTab === 'apps' ? filteredApps : filteredUrls
+    const paginatedData = currentData.slice((page - 1) * pageSize, page * pageSize)
+    const totalPages = Math.ceil(currentData.length / pageSize)
+
+    const formatMinutes = (mins: number) => {
+        const hours = Math.floor(mins / 60)
+        const minutes = mins % 60
+        return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
+    }
+
+    return (
+        <div className="px-6 py-4">
+            <h1 className="text-xl font-semibold mb-5">Apps & URLs</h1>
+
+            <InsightsHeader
+                selectedFilter={selectedFilter}
+                onSelectedFilterChange={setSelectedFilter}
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+                members={DUMMY_MEMBERS}
+                teams={DUMMY_TEAMS}
+                timezone={timezone}
+            >
+                <Button variant="outline" className="h-9">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                </Button>
+            </InsightsHeader>
+
+            <style jsx global>{`
+                html body .custom-hover-row:hover,
+                html body .custom-hover-row:hover > td {
+                    background-color: #d1d5db !important;
+                }
+            `}</style>
+
+            <div className="mt-6 bg-white border rounded-lg shadow-sm">
+                <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as 'apps' | 'urls'); setPage(1); }}>
+                    <div className="border-b px-4 pt-4">
+                        <TabsList className="grid w-[300px] grid-cols-2">
+                            <TabsTrigger value="apps">Applications</TabsTrigger>
+                            <TabsTrigger value="urls">Websites</TabsTrigger>
+                        </TabsList>
+                    </div>
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x border-b bg-gray-50/50">
+                        <div className="p-4">
+                            <p className="text-sm font-medium text-gray-500">Total Time Spent</p>
+                            <p className="text-2xl font-bold text-gray-900">
+                                {formatMinutes(activeTab === 'apps' ? appsSummary.totalTime : urlsSummary.totalTime)}
+                            </p>
+                        </div>
+                        <div className="p-4">
+                            <p className="text-sm font-medium text-gray-500">
+                                Unique {activeTab === 'apps' ? 'Applications' : 'Sites'}
+                            </p>
+                            <p className="text-2xl font-bold text-gray-900">
+                                {activeTab === 'apps' ? appsSummary.uniqueApps : urlsSummary.uniqueSites}
+                            </p>
+                        </div>
+                        <div className="p-4">
+                            <p className="text-sm font-medium text-gray-500">Records</p>
+                            <p className="text-2xl font-bold text-gray-900">{currentData.length}</p>
+                        </div>
+                    </div>
+
+                    <TabsContent value="apps" className="m-0">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-gray-50 text-gray-600 font-medium border-b">
+                                    <tr>
+                                        <th className="p-4">Application</th>
+                                        <th className="p-4">Category</th>
+                                        <th className="p-4">Member</th>
+                                        <th className="p-4">Date</th>
+                                        <th className="p-4 text-right">Time Spent</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {(paginatedData as typeof DUMMY_TOP_APPS).map((app, idx) => (
+                                        <tr
+                                            key={`${app.memberId}-${app.name}-${idx}`}
+                                            style={{ backgroundColor: idx % 2 === 1 ? '#f1f5f9' : '#ffffff' }}
+                                            className="transition-colors custom-hover-row"
+                                        >
+                                            <td className="p-4 font-medium text-gray-900">{app.name}</td>
+                                            <td className="p-4">
+                                                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                                                    {app.category}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 text-gray-600">{app.memberId}</td>
+                                            <td className="p-4 text-gray-600">{app.date}</td>
+                                            <td className="p-4 text-right font-medium">{formatMinutes(app.timeSpent)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="urls" className="m-0">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-gray-50 text-gray-600 font-medium border-b">
+                                    <tr>
+                                        <th className="p-4">Website</th>
+                                        <th className="p-4">Project</th>
+                                        <th className="p-4">Member</th>
+                                        <th className="p-4">Date</th>
+                                        <th className="p-4 text-right">Time Spent</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {(paginatedData as typeof DUMMY_URL_ACTIVITIES).map((url, idx) => (
+                                        <tr
+                                            key={url.id}
+                                            style={{ backgroundColor: idx % 2 === 1 ? '#f1f5f9' : '#ffffff' }}
+                                            className="transition-colors custom-hover-row"
+                                        >
+                                            <td className="p-4 font-medium text-gray-900">{url.site}</td>
+                                            <td className="p-4 text-gray-600">{url.projectName}</td>
+                                            <td className="p-4 text-gray-600">{url.memberId}</td>
+                                            <td className="p-4 text-gray-600">{url.date}</td>
+                                            <td className="p-4 text-right font-medium">{formatMinutes(url.timeSpent)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </TabsContent>
+                </Tabs>
+
+                {/* Pagination */}
+                <div className="border-t">
+                    <PaginationFooter
+                        page={page}
+                        totalPages={totalPages}
+                        onPageChange={setPage}
+                        from={currentData.length > 0 ? (page - 1) * pageSize + 1 : 0}
+                        to={Math.min(page * pageSize, currentData.length)}
+                        total={currentData.length}
+                        pageSize={pageSize}
+                        onPageSizeChange={() => { }}
+                        className="bg-transparent shadow-none border-none"
+                    />
+                </div>
+            </div>
+        </div>
+    )
+}
