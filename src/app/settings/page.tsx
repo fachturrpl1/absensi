@@ -28,7 +28,7 @@ function SettingsCard({ title, icon: Icon, items, badge }: SettingsCardProps) {
         <Icon className="h-5 w-5 text-slate-700" />
         <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
         {badge && (
-          <span className="ml-auto px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
+          <span className="ml-auto px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-700 rounded-full">
             {badge}
           </span>
         )}
@@ -39,12 +39,12 @@ function SettingsCard({ title, icon: Icon, items, badge }: SettingsCardProps) {
             {item.href ? (
               <Link
                 href={item.href}
-                className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                className="text-sm text-slate-600 hover:text-slate-800 hover:underline"
               >
                 {item.label}
               </Link>
             ) : (
-              <span className="text-sm text-blue-600 cursor-pointer hover:text-blue-800 hover:underline">
+              <span className="text-sm text-slate-600 cursor-pointer hover:text-slate-800 hover:underline">
                 {item.label}
               </span>
             )}
@@ -58,12 +58,11 @@ function SettingsCard({ title, icon: Icon, items, badge }: SettingsCardProps) {
 export default function SettingsPage() {
   const settingsCards: SettingsCardProps[] = [
     {
-      title: 'Organization',
+      title: 'Project',
       icon: Building2,
       items: [
-        { label: 'Company information', href: '#' },
         { label: 'Security & log in', href: '#' },
-        { label: 'Projects & to-dos', href: '#' },
+        { label: 'Projects & taks', href: '#' },
         { label: 'Permissions', href: '#' },
       ],
     },
@@ -71,7 +70,7 @@ export default function SettingsPage() {
       title: 'Members',
       icon: Users,
       items: [
-        { label: 'Custom fields', href: '#' },
+        { label: 'Custom fields', href: '/settings/members/custom-fields' },
         { label: 'Work time limits', href: '#' },
         { label: 'Payments', href: '#' },
         { label: 'Achievements', href: '#' },
@@ -90,10 +89,10 @@ export default function SettingsPage() {
       title: 'Activity & tracking',
       icon: Activity,
       items: [
-        { label: 'Activity', href: '#' },
+        { label: 'Activity', href: '/settings/activity/track-apps-urls' },
         { label: 'Timesheets', href: '#' },
-        { label: 'Time & tracking', href: '#' },
-        { label: 'Screenshots', href: '#' },
+        { label: 'Time & tracking', href: '/settings/tracking/allowed-apps' },
+        { label: 'Screenshots', href: '/settings/screenshot' },
       ],
     },
     {
@@ -126,7 +125,7 @@ export default function SettingsPage() {
             <input
               type="text"
               placeholder="Search settings"
-              className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
             />
           </div>
         </div>

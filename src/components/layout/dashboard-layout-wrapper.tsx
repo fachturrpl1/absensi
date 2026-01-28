@@ -44,7 +44,7 @@ export function DashboardLayoutWrapper({
   const hideNavbar = hideNavbarPaths.some(path => pathname?.startsWith(path));
 
   // Check if current path is settings page (should have no padding)
-  const isSettingsPage = pathname?.includes('/activity/screenshots/setting');
+  const isSettingsPage = pathname?.includes('/activity/screenshots/setting') || pathname?.includes('/activity/tracking') || pathname?.includes('/activity/settings') || pathname?.includes('/settings/');
 
   // If public path, render children without layout
   if (isPublicPath) {
