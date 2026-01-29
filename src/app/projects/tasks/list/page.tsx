@@ -177,18 +177,27 @@ export default function ListView() {
             header: () => <div>Actions</div>,
             cell: ({ row }) => (
                 <div className="inline-flex items-center gap-1">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="px-3"
-                        onClick={() => {
-                            setEditingTask(row.original)
-                            setEditedTitle(row.original.title)
-                            setEditedAssignee(row.original.assignee)
-                        }}
-                    >
-                        <Pencil className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="px-3">
+                                <Pencil className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => {
+                                setEditingTask(row.original)
+                                setEditedTitle(row.original.title)
+                                setEditedAssignee(row.original.assignee)
+                            }}>
+                                Edit task
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => {
+                                setTasks(prev => prev.map(t => t.id === row.original.id ? { ...t, completed: !row.original.completed } : t))
+                            }}>
+                                {row.original.completed ? "Reopen task" : "Mark as complete"}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <Button
                         variant="outline"
                         size="sm"
@@ -239,7 +248,7 @@ export default function ListView() {
                                 placeholder="Search tasks"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="ps-10 pl-10 border-gray-300"
+                                className="ps-10 pl-10"
                             />
                         </div>
 
@@ -311,14 +320,7 @@ export default function ListView() {
                                     setRowSelection({})
                                 }}
                             >
-                                {activeTab === "active" ? "Mark as completed" : "Mark as active"}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => {
-                                const selectedRowIds = Object.keys(rowSelection).filter(k => rowSelection[k])
-                                setTasks(prev => prev.filter(t => !selectedRowIds.includes(t.id)))
-                                setRowSelection({})
-                            }} className="text-destructive">
-                                Delete tasks
+                                {activeTab === "active" ? "Mark as completed" : "Reopen tasks"}
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

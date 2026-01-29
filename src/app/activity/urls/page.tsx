@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { Search, Lightbulb, Info, Globe, Monitor, ChevronDown } from "lucide-react"
+import { Search, Lightbulb, Info, Globe, Monitor } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -89,7 +89,7 @@ export default function UrlsPage() {
             APP/URL CLASSIFICATION
           </span>
         </div>
-        
+
         {/* Description */}
         <p className="text-sm text-gray-600 mb-3">
           Classify apps & URLs for different job roles across your organization. Default ratings can be overridden at the job title level.
@@ -195,31 +195,28 @@ export default function UrlsPage() {
                   <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
                     <button
                       onClick={() => handleClassificationChange(url.id, "core")}
-                      className={`px-4 py-2 text-xs font-medium transition-colors ${
-                        url.classification === "core"
+                      className={`px-4 py-2 text-xs font-medium transition-colors ${url.classification === "core"
                           ? "bg-gray-900 text-white"
                           : "bg-white text-gray-500 hover:bg-gray-100"
-                      }`}
+                        }`}
                     >
                       Core work
                     </button>
                     <button
                       onClick={() => handleClassificationChange(url.id, "non-core")}
-                      className={`px-4 py-2 text-xs font-medium border-x border-gray-300 transition-colors ${
-                        url.classification === "non-core"
+                      className={`px-4 py-2 text-xs font-medium border-x border-gray-300 transition-colors ${url.classification === "non-core"
                           ? "bg-gray-900 text-white"
                           : "bg-white text-gray-500 hover:bg-gray-100"
-                      }`}
+                        }`}
                     >
                       Non-core work
                     </button>
                     <button
                       onClick={() => handleClassificationChange(url.id, "unproductive")}
-                      className={`px-4 py-2 text-xs font-medium transition-colors ${
-                        url.classification === "unproductive"
+                      className={`px-4 py-2 text-xs font-medium transition-colors ${url.classification === "unproductive"
                           ? "bg-gray-900 text-white"
                           : "bg-white text-gray-500 hover:bg-gray-100"
-                      }`}
+                        }`}
                     >
                       Unproductive
                     </button>

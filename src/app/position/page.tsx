@@ -310,7 +310,7 @@ export default function PositionsPage() {
                                     placeholder="Search positions..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10"
+                                    className="ps-10 pl-10"
                                 />
                             </div>
                             <div className="flex items-center gap-3 sm:gap-2 flex-wrap">
