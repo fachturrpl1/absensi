@@ -155,7 +155,7 @@ export default function OrganizationPage() {
             placeholder="Search organizations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="ps-10 pl-10"
           />
         </div>
         <div className="flex items-center gap-1 border rounded-md p-1">

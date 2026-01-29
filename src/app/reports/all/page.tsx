@@ -36,7 +36,7 @@ export default function AllReportsPage() {
                     href: "/reports/time-activity",
                     isPopular: true,
                     isStarred: true,
-                    icon: <div className="p-3 bg-blue-100 rounded-lg"><Activity className="w-8 h-8 text-blue-600" /></div>
+                    icon: <div className="p-3 bg-gray-100 rounded-lg"><Activity className="w-8 h-8 text-gray-600" /></div>
                 },
                 {
                     title: "Amounts owed",
@@ -159,9 +159,9 @@ export default function AllReportsPage() {
     const customizedReports = DUMMY_CUSTOM_REPORTS.slice(0, 2)
 
     return (
-        <div className="flex flex-1 flex-col gap-10 p-6 pt-2 max-w-[1600px] mx-auto">
+        <div className="w-full flex flex-1 flex-col gap-10 p-6 pt-2 max-w-[1600px] mx-auto">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="w-full flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-gray-700">Reports</h1>
                 <div className="relative w-[300px]">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -169,7 +169,7 @@ export default function AllReportsPage() {
                         placeholder="Search reports"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 border-gray-300 rounded-full bg-white shadow-sm focus:border-blue-500 transition-all"
+                        className="ps-10 pl-10 border-gray-300 rounded-full bg-white shadow-sm focus:border-gray-500 transition-all"
                     />
                 </div>
             </div>
@@ -183,9 +183,9 @@ export default function AllReportsPage() {
                     {/* Customized Report Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {customizedReports.map((report) => (
-                            <div key={report.id} className="group flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm hover:border-blue-300 transition-all cursor-pointer">
+                            <div key={report.id} className="group flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm hover:border-gray-300 transition-all cursor-pointer">
                                 <div className="flex flex-col gap-1">
-                                    <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{report.name}</h3>
+                                    <h3 className="font-semibold text-gray-900 group-hover:text-gray-900 transition-colors">{report.name}</h3>
                                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
                                         {report.type}
                                     </span>

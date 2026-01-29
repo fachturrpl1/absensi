@@ -13,57 +13,34 @@ export default function HighlightsPage() {
   const timezone = useTimezone()
   const searchParams = useSearchParams()
   const memberIdFromUrl = searchParams.get("memberId")
-  
-  // Get initial memberId: URL > sessionStorage > default
-  const getInitialMemberId = (): string => {
-    // Try to read from window.location.search first (more reliable on initial render)
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search)
-      const memberIdFromLocation = urlParams.get("memberId")
-      if (memberIdFromLocation) {
-        console.log("Initial state: Using memberId from window.location:", memberIdFromLocation)
-        return memberIdFromLocation
-      }
-    }
-    // Fallback to useSearchParams
-    if (memberIdFromUrl) {
-      console.log("Initial state: Using memberId from useSearchParams:", memberIdFromUrl)
-      return memberIdFromUrl
-    }
-    // Fallback to sessionStorage
-    if (typeof window !== "undefined") {
-      const savedMemberId = sessionStorage.getItem("screenshotSelectedMemberId")
-      if (savedMemberId) {
-        console.log("Initial state: Using memberId from sessionStorage:", savedMemberId)
-        return savedMemberId
-      }
-    }
-    console.log("Initial state: Using default memberId: m1")
-    return "m1"
-  }
-  
+
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({
     type: "members",
     all: false,
-    id: getInitialMemberId(),
+    id: memberIdFromUrl || "m1",
   })
-  
+
   // Update filter when memberId from URL changes
+  // Handle filter changes from URL params
   useEffect(() => {
-    console.log("useEffect triggered - memberIdFromUrl:", memberIdFromUrl)
-    // Priority: URL > sessionStorage > keep current
     if (memberIdFromUrl && memberIdFromUrl !== selectedFilter.id) {
-      console.log("Setting filter from URL memberId:", memberIdFromUrl)
+      console.log("Syncing filter with URL:", memberIdFromUrl)
       setSelectedFilter({
         type: "members",
         all: false,
         id: memberIdFromUrl,
       })
-    } else if (!memberIdFromUrl && typeof window !== "undefined") {
+    }
+  }, [memberIdFromUrl]) // Only run when URL param changes
+
+  // Handle initial restore from session storage (Once on mount)
+  useEffect(() => {
+    // Only restore if NO URL param is present
+    if (!memberIdFromUrl && typeof window !== "undefined") {
       const savedMemberId = sessionStorage.getItem("screenshotSelectedMemberId")
       if (savedMemberId && savedMemberId !== selectedFilter.id) {
-        console.log("Setting filter from sessionStorage memberId:", savedMemberId)
+        console.log("Restoring filter from session storage:", savedMemberId)
         setSelectedFilter({
           type: "members",
           all: false,
@@ -71,7 +48,8 @@ export default function HighlightsPage() {
         })
       }
     }
-  }, [memberIdFromUrl, selectedFilter.id])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Run ONCE on mount
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const end = new Date()
     const start = new Date()
@@ -209,13 +187,12 @@ export default function HighlightsPage() {
                           className="flex items-start gap-3 text-sm hover:bg-gray-50 p-2 rounded-md -mx-2 transition-colors cursor-pointer"
                         >
                           <div
-                            className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${
-                              activity.severity === "highly_unusual"
-                                ? "bg-red-500"
-                                : activity.severity === "unusual"
-                                  ? "bg-orange-500"
-                                  : "bg-yellow-500"
-                            }`}
+                            className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${activity.severity === "highly_unusual"
+                              ? "bg-red-500"
+                              : activity.severity === "unusual"
+                                ? "bg-orange-500"
+                                : "bg-yellow-500"
+                              }`}
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
@@ -262,13 +239,12 @@ export default function HighlightsPage() {
                         <div className="flex items-center gap-2 mb-2">
                           <span className="font-semibold text-sm">{notification.memberName}</span>
                           <span
-                            className={`px-2 py-1 text-xs rounded ${
-                              notification.severity === "high"
-                                ? "bg-red-100 text-red-700"
-                                : notification.severity === "medium"
-                                  ? "bg-orange-100 text-orange-700"
-                                  : "bg-yellow-100 text-yellow-700"
-                            }`}
+                            className={`px-2 py-1 text-xs rounded ${notification.severity === "high"
+                              ? "bg-red-100 text-red-700"
+                              : notification.severity === "medium"
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-yellow-100 text-yellow-700"
+                              }`}
                           >
                             {notification.severity}
                           </span>
@@ -299,13 +275,12 @@ export default function HighlightsPage() {
                         <div className="flex items-center gap-2 mb-2">
                           <span className="font-semibold text-sm">{change.memberName}</span>
                           <span
-                            className={`px-2 py-1 text-xs rounded ${
-                              change.changeType === "productivity_increase"
-                                ? "bg-green-100 text-green-700"
-                                : change.changeType === "productivity_decrease"
-                                  ? "bg-red-100 text-red-700"
-                                  : "bg-blue-100 text-blue-700"
-                            }`}
+                            className={`px-2 py-1 text-xs rounded ${change.changeType === "productivity_increase"
+                              ? "bg-green-100 text-green-700"
+                              : change.changeType === "productivity_decrease"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-blue-100 text-blue-700"
+                              }`}
                           >
                             {change.changeType.replace("_", " ")}
                           </span>

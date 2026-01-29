@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table"
 import AddProjectDialog from "@/components/projects/AddProjectDialog"
 import EditProjectDialog from "@/components/projects/EditProjectDialog"
+import TransferProjectDialog from "@/components/projects/TransferProjectDialog"
 import type { Project, NewProjectForm } from "@/components/projects/types"
 import { DUMMY_PROJECTS, DUMMY_MEMBERS, PROJECT_MEMBER_MAP, getTaskCountFromTasksPageByProjectId, getTeamNamesByProjectId } from "@/lib/data/dummy-data"
 import { PaginationFooter } from "@/components/pagination-footer"
@@ -77,7 +78,30 @@ export default function ProjectsPage() {
         disableIdle: false,
         clientId: null,
         members: [],
-        teams: []
+        teams: [],
+        // Budget fields
+        budgetType: "",
+        budgetBasedOn: "",
+        budgetCost: "",
+        budgetNotifyMembers: false,
+        budgetNotifyAt: "80",
+        budgetNotifyWho: "",
+        budgetStopTimers: false,
+        budgetStopAt: "100",
+        budgetResets: "never",
+        budgetStartDate: null,
+        budgetIncludeNonBillable: false,
+        // Member limits - initialize with one default limit
+        memberLimits: [{
+            members: [],
+            type: '',
+            basedOn: '',
+            cost: '',
+            resets: 'never',
+            startDate: null
+        }],
+        memberLimitNotifyAt: "80",
+        memberLimitNotifyMembers: false,
     })
 
     // edit dialog state
@@ -93,6 +117,10 @@ export default function ProjectsPage() {
     // archive confirm state (shared: row & batch)
     const [archiveOpen, setArchiveOpen] = useState(false)
     const [archiveTargets, setArchiveTargets] = useState<string[]>([])
+
+    // transfer project state
+    const [transferOpen, setTransferOpen] = useState(false)
+    const [transferProject, setTransferProject] = useState<Project | null>(null)
 
     const filtered = useMemo(() => {
         const byTab = data.filter(p => (activeTab === "active" ? !p.archived : p.archived))
@@ -159,7 +187,7 @@ export default function ProjectsPage() {
                                 placeholder="Search projects"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="pl-10 border-gray-300"
+                                className="ps-10 pl-10 border-gray-300"
                             />
                         </div>
                         <div className="flex items-center gap-2">
@@ -298,6 +326,14 @@ export default function ProjectsPage() {
                                                                 <DropdownMenuItem>Duplicate project</DropdownMenuItem>
                                                                 <DropdownMenuItem onSelect={() => { setArchiveTargets([p.id]); setArchiveOpen(true) }}>
                                                                     Archive project
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onSelect={() => {
+                                                                        setTransferProject(p);
+                                                                        setTransferOpen(true)
+                                                                    }}
+                                                                >
+                                                                    Transfer
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuSeparator />
                                                                 <DropdownMenuItem className="text-destructive">Delete project</DropdownMenuItem>
@@ -476,6 +512,21 @@ export default function ProjectsPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
+
+                    <TransferProjectDialog
+                        open={transferOpen}
+                        onOpenChange={(o) => { setTransferOpen(o); if (!o) setTransferProject(null) }}
+                        project={transferProject}
+                        onTransfer={(orgId) => {
+                            console.log(`Transferring project ${transferProject?.id} to organization ${orgId}`)
+                            // In real implementation, call API to transfer project
+                            // Then remove from current data
+                            if (transferProject) {
+                                setData(prev => prev.filter(p => p.id !== transferProject.id))
+                                setTransferProject(null)
+                            }
+                        }}
+                    />
 
                 </div>
             </div>

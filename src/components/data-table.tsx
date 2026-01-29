@@ -87,10 +87,12 @@ export function DataTable<TData, TValue>({
   totalRecords,
   onPageIndexChange: onPageIndexChangeProp,
   onPageSizeChange: onPageSizeChangeProp,
+  rowSelection: controlledRowSelection,
+  onRowSelectionChange: onRowSelectionChangeProp,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({})
+  const [internalRowSelection, setInternalRowSelection] = React.useState<Record<string, boolean>>({})
   const [sortOrder, setSortOrder] = React.useState("newest")
   const [pageSize, setPageSize] = React.useState(String(controlledPageSize ?? 10))
   const [pagination, setPagination] = React.useState({
@@ -99,6 +101,10 @@ export function DataTable<TData, TValue>({
   })
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState("all")
+
+  // Use controlled selection if provided, otherwise use internal
+  const rowSelection = controlledRowSelection ?? internalRowSelection
+  const onRowSelectionChange = onRowSelectionChangeProp ?? setInternalRowSelection
 
   // Handler functions
   const handlePageSizeChange = (value: string) => {
@@ -205,7 +211,7 @@ export function DataTable<TData, TValue>({
     getPaginationRowModel: manualPagination ? undefined : getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: onRowSelectionChange,
     onPaginationChange: (updater) => {
       if (typeof updater === 'function') {
         const newPagination = updater({ pageIndex, pageSize: parseInt(pageSize) })

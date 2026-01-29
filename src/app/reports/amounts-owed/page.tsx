@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useMemo } from "react"
+import React, { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Download, SlidersHorizontal, Send, Calendar as CalendarIcon } from "lucide-react"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
@@ -105,6 +105,12 @@ export default function AmountsOwedPage() {
     const totalOwed = filteredData.reduce((sum, item) => sum + item.amountOwed, 0)
     const totalHours = filteredData.reduce((sum, item) => sum + item.totalHours, 0)
 
+    // Avoid hydration mismatch: compute today's string on client only
+    const [todayStr, setTodayStr] = useState<string>("")
+    useEffect(() => {
+        setTodayStr(format(new Date(), "EEE, MMM dd, yyyy"))
+    }, [])
+
     // Handlers
     const handleExport = () => {
         exportToCSV({
@@ -130,7 +136,7 @@ export default function AmountsOwedPage() {
                 }
             `}</style>
 
-            <div className="border-b border-gray-200 bg-white">
+            <div className="sticky top-0 z-20 border-b border-gray-200 bg-white">
                 <div className="px-6 py-4">
                     <h1 className="text-xl font-semibold mb-5">Amounts owed report</h1>
 
@@ -243,7 +249,7 @@ export default function AmountsOwedPage() {
                 {/* Table */}
                 <div className="bg-white border rounded-lg shadow-sm">
                     <div className="bg-gray-50 px-4 py-2 border-b font-medium text-sm text-gray-900">
-                        {format(new Date(), "EEE, MMM dd, yyyy")}
+                        <span suppressHydrationWarning>{todayStr}</span>
                     </div>
                     <table className="w-full text-sm text-left">
                         <thead className="text-gray-500 font-medium border-b border-gray-100">

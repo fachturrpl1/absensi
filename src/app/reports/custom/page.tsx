@@ -243,7 +243,7 @@ export default function CustomizedReportsPage() {
                                 placeholder="Search reports..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="pl-10 border-gray-300"
+                                className="ps-10 pl-10 border-gray-300"
                             />
                         </div>
 

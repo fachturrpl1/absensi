@@ -5,7 +5,7 @@ import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { DUMMY_WORK_SESSIONS, DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
 import { Button } from "@/components/ui/button"
-import { Download, Settings, Search, SlidersHorizontal, Clock, Coffee, Activity } from "lucide-react"
+import { Download, Search, SlidersHorizontal, Clock, Coffee, Activity } from "lucide-react"
 import { format } from "date-fns"
 import { formatHoursForExport } from "@/lib/export-utils"
 import { useTimezone } from "@/components/timezone-provider"
@@ -163,7 +163,7 @@ export default function WorkSessionsPage() {
                 }
             `}</style>
 
-            <div className="border-b border-gray-200 bg-white">
+            <div className="sticky top-0 z-20 border-b border-gray-200 bg-white">
                 <div className="px-6 py-4">
                     <h1 className="text-xl font-semibold mb-5 text-gray-700">Work sessions report</h1>
 
@@ -177,13 +177,6 @@ export default function WorkSessionsPage() {
                         timezone={timezone}
                     >
                         <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                className="h-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50 font-medium"
-                                onClick={() => { }}
-                            >
-                                <Settings className="w-4 h-4 mr-2" /> Filter
-                            </Button>
                             <Button
                                 className="h-9 bg-gray-900 hover:bg-gray-800 text-white font-medium"
                                 onClick={handleExport}
@@ -292,7 +285,7 @@ export default function WorkSessionsPage() {
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                                 <Input
-                                    className="h-8 pl-8 w-[200px] text-xs"
+                                    className="h-8 ps-8 pl-8 w-[200px] text-xs"
                                     placeholder="Search..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}

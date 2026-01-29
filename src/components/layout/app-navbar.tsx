@@ -41,6 +41,8 @@ import {
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { useOrganizationName } from '@/hooks/use-organization-name';
 
 interface AppNavbarProps {
   onMenuClick: () => void;
@@ -48,15 +50,57 @@ interface AppNavbarProps {
   isMobile: boolean;
 }
 
+// Helper function to get initials from name
+function getInitials(firstName?: string, lastName?: string, displayName?: string | null): string {
+  if (displayName) {
+    const parts = displayName.trim().split(' ').filter(p => p.length > 0);
+    const first = parts[0]?.[0];
+    const last = parts[parts.length - 1]?.[0];
+
+    if (parts.length >= 2 && first && last) {
+      return `${first}${last}`.toUpperCase();
+    }
+    if (parts.length >= 1 && parts[0]) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+  }
+
+  if (firstName && lastName) {
+    return `${firstName[0]}${lastName[0]}`.toUpperCase();
+  }
+
+  if (firstName) {
+    return firstName.substring(0, 2).toUpperCase();
+  }
+
+  return 'U';
+}
+
 export function AppNavbar({ onMenuClick, sidebarCollapsed: _, isMobile }: AppNavbarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [notificationCount] = useState(3);
 
+  // Fetch real user and organization data
+  const { data: userProfile } = useUserProfile();
+  const { organizationName } = useOrganizationName();
+
+  // Generate display name and initials
+  const displayName = userProfile?.display_name ||
+    (userProfile?.first_name && userProfile?.last_name
+      ? `${userProfile.first_name} ${userProfile.last_name}`
+      : userProfile?.first_name || 'User');
+
+  const initials = getInitials(
+    userProfile?.first_name,
+    userProfile?.last_name,
+    userProfile?.display_name
+  );
+
   // Generate breadcrumbs from pathname
   const generateBreadcrumbs = () => {
     const paths = pathname?.split('/').filter(Boolean) || [];
-    
+
     const breadcrumbs = [
       { label: 'Home', href: '/' },
     ];
@@ -235,14 +279,16 @@ export function AppNavbar({ onMenuClick, sidebarCollapsed: _, isMobile }: AppNav
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 gap-2 px-2">
                 <Avatar className="h-7 w-7">
-                  <AvatarImage src="/avatar.jpg" alt="User" />
+                  {userProfile?.profile_photo_url && (
+                    <AvatarImage src={userProfile.profile_photo_url} alt={displayName} />
+                  )}
                   <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                    FA
+                    {initials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden md:flex flex-col items-start text-left text-xs">
-                  <span className="font-semibold">Fauzan</span>
-                  <span className="text-muted-foreground">Admin</span>
+                  <span className="font-semibold">{displayName}</span>
+                  <span className="text-muted-foreground">{organizationName || 'Organization'}</span>
                 </div>
                 <ChevronDown className="hidden md:block h-4 w-4 text-muted-foreground" />
               </Button>
@@ -250,8 +296,10 @@ export function AppNavbar({ onMenuClick, sidebarCollapsed: _, isMobile }: AppNav
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">Fauzan Ahmad</p>
-                  <p className="text-xs text-muted-foreground">fauzan@example.com</p>
+                  <p className="text-sm font-medium">{displayName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {userProfile?.employee_code || 'No employee code'}
+                  </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
