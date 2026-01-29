@@ -308,16 +308,16 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
             </button>
           </div>
         </div>
-            <div className="flex min-w-[160px] justify-end">
+        <div className="flex min-w-[160px] justify-end">
               <Button 
                 variant="outline" 
                 className="flex items-center gap-2 rounded-full border border-slate-200 px-4 text-sm font-medium text-slate-700"
                 onClick={() => router.push("/settings/screenshot")}
               >
-                <Settings className="h-4 w-4 text-slate-700" />
-                Settings
-              </Button>
-            </div>
+            <Settings className="h-4 w-4 text-slate-700" />
+            Settings
+          </Button>
+        </div>
       </div>
 
       {/* Date & User Controls */}

@@ -224,19 +224,19 @@ export default function PaymentsPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-6">
+            <div className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleCancel}
-                className="border-slate-300 text-slate-800 hover:bg-slate-50"
+                className="w-full sm:w-auto border-2 border-slate-900 bg-white text-slate-900 shadow-sm hover:bg-slate-50"
               >
                 Cancel
               </Button>
               <Button
                 type="button"
                 onClick={handleSave}
-                className="bg-slate-900 hover:bg-slate-800 text-white"
+                className="w-full sm:w-auto bg-black hover:bg-slate-900 text-white shadow-sm"
               >
                 Save
               </Button>
