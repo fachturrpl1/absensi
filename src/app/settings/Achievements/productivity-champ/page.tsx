@@ -90,8 +90,8 @@ export default function ProductivityChampPage() {
                         key={tab.label}
                         href={tab.href}
                         className={`py-3 text-sm font-medium border-b-2 transition-colors ${tab.active
-                                ? "text-gray-900 border-gray-900"
-                                : "text-gray-500 border-transparent hover:text-gray-700"
+                            ? "text-gray-900 border-gray-900"
+                            : "text-gray-500 border-transparent hover:text-gray-700"
                             }`}
                     >
                         {tab.label}
@@ -108,8 +108,8 @@ export default function ProductivityChampPage() {
                             key={item.label}
                             href={item.href}
                             className={`block px-6 py-2 text-sm transition-colors ${item.active
-                                    ? "text-gray-900 border-l-2 border-gray-900 font-medium"
-                                    : "text-gray-500 hover:text-gray-700"
+                                ? "text-gray-900 border-l-2 border-gray-900 font-medium"
+                                : "text-gray-500 hover:text-gray-700"
                                 }`}
                         >
                             {item.label}
@@ -147,9 +147,17 @@ export default function ProductivityChampPage() {
                             onCheckedChange={setGlobalEnabled}
                         />
 
-                        {/* Badge Icon */}
-                        <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center">
-                            <CheckSquare className="w-5 h-5 text-white" />
+                        {/* Badge Icon - Hexagon with Checkmark */}
+                        <div className="relative w-12 h-12 flex items-center justify-center">
+                            <svg viewBox="0 0 100 100" className="w-12 h-12">
+                                <polygon
+                                    points="50,3 93,25 93,75 50,97 7,75 7,25"
+                                    fill="#10b981"
+                                    stroke="#10b981"
+                                    strokeWidth="2"
+                                />
+                            </svg>
+                            <CheckSquare className="w-5 h-5 text-white absolute" />
                         </div>
 
                         <div>
