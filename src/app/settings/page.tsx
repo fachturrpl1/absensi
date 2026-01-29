@@ -73,7 +73,7 @@ export default function SettingsPage() {
         { label: 'Custom fields', href: '/settings/members/custom-fields' },
         { label: 'Work time limits', href: '#' },
         { label: 'Payments', href: '#' },
-        { label: 'Achievements', href: '#' },
+        { label: 'Achievements', href: '/settings/Achievements' },
       ],
     },
     {
