@@ -328,7 +328,6 @@ export default function ProjectsPage() {
                                                                     Archive project
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem
-                                                                    disabled={data.filter(d => !d.archived).length <= 1}
                                                                     onSelect={() => {
                                                                         setTransferProject(p);
                                                                         setTransferOpen(true)
@@ -518,7 +517,6 @@ export default function ProjectsPage() {
                         open={transferOpen}
                         onOpenChange={(o) => { setTransferOpen(o); if (!o) setTransferProject(null) }}
                         project={transferProject}
-                        canTransfer={data.filter(d => !d.archived).length > 1}
                         onTransfer={(orgId) => {
                             console.log(`Transferring project ${transferProject?.id} to organization ${orgId}`)
                             // In real implementation, call API to transfer project

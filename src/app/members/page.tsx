@@ -49,7 +49,7 @@ import { computeName, computeGroupName, computeGender, computeNik, MemberLike } 
 
 import { IOrganization_member } from "@/interface"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
-import { Skeleton } from "@/components/ui/skeleton" 
+import { Skeleton } from "@/components/ui/skeleton"
 import { createInvitation } from "@/action/invitations"
 import { getOrgRoles } from "@/lib/rbac"
 import { useGroups } from "@/hooks/use-groups"
@@ -216,7 +216,7 @@ export default function MembersPage() {
   const members: IOrganization_member[] = React.useMemo(() => {
     const rawMembers = pageData?.data ?? []
     if (!searchQuery || !searchQuery.trim()) return rawMembers
-    
+
     const searchTerm = searchQuery.toLowerCase().trim()
     return rawMembers.filter((member: any) => {
       const fullName = computeName(member as MemberLike).toLowerCase()
@@ -244,7 +244,7 @@ export default function MembersPage() {
       )
     })
   }, [pageData?.data, searchQuery])
-  
+
   const total: number = pageData?.pagination?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / (pageSize || 1)))
 
@@ -252,11 +252,11 @@ export default function MembersPage() {
   React.useEffect(() => {
     if (members && members.length > 0) {
       console.log('[MEMBERS UI] Total members:', members.length)
-      
+
       // Check all members for department_id
       const membersWithDeptId = members.filter((m: any) => m.department_id != null && m.department_id !== undefined)
       console.log('[MEMBERS UI] Members with department_id:', membersWithDeptId.length)
-      
+
       if (membersWithDeptId.length > 0 && membersWithDeptId[0]) {
         const sample = membersWithDeptId[0] as any;
         console.log('[MEMBERS UI] Sample member with department_id:', {
@@ -269,7 +269,7 @@ export default function MembersPage() {
           biodata_nik: sample.biodata_nik
         })
       }
-      
+
       const membersWithDept = members.filter((m: any) => {
         if (!m.departments) return false
         if (Array.isArray(m.departments) && m.departments.length > 0 && m.departments[0]?.name) return true
@@ -278,15 +278,15 @@ export default function MembersPage() {
       })
       const membersWithoutDept = members.filter((m: any) => {
         if (!m.department_id) return false
-        const hasValidDept = m.departments && 
+        const hasValidDept = m.departments &&
           ((typeof m.departments === 'object' && !Array.isArray(m.departments) && m.departments.name) ||
-           (Array.isArray(m.departments) && m.departments.length > 0 && m.departments[0]?.name))
+            (Array.isArray(m.departments) && m.departments.length > 0 && m.departments[0]?.name))
         return !hasValidDept
       })
-      
+
       console.log('[MEMBERS UI] Members with departments:', membersWithDept.length)
       console.log('[MEMBERS UI] Members without departments (but have department_id):', membersWithoutDept.length)
-      
+
       if (membersWithoutDept.length > 0 && membersWithoutDept[0]) {
         const sample = membersWithoutDept[0] as any;
         console.log('[MEMBERS UI] Sample member without departments:', {
@@ -309,7 +309,7 @@ export default function MembersPage() {
           departments_keys: sampleMember?.departments ? Object.keys(sampleMember.departments) : null
         })
       }
-      
+
       // Log first member structure for debugging
       if (members.length > 0) {
         console.log('[MEMBERS UI] First member full structure:', members[0])
@@ -328,7 +328,7 @@ export default function MembersPage() {
     queryFn: getOrgRoles,
     enabled: inviteDialogOpen,
   })
-  
+
   const { data: departments = [], isLoading: deptLoading } = useGroups({ enabled: inviteDialogOpen })
   const { data: positions = [], isLoading: posLoading } = usePositions({ enabled: inviteDialogOpen })
 
@@ -368,7 +368,7 @@ export default function MembersPage() {
 
       if (result.success) {
         toast.success("Invitation sent successfully via email!")
-        await queryClient.invalidateQueries({ queryKey: ['members', 'paged', organizationId, searchQuery, page, pageSize]})
+        await queryClient.invalidateQueries({ queryKey: ['members', 'paged', organizationId, searchQuery, page, pageSize] })
         setInviteDialogOpen(false)
         inviteForm.reset()
         await refetch()
@@ -395,7 +395,7 @@ export default function MembersPage() {
       // Force refresh data
       await refetch()
       toast.success("Data has been refreshed!")
-      await queryClient.invalidateQueries({ queryKey: ['members', 'paged', organizationId, searchQuery, page, pageSize]})
+      await queryClient.invalidateQueries({ queryKey: ['members', 'paged', organizationId, searchQuery, page, pageSize] })
     } catch (error) {
       toast.error("Failed to refresh data")
     }
@@ -451,7 +451,7 @@ export default function MembersPage() {
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
       toast.success("Succesfully exported members")
-      await queryClient.invalidateQueries({ queryKey: ['members']})
+      await queryClient.invalidateQueries({ queryKey: ['members'] })
     } catch (error) {
       console.error("Export members error:", error)
       toast.error("Gagal mengekspor data members")
@@ -472,78 +472,42 @@ export default function MembersPage() {
     (!isHydrated || (loading && members.length === 0 && !searchQuery)) ? (
       <MembersPageSkeleton />
     ) : (
-    <div className="flex flex-1 flex-col gap-4 w-full">
-      <div className="w-full">
-        <div className="w-full bg-card rounded-lg shadow-sm border">
-          
-          <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center sm:justify-between" suppressHydrationWarning>
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search members..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                  disabled={false} // Search bar tidak pernah di-disable
-                />
-              </div>
-              <div className="flex gap-3 sm:gap-2 flex-wrap items-center" suppressHydrationWarning>
-                {/* Export dialog untuk memilih kolom yang akan diekspor */}
-                <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-                  <DialogContent className="max-w-3xl">
-                    <DialogHeader>
-                      <DialogTitle>Export Members</DialogTitle>
-                      <DialogDescription>
-                        Pilih kolom apa saja yang akan disertakan dalam file Excel. Jika tidak ada member yang
-                        dipilih di tabel, maka semua member akan diekspor.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                      <div className="border rounded-lg">
-                        <div className="px-3 py-2 border-b bg-muted/50 text-sm font-semibold">
-                          Field-field tersedia
-                        </div>
-                        <div className="max-h-64 overflow-y-auto">
-                          <ul className="divide-y">
-                            {EXPORT_FIELDS.filter((f) => !selectedExportFields.includes(f.key)).map(
-                              (field) => (
-                                <li
-                                  key={field.key}
-                                  className="flex items-center justify-between px-3 py-2 text-sm"
-                                >
-                                  <span>{field.label}</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    onClick={() =>
-                                      setSelectedExportFields((prev) => [...prev, field.key])
-                                    }
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </Button>
-                                </li>
-                              ),
-                            )}
-                          </ul>
-                        </div>
-                      </div>
-                      <div className="border rounded-lg">
-                        <div className="px-3 py-2 border-b bg-muted/50 text-sm font-semibold">
-                          Kolom untuk diekspor
-                        </div>
-                        <div className="max-h-64 overflow-y-auto">
-                          {selectedExportFields.length === 0 ? (
-                            <p className="px-3 py-4 text-sm text-muted-foreground">
-                              Belum ada kolom yang dipilih. Tambahkan dari daftar di sebelah kiri.
-                            </p>
-                          ) : (
+      <div className="flex flex-1 flex-col gap-4 w-full">
+        <div className="w-full">
+          <div className="w-full bg-card rounded-lg shadow-sm border">
+
+            <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
+              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center sm:justify-between" suppressHydrationWarning>
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search members..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                    disabled={false} // Search bar tidak pernah di-disable
+                  />
+                </div>
+                <div className="flex gap-3 sm:gap-2 flex-wrap items-center" suppressHydrationWarning>
+                  {/* Export dialog untuk memilih kolom yang akan diekspor */}
+                  <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+                    <DialogContent className="max-w-3xl">
+                      <DialogHeader>
+                        <DialogTitle>Export Members</DialogTitle>
+                        <DialogDescription>
+                          Pilih kolom apa saja yang akan disertakan dalam file Excel. Jika tidak ada member yang
+                          dipilih di tabel, maka semua member akan diekspor.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        <div className="border rounded-lg">
+                          <div className="px-3 py-2 border-b bg-muted/50 text-sm font-semibold">
+                            Field-field tersedia
+                          </div>
+                          <div className="max-h-64 overflow-y-auto">
                             <ul className="divide-y">
-                              {selectedExportFields.map((key) => {
-                                const field = EXPORT_FIELDS.find((f) => f.key === key)
-                                if (!field) return null
-                                return (
+                              {EXPORT_FIELDS.filter((f) => !selectedExportFields.includes(f.key)).map(
+                                (field) => (
                                   <li
                                     key={field.key}
                                     className="flex items-center justify-between px-3 py-2 text-sm"
@@ -554,328 +518,364 @@ export default function MembersPage() {
                                       size="icon"
                                       className="h-7 w-7"
                                       onClick={() =>
-                                        setSelectedExportFields((prev) =>
-                                          prev.filter((k) => k !== field.key),
-                                        )
+                                        setSelectedExportFields((prev) => [...prev, field.key])
                                       }
                                     >
-                                      <Minus className="h-4 w-4" />
+                                      <Plus className="h-4 w-4" />
                                     </Button>
                                   </li>
-                                )
-                              })}
+                                ),
+                              )}
                             </ul>
-                          )}
+                          </div>
+                        </div>
+                        <div className="border rounded-lg">
+                          <div className="px-3 py-2 border-b bg-muted/50 text-sm font-semibold">
+                            Kolom untuk diekspor
+                          </div>
+                          <div className="max-h-64 overflow-y-auto">
+                            {selectedExportFields.length === 0 ? (
+                              <p className="px-3 py-4 text-sm text-muted-foreground">
+                                Belum ada kolom yang dipilih. Tambahkan dari daftar di sebelah kiri.
+                              </p>
+                            ) : (
+                              <ul className="divide-y">
+                                {selectedExportFields.map((key) => {
+                                  const field = EXPORT_FIELDS.find((f) => f.key === key)
+                                  if (!field) return null
+                                  return (
+                                    <li
+                                      key={field.key}
+                                      className="flex items-center justify-between px-3 py-2 text-sm"
+                                    >
+                                      <span>{field.label}</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() =>
+                                          setSelectedExportFields((prev) =>
+                                            prev.filter((k) => k !== field.key),
+                                          )
+                                        }
+                                      >
+                                        <Minus className="h-4 w-4" />
+                                      </Button>
+                                    </li>
+                                  )
+                                })}
+                              </ul>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between mt-4">
-                      <p className="text-xs sm:text-sm text-muted-foreground">
-                        {selectedMemberIds.length > 0
-                          ? `${selectedMemberIds.length} member terpilih akan diekspor.`
-                          : `Tidak ada member yang dipilih di tabel, semua ${members.length} member akan diekspor.`}
-                      </p>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => setExportDialogOpen(false)}
-                          disabled={exporting}
-                        >
-                          Batal
-                        </Button>
-                        <Button
-                          onClick={async () => {
-                            await handleExportMembers()
-                            setExportDialogOpen(false)
-                          }}
-                          disabled={exporting}
-                        >
-                          {exporting ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Mengekspor...
-                            </>
-                          ) : (
-                            <>
-                              <FileSpreadsheet className="mr-2 h-4 w-4" />
-                              Ekspor
-                            </>
-                          )}
-                        </Button>
+                      <div className="flex items-center justify-between mt-4">
+                        <p className="text-xs sm:text-sm text-muted-foreground">
+                          {selectedMemberIds.length > 0
+                            ? `${selectedMemberIds.length} member terpilih akan diekspor.`
+                            : `Tidak ada member yang dipilih di tabel, semua ${members.length} member akan diekspor.`}
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => setExportDialogOpen(false)}
+                            disabled={exporting}
+                          >
+                            Batal
+                          </Button>
+                          <Button
+                            onClick={async () => {
+                              await handleExportMembers()
+                              setExportDialogOpen(false)
+                            }}
+                            disabled={exporting}
+                          >
+                            {exporting ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Mengekspor...
+                              </>
+                            ) : (
+                              <>
+                                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                                Ekspor
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                    </DialogContent>
+                  </Dialog>
 
-                <Button
-                  asChild
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={loading || exporting}
-                  className="whitespace-nowrap"
-                >
-                  <Link 
-                    href={`/members/export${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`}
-                    prefetch={false}
+                  <Button
+                    asChild
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={loading || exporting}
+                    className="whitespace-nowrap"
+                  >
+                    <Link
+                      href={`/members/export${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`}
+                      prefetch={false}
                     // onMouseEnter={(e) => {
                     //   const href = e.currentTarget.getAttribute('href')
                     //   if (href && router) {
                     //     router.prefetch(href)
                     //   }
                     // }}
+                    >
+                      <FileDown className="mr-2 h-4 w-4" />
+                      Export
+                    </Link>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefresh}
+                    disabled={loading}
+                    className="whitespace-nowrap"
                   >
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Link>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={loading}
-                  className="whitespace-nowrap"
-                >
-                  <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-                <Button
-                  asChild
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={isLoadingInviteData}
-                  className="whitespace-nowrap"
-                >
-                  <Link 
-                    href="/members/import-simple"
-                    prefetch={false}
+                    <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                  <Button
+                    asChild
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isLoadingInviteData}
+                    className="whitespace-nowrap"
+                  >
+                    <Link
+                      href="/members/import-simple"
+                      prefetch={false}
                     // onMouseEnter={(e) => {
                     //   const href = e.currentTarget.getAttribute('href')
                     //   if (href && router) {
                     //     router.prefetch(href)
                     //   }
                     // }}
-                  >
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Import
-                  </Link>
-                </Button>
-                <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="whitespace-nowrap">
-                      Invite <Plus className="ml-2 h-4 w-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px]" aria-describedby="invite-description">
-                    <DialogHeader>
-                      <DialogTitle>Invite New Member</DialogTitle>
-                      <DialogDescription id="invite-description">
-                        Send an email invitation to add a new member to your organization
-                      </DialogDescription>
-                    </DialogHeader>
-                    <Form {...inviteForm}>
-                      <form onSubmit={inviteForm.handleSubmit(onSubmitInvite)} className="space-y-4">
-                        <FormField
-                          control={inviteForm.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email Address *</FormLabel>
-                              <FormControl>
-                                <div className="relative">
-                                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                  <Input
-                                    placeholder="john.doe@example.com"
-                                    className="pl-10"
+                    >
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Import
+                    </Link>
+                  </Button>
+                  <Dialog open={inviteDialogOpen} onOpenChange={handleDialogOpenChange}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" className="whitespace-nowrap">
+                        Invite <Plus className="ml-2 h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]" aria-describedby="invite-description">
+                      <DialogHeader>
+                        <DialogTitle>Invite New Member</DialogTitle>
+                        <DialogDescription id="invite-description">
+                          Send an email invitation to add a new member to your organization
+                        </DialogDescription>
+                      </DialogHeader>
+                      <Form {...inviteForm}>
+                        <form onSubmit={inviteForm.handleSubmit(onSubmitInvite)} className="space-y-4">
+                          <FormField
+                            control={inviteForm.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email Address *</FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                      placeholder="john.doe@example.com"
+                                      className="pl-10"
+                                      {...field}
+                                      disabled={submittingInvite}
+                                    />
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={inviteForm.control}
+                            name="role_id"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Role (Optional)</FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                  disabled={submittingInvite || isLoadingInviteData}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select role..." />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {roles.map((role: any) => (
+                                      <SelectItem key={role.id} value={String(role.id)}>
+                                        <div className="flex items-center gap-2">
+                                          {role.code === "A001" ? (
+                                            <Shield className="w-3 h-3" />
+                                          ) : (
+                                            <User className="w-3 h-3" />
+                                          )}
+                                          {role.name}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={inviteForm.control}
+                            name="department_id"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Department (Optional)</FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                  disabled={submittingInvite || isLoadingInviteData}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select department..." />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {departments.map((dept: any) => (
+                                      <SelectItem key={dept.id} value={String(dept.id)}>
+                                        {dept.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={inviteForm.control}
+                            name="position_id"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Position (Optional)</FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                  disabled={submittingInvite || isLoadingInviteData}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select position..." />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {positions.map((pos: any) => (
+                                      <SelectItem key={pos.id} value={String(pos.id)}>
+                                        {pos.title}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={inviteForm.control}
+                            name="message"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Welcome Message (Optional)</FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    placeholder="Welcome to the team!"
+                                    className="resize-none"
+                                    rows={3}
                                     {...field}
                                     disabled={submittingInvite}
                                   />
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={inviteForm.control}
-                          name="role_id"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Role (Optional)</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                                disabled={submittingInvite || isLoadingInviteData}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select role..." />
-                                  </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
-                                  {roles.map((role: any) => (
-                                    <SelectItem key={role.id} value={String(role.id)}>
-                                      <div className="flex items-center gap-2">
-                                        {role.code === "A001" ? (
-                                          <Shield className="w-3 h-3" />
-                                        ) : (
-                                          <User className="w-3 h-3" />
-                                        )}
-                                        {role.name}
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={inviteForm.control}
-                          name="department_id"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Department (Optional)</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                                disabled={submittingInvite || isLoadingInviteData}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select department..." />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {departments.map((dept: any) => (
-                                    <SelectItem key={dept.id} value={String(dept.id)}>
-                                      {dept.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={inviteForm.control}
-                          name="position_id"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Position (Optional)</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                                disabled={submittingInvite || isLoadingInviteData}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select position..." />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {positions.map((pos: any) => (
-                                    <SelectItem key={pos.id} value={String(pos.id)}>
-                                      {pos.title}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={inviteForm.control}
-                          name="message"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Welcome Message (Optional)</FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  placeholder="Welcome to the team!"
-                                  className="resize-none"
-                                  rows={3}
-                                  {...field}
-                                  disabled={submittingInvite}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <Button
-                          type="submit"
-                          disabled={submittingInvite || isLoadingInviteData}
-                          className="w-full"
-                        >
-                          {submittingInvite ? "Sending..." : "Send Invitation"}
-                        </Button>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <Button
+                            type="submit"
+                            disabled={submittingInvite || isLoadingInviteData}
+                            className="w-full"
+                          >
+                            {submittingInvite ? "Sending..." : "Send Invitation"}
+                          </Button>
+                        </form>
+                      </Form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
-            </div>
 
-            <div className="mt-6">
-              {loading && members.length === 0 && !searchQuery ? (
-                <TableSkeleton rows={8} columns={6} />
-              ) : isFetching && members.length === 0 ? (
-                <TableSkeleton rows={8} columns={6} />
-              ) : members.length === 0 ? (
-                <div className="mt-20">
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyMedia variant="icon">
-                        <User className="h-14 w-14 text-muted-foreground mx-auto" />
-                      </EmptyMedia>
-                      <EmptyTitle>No members yet</EmptyTitle>
-                      <EmptyDescription>
-                        {searchQuery 
-                          ? `No members found matching "${searchQuery}"`
-                          : "There are no members for this organization. Use the \"Invite Member\" button to add one."}
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </Empty>
-                </div>
-              ) : (
-                <div className="min-w-full overflow-x-auto relative">
-                  {isFetching && members.length > 0 && (
-                    <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    </div>
-                  )}
-                  <MembersTable 
-                    members={members}
-                    isLoading={false}
-                    onDelete={() => { refetch() }}
-                    showPagination={false}
-                  />
+              <div className="mt-6">
+                {loading && members.length === 0 && !searchQuery ? (
+                  <TableSkeleton rows={8} columns={6} />
+                ) : isFetching && members.length === 0 ? (
+                  <TableSkeleton rows={8} columns={6} />
+                ) : members.length === 0 ? (
+                  <div className="mt-20">
+                    <Empty>
+                      <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                          <User className="h-14 w-14 text-muted-foreground mx-auto" />
+                        </EmptyMedia>
+                        <EmptyTitle>No members yet</EmptyTitle>
+                        <EmptyDescription>
+                          {searchQuery
+                            ? `No members found matching "${searchQuery}"`
+                            : "There are no members for this organization. Use the \"Invite Member\" button to add one."}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
+                  </div>
+                ) : (
+                  <div className="min-w-full overflow-x-auto relative">
+                    {isFetching && members.length > 0 && (
+                      <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      </div>
+                    )}
+                    <MembersTable
+                      members={members}
+                      isLoading={false}
+                      onDelete={() => { refetch() }}
+                      showPagination={false}
+                    />
 
-                  {/* Footer Pagination (server-based) */}
-                  <PaginationFooter
-                    page={page}
-                    totalPages={totalPages || 1}
-                    onPageChange={(p) => setPage(Math.max(1, Math.min(p, Math.max(1, totalPages))))}
-                    isLoading={loading || isFetching}
-                    from={total > 0 ? (page - 1) * pageSize + 1 : 0}
-                    to={Math.min(page * pageSize, total)}
-                    total={total}
-                    pageSize={pageSize}
-                    onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
-                    pageSizeOptions={[10, 50, 100]}
-                  />
-                </div>
-              )}
+                    {/* Footer Pagination (server-based) */}
+                    <PaginationFooter
+                      page={page}
+                      totalPages={totalPages || 1}
+                      onPageChange={(p) => setPage(Math.max(1, Math.min(p, Math.max(1, totalPages))))}
+                      isLoading={loading || isFetching}
+                      from={total > 0 ? (page - 1) * pageSize + 1 : 0}
+                      to={Math.min(page * pageSize, total)}
+                      total={total}
+                      pageSize={pageSize}
+                      onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+                      pageSizeOptions={[10, 50, 100]}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  ))
+    ))
 }

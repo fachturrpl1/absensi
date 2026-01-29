@@ -13,11 +13,10 @@ type TransferProjectDialogProps = {
     onOpenChange: (open: boolean) => void
     project: Project | null
     onTransfer: (organizationId: string) => void
-    canTransfer: boolean
 }
 
 export default function TransferProjectDialog(props: TransferProjectDialogProps) {
-    const { open, onOpenChange, project, onTransfer, canTransfer } = props
+    const { open, onOpenChange, project, onTransfer } = props
     const [selectedOrg, setSelectedOrg] = useState<string>("")
     const [organizations, setOrganizations] = useState<Organization[]>([])
     const [loading, setLoading] = useState(false)
@@ -49,9 +48,9 @@ export default function TransferProjectDialog(props: TransferProjectDialogProps)
         }
     }
 
-    // Disable transfer if only 1 organization available or other restrictions
+    // Disable transfer if only 1 organization available
     const canTransferToOrg = organizations.length > 1
-    const isTransferDisabled = !canTransfer || !canTransferToOrg
+    const isTransferDisabled = !canTransferToOrg
 
     const handleTransfer = () => {
         if (selectedOrg) {
@@ -118,15 +117,11 @@ export default function TransferProjectDialog(props: TransferProjectDialogProps)
                         </div>
                     </div>
 
-                    {(!canTransfer || !canTransferToOrg) && (
+                    {!canTransferToOrg && (
                         <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-3">
                             <div className="flex gap-2">
                                 <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                {!canTransfer ? (
-                                    <span>Transfer is disabled because this is the only project in the organization.</span>
-                                ) : !canTransferToOrg ? (
-                                    <span>Transfer is disabled because you only have one organization. Please create or join another organization first.</span>
-                                ) : null}
+                                <span>Transfer is disabled because you only have one organization. Please create or join another organization first.</span>
                             </div>
                         </div>
                     )}

@@ -391,150 +391,168 @@ export default function AddProjectDialog(props: AddProjectDialogProps) {
                 </div>
 
                 {/* Member Limit Sections */}
-                <ScrollArea className="h-[400px] w-full pr-4">
-                  <div className="space-y-4">
-                    {form.memberLimits.map((limit, index) => (
-                      <div key={index} className="border rounded-lg p-4 space-y-4">
+                {/* Member Limit Sections - Flexible height container */}
+                <div
+                  className={`w-full pr-4 space-y-4 ${form.memberLimits.length > 1 ? 'max-h-[400px] overflow-y-auto' : ''
+                    }`}
+                >
+                  {form.memberLimits.map((limit, index) => (
+                    <div key={index} className="border rounded-lg p-4 space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold">MEMBERS</label>
+                        <Select
+                          value={limit.members?.[0] || ""}
+                          onValueChange={(v) => {
+                            const newLimits = [...form.memberLimits]
+                            newLimits[index] = { ...limit, members: [v] }
+                            onFormChange(s => ({ ...s, memberLimits: newLimits }))
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select member" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DUMMY_MEMBERS.map(m => (
+                              <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
                         <div className="space-y-2">
-                          <label className="text-xs font-semibold">MEMBERS</label>
-                          <Input className="pl-3" placeholder="Select members" readOnly />
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <label className="text-xs">TYPE*</label>
-                            <Select
-                              value={limit.type}
-                              onValueChange={(v) => {
-                                const newLimits = [...form.memberLimits]
-                                newLimits[index] = { ...limit, type: v }
-                                onFormChange(s => ({ ...s, memberLimits: newLimits }))
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a type" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="daily">Daily</SelectItem>
-                                <SelectItem value="weekly">Weekly</SelectItem>
-                                <SelectItem value="total">Total</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-xs">BASED ON*</label>
-                            <Select
-                              value={limit.basedOn}
-                              onValueChange={(v) => {
-                                const newLimits = [...form.memberLimits]
-                                newLimits[index] = { ...limit, basedOn: v }
-                                onFormChange(s => ({ ...s, memberLimits: newLimits }))
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a rate" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="hours">Hours</SelectItem>
-                                <SelectItem value="cost">Cost</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-xs">COST*</label>
-                            <div className="flex">
-                              <div className="flex items-center justify-center bg-gray-100 px-3 border border-r-0 rounded-l-md text-sm text-gray-600">
-                                $
-                              </div>
-                              <Input
-                                type="number"
-                                placeholder="0.0"
-                                value={limit.cost}
-                                onChange={(e) => {
-                                  const newLimits = [...form.memberLimits]
-                                  newLimits[index] = { ...limit, cost: e.target.value }
-                                  onFormChange(s => ({ ...s, memberLimits: newLimits }))
-                                }}
-                                className="rounded-l-none"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="text-xs">RESETS*</label>
-                            <Select
-                              value={limit.resets}
-                              onValueChange={(v) => {
-                                const newLimits = [...form.memberLimits]
-                                newLimits[index] = { ...limit, resets: v }
-                                onFormChange(s => ({ ...s, memberLimits: newLimits }))
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Never" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="never">Never</SelectItem>
-                                <SelectItem value="daily">Daily</SelectItem>
-                                <SelectItem value="weekly">Weekly</SelectItem>
-                                <SelectItem value="monthly">Monthly</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-xs">START DATE</label>
-                            <Input
-                              className="pl-3"
-                              type="date"
-                              value={limit.startDate || ''}
-                              onChange={(e) => {
-                                const newLimits = [...form.memberLimits]
-                                newLimits[index] = { ...limit, startDate: e.target.value }
-                                onFormChange(s => ({ ...s, memberLimits: newLimits }))
-                              }}
-                            />
-                          </div>
-                        </div>
-
-                        {form.memberLimits.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => {
-                              const newLimits = form.memberLimits.filter((_, i) => i !== index)
+                          <label className="text-xs">TYPE*</label>
+                          <Select
+                            value={limit.type}
+                            onValueChange={(v) => {
+                              const newLimits = [...form.memberLimits]
+                              newLimits[index] = { ...limit, type: v }
                               onFormChange(s => ({ ...s, memberLimits: newLimits }))
                             }}
                           >
-                            <Trash2 className="mr-2 h-4 w-4" /> Remove limit
-                          </Button>
-                        )}
-                      </div>
-                    ))}
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="total">Total</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                    <Button
-                      variant="link"
-                      className="text-gray-900 p-0 hover:cursor-pointer"
-                      onClick={() => {
-                        const newLimit: import('./types').MemberLimit = {
-                          members: [],
-                          type: '',
-                          basedOn: '',
-                          cost: '',
-                          resets: 'never',
-                          startDate: null
-                        }
-                        onFormChange(s => ({ ...s, memberLimits: [...s.memberLimits, newLimit] }))
-                      }}
-                    >
-                      + Add member limit
-                    </Button>
-                  </div>
-                </ScrollArea>
+                        <div className="space-y-2">
+                          <label className="text-xs">BASED ON*</label>
+                          <Select
+                            value={limit.basedOn}
+                            onValueChange={(v) => {
+                              const newLimits = [...form.memberLimits]
+                              newLimits[index] = { ...limit, basedOn: v }
+                              onFormChange(s => ({ ...s, memberLimits: newLimits }))
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a rate" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="hours">Hours</SelectItem>
+                              <SelectItem value="cost">Cost</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-xs">COST*</label>
+                          <div className="flex">
+                            <div className="flex items-center justify-center bg-gray-100 px-3 border border-r-0 rounded-l-md text-sm text-gray-600">
+                              $
+                            </div>
+                            <Input
+                              type="number"
+                              placeholder="0.0"
+                              value={limit.cost}
+                              onChange={(e) => {
+                                const newLimits = [...form.memberLimits]
+                                newLimits[index] = { ...limit, cost: e.target.value }
+                                onFormChange(s => ({ ...s, memberLimits: newLimits }))
+                              }}
+                              className="rounded-l-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-xs">RESETS*</label>
+                          <Select
+                            value={limit.resets}
+                            onValueChange={(v) => {
+                              const newLimits = [...form.memberLimits]
+                              newLimits[index] = { ...limit, resets: v }
+                              onFormChange(s => ({ ...s, memberLimits: newLimits }))
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Never" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="never">Never</SelectItem>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-xs">START DATE</label>
+                          <Input
+                            className="pl-3"
+                            type="date"
+                            value={limit.startDate || ''}
+                            onChange={(e) => {
+                              const newLimits = [...form.memberLimits]
+                              newLimits[index] = { ...limit, startDate: e.target.value }
+                              onFormChange(s => ({ ...s, memberLimits: newLimits }))
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {form.memberLimits.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => {
+                            const newLimits = form.memberLimits.filter((_, i) => i !== index)
+                            onFormChange(s => ({ ...s, memberLimits: newLimits }))
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Remove limit
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+
+                  <Button
+                    variant="link"
+                    className="text-gray-900 p-0 hover:cursor-pointer"
+                    onClick={() => {
+                      const newLimit: import('./types').MemberLimit = {
+                        members: [],
+                        type: '',
+                        basedOn: '',
+                        cost: '',
+                        resets: 'never',
+                        startDate: null
+                      }
+                      onFormChange(s => ({ ...s, memberLimits: [...s.memberLimits, newLimit] }))
+                    }}
+                  >
+                    + Add member limit
+                  </Button>
+                </div>
               </TabsContent>
             </Tabs>
           </TabsContent>
