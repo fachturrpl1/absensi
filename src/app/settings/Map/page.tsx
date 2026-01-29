@@ -4,57 +4,60 @@ import React, { useState, useMemo } from "react"
 import { Calendar, Info, Search, User } from "lucide-react"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
 
-interface MemberWithGrace {
+type TrackingOption = "off" | "tracking-time" | "always"
+
+interface MemberWithSetting {
     id: string
     name: string
     avatar?: string
-    gracePeriod: string
+    trackingSetting: TrackingOption
 }
 
-export default function GracePeriodPage() {
-    // Convert shared members to include grace period settings
-    const initialMembers: MemberWithGrace[] = useMemo(() =>
+export default function MapPage() {
+    // Convert shared members to include tracking setting
+    const initialMembers: MemberWithSetting[] = useMemo(() =>
         SHARED_MEMBERS.map(m => ({
             id: m.id,
             name: m.name,
             avatar: m.avatar,
-            gracePeriod: "5"
+            trackingSetting: "tracking-time" as TrackingOption
         })), []
     )
 
-    const [globalGracePeriod, setGlobalGracePeriod] = useState("5")
-    const [members, setMembers] = useState<MemberWithGrace[]>(initialMembers)
+    const [globalSetting, setGlobalSetting] = useState<TrackingOption>("tracking-time")
+    const [members, setMembers] = useState<MemberWithSetting[]>(initialMembers)
     const [searchQuery, setSearchQuery] = useState("")
 
     const tabs = [
-        { label: "CALENDAR", href: "/settings/Calender", active: true },
+        { label: "CALENDAR", href: "/settings/Calender", active: false },
         { label: "JOB SITES", href: "/settings/Job-sites", active: false },
-        { label: "MAP", href: "/settings/Map", active: false },
+        { label: "MAP", href: "/settings/Map", active: true },
     ]
 
     const sidebarItems = [
-        { label: "Calendar type", href: "/settings/Schedule", active: false },
-        { label: "Shift alerts", href: "/settings/Schedule/shift-alerts", active: false },
-        { label: "Grace period", href: "/settings/Schedule/grace-period", active: true },
+        { label: "Track Locations (Mobile Only)", href: "/settings/Map", active: true },
     ]
 
-    const gracePeriodOptions = ["1", "2", "3", "5", "10", "15", "20", "30"]
+    const trackingOptions: { value: TrackingOption; label: string }[] = [
+        { value: "off", label: "Off" },
+        { value: "tracking-time", label: "Tracking time" },
+        { value: "always", label: "Always" },
+    ]
 
-    const handleMemberGracePeriodChange = (id: string, value: string) => {
+    const handleGlobalChange = (setting: TrackingOption) => {
+        setGlobalSetting(setting)
         setMembers(prev =>
-            prev.map(member =>
-                member.id === id ? { ...member, gracePeriod: value } : member
-            )
+            prev.map(member => ({ ...member, trackingSetting: setting }))
         )
     }
 
-    const handleApplyToAll = () => {
+    const handleMemberChange = (id: string, setting: TrackingOption) => {
         setMembers(prev =>
-            prev.map(member => ({ ...member, gracePeriod: globalGracePeriod }))
+            prev.map(member =>
+                member.id === id ? { ...member, trackingSetting: setting } : member
+            )
         )
     }
 
@@ -77,8 +80,8 @@ export default function GracePeriodPage() {
                         key={tab.label}
                         href={tab.href}
                         className={`py-3 text-sm font-medium border-b-2 transition-colors ${tab.active
-                            ? "text-gray-900 border-gray-900"
-                            : "text-gray-500 border-transparent hover:text-gray-700"
+                                ? "text-gray-900 border-gray-900"
+                                : "text-gray-500 border-transparent hover:text-gray-700"
                             }`}
                     >
                         {tab.label}
@@ -89,14 +92,14 @@ export default function GracePeriodPage() {
             {/* Content */}
             <div className="flex flex-1">
                 {/* Sidebar */}
-                <div className="w-48 border-r border-gray-200 py-6">
+                <div className="w-56 border-r border-gray-200 py-6">
                     {sidebarItems.map((item) => (
                         <Link
                             key={item.label}
                             href={item.href}
                             className={`block px-6 py-2 text-sm transition-colors ${item.active
-                                ? "text-gray-900 border-l-2 border-gray-900 font-medium"
-                                : "text-gray-500 hover:text-gray-700"
+                                    ? "text-gray-900 border-l-2 border-gray-900 font-medium"
+                                    : "text-gray-500 hover:text-gray-700"
                                 }`}
                         >
                             {item.label}
@@ -109,14 +112,14 @@ export default function GracePeriodPage() {
                     {/* Section Title */}
                     <div className="flex items-center gap-1 mb-2">
                         <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                            GRACE PERIOD
+                            TRACK LOCATIONS (MOBILE ONLY)
                         </span>
                         <Info className="w-3.5 h-3.5 text-gray-400" />
                     </div>
 
                     {/* Description */}
                     <p className="text-sm text-gray-600 mb-6">
-                        Set a grace period for determining if a shift is considered late.
+                        Control whether location tracking is enabled in the mobile app
                     </p>
 
                     {/* Global Label */}
@@ -127,26 +130,20 @@ export default function GracePeriodPage() {
                         <Info className="w-3.5 h-3.5 text-gray-400" />
                     </div>
 
-                    {/* Global Grace Period Row */}
-                    <div className="flex items-center gap-4 mb-10">
-                        <Select value={globalGracePeriod} onValueChange={setGlobalGracePeriod}>
-                            <SelectTrigger className="w-[120px] h-10 border-gray-300 bg-white">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {gracePeriodOptions.map((option) => (
-                                    <SelectItem key={option} value={option}>
-                                        {option} min
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Button
-                            onClick={handleApplyToAll}
-                            className="h-10 px-6 bg-gray-900 text-white hover:bg-gray-800"
-                        >
-                            Apply to all
-                        </Button>
+                    {/* Global Toggle Buttons */}
+                    <div className="inline-flex rounded-full bg-gray-100 p-0.5 mb-10">
+                        {trackingOptions.map((option) => (
+                            <button
+                                key={option.value}
+                                onClick={() => handleGlobalChange(option.value)}
+                                className={`px-5 py-2 text-sm font-medium rounded-full transition-all ${globalSetting === option.value
+                                        ? "bg-gray-800 text-white shadow-sm"
+                                        : "text-gray-500 hover:text-gray-700"
+                                    }`}
+                            >
+                                {option.label}
+                            </button>
+                        ))}
                     </div>
 
                     {/* Individual Settings Section */}
@@ -184,23 +181,28 @@ export default function GracePeriodPage() {
                                         </div>
                                         <span className="text-sm text-gray-900">{member.name}</span>
                                     </div>
-                                    <Select
-                                        value={member.gracePeriod}
-                                        onValueChange={(value) => handleMemberGracePeriodChange(member.id, value)}
-                                    >
-                                        <SelectTrigger className="w-[100px] h-9 border-gray-300 bg-white">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {gracePeriodOptions.map((option) => (
-                                                <SelectItem key={option} value={option}>
-                                                    {option} min
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    {/* Member Toggle Buttons */}
+                                    <div className="inline-flex rounded-full bg-gray-100 p-0.5">
+                                        {trackingOptions.map((option) => (
+                                            <button
+                                                key={option.value}
+                                                onClick={() => handleMemberChange(member.id, option.value)}
+                                                className={`px-4 py-1.5 text-xs font-medium rounded-full transition-all ${member.trackingSetting === option.value
+                                                        ? "bg-gray-800 text-white shadow-sm"
+                                                        : "text-gray-500 hover:text-gray-700"
+                                                    }`}
+                                            >
+                                                {option.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             ))}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="py-3 text-sm text-gray-500">
+                            Showing {filteredMembers.length} of {members.length} members
                         </div>
                     </div>
                 </div>

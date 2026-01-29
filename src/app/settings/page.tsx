@@ -80,17 +80,17 @@ export default function SettingsPage() {
       title: 'Schedules',
       icon: Calendar,
       items: [
-        { label: 'Calendar', href: '#' },
-        { label: 'Job sites', href: '#' },
-        { label: 'Map', href: '#' },
+        { label: 'Calendar', href: '/settings/Calender' },
+        { label: 'Job sites', href: '/settings/Job-sites' },
+        { label: 'Map', href: '/settings/Map' },
       ],
     },
     {
-      title: 'Activity & tracking',
+      title: 'Activity & tracking', 
       icon: Activity,
       items: [
         { label: 'Activity', href: '/settings/activity/track-apps-urls' },
-        { label: 'Timesheets', href: '#' },
+        { label: 'Timesheets', href: '/settings/Timesheet' },
         { label: 'Time & tracking', href: '/settings/tracking/allowed-apps' },
         { label: 'Screenshots', href: '/settings/screenshot' },
       ],

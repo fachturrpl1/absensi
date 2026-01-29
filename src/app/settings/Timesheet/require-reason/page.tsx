@@ -1,60 +1,58 @@
 "use client"
 
 import React, { useState, useMemo } from "react"
-import { Calendar, Info, Search, User } from "lucide-react"
+import { Activity, Info, Search, User } from "lucide-react"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
 
-interface MemberWithGrace {
+interface MemberWithSetting {
     id: string
     name: string
     avatar?: string
-    gracePeriod: string
+    requireReason: boolean
 }
 
-export default function GracePeriodPage() {
-    // Convert shared members to include grace period settings
-    const initialMembers: MemberWithGrace[] = useMemo(() =>
+export default function RequireReasonPage() {
+    const initialMembers: MemberWithSetting[] = useMemo(() =>
         SHARED_MEMBERS.map(m => ({
             id: m.id,
             name: m.name,
             avatar: m.avatar,
-            gracePeriod: "5"
+            requireReason: true
         })), []
     )
 
-    const [globalGracePeriod, setGlobalGracePeriod] = useState("5")
-    const [members, setMembers] = useState<MemberWithGrace[]>(initialMembers)
+    const [globalEnabled, setGlobalEnabled] = useState(true)
+    const [members, setMembers] = useState<MemberWithSetting[]>(initialMembers)
     const [searchQuery, setSearchQuery] = useState("")
 
     const tabs = [
-        { label: "CALENDAR", href: "/settings/Calender", active: true },
-        { label: "JOB SITES", href: "/settings/Job-sites", active: false },
-        { label: "MAP", href: "/settings/Map", active: false },
+        { label: "ACTIVITY", href: "#", active: false },
+        { label: "TIMESHEETS", href: "/settings/Timesheet", active: true },
+        { label: "TIME & TRACKING", href: "#", active: false },
+        { label: "SCREENSHOTS", href: "#", active: false },
     ]
 
     const sidebarItems = [
-        { label: "Calendar type", href: "/settings/Schedule", active: false },
-        { label: "Shift alerts", href: "/settings/Schedule/shift-alerts", active: false },
-        { label: "Grace period", href: "/settings/Schedule/grace-period", active: true },
+        { label: "Modify time (manual time)", href: "/settings/Timesheet", active: false },
+        { label: "Require reason", href: "/settings/Timesheet/require-reason", active: true },
+        { label: "Reasons", href: "/settings/Timesheet/reasons", active: false },
     ]
 
-    const gracePeriodOptions = ["1", "2", "3", "5", "10", "15", "20", "30"]
-
-    const handleMemberGracePeriodChange = (id: string, value: string) => {
+    const handleGlobalChange = (enabled: boolean) => {
+        setGlobalEnabled(enabled)
         setMembers(prev =>
-            prev.map(member =>
-                member.id === id ? { ...member, gracePeriod: value } : member
-            )
+            prev.map(member => ({ ...member, requireReason: enabled }))
         )
     }
 
-    const handleApplyToAll = () => {
+    const handleMemberChange = (id: string, enabled: boolean) => {
         setMembers(prev =>
-            prev.map(member => ({ ...member, gracePeriod: globalGracePeriod }))
+            prev.map(member =>
+                member.id === id ? { ...member, requireReason: enabled } : member
+            )
         )
     }
 
@@ -66,8 +64,8 @@ export default function GracePeriodPage() {
         <div className="flex flex-col min-h-screen bg-white">
             {/* Header */}
             <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-200">
-                <Calendar className="w-5 h-5 text-gray-900" />
-                <h1 className="text-xl font-semibold text-gray-900">Schedules</h1>
+                <Activity className="w-5 h-5 text-gray-900" />
+                <h1 className="text-xl font-semibold text-gray-900">Activity & tracking</h1>
             </div>
 
             {/* Tabs */}
@@ -89,7 +87,7 @@ export default function GracePeriodPage() {
             {/* Content */}
             <div className="flex flex-1">
                 {/* Sidebar */}
-                <div className="w-48 border-r border-gray-200 py-6">
+                <div className="w-56 border-r border-gray-200 py-6">
                     {sidebarItems.map((item) => (
                         <Link
                             key={item.label}
@@ -109,14 +107,14 @@ export default function GracePeriodPage() {
                     {/* Section Title */}
                     <div className="flex items-center gap-1 mb-2">
                         <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                            GRACE PERIOD
+                            REQUIRE REASON
                         </span>
                         <Info className="w-3.5 h-3.5 text-gray-400" />
                     </div>
 
                     {/* Description */}
                     <p className="text-sm text-gray-600 mb-6">
-                        Set a grace period for determining if a shift is considered late.
+                        Require team members to provide a reason when adding or editing their time.
                     </p>
 
                     {/* Global Label */}
@@ -127,26 +125,13 @@ export default function GracePeriodPage() {
                         <Info className="w-3.5 h-3.5 text-gray-400" />
                     </div>
 
-                    {/* Global Grace Period Row */}
-                    <div className="flex items-center gap-4 mb-10">
-                        <Select value={globalGracePeriod} onValueChange={setGlobalGracePeriod}>
-                            <SelectTrigger className="w-[120px] h-10 border-gray-300 bg-white">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {gracePeriodOptions.map((option) => (
-                                    <SelectItem key={option} value={option}>
-                                        {option} min
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Button
-                            onClick={handleApplyToAll}
-                            className="h-10 px-6 bg-gray-900 text-white hover:bg-gray-800"
-                        >
-                            Apply to all
-                        </Button>
+                    {/* Global Toggle - Switch */}
+                    <div className="mb-10">
+                        <Switch
+                            checked={globalEnabled}
+                            onCheckedChange={handleGlobalChange}
+                            className="data-[state=checked]:!bg-gray-500 data-[state=unchecked]:bg-gray-300 [&>span]:!bg-white"
+                        />
                     </div>
 
                     {/* Individual Settings Section */}
@@ -184,23 +169,18 @@ export default function GracePeriodPage() {
                                         </div>
                                         <span className="text-sm text-gray-900">{member.name}</span>
                                     </div>
-                                    <Select
-                                        value={member.gracePeriod}
-                                        onValueChange={(value) => handleMemberGracePeriodChange(member.id, value)}
-                                    >
-                                        <SelectTrigger className="w-[100px] h-9 border-gray-300 bg-white">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {gracePeriodOptions.map((option) => (
-                                                <SelectItem key={option} value={option}>
-                                                    {option} min
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <Switch
+                                        checked={member.requireReason}
+                                        onCheckedChange={(checked) => handleMemberChange(member.id, checked)}
+                                        className="data-[state=checked]:!bg-gray-500 data-[state=unchecked]:bg-gray-300 [&>span]:!bg-white"
+                                    />
                                 </div>
                             ))}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="py-3 text-sm text-gray-500">
+                            Showing {filteredMembers.length} of {members.length} members
                         </div>
                     </div>
                 </div>
