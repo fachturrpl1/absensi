@@ -2,6 +2,24 @@
 import * as LucideIcons from 'lucide-react'
 
 // ============================================================================
+// ORGANIZATIONS
+// ============================================================================
+
+export interface Organization {
+    id: string
+    name: string
+    plan: 'free' | 'paid'
+    owner: string
+}
+
+export const DUMMY_ORGANIZATIONS: Organization[] = [
+    { id: "org-1", name: "Main Organization", plan: "paid", owner: "current-user" },
+    { id: "org-2", name: "Space Designs", plan: "paid", owner: "current-user" },
+    { id: "org-3", name: "Creative Studio", plan: "paid", owner: "current-user" },
+    { id: "org-4", name: "Tech Solutions", plan: "free", owner: "current-user" },
+]
+
+// ============================================================================
 // CLIENTS
 // ============================================================================
 

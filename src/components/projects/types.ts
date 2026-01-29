@@ -15,6 +15,15 @@ export type Project = {
   archived: boolean
 }
 
+export type MemberLimit = {
+  members: string[]
+  type: string
+  basedOn: string
+  cost: string
+  resets: string
+  startDate: string | null
+}
+
 export type NewProjectForm = {
   names: string
   billable: boolean
@@ -24,6 +33,22 @@ export type NewProjectForm = {
   clientId: string | null
   members: string[]
   teams: string[]
+  // Budget fields
+  budgetType: string
+  budgetBasedOn: string
+  budgetCost: string
+  budgetNotifyMembers: boolean
+  budgetNotifyAt: string
+  budgetNotifyWho: string
+  budgetStopTimers: boolean
+  budgetStopAt: string
+  budgetResets: string
+  budgetStartDate: string | null
+  budgetIncludeNonBillable: boolean
+  // Member limits
+  memberLimits: MemberLimit[]
+  memberLimitNotifyAt: string
+  memberLimitNotifyMembers: boolean
 }
 
 export interface DuplicateProjectOptions {

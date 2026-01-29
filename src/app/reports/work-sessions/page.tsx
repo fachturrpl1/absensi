@@ -5,7 +5,7 @@ import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { DUMMY_WORK_SESSIONS, DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
 import { Button } from "@/components/ui/button"
-import { Download, Settings, Search, SlidersHorizontal, Clock, Coffee, Activity } from "lucide-react"
+import { Download, Search, SlidersHorizontal, Clock, Coffee, Activity } from "lucide-react"
 import { format } from "date-fns"
 import { formatHoursForExport } from "@/lib/export-utils"
 import { useTimezone } from "@/components/timezone-provider"
@@ -177,13 +177,6 @@ export default function WorkSessionsPage() {
                         timezone={timezone}
                     >
                         <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                className="h-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50 font-medium"
-                                onClick={() => { }}
-                            >
-                                <Settings className="w-4 h-4 mr-2" /> Filter
-                            </Button>
                             <Button
                                 className="h-9 bg-gray-900 hover:bg-gray-800 text-white font-medium"
                                 onClick={handleExport}
