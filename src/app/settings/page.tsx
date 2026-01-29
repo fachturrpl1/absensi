@@ -86,7 +86,7 @@ export default function SettingsPage() {
       ],
     },
     {
-      title: 'Activity & tracking', 
+      title: 'Activity & tracking',
       icon: Activity,
       items: [
         { label: 'Activity', href: '/settings/activity/track-apps-urls' },
@@ -119,7 +119,7 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
+          <h1 className="text-xl font-semibold text-slate-900">Settings</h1>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input

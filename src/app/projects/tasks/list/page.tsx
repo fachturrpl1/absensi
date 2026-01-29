@@ -54,7 +54,7 @@ export default function ListView() {
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
     const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false)
-    const [isGlobalTaskDialogOpen, setIsGlobalTaskDialogOpen] = useState(false)
+
     const [taskToDelete, setTaskToDelete] = useState<TaskRow | null>(null)
     const [editingTask, setEditingTask] = useState<TaskRow | null>(null)
 
@@ -65,6 +65,8 @@ export default function ListView() {
     const [newTaskAssignee, setNewTaskAssignee] = useState("")
     const [newTaskProject, setNewTaskProject] = useState("")
     const [newTaskTeams, setNewTaskTeams] = useState<string[]>([])
+
+    const [editedTeams, setEditedTeams] = useState<string[]>([])
 
     // Filter states
     const [selectedProject, setSelectedProject] = useState(initialProject || "all")
@@ -77,7 +79,7 @@ export default function ListView() {
         return Array.from(new Set([...memberNames, ...taskNames].filter(Boolean)))
     }, [tasks])
 
-    // Assignee list filtered by selected teams (dynamic)
+    // Assignee list for New Task
     const dynamicAssignees = useMemo(() => {
         if (!newTaskTeams || newTaskTeams.length === 0) return uniqueAssignees
         const memberIds = Array.from(new Set(newTaskTeams.flatMap((teamId) => {
@@ -87,6 +89,18 @@ export default function ListView() {
         const names = DUMMY_MEMBERS.filter((m) => memberIds.includes(m.id)).map((m) => m.name)
         return names.length > 0 ? names : uniqueAssignees
     }, [newTaskTeams, uniqueAssignees])
+
+    // Assignee list for Editing Task
+    const dynamicEditedAssignees = useMemo(() => {
+        if (!editedTeams || editedTeams.length === 0) return uniqueAssignees
+        const memberIds = Array.from(new Set(editedTeams.flatMap((teamId) => {
+            const t = DUMMY_TEAMS.find((x) => x.id === teamId)
+            return t ? t.members : []
+        })))
+        const names = DUMMY_MEMBERS.filter((m) => memberIds.includes(m.id)).map((m) => m.name)
+        return names.length > 0 ? names : uniqueAssignees
+    }, [editedTeams, uniqueAssignees])
+
 
     const filteredTasks = useMemo(() => {
         return tasks.filter((task) => {
@@ -188,6 +202,7 @@ export default function ListView() {
                                 setEditingTask(row.original)
                                 setEditedTitle(row.original.title)
                                 setEditedAssignee(row.original.assignee)
+                                setEditedTeams([])
                             }}>
                                 Edit task
                             </DropdownMenuItem>
@@ -218,7 +233,7 @@ export default function ListView() {
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold">Tasks</h1>
+                <h1 className="text-xl font-semibold">Tasks</h1>
             </div>
 
             {/* Tabs */}
@@ -279,21 +294,9 @@ export default function ListView() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button className="px-3">
-                                    <Plus className="w-4 h-4 mr-2" />Add
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => setIsNewTaskDialogOpen(true)}>
-                                    Add task
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => setIsGlobalTaskDialogOpen(true)}>
-                                    Add global task
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button className="px-3" onClick={() => setIsNewTaskDialogOpen(true)}>
+                            <Plus className="w-4 h-4 mr-2" />Add task
+                        </Button>
                     </div>
                 </div>
 
@@ -410,13 +413,15 @@ export default function ListView() {
                                 </div>
                             </div>
                         </TabsContent>
-                        <TabsContent value="teams" className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="text-sm font-medium">TEAMS</div>
-                                <Button variant="link" className="h-auto p-0 text-blue-600" onClick={() => setNewTaskTeams(DUMMY_TEAMS.map(t => t.id))}>Select all</Button>
+                        <TabsContent value="teams" className="space-y-6">
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-xs font-semibold text-muted-foreground">TEAMS</div>
+                                    <Button variant="link" className="h-auto p-0 text-gray-900 hover:cursor-pointer" onClick={() => setNewTaskTeams(DUMMY_TEAMS.map(t => t.id))}>Select all</Button>
+                                </div>
                             </div>
                             <ScrollArea className="h-[200px] w-full rounded-md border p-4">
-                                <div className="space-y-3">
+                                <div className="space-y-4">
                                     {DUMMY_TEAMS.map((team) => (
                                         <div key={team.id} className="flex items-center space-x-2">
                                             <Checkbox
@@ -430,7 +435,7 @@ export default function ListView() {
                                                     })
                                                 }}
                                             />
-                                            <label htmlFor={`task-team-${team.id}`} className="text-sm font-medium leading-none">
+                                            <label htmlFor={`task-team-${team.id}`} className="text-sm leading-none">
                                                 {team.name} <span className="text-muted-foreground">({team.memberCount} members)</span>
                                             </label>
                                         </div>
@@ -469,39 +474,7 @@ export default function ListView() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={isGlobalTaskDialogOpen} onOpenChange={setIsGlobalTaskDialogOpen}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Add global task</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="rounded-md bg-gray-50 p-4 text-sm text-foreground">
-                            <p>
-                                Global tasks can be added to multiple projects that all members can track.
-                            </p>
-                        </div>
-                        <div className="space-y-2">
-                            <div className="text-sm font-medium">GLOBAL TASK*</div>
-                            <Select>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select global task" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {DUMMY_GLOBAL_TASKS.map(task => (
-                                        <SelectItem key={task.id} value={task.id}>{task.title}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsGlobalTaskDialogOpen(false)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={() => setIsGlobalTaskDialogOpen(false)}>Save</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+
 
             <Dialog open={Boolean(taskToDelete)} onOpenChange={(open) => !open && setTaskToDelete(null)}>
                 <DialogContent className="max-w-md space-y-6">
@@ -541,27 +514,65 @@ export default function ListView() {
                             Update the fields below before saving your changes.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <div className="text-sm font-medium">TASK*</div>
-                            <Input className="px-4" value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <div className="text-sm font-medium">ASSIGNEE</div>
-                            <Select value={editedAssignee} onValueChange={(value) => setEditedAssignee(value)}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select assignee" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {uniqueAssignees.map((assignee) => (
-                                        <SelectItem key={assignee} value={assignee}>
-                                            {assignee}
-                                        </SelectItem>
+                    <Tabs defaultValue="general" className="space-y-4 py-2">
+                        <TabsList className="mb-2">
+                            <TabsTrigger value="general">GENERAL</TabsTrigger>
+                            <TabsTrigger value="teams">TEAMS</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="general">
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <div className="text-sm font-medium">TASK*</div>
+                                    <Input className="px-4" value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="text-sm font-medium">ASSIGNEE</div>
+                                    <Select value={editedAssignee} onValueChange={(value) => setEditedAssignee(value)}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select assignee" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {dynamicEditedAssignees.map((assignee) => (
+                                                <SelectItem key={assignee} value={assignee}>
+                                                    {assignee}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </TabsContent>
+                        <TabsContent value="teams" className="space-y-6">
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-xs font-semibold text-muted-foreground">TEAMS</div>
+                                    <Button variant="link" className="h-auto p-0 text-gray-900 hover:cursor-pointer" onClick={() => setEditedTeams(DUMMY_TEAMS.map(t => t.id))}>Select all</Button>
+                                </div>
+                            </div>
+                            <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+                                <div className="space-y-4">
+                                    {DUMMY_TEAMS.map((team) => (
+                                        <div key={team.id} className="flex items-center space-x-2">
+                                            <Checkbox
+                                                id={`edit-team-${team.id}`}
+                                                checked={editedTeams.includes(team.id)}
+                                                onCheckedChange={(checked) => {
+                                                    setEditedTeams((prev) => {
+                                                        const set = new Set(prev)
+                                                        if (checked) set.add(team.id); else set.delete(team.id)
+                                                        return Array.from(set)
+                                                    })
+                                                }}
+                                            />
+                                            <label htmlFor={`edit-team-${team.id}`} className="text-sm leading-none">
+                                                {team.name} <span className="text-muted-foreground">({team.memberCount} members)</span>
+                                            </label>
+                                        </div>
                                     ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
+                                </div>
+                            </ScrollArea>
+                        </TabsContent>
+                    </Tabs>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setEditingTask(null)}>
                             Cancel
