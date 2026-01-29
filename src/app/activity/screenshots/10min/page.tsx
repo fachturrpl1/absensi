@@ -867,25 +867,25 @@ export default function Every10MinPage() {
           </>
         ) : (
           <>
-            {/* <button
+        {/* <button
           onClick={() => setIsDialogOpen(true)}
           className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
         >
           <LineChart className="h-4 w-4" />
           How activity works
         </button> */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex gap-6">
-                <div className="flex flex-1 flex-col justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Worked time</p>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex gap-6">
+            <div className="flex flex-1 flex-col justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Worked time</p>
                   <h2 className="text-3xl font-semibold text-slate-900">{memberSummary.totalWorkedTime}</h2>
-                </div>
-                <div className="flex flex-1 flex-col justify-between border-l border-slate-200 pl-6">
-                  <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Avg. activity</p>
-                  <span className="text-3xl font-semibold text-slate-700">{memberSummary.avgActivity}</span>
-                </div>
-              </div>
             </div>
+            <div className="flex flex-1 flex-col justify-between border-l border-slate-200 pl-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Avg. activity</p>
+                  <span className="text-3xl font-semibold text-slate-700">{memberSummary.avgActivity}</span>
+            </div>
+          </div>
+        </div>
             <div className="relative w-full rounded-t-2xl border-t border-l border-r border-slate-200 bg-white p-6 pb-10 shadow-sm mt-6 overflow-visible" style={{ borderBottom: 'none' }}>
               {/* Garis horizontal penuh yang melewati tengah tombol */}
               <div className="absolute left-0 right-0 bottom-0 flex items-center justify-center" style={{ transform: 'translateY(50%)' }}>
@@ -914,38 +914,38 @@ export default function Every10MinPage() {
                   </Button>
                 </div>
               </div>
-              {/* <div className="absolute top-0 z-10 -translate-y-1/2" style={{ right: '1.5rem' }}>
+          {/* <div className="absolute top-0 z-10 -translate-y-1/2" style={{ right: '1.5rem' }}>
             <Button variant="outline" size="sm" className="rounded-full border border-slate-200 bg-white px-4 text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500 shadow-sm">
               Insights
             </Button>
           </div> */}
-              <div className="flex flex-col md:flex-row">
-                {/* Focus Time */}
-                <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
-                  <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
-                    Focus time
-                    <Info className="h-3.5 w-3.5 text-slate-400" />
-                  </div>
+          <div className="flex flex-col md:flex-row">
+            {/* Focus Time */}
+            <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
+              <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
+                Focus time
+                <Info className="h-3.5 w-3.5 text-slate-400" />
+              </div>
                   <div className="flex flex-col items-center justify-center gap-3 py-4">
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
-                      <svg className="h-8 w-8 text-blue-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                      </svg>
-                    </div>
-                    <h3 className="text-xl font-semibold text-slate-900">{memberSummary.focusTime}</h3>
-                    <p className="text-center text-xs text-slate-500 max-w-[180px]">
-                      {memberSummary.focusDescription}
-                    </p>
-                  </div>
+                  <svg className="h-8 w-8 text-blue-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
                 </div>
+                    <h3 className="text-xl font-semibold text-slate-900">{memberSummary.focusTime}</h3>
+                <p className="text-center text-xs text-slate-500 max-w-[180px]">
+                      {memberSummary.focusDescription}
+                </p>
+              </div>
+            </div>
 
-                {/* Unusual Activity Instances */}
-                <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
-                  <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
-                    Unusual activity instances
-                    <Info className="h-3.5 w-3.5 text-slate-400" />
-                  </div>
-                  <div className="flex w-full flex-row items-center justify-center gap-4 py-8">
+            {/* Unusual Activity Instances */}
+            <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6 border-r border-slate-200">
+              <div className="flex w-full items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
+                Unusual activity instances
+                <Info className="h-3.5 w-3.5 text-slate-400" />
+              </div>
+              <div className="flex w-full flex-row items-center justify-center gap-4 py-8">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full border-4 border-slate-100 bg-white text-slate-700">
                       <span className="text-lg font-semibold">{memberSummary.unusualCount}</span>
                     </div>
@@ -960,42 +960,42 @@ export default function Every10MinPage() {
                           </p>
                         ))}
                       </div>
-                    </div>
-                  </div>
                 </div>
+              </div>
+            </div>
 
-                {/* Work Time Classification */}
-                <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6">
+            {/* Work Time Classification */}
+            <div className="flex flex-1 flex-col items-center justify-start gap-4 p-6">
                   <div className="flex w-full items-center justify-between mb-2">
                     <div className="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
-                      Work time classification
-                      <Info className="h-3.5 w-3.5 text-slate-400" />
-                    </div>
-                  </div>
+                Work time classification
+                <Info className="h-3.5 w-3.5 text-slate-400" />
+              </div>
+                </div>
 
                   <div className="flex items-start justify-between w-full mb-3">
                     {/* Left: Core work percentage */}
                     <div className="flex flex-col">
                       <span className="text-3xl font-semibold text-gray-900">{workClassificationData.coreWork.percentage}%</span>
                       <span className="text-sm text-gray-600 mt-1">Core work</span>
-                    </div>
+              </div>
 
                     {/* Right: Legend */}
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-green-500"></div>
                         <span className="text-sm text-gray-700">{workClassificationData.coreWork.percentage}% Core work</span>
-                      </div>
+            </div>
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-gray-400"></div>
                         <span className="text-sm text-gray-700">{workClassificationData.nonCoreWork.percentage}% Non-core work</span>
-                      </div>
+          </div>
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-orange-500"></div>
                         <span className="text-sm text-gray-700">{workClassificationData.unproductive.percentage}% Unproductive</span>
-                      </div>
-                    </div>
-                  </div>
+          </div>
+        </div>
+      </div>
 
                   {/* Bar chart */}
                   <div className="mb-2 relative w-full">
@@ -1050,11 +1050,11 @@ export default function Every10MinPage() {
                           ) : (
                             <div className="text-gray-400">No data</div>
                           )}
-                        </div>
+          </div>
                         <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
                           <div className="w-2 h-2 bg-gray-800 transform rotate-45"></div>
-                        </div>
-                      </div>
+                    </div>
+                  </div>
                     )}
                     {hoveredSegment === 'noncore' && workClassificationData.nonCoreWork.percentage > 0 && (
                       <div
@@ -1078,8 +1078,8 @@ export default function Every10MinPage() {
                         </div>
                         <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
                           <div className="w-2 h-2 bg-gray-800 transform rotate-45"></div>
-                        </div>
-                      </div>
+                  </div>
+                  </div>
                     )}
                     {hoveredSegment === 'unproductive' && workClassificationData.unproductive.percentage > 0 && (
                       <div
@@ -1115,10 +1115,10 @@ export default function Every10MinPage() {
                     <span>50%</span>
                     <span>75%</span>
                     <span>100%</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
           </>
         )}
       </div>
@@ -1157,9 +1157,9 @@ export default function Every10MinPage() {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                       {[...Array(6)].map((_, cardIdx) => (
                         <ScreenshotCardSkeleton key={cardIdx} />
-                      ))}
-                    </div>
-                  </div>
+            ))}
+          </div>
+        </div>
                 ))}
               </div>
             ))}
@@ -1185,11 +1185,11 @@ export default function Every10MinPage() {
                 let itemIndex = 0
                 return (
                   <div key={`${dateGroup.date}-${block.label}-${blockStart}`} className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-slate-500">
+          <div className="flex items-center gap-2 text-sm text-slate-500">
                       <span className="font-medium">{block.label}</span>
                       <span className="text-slate-400">{block.summary}</span>
-                    </div>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                       {block.items.map((item) => {
                         // Skip placeholder items yang tidak memiliki time (untuk menghindari error di modal)
                         if (item.noActivity && !item.time) {
@@ -1219,7 +1219,7 @@ export default function Every10MinPage() {
                   </div>
                 )
               })}
-            </div>
+                    </div>
           ))
         ) : (
           // Render normal (bukan range)
@@ -1263,11 +1263,11 @@ export default function Every10MinPage() {
                     )
                   })}
                 </div>
-              </div>
+                    </div>
             )
           })
         )}
-      </div>
+                  </div>
 
       {isMounted && modalOpen && currentScreenshot && createPortal(
         <>
@@ -1288,7 +1288,7 @@ export default function Every10MinPage() {
           <div
             id="screenshot-modal-overlay"
             className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center gap-4 p-8"
-            style={{
+                        style={{
               position: 'fixed',
               top: 0,
               left: 0,
@@ -1339,13 +1339,13 @@ export default function Every10MinPage() {
                 ) : (
                   <div className="flex items-center justify-center h-full w-full text-slate-400">
                     No image available
-                  </div>
+                    </div>
                 )}
-              </div>
+                  </div>
               <div className="flex items-center justify-center text-sm text-slate-600 shrink-0">
                 <span>{currentScreenshot.time}</span>
+                </div>
               </div>
-            </div>
 
             {/* Tombol Next - Kanan */}
             <button

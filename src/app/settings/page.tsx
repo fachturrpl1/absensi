@@ -100,7 +100,7 @@ export default function SettingsPage() {
       icon: Lightbulb,
       badge: 'Add-on',
       items: [
-        { label: 'Apps/URLs classifications', href: '#' },
+        { label: 'Apps/URLs classifications', href: '/settings/app-url' },
       ],
     },
     {
