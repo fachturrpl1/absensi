@@ -125,7 +125,7 @@ export default function ManualTimeEditsPage() {
                             placeholder="Search member or note..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="ps-9"
+                            className="ps-9 pl-9"
                         />
                     </div>
                 </div>

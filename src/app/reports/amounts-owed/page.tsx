@@ -136,7 +136,7 @@ export default function AmountsOwedPage() {
                 }
             `}</style>
 
-            <div className="border-b border-gray-200 bg-white">
+            <div className="sticky top-0 z-20 border-b border-gray-200 bg-white">
                 <div className="px-6 py-4">
                     <h1 className="text-xl font-semibold mb-5">Amounts owed report</h1>
 

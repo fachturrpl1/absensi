@@ -142,7 +142,7 @@ export default function ClientInvoicesAgingPage() {
                     background-color: #f9fafb !important;
                 }
             `}</style>
-            <div className="border-b border-gray-200 bg-white">
+            <div className="sticky top-0 z-20 border-b border-gray-200 bg-white">
                 <div className="px-6 py-4">
                     <h1 className="text-xl font-semibold mb-5">Client invoices aging</h1>
 
@@ -204,7 +204,7 @@ export default function ClientInvoicesAgingPage() {
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                         <Input
                             placeholder="Search client..."
-                            className="ps-9 h-9 bg-white"
+                            className="ps-9 pl-9 h-9 bg-white"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />

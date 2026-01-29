@@ -275,7 +275,7 @@ export default function TimeActivityPage() {
                 }
             `}</style>
             {/* Header Section */}
-            <div className="border-b border-gray-200 bg-white">
+            <div className="sticky top-0 z-20 border-b border-gray-200 bg-white">
                 <div className="px-6 py-4">
                     <h1 className="text-xl font-semibold mb-5">Time and activity report</h1>
 

@@ -112,7 +112,7 @@ export default function TimeOffBalancesPage() {
                             placeholder="Search member or policy..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="ps-9"
+                            className="ps-9 pl-9"
                         />
                     </div>
                 </div>

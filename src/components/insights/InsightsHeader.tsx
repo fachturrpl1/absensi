@@ -444,7 +444,7 @@ export function InsightsHeader({
                   placeholder="Search items"
                   value={filterSearch}
                   onChange={(e) => setFilterSearch(e.target.value)}
-                  className="ps-8 pe-8"
+                  className="ps-8 pl-8 pe-8 pr-8"
                 />
                 {filterSearch && (
                   <button
