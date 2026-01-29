@@ -3133,17 +3133,21 @@ export interface WorkSession {
     session?: string
     projectId?: string
     projectName?: string
+    clientName?: string
+    todo?: string
+    manualPercentage?: number
+    activityPercentage?: number
 }
 
 export const DUMMY_WORK_SESSIONS: WorkSession[] = [
-    { id: 'session-1', memberId: 'm1', memberName: 'Antonio Galih', date: '2026-01-21', startTime: '08:00', endTime: '12:00', duration: 240, session: 'Morning', projectId: 'proj-1', projectName: 'Website Redesign' },
-    { id: 'session-2', memberId: 'm1', memberName: 'Antonio Galih', date: '2026-01-21', startTime: '13:00', endTime: '17:30', duration: 270, session: 'Afternoon', projectId: 'proj-1', projectName: 'Website Redesign' },
-    { id: 'session-3', memberId: 'm2', memberName: 'Lave Lavael', date: '2026-01-21', startTime: '09:25', endTime: '12:30', duration: 185, session: 'Morning', projectId: 'proj-2', projectName: 'Mobile App Development' },
-    { id: 'session-4', memberId: 'm2', memberName: 'Lave Lavael', date: '2026-01-21', startTime: '13:30', endTime: '18:00', duration: 270, session: 'Afternoon', projectId: 'proj-2', projectName: 'Mobile App Development' },
-    { id: 'session-5', memberId: 'm3', memberName: 'Sarah Johnson', date: '2026-01-21', startTime: '08:00', endTime: '12:00', duration: 240, session: 'Morning', projectId: 'proj-3', projectName: 'Marketing Campaign' },
-    { id: 'session-6', memberId: 'm3', memberName: 'Sarah Johnson', date: '2026-01-21', startTime: '12:45', endTime: '16:30', duration: 225, session: 'Afternoon', projectId: 'proj-3', projectName: 'Marketing Campaign' },
-    { id: 'session-7', memberId: 'm5', memberName: 'Emma Rodriguez', date: '2026-01-21', startTime: '08:02', endTime: '12:15', duration: 253, session: 'Morning', projectId: 'proj-4', projectName: 'API Integration' },
-    { id: 'session-8', memberId: 'm5', memberName: 'Emma Rodriguez', date: '2026-01-21', startTime: '13:00', endTime: '17:10', duration: 250, session: 'Afternoon', projectId: 'proj-4', projectName: 'API Integration' },
+    { id: 'session-1', memberId: 'm1', memberName: 'Antonio Galih', date: '2026-01-21', startTime: '08:00', endTime: '12:00', duration: 240, session: 'Morning', projectId: 'proj-1', projectName: 'Website Redesign', clientName: 'TechCorp', todo: 'Design Review', manualPercentage: 0, activityPercentage: 85 },
+    { id: 'session-2', memberId: 'm1', memberName: 'Antonio Galih', date: '2026-01-21', startTime: '13:00', endTime: '17:30', duration: 270, session: 'Afternoon', projectId: 'proj-1', projectName: 'Website Redesign', clientName: 'TechCorp', todo: 'Implementation', manualPercentage: 0, activityPercentage: 78 },
+    { id: 'session-3', memberId: 'm2', memberName: 'Lave Lavael', date: '2026-01-21', startTime: '09:25', endTime: '12:30', duration: 185, session: 'Morning', projectId: 'proj-2', projectName: 'Mobile App Development', clientName: 'StartupInc', todo: 'API Integration', manualPercentage: 5, activityPercentage: 92 },
+    { id: 'session-4', memberId: 'm2', memberName: 'Lave Lavael', date: '2026-01-21', startTime: '13:30', endTime: '18:00', duration: 270, session: 'Afternoon', projectId: 'proj-2', projectName: 'Mobile App Development', clientName: 'StartupInc', todo: 'Testing', manualPercentage: 0, activityPercentage: 88 },
+    { id: 'session-5', memberId: 'm3', memberName: 'Sarah Johnson', date: '2026-01-21', startTime: '08:00', endTime: '12:00', duration: 240, session: 'Morning', projectId: 'proj-3', projectName: 'Marketing Campaign', clientName: 'GrowthLtd', todo: 'Content Strategy', manualPercentage: 0, activityPercentage: 65 },
+    { id: 'session-6', memberId: 'm3', memberName: 'Sarah Johnson', date: '2026-01-21', startTime: '12:45', endTime: '16:30', duration: 225, session: 'Afternoon', projectId: 'proj-3', projectName: 'Marketing Campaign', clientName: 'GrowthLtd', todo: 'Ad Setup', manualPercentage: 10, activityPercentage: 70 },
+    { id: 'session-7', memberId: 'm5', memberName: 'Emma Rodriguez', date: '2026-01-21', startTime: '08:02', endTime: '12:15', duration: 253, session: 'Morning', projectId: 'proj-4', projectName: 'API Integration', clientName: 'FinTech', todo: 'Documentation', manualPercentage: 0, activityPercentage: 95 },
+    { id: 'session-8', memberId: 'm5', memberName: 'Emma Rodriguez', date: '2026-01-21', startTime: '13:00', endTime: '17:10', duration: 250, session: 'Afternoon', projectId: 'proj-4', projectName: 'API Integration', clientName: 'FinTech', todo: 'Debugging', manualPercentage: 0, activityPercentage: 91 },
 ]
 
 // ============================================================================
