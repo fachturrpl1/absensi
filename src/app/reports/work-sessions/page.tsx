@@ -285,7 +285,7 @@ export default function WorkSessionsPage() {
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                                 <Input
-                                    className="h-8 pl-8 w-[200px] text-xs"
+                                    className="h-8 ps-8 w-[200px] text-xs"
                                     placeholder="Search..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}

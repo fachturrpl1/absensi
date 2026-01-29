@@ -169,7 +169,7 @@ export default function AllReportsPage() {
                         placeholder="Search reports"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 border-gray-300 rounded-full bg-white shadow-sm focus:border-blue-500 transition-all"
+                        className="ps-10 border-gray-300 rounded-full bg-white shadow-sm focus:border-blue-500 transition-all"
                     />
                 </div>
             </div>

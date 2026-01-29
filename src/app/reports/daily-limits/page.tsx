@@ -108,7 +108,7 @@ export default function DailyLimitsPage() {
                             placeholder="Search member..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9"
+                            className="ps-9"
                         />
                     </div>
                 </div>

@@ -134,7 +134,7 @@ export default function ExpensesPage() {
                             placeholder="Search member, project, or description..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9"
+                            className="ps-9"
                         />
                     </div>
                     <select
