@@ -157,7 +157,7 @@ export default function ProjectsPage() {
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold">Projects</h1>
+                <h1 className="text-xl font-semibold">Projects</h1>
             </div>
 
             {/* Tabs */}
@@ -187,7 +187,7 @@ export default function ProjectsPage() {
                                 placeholder="Search projects"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="ps-10 pl-10 border-gray-300"
+                                className="ps-10 pl-10"
                             />
                         </div>
                         <div className="flex items-center gap-2">
