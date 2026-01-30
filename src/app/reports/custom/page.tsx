@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Search, Pencil, Trash, Download, MoreVertical } from "lucide-react"
+import { Search, Pencil, Trash, Download, MoreVertical, Star } from "lucide-react"
 import { EditScheduleDialog } from "@/components/report/EditScheduleDialog"
 import {
     Dialog,
@@ -207,17 +207,6 @@ export default function CustomizedReportsPage() {
 
     return (
         <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
-            <style jsx global>{`
-                html body .custom-hover-row:hover,
-                html body .custom-hover-row:hover > td {
-                    background-color: #d1d5db !important;
-                }
-                html body.dark .custom-hover-row:hover,
-                html body.dark .custom-hover-row:hover > td {
-                    background-color: #374151 !important;
-                }
-            `}</style>
-
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-gray-700">Customized Reports</h1>
@@ -244,6 +233,7 @@ export default function CustomizedReportsPage() {
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="ps-10 pl-10 border-gray-300"
+                                suppressHydrationWarning
                             />
                         </div>
 
@@ -256,6 +246,7 @@ export default function CustomizedReportsPage() {
                                 <SelectItem value="Time & Activity">Time & Activity</SelectItem>
                                 <SelectItem value="Daily Totals">Daily Totals</SelectItem>
                                 <SelectItem value="Payments">Payments</SelectItem>
+
                                 <SelectItem value="Custom">Custom</SelectItem>
                             </SelectContent>
                         </Select>
@@ -299,11 +290,24 @@ export default function CustomizedReportsPage() {
 
                     {/* Row 2: Bulk Actions */}
                     {selectedReports.length > 0 && (
-                        <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                            <span className="text-sm font-medium text-blue-900">
+                        <div className="flex items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                            <span className="text-sm font-medium text-gray-900">
                                 {selectedReports.length} selected
                             </span>
-                            <div className="h-4 w-px bg-blue-300" />
+                            <div className="h-4 w-px bg-gray-300" />
+                            <Button variant="ghost" size="sm" onClick={() => {
+                                if (selectedReports.length > 3) {
+                                    toast.error("You can select a maximum of 3 reports to show on the Reports page")
+                                    return
+                                }
+                                // Save to localStorage for demo persistence
+                                localStorage.setItem("featured_report_ids", JSON.stringify(selectedReports))
+                                toast.success("Reports updated on the main Reports page")
+                                setSelectedReports([])
+                            }}>
+                                <Star className="w-4 h-4 mr-2" />
+                                Show on Reports Page
+                            </Button>
                             <Button variant="ghost" size="sm" onClick={handleBulkPauseResume}>
                                 Toggle Status
                             </Button>
@@ -368,7 +372,7 @@ export default function CustomizedReportsPage() {
                                         <tr
                                             key={report.id}
                                             style={{ backgroundColor: idx % 2 === 1 ? '#f1f5f9' : '#ffffff' }}
-                                            className="transition-colors custom-hover-row"
+                                            className="transition-colors hover:bg-gray-200"
                                         >
                                             <td className="p-4 text-center">
                                                 <input

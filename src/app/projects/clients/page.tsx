@@ -141,7 +141,7 @@ export default function ClientsPage() {
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold">Clients</h1>
+                <h1 className="text-xl font-semibold">Clients</h1>
             </div>
 
             {/* Custom Tabs - matching Projects page style */}
@@ -183,7 +183,7 @@ export default function ClientsPage() {
                                 placeholder="Search clients"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="ps-10 pl-10 border-gray-300"
+                                className="ps-10 pl-10"
                             />
                         </div>
                         <div className="flex items-center gap-2">
@@ -273,7 +273,31 @@ export default function ClientsPage() {
                             phoneCountry: "id",
                             emails: editingClient.emails?.join(", ") || "",
                             projects: [],
-                            teams: []
+                            teams: [],
+                            // Budget
+                            budgetType: "",
+                            budgetBasedOn: "",
+                            budgetCost: "",
+                            budgetNotifyAt: "80",
+                            budgetResets: "never",
+                            budgetStartDate: "",
+                            budgetIncludeNonBillable: false,
+                            // Invoicing
+                            invoiceNotesCustom: false,
+                            invoiceNotes: "",
+                            invoiceNetTermsCustom: false,
+                            invoiceNetTerms: "30",
+                            invoiceTaxRateCustom: false,
+                            invoiceTaxRate: "",
+                            autoInvoicing: "off",
+                            aiAmountBasedOn: "hourly",
+                            aiFixedPrice: "",
+                            aiFrequency: "monthly",
+                            aiDelaySending: "0",
+                            aiSendReminder: "0",
+                            aiLineItems: "user-project-date",
+                            aiIncludeNonBillable: false,
+                            aiIncludeExpenses: false
                         }
                         : undefined
                 }

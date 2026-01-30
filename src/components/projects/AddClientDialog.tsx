@@ -4,6 +4,8 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -27,6 +29,31 @@ export interface ClientFormData {
     emails: string
     projects: string[]
     teams: string[]
+    // Budget
+    budgetType: string
+    budgetBasedOn: string
+    budgetCost: string
+    budgetNotifyAt: string
+    budgetResets: string
+    budgetStartDate: string
+    budgetIncludeNonBillable: boolean
+    // Invoicing
+    invoiceNotesCustom: boolean
+    invoiceNotes: string
+    invoiceNetTermsCustom: boolean
+    invoiceNetTerms: string
+    invoiceTaxRateCustom: boolean
+    invoiceTaxRate: string
+    autoInvoicing: "off" | "custom"
+    // Auto Invoicing Details
+    aiAmountBasedOn: "hourly" | "fixed"
+    aiFixedPrice: string
+    aiFrequency: string
+    aiDelaySending: string
+    aiSendReminder: string
+    aiLineItems: string
+    aiIncludeNonBillable: boolean
+    aiIncludeExpenses: boolean
 }
 
 export function AddClientDialog({ open, onOpenChange, onSave, initialData }: AddClientDialogProps) {
@@ -39,6 +66,31 @@ export function AddClientDialog({ open, onOpenChange, onSave, initialData }: Add
             emails: "",
             projects: [],
             teams: [],
+            // Budget
+            budgetType: "",
+            budgetBasedOn: "",
+            budgetCost: "",
+            budgetNotifyAt: "80",
+            budgetResets: "never",
+            budgetStartDate: "",
+            budgetIncludeNonBillable: false,
+            // Invoicing
+            invoiceNotesCustom: false,
+            invoiceNotes: "",
+            invoiceNetTermsCustom: false,
+            invoiceNetTerms: "30",
+            invoiceTaxRateCustom: false,
+            invoiceTaxRate: "",
+            autoInvoicing: "off",
+            // Auto Invoicing Defaults
+            aiAmountBasedOn: "hourly",
+            aiFixedPrice: "",
+            aiFrequency: "monthly",
+            aiDelaySending: "0",
+            aiSendReminder: "0",
+            aiLineItems: "user-project-date",
+            aiIncludeNonBillable: false,
+            aiIncludeExpenses: false
         }
     )
 
@@ -60,6 +112,31 @@ export function AddClientDialog({ open, onOpenChange, onSave, initialData }: Add
             emails: "",
             projects: [],
             teams: [],
+            // Budget
+            budgetType: "",
+            budgetBasedOn: "",
+            budgetCost: "",
+            budgetNotifyAt: "80",
+            budgetResets: "never",
+            budgetStartDate: "",
+            budgetIncludeNonBillable: false,
+            // Invoicing
+            invoiceNotesCustom: false,
+            invoiceNotes: "",
+            invoiceNetTermsCustom: false,
+            invoiceNetTerms: "30",
+            invoiceTaxRateCustom: false,
+            invoiceTaxRate: "",
+            autoInvoicing: "off",
+            // Auto Invoicing Defaults
+            aiAmountBasedOn: "hourly",
+            aiFixedPrice: "",
+            aiFrequency: "monthly",
+            aiDelaySending: "0",
+            aiSendReminder: "0",
+            aiLineItems: "user-project-date",
+            aiIncludeNonBillable: false,
+            aiIncludeExpenses: false
         })
         onOpenChange(false)
     }
@@ -146,8 +223,8 @@ export function AddClientDialog({ open, onOpenChange, onSave, initialData }: Add
                     <TabsContent value="projects" className="space-y-6 pt-5">
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <Label>PROJECTS / WORK ORDERS</Label>
-                                <Button variant="link" className="h-auto p-0 text-blue-600" onClick={() => setFormData({ ...formData, projects: DUMMY_PROJECTS.map(p => p.id) })}>
+                                <div className="text-xs font-semibold text-muted-foreground">PROJECTS / WORK ORDERS</div>
+                                <Button variant="link" className="h-auto p-0 text-gray-900 hover:cursor-pointer" onClick={() => setFormData({ ...formData, projects: DUMMY_PROJECTS.map(p => p.id) })}>
                                     Select all
                                 </Button>
                             </div>
@@ -168,7 +245,7 @@ export function AddClientDialog({ open, onOpenChange, onSave, initialData }: Add
                                         />
                                         <label
                                             htmlFor={project.id}
-                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                            className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                         >
                                             {project.name}
                                         </label>
@@ -181,8 +258,8 @@ export function AddClientDialog({ open, onOpenChange, onSave, initialData }: Add
                     <TabsContent value="teams" className="space-y-6 pt-5">
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <Label>TEAMS</Label>
-                                <Button variant="link" className="h-auto p-0 text-blue-600" onClick={() => setFormData({ ...formData, teams: DUMMY_TEAMS.map(t => t.id) })}>
+                                <div className="text-xs font-semibold text-muted-foreground">TEAMS</div>
+                                <Button variant="link" className="h-auto p-0 text-gray-900 hover:cursor-pointer" onClick={() => setFormData({ ...formData, teams: DUMMY_TEAMS.map(t => t.id) })}>
                                     Select all
                                 </Button>
                             </div>
@@ -203,7 +280,7 @@ export function AddClientDialog({ open, onOpenChange, onSave, initialData }: Add
                                         />
                                         <label
                                             htmlFor={`team-${team.id}`}
-                                            className="text-sm font-medium leading-none"
+                                            className="text-sm leading-none"
                                         >
                                             {team.name} <span className="text-muted-foreground">({team.memberCount} members)</span>
                                         </label>
@@ -214,11 +291,350 @@ export function AddClientDialog({ open, onOpenChange, onSave, initialData }: Add
                     </TabsContent>
 
                     <TabsContent value="budget" className="space-y-6 pt-5">
-                        <p className="text-sm text-muted-foreground">Budget settings will be available here.</p>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-muted-foreground">TYPE*</label>
+                                <Select
+                                    value={formData.budgetType}
+                                    onValueChange={(v) => setFormData({ ...formData, budgetType: v })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="hours">Hours</SelectItem>
+                                        <SelectItem value="cost">Cost</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-muted-foreground">BASED ON*</label>
+                                <Select
+                                    value={formData.budgetBasedOn}
+                                    onValueChange={(v) => setFormData({ ...formData, budgetBasedOn: v })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a rate" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="tracked-time">Tracked Time</SelectItem>
+                                        <SelectItem value="billable-time">Billable Time</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-muted-foreground">COST*</label>
+                                <div className="flex">
+                                    <div className="flex items-center justify-center bg-gray-100 px-3 border border-r-0 rounded-l-md text-sm text-gray-600">
+                                        $
+                                    </div>
+                                    <Input
+                                        type="number"
+                                        placeholder="0.0"
+                                        value={formData.budgetCost}
+                                        onChange={(e) => setFormData({ ...formData, budgetCost: e.target.value })}
+                                        className="rounded-l-none"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-muted-foreground">NOTIFY AT</label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        type="number"
+                                        value={formData.budgetNotifyAt}
+                                        onChange={(e) => setFormData({ ...formData, budgetNotifyAt: e.target.value })}
+                                        className="flex-1"
+                                    />
+                                    <div className="flex items-center px-3 bg-gray-100 border rounded-md text-sm text-muted-foreground">
+                                        % of budget
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-muted-foreground">RESETS*</label>
+                                <Select
+                                    value={formData.budgetResets}
+                                    onValueChange={(v) => setFormData({ ...formData, budgetResets: v })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Never" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="never">Never</SelectItem>
+                                        <SelectItem value="daily">Daily</SelectItem>
+                                        <SelectItem value="weekly">Weekly</SelectItem>
+                                        <SelectItem value="monthly">Monthly</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                                    START DATE <span className="text-gray-400">ⓘ</span>
+                                </label>
+                                <Input
+                                    type="date"
+                                    value={formData.budgetStartDate}
+                                    onChange={(e) => setFormData({ ...formData, budgetStartDate: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <Switch
+                                id="include-non-billable"
+                                checked={formData.budgetIncludeNonBillable}
+                                onCheckedChange={(v) => setFormData({ ...formData, budgetIncludeNonBillable: v })}
+                            />
+                            <Label htmlFor="include-non-billable" className="text-sm font-normal text-muted-foreground">Include non-billable time</Label>
+                        </div>
                     </TabsContent>
 
                     <TabsContent value="invoicing" className="space-y-6 pt-5">
-                        <p className="text-sm text-muted-foreground">Invoicing settings will be available here.</p>
+                        <div className="space-y-4">
+                            {/* Notes */}
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase">Notes (shown on invoices)</label>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        id="custom-notes"
+                                        checked={formData.invoiceNotesCustom}
+                                        onCheckedChange={(v) => setFormData({ ...formData, invoiceNotesCustom: v })}
+                                    />
+                                    <Label htmlFor="custom-notes" className="text-sm font-medium">Custom for this client</Label>
+                                </div>
+                                {formData.invoiceNotesCustom && (
+                                    <Textarea
+                                        placeholder="Enter notes to client"
+                                        value={formData.invoiceNotes}
+                                        onChange={(e) => setFormData({ ...formData, invoiceNotes: e.target.value })}
+                                        className="mt-2"
+                                    />
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-8">
+                                {/* Net Terms */}
+                                <div className="space-y-3">
+                                    <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                                        NET TERMS <span className="text-gray-400">ⓘ</span>
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <Switch
+                                            id="custom-net-terms"
+                                            checked={formData.invoiceNetTermsCustom}
+                                            onCheckedChange={(v) => setFormData({ ...formData, invoiceNetTermsCustom: v })}
+                                        />
+                                        <Label htmlFor="custom-net-terms" className="text-sm font-medium">Custom for this client</Label>
+                                    </div>
+                                    {formData.invoiceNetTermsCustom && (
+                                        <div className="flex gap-2">
+                                            <Input
+                                                type="number"
+                                                value={formData.invoiceNetTerms}
+                                                onChange={(e) => setFormData({ ...formData, invoiceNetTerms: e.target.value })}
+                                                className="flex-1"
+                                            />
+                                            <div className="flex items-center px-4 bg-gray-100 border rounded-md text-sm text-foreground">
+                                                days
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Tax Rate */}
+                                <div className="space-y-3">
+                                    <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                                        TAX RATE <span className="text-gray-400">ⓘ</span>
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <Switch
+                                            id="custom-tax-rate"
+                                            checked={formData.invoiceTaxRateCustom}
+                                            onCheckedChange={(v) => setFormData({ ...formData, invoiceTaxRateCustom: v })}
+                                        />
+                                        <Label htmlFor="custom-tax-rate" className="text-sm font-medium">Custom for this client</Label>
+                                    </div>
+                                    {formData.invoiceTaxRateCustom && (
+                                        <div className="flex gap-2">
+                                            <Input
+                                                type="number"
+                                                placeholder="Ex. 7"
+                                                value={formData.invoiceTaxRate}
+                                                onChange={(e) => setFormData({ ...formData, invoiceTaxRate: e.target.value })}
+                                                className="flex-1"
+                                            />
+                                            <div className="flex items-center px-4 bg-gray-100 border rounded-md text-sm text-foreground">
+                                                %
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Auto Invoicing */}
+                            <div className="space-y-3 pt-2">
+                                <label className="text-base font-semibold">Auto invoicing</label>
+                                <div className="flex rounded-full bg-gray-100 p-1 w-fit">
+                                    <button
+                                        onClick={() => setFormData({ ...formData, autoInvoicing: "off" })}
+                                        className={`px-6 py-1.5 rounded-full text-sm font-medium transition-all ${formData.autoInvoicing === "off" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                                    >
+                                        Off
+                                    </button>
+                                    <button
+                                        onClick={() => setFormData({ ...formData, autoInvoicing: "custom" })}
+                                        className={`px-6 py-1.5 rounded-full text-sm font-medium transition-all ${formData.autoInvoicing === "custom" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                                    >
+                                        Custom
+                                    </button>
+                                </div>
+                                <Button variant="link" className="h-auto p-0 text-gray-900 hover:cursor-pointer text-sm font-normal">
+                                    Set up auto-invoicing for all your clients at once.
+                                </Button>
+                            </div>
+
+                            {formData.autoInvoicing === "custom" && (
+                                <div className="space-y-6 pt-2 border-t mt-4 border-gray-100">
+                                    <div className="grid grid-cols-2 gap-8">
+                                        <div className="space-y-3">
+                                            <label className="text-xs font-semibold text-muted-foreground uppercase">Amount based on</label>
+                                            <RadioGroup
+                                                value={formData.aiAmountBasedOn}
+                                                onValueChange={(v: "hourly" | "fixed") => setFormData({ ...formData, aiAmountBasedOn: v })}
+                                                className="space-y-3"
+                                            >
+                                                <div className="flex items-center space-x-2">
+                                                    <RadioGroupItem value="hourly" id="ai-hourly" />
+                                                    <Label htmlFor="ai-hourly" className="font-normal flex gap-1 items-center">
+                                                        Hourly <span className="text-gray-400 cursor-help" title="Info">ⓘ</span>
+                                                    </Label>
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <RadioGroupItem value="fixed" id="ai-fixed" />
+                                                    <Label htmlFor="ai-fixed" className="font-normal">Fixed price</Label>
+                                                    {formData.aiAmountBasedOn === "fixed" && (
+                                                        <div className="flex items-center ml-2">
+                                                            <Input
+                                                                type="number"
+                                                                value={formData.aiFixedPrice}
+                                                                onChange={(e) => setFormData({ ...formData, aiFixedPrice: e.target.value })}
+                                                                className="w-24 h-8"
+                                                            />
+                                                            <div className="flex items-center px-3 h-8 bg-gray-100 border border-l-0 rounded-r-md text-xs text-foreground">
+                                                                USD
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </RadioGroup>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <label className="text-xs font-semibold text-muted-foreground uppercase">Frequency</label>
+                                            <Select
+                                                value={formData.aiFrequency}
+                                                onValueChange={(v) => setFormData({ ...formData, aiFrequency: v })}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select frequency" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="monthly">Monthly</SelectItem>
+                                                    <SelectItem value="weekly">Weekly</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-8">
+                                        <div className="space-y-3">
+                                            <div className="h-10 flex items-end pb-1">
+                                                <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                                                    Delay sending <span className="text-gray-400 cursor-help" title="Info">ⓘ</span>
+                                                </label>
+                                            </div>
+                                            <div className="flex gap-0">
+                                                <Input
+                                                    type="number"
+                                                    value={formData.aiDelaySending}
+                                                    onChange={(e) => setFormData({ ...formData, aiDelaySending: e.target.value })}
+                                                    className="rounded-r-none"
+                                                />
+                                                <div className="flex items-center px-4 bg-gray-100 border border-l-0 rounded-r-md text-sm text-foreground">
+                                                    days
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <div className="h-10 flex items-end pb-1">
+                                                <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                                                    Send reminder to pay after due <span className="text-gray-400 cursor-help" title="Info">ⓘ</span>
+                                                </label>
+                                            </div>
+                                            <div className="flex gap-0">
+                                                <Input
+                                                    type="number"
+                                                    value={formData.aiSendReminder}
+                                                    onChange={(e) => setFormData({ ...formData, aiSendReminder: e.target.value })}
+                                                    className="rounded-r-none"
+                                                />
+                                                <div className="flex items-center px-4 bg-gray-100 border border-l-0 rounded-r-md text-sm text-foreground">
+                                                    days
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-semibold text-muted-foreground uppercase">Line items</label>
+                                        <Select
+                                            value={formData.aiLineItems}
+                                            onValueChange={(v) => setFormData({ ...formData, aiLineItems: v })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select line items" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="user-project-date">By user, project, and date</SelectItem>
+                                                <SelectItem value="project">By project</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <Switch
+                                                id="ai-include-non-billable"
+                                                checked={formData.aiIncludeNonBillable}
+                                                onCheckedChange={(v) => setFormData({ ...formData, aiIncludeNonBillable: v })}
+                                            />
+                                            <Label htmlFor="ai-include-non-billable" className="font-normal text-muted-foreground">Include non-billable time</Label>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Switch
+                                                id="ai-include-expenses"
+                                                checked={formData.aiIncludeExpenses}
+                                                onCheckedChange={(v) => setFormData({ ...formData, aiIncludeExpenses: v })}
+                                            />
+                                            <Label htmlFor="ai-include-expenses" className="font-normal text-muted-foreground">Include expenses</Label>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </TabsContent>
                 </Tabs>
 

@@ -2947,10 +2947,10 @@ export interface ExpenseEntry {
 }
 
 export const DUMMY_EXPENSES: ExpenseEntry[] = [
-    { id: 'exp-1', memberId: 'm1', memberName: 'Antonio Galih', projectId: 'proj-1', projectName: 'Website Redesign', category: 'software', description: 'Adobe Creative Cloud subscription', amount: 850000, currency: 'IDR', date: '2026-01-15', status: 'approved' },
+    { id: 'exp-1', memberId: 'm1', memberName: 'Antonio Galih', projectId: 'proj-1', projectName: 'Website Redesign', category: 'software', description: 'Adobe Creative Cloud subscription', amount: 850000, currency: 'IDR', date: '2026-01-15', status: 'approved', receiptUrl: 'https://example.com/receipt1.pdf' },
     { id: 'exp-2', memberId: 'm2', memberName: 'Lave Lavael', projectId: 'proj-2', projectName: 'Mobile App Development', category: 'equipment', description: 'External monitor', amount: 3500000, currency: 'IDR', date: '2026-01-18', status: 'pending' },
-    { id: 'exp-3', memberId: 'm3', memberName: 'Sarah Johnson', projectId: 'proj-1', projectName: 'Website Redesign', category: 'travel', description: 'Client meeting transportation', amount: 250000, currency: 'IDR', date: '2026-01-20', status: 'reimbursed' },
-    { id: 'exp-4', memberId: 'm4', memberName: 'Michael Chen', projectId: 'proj-3', projectName: 'Marketing Campaign', category: 'meals', description: 'Team lunch meeting', amount: 450000, currency: 'IDR', date: '2026-01-19', status: 'approved' },
+    { id: 'exp-3', memberId: 'm3', memberName: 'Sarah Johnson', projectId: 'proj-1', projectName: 'Website Redesign', category: 'travel', description: 'Client meeting transportation', amount: 250000, currency: 'IDR', date: '2026-01-20', status: 'reimbursed', receiptUrl: 'https://example.com/receipt3.jpg' },
+    { id: 'exp-4', memberId: 'm4', memberName: 'Michael Chen', projectId: 'proj-3', projectName: 'Marketing Campaign', category: 'meals', description: 'Team lunch meeting', amount: 450000, currency: 'IDR', date: '2026-01-19', status: 'approved', receiptUrl: 'https://example.com/receipt4.png' },
     { id: 'exp-5', memberId: 'm5', memberName: 'Emma Rodriguez', projectId: 'proj-2', projectName: 'Mobile App Development', category: 'software', description: 'Testing tools license', amount: 1200000, currency: 'IDR', date: '2026-01-22', status: 'pending' },
     { id: 'exp-6', memberId: 'm1', memberName: 'Antonio Galih', projectId: 'proj-4', projectName: 'API Integration', category: 'office', description: 'Office supplies', amount: 150000, currency: 'IDR', date: '2026-01-21', status: 'rejected' },
 ]
@@ -3341,4 +3341,136 @@ export const DUMMY_AMOUNTS_OWED: AmountsOwedData[] = [
     { id: 'ao-5', memberId: 'm5', name: 'Emma Rodriguez', email: 'emma@example.com', team: 'Team Beta', hourlyRate: 135000, currency: 'IDR', regularHours: 150, overtimeHours: 0, totalHours: 150, amountOwed: 20250000, paymentStatus: 'Unpaid' },
 ]
 
+// ============================================================================
+// MANUAL TIME EDITS
+// ============================================================================
 
+export interface ManualEditEntry {
+    id: string
+    memberId: string
+    memberName: string
+    memberAvatar?: string
+    projectId: string
+    projectName: string
+    taskId?: string
+    taskName?: string // To-do designation
+    action: 'Add' | 'Edit' | 'Delete'
+    timeSpan?: string // e.g. "09:00 - 17:00"
+    timeChange: string // "0:20:00"
+    reason: string
+    changedById: string
+    changedByName: string
+    changedAt: string // ISO string
+    date: string // YYYY-MM-DD for grouping
+}
+
+export const DUMMY_MANUAL_EDITS: ManualEditEntry[] = [
+    {
+        id: 'me-1',
+        memberId: 'm1',
+        memberName: 'Antonio Galih',
+        memberAvatar: 'https://i.pravatar.cc/150?u=m1',
+        projectId: 'proj-1',
+        projectName: 'Website Redesign',
+        taskId: 't-1',
+        taskName: 'Setup repository',
+        action: 'Edit',
+        timeSpan: '09:00 - 11:30',
+        timeChange: '-0:30:00',
+        reason: 'Correction of break time',
+        changedById: 'm1',
+        changedByName: 'Antonio Galih',
+        changedAt: '2026-01-21T10:30:00',
+        date: '2026-01-21'
+    },
+    {
+        id: 'me-2',
+        memberId: 'm2',
+        memberName: 'Lave Lavael',
+        memberAvatar: 'https://i.pravatar.cc/150?u=m2',
+        projectId: 'proj-2',
+        projectName: 'Mobile App',
+        taskId: 't-4',
+        taskName: 'API contracts',
+        action: 'Add',
+        timeSpan: '13:00 - 15:00',
+        timeChange: '+2:00:00',
+        reason: 'Forgot to track time',
+        changedById: 'm2',
+        changedByName: 'Lave Lavael',
+        changedAt: '2026-01-20T16:00:00',
+        date: '2026-01-20'
+    },
+    {
+        id: 'me-3',
+        memberId: 'm3',
+        memberName: 'Sarah Johnson',
+        memberAvatar: 'https://i.pravatar.cc/150?u=m3',
+        projectId: 'proj-1',
+        projectName: 'Website Redesign',
+        taskId: 't-3',
+        taskName: 'Landing page hero',
+        action: 'Delete',
+        timeSpan: '10:00 - 11:00',
+        timeChange: '-1:00:00',
+        reason: 'Duplicate entry',
+        changedById: 'm1',
+        changedByName: 'Antonio Galih',
+        changedAt: '2026-01-19T11:15:00',
+        date: '2026-01-19'
+    },
+    {
+        id: 'me-4',
+        memberId: 'm4',
+        memberName: 'Michael Chen',
+        memberAvatar: 'https://i.pravatar.cc/150?u=m4',
+        projectId: 'proj-3',
+        projectName: 'Marketing Campaign',
+        taskId: 't-6',
+        taskName: 'Campaign brief',
+        action: 'Edit',
+        timeSpan: '14:00 - 18:00',
+        timeChange: '+0:15:00',
+        reason: 'Extended work hours',
+        changedById: 'm4',
+        changedByName: 'Michael Chen',
+        changedAt: '2026-01-19T18:30:00',
+        date: '2026-01-19'
+    },
+    {
+        id: 'me-5',
+        memberId: 'm1',
+        memberName: 'Antonio Galih',
+        memberAvatar: 'https://i.pravatar.cc/150?u=m1',
+        projectId: 'proj-1',
+        projectName: 'Website Redesign',
+        taskId: 't-2',
+        taskName: 'Create design system',
+        action: 'Add',
+        timeSpan: '08:00 - 09:00',
+        timeChange: '+1:00:00',
+        reason: 'Early morning review',
+        changedById: 'm1',
+        changedByName: 'Antonio Galih',
+        changedAt: '2026-01-18T09:05:00',
+        date: '2026-01-18'
+    },
+    {
+        id: 'me-6',
+        memberId: 'm2',
+        memberName: 'Lave Lavael',
+        memberAvatar: 'https://i.pravatar.cc/150?u=m2',
+        projectId: 'proj-2',
+        projectName: 'Mobile App',
+        taskId: 't-5',
+        taskName: 'Auth flow',
+        action: 'Delete',
+        timeSpan: '16:00 - 17:00',
+        timeChange: '-1:00:00',
+        reason: 'Wrong project selected',
+        changedById: 'm2',
+        changedByName: 'Lave Lavael',
+        changedAt: '2026-01-21T17:15:00',
+        date: '2026-01-21'
+    }
+]
