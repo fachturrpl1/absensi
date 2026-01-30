@@ -61,9 +61,7 @@ export default function SettingsPage() {
       title: 'Project',
       icon: Building2,
       items: [
-        { label: 'Security & log in', href: '#' },
-        { label: 'Projects & taks', href: '#' },
-        { label: 'Permissions', href: '#' },
+        { label: 'Projects & taks', href: '/settings/project&task' },
       ],
     },
     {
@@ -71,9 +69,9 @@ export default function SettingsPage() {
       icon: Users,
       items: [
         { label: 'Custom fields', href: '/settings/members/custom-fields' },
-        { label: 'Work time limits', href: '#' },
-        { label: 'Payments', href: '#' },
-        { label: 'Achievements', href: '#' },
+        { label: 'Work time limits', href: '/settings/work-time-limit' },
+        { label: 'Payments', href: '/settings/payments' },
+        { label: 'Achievements', href: '/settings/Achievements' },
       ],
     },
     {
@@ -89,7 +87,7 @@ export default function SettingsPage() {
       title: 'Activity & tracking',
       icon: Activity,
       items: [
-        { label: 'Activity', href: '/settings/activity/track-apps-urls' },
+        { label: 'Activity', href: '/settings/Activity/track-apps-urls' },
         { label: 'Timesheets', href: '/settings/Timesheet' },
         { label: 'Time & tracking', href: '/settings/tracking/allowed-apps' },
         { label: 'Screenshots', href: '/settings/screenshot' },
@@ -107,9 +105,9 @@ export default function SettingsPage() {
       title: 'Policies',
       icon: FileText,
       items: [
-        { label: 'Time off', href: '#' },
-        { label: 'Work breaks', href: '#' },
-        { label: 'Overtime', href: '#' },
+        { label: 'Time off', href: '/settings/Policies' },
+        { label: 'Work breaks', href: '/settings/Policies/work-breaks' },
+        { label: 'Overtime', href: '/settings/Policies/overtime' },
       ],
     },
   ];

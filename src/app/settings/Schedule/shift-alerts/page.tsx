@@ -1,10 +1,10 @@
 "use client"
 
 import React, { useState, useMemo } from "react"
-import { Calendar, Info, Search, User } from "lucide-react"
+import { Info, Search, User } from "lucide-react"
 import Link from "next/link"
-import { Input } from "@/components/ui/input"
 import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
+import { SchedulesHeader } from "@/components/settings/SchedulesHeader"
 
 interface MemberWithAlert {
     id: string
@@ -27,12 +27,6 @@ export default function ShiftAlertsPage() {
     const [globalSetting, setGlobalSetting] = useState<"both" | "management" | "user" | "no-one">("both")
     const [members, setMembers] = useState<MemberWithAlert[]>(initialMembers)
     const [searchQuery, setSearchQuery] = useState("")
-
-    const tabs = [
-        { label: "CALENDAR", href: "/settings/Calender", active: true },
-        { label: "JOB SITES", href: "/settings/Job-sites", active: false },
-        { label: "MAP", href: "/settings/Map", active: false },
-    ]
 
     const sidebarItems = [
         { label: "Calendar type", href: "/settings/Schedule", active: false },
@@ -69,27 +63,7 @@ export default function ShiftAlertsPage() {
 
     return (
         <div className="flex flex-col min-h-screen bg-white">
-            {/* Header */}
-            <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-200">
-                <Calendar className="w-5 h-5 text-gray-900" />
-                <h1 className="text-xl font-semibold text-gray-900">Schedules</h1>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex items-center gap-6 px-6 border-b border-gray-200">
-                {tabs.map((tab) => (
-                    <Link
-                        key={tab.label}
-                        href={tab.href}
-                        className={`py-3 text-sm font-medium border-b-2 transition-colors ${tab.active
-                            ? "text-gray-900 border-gray-900"
-                            : "text-gray-500 border-transparent hover:text-gray-700"
-                            }`}
-                    >
-                        {tab.label}
-                    </Link>
-                ))}
-            </div>
+            <SchedulesHeader activeTab="calendar" />
 
             {/* Content */}
             <div className="flex flex-1">
@@ -139,7 +113,7 @@ export default function ShiftAlertsPage() {
                                 key={option.value}
                                 onClick={() => handleGlobalChange(option.value)}
                                 className={`px-5 py-2 text-sm font-medium rounded-full transition-all ${globalSetting === option.value
-                                    ? "bg-gray-800 text-white shadow-sm"
+                                    ? "bg-white text-gray-900 shadow-sm"
                                     : "text-gray-500 hover:text-gray-700"
                                     }`}
                             >
@@ -154,14 +128,14 @@ export default function ShiftAlertsPage() {
                             <h3 className="text-lg font-semibold text-gray-900 mb-1">Individual settings</h3>
                             <p className="text-sm text-gray-500">Override the organization default for specific members</p>
                         </div>
-                        <div className="relative w-56">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <Input
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <input
                                 type="text"
                                 placeholder="Search members"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 h-10 border-gray-300 rounded-full bg-white"
+                                className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                             />
                         </div>
                     </div>
@@ -189,7 +163,7 @@ export default function ShiftAlertsPage() {
                                                 key={option.value}
                                                 onClick={() => handleMemberAlertChange(member.id, option.value)}
                                                 className={`px-4 py-1.5 text-xs font-medium rounded-full transition-all ${member.alertSetting === option.value
-                                                    ? "bg-gray-800 text-white shadow-sm"
+                                                    ? "bg-white text-gray-900 shadow-sm"
                                                     : "text-gray-500 hover:text-gray-700"
                                                     }`}
                                             >

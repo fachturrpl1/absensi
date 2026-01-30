@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Activity, Info, Search, Star } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { Info, Search, Star } from "lucide-react"
 import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
+import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
 
 type KeepIdleTimeOption = "prompt" | "always" | "never"
 
@@ -35,43 +35,7 @@ export default function KeepIdleTimePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-white w-full">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-200 w-full">
-        <div className="flex items-center gap-3">
-          <Activity className="h-6 w-6 text-slate-700" />
-          <h1 className="text-2xl font-semibold text-slate-900">Activity & tracking</h1>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="px-6 border-b border-slate-200 w-full">
-        <div className="flex gap-8">
-          <Link
-            href="/activity"
-            className="px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            ACTIVITY
-          </Link>
-          <Link
-            href="#"
-            className="px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            TIMESHEETS
-          </Link>
-          <Link
-            href="/activity/tracking/allowed-apps"
-            className="px-4 py-3 text-sm font-medium text-slate-900 border-b-2 border-slate-900 transition-colors"
-          >
-            TIME & TRACKING
-          </Link>
-          <Link
-            href="/activity/screenshots/setting"
-            className="px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            SCREENSHOTS
-          </Link>
-        </div>
-      </div>
+      <ActivityTrackingHeader activeTab="tracking" />
 
       {/* Main Content */}
       <div className="flex flex-1 w-full">
@@ -130,31 +94,28 @@ export default function KeepIdleTimePage() {
                   <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-200 p-1">
                     <button
                       onClick={() => handleGlobalKeepIdleTimeChange("prompt")}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                        globalKeepIdleTime === "prompt"
-                          ? "bg-white text-slate-900 shadow-sm"
-                          : "bg-transparent text-slate-600"
-                      }`}
+                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${globalKeepIdleTime === "prompt"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "bg-transparent text-slate-600"
+                        }`}
                     >
                       Prompt
                     </button>
                     <button
                       onClick={() => handleGlobalKeepIdleTimeChange("always")}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                        globalKeepIdleTime === "always"
-                          ? "bg-white text-slate-900 shadow-sm"
-                          : "bg-transparent text-slate-600"
-                      }`}
+                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${globalKeepIdleTime === "always"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "bg-transparent text-slate-600"
+                        }`}
                     >
                       Always
                     </button>
                     <button
                       onClick={() => handleGlobalKeepIdleTimeChange("never")}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                        globalKeepIdleTime === "never"
-                          ? "bg-white text-slate-900 shadow-sm"
-                          : "bg-transparent text-slate-600"
-                      }`}
+                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${globalKeepIdleTime === "never"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "bg-transparent text-slate-600"
+                        }`}
                     >
                       Never
                     </button>
@@ -168,12 +129,12 @@ export default function KeepIdleTimePage() {
               <div className="flex items-center justify-between">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
+                  <input
                     type="text"
                     placeholder="Search members"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 w-64"
+                    className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                   />
                 </div>
               </div>
@@ -221,31 +182,28 @@ export default function KeepIdleTimePage() {
                                 <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-200 p-1">
                                   <button
                                     onClick={() => handleMemberKeepIdleTimeChange(member.id, "prompt")}
-                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                                      memberKeepIdleTime === "prompt"
-                                        ? "bg-white text-slate-900 shadow-sm"
-                                        : "bg-transparent text-slate-600"
-                                    }`}
+                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${memberKeepIdleTime === "prompt"
+                                      ? "bg-white text-slate-900 shadow-sm"
+                                      : "bg-transparent text-slate-600"
+                                      }`}
                                   >
                                     Prompt
                                   </button>
                                   <button
                                     onClick={() => handleMemberKeepIdleTimeChange(member.id, "always")}
-                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                                      memberKeepIdleTime === "always"
-                                        ? "bg-white text-slate-900 shadow-sm"
-                                        : "bg-transparent text-slate-600"
-                                    }`}
+                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${memberKeepIdleTime === "always"
+                                      ? "bg-white text-slate-900 shadow-sm"
+                                      : "bg-transparent text-slate-600"
+                                      }`}
                                   >
                                     Always
                                   </button>
                                   <button
                                     onClick={() => handleMemberKeepIdleTimeChange(member.id, "never")}
-                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                                      memberKeepIdleTime === "never"
-                                        ? "bg-white text-slate-900 shadow-sm"
-                                        : "bg-transparent text-slate-600"
-                                    }`}
+                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${memberKeepIdleTime === "never"
+                                      ? "bg-white text-slate-900 shadow-sm"
+                                      : "bg-transparent text-slate-600"
+                                      }`}
                                   >
                                     Never
                                   </button>
