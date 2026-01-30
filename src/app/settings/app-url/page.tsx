@@ -217,7 +217,7 @@ export default function AppUrlPage() {
                                         <button
                                             onClick={() => handleClassificationChange(url.id, "core")}
                                             className={`px-5 py-2 text-xs font-medium rounded-full transition-all ${url.classification === "core"
-                                                ? "bg-gray-800 text-white shadow-sm"
+                                                ? "bg-white text-gray-900 shadow-sm"
                                                 : "text-gray-500 hover:text-gray-700"
                                                 }`}
                                         >
@@ -226,7 +226,7 @@ export default function AppUrlPage() {
                                         <button
                                             onClick={() => handleClassificationChange(url.id, "non-core")}
                                             className={`px-5 py-2 text-xs font-medium rounded-full transition-all ${url.classification === "non-core"
-                                                ? "bg-gray-800 text-white shadow-sm"
+                                                ? "bg-white text-gray-900 shadow-sm"
                                                 : "text-gray-500 hover:text-gray-700"
                                                 }`}
                                         >
@@ -235,7 +235,7 @@ export default function AppUrlPage() {
                                         <button
                                             onClick={() => handleClassificationChange(url.id, "unproductive")}
                                             className={`px-5 py-2 text-xs font-medium rounded-full transition-all ${url.classification === "unproductive"
-                                                ? "bg-gray-800 text-white shadow-sm"
+                                                ? "bg-white text-gray-900 shadow-sm"
                                                 : "text-gray-500 hover:text-gray-700"
                                                 }`}
                                         >

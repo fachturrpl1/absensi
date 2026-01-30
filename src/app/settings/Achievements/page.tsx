@@ -1,12 +1,13 @@
 "use client"
 
 import React, { useState, useMemo } from "react"
-import { Users, Info, Search, User, Clock } from "lucide-react"
+import { Info, Search, User, Clock } from "lucide-react"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
+import { MembersHeader } from "@/components/settings/MembersHeader"
 
 interface MemberWithSettings {
     id: string
@@ -31,13 +32,6 @@ export default function EfficiencyProPage() {
     const [globalActivityGoal, setGlobalActivityGoal] = useState(50)
     const [members, setMembers] = useState<MemberWithSettings[]>(initialMembers)
     const [searchQuery, setSearchQuery] = useState("")
-
-    const tabs = [
-        { label: "CUSTOM FIELDS", href: "#", active: false },
-        { label: "WORK TIME LIMITS", href: "#", active: false },
-        { label: "PAYMENTS", href: "#", active: false },
-        { label: "ACHIEVEMENTS", href: "/settings/Achievements", active: true },
-    ]
 
     const sidebarItems = [
         { label: "Efficiency pro", href: "/settings/Achievements", active: true },
@@ -77,27 +71,7 @@ export default function EfficiencyProPage() {
 
     return (
         <div className="flex flex-col min-h-screen bg-white">
-            {/* Header */}
-            <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-200">
-                <Users className="w-5 h-5 text-gray-900" />
-                <h1 className="text-xl font-semibold text-gray-900">Members</h1>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex items-center gap-6 px-6 border-b border-gray-200">
-                {tabs.map((tab) => (
-                    <Link
-                        key={tab.label}
-                        href={tab.href}
-                        className={`py-3 text-sm font-medium border-b-2 transition-colors ${tab.active
-                            ? "text-gray-900 border-gray-900"
-                            : "text-gray-500 border-transparent hover:text-gray-700"
-                            }`}
-                    >
-                        {tab.label}
-                    </Link>
-                ))}
-            </div>
+            <MembersHeader activeTab="achievements" />
 
             {/* Content */}
             <div className="flex flex-1">
@@ -198,14 +172,14 @@ export default function EfficiencyProPage() {
                             <h3 className="text-lg font-semibold text-gray-900 mb-1">Individual settings</h3>
                             <p className="text-sm text-gray-500">Override the organization default for specific members</p>
                         </div>
-                        <div className="relative w-56">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <Input
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <input
                                 type="text"
                                 placeholder="Search members"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 h-10 border-gray-300 rounded-full bg-white"
+                                className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                             />
                         </div>
                     </div>

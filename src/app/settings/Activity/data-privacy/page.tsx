@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Activity, Info, Search } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { Info, Search } from "lucide-react"
 import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
+import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
 
 export default function DataPrivacyPage() {
   const [globalDataPrivacy, setGlobalDataPrivacy] = useState(false)
@@ -33,43 +33,7 @@ export default function DataPrivacyPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-white w-full">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-200 w-full">
-        <div className="flex items-center gap-3">
-          <Activity className="h-6 w-6 text-slate-700" />
-          <h1 className="text-2xl font-semibold text-slate-900">Activity & tracking</h1>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="px-6 border-b border-slate-200 w-full">
-        <div className="flex gap-8">
-          <Link
-            href="/activity/settings/track-apps-urls"
-            className="px-4 py-3 text-sm font-medium text-slate-900 border-b-2 border-slate-900 transition-colors"
-          >
-            ACTIVITY
-          </Link>
-          <Link
-            href="#"
-            className="px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            TIMESHEETS
-          </Link>
-          <Link
-            href="/activity/tracking/allowed-apps"
-            className="px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            TIME & TRACKING
-          </Link>
-          <Link
-            href="/activity/screenshots/setting"
-            className="px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            SCREENSHOTS
-          </Link>
-        </div>
-      </div>
+      <ActivityTrackingHeader activeTab="activity" />
 
       {/* Main Content */}
       <div className="flex flex-1 w-full">
@@ -77,19 +41,19 @@ export default function DataPrivacyPage() {
         <div className="w-64 border-r border-slate-200 bg-slate-50">
           <div className="p-4 space-y-1">
             <Link
-              href="/activity/settings/track-apps-urls"
+              href="/settings/Activity/track-apps-urls"
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
             >
               Track apps & URLs
             </Link>
             <Link
-              href="/activity/settings/data-privacy"
+              href="/settings/Activity/data-privacy"
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-900 bg-slate-100 rounded-md"
             >
               Data privacy
             </Link>
             <Link
-              href="#"
+              href="/settings/Activity/record-activity"
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
             >
               Record activity
@@ -133,21 +97,19 @@ export default function DataPrivacyPage() {
                   <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-200 p-1">
                     <button
                       onClick={() => handleGlobalDataPrivacyChange(false)}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                        !globalDataPrivacy
-                          ? "bg-white text-slate-900 shadow-sm"
-                          : "bg-transparent text-slate-600"
-                      }`}
+                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${!globalDataPrivacy
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "bg-transparent text-slate-600"
+                        }`}
                     >
                       Off
                     </button>
                     <button
                       onClick={() => handleGlobalDataPrivacyChange(true)}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                        globalDataPrivacy
-                          ? "bg-white text-slate-900 shadow-sm"
-                          : "bg-transparent text-slate-600"
-                      }`}
+                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${globalDataPrivacy
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "bg-transparent text-slate-600"
+                        }`}
                     >
                       On
                     </button>
@@ -167,12 +129,12 @@ export default function DataPrivacyPage() {
                 </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
+                  <input
                     type="text"
                     placeholder="Search members"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 w-64"
+                    className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                   />
                 </div>
               </div>
@@ -220,21 +182,19 @@ export default function DataPrivacyPage() {
                                 <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-200 p-1">
                                   <button
                                     onClick={() => handleMemberDataPrivacyChange(member.id, false)}
-                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                                      !memberDataPrivacyValue
-                                        ? "bg-white text-slate-900 shadow-sm"
-                                        : "bg-transparent text-slate-600"
-                                    }`}
+                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${!memberDataPrivacyValue
+                                      ? "bg-white text-slate-900 shadow-sm"
+                                      : "bg-transparent text-slate-600"
+                                      }`}
                                   >
                                     Off
                                   </button>
                                   <button
                                     onClick={() => handleMemberDataPrivacyChange(member.id, true)}
-                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                                      memberDataPrivacyValue
-                                        ? "bg-white text-slate-900 shadow-sm"
-                                        : "bg-transparent text-slate-600"
-                                    }`}
+                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${memberDataPrivacyValue
+                                      ? "bg-white text-slate-900 shadow-sm"
+                                      : "bg-transparent text-slate-600"
+                                      }`}
                                   >
                                     On
                                   </button>

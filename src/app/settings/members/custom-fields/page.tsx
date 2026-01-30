@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Users, Plus, Sparkles } from "lucide-react"
+import { Plus, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { MembersHeader } from "@/components/settings/MembersHeader"
 
 export default function CustomFieldsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -48,43 +49,7 @@ export default function CustomFieldsPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-white w-full">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-200 w-full">
-        <div className="flex items-center gap-3">
-          <Users className="h-6 w-6 text-slate-700" />
-          <h1 className="text-2xl font-semibold text-slate-900">Members</h1>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="px-6 border-b border-slate-200 w-full">
-        <div className="flex gap-8">
-          <Link
-            href="/settings/members/custom-fields"
-            className="px-4 py-3 text-sm font-medium text-slate-900 border-b-2 border-slate-900 transition-colors"
-          >
-            CUSTOM FIELDS
-          </Link>
-          <Link
-            href="#"
-            className="px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            WORK TIME LIMITS
-          </Link>
-          <Link
-            href="/settings/members/payments"
-            className="px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            PAYMENTS
-          </Link>
-          <Link
-            href="#"
-            className="px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            ACHIEVEMENTS
-          </Link>
-        </div>
-      </div>
+      <MembersHeader activeTab="custom-fields" />
 
       {/* Main Content */}
       <div className="flex flex-1 w-full">

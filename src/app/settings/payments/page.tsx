@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Users, Info } from "lucide-react"
+import { Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { MembersHeader } from "@/components/settings/MembersHeader"
 
 export default function PaymentsPage() {
   const DEFAULT_PROCESS: "manually" | "automatically" = "manually"
@@ -33,43 +34,7 @@ export default function PaymentsPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-white w-full relative">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-200 w-full">
-        <div className="flex items-center gap-3">
-          <Users className="h-6 w-6 text-slate-700" />
-          <h1 className="text-2xl font-semibold text-slate-900">Members</h1>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="px-6 border-b border-slate-200 w-full">
-        <div className="flex gap-8">
-          <Link
-            href="/settings/members/custom-fields"
-            className="px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            CUSTOM FIELDS
-          </Link>
-          <Link
-            href="#"
-            className="px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            WORK TIME LIMITS
-          </Link>
-          <Link
-            href="/settings/members/payments"
-            className="px-4 py-3 text-sm font-medium text-slate-900 border-b-2 border-slate-900 transition-colors"
-          >
-            PAYMENTS
-          </Link>
-          <Link
-            href="#"
-            className="px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            ACHIEVEMENTS
-          </Link>
-        </div>
-      </div>
+      <MembersHeader activeTab="payments" />
 
       {/* Main Content */}
       <div className="flex flex-1 w-full">
@@ -113,22 +78,20 @@ export default function PaymentsPage() {
                 <button
                   type="button"
                   onClick={() => setProcessPayments("manually")}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    processPayments === "manually"
-                      ? "bg-slate-200 text-slate-900"
-                      : "bg-white text-slate-600 border border-slate-300 hover:bg-slate-50"
-                  }`}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${processPayments === "manually"
+                    ? "bg-slate-200 text-slate-900"
+                    : "bg-white text-slate-600 border border-slate-300 hover:bg-slate-50"
+                    }`}
                 >
                   Manually
                 </button>
                 <button
                   type="button"
                   onClick={() => setProcessPayments("automatically")}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    processPayments === "automatically"
-                      ? "bg-slate-200 text-slate-900"
-                      : "bg-white text-slate-600 border border-slate-300 hover:bg-slate-50"
-                  }`}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${processPayments === "automatically"
+                    ? "bg-slate-200 text-slate-900"
+                    : "bg-white text-slate-600 border border-slate-300 hover:bg-slate-50"
+                    }`}
                 >
                   Automatically
                 </button>
@@ -177,29 +140,27 @@ export default function PaymentsPage() {
               <p className="text-sm text-slate-600">
                 Choose whether you want members paid through payroll integrations (Wise, PayPal or Payoneer) to receive emails with PDF attachments (amounts listed in organization currency).
               </p>
-              
+
               {/* Toggle Switch */}
               <div className="flex items-center gap-2">
                 <div className="relative inline-flex items-center bg-slate-200 border border-slate-300 rounded-full p-1">
                   <button
                     type="button"
                     onClick={() => setProofOfPaymentEnabled(false)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                      !proofOfPaymentEnabled
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "bg-transparent text-slate-600"
-                    }`}
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${!proofOfPaymentEnabled
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "bg-transparent text-slate-600"
+                      }`}
                   >
                     Off
                   </button>
                   <button
                     type="button"
                     onClick={() => setProofOfPaymentEnabled(true)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                      proofOfPaymentEnabled
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "bg-transparent text-slate-600"
-                    }`}
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${proofOfPaymentEnabled
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "bg-transparent text-slate-600"
+                      }`}
                   >
                     On
                   </button>

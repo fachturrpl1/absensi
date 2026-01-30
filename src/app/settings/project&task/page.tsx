@@ -1,49 +1,51 @@
 "use client"
 
-import React, { useState, useMemo } from "react"
+import React, { useState } from "react"
 import { Info, Search, User } from "lucide-react"
 import Link from "next/link"
+import { OrganizationHeader } from "@/components/settings/OrganizationHeader"
 import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
-import { SchedulesHeader } from "@/components/settings/SchedulesHeader"
 
-interface MemberWithSetting {
+type ProjectRole = "none" | "viewer" | "user" | "manager"
+
+interface MemberWithRole {
     id: string
     name: string
     avatar?: string
-    enabled: boolean
+    role: ProjectRole
 }
 
-export default function JobSitesPage() {
-    // Convert shared members to include setting
-    const initialMembers: MemberWithSetting[] = useMemo(() =>
+export default function DefaultProjectRolePage() {
+    const [globalRole, setGlobalRole] = useState<ProjectRole>("none")
+    const [members, setMembers] = useState<MemberWithRole[]>(
         SHARED_MEMBERS.map(m => ({
             id: m.id,
             name: m.name,
             avatar: m.avatar,
-            enabled: false
-        })), []
+            role: "none" as ProjectRole
+        }))
     )
-
-    const [globalEnabled, setGlobalEnabled] = useState(false)
-    const [members, setMembers] = useState<MemberWithSetting[]>(initialMembers)
     const [searchQuery, setSearchQuery] = useState("")
 
     const sidebarItems = [
-        { label: "Restrict timer to job sites", href: "/settings/Job-sites", active: true },
-        { label: "Enter/exit notifications", href: "/settings/Job-sites/enter-exit-notifications", active: false },
+        { label: "Default project role", href: "/settings/project&task", active: true },
+        { label: "Complete to-dos", href: "/settings/project&task/complete-todos", active: false },
+        { label: "Manage to-dos", href: "/settings/project&task/manage-todos", active: false },
+        { label: "Allow project tracking", href: "/settings/project&task/allow-project-tracking", active: false },
+        { label: "Global to-dos", href: "/settings/project&task/global-todos", active: false },
     ]
 
-    const handleGlobalChange = (enabled: boolean) => {
-        setGlobalEnabled(enabled)
-        setMembers(prev =>
-            prev.map(member => ({ ...member, enabled }))
-        )
-    }
+    const roles: { value: ProjectRole; label: string }[] = [
+        { value: "none", label: "None" },
+        { value: "viewer", label: "Viewer" },
+        { value: "user", label: "User" },
+        { value: "manager", label: "Manager" },
+    ]
 
-    const handleMemberChange = (id: string, enabled: boolean) => {
+    const handleMemberRoleChange = (id: string, role: ProjectRole) => {
         setMembers(prev =>
             prev.map(member =>
-                member.id === id ? { ...member, enabled } : member
+                member.id === id ? { ...member, role } : member
             )
         )
     }
@@ -54,7 +56,7 @@ export default function JobSitesPage() {
 
     return (
         <div className="flex flex-col min-h-screen bg-white">
-            <SchedulesHeader activeTab="job-sites" />
+            <OrganizationHeader activeTab="projects-todos" />
 
             {/* Content */}
             <div className="flex flex-1">
@@ -79,17 +81,17 @@ export default function JobSitesPage() {
                     {/* Section Title */}
                     <div className="flex items-center gap-1 mb-2">
                         <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                            RESTRICT TIMER TO JOB SITES
+                            DEFAULT PROJECT ROLE
                         </span>
                         <Info className="w-3.5 h-3.5 text-gray-400" />
                     </div>
 
                     {/* Description */}
                     <p className="text-sm text-gray-600 mb-6">
-                        Only allow members to track their time while at a job site
+                        When creating a new project, members will be assigned by default to the selected role.
                     </p>
 
-                    {/* Global Label */}
+                    {/* Global Setting */}
                     <div className="flex items-center gap-1 mb-3">
                         <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
                             GLOBAL:
@@ -97,26 +99,20 @@ export default function JobSitesPage() {
                         <Info className="w-3.5 h-3.5 text-gray-400" />
                     </div>
 
-                    {/* Global Toggle Buttons - Pill style like Shift Alerts */}
-                    <div className="inline-flex rounded-full bg-gray-100 p-0.5 mb-10">
-                        <button
-                            onClick={() => handleGlobalChange(true)}
-                            className={`px-5 py-2 text-sm font-medium rounded-full transition-all ${globalEnabled
-                                ? "bg-white text-gray-900 shadow-sm"
-                                : "text-gray-500 hover:text-gray-700"
-                                }`}
-                        >
-                            On
-                        </button>
-                        <button
-                            onClick={() => handleGlobalChange(false)}
-                            className={`px-5 py-2 text-sm font-medium rounded-full transition-all ${!globalEnabled
-                                ? "bg-white text-gray-900 shadow-sm"
-                                : "text-gray-500 hover:text-gray-700"
-                                }`}
-                        >
-                            Off
-                        </button>
+                    {/* Role Selection Pills */}
+                    <div className="flex items-center bg-gray-100 rounded-full p-1 w-fit mb-10">
+                        {roles.map((role) => (
+                            <button
+                                key={role.value}
+                                onClick={() => setGlobalRole(role.value)}
+                                className={`px-6 py-2 text-sm font-medium rounded-full transition-colors ${globalRole === role.value
+                                    ? "bg-white text-gray-900 shadow-sm"
+                                    : "text-gray-600 hover:text-gray-900"
+                                    }`}
+                            >
+                                {role.label}
+                            </button>
+                        ))}
                     </div>
 
                     {/* Individual Settings Section */}
@@ -149,31 +145,24 @@ export default function JobSitesPage() {
                             {filteredMembers.map((member) => (
                                 <div key={member.id} className="flex items-center justify-between py-4">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                                            <User className="w-4 h-4 text-gray-500" />
+                                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                            <User className="w-4 h-4 text-gray-600" />
                                         </div>
                                         <span className="text-sm text-gray-900">{member.name}</span>
                                     </div>
-                                    {/* Member Toggle Buttons - Pill style */}
-                                    <div className="inline-flex rounded-full bg-gray-100 p-0.5">
-                                        <button
-                                            onClick={() => handleMemberChange(member.id, true)}
-                                            className={`px-4 py-1.5 text-xs font-medium rounded-full transition-all ${member.enabled
-                                                ? "bg-white text-gray-900 shadow-sm"
-                                                : "text-gray-500 hover:text-gray-700"
-                                                }`}
-                                        >
-                                            On
-                                        </button>
-                                        <button
-                                            onClick={() => handleMemberChange(member.id, false)}
-                                            className={`px-4 py-1.5 text-xs font-medium rounded-full transition-all ${!member.enabled
-                                                ? "bg-white text-gray-900 shadow-sm"
-                                                : "text-gray-500 hover:text-gray-700"
-                                                }`}
-                                        >
-                                            Off
-                                        </button>
+                                    <div className="flex items-center bg-gray-100 rounded-full p-1">
+                                        {roles.map((role) => (
+                                            <button
+                                                key={role.value}
+                                                onClick={() => handleMemberRoleChange(member.id, role.value)}
+                                                className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${member.role === role.value
+                                                    ? "bg-white text-gray-900 shadow-sm"
+                                                    : "text-gray-600 hover:text-gray-900"
+                                                    }`}
+                                            >
+                                                {role.label}
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
                             ))}
