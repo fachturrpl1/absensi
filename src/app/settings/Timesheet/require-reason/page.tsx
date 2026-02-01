@@ -2,10 +2,11 @@
 
 import React, { useState, useMemo } from "react"
 import { Info, Search, User } from "lucide-react"
-import Link from "next/link"
+
 import { Switch } from "@/components/ui/switch"
 import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
 import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
+import { TimesheetSidebar } from "@/components/settings/TimesheetSidebar"
 
 interface MemberWithSetting {
     id: string
@@ -28,11 +29,7 @@ export default function RequireReasonPage() {
     const [members, setMembers] = useState<MemberWithSetting[]>(initialMembers)
     const [searchQuery, setSearchQuery] = useState("")
 
-    const sidebarItems = [
-        { label: "Modify time (manual time)", href: "/settings/Timesheet", active: false },
-        { label: "Require reason", href: "/settings/Timesheet/require-reason", active: true },
-        { label: "Reasons", href: "/settings/Timesheet/reasons", active: false },
-    ]
+
 
     const handleGlobalChange = (enabled: boolean) => {
         setGlobalEnabled(enabled)
@@ -60,20 +57,8 @@ export default function RequireReasonPage() {
             {/* Content */}
             <div className="flex flex-1">
                 {/* Sidebar */}
-                <div className="w-56 border-r border-gray-200 py-6">
-                    {sidebarItems.map((item) => (
-                        <Link
-                            key={item.label}
-                            href={item.href}
-                            className={`block px-6 py-2 text-sm transition-colors ${item.active
-                                ? "text-gray-900 border-l-2 border-gray-900 font-medium"
-                                : "text-gray-500 hover:text-gray-700"
-                                }`}
-                        >
-                            {item.label}
-                        </Link>
-                    ))}
-                </div>
+                {/* Sidebar */}
+                <TimesheetSidebar activeItem="require-reason" />
 
                 {/* Main Content */}
                 <div className="flex-1 p-6">

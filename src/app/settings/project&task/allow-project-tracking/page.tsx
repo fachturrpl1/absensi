@@ -4,10 +4,11 @@ import React, { useState } from "react"
 import {
     Info, Search
 } from "lucide-react"
-import Link from "next/link"
+
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { OrganizationHeader } from "@/components/settings/OrganizationHeader"
+import { ProjectSidebar } from "@/components/settings/ProjectSidebar"
 
 interface ProjectWithTracking {
     id: string
@@ -24,13 +25,7 @@ export default function AllowProjectTrackingPage() {
     ])
     const [searchQuery, setSearchQuery] = useState("")
 
-    const sidebarItems = [
-        { label: "Default project role", href: "/settings/project&task", active: false },
-        { label: "Complete to-dos", href: "/settings/project&task/complete-todos", active: false },
-        { label: "Manage to-dos", href: "/settings/project&task/manage-todos", active: false },
-        { label: "Allow project tracking", href: "/settings/project&task/allow-project-tracking", active: true },
-        { label: "Global to-dos", href: "/settings/project&task/global-todos", active: false },
-    ]
+
 
     const handleProjectTrackingChange = (id: string, enabled: boolean) => {
         setProjects(prev =>
@@ -51,20 +46,8 @@ export default function AllowProjectTrackingPage() {
             {/* Content */}
             <div className="flex flex-1">
                 {/* Sidebar */}
-                <div className="w-56 border-r border-gray-200 py-6">
-                    {sidebarItems.map((item) => (
-                        <Link
-                            key={item.label}
-                            href={item.href}
-                            className={`block px-6 py-2 text-sm transition-colors ${item.active
-                                ? "text-gray-900 border-l-2 border-gray-900 font-medium"
-                                : "text-gray-500 hover:text-gray-700"
-                                }`}
-                        >
-                            {item.label}
-                        </Link>
-                    ))}
-                </div>
+                {/* Sidebar */}
+                <ProjectSidebar activeItem="allow-project-tracking" />
 
                 {/* Main Content */}
                 <div className="flex-1 p-6">

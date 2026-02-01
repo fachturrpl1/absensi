@@ -2,9 +2,10 @@
 
 import React, { useState } from "react"
 import { ChevronDown, Plus } from "lucide-react"
-import Link from "next/link"
+
 import { Button } from "@/components/ui/button"
 import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
+import { TimesheetSidebar } from "@/components/settings/TimesheetSidebar"
 
 interface Reason {
     id: string
@@ -22,11 +23,7 @@ export default function ReasonsPage() {
     const [reasons, setReasons] = useState<Reason[]>(INITIAL_REASONS)
     const [showActionsMenu, setShowActionsMenu] = useState<string | null>(null)
 
-    const sidebarItems = [
-        { label: "Modify time (manual time)", href: "/settings/Timesheet", active: false },
-        { label: "Require reason", href: "/settings/Timesheet/require-reason", active: false },
-        { label: "Reasons", href: "/settings/Timesheet/reasons", active: true },
-    ]
+
 
     const handleAddReason = () => {
         const newReason: Reason = {
@@ -58,20 +55,8 @@ export default function ReasonsPage() {
             {/* Content */}
             <div className="flex flex-1">
                 {/* Sidebar */}
-                <div className="w-56 border-r border-gray-200 py-6">
-                    {sidebarItems.map((item) => (
-                        <Link
-                            key={item.label}
-                            href={item.href}
-                            className={`block px-6 py-2 text-sm transition-colors ${item.active
-                                ? "text-gray-900 border-l-2 border-gray-900 font-medium"
-                                : "text-gray-500 hover:text-gray-700"
-                                }`}
-                        >
-                            {item.label}
-                        </Link>
-                    ))}
-                </div>
+                {/* Sidebar */}
+                <TimesheetSidebar activeItem="reasons" />
 
                 {/* Main Content */}
                 <div className="flex-1 p-6">
