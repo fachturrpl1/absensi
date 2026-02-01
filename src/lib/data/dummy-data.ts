@@ -2931,13 +2931,22 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApproval[] = [
 // EXPENSES
 // ============================================================================
 
+export const EXPENSE_CATEGORIES: Record<string, string> = {
+    travel: 'Travel',
+    equipment: 'Equipment',
+    software: 'Software',
+    meals: 'Meals',
+    office: 'Office',
+    other: 'Other'
+}
+
 export interface ExpenseEntry {
     id: string
     memberId: string
     memberName: string
     projectId: string
     projectName: string
-    category: 'travel' | 'equipment' | 'software' | 'meals' | 'office' | 'other'
+    category: keyof typeof EXPENSE_CATEGORIES
     description: string
     amount: number
     currency: string
@@ -2955,31 +2964,132 @@ export const DUMMY_EXPENSES: ExpenseEntry[] = [
     { id: 'exp-6', memberId: 'm1', memberName: 'Antonio Galih', projectId: 'proj-4', projectName: 'API Integration', category: 'office', description: 'Office supplies', amount: 150000, currency: 'IDR', date: '2026-01-21', status: 'rejected' },
 ]
 
+
+// ============================================================================
+// WORK BREAKS
+// ============================================================================
+
+export interface BreakEntry {
+    id: string
+    memberId: string
+    memberName: string
+    projectId?: string
+    projectName?: string
+    startTime: string // HH:mm
+    endTime: string // HH:mm
+    duration: string // e.g. "30 mins", "1 hr" (This can act as Actual)
+    date: string // YYYY-MM-DD
+    type: 'Lunch' | 'Coffee' | 'Personal' | 'Other'
+    policy: string
+    status: 'Compliant' | 'Violation'
+    allottedDuration: number // hours
+    actualDuration: number // hours (derived from duration string usually, but explicit here for table)
+    paidDuration: number // hours
+}
+
+export const DUMMY_BREAKS: BreakEntry[] = [
+    { id: 'brk-1', memberId: 'm1', memberName: 'Antonio Galih', projectId: 'proj-1', projectName: 'Website Redesign', startTime: '12:00', endTime: '13:00', duration: '1 hr', date: '2026-01-20', type: 'Lunch', policy: 'Standard Lunch', status: 'Compliant', allottedDuration: 1, actualDuration: 1, paidDuration: 0 },
+    { id: 'brk-2', memberId: 'm2', memberName: 'Lave Lavael', projectId: 'proj-2', projectName: 'Mobile App', startTime: '10:00', endTime: '10:15', duration: '15 mins', date: '2026-01-20', type: 'Coffee', policy: 'Morning Break', status: 'Compliant', allottedDuration: 0.25, actualDuration: 0.25, paidDuration: 0.25 },
+    { id: 'brk-3', memberId: 'm3', memberName: 'Sarah Johnson', projectId: 'proj-1', projectName: 'Website Redesign', startTime: '12:30', endTime: '13:30', duration: '1 hr', date: '2026-01-20', type: 'Lunch', policy: 'Standard Lunch', status: 'Compliant', allottedDuration: 1, actualDuration: 1, paidDuration: 0 },
+    { id: 'brk-4', memberId: 'm1', memberName: 'Antonio Galih', projectId: 'proj-1', projectName: 'Website Redesign', startTime: '15:30', endTime: '15:45', duration: '15 mins', date: '2026-01-20', type: 'Coffee', policy: 'Afternoon Break', status: 'Compliant', allottedDuration: 0.25, actualDuration: 0.25, paidDuration: 0.25 },
+    { id: 'brk-5', memberId: 'm4', memberName: 'Michael Chen', projectId: 'proj-3', projectName: 'Marketing', startTime: '12:15', endTime: '13:15', duration: '1 hr', date: '2026-01-21', type: 'Lunch', policy: 'Standard Lunch', status: 'Compliant', allottedDuration: 1, actualDuration: 1, paidDuration: 0 },
+    { id: 'brk-6', memberId: 'm5', memberName: 'Emma Rodriguez', projectId: 'proj-2', projectName: 'Mobile App', startTime: '11:00', endTime: '11:20', duration: '20 mins', date: '2026-01-21', type: 'Personal', policy: 'Flexible', status: 'Violation', allottedDuration: 0.25, actualDuration: 0.33, paidDuration: 0 },
+]
+
 // ============================================================================
 // AUDIT LOG
 // ============================================================================
 
 export interface AuditLogEntry {
     id: string
-    userId: string
-    userName: string
-    action: 'create' | 'update' | 'delete' | 'approve' | 'reject' | 'login' | 'logout' | 'export'
-    entityType: 'project' | 'task' | 'member' | 'timesheet' | 'expense' | 'invoice' | 'report' | 'settings'
-    entityName: string
-    changes?: string
-    timestamp: string
-    ipAddress: string
+    date: string // ISO string "YYYY-MM-DD"
+    time: string // "HH:mm:ss am/pm"
+    author: {
+        name: string
+        avatar?: string
+        initials: string
+        color: string
+    }
+    action: 'Added' | 'Created' | 'Updated' | 'Deleted' | 'Removed'
+    object: string
+    members?: {
+        name: string
+        avatar?: string
+        initials: string
+        color: string
+    }[]
+    details: string
 }
 
-export const DUMMY_AUDIT_LOG: AuditLogEntry[] = [
-    { id: 'audit-1', userId: 'm1', userName: 'Antonio Galih', action: 'update', entityType: 'project', entityName: 'Website Redesign', changes: 'Updated budget from $10,000 to $12,000', timestamp: '2026-01-21T14:30:00', ipAddress: '192.168.1.100' },
-    { id: 'audit-2', userId: 'm3', userName: 'Sarah Johnson', action: 'approve', entityType: 'timesheet', entityName: 'Week 3 - Antonio Galih', timestamp: '2026-01-20T09:15:00', ipAddress: '192.168.1.102' },
-    { id: 'audit-3', userId: 'm2', userName: 'Lave Lavael', action: 'create', entityType: 'task', entityName: 'Design Homepage Mockup', timestamp: '2026-01-19T11:00:00', ipAddress: '192.168.1.101' },
-    { id: 'audit-4', userId: 'm4', userName: 'Michael Chen', action: 'export', entityType: 'report', entityName: 'Time & Activity Report', timestamp: '2026-01-19T16:45:00', ipAddress: '192.168.1.103' },
-    { id: 'audit-5', userId: 'm5', userName: 'Emma Rodriguez', action: 'delete', entityType: 'task', entityName: 'Old Bug Fix', timestamp: '2026-01-18T10:30:00', ipAddress: '192.168.1.104' },
-    { id: 'audit-6', userId: 'm1', userName: 'Antonio Galih', action: 'login', entityType: 'settings', entityName: 'System Access', timestamp: '2026-01-21T08:00:00', ipAddress: '192.168.1.100' },
-    { id: 'audit-7', userId: 'm3', userName: 'Sarah Johnson', action: 'reject', entityType: 'expense', entityName: 'Office supplies request', changes: 'Missing receipt', timestamp: '2026-01-20T15:00:00', ipAddress: '192.168.1.102' },
+export const DUMMY_AUDIT_LOGS: AuditLogEntry[] = [
+    {
+        id: '#1709997370',
+        date: '2026-01-29',
+        time: '2:28:46 pm',
+        author: { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' },
+        action: 'Added',
+        object: 'Project',
+        details: 'Project "SMK 100 Brantas" Project assigned to "radenbesus2015..."',
+    },
+    {
+        id: '#1709997369',
+        date: '2026-01-29',
+        time: '2:28:46 pm',
+        author: { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' },
+        action: 'Created',
+        object: 'Client',
+        details: 'Client "radenbesus2015@gmail.com" created',
+    },
+    {
+        id: '#1709700754',
+        date: '2026-01-29',
+        time: '9:59:34 am',
+        author: { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' },
+        action: 'Updated',
+        object: 'Tool tagging',
+        details: 'Classification for Feature settings changed',
+    },
+    {
+        id: '#1709588703',
+        date: '2026-01-28',
+        time: '8:25:08 am',
+        author: { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' },
+        action: 'Added',
+        object: 'Project',
+        members: [
+            { name: 'Muhammad Ma\'Arif', initials: 'MM', color: 'bg-orange-400' },
+            { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' }
+        ],
+        details: 'Members were added to "SMA Bradas" project with "Manager" role',
+    },
+    {
+        id: '#1709588702',
+        date: '2026-01-28',
+        time: '8:25:08 am',
+        author: { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' },
+        action: 'Updated',
+        object: 'Project',
+        members: [
+            { name: 'Muhammad Ma\'Arif', initials: 'MM', color: 'bg-orange-400' }
+        ],
+        details: 'Role changed from "User" to "Manager" on "SMA Bradas" project',
+    },
+    {
+        id: '#1709588700',
+        date: '2026-01-27',
+        time: '8:25:08 am',
+        author: { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' },
+        action: 'Updated',
+        object: 'Project',
+        members: [
+            { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' }
+        ],
+        details: 'Role changed from "User" to "Manager" on "SMA Bradas" project',
+    }
 ]
+
+
+
 
 // ============================================================================
 // WEEKLY/DAILY LIMITS
