@@ -4,10 +4,11 @@ import React, { useState } from "react"
 
 import { ReportCard } from "@/components/report/report-card"
 import { Input } from "@/components/ui/input"
-import { Search, X, DollarSign, Activity, BarChart3 } from "lucide-react"
+import { Search, DollarSign, Activity, BarChart3, StarOff, Trash2 } from "lucide-react"
 import { DUMMY_CUSTOM_REPORTS } from "@/lib/data/dummy-data"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 // Define Report Types
 type ReportSection = {
@@ -155,9 +156,6 @@ export default function AllReportsPage() {
         )
     })).filter(section => section.items.length > 0)
 
-    // Dummy Customized Reports (Limit to 2 for preview like in mockup)
-    const customizedReports = DUMMY_CUSTOM_REPORTS.slice(0, 2)
-
     return (
         <div className="w-full flex flex-1 flex-col gap-10 p-6 pt-2 max-w-[1600px] mx-auto">
             {/* Header */}
@@ -170,36 +168,14 @@ export default function AllReportsPage() {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="ps-10 pl-10 border-gray-300 rounded-full bg-white shadow-sm focus:border-gray-500 transition-all"
+                        suppressHydrationWarning
                     />
                 </div>
             </div>
 
             {/* Customized Reports Section - Only show if no search term */}
-            {!searchTerm && (
-                <section className="space-y-6">
-                    <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Customized reports</h2>
+            {!searchTerm && <FeaturedReportsSection />}
 
-
-                    {/* Customized Report Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {customizedReports.map((report) => (
-                            <div key={report.id} className="group flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm hover:border-gray-300 transition-all cursor-pointer">
-                                <div className="flex flex-col gap-1">
-                                    <h3 className="font-semibold text-gray-900 group-hover:text-gray-900 transition-colors">{report.name}</h3>
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                                        {report.type}
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500">
-                                        <X className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            )}
 
             {/* Main Reports Grid */}
             <div className="space-y-16 pb-16">
@@ -233,6 +209,92 @@ export default function AllReportsPage() {
                 )}
             </div>
         </div>
+    )
+}
+
+function FeaturedReportsSection() {
+    // Featured Reports Logic
+    const [featuredReportIds, setFeaturedReportIds] = useState<string[]>([])
+    const [mounted, setMounted] = useState(false)
+
+    // Load featured IDs from localStorage on mount
+    React.useEffect(() => {
+        setMounted(true)
+        const stored = localStorage.getItem("featured_report_ids")
+        if (stored) {
+            try {
+                setFeaturedReportIds(JSON.parse(stored))
+            } catch (e) {
+                console.error("Failed to parse featured reports", e)
+            }
+        } else {
+            // Default: Show first 2 if none set
+            setFeaturedReportIds(DUMMY_CUSTOM_REPORTS.slice(0, 2).map(r => r.id))
+        }
+    }, [])
+
+    if (!mounted) return null // Prevent hydration mismatch by not rendering until client-side
+
+    const customizedReports = DUMMY_CUSTOM_REPORTS.filter(r => featuredReportIds.includes(r.id))
+
+    if (customizedReports.length === 0) return null
+
+    return (
+        <section className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Customized reports</h2>
+                <a href="/reports/custom" className="text-sm font-medium text-gray-900 hover:text-blue-800 hover:underline">
+                    View all &rarr;
+                </a>
+            </div>
+
+            {/* Customized Report Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {customizedReports.map((report) => (
+                    <div key={report.id} className="group flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm hover:border-gray-300 transition-all cursor-pointer">
+                        <div className="flex flex-col gap-1">
+                            <h3 className="font-semibold text-gray-900 group-hover:text-gray-900 transition-colors">{report.name}</h3>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                {report.type}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-gray-400 hover:text-yellow-500"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    const newIds = featuredReportIds.filter(id => id !== report.id)
+                                    setFeaturedReportIds(newIds)
+                                    localStorage.setItem("featured_report_ids", JSON.stringify(newIds))
+                                    toast.success("Removed from dashboard")
+                                }}
+                                title="Unfavorite (Remove from dashboard)"
+                            >
+                                <StarOff className="w-4 h-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-gray-400 hover:text-red-500"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    // For demo: Remove from featured view AND show toast
+                                    const newIds = featuredReportIds.filter(id => id !== report.id)
+                                    setFeaturedReportIds(newIds)
+                                    localStorage.setItem("featured_report_ids", JSON.stringify(newIds))
+                                    toast.success("Report moved to trash")
+                                }}
+                                title="Move to trash"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </section>
     )
 }
 

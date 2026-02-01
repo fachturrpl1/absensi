@@ -10,6 +10,8 @@ import { format } from "date-fns"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PaginationFooter } from "@/components/pagination-footer"
 import { useTimezone } from "@/components/timezone-provider"
+import { exportToCSV, generateFilename, type ExportColumn } from "@/lib/export-utils"
+import { toast } from "sonner"
 
 export default function AppsUrlsPage() {
     const timezone = useTimezone()
@@ -21,6 +23,11 @@ export default function AppsUrlsPage() {
     const [activeTab, setActiveTab] = useState<'apps' | 'urls'>('apps')
     const [page, setPage] = useState(1)
     const pageSize = 10
+
+    const getMemberName = (id: string) => {
+        const member = DUMMY_MEMBERS.find(m => m.id === id)
+        return member ? member.name : id
+    }
 
     // Filter apps data
     const filteredApps = useMemo(() => {
@@ -82,9 +89,62 @@ export default function AppsUrlsPage() {
         return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
     }
 
+    const handleExport = () => {
+        if (activeTab === 'apps') {
+            // Prepare data with derived fields
+            const exportData = filteredApps.map(app => {
+                const percentage = appsSummary.totalTime > 0
+                    ? ((app.timeSpent / appsSummary.totalTime) * 100).toFixed(1) + '%'
+                    : '0%'
+
+                const project = app.category === 'Development' ? 'Website Redesign' :
+                    app.category === 'Design' ? 'Marketing Campaign' :
+                        'Internal Operations'
+
+                return {
+                    ...app,
+                    project,
+                    percentage
+                }
+            })
+
+            const columns: ExportColumn[] = [
+                { label: 'Application', key: 'name' },
+                { label: 'Category', key: 'category' },
+                { label: 'Project', key: 'project' },
+                { label: 'Member', key: 'memberId' },
+                { label: 'Date', key: 'date' },
+                {
+                    label: 'Time Spent',
+                    key: 'timeSpent',
+                    format: (value: any) => formatMinutes(value as number)
+                },
+                { label: 'Percentage', key: 'percentage' }
+            ]
+            const filename = generateFilename('apps-activity')
+            exportToCSV({ data: exportData, columns, filename })
+            toast.success('Apps data exported successfully')
+        } else {
+            const columns: ExportColumn[] = [
+                { label: 'Website', key: 'site' },
+                { label: 'Project', key: 'projectName' },
+                { label: 'Member', key: 'memberId' },
+                { label: 'Date', key: 'date' },
+                {
+                    label: 'Time Spent',
+                    key: 'timeSpent',
+                    format: (value: any) => formatMinutes(value as number)
+                }
+            ]
+            const filename = generateFilename('urls-activity')
+            exportToCSV({ data: filteredUrls, columns, filename })
+            toast.success('URLs data exported successfully')
+        }
+    }
+
     return (
         <div className="px-6 py-4">
-            <h1 className="text-xl font-semibold mb-5">Apps & URLs</h1>
+            <h1 className="text-xl font-semibold mb-5">Apps & URLs Report</h1>
 
             <InsightsHeader
                 selectedFilter={selectedFilter}
@@ -95,22 +155,15 @@ export default function AppsUrlsPage() {
                 teams={DUMMY_TEAMS}
                 timezone={timezone}
             >
-                <Button variant="outline" className="h-9">
+                <Button variant="outline" className="h-9" onClick={handleExport}>
                     <Download className="w-4 h-4 mr-2" />
                     Export
                 </Button>
             </InsightsHeader>
 
-            <style jsx global>{`
-                html body .custom-hover-row:hover,
-                html body .custom-hover-row:hover > td {
-                    background-color: #d1d5db !important;
-                }
-            `}</style>
-
             <div className="mt-6 bg-white border rounded-lg shadow-sm">
                 <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as 'apps' | 'urls'); setPage(1); }}>
-                    <div className="border-b px-4 pt-4">
+                    <div className="border-b px-4 py-4">
                         <TabsList className="grid w-[300px] grid-cols-2">
                             <TabsTrigger value="apps">Applications</TabsTrigger>
                             <TabsTrigger value="urls">Websites</TabsTrigger>
@@ -146,17 +199,18 @@ export default function AppsUrlsPage() {
                                     <tr>
                                         <th className="p-4">Application</th>
                                         <th className="p-4">Category</th>
+                                        <th className="p-4">Project</th>
                                         <th className="p-4">Member</th>
                                         <th className="p-4">Date</th>
                                         <th className="p-4 text-right">Time Spent</th>
+                                        <th className="p-4 text-right">Percentage</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {(paginatedData as typeof DUMMY_TOP_APPS).map((app, idx) => (
                                         <tr
                                             key={`${app.memberId}-${app.name}-${idx}`}
-                                            style={{ backgroundColor: idx % 2 === 1 ? '#f1f5f9' : '#ffffff' }}
-                                            className="transition-colors custom-hover-row"
+                                            className={`transition-colors hover:bg-gray-300 ${idx % 2 === 1 ? 'bg-slate-100' : 'bg-white'}`}
                                         >
                                             <td className="p-4 font-medium text-gray-900">{app.name}</td>
                                             <td className="p-4">
@@ -164,9 +218,20 @@ export default function AppsUrlsPage() {
                                                     {app.category}
                                                 </span>
                                             </td>
-                                            <td className="p-4 text-gray-600">{app.memberId}</td>
+                                            <td className="p-4 text-gray-600">
+                                                {/* Mock Project Name based on category or random */}
+                                                {app.category === 'Development' ? 'Website Redesign' :
+                                                    app.category === 'Design' ? 'Marketing Campaign' :
+                                                        'Internal Operations'}
+                                            </td>
+                                            <td className="p-4 text-gray-600">{getMemberName(app.memberId ?? '')}</td>
                                             <td className="p-4 text-gray-600">{app.date}</td>
                                             <td className="p-4 text-right font-medium">{formatMinutes(app.timeSpent)}</td>
+                                            <td className="p-4 text-right text-gray-600">
+                                                {appsSummary.totalTime > 0
+                                                    ? ((app.timeSpent / appsSummary.totalTime) * 100).toFixed(1) + '%'
+                                                    : '0%'}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -190,12 +255,11 @@ export default function AppsUrlsPage() {
                                     {(paginatedData as typeof DUMMY_URL_ACTIVITIES).map((url, idx) => (
                                         <tr
                                             key={url.id}
-                                            style={{ backgroundColor: idx % 2 === 1 ? '#f1f5f9' : '#ffffff' }}
-                                            className="transition-colors custom-hover-row"
+                                            className={`transition-colors hover:bg-gray-300 ${idx % 2 === 1 ? 'bg-slate-100' : 'bg-white'}`}
                                         >
                                             <td className="p-4 font-medium text-gray-900">{url.site}</td>
                                             <td className="p-4 text-gray-600">{url.projectName}</td>
-                                            <td className="p-4 text-gray-600">{url.memberId}</td>
+                                            <td className="p-4 text-gray-600">{getMemberName(url.memberId ?? '')}</td>
                                             <td className="p-4 text-gray-600">{url.date}</td>
                                             <td className="p-4 text-right font-medium">{formatMinutes(url.timeSpent)}</td>
                                         </tr>
