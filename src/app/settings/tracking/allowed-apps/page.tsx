@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { Info, Search, Star } from "lucide-react"
+import { Info, Search } from "lucide-react"
 import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
 import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
+import { TrackingSidebar } from "@/components/settings/TrackingSidebar"
 
 type AllowedAppsOption = "all" | "desktop" | "mobile"
 
@@ -40,35 +40,8 @@ export default function AllowedAppsPage() {
       {/* Main Content */}
       <div className="flex flex-1 w-full">
         {/* Left Sidebar */}
-        <div className="w-64 border-r border-slate-200 bg-slate-50">
-          <div className="p-4 space-y-1">
-            <Link
-              href="/activity/tracking/allowed-apps"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-900 bg-slate-100 rounded-md"
-            >
-              Allowed apps
-            </Link>
-            <Link
-              href="/activity/tracking/idle-timeout"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-            >
-              Idle timeout
-            </Link>
-            <Link
-              href="/activity/tracking/keep-idle-time"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-            >
-              Keep idle time
-            </Link>
-            <Link
-              href="#"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-            >
-              Automatic tracking policy
-              <Star className="h-3 w-3 text-slate-400" />
-            </Link>
-          </div>
-        </div>
+        {/* Left Sidebar */}
+        <TrackingSidebar activeItem="allowed-apps" />
 
         {/* Main Content Area */}
         <div className="flex-1 p-6">

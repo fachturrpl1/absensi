@@ -2,9 +2,10 @@
 
 import React, { useState, useMemo } from "react"
 import { Info, Search, User } from "lucide-react"
-import Link from "next/link"
+
 import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
 import { SchedulesHeader } from "@/components/settings/SchedulesHeader"
+import { MapSidebar } from "@/components/settings/MapSidebar"
 
 type TrackingOption = "off" | "tracking-time" | "always"
 
@@ -30,9 +31,7 @@ export default function MapPage() {
     const [members, setMembers] = useState<MemberWithSetting[]>(initialMembers)
     const [searchQuery, setSearchQuery] = useState("")
 
-    const sidebarItems = [
-        { label: "Track Locations (Mobile Only)", href: "/settings/Map", active: true },
-    ]
+
 
     const trackingOptions: { value: TrackingOption; label: string }[] = [
         { value: "off", label: "Off" },
@@ -66,20 +65,8 @@ export default function MapPage() {
             {/* Content */}
             <div className="flex flex-1">
                 {/* Sidebar */}
-                <div className="w-56 border-r border-gray-200 py-6">
-                    {sidebarItems.map((item) => (
-                        <Link
-                            key={item.label}
-                            href={item.href}
-                            className={`block px-6 py-2 text-sm transition-colors ${item.active
-                                ? "text-gray-900 border-l-2 border-gray-900 font-medium"
-                                : "text-gray-500 hover:text-gray-700"
-                                }`}
-                        >
-                            {item.label}
-                        </Link>
-                    ))}
-                </div>
+                {/* Sidebar */}
+                <MapSidebar activeItem="track-locations" />
 
                 {/* Main Content */}
                 <div className="flex-1 p-6">

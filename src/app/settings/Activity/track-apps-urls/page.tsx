@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
+
 import { Info, Search } from "lucide-react"
 import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
 import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
+import { ActivitySidebar } from "@/components/settings/ActivitySidebar"
 
 type TrackAppsUrlsOption = "off" | "apps" | "apps-urls"
 
@@ -40,28 +41,7 @@ export default function TrackAppsUrlsPage() {
       {/* Main Content */}
       <div className="flex flex-1 w-full">
         {/* Left Sidebar */}
-        <div className="w-64 border-r border-slate-200 bg-slate-50">
-          <div className="p-4 space-y-1">
-            <Link
-              href="/settings/Activity/track-apps-urls"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-900 bg-slate-100 rounded-md"
-            >
-              Track apps & URLs
-            </Link>
-            <Link
-              href="/settings/Activity/data-privacy"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-            >
-              Data privacy
-            </Link>
-            <Link
-              href="/settings/Activity/record-activity"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-            >
-              Record activity
-            </Link>
-          </div>
-        </div>
+        <ActivitySidebar activeItem="track-apps-urls" />
 
         {/* Main Content Area */}
         <div className="flex-1 p-6">

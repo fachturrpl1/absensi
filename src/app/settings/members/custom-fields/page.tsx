@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
+
 import { Plus, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { MembersHeader } from "@/components/settings/MembersHeader"
+import { MembersSidebar } from "@/components/settings/MembersSidebar"
 
 export default function CustomFieldsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -54,22 +55,7 @@ export default function CustomFieldsPage() {
       {/* Main Content */}
       <div className="flex flex-1 w-full">
         {/* Left Sidebar */}
-        <div className="w-64 border-r border-slate-200 bg-slate-50">
-          <div className="p-4 space-y-1">
-            <Link
-              href="/settings/members/custom-fields"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-900 bg-slate-100 rounded-md border-l-4 border-slate-900"
-            >
-              Profile fields
-            </Link>
-            <Link
-              href="/settings/members/email-notifications"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-            >
-              Email notifications
-            </Link>
-          </div>
-        </div>
+        <MembersSidebar activeItem="profile-fields" />
 
         {/* Main Content Area */}
         <div className="flex-1 p-6">

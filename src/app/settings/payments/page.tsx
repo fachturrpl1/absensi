@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
+import Image from "next/image"
 import { Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,35 +36,10 @@ export default function PaymentsPage() {
     <div className="flex flex-col min-h-screen bg-white w-full relative">
       <MembersHeader activeTab="payments" />
 
-      {/* Main Content */}
-      <div className="flex flex-1 w-full">
-        {/* Left Sidebar */}
-        <div className="w-64 border-r border-slate-200 bg-white">
-          <div className="p-4 space-y-1">
-            <Link
-              href="/settings/members/custom-fields"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-            >
-              Profile fields
-            </Link>
-            <Link
-              href="/settings/members/email-notifications"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-            >
-              Email notifications
-            </Link>
-            <Link
-              href="/settings/members/payments"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-900 bg-slate-100 rounded-md border-l-4 border-slate-900"
-            >
-              Payments
-            </Link>
-          </div>
-        </div>
-
-        {/* Main Content Area */}
-        <div className="flex-1 p-6">
-          <div className="space-y-8 max-w-3xl">
+      <div className="flex flex-1 w-full p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-7xl mx-auto">
+          {/* Left Column: Settings Form */}
+          <div className="space-y-8">
             {/* Process Payments Section */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -185,7 +160,7 @@ export default function PaymentsPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-end">
+            <div className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-start">
               <Button
                 type="button"
                 variant="outline"
@@ -201,6 +176,19 @@ export default function PaymentsPage() {
               >
                 Save
               </Button>
+            </div>
+          </div>
+
+          {/* Right Column: Image */}
+          <div className="hidden lg:block">
+            <div className="relative w-full h-full min-h-[400px]">
+              <Image
+                src="/images/payment.png"
+                alt="Payment Illustration"
+                fill
+                className="object-contain object-top"
+                priority
+              />
             </div>
           </div>
         </div>

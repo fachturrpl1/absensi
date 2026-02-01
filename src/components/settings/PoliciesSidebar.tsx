@@ -21,12 +21,12 @@ export function PoliciesSidebar({ activeItem }: PoliciesSidebarProps) {
                 {sidebarItems.map((item) => (
                     <div key={item.key} className="flex items-center">
                         <div
-                            className={`w-1 h-8 rounded-r-lg mr-3 ${activeItem === item.key ? "bg-blue-500" : "bg-transparent"
+                            className={`w-1 h-8 rounded-r-lg mr-3 ${activeItem === item.key ? "bg-slate-900" : "bg-transparent"
                                 }`}
                         />
                         <Link
                             href={item.href}
-                            className={`flex-1 py-1.5 text-sm font-medium transition-colors ${activeItem === item.key ? "text-blue-600" : "text-slate-600 hover:text-slate-900"
+                            className={`flex-1 py-1.5 text-sm font-medium transition-colors ${activeItem === item.key ? "text-slate-900" : "text-slate-600 hover:text-slate-900"
                                 }`}
                         >
                             {item.label}

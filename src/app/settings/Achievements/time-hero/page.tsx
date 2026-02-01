@@ -2,12 +2,13 @@
 
 import React, { useState, useMemo } from "react"
 import { Info, Search, User, Clock } from "lucide-react"
-import Link from "next/link"
+
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
 import { MembersHeader } from "@/components/settings/MembersHeader"
+import { AchievementsSidebar } from "@/components/settings/AchievementsSidebar"
 
 interface MemberWithSettings {
     id: string
@@ -33,11 +34,7 @@ export default function TimeHeroPage() {
     const [members, setMembers] = useState<MemberWithSettings[]>(initialMembers)
     const [searchQuery, setSearchQuery] = useState("")
 
-    const sidebarItems = [
-        { label: "Efficiency pro", href: "/settings/Achievements", active: false },
-        { label: "Productivity champ", href: "/settings/Achievements/productivity-champ", active: false },
-        { label: "Time hero", href: "/settings/Achievements/time-hero", active: true },
-    ]
+
 
     const handleApplyToAll = () => {
         setMembers(prev =>
@@ -76,20 +73,8 @@ export default function TimeHeroPage() {
             {/* Content */}
             <div className="flex flex-1">
                 {/* Sidebar */}
-                <div className="w-56 border-r border-gray-200 py-6">
-                    {sidebarItems.map((item) => (
-                        <Link
-                            key={item.label}
-                            href={item.href}
-                            className={`block px-6 py-2 text-sm transition-colors ${item.active
-                                ? "text-gray-900 border-l-2 border-gray-900 font-medium"
-                                : "text-gray-500 hover:text-gray-700"
-                                }`}
-                        >
-                            {item.label}
-                        </Link>
-                    ))}
-                </div>
+                {/* Sidebar */}
+                <AchievementsSidebar activeItem="time-hero" />
 
                 {/* Main Content */}
                 <div className="flex-1 p-6">

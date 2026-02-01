@@ -21,7 +21,7 @@ export function PoliciesHeader({ activeTab }: PoliciesHeaderProps) {
             {/* Header */}
             <div className="px-6 py-4 border-b border-slate-200 w-full">
                 <div className="flex items-center gap-3">
-                    <FileText className="h-6 w-6 text-blue-500" />
+                    <FileText className="h-6 w-6 text-slate-700" />
                     <h1 className="text-2xl font-semibold text-slate-900">Policies</h1>
                 </div>
             </div>
@@ -34,8 +34,8 @@ export function PoliciesHeader({ activeTab }: PoliciesHeaderProps) {
                             key={tab.key}
                             href={tab.href}
                             className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === tab.key
-                                    ? "text-blue-600 border-blue-600"
-                                    : "text-slate-600 hover:text-slate-900 border-transparent hover:border-slate-300"
+                                ? "text-slate-900 border-slate-900"
+                                : "text-slate-600 hover:text-slate-900 border-transparent hover:border-slate-300"
                                 }`}
                         >
                             {tab.label}

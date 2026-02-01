@@ -1,8 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { Users, Lock, Info } from "lucide-react"
+
+import { Lock, Info } from "lucide-react"
+import { MembersSidebar } from "@/components/settings/MembersSidebar"
+import { MembersHeader } from "@/components/settings/MembersHeader"
 import { Button } from "@/components/ui/button"
 
 export default function EmailNotificationsPage() {
@@ -10,63 +12,12 @@ export default function EmailNotificationsPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-white w-full">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-200 w-full">
-        <div className="flex items-center gap-3">
-          <Users className="h-6 w-6 text-slate-700" />
-          <h1 className="text-2xl font-semibold text-slate-900">Members</h1>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="px-6 border-b border-slate-200 w-full">
-        <div className="flex gap-8">
-          <Link
-            href="/settings/members/custom-fields"
-            className="px-4 py-3 text-sm font-medium text-slate-900 border-b-2 border-slate-900 transition-colors"
-          >
-            CUSTOM FIELDS
-          </Link>
-          <Link
-            href="#"
-            className="px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            WORK TIME LIMITS
-          </Link>
-          <Link
-            href="#"
-            className="px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            PAYMENTS
-          </Link>
-          <Link
-            href="#"
-            className="px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            ACHIEVEMENTS
-          </Link>
-        </div>
-      </div>
+      <MembersHeader activeTab="custom-fields" />
 
       {/* Main Content */}
       <div className="flex flex-1 w-full">
         {/* Left Sidebar */}
-        <div className="w-64 border-r border-slate-200 bg-slate-50">
-          <div className="p-4 space-y-1">
-            <Link
-              href="/settings/members/custom-fields"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-            >
-              Profile fields
-            </Link>
-            <Link
-              href="/settings/members/email-notifications"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-900 bg-slate-100 rounded-md border-l-4 border-slate-900"
-            >
-              Email notifications
-            </Link>
-          </div>
-        </div>
+        <MembersSidebar activeItem="email-notifications" />
 
         {/* Main Content Area */}
         <div className="flex-1 p-6">
@@ -112,21 +63,19 @@ export default function EmailNotificationsPage() {
                   <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-200 p-1">
                     <button
                       onClick={() => setDefaultEmailNotifications(false)}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                        !defaultEmailNotifications
-                          ? "bg-white text-slate-900 shadow-sm"
-                          : "bg-transparent text-slate-600"
-                      }`}
+                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${!defaultEmailNotifications
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "bg-transparent text-slate-600"
+                        }`}
                     >
                       Off
                     </button>
                     <button
                       onClick={() => setDefaultEmailNotifications(true)}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                        defaultEmailNotifications
-                          ? "bg-white text-slate-900 shadow-sm"
-                          : "bg-transparent text-slate-600"
-                      }`}
+                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${defaultEmailNotifications
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "bg-transparent text-slate-600"
+                        }`}
                     >
                       On
                     </button>

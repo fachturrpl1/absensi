@@ -1,12 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
+
 import { Info, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
 import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
+import { ScreenshotsSidebar } from "@/components/settings/ScreenshotsSidebar"
 
 export default function ScreenshotSettingsPage() {
   const [globalFrequency, setGlobalFrequency] = useState("1x")
@@ -50,28 +51,8 @@ export default function ScreenshotSettingsPage() {
       {/* Main Content */}
       <div className="flex flex-1 w-full">
         {/* Left Sidebar */}
-        <div className="w-64 border-r border-slate-200 bg-slate-50">
-          <div className="p-4 space-y-1">
-            <Link
-              href="/activity/screenshots/setting"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-900 bg-slate-100 rounded-md"
-            >
-              Screenshot frequency
-            </Link>
-            <Link
-              href="/activity/screenshots/setting/blur"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-            >
-              Screenshot blur
-            </Link>
-            <Link
-              href="/activity/screenshots/setting/delete"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-            >
-              Delete screenshots
-            </Link>
-          </div>
-        </div>
+        {/* Left Sidebar */}
+        <ScreenshotsSidebar activeItem="frequency" />
 
         {/* Main Content Area */}
         <div className="flex-1 p-6">

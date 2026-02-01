@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { Info, Search, Star } from "lucide-react"
+import { Info, Search } from "lucide-react"
 import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
 import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
+import { TrackingSidebar } from "@/components/settings/TrackingSidebar"
 
 type KeepIdleTimeOption = "prompt" | "always" | "never"
 
@@ -40,29 +40,8 @@ export default function TrackingPage() {
             {/* Main Content */}
             <div className="flex flex-1 w-full">
                 {/* Left Sidebar */}
-                <div className="w-64 border-r border-slate-200 bg-slate-50">
-                    <div className="p-4 space-y-1">
-                        <Link
-                            href="/settings/tracking"
-                            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-900 bg-slate-100 rounded-md"
-                        >
-                            Keep idle time
-                        </Link>
-                        <Link
-                            href="/settings/tracking/idle-timeout"
-                            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-                        >
-                            Idle timeout
-                        </Link>
-                        <Link
-                            href="/settings/tracking/allowed-apps"
-                            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-                        >
-                            <Star className="h-4 w-4" />
-                            Allowed apps
-                        </Link>
-                    </div>
-                </div>
+                {/* Left Sidebar */}
+                <TrackingSidebar activeItem="keep-idle-time" />
 
                 {/* Right Content */}
                 <div className="flex-1 p-6">
