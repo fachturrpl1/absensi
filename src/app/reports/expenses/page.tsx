@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
-import { DUMMY_EXPENSES, DUMMY_MEMBERS, DUMMY_TEAMS, type ExpenseEntry } from "@/lib/data/dummy-data"
+import { DUMMY_EXPENSES, DUMMY_MEMBERS, DUMMY_TEAMS, EXPENSE_CATEGORIES, type ExpenseEntry } from "@/lib/data/dummy-data"
 import { Button } from "@/components/ui/button"
 import { Download, Search, Plus, Upload, X } from "lucide-react"
 import { format } from "date-fns"
@@ -18,15 +18,6 @@ import { toast } from "sonner"
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
-}
-
-const categoryLabels: Record<string, string> = {
-    travel: 'Travel',
-    equipment: 'Equipment',
-    software: 'Software',
-    meals: 'Meals',
-    office: 'Office',
-    other: 'Other'
 }
 
 export default function ExpensesPage() {
@@ -113,7 +104,7 @@ export default function ExpensesPage() {
             let key = ''
             if (groupBy === 'member') key = item.memberName
             else if (groupBy === 'project') key = item.projectName || 'No Project'
-            else if (groupBy === 'category') key = categoryLabels[item.category] || item.category
+            else if (groupBy === 'category') key = EXPENSE_CATEGORIES[item.category] || item.category
             else if (groupBy === 'status') key = item.status.charAt(0).toUpperCase() + item.status.slice(1)
 
             if (!groups[key]) groups[key] = []
@@ -163,8 +154,7 @@ export default function ExpensesPage() {
 
     return (
         <div className="px-6 py-4">
-            <h1 className="text-xl font-semibold mb-5">Expenses</h1>
-
+            <h1 className="text-xl font-semibold mb-5">Expenses Report</h1>
             <InsightsHeader
                 selectedFilter={selectedFilter}
                 onSelectedFilterChange={setSelectedFilter}
@@ -271,7 +261,7 @@ export default function ExpensesPage() {
                                         <td className="p-4 text-gray-600">{expense.projectName || '-'}</td>
                                         <td className="p-4">
                                             <div className="px-2 py-1 font-medium text-gray-900">
-                                                {categoryLabels[expense.category] || String(expense.category)}
+                                                {EXPENSE_CATEGORIES[expense.category] || String(expense.category)}
                                             </div>
                                         </td>
                                         <td className="p-4 text-gray-600 max-w-[200px] truncate" title={expense.description}>{expense.description}</td>
@@ -316,7 +306,7 @@ export default function ExpensesPage() {
                                             <td className="p-4 text-gray-600">{expense.projectName || '-'}</td>
                                             <td className="p-4">
                                                 <div className="px-2 py-1 font-medium text-gray-900">
-                                                    {categoryLabels[expense.category] || String(expense.category)}
+                                                    {EXPENSE_CATEGORIES[expense.category] || String(expense.category)}
                                                 </div>
                                             </td>
                                             <td className="p-4 text-gray-600 max-w-[200px] truncate" title={expense.description}>{expense.description}</td>
@@ -406,7 +396,7 @@ export default function ExpensesPage() {
                                     <SelectValue placeholder="Select category" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {Object.entries(categoryLabels).map(([key, label]) => (
+                                    {Object.entries(EXPENSE_CATEGORIES).map(([key, label]) => (
                                         <SelectItem key={key} value={key}>{label}</SelectItem>
                                     ))}
                                 </SelectContent>
