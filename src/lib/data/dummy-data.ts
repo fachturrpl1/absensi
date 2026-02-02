@@ -3000,6 +3000,12 @@ export const DUMMY_BREAKS: BreakEntry[] = [
 // AUDIT LOG
 // ============================================================================
 
+export type AuditAction =
+    | 'accepted invite' | 'added' | 'approved' | 'archived' | 'created'
+    | 'deleted' | 'denied' | 'duplicated' | 'enabled' | 'merge failed'
+    | 'merged' | 'opened' | 'removed' | 'restored' | 'send email'
+    | 'submitted' | 'transfered' | 'unsubmit' | 'updated'
+
 export interface AuditLogEntry {
     id: string
     date: string // ISO string "YYYY-MM-DD"
@@ -3010,7 +3016,7 @@ export interface AuditLogEntry {
         initials: string
         color: string
     }
-    action: 'Added' | 'Created' | 'Updated' | 'Deleted' | 'Removed'
+    action: AuditAction
     object: string
     members?: {
         name: string
@@ -3023,70 +3029,158 @@ export interface AuditLogEntry {
 
 export const DUMMY_AUDIT_LOGS: AuditLogEntry[] = [
     {
-        id: '#1709997370',
-        date: '2026-01-29',
-        time: '2:28:46 pm',
-        author: { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' },
-        action: 'Added',
-        object: 'Project',
-        details: 'Project "SMK 100 Brantas" Project assigned to "radenbesus2015..."',
-    },
-    {
-        id: '#1709997369',
-        date: '2026-01-29',
-        time: '2:28:46 pm',
-        author: { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' },
-        action: 'Created',
+        id: '#LOG-2026-001',
+        date: '2026-01-30',
+        time: '09:15:22 am',
+        author: { name: 'Antonio Galih', initials: 'AG', color: 'bg-slate-500' },
+        action: 'created',
         object: 'Client',
-        details: 'Client "radenbesus2015@gmail.com" created',
+        details: 'New client "Tech Solutions Inc." registered',
     },
     {
-        id: '#1709700754',
+        id: '#LOG-2026-002',
+        date: '2026-01-30',
+        time: '09:10:05 am',
+        author: { name: 'Antonio Galih', initials: 'AG', color: 'bg-slate-500' },
+        action: 'added',
+        object: 'Project',
+        details: 'Project "Mobile App Revamp" assigned to "Tech Solutions Inc."',
+    },
+    {
+        id: '#LOG-2026-003',
         date: '2026-01-29',
-        time: '9:59:34 am',
-        author: { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' },
-        action: 'Updated',
-        object: 'Tool tagging',
-        details: 'Classification for Feature settings changed',
+        time: '4:45:10 pm',
+        author: { name: 'Sarah Johnson', initials: 'SJ', color: 'bg-gray-500' },
+        action: 'approved',
+        object: 'Timesheet',
+        details: 'Approved timesheet for week Jan 19-25',
     },
     {
-        id: '#1709588703',
+        id: '#LOG-2026-004',
+        date: '2026-01-29',
+        time: '2:30:00 pm',
+        author: { name: 'Lave Lavael', initials: 'LL', color: 'bg-slate-500' },
+        action: 'deleted',
+        object: 'Expense',
+        details: 'Removed duplicate expense entry #EXP-2024-001',
+    },
+    {
+        id: '#LOG-2026-005',
         date: '2026-01-28',
-        time: '8:25:08 am',
-        author: { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' },
-        action: 'Added',
-        object: 'Project',
+        time: '11:20:15 am',
+        author: { name: 'Emma Rodriguez', initials: 'ER', color: 'bg-slate-500' },
+        action: 'updated',
+        object: 'Team',
         members: [
-            { name: 'Muhammad Ma\'Arif', initials: 'MM', color: 'bg-orange-400' },
-            { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' }
+            { name: 'Michael Chen', initials: 'MC', color: 'bg-slate-500' }
         ],
-        details: 'Members were added to "SMA Bradas" project with "Manager" role',
+        details: 'Role changed to "Team Lead" for "Marketing" squad',
     },
     {
-        id: '#1709588702',
+        id: '#LOG-2026-006',
         date: '2026-01-28',
-        time: '8:25:08 am',
-        author: { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' },
-        action: 'Updated',
-        object: 'Project',
+        time: '10:05:44 am',
+        author: { name: 'Emma Rodriguez', initials: 'ER', color: 'bg-slate-500' },
+        action: 'added',
+        object: 'Team',
         members: [
-            { name: 'Muhammad Ma\'Arif', initials: 'MM', color: 'bg-orange-400' }
+            { name: 'Michael Chen', initials: 'MC', color: 'bg-slate-500' },
+            { name: 'Lave Lavael', initials: 'LL', color: 'bg-slate-500' }
         ],
-        details: 'Role changed from "User" to "Manager" on "SMA Bradas" project',
+        details: 'Added members to "Marketing" squad',
     },
     {
-        id: '#1709588700',
+        id: '#LOG-2026-007',
         date: '2026-01-27',
-        time: '8:25:08 am',
-        author: { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' },
-        action: 'Updated',
+        time: '3:15:30 pm',
+        author: { name: 'Michael Chen', initials: 'MC', color: 'bg-slate-500' },
+        action: 'updated',
+        object: 'Policy',
+        details: 'Updated "Remote Work" policy description',
+    },
+    {
+        id: '#LOG-2026-008',
+        date: '2026-01-27',
+        time: '1:00:00 pm',
+        author: { name: 'Antonio Galih', initials: 'AG', color: 'bg-slate-500' },
+        action: 'created',
+        object: 'Report',
+        details: 'Generated "Monthly Financial Summary" report',
+    },
+    {
+        id: '#LOG-2026-009',
+        date: '2026-01-26',
+        time: '08:30:00 am',
+        author: { name: 'Lave Lavael', initials: 'LL', color: 'bg-slate-500' },
+        action: 'accepted invite',
+        object: 'Organization',
+        details: 'Accepted invitation to join "UBIG" organization',
+    },
+    {
+        id: '#LOG-2026-010',
+        date: '2026-01-26',
+        time: '14:20:00 pm',
+        author: { name: 'Antonio Galih', initials: 'AG', color: 'bg-slate-500' },
+        action: 'denied',
+        object: 'Timesheet',
+        details: 'Denied overtime request for "Lave Lavael"',
+    },
+    {
+        id: '#LOG-2026-011',
+        date: '2026-01-25',
+        time: '16:00:00 pm',
+        author: { name: 'Sarah Johnson', initials: 'SJ', color: 'bg-gray-500' },
+        action: 'submitted',
+        object: 'Invoice',
+        details: 'Submitted invoice #INV-2026-001 for approval',
+    },
+    {
+        id: '#LOG-2026-012',
+        date: '2026-01-25',
+        time: '17:00:00 pm',
+        author: { name: 'Sarah Johnson', initials: 'SJ', color: 'bg-gray-500' },
+        action: 'unsubmit',
+        object: 'Invoice',
+        details: 'Unsubmitted invoice #INV-2026-001 for correction',
+    },
+    {
+        id: '#LOG-2026-013',
+        date: '2026-01-24',
+        time: '10:00:00 am',
+        author: { name: 'Antonio Galih', initials: 'AG', color: 'bg-slate-500' },
+        action: 'archived',
         object: 'Project',
-        members: [
-            { name: 'fatur fris', initials: 'FF', color: 'bg-orange-400' }
-        ],
-        details: 'Role changed from "User" to "Manager" on "SMA Bradas" project',
+        details: 'Archived "Legacy Website" project',
+    },
+    {
+        id: '#LOG-2026-014',
+        date: '2026-01-24',
+        time: '11:00:00 am',
+        author: { name: 'Antonio Galih', initials: 'AG', color: 'bg-slate-500' },
+        action: 'restored',
+        object: 'Project',
+        details: 'Restored "Legacy Website" project',
+    },
+    {
+        id: '#LOG-2026-015',
+        date: '2026-01-23',
+        time: '09:00:00 am',
+        author: { name: 'Antonio Galih', initials: 'AG', color: 'bg-slate-500' },
+        action: 'enabled',
+        object: 'Feature',
+        details: 'Enabled "Insights" feature',
+    },
+    {
+        id: '#LOG-2026-016',
+        date: '2026-01-23',
+        time: '09:05:00 am',
+        author: { name: 'Antonio Galih', initials: 'AG', color: 'bg-slate-500' },
+        action: 'transfered',
+        object: 'Project',
+        details: 'Transferred "Mobile App" project to "Tech Corp"',
     }
 ]
+
 
 
 
@@ -3584,3 +3678,208 @@ export const DUMMY_MANUAL_EDITS: ManualEditEntry[] = [
         date: '2026-01-21'
     }
 ]
+
+// ============================================================================
+// PAYMENTS REPORT
+// ============================================================================
+
+export interface PaymentEntry {
+    id: string;
+    member: {
+        name: string;
+        avatar: string;
+        initials: string;
+        color: string;
+    };
+    amount: number;
+    method: 'PayPal' | 'Wise' | 'Bank Transfer' | 'Manual';
+    date: string; // ISO string
+    hours: number;
+    rate: number;
+    notes: string;
+    status: 'Completed' | 'Pending' | 'Failed';
+    project?: string;
+}
+
+export const DUMMY_PAYMENTS: PaymentEntry[] = [
+    {
+        id: 'pay-1',
+        member: { name: 'Antonio Galih', avatar: 'https://i.pravatar.cc/150?u=m1', initials: 'AG', color: 'placeholder' },
+        amount: 5000000,
+        method: 'PayPal',
+        date: '2026-01-28T09:00:00Z',
+        hours: 40,
+        rate: 125000,
+        notes: 'Weekly payment for Project Alpha',
+        status: 'Completed',
+        project: 'Website Redesign',
+    },
+    {
+        id: 'pay-2',
+        member: { name: 'Lave Lavael', avatar: 'https://i.pravatar.cc/150?u=m2', initials: 'LL', color: 'placeholder' },
+        amount: 3750000,
+        method: 'Wise',
+        date: '2026-01-28T10:00:00Z',
+        hours: 30,
+        rate: 125000,
+        notes: 'Mobile app development milestone',
+        status: 'Completed',
+        project: 'Mobile App',
+    },
+    {
+        id: 'pay-3',
+        member: { name: 'Sarah Johnson', avatar: 'https://i.pravatar.cc/150?u=m3', initials: 'SJ', color: 'placeholder' },
+        amount: 2500000,
+        method: 'Bank Transfer',
+        date: '2026-01-27T11:00:00Z',
+        hours: 20,
+        rate: 125000,
+        notes: 'Bug fixes and maintenance',
+        status: 'Pending',
+        project: 'API Integration',
+    },
+    {
+        id: 'pay-4',
+        member: { name: 'Michael Chen', avatar: 'https://i.pravatar.cc/150?u=m4', initials: 'MC', color: 'placeholder' },
+        amount: 4500000,
+        method: 'Manual',
+        date: '2026-01-26T12:00:00Z',
+        hours: 36,
+        rate: 125000,
+        notes: 'Backend refactor sprint',
+        status: 'Completed',
+        project: 'Backend Refactor',
+    },
+    {
+        id: 'pay-5',
+        member: { name: 'Emma Rodriguez', avatar: 'https://i.pravatar.cc/150?u=m5', initials: 'ER', color: 'placeholder' },
+        amount: 1500000,
+        method: 'PayPal',
+        date: '2026-01-25T13:00:00Z',
+        hours: 12,
+        rate: 125000,
+        notes: 'Design system updates',
+        status: 'Failed',
+        project: 'Website Redesign',
+    },
+    {
+        id: 'pay-6',
+        member: { name: 'Antonio Galih', avatar: 'https://i.pravatar.cc/150?u=m1', initials: 'AG', color: 'placeholder' },
+        amount: 2000000,
+        method: 'Wise',
+        date: '2026-01-20T14:00:00Z',
+        hours: 16,
+        rate: 125000,
+        notes: 'Consultation fees',
+        status: 'Completed',
+        project: 'Mobile App',
+    },
+    {
+        id: 'pay-7',
+        member: { name: 'Lave Lavael', avatar: 'https://i.pravatar.cc/150?u=m2', initials: 'LL', color: 'placeholder' },
+        amount: 3000000,
+        method: 'Bank Transfer',
+        date: '2026-01-19T15:00:00Z',
+        hours: 24,
+        rate: 125000,
+        notes: 'API documentation',
+        status: 'Pending',
+        project: 'API Integration',
+    },
+    {
+        id: 'pay-8',
+        member: { name: 'Michael Chen', avatar: 'https://i.pravatar.cc/150?u=m4', initials: 'MC', color: 'placeholder' },
+        amount: 5000000,
+        method: 'Manual',
+        date: '2026-01-18T16:00:00Z',
+        hours: 40,
+        rate: 125000,
+        notes: 'Database migration',
+        status: 'Completed',
+        project: 'Backend Refactor',
+    },
+    {
+        id: 'pay-9',
+        member: { name: 'Sarah Johnson', avatar: 'https://i.pravatar.cc/150?u=m3', initials: 'SJ', color: 'placeholder' },
+        amount: 1800000,
+        method: 'PayPal',
+        date: '2026-01-15T17:00:00Z',
+        hours: 14.4,
+        rate: 125000,
+        notes: 'UI updates',
+        status: 'Completed',
+        project: 'Website Redesign',
+    },
+    {
+        id: 'pay-10',
+        member: { name: 'Emma Rodriguez', avatar: 'https://i.pravatar.cc/150?u=m5', initials: 'ER', color: 'placeholder' },
+        amount: 2200000,
+        method: 'Wise',
+        date: '2026-01-15T18:00:00Z',
+        hours: 17.6,
+        rate: 125000,
+        notes: 'User testing sessions',
+        status: 'Failed',
+        project: 'Mobile App',
+    },
+    {
+        id: 'pay-11',
+        member: { name: 'Antonio Galih', avatar: 'https://i.pravatar.cc/150?u=m1', initials: 'AG', color: 'placeholder' },
+        amount: 3200000,
+        method: 'Bank Transfer',
+        date: '2026-01-14T19:00:00Z',
+        hours: 25.6,
+        rate: 125000,
+        notes: 'Redesign Phase 1',
+        status: 'Completed',
+        project: 'Website Redesign',
+    },
+    {
+        id: 'pay-12',
+        member: { name: 'Lave Lavael', avatar: 'https://i.pravatar.cc/150?u=m2', initials: 'LL', color: 'placeholder' },
+        amount: 2800000,
+        method: 'Manual',
+        date: '2026-01-12T20:00:00Z',
+        hours: 22.4,
+        rate: 125000,
+        notes: 'App optimization',
+        status: 'Pending',
+        project: 'Mobile App',
+    },
+    {
+        id: 'pay-13',
+        member: { name: 'Michael Chen', avatar: 'https://i.pravatar.cc/150?u=m4', initials: 'MC', color: 'placeholder' },
+        amount: 1500000,
+        method: 'PayPal',
+        date: '2026-01-11T21:00:00Z',
+        hours: 12,
+        rate: 125000,
+        notes: 'Security patch',
+        status: 'Completed',
+        project: 'Backend Refactor',
+    },
+    {
+        id: 'pay-14',
+        member: { name: 'Sarah Johnson', avatar: 'https://i.pravatar.cc/150?u=m3', initials: 'SJ', color: 'placeholder' },
+        amount: 4200000,
+        method: 'Wise',
+        date: '2026-01-10T22:00:00Z',
+        hours: 33.6,
+        rate: 125000,
+        notes: 'Frontend overhaul',
+        status: 'Completed',
+        project: 'Website Redesign',
+    },
+    {
+        id: 'pay-15',
+        member: { name: 'Antonio Galih', avatar: 'https://i.pravatar.cc/150?u=m1', initials: 'AG', color: 'placeholder' },
+        amount: 3600000,
+        method: 'Bank Transfer',
+        date: '2026-01-09T23:00:00Z',
+        hours: 28.8,
+        rate: 125000,
+        notes: 'Consultation',
+        status: 'Completed',
+        project: 'Design System',
+    },
+];
