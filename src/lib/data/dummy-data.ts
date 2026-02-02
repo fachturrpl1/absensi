@@ -4038,3 +4038,16 @@ export const DUMMY_PAYMENTS: PaymentEntry[] = [
         project: 'Design System',
     },
 ];
+
+// ============================================================================
+// EXPORT HELPERS FOR ACTIVITY PAGES
+// ============================================================================
+
+export function generateMemberAppActivities(memberId: string): AppActivityEntry[] {
+    return DUMMY_APP_ACTIVITIES.filter(a => a.memberId === memberId)
+}
+
+export function generateMemberUrlActivities(memberId: string): UrlActivityEntry[] {
+    return generateUrlActivities().filter(a => a.memberId === memberId)
+}
+
