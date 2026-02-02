@@ -2,20 +2,36 @@
 
 import { useState } from "react"
 
-import { Info, Search } from "lucide-react"
-import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
+import { Info, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { useSettingsMembers } from "@/hooks/use-settings-members"
 import { useBlurSettings } from "../blur-context"
 import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
 import { ScreenshotsSidebar } from "@/components/settings/ScreenshotsSidebar"
 
 export default function ScreenshotBlurPage() {
+  const { members, loading } = useSettingsMembers()
   const { blurSettings, setGlobalBlur, setMemberBlur, getMemberBlur } = useBlurSettings()
   const [searchQuery, setSearchQuery] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
-  const filteredMembers = DUMMY_MEMBERS.filter(member => {
+  const filteredMembers = members.filter(member => {
     const fullName = member.name.toLowerCase()
-    return fullName.includes(searchQuery.toLowerCase())
+    const blurStatus = getMemberBlur(member.id) ? "on" : "off"
+    const query = searchQuery.toLowerCase()
+    return fullName.includes(query) || blurStatus.includes(query)
   })
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedMembers = filteredMembers.slice(startIndex, startIndex + itemsPerPage)
+
+  // Reset to first page when search changes
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    setCurrentPage(1)
+  }
 
 
   return (
@@ -88,7 +104,7 @@ export default function ScreenshotBlurPage() {
                     type="text"
                     placeholder="Search members"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                   />
                 </div>
@@ -108,14 +124,23 @@ export default function ScreenshotBlurPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-slate-200">
-                    {filteredMembers.length === 0 ? (
+                    {loading ? (
+                      <tr>
+                        <td colSpan={2} className="px-4 py-8 text-center text-sm text-slate-500">
+                          <div className="flex items-center justify-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Loading members...
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredMembers.length === 0 ? (
                       <tr>
                         <td colSpan={2} className="px-4 py-8 text-center text-sm text-slate-500">
                           No members found
                         </td>
                       </tr>
                     ) : (
-                      filteredMembers.map((member) => {
+                      paginatedMembers.map((member) => {
                         const memberBlur = getMemberBlur(member.id)
                         return (
                           <tr key={member.id} className="hover:bg-slate-50">
@@ -169,6 +194,34 @@ export default function ScreenshotBlurPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination */}
+              {!loading && filteredMembers.length > 0 && (
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-slate-500">
+                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredMembers.length)} of {filteredMembers.length} members
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span className="text-sm text-slate-700">
+                      Page {currentPage} of {totalPages || 1}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

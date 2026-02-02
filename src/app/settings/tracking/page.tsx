@@ -1,22 +1,42 @@
 "use client"
 
 import { useState } from "react"
-import { Info, Search } from "lucide-react"
-import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
+import { Info, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { useSettingsMembers } from "@/hooks/use-settings-members"
 import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
 import { TrackingSidebar } from "@/components/settings/TrackingSidebar"
 
 type KeepIdleTimeOption = "prompt" | "always" | "never"
 
 export default function TrackingPage() {
+    const { members, loading } = useSettingsMembers()
     const [globalKeepIdleTime, setGlobalKeepIdleTime] = useState<KeepIdleTimeOption>("prompt")
     const [searchQuery, setSearchQuery] = useState("")
     const [memberKeepIdleTimes, setMemberKeepIdleTimes] = useState<Record<string, KeepIdleTimeOption>>({})
+    const [currentPage, setCurrentPage] = useState(1)
+    const itemsPerPage = 10
 
-    const filteredMembers = DUMMY_MEMBERS.filter(member => {
+    const getMemberKeepIdleTime = (memberId: string): KeepIdleTimeOption => {
+        return memberKeepIdleTimes[memberId] || globalKeepIdleTime
+    }
+
+    const filteredMembers = members.filter(member => {
         const fullName = member.name.toLowerCase()
-        return fullName.includes(searchQuery.toLowerCase())
+        const keepIdleTime = getMemberKeepIdleTime(member.id).toLowerCase()
+        const query = searchQuery.toLowerCase()
+        return fullName.includes(query) || keepIdleTime.includes(query)
     })
+
+    // Pagination calculations
+    const totalPages = Math.ceil(filteredMembers.length / itemsPerPage)
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const paginatedMembers = filteredMembers.slice(startIndex, startIndex + itemsPerPage)
+
+    // Reset to first page when search changes
+    const handleSearchChange = (value: string) => {
+        setSearchQuery(value)
+        setCurrentPage(1)
+    }
 
     const handleGlobalKeepIdleTimeChange = (value: KeepIdleTimeOption) => {
         setGlobalKeepIdleTime(value)
@@ -27,10 +47,6 @@ export default function TrackingPage() {
             ...prev,
             [memberId]: value
         }))
-    }
-
-    const getMemberKeepIdleTime = (memberId: string): KeepIdleTimeOption => {
-        return memberKeepIdleTimes[memberId] || globalKeepIdleTime
     }
 
     return (
@@ -109,7 +125,7 @@ export default function TrackingPage() {
                                 type="text"
                                 placeholder="Search members"
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={(e) => handleSearchChange(e.target.value)}
                                 className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                             />
                         </div>
@@ -120,7 +136,18 @@ export default function TrackingPage() {
                         <div className="py-3 border-b border-slate-200">
                             <span className="text-sm font-semibold text-slate-900">Name</span>
                         </div>
-                        {filteredMembers.map((member) => (
+                        {loading ? (
+                            <div className="py-8 text-center text-sm text-slate-500">
+                                <div className="flex items-center justify-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Loading members...
+                                </div>
+                            </div>
+                        ) : filteredMembers.length === 0 ? (
+                            <div className="py-8 text-center text-sm text-slate-500">
+                                No members found
+                            </div>
+                        ) : paginatedMembers.map((member) => (
                             <div key={member.id} className="flex items-center justify-between py-4 border-b border-slate-100">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
@@ -163,10 +190,33 @@ export default function TrackingPage() {
                         ))}
                     </div>
 
-                    {/* Footer */}
-                    <div className="py-3 text-sm text-slate-500">
-                        Showing {filteredMembers.length} of {DUMMY_MEMBERS.length} members
-                    </div>
+                    {/* Pagination */}
+                    {!loading && filteredMembers.length > 0 && (
+                        <div className="flex items-center justify-between mt-4">
+                            <div className="text-sm text-slate-500">
+                                Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredMembers.length)} of {filteredMembers.length} members
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                    disabled={currentPage === 1}
+                                    className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </button>
+                                <span className="text-sm text-slate-700">
+                                    Page {currentPage} of {totalPages || 1}
+                                </span>
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                    disabled={currentPage === totalPages || totalPages === 0}
+                                    className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

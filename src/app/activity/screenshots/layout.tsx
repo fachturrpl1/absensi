@@ -7,23 +7,36 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
+import { DUMMY_TEAMS, type Member } from "@/lib/data/dummy-data"
 import { DownloadDialog } from "@/components/activity/DownloadDialog"
 import { SelectedMemberProvider } from "./selected-member-context"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { DateRange, SelectedFilter } from "@/components/insights/types"
 import { useTimezone } from "@/components/timezone-provider"
 import { BlurProvider } from "@/app/settings/screenshot/blur-context"
+import { useSettingsMembers } from "@/hooks/use-settings-members"
 
 export default function ScreenshotsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const memberIdFromUrl = searchParams.get("memberId")
-  
+  const { members: settingsMembers, loading: membersLoading } = useSettingsMembers()
+
+  // Convert settingsMembers to Member format for compatibility
+  const realMembers: Member[] = useMemo(() => {
+    return settingsMembers.map(m => ({
+      id: m.id,
+      name: m.name,
+      email: m.email,
+      avatar: m.avatar,
+      activityScore: m.activityScore,
+    }))
+  }, [settingsMembers])
+
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false)
-  
+
   // Get initial memberId: URL > sessionStorage > default
   const getInitialMemberId = (): string => {
     if (typeof window !== "undefined") {
@@ -36,7 +49,7 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
       const savedMemberId = sessionStorage.getItem("screenshotSelectedMemberId")
       if (savedMemberId) return savedMemberId
     }
-    return DUMMY_MEMBERS[0]?.id ?? "m1"
+    return realMembers[0]?.id ?? "m1"
   }
 
   const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({
@@ -44,7 +57,7 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
     all: false,
     id: getInitialMemberId(),
   })
-  
+
   // Update filter when memberId from URL changes
   useEffect(() => {
     if (memberIdFromUrl && memberIdFromUrl !== selectedFilter.id) {
@@ -67,12 +80,40 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
       }
     }
   }, [memberIdFromUrl, selectedFilter.id])
-  
+
+  // Auto-select first real member if current selection is invalid or "m1" (dummy)
+  useEffect(() => {
+    if (realMembers.length > 0 && !membersLoading) {
+      const currentId = selectedFilter.id
+      // Check if current ID exists in real members
+      const isValidMember = realMembers.some(m => m.id === currentId)
+
+      // If invalid or is the default "m1" dummy but "m1" is not in real members (likely), switch to first real member
+      if (!isValidMember || (currentId === "m1" && !realMembers.some(m => m.id === "m1"))) {
+        const firstMemberId = realMembers[0]?.id
+        if (!firstMemberId) return
+
+        setSelectedFilter({
+          type: "members",
+          all: false,
+          id: firstMemberId,
+        })
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem("screenshotSelectedMemberId", firstMemberId)
+          // Update URL without refresh
+          const params = new URLSearchParams(window.location.search)
+          params.set("memberId", firstMemberId)
+          window.history.replaceState({}, '', `${pathname}?${params.toString()}`)
+        }
+      }
+    }
+  }, [realMembers, membersLoading, selectedFilter.id, pathname])
+
   // Sync selectedFilter changes to sessionStorage and URL
   const handleFilterChange = (filter: SelectedFilter) => {
     // Jika all: true (tidak seharusnya terjadi karena hideAllOption), ubah ke member pertama
     if (filter.all) {
-      const firstMemberId = DUMMY_MEMBERS[0]?.id ?? "m1"
+      const firstMemberId = realMembers[0]?.id ?? "m1"
       const newFilter: SelectedFilter = {
         type: "members",
         all: false,
@@ -87,15 +128,15 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
       }
       return
     }
-    
+
     setSelectedFilter(filter)
     if (!filter.all && filter.id && typeof window !== "undefined") {
       sessionStorage.setItem("screenshotSelectedMemberId", filter.id)
       const params = new URLSearchParams(searchParams.toString())
       params.set("memberId", filter.id)
       router.push(`${pathname}?${params.toString()}`)
-      }
     }
+  }
 
   const selectedMemberId = selectedFilter.all ? null : (selectedFilter.id ?? null)
 
@@ -121,7 +162,7 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
           }
         } catch (e) {
           // Jika parsing gagal, gunakan default
-      }
+        }
       }
     }
     // Default berdasarkan halaman
@@ -144,12 +185,12 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
   }
 
   const [dateRange, setDateRange] = useState<DateRange>(getInitialDateRange)
-  
+
   // Update date range saat pathname berubah (pindah antara 10min dan all)
   useEffect(() => {
     const currentIsAll = pathname?.includes("/all")
     const storageKey = currentIsAll ? "screenshotDateRangeAll" : "screenshotDateRange10min"
-    
+
     if (typeof window !== "undefined") {
       const savedDateRange = sessionStorage.getItem(storageKey)
       if (savedDateRange) {
@@ -207,7 +248,7 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
       }
     }
   }, [pathname])
-  
+
   // Handler untuk update date range dengan persistensi
   const handleDateRangeChange = (newDateRange: DateRange) => {
     setDateRange(newDateRange)
@@ -220,7 +261,7 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
       }))
     }
   }
-  
+
   // Persist date range ke sessionStorage saat berubah (backup)
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -232,15 +273,15 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
     }
   }, [dateRange, isAllScreenshots])
 
-  const demoMembers = useMemo(() => DUMMY_MEMBERS, [])
+  const demoMembers = useMemo(() => realMembers, [realMembers])
   const demoTeams = useMemo(() => DUMMY_TEAMS, [])
-  
+
   const selectedMember = useMemo(
     () =>
-      DUMMY_MEMBERS.find((member) => member.id === selectedMemberId) ??
-      DUMMY_MEMBERS[0] ??
+      realMembers.find((member) => member.id === selectedMemberId) ??
+      realMembers[0] ??
       null,
-    [selectedMemberId]
+    [selectedMemberId, realMembers]
   )
 
 
@@ -266,131 +307,131 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
 
   return (
     <BlurProvider>
-    <SelectedMemberProvider value={{ selectedMemberId, selectedMember, dateRange }}>
-    <div className={`flex min-h-screen flex-col bg-white text-slate-800 ${isSettingsPage ? '' : 'gap-6 px-6 py-8'}`}>
-      <DownloadDialog
-        isOpen={isDownloadDialogOpen}
-        onClose={() => setIsDownloadDialogOpen(false)}
-      />
-
-      {/* Header - hanya tampil jika bukan settings page */}
-      {!isSettingsPage && (
-        <>
-          <div className="relative flex w-full items-center justify-between gap-4">
-            {/* Screenshot Title */}
-        <div className="flex-1 min-w-[220px]">
-              <h1 className="text-xl font-semibold mb-5">Screenshot</h1>
-            </div>
-
-        {/* Tab Navigation */}
-        <div className="absolute left-1/2 flex -translate-x-1/2 transform">
-          <div
-            className="flex min-w-[250px] justify-center gap-1 rounded-full px-1 py-1 shadow-sm"
-            style={{ backgroundColor: "#A9A9A9" }}
-          >
-            <button
-              onClick={() => router.push("/activity/screenshots/10min")}
-              className={`rounded-full px-5 py-1.5 text-sm font-normal transition-all focus-visible:outline-none focus-visible:ring-0 ${isEvery10Min
-                ? "bg-white text-slate-900 shadow-sm"
-                : "bg-transparent text-slate-900 hover:bg-white/40"
-                }`}
-            >
-              Every 10 min
-            </button>
-            <button
-              onClick={() => router.push("/activity/screenshots/all")}
-              className={`rounded-full px-5 py-1.5 text-sm font-normal transition-all focus-visible:outline-none focus-visible:ring-0 ${isAllScreenshots
-                ? "bg-white text-slate-900 shadow-sm"
-                : "bg-transparent text-slate-900 hover:bg-white/40"
-                }`}
-            >
-              All screenshots
-            </button>
-          </div>
-        </div>
-        <div className="flex min-w-[160px] justify-end">
-              <Button 
-                variant="outline" 
-                className="flex items-center gap-2 rounded-full border border-slate-200 px-4 text-sm font-medium text-slate-700"
-                onClick={() => router.push("/settings/screenshot")}
-              >
-            <Settings className="h-4 w-4 text-slate-700" />
-            Settings
-          </Button>
-        </div>
-      </div>
-
-      {/* Date & User Controls */}
-      <div className="flex w-full items-center justify-between gap-4">
-            <InsightsHeader
-              selectedFilter={selectedFilter}
-              onSelectedFilterChange={handleFilterChange}
-              dateRange={dateRange}
-              onDateRangeChange={handleDateRangeChange}
-              members={demoMembers}
-              teams={demoTeams}
-              timezone={timezone}
-              hideAllOption={true}
-              hideTeamsTab={true}
-            />
-          </div>
-        </>
-      )}
-
-      {/* Child Content */}
-      {children}
-
-      {isFilterOpen && (
-        <>
-          <div
-        className="pointer-events-auto fixed inset-x-0 top-[220px] bottom-0 bg-slate-900/10"
-            onClick={() => setIsFilterOpen(false)}
+      <SelectedMemberProvider value={{ selectedMemberId, selectedMember, dateRange }}>
+        <div className={`flex min-h-screen flex-col bg-white text-slate-800 ${isSettingsPage ? '' : 'gap-6 px-6 py-8'}`}>
+          <DownloadDialog
+            isOpen={isDownloadDialogOpen}
+            onClose={() => setIsDownloadDialogOpen(false)}
           />
-          <div className="pointer-events-none fixed top-[220px] right-0 bottom-0 z-30 flex max-w-[320px] flex-col px-6 py-8">
-            <div
-              className="pointer-events-auto flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white text-slate-800 shadow-[0_25px_40px_rgba(15,23,42,0.18)]"
-              ref={filterPanelRef}
-              style={{ maxHeight: "calc(100vh - 220px)" }}
-            >
-              <div className="border-b border-slate-100 px-6 py-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.4em] text-blue-500">Filters</p>
-              </div>
-              <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
-                <div className="space-y-2 rounded-2xl border border-slate-200 bg-[#f5f8ff] px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Member</p>
-                  <div className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2 shadow-[inset_0_1px_0_rgba(15,23,42,0.04)]">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-500">
-                      <User className="h-4 w-4" />
-                    </div>
-                    <div className="text-sm font-semibold text-slate-700">
-                      {selectedMember?.name ?? "Member"}
-                    </div>
+
+          {/* Header - hanya tampil jika bukan settings page */}
+          {!isSettingsPage && (
+            <>
+              <div className="relative flex w-full items-center justify-between gap-4">
+                {/* Screenshot Title */}
+                <div className="flex-1 min-w-[220px]">
+                  <h1 className="text-xl font-semibold mb-5">Screenshot</h1>
+                </div>
+
+                {/* Tab Navigation */}
+                <div className="absolute left-1/2 flex -translate-x-1/2 transform">
+                  <div
+                    className="flex min-w-[250px] justify-center gap-1 rounded-full px-1 py-1 shadow-sm"
+                    style={{ backgroundColor: "#A9A9A9" }}
+                  >
+                    <button
+                      onClick={() => router.push("/activity/screenshots/10min")}
+                      className={`rounded-full px-5 py-1.5 text-sm font-normal transition-all focus-visible:outline-none focus-visible:ring-0 ${isEvery10Min
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "bg-transparent text-slate-900 hover:bg-white/40"
+                        }`}
+                    >
+                      Every 10 min
+                    </button>
+                    <button
+                      onClick={() => router.push("/activity/screenshots/all")}
+                      className={`rounded-full px-5 py-1.5 text-sm font-normal transition-all focus-visible:outline-none focus-visible:ring-0 ${isAllScreenshots
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "bg-transparent text-slate-900 hover:bg-white/40"
+                        }`}
+                    >
+                      All screenshots
+                    </button>
                   </div>
                 </div>
-                {["Project", "Time Type", "Source", "Activity Level"].map((label) => (
-                  <div key={label} className="space-y-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-slate-500">{label}</p>
-                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-500 shadow-sm">
-                      <span>All {label.toLowerCase()}</span>
-                      <span className="text-base text-slate-400">⌄</span>
-                    </div>
-                  </div>
-                ))}
+                <div className="flex min-w-[160px] justify-end">
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2 rounded-full border border-slate-200 px-4 text-sm font-medium text-slate-700"
+                    onClick={() => router.push("/settings/screenshot")}
+                  >
+                    <Settings className="h-4 w-4 text-slate-700" />
+                    Settings
+                  </Button>
+                </div>
               </div>
-              <div className="border-t border-slate-100 px-6 py-5">
-                <button
-                  onClick={() => setIsFilterOpen(false)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
+
+              {/* Date & User Controls */}
+              <div className="flex w-full items-center justify-between gap-4">
+                <InsightsHeader
+                  selectedFilter={selectedFilter}
+                  onSelectedFilterChange={handleFilterChange}
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                  members={demoMembers}
+                  teams={demoTeams}
+                  timezone={timezone}
+                  hideAllOption={true}
+                  hideTeamsTab={true}
+                />
+              </div>
+            </>
+          )}
+
+          {/* Child Content */}
+          {children}
+
+          {isFilterOpen && (
+            <>
+              <div
+                className="pointer-events-auto fixed inset-x-0 top-[220px] bottom-0 bg-slate-900/10"
+                onClick={() => setIsFilterOpen(false)}
+              />
+              <div className="pointer-events-none fixed top-[220px] right-0 bottom-0 z-30 flex max-w-[320px] flex-col px-6 py-8">
+                <div
+                  className="pointer-events-auto flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white text-slate-800 shadow-[0_25px_40px_rgba(15,23,42,0.18)]"
+                  ref={filterPanelRef}
+                  style={{ maxHeight: "calc(100vh - 220px)" }}
                 >
-                  Clear filters
-                </button>
+                  <div className="border-b border-slate-100 px-6 py-5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.4em] text-blue-500">Filters</p>
+                  </div>
+                  <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
+                    <div className="space-y-2 rounded-2xl border border-slate-200 bg-[#f5f8ff] px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Member</p>
+                      <div className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2 shadow-[inset_0_1px_0_rgba(15,23,42,0.04)]">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-500">
+                          <User className="h-4 w-4" />
+                        </div>
+                        <div className="text-sm font-semibold text-slate-700">
+                          {selectedMember?.name ?? "Member"}
+                        </div>
+                      </div>
+                    </div>
+                    {["Project", "Time Type", "Source", "Activity Level"].map((label) => (
+                      <div key={label} className="space-y-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-slate-500">{label}</p>
+                        <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-500 shadow-sm">
+                          <span>All {label.toLowerCase()}</span>
+                          <span className="text-base text-slate-400">⌄</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t border-slate-100 px-6 py-5">
+                    <button
+                      onClick={() => setIsFilterOpen(false)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-    </SelectedMemberProvider>
+            </>
+          )}
+        </div>
+      </SelectedMemberProvider>
     </BlurProvider>
   )
 }

@@ -1651,6 +1651,161 @@ export function getScreenshotsByMemberAndDateRange(memberId: string, startDate: 
 }
 
 // ============================================================================
+// DYNAMIC MEMBER DATA GENERATORS
+// ============================================================================
+
+// Template screenshot images that can be used for any member
+const SCREENSHOT_IMAGES = [
+    "/Screenshoot/Screenshot 2025-12-08 094631.png",
+    "/Screenshoot/Screenshot 2025-12-11 204654.png",
+    "/Screenshoot/Screenshot 2025-12-04 220750.png",
+    "/Screenshoot/Screenshot 2025-12-25 191532.png",
+    "/Screenshoot/Screenshot 2025-12-04 204028.png",
+    "/Screenshoot/Screenshot 2025-11-28 162344.png",
+    "/Screenshoot/Screenshot 2025-11-18 155809.png",
+    "/Screenshoot/Screenshot 2026-01-12 222910.png",
+    "/Screenshoot/Screenshot 2026-01-20 161303.png",
+    "/Screenshoot/Screenshot 2026-01-20 161319.png",
+    "/Screenshoot/Screenshot 2026-01-09 101315.png",
+    "/Screenshoot/Screenshot 2026-01-04 222401.png",
+]
+
+// Time patterns for different variation indexes
+const TIME_PATTERNS = [
+    { start: 9, period: "am" },
+    { start: 10, period: "am" },
+    { start: 11, period: "am" },
+    { start: 1, period: "pm" },
+    { start: 2, period: "pm" },
+    { start: 3, period: "pm" },
+    { start: 4, period: "pm" },
+]
+
+// Generate screenshot data for any member ID
+export function generateMemberScreenshots(memberId: string): MemberScreenshotItem[] {
+    // If member is in existing dummy data, return that
+    if (DUMMY_MEMBER_SCREENSHOTS[memberId]) {
+        return DUMMY_MEMBER_SCREENSHOTS[memberId]
+    }
+
+    // Generate deterministic variation based on memberId hash
+    // Improve hash spread for UUIDs
+    const hash = memberId.split('').reduce((acc, char) => ((acc << 5) - acc) + char.charCodeAt(0), 0)
+    console.log(`[Generator] Generating screenshots for ${memberId}, hash: ${hash}`)
+
+    const patternIndex = Math.abs(hash) % TIME_PATTERNS.length
+    const pattern = TIME_PATTERNS[patternIndex] || TIME_PATTERNS[0]
+    const startHour = pattern?.start ?? 9
+    const period = pattern?.period ?? "am"
+
+    const screenshots: MemberScreenshotItem[] = []
+
+    for (let i = 0; i < 8; i++) {
+        const minuteStart = i * 10
+        const minuteEnd = (i + 1) * 10
+        const hourStart = startHour + Math.floor(minuteStart / 60)
+        const hourEnd = startHour + Math.floor(minuteEnd / 60)
+        const actualMinuteStart = minuteStart % 60
+        const actualMinuteEnd = minuteEnd % 60
+
+        const formatHour = (h: number, p: string) => {
+            if (p === "am" && h >= 12) return { hour: h - 12 || 12, period: h >= 12 ? "pm" : "am" }
+            if (p === "pm" && h > 12) return { hour: h - 12, period: "pm" }
+            if (p === "pm" && h === 12) return { hour: 12, period: "pm" }
+            return { hour: h, period: p }
+        }
+
+        const startFormatted = formatHour(hourStart, period)
+        const endFormatted = formatHour(hourEnd, period)
+
+        const timeStr = `${startFormatted.hour}:${actualMinuteStart.toString().padStart(2, '0')} ${startFormatted.period} - ${endFormatted.hour}:${actualMinuteEnd.toString().padStart(2, '0')} ${endFormatted.period}`
+
+        // Last item is always "no activity"
+        if (i === 7) {
+            screenshots.push({
+                id: `${memberId}-${i + 1}`,
+                time: timeStr,
+                progress: 0,
+                minutes: 0,
+                image: "",
+                noActivity: true,
+                screenCount: 0
+            })
+        } else {
+            // Use deterministic but varied progress and image index
+            const progress = 40 + ((hash + i * 17) % 45)
+            const imageIndex = (hash + i) % SCREENSHOT_IMAGES.length
+
+            screenshots.push({
+                id: `${memberId}-${i + 1}`,
+                time: timeStr,
+                progress,
+                minutes: 10,
+                image: SCREENSHOT_IMAGES[imageIndex] ?? SCREENSHOT_IMAGES[0] ?? "",
+                screenCount: 1
+            })
+        }
+    }
+
+    return screenshots
+}
+
+// Generate insight summary for any member ID
+export function generateMemberInsight(memberId: string): MemberInsightSummary {
+    // If member is in existing dummy data, return that
+    if (DUMMY_MEMBER_INSIGHTS[memberId]) {
+        return DUMMY_MEMBER_INSIGHTS[memberId]
+    }
+
+    // Generate deterministic variation based on memberId hash
+    const hash = memberId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+
+    const workedHours = 2 + (hash % 4)
+    const workedMinutes = (hash * 7) % 60
+    const focusHours = 1 + (hash % 2)
+    const focusMinutes = (hash * 5) % 60
+    const avgActivity = 60 + (hash % 30)
+    const unusualCount = hash % 3
+
+    const classificationsLabels = ["Productive", "Balanced", "Creative", "Recovery", "High focus"] as const
+    const classificationSummaries = [
+        "Maintains high focus on tasks.",
+        "Punctuated focus with controlled rest.",
+        "Switches between tasks calmly.",
+        "Rebounds strong after a short lull.",
+        "Keeps steady pace throughout the day."
+    ] as const
+    const focusDescriptions = [
+        "Stable focus with a fresh start.",
+        "Deep work streak in the morning.",
+        "Creative tasks keep the pace steady.",
+        "Quick bursts of energy in the afternoon.",
+        "Consistent energy with quick updates."
+    ] as const
+    const unusualMessages = [
+        "- No unusual activity detected.",
+        "- Brief break before diving back into work.",
+        "- Two idle checks interrupted the flow.\n- The app switched quickly before returning to work.",
+        "- Idle stretch followed by a sprint.\n- Brief break before diving back into API fixes.\n- Finished with a quick review."
+    ] as const
+
+    const classIndex = hash % classificationsLabels.length
+
+    return {
+        memberId,
+        totalWorkedTime: `${workedHours}h ${workedMinutes.toString().padStart(2, '0')}m`,
+        focusTime: `${focusHours}h ${focusMinutes.toString().padStart(2, '0')}m`,
+        focusDescription: focusDescriptions[hash % focusDescriptions.length] || focusDescriptions[0],
+        avgActivity: `${avgActivity}%`,
+        unusualCount,
+        unusualMessage: unusualMessages[Math.min(unusualCount, unusualMessages.length - 1)] || unusualMessages[0],
+        classificationLabel: classificationsLabels[classIndex] || classificationsLabels[0],
+        classificationSummary: classificationSummaries[classIndex] || classificationSummaries[0],
+        classificationPercent: 55 + (hash % 35),
+    }
+}
+
+// ============================================================================
 // ATTENDANCE DASHBOARD
 // ============================================================================
 
@@ -3474,3 +3629,92 @@ export const DUMMY_MANUAL_EDITS: ManualEditEntry[] = [
         date: '2026-01-21'
     }
 ]
+
+// ============================================================================
+// GENERATORS FOR ACTIVITIES
+// ============================================================================
+
+export interface GeneratedAppActivity {
+    memberId: string
+    date: string
+    appName: string
+    timeSpent: number // minutes
+}
+
+export interface GeneratedUrlActivity {
+    memberId: string
+    date: string
+    site: string
+    timeSpent: number // minutes
+}
+
+export function generateMemberAppActivities(memberId: string): GeneratedAppActivity[] {
+    // Deterministic hash
+    const hash = memberId.split('').reduce((acc, char) => ((acc << 5) - acc) + char.charCodeAt(0), 0)
+
+    const apps = [
+        { name: 'VS Code', baseTime: 180, variance: 60, category: 'App' },
+        { name: 'Chrome', baseTime: 120, variance: 40, category: 'App' },
+        { name: 'Slack', baseTime: 60, variance: 30, category: 'App' },
+        { name: 'Figma', baseTime: 40, variance: 20, category: 'App' },
+        { name: 'Terminal', baseTime: 45, variance: 15, category: 'App' },
+        { name: 'Spotify', baseTime: 30, variance: 30, category: 'App' },
+        { name: 'Discord', baseTime: 20, variance: 20, category: 'App' }
+    ]
+
+    // Rotate apps based on hash to create variety
+    const profileType = Math.abs(hash) % 3 // 0: Dev, 1: Designer, 2: Manager
+
+    // Adjust weights based on profile
+    let activeApps = [...apps]
+    if (profileType === 0) { // Dev
+        activeApps = apps.filter(a => ['VS Code', 'Chrome', 'Terminal', 'Slack', 'Spotify'].includes(a.name))
+    } else if (profileType === 1) { // Designer
+        activeApps = apps.filter(a => ['Figma', 'Chrome', 'Slack', 'Spotify'].includes(a.name))
+    } else { // Manager
+        activeApps = apps.filter(a => ['Chrome', 'Slack', 'VS Code'].includes(a.name))
+    }
+
+    const today = new Date().toISOString().split('T')[0] ?? new Date().toISOString()
+
+    return activeApps.map((app, index) => {
+        const uniqueVal = Math.abs(hash + index * 123)
+        const time = Math.max(10, app.baseTime + (uniqueVal % app.variance) - (app.variance / 2))
+        return {
+            memberId,
+            date: today,
+            appName: app.name,
+            timeSpent: Math.round(time)
+        }
+    })
+}
+
+export function generateMemberUrlActivities(memberId: string): GeneratedUrlActivity[] {
+    const hash = memberId.split('').reduce((acc, char) => ((acc << 5) - acc) + char.charCodeAt(0), 0)
+
+    const sites = [
+        { name: 'github.com', baseTime: 60, variance: 30 },
+        { name: 'stackoverflow.com', baseTime: 45, variance: 20 },
+        { name: 'localhost', baseTime: 120, variance: 60 },
+        { name: 'docs.google.com', baseTime: 40, variance: 20 },
+        { name: 'notion.so', baseTime: 30, variance: 15 },
+        { name: 'youtube.com', baseTime: 20, variance: 20 },
+        { name: 'gmail.com', baseTime: 15, variance: 10 }
+    ]
+
+    const today = new Date().toISOString().split('T')[0] ?? new Date().toISOString()
+
+    return sites.map((site, index) => {
+        const uniqueVal = Math.abs(hash + index * 456)
+        // Probabilistic inclusion
+        if (uniqueVal % 10 > 7) return null // 20% chance to skip
+
+        const time = Math.max(5, site.baseTime + (uniqueVal % site.variance) - (site.variance / 2))
+        return {
+            memberId,
+            date: today,
+            site: site.name,
+            timeSpent: Math.round(time)
+        }
+    }).filter(item => item !== null) as GeneratedUrlActivity[]
+}

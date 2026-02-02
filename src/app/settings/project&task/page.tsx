@@ -1,11 +1,11 @@
 "use client"
 
-import React, { useState } from "react"
-import { Info, Search, User } from "lucide-react"
+import React, { useState, useEffect } from "react"
+import { Info, Search, User, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 
 import { OrganizationHeader } from "@/components/settings/OrganizationHeader"
 import { ProjectSidebar } from "@/components/settings/ProjectSidebar"
-import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
+import { useSettingsMembers } from "@/hooks/use-settings-members"
 
 type ProjectRole = "none" | "viewer" | "user" | "manager"
 
@@ -17,16 +17,26 @@ interface MemberWithRole {
 }
 
 export default function DefaultProjectRolePage() {
+    const { members: fetchedMembers, loading } = useSettingsMembers()
     const [globalRole, setGlobalRole] = useState<ProjectRole>("none")
-    const [members, setMembers] = useState<MemberWithRole[]>(
-        SHARED_MEMBERS.map(m => ({
-            id: m.id,
-            name: m.name,
-            avatar: m.avatar,
-            role: "none" as ProjectRole
-        }))
-    )
+    const [members, setMembers] = useState<MemberWithRole[]>([])
     const [searchQuery, setSearchQuery] = useState("")
+
+    // Sync fetched members with local role state
+    useEffect(() => {
+        if (fetchedMembers.length > 0) {
+            setMembers(prev => {
+                // Keep existing roles for members we already have
+                const existingRoles = new Map(prev.map(m => [m.id, m.role]))
+                return fetchedMembers.map(m => ({
+                    id: m.id,
+                    name: m.name,
+                    avatar: m.avatar,
+                    role: existingRoles.get(m.id) || globalRole
+                }))
+            })
+        }
+    }, [fetchedMembers, globalRole])
 
 
 
@@ -37,6 +47,13 @@ export default function DefaultProjectRolePage() {
         { value: "manager", label: "Manager" },
     ]
 
+    const handleGlobalRoleChange = (newRole: ProjectRole) => {
+        setGlobalRole(newRole)
+        setMembers(prev =>
+            prev.map(member => ({ ...member, role: newRole }))
+        )
+    }
+
     const handleMemberRoleChange = (id: string, role: ProjectRole) => {
         setMembers(prev =>
             prev.map(member =>
@@ -45,9 +62,24 @@ export default function DefaultProjectRolePage() {
         )
     }
 
+    const [currentPage, setCurrentPage] = useState(1)
+    const itemsPerPage = 10
+
     const filteredMembers = members.filter(member =>
-        member.name.toLowerCase().includes(searchQuery.toLowerCase())
+        member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.role.toLowerCase().includes(searchQuery.toLowerCase())
     )
+
+    // Pagination calculations
+    const totalPages = Math.ceil(filteredMembers.length / itemsPerPage)
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const paginatedMembers = filteredMembers.slice(startIndex, startIndex + itemsPerPage)
+
+    // Reset to first page when search changes
+    const handleSearchChange = (value: string) => {
+        setSearchQuery(value)
+        setCurrentPage(1)
+    }
 
     return (
         <div className="flex flex-col min-h-screen bg-white">
@@ -87,7 +119,7 @@ export default function DefaultProjectRolePage() {
                         {roles.map((role) => (
                             <button
                                 key={role.value}
-                                onClick={() => setGlobalRole(role.value)}
+                                onClick={() => handleGlobalRoleChange(role.value)}
                                 className={`px-6 py-2 text-sm font-medium rounded-full transition-colors ${globalRole === role.value
                                     ? "bg-white text-gray-900 shadow-sm"
                                     : "text-gray-600 hover:text-gray-900"
@@ -110,7 +142,7 @@ export default function DefaultProjectRolePage() {
                                 type="text"
                                 placeholder="Search members"
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={(e) => handleSearchChange(e.target.value)}
                                 className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                             />
                         </div>
@@ -125,7 +157,18 @@ export default function DefaultProjectRolePage() {
 
                         {/* Table Body */}
                         <div className="divide-y divide-gray-200">
-                            {filteredMembers.map((member) => (
+                            {loading ? (
+                                <div className="py-8 text-center text-sm text-slate-500">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Loading members...
+                                    </div>
+                                </div>
+                            ) : filteredMembers.length === 0 ? (
+                                <div className="py-8 text-center text-sm text-slate-500">
+                                    No members found
+                                </div>
+                            ) : paginatedMembers.map((member) => (
                                 <div key={member.id} className="flex items-center justify-between py-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
@@ -151,10 +194,33 @@ export default function DefaultProjectRolePage() {
                             ))}
                         </div>
 
-                        {/* Footer */}
-                        <div className="py-3 text-sm text-gray-500">
-                            Showing {filteredMembers.length} of {members.length} members
-                        </div>
+                        {/* Pagination */}
+                        {!loading && filteredMembers.length > 0 && (
+                            <div className="flex items-center justify-between mt-4">
+                                <div className="text-sm text-gray-500">
+                                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredMembers.length)} of {filteredMembers.length} members
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </button>
+                                    <span className="text-sm text-slate-700">
+                                        Page {currentPage} of {totalPages || 1}
+                                    </span>
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages || totalPages === 0}
+                                        className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

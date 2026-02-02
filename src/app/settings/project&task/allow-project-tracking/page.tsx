@@ -5,7 +5,7 @@ import {
     Info, Search
 } from "lucide-react"
 
-import { Input } from "@/components/ui/input"
+
 import { Switch } from "@/components/ui/switch"
 import { OrganizationHeader } from "@/components/settings/OrganizationHeader"
 import { ProjectSidebar } from "@/components/settings/ProjectSidebar"
@@ -85,14 +85,14 @@ export default function AllowProjectTrackingPage() {
                             <h3 className="text-lg font-semibold text-gray-900 mb-1">Individual settings</h3>
                             <p className="text-sm text-gray-500">Override the organization default for specific projects</p>
                         </div>
-                        <div className="relative w-56">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <Input
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <input
                                 type="text"
                                 placeholder="Search projects"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 h-10 border-gray-300 rounded-full bg-white"
+                                className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                             />
                         </div>
                     </div>

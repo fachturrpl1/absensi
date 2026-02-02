@@ -1,25 +1,79 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
-import { Info, Search } from "lucide-react"
+import { Info, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
+import { useSettingsMembers } from "@/hooks/use-settings-members"
 import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
 import { ScreenshotsSidebar } from "@/components/settings/ScreenshotsSidebar"
 
 export default function ScreenshotSettingsPage() {
+  const { members, loading } = useSettingsMembers()
   const [globalFrequency, setGlobalFrequency] = useState("1x")
   const [searchQuery, setSearchQuery] = useState("")
   const [memberFrequencies, setMemberFrequencies] = useState<Record<string, string>>({})
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
+  const [isLoaded, setIsLoaded] = useState(false)
 
-  const frequencyOptions = ["1x", "2x", "3x", "4x", "5x", "6x"]
+  const frequencyOptions = ["Off", "1x", "2x", "3x", "4x", "5x", "6x"]
 
-  const filteredMembers = DUMMY_MEMBERS.filter(member => {
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const savedGlobal = localStorage.getItem("settings_screenshot_global_frequency")
+    const savedMembers = localStorage.getItem("settings_screenshot_member_frequencies")
+
+    if (savedGlobal) {
+      setGlobalFrequency(savedGlobal)
+    }
+
+    if (savedMembers) {
+      try {
+        setMemberFrequencies(JSON.parse(savedMembers))
+      } catch (e) {
+        console.error("Failed to parse member frequencies", e)
+      }
+    }
+    setIsLoaded(true)
+  }, [])
+
+  // Save global frequency when it changes
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem("settings_screenshot_global_frequency", globalFrequency)
+    }
+  }, [globalFrequency, isLoaded])
+
+  // Save member frequencies when they change
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem("settings_screenshot_member_frequencies", JSON.stringify(memberFrequencies))
+    }
+  }, [memberFrequencies, isLoaded])
+
+  const getMemberFrequency = (memberId: string) => {
+    return memberFrequencies[memberId] || globalFrequency
+  }
+
+  const filteredMembers = members.filter(member => {
     const fullName = member.name.toLowerCase()
-    return fullName.includes(searchQuery.toLowerCase())
+    const frequency = getMemberFrequency(member.id).toLowerCase()
+    const query = searchQuery.toLowerCase()
+    return fullName.includes(query) || frequency.includes(query)
   })
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedMembers = filteredMembers.slice(startIndex, startIndex + itemsPerPage)
+
+  // Reset to first page when search changes
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    setCurrentPage(1)
+  }
 
   const handleGlobalFrequencyChange = (value: string) => {
     setGlobalFrequency(value)
@@ -34,14 +88,10 @@ export default function ScreenshotSettingsPage() {
 
   const handleApplyToAll = () => {
     const newFrequencies: Record<string, string> = {}
-    DUMMY_MEMBERS.forEach(member => {
+    members.forEach(member => {
       newFrequencies[member.id] = globalFrequency
     })
     setMemberFrequencies(newFrequencies)
-  }
-
-  const getMemberFrequency = (memberId: string) => {
-    return memberFrequencies[memberId] || globalFrequency
   }
 
   return (
@@ -113,7 +163,7 @@ export default function ScreenshotSettingsPage() {
                     type="text"
                     placeholder="Search members"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                   />
                 </div>
@@ -133,14 +183,23 @@ export default function ScreenshotSettingsPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-slate-200">
-                    {filteredMembers.length === 0 ? (
+                    {loading ? (
+                      <tr>
+                        <td colSpan={2} className="px-4 py-8 text-center text-sm text-slate-500">
+                          <div className="flex items-center justify-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Loading members...
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredMembers.length === 0 ? (
                       <tr>
                         <td colSpan={2} className="px-4 py-8 text-center text-sm text-slate-500">
                           No members found
                         </td>
                       </tr>
                     ) : (
-                      filteredMembers.map((member) => {
+                      paginatedMembers.map((member) => {
                         const memberFrequency = getMemberFrequency(member.id)
                         return (
                           <tr key={member.id} className="hover:bg-slate-50">
@@ -182,6 +241,34 @@ export default function ScreenshotSettingsPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination */}
+              {!loading && filteredMembers.length > 0 && (
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-slate-500">
+                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredMembers.length)} of {filteredMembers.length} members
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span className="text-sm text-slate-700">
+                      Page {currentPage} of {totalPages || 1}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

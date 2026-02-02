@@ -1,31 +1,81 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
-import { Info, Search } from "lucide-react"
-import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
+import { Info, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { useSettingsMembers } from "@/hooks/use-settings-members"
 import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
 import { ScreenshotsSidebar } from "@/components/settings/ScreenshotsSidebar"
 
 export default function ScreenshotDeletePage() {
+  const { members, loading } = useSettingsMembers()
   const [globalDelete, setGlobalDelete] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [memberDeletes, setMemberDeletes] = useState<Record<string, boolean>>({})
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
+  const [isLoaded, setIsLoaded] = useState(false)
 
-  const filteredMembers = DUMMY_MEMBERS.filter(member => {
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const savedGlobal = localStorage.getItem("settings_screenshot_global_delete")
+    const savedMembers = localStorage.getItem("settings_screenshot_member_deletes")
+
+    if (savedGlobal) {
+      setGlobalDelete(savedGlobal === "true")
+    }
+
+    if (savedMembers) {
+      try {
+        setMemberDeletes(JSON.parse(savedMembers))
+      } catch (e) {
+        console.error("Failed to parse member deletes", e)
+      }
+    }
+    setIsLoaded(true)
+  }, [])
+
+  // Save global delete when it changes
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem("settings_screenshot_global_delete", String(globalDelete))
+    }
+  }, [globalDelete, isLoaded])
+
+  // Save member deletes when they change
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem("settings_screenshot_member_deletes", JSON.stringify(memberDeletes))
+    }
+  }, [memberDeletes, isLoaded])
+
+  const getMemberDelete = (memberId: string) => {
+    return memberDeletes[memberId] !== undefined ? memberDeletes[memberId] : globalDelete
+  }
+
+  const filteredMembers = members.filter(member => {
     const fullName = member.name.toLowerCase()
-    return fullName.includes(searchQuery.toLowerCase())
+    const deleteStatus = getMemberDelete(member.id) ? "on" : "off"
+    const query = searchQuery.toLowerCase()
+    return fullName.includes(query) || deleteStatus.includes(query)
   })
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedMembers = filteredMembers.slice(startIndex, startIndex + itemsPerPage)
+
+  // Reset to first page when search changes
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    setCurrentPage(1)
+  }
 
   const handleMemberDeleteChange = (memberId: string, checked: boolean) => {
     setMemberDeletes(prev => ({
       ...prev,
       [memberId]: checked
     }))
-  }
-
-  const getMemberDelete = (memberId: string) => {
-    return memberDeletes[memberId] !== undefined ? memberDeletes[memberId] : globalDelete
   }
 
   return (
@@ -98,7 +148,7 @@ export default function ScreenshotDeletePage() {
                     type="text"
                     placeholder="Search members"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                   />
                 </div>
@@ -118,14 +168,23 @@ export default function ScreenshotDeletePage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-slate-200">
-                    {filteredMembers.length === 0 ? (
+                    {loading ? (
+                      <tr>
+                        <td colSpan={2} className="px-4 py-8 text-center text-sm text-slate-500">
+                          <div className="flex items-center justify-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Loading members...
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredMembers.length === 0 ? (
                       <tr>
                         <td colSpan={2} className="px-4 py-8 text-center text-sm text-slate-500">
                           No members found
                         </td>
                       </tr>
                     ) : (
-                      filteredMembers.map((member) => {
+                      paginatedMembers.map((member) => {
                         const memberDelete = getMemberDelete(member.id)
                         return (
                           <tr key={member.id} className="hover:bg-slate-50">
@@ -173,6 +232,34 @@ export default function ScreenshotDeletePage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination */}
+              {!loading && filteredMembers.length > 0 && (
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-slate-500">
+                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredMembers.length)} of {filteredMembers.length} members
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span className="text-sm text-slate-700">
+                      Page {currentPage} of {totalPages || 1}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
