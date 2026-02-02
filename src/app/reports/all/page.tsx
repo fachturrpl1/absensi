@@ -193,8 +193,8 @@ export default function AllReportsPage() {
                                     description={item.description}
                                     href={item.href}
                                     hideStar
-                                    target="_blank"
                                 />
+
                             ))}
                         </div>
                     </section>
