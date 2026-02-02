@@ -9,8 +9,7 @@ import {
   ArrowUpDown,
 } from "lucide-react"
 import {
-  DUMMY_MEMBER_SCREENSHOTS,
-  DUMMY_MEMBERS,
+  generateMemberScreenshots,
   MemberScreenshotItem,
 } from "@/lib/data/dummy-data"
 import { useSelectedMemberContext } from "../selected-member-context"
@@ -33,18 +32,18 @@ const formatDuration = (totalMinutes: number) => {
 const parseTimeForSort = (timeStr: string): number => {
   const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i)
   if (!match || !match[1] || !match[2] || !match[3]) return 0
-  
+
   let hours = parseInt(match[1], 10)
   const minutes = parseInt(match[2], 10)
   const period = match[3].toLowerCase()
-  
+
   // Convert to 24-hour format
   if (period === "pm" && hours !== 12) {
     hours += 12
   } else if (period === "am" && hours === 12) {
     hours = 0
   }
-  
+
   return hours * 60 + minutes // Return total minutes for easy comparison
 }
 
@@ -59,11 +58,11 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
     const timeB = parseTimeForSort(b.time)
     return timeA - timeB
   })
-  
+
   const blocks = []
   for (let i = 0; i < sorted.length; i += chunkSize) {
     const chunk = sorted.slice(i, i + chunkSize)
-    
+
     // Pastikan chunk selalu memiliki 6 item, jika kurang tambahkan "No activity" placeholder
     const paddedChunk = [...chunk]
     while (paddedChunk.length < chunkSize) {
@@ -77,17 +76,17 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
         screenCount: 0
       })
     }
-    
+
     const totalMinutes = chunk.reduce((sum, item) => sum + (item.minutes ?? 0), 0)
     const summary = `Total time worked: ${formatDuration(totalMinutes)}`
-    
+
     // Calculate 1-hour range from first item's start time
     const firstTimeStr = chunk[0]?.time.split(" - ")[0] ?? ""
     if (!firstTimeStr) {
       blocks.push({ label: chunk[0]?.time ?? `Block ${Math.floor(i / chunkSize) + 1}`, summary, items: paddedChunk })
       continue
     }
-    
+
     // Parse first time and add 1 hour for end time
     const parseTime = (timeStr: string): { hours: number; minutes: number; period: string } => {
       const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i)
@@ -99,7 +98,7 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
       if (period === 'am' && hours === 12) hours = 0
       return { hours, minutes, period: match[3] }
     }
-    
+
     const formatTime = (hours: number, minutes: number): string => {
       let displayHours = hours
       let period = 'am'
@@ -110,16 +109,16 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
       if (displayHours === 0) displayHours = 12
       return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`
     }
-    
+
     const firstTime = parseTime(firstTimeStr)
     let endHours = firstTime.hours + 1
     const endMinutes = firstTime.minutes
     if (endHours >= 24) endHours = endHours - 24
-    
+
     const startTimeFormatted = firstTimeStr
     const endTimeFormatted = formatTime(endHours, endMinutes)
     const label = `${startTimeFormatted} - ${endTimeFormatted}`
-    
+
     blocks.push({ label, summary, items: paddedChunk })
   }
 
@@ -133,9 +132,8 @@ interface DateGroupedBlocks {
 }
 
 export default function AllScreenshotsPage() {
-  const { selectedMemberId, dateRange } = useSelectedMemberContext()
-  const fallbackMemberId = DUMMY_MEMBERS[0]?.id ?? null
-  const activeMemberId = selectedMemberId ?? fallbackMemberId
+  const { selectedMemberId, selectedMember, dateRange } = useSelectedMemberContext()
+  const activeMemberId = selectedMemberId ?? selectedMember?.id ?? null
   const [modalOpen, setModalOpen] = useState(false)
   const [modalIndex, setModalIndex] = useState(0)
   const [isMounted, setIsMounted] = useState(false)
@@ -157,42 +155,42 @@ export default function AllScreenshotsPage() {
   const dateStatus = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    
+
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
-    
+
     const start = new Date(dateRange.startDate)
     start.setHours(0, 0, 0, 0)
     const end = new Date(dateRange.endDate)
     end.setHours(23, 59, 59, 999)
-    
+
     // Check if range is completely in the future (start > today and end > today)
     if (start > today && end > today) {
       return { isValid: false, isToday: false, isYesterday: false, isRange: false }
     }
-    
+
     // Check if range is more than 30 days ago (both start and end are more than 30 days ago)
     const thirtyDaysAgo = new Date(today)
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
     if (end < thirtyDaysAgo && start < thirtyDaysAgo) {
       return { isValid: false, isToday: false, isYesterday: false, isRange: false }
     }
-    
+
     // Check if start date is today (range is today)
     // end harus dalam range hari ini (00:00:00 sampai 23:59:59.999)
     const todayEnd = new Date(today)
     todayEnd.setHours(23, 59, 59, 999)
     const isToday = start.getTime() === today.getTime() && end.getTime() <= todayEnd.getTime()
-    
+
     // Check if start date is yesterday (range is yesterday)
     const yesterdayEnd = new Date(yesterday)
     yesterdayEnd.setHours(23, 59, 59, 999)
     const isYesterday = start.getTime() === yesterday.getTime() && end.getTime() <= yesterdayEnd.getTime()
-    
+
     // Check if it's a range (multiple days)
     const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
     const isRange = daysDiff > 1
-    
+
     return {
       isValid: true,
       isToday,
@@ -205,7 +203,7 @@ export default function AllScreenshotsPage() {
     // Jika masih loading, return empty array agar skeleton muncul
     if (isLoading) return []
     if (!activeMemberId || !dateStatus.isValid) return []
-    const baseItems = DUMMY_MEMBER_SCREENSHOTS[activeMemberId] ?? []
+    const baseItems = generateMemberScreenshots(activeMemberId)
 
     let blocks: Array<{ label: string; summary: string; items: MemberScreenshotItem[] }> = []
 
@@ -277,7 +275,7 @@ export default function AllScreenshotsPage() {
     // Filter out deleted screenshots untuk modal (tapi card tetap ditampilkan)
     return allItems.filter(item => !deletedScreenshots.has(item.id));
   }, [memberTimeBlocks, dateStatus, deletedScreenshots]);
-  
+
   const currentScreenshot = flattenedScreenshots[modalIndex]
 
   useEffect(() => {
@@ -368,23 +366,23 @@ export default function AllScreenshotsPage() {
     const originalPosition = document.body.style.position
     const originalWidth = document.body.style.width
     const originalTop = document.body.style.top
-    
+
     // Simpan scroll position sebelum mengubah style
     const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop
     scrollPositionRef.current = scrollY
-    
+
     // Hide scrollbar and prevent scrolling
     document.body.style.overflow = 'hidden'
     document.body.style.position = 'fixed'
     document.body.style.width = '100%'
     document.body.style.top = `-${scrollY}px`
     document.documentElement.style.overflow = 'hidden'
-    
+
     // Prevent touch move on mobile
     const preventScroll = (e: TouchEvent) => {
       e.preventDefault()
     }
-    
+
     document.body.addEventListener('touchmove', preventScroll, { passive: false })
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -406,7 +404,7 @@ export default function AllScreenshotsPage() {
       document.body.style.width = originalWidth
       document.body.style.top = originalTop
       document.documentElement.style.overflow = originalHtmlOverflow
-      
+
       // Kembalikan scroll position setelah style di-reset
       setTimeout(() => {
         window.scrollTo(0, scrollPositionRef.current)
@@ -548,14 +546,14 @@ export default function AllScreenshotsPage() {
                     itemIndex++
                     const isDeleted = deletedScreenshots.has(item.id)
                     return (
-                        <MemberScreenshotCard
-                          key={item.id}
-                          item={item}
-                          onImageClick={() => openModal(globalIndex)}
-                          onDelete={() => handleDeleteClick(item.id)}
-                          isDeleted={isDeleted}
-                          memberId={selectedMemberId || undefined}
-                        />
+                      <MemberScreenshotCard
+                        key={item.id}
+                        item={item}
+                        onImageClick={() => openModal(globalIndex)}
+                        onDelete={() => handleDeleteClick(item.id)}
+                        isDeleted={isDeleted}
+                        memberId={selectedMemberId || undefined}
+                      />
                     )
                   })}
                 </div>
@@ -581,22 +579,22 @@ export default function AllScreenshotsPage() {
               }
             `
           }} />
-          <div 
+          <div
             id="screenshot-modal-overlay"
-            className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center gap-4 p-8" 
-            style={{ 
-              position: 'fixed', 
-              top: 0, 
-              left: 0, 
-              right: 0, 
-              bottom: 0, 
-              width: '100vw', 
+            className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center gap-4 p-8"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
               height: '100vh',
               backgroundColor: 'rgba(0, 0, 0, 0.6)',
               backdropFilter: 'blur(2px)',
               overflow: 'hidden',
-              zIndex: 99999 
-            }} 
+              zIndex: 99999
+            }}
             onClick={closeModal}
           >
             {/* Tombol Previous - Kiri */}

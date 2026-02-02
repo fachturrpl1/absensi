@@ -17,16 +17,6 @@ interface OrganizationHeaderProps {
 export function OrganizationHeader({ activeTab }: OrganizationHeaderProps) {
     const tabs: Tab[] = [
         {
-            label: "COMPANY INFORMATION",
-            href: "/settings/organization/company-information",
-            active: activeTab === "company-information"
-        },
-        {
-            label: "SECURITY & LOG IN",
-            href: "/settings/organization/security-login",
-            active: activeTab === "security-login"
-        },
-        {
             label: "PROJECTS & TO-DOS",
             href: "/settings/project&task",
             active: activeTab === "projects-todos"
