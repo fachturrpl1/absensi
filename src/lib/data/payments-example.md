@@ -1,0 +1,205 @@
+Here’s a sample DUMMY_PAYMENTS array based on your PaymentEntry interface. This includes a variety of payment methods, statuses, and projects for realistic testing:
+
+// src/lib/data/dummy-data.ts
+
+export interface PaymentEntry {
+  id: string;
+  member: {
+    name: string;
+    avatar: string;
+    initials: string;
+    color: string;
+  };
+  amount: number;
+  method: 'PayPal' | 'Wise' | 'Bank Transfer' | 'Manual';
+  date: string; // ISO string
+  hours: number;
+  rate: number;
+  notes: string;
+  status: 'Completed' | 'Pending' | 'Failed';
+  project?: string;
+}
+
+export const DUMMY_PAYMENTS: PaymentEntry[] = [
+  {
+    id: '1',
+    member: { name: 'Alice Johnson', avatar: '/avatars/alice.png', initials: 'AJ', color: '#4F8A8B' },
+    amount: 400,
+    method: 'PayPal',
+    date: '2026-01-15T09:00:00Z',
+    hours: 20,
+    rate: 20,
+    notes: 'Weekly payment',
+    status: 'Completed',
+    project: 'Website Redesign',
+  },
+  {
+    id: '2',
+    member: { name: 'Bob Smith', avatar: '/avatars/bob.png', initials: 'BS', color: '#F9A826' },
+    amount: 300,
+    method: 'Wise',
+    date: '2026-01-16T10:00:00Z',
+    hours: 15,
+    rate: 20,
+    notes: 'First half of January',
+    status: 'Completed',
+    project: 'Mobile App',
+  },
+  {
+    id: '3',
+    member: { name: 'Carmen Lee', avatar: '/avatars/carmen.png', initials: 'CL', color: '#E36414' },
+    amount: 250,
+    method: 'Bank Transfer',
+    date: '2026-01-17T11:00:00Z',
+    hours: 10,
+    rate: 25,
+    notes: 'Urgent bug fixes',
+    status: 'Pending',
+    project: 'API Integration',
+  },
+  {
+    id: '4',
+    member: { name: 'David Kim', avatar: '/avatars/david.png', initials: 'DK', color: '#3A6EA5' },
+    amount: 500,
+    method: 'Manual',
+    date: '2026-01-18T12:00:00Z',
+    hours: 25,
+    rate: 20,
+    notes: 'Monthly salary',
+    status: 'Completed',
+    project: 'Backend Refactor',
+  },
+  {
+    id: '5',
+    member: { name: 'Eva Green', avatar: '/avatars/eva.png', initials: 'EG', color: '#A1C349' },
+    amount: 120,
+    method: 'PayPal',
+    date: '2026-01-19T13:00:00Z',
+    hours: 6,
+    rate: 20,
+    notes: 'Design sprint',
+    status: 'Failed',
+    project: 'Website Redesign',
+  },
+  {
+    id: '6',
+    member: { name: 'Frank Moore', avatar: '/avatars/frank.png', initials: 'FM', color: '#B83B5E' },
+    amount: 200,
+    method: 'Wise',
+    date: '2026-01-20T14:00:00Z',
+    hours: 8,
+    rate: 25,
+    notes: 'QA testing',
+    status: 'Completed',
+    project: 'Mobile App',
+  },
+  {
+    id: '7',
+    member: { name: 'Grace Lin', avatar: '/avatars/grace.png', initials: 'GL', color: '#40514E' },
+    amount: 350,
+    method: 'Bank Transfer',
+    date: '2026-01-21T15:00:00Z',
+    hours: 14,
+    rate: 25,
+    notes: 'Sprint review',
+    status: 'Pending',
+    project: 'API Integration',
+  },
+  {
+    id: '8',
+    member: { name: 'Henry Ford', avatar: '/avatars/henry.png', initials: 'HF', color: '#11999E' },
+    amount: 450,
+    method: 'Manual',
+    date: '2026-01-22T16:00:00Z',
+    hours: 18,
+    rate: 25,
+    notes: 'Consulting fee',
+    status: 'Completed',
+    project: 'Backend Refactor',
+  },
+  {
+    id: '9',
+    member: { name: 'Ivy Chen', avatar: '/avatars/ivy.png', initials: 'IC', color: '#6A0572' },
+    amount: 180,
+    method: 'PayPal',
+    date: '2026-01-23T17:00:00Z',
+    hours: 9,
+    rate: 20,
+    notes: 'UI updates',
+    status: 'Completed',
+    project: 'Website Redesign',
+  },
+  {
+    id: '10',
+    member: { name: 'Jack Lee', avatar: '/avatars/jack.png', initials: 'JL', color: '#F67280' },
+    amount: 220,
+    method: 'Wise',
+    date: '2026-01-24T18:00:00Z',
+    hours: 11,
+    rate: 20,
+    notes: 'Feature implementation',
+    status: 'Failed',
+    project: 'Mobile App',
+  },
+  {
+    id: '11',
+    member: { name: 'Karen White', avatar: '/avatars/karen.png', initials: 'KW', color: '#355C7D' },
+    amount: 320,
+    method: 'Bank Transfer',
+    date: '2026-01-25T19:00:00Z',
+    hours: 16,
+    rate: 20,
+    notes: 'Documentation',
+    status: 'Completed',
+    project: 'API Integration',
+  },
+  {
+    id: '12',
+    member: { name: 'Leo Brown', avatar: '/avatars/leo.png', initials: 'LB', color: '#C06C84' },
+    amount: 500,
+    method: 'Manual',
+    date: '2026-01-26T20:00:00Z',
+    hours: 20,
+    rate: 25,
+    notes: 'Retainer',
+    status: 'Pending',
+    project: 'Backend Refactor',
+  },
+  {
+    id: '13',
+    member: { name: 'Mona Patel', avatar: '/avatars/mona.png', initials: 'MP', color: '#6C5B7B' },
+    amount: 150,
+    method: 'PayPal',
+    date: '2026-01-27T21:00:00Z',
+    hours: 7.5,
+    rate: 20,
+    notes: 'Bug fixes',
+    status: 'Completed',
+    project: 'Website Redesign',
+  },
+  {
+    id: '14',
+    member: { name: 'Nina Gomez', avatar: '/avatars/nina.png', initials: 'NG', color: '#355C7D' },
+    amount: 280,
+    method: 'Wise',
+    date: '2026-01-28T22:00:00Z',
+    hours: 14,
+    rate: 20,
+    notes: 'Sprint planning',
+    status: 'Completed',
+    project: 'Mobile App',
+  },
+  {
+    id: '15',
+    member: { name: 'Oscar Diaz', avatar: '/avatars/oscar.png', initials: 'OD', color: '#F8B195' },
+    amount: 360,
+    method: 'Bank Transfer',
+    date: '2026-01-29T23:00:00Z',
+    hours: 12,
+    rate: 30,
+    notes: 'Database optimization',
+    status: 'Completed',
+    project: 'API Integration',
+  },
+];
+You can adjust names, avatars, and other fields as needed for your project. This dataset covers all payment methods, statuses, and projects for thorough UI and filter testing. Let me know if you need more entries or further customization!

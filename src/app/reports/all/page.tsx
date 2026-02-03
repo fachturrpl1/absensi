@@ -193,8 +193,8 @@ export default function AllReportsPage() {
                                     description={item.description}
                                     href={item.href}
                                     hideStar
-                                    target="_blank"
                                 />
+
                             ))}
                         </div>
                     </section>
@@ -237,7 +237,7 @@ function FeaturedReportsSection() {
 
     const customizedReports = DUMMY_CUSTOM_REPORTS.filter(r => featuredReportIds.includes(r.id))
 
-    if (customizedReports.length === 0) return null
+    // Keep section visible even when no customized reports
 
     return (
         <section className="space-y-6">
@@ -249,51 +249,57 @@ function FeaturedReportsSection() {
             </div>
 
             {/* Customized Report Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {customizedReports.map((report) => (
-                    <div key={report.id} className="group flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm hover:border-gray-300 transition-all cursor-pointer">
-                        <div className="flex flex-col gap-1">
-                            <h3 className="font-semibold text-gray-900 group-hover:text-gray-900 transition-colors">{report.name}</h3>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                                {report.type}
-                            </span>
+            {customizedReports.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {customizedReports.map((report) => (
+                        <div key={report.id} className="group flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm hover:border-gray-300 transition-all cursor-pointer">
+                            <div className="flex flex-col gap-1">
+                                <h3 className="font-semibold text-gray-900 group-hover:text-gray-900 transition-colors">{report.name}</h3>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                    {report.type}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-gray-400 hover:text-yellow-500"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        const newIds = featuredReportIds.filter(id => id !== report.id)
+                                        setFeaturedReportIds(newIds)
+                                        localStorage.setItem("featured_report_ids", JSON.stringify(newIds))
+                                        toast.success("Removed from dashboard")
+                                    }}
+                                    title="Unfavorite (Remove from dashboard)"
+                                >
+                                    <StarOff className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-gray-400 hover:text-red-500"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        // For demo: Remove from featured view AND show toast
+                                        const newIds = featuredReportIds.filter(id => id !== report.id)
+                                        setFeaturedReportIds(newIds)
+                                        localStorage.setItem("featured_report_ids", JSON.stringify(newIds))
+                                        toast.success("Report moved to trash")
+                                    }}
+                                    title="Move to trash"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-gray-400 hover:text-yellow-500"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    const newIds = featuredReportIds.filter(id => id !== report.id)
-                                    setFeaturedReportIds(newIds)
-                                    localStorage.setItem("featured_report_ids", JSON.stringify(newIds))
-                                    toast.success("Removed from dashboard")
-                                }}
-                                title="Unfavorite (Remove from dashboard)"
-                            >
-                                <StarOff className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-gray-400 hover:text-red-500"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    // For demo: Remove from featured view AND show toast
-                                    const newIds = featuredReportIds.filter(id => id !== report.id)
-                                    setFeaturedReportIds(newIds)
-                                    localStorage.setItem("featured_report_ids", JSON.stringify(newIds))
-                                    toast.success("Report moved to trash")
-                                }}
-                                title="Move to trash"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </Button>
-                        </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="w-full rounded-lg border border-dashed border-gray-300 bg-white p-6 text-center text-gray-500">
+                    <p className="text-sm">No customized reports yet.</p>
+                </div>
+            )}
         </section>
     )
 }

@@ -10,6 +10,16 @@ import { Search, Pencil, Plus, Upload } from "lucide-react"
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
 } from "@/components/ui/dialog"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Switch } from "@/components/ui/switch"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
@@ -68,6 +78,10 @@ export default function ProjectsPage() {
     const [addOpen, setAddOpen] = useState(false)
     const [importOpen, setImportOpen] = useState(false)
     const [importFile, setImportFile] = useState<File | null>(null)
+
+    // delete confirm state
+    const [deleteOpen, setDeleteOpen] = useState(false)
+    const [deleteTarget, setDeleteTarget] = useState<Project | null>(null)
 
     // add project form state
     const [form, setForm] = useState<NewProjectForm>({
@@ -151,6 +165,17 @@ export default function ProjectsPage() {
 
     const toggleSelect = (id: string) => {
         setSelectedIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))
+    }
+
+    const handleDelete = () => {
+        if (deleteTarget) {
+            setData(prev => prev.filter(p => p.id !== deleteTarget.id))
+            setDeleteOpen(false)
+            setDeleteTarget(null)
+            if (selectedIds.includes(deleteTarget.id)) {
+                setSelectedIds(prev => prev.filter(id => id !== deleteTarget.id))
+            }
+        }
     }
 
     return (
@@ -336,7 +361,15 @@ export default function ProjectsPage() {
                                                                     Transfer
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuSeparator />
-                                                                <DropdownMenuItem className="text-destructive">Delete project</DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    className="text-destructive focus:text-destructive"
+                                                                    onSelect={() => {
+                                                                        setDeleteTarget(p)
+                                                                        setDeleteOpen(true)
+                                                                    }}
+                                                                >
+                                                                    Delete project
+                                                                </DropdownMenuItem>
                                                             </>
                                                         ) : (
                                                             <>
@@ -354,7 +387,15 @@ export default function ProjectsPage() {
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem disabled>Transfer</DropdownMenuItem>
                                                                 <DropdownMenuSeparator />
-                                                                <DropdownMenuItem className="text-destructive">Delete project</DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    className="text-destructive focus:text-destructive"
+                                                                    onSelect={() => {
+                                                                        setDeleteTarget(p)
+                                                                        setDeleteOpen(true)
+                                                                    }}
+                                                                >
+                                                                    Delete project
+                                                                </DropdownMenuItem>
                                                             </>
 
                                                         )}
@@ -460,6 +501,28 @@ export default function ProjectsPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
+
+                    {/* Delete Confirmation Dialog */}
+                    <AlertDialog open={deleteOpen} onOpenChange={(o) => { setDeleteOpen(o); if (!o) setDeleteTarget(null) }}>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the project
+                                    {deleteTarget && <span className="font-semibold text-foreground"> {deleteTarget.name}</span>} and remove all associated data.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={handleDelete}
+                                    className="bg-destructive text-white hover:bg-destructive/90"
+                                >
+                                    Delete
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
 
                     <Dialog open={importOpen} onOpenChange={(o) => { setImportOpen(o); if (!o) setImportFile(null) }}>
                         <DialogContent className="max-w-xl">
