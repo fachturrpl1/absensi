@@ -33,10 +33,10 @@ import {
 } from "@/action/members"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 import { getOrganizationUsers, getAllUsersNotRegistered } from "@/action/users"
-import FormSkeleton from "../form-skeleton"
+import FormSkeleton from "@/components/common/form-skeleton"
 import { createRfidCard, updateRfidCard } from "@/action/rfid_card"
 import { createClient } from "@/utils/supabase/client"
-import { Can } from "../can"
+import { Can } from "@/components/common/can"
 import { useGroups } from "@/hooks/use-groups"
 import { usePositions } from "@/hooks/use-positions"
 import { EMPLOYMENT_STATUS_OPTIONS, CARD_TYPE_OPTIONS } from "@/constants"
@@ -77,7 +77,7 @@ export default function MembersForm({
     const [users, setUsers] = React.useState<IUser[]>([])
     const [loadingForm, setLoadingForm] = React.useState(true)
     const [organizationId, _setOrganizationId] = React.useState<string>("")
-    
+
     // Use React Query hooks instead of manual state management
     const { data: groups = [], isLoading: groupsLoading } = useGroups()
     const { data: positions = [], isLoading: positionsLoading } = usePositions()
