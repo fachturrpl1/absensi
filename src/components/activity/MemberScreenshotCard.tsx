@@ -15,7 +15,7 @@ interface MemberScreenshotCardProps {
 export function MemberScreenshotCard({ item, onImageClick, onDelete, isDeleted = false, memberId }: MemberScreenshotCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [shouldBlur, setShouldBlur] = useState(false)
-  
+
   // Get blur setting for this member and listen for changes
   useEffect(() => {
     if (typeof window === "undefined" || !memberId) {
@@ -130,9 +130,9 @@ export function MemberScreenshotCard({ item, onImageClick, onDelete, isDeleted =
             onClick={onImageClick}
             className="relative mb-2 aspect-video w-full overflow-hidden rounded border border-slate-200 bg-slate-50 text-left"
           >
-            <img 
-              src={item.image} 
-              alt="Screenshot" 
+            <img
+              src={item.image}
+              alt="Screenshot"
               className={`h-full w-full object-cover transition-all duration-200 ${shouldBlur ? "blur-md" : ""}`}
               style={{
                 filter: shouldBlur ? "blur(8px)" : "none",
@@ -148,19 +148,21 @@ export function MemberScreenshotCard({ item, onImageClick, onDelete, isDeleted =
         </div>
         <div className="mb-2 flex items-center justify-between text-xs">
           <span className="text-slate-600">{item.time}</span>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete?.()
-            }}
-            className="text-slate-400 hover:text-red-600 transition-colors"
-            aria-label="Delete screenshot"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
+              className="text-slate-400 hover:text-red-600 transition-colors"
+              aria-label="Delete screenshot"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          )}
         </div>
         <div className="space-y-1 relative overflow-visible">
-          <div 
+          <div
             className="h-2 w-full rounded-full bg-slate-200 relative overflow-visible"
             onMouseEnter={() => !showNoActivity && setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
@@ -177,18 +179,18 @@ export function MemberScreenshotCard({ item, onImageClick, onDelete, isDeleted =
           {isHovered && !showNoActivity && (
             <>
               {/* Vertical line connecting tooltip to progress bar */}
-              <div 
+              <div
                 className="absolute left-1/2 transform -translate-x-1/2 pointer-events-none z-40"
-                style={{ 
+                style={{
                   top: '100%',
                   height: '8px',
                   width: '1px',
                   backgroundColor: '#4b5563'
                 }}
               />
-              <div 
+              <div
                 className="absolute px-3 py-2 bg-gray-800 text-white text-xs rounded shadow-lg z-50 min-w-[180px] pointer-events-none opacity-90"
-                style={{ 
+                style={{
                   top: 'calc(100% + 8px)',
                   left: '50%',
                   transform: 'translateX(-50%)'
