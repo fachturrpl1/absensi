@@ -7,30 +7,16 @@ import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_PAYMENTS, DUMMY_PROJECTS } from "@/li
 import { Button } from "@/components/ui/button"
 import { Download, Search, Filter, CreditCard, Clock, CheckCircle } from "lucide-react"
 import { format } from "date-fns"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
 import { PaymentsFilterSidebar } from "@/components/report/PaymentsFilterSidebar"
-import { AuditLogAuthorCell } from "@/components/report/AuditLogAuthorCell"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { DataTable } from "@/components/tables/data-table"
+import { columns } from "./columns"
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
-}
-
-const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-        case 'Completed':
-            return "bg-green-100 text-green-700 border-green-200"
-        case 'Pending':
-            return "bg-yellow-100 text-yellow-700 border-yellow-200"
-        case 'Failed':
-            return "bg-red-100 text-red-700 border-red-200"
-        default:
-            return "bg-gray-100 text-gray-700 border-gray-200"
-    }
 }
 
 export default function PaymentsPage() {
@@ -40,8 +26,6 @@ export default function PaymentsPage() {
         startDate: new Date(2026, 0, 15),
         endDate: new Date(2026, 0, 30)
     })
-    const [page, setPage] = useState(1)
-    const pageSize = 10
 
     // Local Filters
     const [searchQuery, setSearchQuery] = useState("")
@@ -85,7 +69,7 @@ export default function PaymentsPage() {
                     data = data.filter(item => item.member.name === selectedMember.name)
                 }
             } else if (selectedFilter.type === 'teams') {
-                // Simple implementation
+                // Simple implementation for teams if needed
             }
         }
 
@@ -136,34 +120,39 @@ export default function PaymentsPage() {
                 label: "Total Paid",
                 value: formatCurrency(totalPaid),
                 icon: CheckCircle,
-                className: "bg-green-50 border-green-200 text-green-700"
+                className: "bg-gray-50 border-gray-200 text-gray-700"
             },
             {
                 label: "Pending Payments",
                 value: formatCurrency(pendingAmount),
                 icon: Clock,
-                className: "bg-yellow-50 border-yellow-200 text-yellow-700"
+                className: "bg-gray-50 border-gray-200 text-gray-700"
             },
             {
                 label: "Work Summary",
                 value: `${totalHours.toFixed(1)} h`,
                 subValue: `Avg Rate: ${formatCurrency(avgRate)}/h`,
                 icon: CreditCard,
-                className: "bg-blue-50 border-blue-200 text-blue-700"
+                className: "bg-gray-50 border-gray-200 text-gray-700"
             },
         ]
     }, [filteredData])
 
-    // Pagination
-    const paginatedData = useMemo(() => {
-        const start = (page - 1) * pageSize
-        return filteredData.slice(start, start + pageSize)
-    }, [filteredData, page])
-
-    const totalPages = Math.ceil(filteredData.length / pageSize)
-
     const handleExport = () => {
-        console.log("Exporting Payments Report", filteredData)
+        // Implementation for CSV export would go here
+        // For now, logging to console
+        console.log("Exporting filtered data:", filteredData)
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + ["ID,Member,Date,Amount,Status,Method,Project"].join(",") + "\n"
+            + filteredData.map(row =>
+                `${row.id},${row.member.name},${row.date},${row.amount},${row.status},${row.method},${row.project}`
+            ).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "payments_report.csv");
+        document.body.appendChild(link);
+        link.click();
     }
 
     return (
@@ -225,109 +214,15 @@ export default function PaymentsPage() {
                 ))}
             </div>
 
-            {/* Table Container */}
+            {/* Data Table */}
             <div className="bg-white border rounded-lg shadow-sm">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-600 font-medium border-b">
-                            <tr>
-                                <th className="p-4 w-48">Member</th>
-                                <th className="p-4 w-40">Project</th>
-                                <th className="p-4 w-32">Date Paid</th>
-                                <th className="p-4 w-32">Method</th>
-                                <th className="p-4 text-right w-24">Hours</th>
-                                <th className="p-4 text-right w-24">Rate</th>
-                                <th className="p-4 text-right w-32">Amount</th>
-                                <th className="p-4 w-32">Status</th>
-                                <th className="p-4">Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {paginatedData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={9} className="p-8 text-center text-gray-500">
-                                        No payments found
-                                    </td>
-                                </tr>
-                            ) : (
-                                paginatedData.map((payment) => (
-                                    <tr
-                                        key={payment.id}
-                                        className="hover:bg-gray-50/50 transition-colors"
-                                    >
-                                        <td className="p-4 align-middle">
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <div className="inline-flex cursor-pointer">
-                                                        <AuditLogAuthorCell
-                                                            author={{
-                                                                ...payment.member,
-                                                                avatarUrl: payment.member.avatar,
-                                                                // Fallback if styling is removed/placeholder
-                                                                color: payment.member.color === 'placeholder' ? undefined : payment.member.color
-                                                            }}
-                                                            showName={true}
-                                                            showRing={true}
-                                                            avatarClassName="ring-2 ring-white"
-                                                            className="bg-white"
-                                                        />
-                                                    </div>
-                                                </TooltipTrigger>
-                                                <TooltipContent className="bg-gray-900 text-white border-0">
-                                                    <p>{payment.member.name}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </td>
-                                        <td className="p-4 align-middle text-gray-900 font-medium">
-                                            {payment.project || "—"}
-                                        </td>
-                                        <td className="p-4 align-middle text-gray-600">
-                                            {format(new Date(payment.date), 'MMM d, yyyy')}
-                                        </td>
-                                        <td className="p-4 align-middle text-gray-600">
-                                            {payment.method}
-                                        </td>
-                                        <td className="p-4 align-middle text-right text-gray-900">
-                                            {payment.hours.toFixed(1)} h
-                                        </td>
-                                        <td className="p-4 align-middle text-right text-gray-600">
-                                            {formatCurrency(payment.rate)}
-                                        </td>
-                                        <td className="p-4 align-middle text-right font-bold text-gray-900">
-                                            {formatCurrency(payment.amount)}
-                                        </td>
-                                        <td className="p-4 align-middle">
-                                            <span className={cn(
-                                                "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
-                                                getStatusBadgeColor(payment.status)
-                                            )}>
-                                                {payment.status}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 align-middle text-gray-500 truncate max-w-xs">
-                                            {payment.notes}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Pagination */}
-                <div className="border-t">
-                    <PaginationFooter
-                        page={page}
-                        totalPages={totalPages}
-                        onPageChange={setPage}
-                        from={paginatedData.length > 0 ? (page - 1) * pageSize + 1 : 0}
-                        to={Math.min(page * pageSize, filteredData.length)}
-                        total={filteredData.length}
-                        pageSize={pageSize}
-                        onPageSizeChange={() => { }}
-                        className="bg-transparent shadow-none border-none"
-                    />
-                </div>
+                <DataTable
+                    columns={columns}
+                    data={filteredData}
+                    showColumnToggle={false}
+                    showFilters={false}
+                    showPagination={true}
+                />
             </div>
 
             <PaymentsFilterSidebar
@@ -335,6 +230,6 @@ export default function PaymentsPage() {
                 onOpenChange={setFilterSidebarOpen}
                 onApply={handleSidebarApply}
             />
-        </div>
+        </div >
     )
 }
