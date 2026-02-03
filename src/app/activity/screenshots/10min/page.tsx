@@ -24,7 +24,8 @@ import { MemberScreenshotCard } from "@/components/activity/MemberScreenshotCard
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ScreenshotCardSkeleton } from "@/components/activity/ScreenshotCardSkeleton"
 import { Skeleton } from "@/components/ui/skeleton"
-// import { ActivityDialog } from "@/components/activity/ActivityDialog"
+import { useAuthStore } from "@/store/user-store"
+
 
 const formatDuration = (totalMinutes: number) => {
   const hours = Math.floor(totalMinutes / 60)
@@ -136,6 +137,8 @@ export default function Every10MinPage() {
   const router = useRouter()
   const { selectedMemberId, selectedMember, dateRange } = useSelectedMemberContext()
   const activeMemberId = selectedMemberId ?? selectedMember?.id ?? null
+  const { userOrganizations } = useAuthStore()
+  const currentMemberId = userOrganizations?.[0]?.id?.toString()
   const [modalOpen, setModalOpen] = useState(false)
   const [modalIndex, setModalIndex] = useState(0)
   const [isMounted, setIsMounted] = useState(false)
@@ -144,6 +147,38 @@ export default function Every10MinPage() {
   // State untuk dialog konfirmasi hapus
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [screenshotToDelete, setScreenshotToDelete] = useState<string | null>(null)
+  // State permission delete
+  const [canDelete, setCanDelete] = useState(true)
+
+  // Load delete permission from localStorage based on CURRENT USER (Actor)
+  useEffect(() => {
+    if (!currentMemberId) return
+
+    const savedGlobal = localStorage.getItem("settings_screenshot_global_delete")
+    const savedMembers = localStorage.getItem("settings_screenshot_member_deletes")
+
+    let isDeleteEnabled = true // Default to true if no settings
+
+    // Check global first
+    if (savedGlobal !== null) {
+      isDeleteEnabled = savedGlobal === "true"
+    }
+
+    // Check individual override
+    if (savedMembers) {
+      try {
+        const memberDeletes = JSON.parse(savedMembers)
+        if (memberDeletes[currentMemberId] !== undefined) {
+          isDeleteEnabled = memberDeletes[currentMemberId]
+        }
+      } catch (e) {
+        console.error("Failed to parse member deletes", e)
+      }
+    }
+
+    setCanDelete(isDeleteEnabled)
+  }, [currentMemberId])
+
   // State untuk loading
   const [isLoading, setIsLoading] = useState(true)
   // Ref untuk track apakah ini mount pertama kali
@@ -1249,7 +1284,7 @@ export default function Every10MinPage() {
                         key={item.id}
                         item={item}
                         onImageClick={() => openModal(globalIndex)}
-                        onDelete={() => handleDeleteClick(item.id)}
+                        onDelete={canDelete ? () => handleDeleteClick(item.id) : undefined}
                         isDeleted={isDeleted}
                         memberId={activeMemberId || undefined}
                       />

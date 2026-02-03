@@ -16,7 +16,7 @@ const sidebarItems: { key: SidebarItemKey; label: string; href: string }[] = [
 
 export function PoliciesSidebar({ activeItem }: PoliciesSidebarProps) {
     return (
-        <aside className="w-64 flex-shrink-0 py-6 pr-6">
+        <aside className="w-64 flex-shrink-0 py-6 pr-6 border-r border-slate-200">
             <nav className="flex flex-col gap-1">
                 {sidebarItems.map((item) => (
                     <div key={item.key} className="flex items-center">
