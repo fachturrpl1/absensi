@@ -133,27 +133,27 @@ export default function AnalyticsPage() {
         });
         setDeptMemberCounts(counts);
 
-      // Fetch attendance records using secure API route (server-side filtering)
-      const toYMD = (d: Date) => format(d, 'yyyy-MM-dd');
-      const params = new URLSearchParams();
-      params.set('organizationId', String(orgId));
-      params.set('page', '1');
-      params.set('limit', '1000');
-      params.set('dateFrom', toYMD(dateRange.from));
-      params.set('dateTo', toYMD(dateRange.to));
+        // Fetch attendance records using secure API route (server-side filtering)
+        const toYMD = (d: Date) => format(d, 'yyyy-MM-dd');
+        const params = new URLSearchParams();
+        params.set('organizationId', String(orgId));
+        params.set('page', '1');
+        params.set('limit', '1000');
+        params.set('dateFrom', toYMD(dateRange.from));
+        params.set('dateTo', toYMD(dateRange.to));
 
-      const response = await fetch(`/api/attendance-records?${params.toString()}`, {
-        method: 'GET',
-        credentials: 'same-origin',
-      });
-      const result = await response.json();
+        const response = await fetch(`/api/attendance-records?${params.toString()}`, {
+          method: 'GET',
+          credentials: 'same-origin',
+        });
+        const result = await response.json();
 
-      if (result.success && result.data) {
-        setAllRecords(result.data);
-      } else {
-        console.error('Failed to fetch attendance records:', result.message);
-        setAllRecords([]);
-      }
+        if (result.success && result.data) {
+          setAllRecords(result.data);
+        } else {
+          console.error('Failed to fetch attendance records:', result.message);
+          setAllRecords([]);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { DataTable } from "@/components/data-table-move"
+import { DataTable } from "@/components/tables/data-table-move"
 import { ColumnDef, useReactTable, getCoreRowModel, getPaginationRowModel, RowSelectionState } from "@tanstack/react-table"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import { Checkbox } from "@/components/ui/checkbox"

@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useAuthStore } from "@/store/user-store"
 import { useOrgStore } from "@/store/org-store"
 import { getInitialUserData } from "@/action/bootstrap"
+import { getUserOrganizations } from "@/action/user-organizations"
 
 import { logger } from '@/lib/logger';
 
@@ -18,6 +19,7 @@ let globalLoadPromise: Promise<void> | null = null;
 export function PermissionInitializer({ userId }: { userId: string }) {
   const setPermissions = useAuthStore((state) => state.setPermissions)
   const setRole = useAuthStore((state) => state.setRole)
+  const setUserOrganizations = useAuthStore((state) => state.setUserOrganizations)
   const setOrganizationId = useOrgStore((state) => state.setOrganizationId)
 
   // Module-level variable to deduplicate across multiple mounts
@@ -64,8 +66,12 @@ export function PermissionInitializer({ userId }: { userId: string }) {
       // 3. Start Server Fetch (wrapped in a shared promise)
       globalLoadPromise = (async () => {
         try {
+          console.log("[PermissionInitializer] Starting bootstrap for userId:", userId);
           // CALL MASTER BOOTSTRAP ACTION
-          const bootstrapData = await getInitialUserData(userId)
+          const [bootstrapData, userOrgs] = await Promise.all([
+            getInitialUserData(userId),
+            getUserOrganizations(userId)
+          ])
 
           // 1. Set Permissions
           setPermissions(bootstrapData.permissions)
@@ -88,6 +94,10 @@ export function PermissionInitializer({ userId }: { userId: string }) {
           useOrgStore.getState().setOrganizationStatus(bootstrapData.organizationStatus)
           logger.debug("✅ Organization Status loaded:", bootstrapData.organizationStatus)
 
+          // 5. Set User Organizations
+          setUserOrganizations(userOrgs)
+          logger.debug("✅ User Organizations loaded:", userOrgs)
+
         } catch (error) {
           logger.error("❌ Failed to load bootstrap data:", error)
           setPermissions([])
@@ -104,7 +114,7 @@ export function PermissionInitializer({ userId }: { userId: string }) {
     if (userId) {
       loadPermissionsAndRole()
     }
-  }, [userId, setPermissions, setRole, setOrganizationId])
+  }, [userId, setPermissions, setRole, setUserOrganizations, setOrganizationId])
 
   return null
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { PaginationFooter } from "@/components/pagination-footer"
+import { PaginationFooter } from "./pagination-footer"
 import {
   flexRender,
   Table as TanstackTable,

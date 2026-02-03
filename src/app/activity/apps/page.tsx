@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect } from "react"
 import { DUMMY_APP_ACTIVITIES, DUMMY_MEMBERS, DUMMY_PROJECTS, DUMMY_TEAMS, type AppActivityEntry } from "@/lib/data/dummy-data"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useTimezone } from "@/components/timezone-provider"
+import { useTimezone } from "@/components/providers/timezone-provider"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { DateRange, SelectedFilter } from "@/components/insights/types"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -13,7 +13,7 @@ export default function AppsPage() {
   const searchParams = useSearchParams()
   const memberIdFromUrl = searchParams.get("memberId")
   const timezone = useTimezone()
-  
+
   // Get initial memberId: URL > sessionStorage > default
   const getInitialMemberId = (): string => {
     if (typeof window !== "undefined") {
@@ -34,7 +34,7 @@ export default function AppsPage() {
     all: false,
     id: getInitialMemberId(),
   })
-  
+
   // Update filter when memberId from URL changes
   useEffect(() => {
     if (memberIdFromUrl && memberIdFromUrl !== selectedFilter.id) {
@@ -57,7 +57,7 @@ export default function AppsPage() {
       }
     }
   }, [memberIdFromUrl, selectedFilter.id])
-  
+
   // Sync selectedFilter changes to sessionStorage and URL
   const handleFilterChange = (filter: SelectedFilter) => {
     // Jika all: true (tidak seharusnya terjadi karena hideAllOption), ubah ke member pertama
@@ -77,7 +77,7 @@ export default function AppsPage() {
       }
       return
     }
-    
+
     setSelectedFilter(filter)
     if (!filter.all && filter.id && typeof window !== "undefined") {
       sessionStorage.setItem("appSelectedMemberId", filter.id)
@@ -88,7 +88,7 @@ export default function AppsPage() {
   }
 
   const selectedMemberId = selectedFilter.all ? null : (selectedFilter.id ?? null)
-  
+
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -227,7 +227,7 @@ export default function AppsPage() {
             ) : (
               groupedData.map((group) => (
                 <React.Fragment key={group.date}>
-                 
+
                   {/* Data Rows */}
                   {group.items.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50">
@@ -247,4 +247,3 @@ export default function AppsPage() {
   )
 }
 
- 

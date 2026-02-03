@@ -1,4 +1,4 @@
-import TopBar from "../top-bar";
+import TopBar from "@/components/layout/top-bar";
 
 interface ContentLayoutProps {
   title: string;

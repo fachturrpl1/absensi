@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { MembersTable } from "@/components/members-table"
+import { MembersTable } from "@/components/tables/members-table"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useQueryClient } from "@tanstack/react-query"

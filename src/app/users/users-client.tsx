@@ -2,7 +2,7 @@
 
 import React from "react"
 import { ColumnDef } from "@tanstack/react-table"
-import { DataTable } from "@/components/data-table"
+import { DataTable } from "@/components/tables/data-table"
 import { Check, X, Edit, Trash } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { IUser } from "@/interface"

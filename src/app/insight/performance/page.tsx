@@ -5,7 +5,7 @@ import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import { InsightsRightSidebar } from "@/components/insights/InsightsRightSidebar"
 import type { DateRange, PickerItem, SelectedFilter } from "@/components/insights/types"
 import { DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
-import { useTimezone } from "@/components/timezone-provider"
+import { useTimezone } from "@/components/providers/timezone-provider"
 import { Info } from "lucide-react"
 import {
   DUMMY_UTILIZATION_DATA,

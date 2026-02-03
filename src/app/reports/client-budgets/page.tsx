@@ -7,8 +7,8 @@ import { DUMMY_CLIENT_BUDGETS, DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dum
 import { Button } from "@/components/ui/button"
 import { Download, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { PaginationFooter } from "@/components/pagination-footer"
-import { useTimezone } from "@/components/timezone-provider"
+import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { useTimezone } from "@/components/providers/timezone-provider"
 import { cn } from "@/lib/utils"
 
 export default function ClientBudgetsPage() {

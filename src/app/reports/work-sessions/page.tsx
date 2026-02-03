@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Download, Search, SlidersHorizontal, Clock, Coffee, Activity } from "lucide-react"
 import { format } from "date-fns"
 import { formatHoursForExport } from "@/lib/export-utils"
-import { useTimezone } from "@/components/timezone-provider"
+import { useTimezone } from "@/components/providers/timezone-provider"
 import { Input } from "@/components/ui/input"
-import { PaginationFooter } from "@/components/pagination-footer"
+import { PaginationFooter } from "@/components/tables/pagination-footer"
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,

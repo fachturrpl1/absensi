@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { ChevronsUpDown, Building2, Plus, Check } from "lucide-react";
+import { ChevronsUpDown, Building2, Plus, Check, Command } from "lucide-react";
 import Link from "next/link";
 import { useAuthStore } from "@/store/user-store";
+import { useOrgStore } from "@/store/org-store";
 
 import {
   DropdownMenu,
@@ -23,19 +24,31 @@ import {
 export function OrganizationSwitcher() {
   const { isMobile } = useSidebar();
   const { userOrganizations } = useAuthStore();
-  
-  // We can use a local state or store state for the selected org.
-  // For now, let's default to the first one or a placeholder.
-  // In a real app, this might be persisted or come from the URL/current sessionContext.
-  const [selectedOrg, setSelectedOrg] = React.useState<typeof userOrganizations[0] | null>(
-    userOrganizations?.[0] || null
-  );
+  const { organizationId, setOrganizationId } = useOrgStore();
 
+  // Find the active organization based on the store's organizationId
+  const activeOrg = React.useMemo(() => {
+    return userOrganizations?.find(org => org.organization_id === organizationId) || userOrganizations?.[0] || null;
+  }, [userOrganizations, organizationId]);
+
+  const [selectedOrg, setSelectedOrg] = React.useState<typeof userOrganizations[0] | null>(activeOrg);
+
+  // Sync state when activeOrg changes (e.g. data loaded)
   React.useEffect(() => {
-    if (userOrganizations?.length > 0 && !selectedOrg) {
-        setSelectedOrg(userOrganizations[0]);
+    if (activeOrg && activeOrg.id !== selectedOrg?.id) {
+      setSelectedOrg(activeOrg);
     }
-  }, [userOrganizations, selectedOrg]);
+  }, [activeOrg, selectedOrg]);
+
+  // Handle switching organization
+  const handleSwitchOrg = (org: typeof userOrganizations[0]) => {
+    setSelectedOrg(org);
+    // Update global store
+    setOrganizationId(org.organization_id, org.organization_name);
+
+    // Optional: Force reload or trigger server action if switching requires backend validation/session update
+    // window.location.reload(); 
+  };
 
 
   return (
@@ -47,8 +60,8 @@ export function OrganizationSwitcher() {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Building2 className="size-4" />
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                <Command className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">
@@ -73,7 +86,7 @@ export function OrganizationSwitcher() {
             {userOrganizations?.map((org, index) => (
               <DropdownMenuItem
                 key={org.id || index}
-                onClick={() => setSelectedOrg(org)}
+                onClick={() => handleSwitchOrg(org)}
                 className="gap-2 p-2"
               >
                 <div className="flex size-6 items-center justify-center rounded-sm border">
@@ -85,12 +98,12 @@ export function OrganizationSwitcher() {
             ))}
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2 p-2" asChild>
-                <Link href="/organization/new">
-                    <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                        <Plus className="size-4" />
-                    </div>
-                    <div className="font-medium text-muted-foreground">Add Organization</div>
-                </Link>
+              <Link href="/organization/new">
+                <div className="flex size-6 items-center justify-center rounded-md border bg-background">
+                  <Plus className="size-4" />
+                </div>
+                <div className="font-medium text-muted-foreground">Add Organization</div>
+              </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

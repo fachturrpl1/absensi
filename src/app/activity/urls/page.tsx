@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect } from "react"
 import { Plus, Minus } from "lucide-react"
 import { DUMMY_URL_ACTIVITIES, DUMMY_MEMBERS, DUMMY_PROJECTS, DUMMY_TEAMS, type UrlActivityEntry } from "@/lib/data/dummy-data"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useTimezone } from "@/components/timezone-provider"
+import { useTimezone } from "@/components/providers/timezone-provider"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { DateRange, SelectedFilter } from "@/components/insights/types"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -14,7 +14,7 @@ export default function UrlsPage() {
   const searchParams = useSearchParams()
   const memberIdFromUrl = searchParams.get("memberId")
   const timezone = useTimezone()
-  
+
   // Get initial memberId: URL > sessionStorage > default
   const getInitialMemberId = (): string => {
     if (typeof window !== "undefined") {
@@ -35,7 +35,7 @@ export default function UrlsPage() {
     all: false,
     id: getInitialMemberId(),
   })
-  
+
   // Update filter when memberId from URL changes
   useEffect(() => {
     if (memberIdFromUrl && memberIdFromUrl !== selectedFilter.id) {
@@ -58,7 +58,7 @@ export default function UrlsPage() {
       }
     }
   }, [memberIdFromUrl, selectedFilter.id])
-  
+
   // Sync selectedFilter changes to sessionStorage and URL
   const handleFilterChange = (filter: SelectedFilter) => {
     // Jika all: true (tidak seharusnya terjadi karena hideAllOption), ubah ke member pertama
@@ -78,7 +78,7 @@ export default function UrlsPage() {
       }
       return
     }
-    
+
     setSelectedFilter(filter)
     if (!filter.all && filter.id && typeof window !== "undefined") {
       sessionStorage.setItem("urlSelectedMemberId", filter.id)
@@ -89,7 +89,7 @@ export default function UrlsPage() {
   }
 
   const selectedMemberId = selectedFilter.all ? null : (selectedFilter.id ?? null)
-  
+
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -161,7 +161,7 @@ export default function UrlsPage() {
             const firstItem = items[0]!
             const totalTime = items.reduce((sum, item) => sum + item.timeSpent, 0)
             const allDetails = items.flatMap(item => item.details || [])
-            
+
             return {
               id: groupKey,
               projectId: firstItem.projectId,
@@ -174,12 +174,12 @@ export default function UrlsPage() {
             }
           })
           .sort((a, b) => {
-          // Sort by time spent descending, then by site name
-          if (b.timeSpent !== a.timeSpent) {
-            return b.timeSpent - a.timeSpent
-          }
-          return a.site.localeCompare(b.site)
-        })
+            // Sort by time spent descending, then by site name
+            if (b.timeSpent !== a.timeSpent) {
+              return b.timeSpent - a.timeSpent
+            }
+            return a.site.localeCompare(b.site)
+          })
       }))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [selectedProject, selectedMemberId, dateRange])
@@ -263,13 +263,13 @@ export default function UrlsPage() {
             ) : (
               groupedData.map((group) => (
                 <React.Fragment key={group.date}>
-                 
+
                   {/* Data Rows */}
                   {group.groups.map((item) => {
                     const isExpanded = expandedRows.has(item.id)
                     const hasDetails = item.details && item.details.length > 0
-                    
-    return (
+
+                    return (
                       <React.Fragment key={item.id}>
                         <tr className="hover:bg-gray-50">
                           <td className="px-6 py-3 text-sm text-gray-900">
@@ -333,6 +333,6 @@ export default function UrlsPage() {
           </tbody>
         </table>
       </div>
-        </div>
-    )
+    </div>
+  )
 }

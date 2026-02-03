@@ -112,13 +112,12 @@ export default function SetupWizard() {
         {STEPS.map((step) => (
           <div key={step.number} className="space-y-2">
             <div
-              className={`flex items-center justify-center h-10 rounded-full font-semibold transition-all ${
-                step.number < wizardStore.currentStep
+              className={`flex items-center justify-center h-10 rounded-full font-semibold transition-all ${step.number < wizardStore.currentStep
                   ? "bg-green-600 text-white"
                   : step.number === wizardStore.currentStep
-                  ? "bg-primary text-white"
-                  : "bg-muted text-muted-foreground"
-              }`}
+                    ? "bg-primary text-white"
+                    : "bg-muted text-muted-foreground"
+                }`}
             >
               {step.number < wizardStore.currentStep ? (
                 <CheckCircle2 className="h-5 w-5" />

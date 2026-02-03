@@ -28,7 +28,7 @@ import { Switch } from "@/components/ui/switch"
 
 import { IOrganization } from "@/interface"
 import { addOrganization, updateOrganization } from "@/action/organization"
-import ProfilePhotoDialog from "@/components/change-foto"
+import ProfilePhotoDialog from "@/components/user/change-foto"
 
 
 interface OrganizationFormProps {
@@ -256,65 +256,65 @@ export default function OrganizationForm({
             />
             <div className=" col-span-3 grid grid-cols-4 gap-4 gap-y-8">
 
-            {/* Size Category */}
-            <FormField
-              control={form.control}
-              name="size_category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Size Category</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Small, Medium, Large" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              {/* Size Category */}
+              <FormField
+                control={form.control}
+                name="size_category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Size Category</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Small, Medium, Large" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Timezone */}
-            <FormField
-              control={form.control}
-              name="timezone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Timezone</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Asia/Jakarta" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              {/* Timezone */}
+              <FormField
+                control={form.control}
+                name="timezone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Timezone</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Asia/Jakarta" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Currency */}
-            <FormField
-              control={form.control}
-              name="currency_code"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Currency Code</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. IDR, USD" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              {/* Currency */}
+              <FormField
+                control={form.control}
+                name="currency_code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Currency Code</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. IDR, USD" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Country */}
-            <FormField
-              control={form.control}
-              name="country_code"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Country Code</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. ID, US" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              {/* Country */}
+              <FormField
+                control={form.control}
+                name="country_code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Country Code</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. ID, US" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* Address */}
@@ -423,50 +423,50 @@ export default function OrganizationForm({
             />
 
             {/* Active Switch */}
-          <div className="grid grid-cols-2 col-span-3 gap-4">
+            <div className="grid grid-cols-2 col-span-3 gap-4">
 
-            {/* Subscription Tier */}
-            <FormField
-              control={form.control}
-              name="subscription_tier"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Subscription Tier</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Basic, Pro, Enterprise" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              {/* Subscription Tier */}
+              <FormField
+                control={form.control}
+                name="subscription_tier"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subscription Tier</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Basic, Pro, Enterprise" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Subscription Expiry */}
-            <FormField
-              control={form.control}
-              name="subscription_expires_at"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Subscription Expires At</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="date"
-                      {...field}
-                      value={field.value ?? ""} // convert null to empty string
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              {/* Subscription Expiry */}
+              <FormField
+                control={form.control}
+                name="subscription_expires_at"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subscription Expires At</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        value={field.value ?? ""} // convert null to empty string
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-             
 
-          <FormField
+
+            <FormField
               control={form.control}
               name="is_active"
               render={({ field }) => (
                 <FormItem className="absolute top-4 right-4">
-                  
+
                   <FormControl>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>
@@ -476,7 +476,7 @@ export default function OrganizationForm({
             />
           </CardContent>
         </Card>
-         
+
 
         <div className="flex gap-4 col-span-2 mt-8 justify-end">
           <Button type="button" variant="outline" onClick={() => router.back()}>

@@ -2,7 +2,7 @@
 
 import React from "react"
 import { ColumnDef } from "@tanstack/react-table"
-import { DataTable } from "@/components/data-table"
+import { DataTable } from "@/components/tables/data-table"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Trash, Plus, Calendar } from "lucide-react"

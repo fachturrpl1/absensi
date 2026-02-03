@@ -9,7 +9,7 @@ import { Plus, Search } from "lucide-react"
 import { AddClientDialog, type ClientFormData } from "@/components/projects/AddClientDialog"
 import { ClientsTable, type Client } from "@/components/projects/ClientsTable"
 import { DUMMY_CLIENTS } from "@/lib/data/dummy-data"
-import { PaginationFooter } from "@/components/pagination-footer"
+import { PaginationFooter } from "@/components/tables/pagination-footer"
 
 export default function ClientsPage() {
     const [activeTab, setActiveTab] = useState<"active" | "archived">("active")

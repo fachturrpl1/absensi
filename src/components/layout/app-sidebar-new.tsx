@@ -15,7 +15,6 @@ import {
   Briefcase,
   BarChart3,
   Settings,
-  Command,
   ChevronRight,
   ListChecks,
   Cpu,

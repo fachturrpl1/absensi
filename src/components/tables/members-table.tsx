@@ -25,7 +25,7 @@ import {
 import { deleteOrganization_member } from "@/action/members"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
-import { PaginationFooter } from "@/components/pagination-footer"
+import { PaginationFooter } from "./pagination-footer"
 
 interface MembersTableProps {
   members: IOrganization_member[]

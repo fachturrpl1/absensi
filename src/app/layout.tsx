@@ -3,29 +3,29 @@ import "./globals.css";
 
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
-import { UserProvider } from "@/components/user-provider";
-import { TimezoneProvider } from "@/components/timezone-provider";
-import { TimeFormatProvider } from "@/components/time-format-provider";
+import { UserProvider } from "@/components/auth/user-provider";
+import { TimezoneProvider } from "@/components/providers/timezone-provider";
+import { TimeFormatProvider } from "@/components/providers/time-format-provider";
 import { QueryProvider } from "@/providers/query-provider";
-import OrganizationStatusChecker from "@/components/organization-status-checker";
-import AccountStatusChecker from "@/components/account-status-checker";
-import { PermissionInitializer } from "@/components/permission-initializer";
+import OrganizationStatusChecker from "@/components/organization/organization-status-checker";
+import AccountStatusChecker from "@/components/organization/account-status-checker";
+import { PermissionInitializer } from "@/components/auth/permission-initializer";
 import { ToastProvider } from "@/components/notifications/toast-system";
 import { DashboardLayoutWrapper } from "@/components/layout/dashboard-layout-wrapper";
 
 import { createClient } from "@/utils/supabase/server";
-import { 
-  getCachedUserProfile, 
+import {
+  getCachedUserProfile,
   getCachedOrganizationTimezone,
-  getCachedOrganizationName 
+  getCachedOrganizationName
 } from "@/lib/data-cache";
 
 import { Geist, Geist_Mono } from "next/font/google";
-import { InstallPrompt } from "@/components/install-prompt";
-import { OfflineDetector } from "@/components/offline-detector";
-import { GlobalTitleManager } from "@/components/global-title-manager";
-import { AuthErrorHandler } from "@/components/auth-error-handler";
-import PWACleanup from "@/components/pwa-cleanup";
+import { InstallPrompt } from "@/components/common/install-prompt";
+import { OfflineDetector } from "@/components/common/offline-detector";
+import { GlobalTitleManager } from "@/components/common/global-title-manager";
+import { AuthErrorHandler } from "@/components/auth/auth-error-handler";
+import { PWACleanup } from "@/components/common/pwa-cleanup";
 
 
 const geistSans = Geist({
@@ -50,7 +50,7 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
- 
+
 
 // Base metadata will be generated dynamically
 export async function generateMetadata(): Promise<Metadata> {
@@ -66,8 +66,8 @@ export async function generateMetadata(): Promise<Metadata> {
       process.env.APP_URL
         ? `${process.env.APP_URL}`
         : process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : `http://localhost:${process.env.PORT || 3000}`
+          ? `https://${process.env.VERCEL_URL}`
+          : `http://localhost:${process.env.PORT || 3000}`
     ),
     alternates: { canonical: "/" },
     manifest: "/manifest.json",
@@ -134,23 +134,23 @@ export default async function RootLayout({
 
   const mappedUser = user
     ? {
-        id: user.id,
-        email: user.email ?? undefined,
-        employee_code: profile?.employee_code ?? undefined,
-        first_name: resolvedFirstName ?? undefined,
-        middle_name: resolvedMiddleName ?? undefined,
-        last_name: resolvedLastName ?? undefined,
-        display_name: resolvedDisplayName ?? undefined,
-        profile_photo_url: profile?.profile_photo_url ?? metadata.profile_photo_url ?? undefined,
-      }
+      id: user.id,
+      email: user.email ?? undefined,
+      employee_code: profile?.employee_code ?? undefined,
+      first_name: resolvedFirstName ?? undefined,
+      middle_name: resolvedMiddleName ?? undefined,
+      last_name: resolvedLastName ?? undefined,
+      display_name: resolvedDisplayName ?? undefined,
+      profile_photo_url: profile?.profile_photo_url ?? metadata.profile_photo_url ?? undefined,
+    }
     : null;
 
   // 🔹 Fetch timezone and organization name from the user's organization (cached)
   const timezone = user ? await getCachedOrganizationTimezone(user.id) : "UTC"
   const organizationName = user ? await getCachedOrganizationName(user.id) : null
-  
+
   // Generate dynamic short title for mobile based on organization
-  const dynamicShortTitle = organizationName 
+  const dynamicShortTitle = organizationName
     ? organizationName.split(' ').slice(0, 2).join(' ') // First 2 words for mobile
     : "Presensi"
 
@@ -166,7 +166,7 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-title" content={dynamicShortTitle} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
-        <PWACleanup/>
+        <PWACleanup />
         <GlobalTitleManager />
         <InstallPrompt />
         <OfflineDetector />

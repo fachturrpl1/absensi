@@ -7,8 +7,8 @@ import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_PAYMENTS, DUMMY_PROJECTS } from "@/li
 import { Button } from "@/components/ui/button"
 import { Download, Search, Filter, CreditCard, Clock, CheckCircle } from "lucide-react"
 import { format } from "date-fns"
-import { PaginationFooter } from "@/components/pagination-footer"
-import { useTimezone } from "@/components/timezone-provider"
+import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { useTimezone } from "@/components/providers/timezone-provider"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 

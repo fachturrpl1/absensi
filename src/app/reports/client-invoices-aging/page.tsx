@@ -7,10 +7,10 @@ import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { Button } from "@/components/ui/button"
 import { Download, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { PaginationFooter } from "@/components/pagination-footer"
+import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { useTimezone } from "@/components/timezone-provider"
+import { useTimezone } from "@/components/providers/timezone-provider"
 import { exportToCSV, generateFilename, formatCurrencyForExport } from "@/lib/export-utils"
 import {
     Select,

@@ -2,8 +2,8 @@
 
 import { usePathname } from 'next/navigation';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { AppSidebarNew } from '@/components/layout-new/app-sidebar-new';
-import { NavbarNew } from '@/components/layout-new/navbar-new';
+import { AppSidebarNew } from './app-sidebar-new';
+import { NavbarNew } from './navbar-new';
 
 export function DashboardLayoutWrapper({
   children,

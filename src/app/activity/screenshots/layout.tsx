@@ -12,7 +12,7 @@ import { DownloadDialog } from "@/components/activity/DownloadDialog"
 import { SelectedMemberProvider } from "./selected-member-context"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { DateRange, SelectedFilter } from "@/components/insights/types"
-import { useTimezone } from "@/components/timezone-provider"
+import { useTimezone } from "@/components/providers/timezone-provider"
 import { BlurProvider } from "@/app/settings/screenshot/blur-context"
 import { useSettingsMembers } from "@/hooks/use-settings-members"
 

@@ -2,7 +2,7 @@
 
 import React from "react"
 import { ColumnDef } from "@tanstack/react-table"
-import { DataTable } from "@/components/data-table"
+import { DataTable } from "@/components/tables/data-table"
 import { Button } from "@/components/ui/button"
 import {
     Trash,
@@ -72,17 +72,17 @@ export default function RolesPage() {
     const fetchroles = async () => {
         try {
             setLoading(true)
-            
+
             if (!organizationId) {
                 toast.error('Please select an organization')
                 setLoading(false)
                 return
             }
-            
+
             const response: unknown = await getAllRole()
             const typedResponse = response as { success: boolean; data: IRole[]; message: string }
             if (!typedResponse.success) throw new Error(typedResponse.message)
-            
+
             setroles(typedResponse.data)
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'Unknown error')
@@ -110,7 +110,7 @@ export default function RolesPage() {
                 toast.error('Please select an organization')
                 return
             }
-            
+
             let res
             if (editingDetail) {
                 res = await updateRole(editingDetail.id, values)
@@ -200,7 +200,7 @@ export default function RolesPage() {
                         </AlertDialog>
                         <Link href={`/role/role-permission/${ws.id}`}>
                             <Button variant={"outline"} className="border-2 cursor-pointer">
-                                 Permissions<ChevronRight/>
+                                Permissions<ChevronRight />
                             </Button>
                         </Link>
 
@@ -212,10 +212,10 @@ export default function RolesPage() {
 
     return (
         <div className="flex flex-1 flex-col gap-4 w-full">
-            
+
             <div className="w-full">
                 <div className=" items-center my-7">
-                   
+
                     <Dialog open={open} onOpenChange={setOpen}>
                         <DialogTrigger asChild className="float-end ml-5">
                             <Button

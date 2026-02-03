@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { DataTable } from "@/components/data-table"
+import { DataTable } from "@/components/tables/data-table"
 import { Button } from "@/components/ui/button"
 import { useQueryClient } from "@tanstack/react-query"
 import { Plus, Group as GroupIcon, Pencil, Trash, Search, RotateCcw, ChevronRight, FileSpreadsheet } from "lucide-react"
@@ -56,7 +56,7 @@ import {
   updateGroup,
 } from "@/action/group"
 import { getAllOrganization } from "@/action/organization"
-import { Can } from "@/components/can"
+import { Can } from "@/components/common/can"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import { getCache, setCache } from "@/lib/local-cache"
 import {
