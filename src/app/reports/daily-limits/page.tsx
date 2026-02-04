@@ -1,185 +1,210 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useEffect } from "react"
+import { columns } from "./columns"
+import { DUMMY_DAILY_LIMITS } from "@/lib/data/dummy-daily-limits"
+import { DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
+import { DataTable } from "@/components/tables/data-table"
+import { Button } from "@/components/ui/button"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
-import { DUMMY_MEMBER_LIMITS, DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
-import { Button } from "@/components/ui/button"
-import { Download, Search } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { useTimezone } from "@/components/providers/timezone-provider"
-import { cn } from "@/lib/utils"
+import {
+    Card,
+    CardContent,
+} from "@/components/ui/card"
+import { DailyLimitsFilterSidebar } from "@/components/report/DailyLimitsFilterSidebar"
+import { Input } from "@/components/ui/input"
+import { Filter, Search, Download, Settings2 } from "lucide-react"
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { VisibilityState } from "@tanstack/react-table"
 
 export default function DailyLimitsPage() {
     const timezone = useTimezone()
-    const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({ type: "members", all: true, id: "all" })
-    const [dateRange, setDateRange] = useState<DateRange>({
-        startDate: new Date(2026, 0, 19),
-        endDate: new Date(2026, 0, 25)
+    const [filterSidebarOpen, setFilterSidebarOpen] = useState(false)
+    const [sidebarFilters, setSidebarFilters] = useState({
+        role: "all",
+        status: "all",
+        day: "today"
     })
+    const [dateRange, setDateRange] = useState<DateRange>({
+        startDate: new Date(),
+        endDate: new Date()
+    })
+    const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({ type: "members", all: true, id: "all" })
+
+    const [data] = useState(DUMMY_DAILY_LIMITS)
+    const [isLoading, setIsLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState("")
-    const [page, setPage] = useState(1)
-    const pageSize = 10
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
 
-    const filteredData = useMemo(() => {
-        let data = DUMMY_MEMBER_LIMITS
+    // Simulate loading
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsLoading(false)
+        }, 1000)
+        return () => clearTimeout(timer)
+    }, [])
 
-        if (!selectedFilter.all && selectedFilter.id !== 'all') {
-            if (selectedFilter.type === 'members') {
-                data = data.filter(item => item.memberId === selectedFilter.id)
-            } else if (selectedFilter.type === 'teams') {
-                const team = DUMMY_TEAMS.find(t => t.id === selectedFilter.id)
-                if (team) {
-                    data = data.filter(item => team.members.includes(item.memberId))
-                }
-            }
+    // Filter Logic
+    const filteredData = data.filter((item) => {
+        const matchesRole = sidebarFilters.role === "all" || item.role === sidebarFilters.role
+        const matchesStatus = sidebarFilters.status === "all" ||
+            (sidebarFilters.status === "exceeded" && item.status === "Exceeded") ||
+            (sidebarFilters.status === "approaching" && item.status === "Approaching Limit") ||
+            (sidebarFilters.status === "within" && item.status === "Within Limit")
+
+        let matchesDay = true
+        // Simple day matching for dummy data
+        const itemDate = item.date
+        // Hardcoded matching for dummy data date strings "2026-02-04" vs "2026-02-03"
+        // In a real app we'd use dynamic dates, but for stable dummy data matching:
+        if (sidebarFilters.day === 'today') {
+            matchesDay = itemDate === '2026-02-04'
+        } else if (sidebarFilters.day === 'yesterday') {
+            matchesDay = itemDate === '2026-02-03'
         }
 
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase()
-            data = data.filter(item => item.memberName.toLowerCase().includes(query))
-        }
+        const matchesSearch = item.memberName.toLowerCase().includes(searchQuery.toLowerCase())
 
-        return data
-    }, [selectedFilter, searchQuery])
+        return matchesRole && matchesStatus && matchesSearch && matchesDay
+    })
 
-    const summaryCards = useMemo(() => {
-        const totalMembers = filteredData.length
-        const overLimit = filteredData.filter(m => m.dailyUsed > m.dailyLimit).length
-        const avgUsage = totalMembers > 0 ? filteredData.reduce((sum, m) => sum + (m.dailyUsed / m.dailyLimit * 100), 0) / totalMembers : 0
-        const totalHours = filteredData.reduce((sum, m) => sum + m.dailyUsed, 0)
+    // Handlers
+    const handleApplyFilters = (filters: typeof sidebarFilters) => {
+        setSidebarFilters(filters)
+        setFilterSidebarOpen(false)
+        console.log("Filters applied:", filters)
+    }
 
-        return [
-            { label: "Total Members", value: totalMembers },
-            { label: "Over Daily Limit", value: overLimit },
-            { label: "Avg Daily Usage", value: avgUsage.toFixed(0) + "%" },
-            { label: "Total Daily Hours", value: totalHours.toFixed(1) + " h" },
-        ]
-    }, [filteredData])
+    const handleExport = () => {
+        const headers = ["Member,Role,Daily Limit,Time Spent,Remaining,Status,Date"]
+        const rows = filteredData.map(item => {
+            const remaining = item.dailyLimit - item.hoursTracked
+            return [
+                item.memberName,
+                item.role,
+                item.dailyLimit,
+                item.hoursTracked.toFixed(2),
+                remaining.toFixed(2),
+                item.status,
+                item.date
+            ].join(",")
+        })
 
-    const paginatedData = useMemo(() => {
-        const start = (page - 1) * pageSize
-        return filteredData.slice(start, start + pageSize)
-    }, [filteredData, page])
-
-    const totalPages = Math.ceil(filteredData.length / pageSize)
+        const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n")
+        const encodedUri = encodeURI(csvContent)
+        const link = document.createElement("a")
+        link.setAttribute("href", encodedUri)
+        link.setAttribute("download", "daily_limits_report.csv")
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+    }
 
     return (
-        <div className="px-6 py-4">
-            <h1 className="text-xl font-semibold mb-5">Daily limits</h1>
+        <div className="px-6 pb-6 space-y-6">
+            <div className="flex justify-between items-center">
+                <h1 className="text-xl font-semibold">Daily Limits Report</h1>
+                <div className="flex items-center gap-2">
+                    <div className="relative w-64">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <Input
+                            placeholder="Search members..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9 ps-9 h-9 bg-white"
+                        />
+                    </div>
+                </div>
+            </div>
 
             <InsightsHeader
                 selectedFilter={selectedFilter}
                 onSelectedFilterChange={setSelectedFilter}
                 dateRange={dateRange}
                 onDateRangeChange={setDateRange}
-                members={DUMMY_MEMBERS}
+                members={DUMMY_MEMBERS} // Using dummy members for the header filter
                 teams={DUMMY_TEAMS}
                 timezone={timezone}
             >
-                <Button variant="outline" className="h-9">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        className="h-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50 font-medium"
+                        onClick={() => setFilterSidebarOpen(true)}
+                    >
+                        <Filter className="w-4 h-4 mr-2" /> Filter
+                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon" className="h-9 w-9 bg-white border-gray-300 hover:bg-gray-50 text-gray-700">
+                                <Settings2 className="w-4 h-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[180px]">
+                            {columns
+                                .map((col) => {
+                                    const id = col.id || (col as any).accessorKey
+                                    const label = {
+                                        memberName: "Member",
+                                        role: "Role",
+                                        dailyLimit: "Daily Limit",
+                                        hoursTracked: "Time spent",
+                                        percentageUsed: "Percentage used",
+                                        remaining: "Remaining",
+                                        status: "Status",
+                                        date: "Date"
+                                    }[id as string] || id
+
+                                    return (
+                                        <DropdownMenuCheckboxItem
+                                            key={id}
+                                            className="capitalize"
+                                            checked={columnVisibility[id] !== false}
+                                            onCheckedChange={(value) =>
+                                                setColumnVisibility((prev) => ({
+                                                    ...prev,
+                                                    [id]: !!value,
+                                                }))
+                                            }
+                                        >
+                                            {label}
+                                        </DropdownMenuCheckboxItem>
+                                    )
+                                })}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button variant="outline" className="h-9" onClick={handleExport}>
+                        <Download className="w-4 h-4 mr-2" /> Export
+                    </Button>
+                </div>
             </InsightsHeader>
 
-            <style jsx global>{`
-                html body .custom-hover-row:hover,
-                html body .custom-hover-row:hover > td {
-                    background-color: #d1d5db !important;
-                }
-            `}</style>
-
-            <div className="mt-6 bg-white border rounded-lg shadow-sm">
-                <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x border-b bg-gray-50/50">
-                    {summaryCards.map((card, idx) => (
-                        <div key={idx} className="p-4">
-                            <p className="text-sm font-medium text-gray-500">{card.label}</p>
-                            <p className="text-2xl font-bold text-gray-900">{card.value}</p>
-                        </div>
-                    ))}
-                </div>
-
-                <div className="p-4 border-b">
-                    <div className="relative max-w-sm">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        <Input
-                            placeholder="Search member..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="ps-9 pl-9"
-                        />
-                    </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-600 font-medium border-b">
-                            <tr>
-                                <th className="p-4">Member</th>
-                                <th className="p-4 text-right">Daily Limit</th>
-                                <th className="p-4 text-right">Hours Used</th>
-                                <th className="p-4 text-right">Remaining</th>
-                                <th className="p-4 text-center">Usage</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {paginatedData.map((row, idx) => {
-                                const remaining = row.dailyLimit - row.dailyUsed
-                                const usage = (row.dailyUsed / row.dailyLimit) * 100
-                                return (
-                                    <tr
-                                        key={row.id}
-                                        style={{ backgroundColor: idx % 2 === 1 ? '#f1f5f9' : '#ffffff' }}
-                                        className="transition-colors custom-hover-row"
-                                    >
-                                        <td className="p-4 font-medium text-gray-900">{row.memberName}</td>
-                                        <td className="p-4 text-right">{row.dailyLimit} h</td>
-                                        <td className="p-4 text-right">{row.dailyUsed.toFixed(1)} h</td>
-                                        <td className="p-4 text-right">
-                                            <span className={cn(
-                                                "font-medium",
-                                                remaining < 0 ? "text-red-600" : "text-green-600"
-                                            )}>
-                                                {remaining >= 0 ? `${remaining.toFixed(1)} h` : `${Math.abs(remaining).toFixed(1)} h over`}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                                    <div
-                                                        className={cn(
-                                                            "h-full rounded-full",
-                                                            usage > 100 ? "bg-red-500" : usage > 80 ? "bg-yellow-500" : "bg-green-500"
-                                                        )}
-                                                        style={{ width: `${Math.min(usage, 100)}%` }}
-                                                    />
-                                                </div>
-                                                <span className="text-xs text-gray-500">{usage.toFixed(0)}%</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-
-                <div className="border-t">
-                    <PaginationFooter
-                        page={page}
-                        totalPages={totalPages}
-                        onPageChange={setPage}
-                        from={filteredData.length > 0 ? (page - 1) * pageSize + 1 : 0}
-                        to={Math.min(page * pageSize, filteredData.length)}
-                        total={filteredData.length}
-                        pageSize={pageSize}
-                        onPageSizeChange={() => { }}
-                        className="bg-transparent shadow-none border-none"
+            {/* Main Table */}
+            <Card className="border shadow-sm rounded-lg">
+                <CardContent className="p-0">
+                    <DataTable
+                        columns={columns}
+                        data={filteredData}
+                        isLoading={isLoading}
+                        showColumnToggle={false}
+                        columnVisibility={columnVisibility}
+                        onColumnVisibilityChange={setColumnVisibility}
                     />
-                </div>
-            </div>
+                </CardContent>
+            </Card>
+
+            <DailyLimitsFilterSidebar
+                open={filterSidebarOpen}
+                onOpenChange={setFilterSidebarOpen}
+                onApply={handleApplyFilters}
+            />
         </div>
     )
 }

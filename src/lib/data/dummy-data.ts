@@ -3860,6 +3860,11 @@ export interface PaymentEntry {
     notes: string;
     status: 'Completed' | 'Pending' | 'Failed';
     project?: string;
+    projectsBreakdown?: {
+        name: string;
+        hours: number;
+        amount: number;
+    }[];
 }
 
 export const DUMMY_PAYMENTS: PaymentEntry[] = [
@@ -3880,6 +3885,10 @@ export const DUMMY_PAYMENTS: PaymentEntry[] = [
         notes: 'Weekly payment for Project Alpha',
         status: 'Completed',
         project: 'Website Redesign',
+        projectsBreakdown: [
+            { name: 'Website Redesign', hours: 25, amount: 3125000 },
+            { name: 'Maintenance', hours: 15, amount: 1875000 }
+        ]
     },
     {
         id: 'pay-2',
@@ -3898,6 +3907,9 @@ export const DUMMY_PAYMENTS: PaymentEntry[] = [
         notes: 'Mobile app development milestone',
         status: 'Completed',
         project: 'Mobile App',
+        projectsBreakdown: [
+            { name: 'Mobile App', hours: 30, amount: 3750000 }
+        ]
     },
     {
         id: 'pay-3',
@@ -3916,6 +3928,10 @@ export const DUMMY_PAYMENTS: PaymentEntry[] = [
         notes: 'Bug fixes and maintenance',
         status: 'Pending',
         project: 'API Integration',
+        projectsBreakdown: [
+            { name: 'API Integration', hours: 10, amount: 1250000 },
+            { name: 'Documentation', hours: 10, amount: 1250000 }
+        ]
     },
     {
         id: 'pay-4',
@@ -4147,3 +4163,77 @@ export function generateMemberUrlActivities(memberId: string): UrlActivityEntry[
     return generateUrlActivities().filter(a => a.memberId === memberId)
 }
 
+
+// ============================================================================
+// WEEKLY LIMITS (NEW)
+// ============================================================================
+
+export interface WeeklyLimitEntry {
+    id: string
+    memberId: string
+    memberName: string
+    role: string
+    weeklyLimit: number
+    hoursTracked: number
+    weekStartDate: string
+    weekEndDate: string
+    status: 'Within Limit' | 'Approaching Limit' | 'Exceeded'
+}
+
+export const DUMMY_WEEKLY_LIMITS: WeeklyLimitEntry[] = [
+    {
+        id: 'wl-1',
+        memberId: 'm1',
+        memberName: 'Antonio Galih',
+        role: 'Owner',
+        weeklyLimit: 40,
+        hoursTracked: 38.5,
+        weekStartDate: '2026-02-01',
+        weekEndDate: '2026-02-07',
+        status: 'Approaching Limit'
+    },
+    {
+        id: 'wl-2',
+        memberId: 'm4',
+        memberName: 'Michael Chen',
+        role: 'Manager',
+        weeklyLimit: 40,
+        hoursTracked: 42.1,
+        weekStartDate: '2026-02-01',
+        weekEndDate: '2026-02-07',
+        status: 'Exceeded'
+    },
+    {
+        id: 'wl-3',
+        memberId: 'm3',
+        memberName: 'Sarah Johnson',
+        role: 'Member',
+        weeklyLimit: 30,
+        hoursTracked: 12.4,
+        weekStartDate: '2026-02-01',
+        weekEndDate: '2026-02-07',
+        status: 'Within Limit'
+    },
+    {
+        id: 'wl-4',
+        memberId: 'm2',
+        memberName: 'Emily Davis',
+        role: 'Member',
+        weeklyLimit: 20,
+        hoursTracked: 5.0,
+        weekStartDate: '2026-02-01',
+        weekEndDate: '2026-02-07',
+        status: 'Within Limit'
+    },
+    {
+        id: 'wl-5',
+        memberId: 'm5',
+        memberName: 'David Wilson',
+        role: 'Member',
+        weeklyLimit: 40,
+        hoursTracked: 39.8,
+        weekStartDate: '2026-02-01',
+        weekEndDate: '2026-02-07',
+        status: 'Approaching Limit'
+    }
+];

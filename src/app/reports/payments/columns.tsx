@@ -10,7 +10,6 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -20,6 +19,11 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useState } from "react"
+import { PaymentDetailsDialog } from "@/components/report/payment-details-dialog"
+import { toast } from "sonner"
+import { generateReceipt } from "@/utils/receipt-generator"
+
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
@@ -48,6 +52,7 @@ export const columns: ColumnDef<PaymentEntry>[] = [
         enableHiding: false,
     },
     {
+        id: "member",
         accessorKey: "member.name",
         header: () => <div className="font-bold text-black">Member</div>,
         cell: ({ row }) => <div className="whitespace-nowrap font-medium text-black">{row.original.member.name}</div>
@@ -73,6 +78,16 @@ export const columns: ColumnDef<PaymentEntry>[] = [
             </div>
         ),
         cell: ({ row }) => <span className="text-gray-900 whitespace-nowrap">{row.original.type}</span>
+    },
+    {
+        accessorKey: "method",
+        header: () => <div className="font-bold text-black">Method</div>,
+        cell: ({ row }) => <span className="text-gray-900 whitespace-nowrap">{row.original.method}</span>
+    },
+    {
+        accessorKey: "status",
+        header: () => <div className="font-bold text-black">Status</div>,
+        cell: ({ row }) => <span className="text-gray-900 whitespace-nowrap">{row.original.status}</span>
     },
     {
         accessorKey: "date",
@@ -125,31 +140,60 @@ export const columns: ColumnDef<PaymentEntry>[] = [
         cell: ({ row }) => <div className="text-right text-gray-900 font-bold whitespace-nowrap">{formatCurrency(row.original.amount)}</div>
     },
     {
+        accessorKey: "notes",
+        header: () => <div className="font-bold text-black">Notes</div>,
+        cell: ({ row }) => <div className="max-w-[200px] truncate text-gray-500" title={row.original.notes}>{row.original.notes || "—"}</div>
+    },
+    {
         id: "actions",
-        cell: ({ row }) => {
-            const payment = row.original
-
-            return (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem
-                            onClick={() => navigator.clipboard.writeText(payment.id)}
-                        >
-                            Copy ID
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem>Download Receipt</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            )
-        },
+        header: () => <div className="text-center font-bold text-black px-4">Action</div>,
+        cell: ({ row }) => (
+            <div className="flex justify-center">
+                <PaymentActions payment={row.original} />
+            </div>
+        )
     },
 ]
+
+function PaymentActions({ payment }: { payment: PaymentEntry }) {
+    const [showDetails, setShowDetails] = useState(false)
+
+    return (
+        <>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                        onClick={() => {
+                            navigator.clipboard.writeText(payment.id)
+                            toast.success("ID Copied", { description: payment.id })
+                        }}
+                    >
+                        Copy ID
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setShowDetails(true)}>
+                        View Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                        generateReceipt(payment)
+                        toast.success("Receipt Downloaded", { description: `receipt-${payment.id}.pdf saved` })
+                    }}>
+                        Download Receipt
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            <PaymentDetailsDialog
+                payment={payment}
+                open={showDetails}
+                onOpenChange={setShowDetails}
+            />
+        </>
+    )
+}

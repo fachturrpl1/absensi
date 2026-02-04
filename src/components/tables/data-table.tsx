@@ -64,6 +64,8 @@ type DataTableProps<TData, TValue> = {
   onRowSelectionChange?: OnChangeFn<RowSelectionState>
   onPageIndexChange?: (pageIndex: number) => void
   onPageSizeChange?: (pageSize: number) => void
+  columnVisibility?: VisibilityState
+  onColumnVisibilityChange?: OnChangeFn<VisibilityState>
 }
 
 export function DataTable<TData, TValue>({
@@ -89,9 +91,11 @@ export function DataTable<TData, TValue>({
   onPageSizeChange: onPageSizeChangeProp,
   rowSelection: controlledRowSelection,
   onRowSelectionChange: onRowSelectionChangeProp,
+  columnVisibility: controlledColumnVisibility,
+  onColumnVisibilityChange: onColumnVisibilityChangeProp,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+  const [internalColumnVisibility, setInternalColumnVisibility] = React.useState<VisibilityState>({})
   const [internalRowSelection, setInternalRowSelection] = React.useState<Record<string, boolean>>({})
   const [sortOrder, setSortOrder] = React.useState("newest")
   const [pageSize, setPageSize] = React.useState(String(controlledPageSize ?? 10))
@@ -105,6 +109,9 @@ export function DataTable<TData, TValue>({
   // Use controlled selection if provided, otherwise use internal
   const rowSelection = controlledRowSelection ?? internalRowSelection
   const onRowSelectionChange = onRowSelectionChangeProp ?? setInternalRowSelection
+
+  const columnVisibility = controlledColumnVisibility ?? internalColumnVisibility
+  const onColumnVisibilityChange = onColumnVisibilityChangeProp ?? setInternalColumnVisibility
 
   // Handler functions
   const handlePageSizeChange = (value: string) => {
@@ -207,10 +214,11 @@ export function DataTable<TData, TValue>({
     data: filteredData,
     columns,
     onSortingChange: setSorting,
+    getRowId: getRowKey,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: manualPagination ? undefined : getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
+    onColumnVisibilityChange: onColumnVisibilityChange,
     onRowSelectionChange: onRowSelectionChange,
     onPaginationChange: (updater) => {
       if (typeof updater === 'function') {

@@ -28,7 +28,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 
 import { useOrgStore } from '@/store/org-store';
-// import { useUserStore } from '@/store/user-store';
+import { useAuthStore } from '@/store/user-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown';
 
@@ -40,7 +40,10 @@ export function NavbarNew() {
   const showActions = pathname !== '/organization';
   const { theme, setTheme } = useTheme();
   const { organizationName, organizationId, setOrganizationId } = useOrgStore();
-  // const { user } = useUserStore();
+  // @ts-ignore
+  const user = useAuthStore((state: any) => state.user);
+  // @ts-ignore
+  const userOrganizations = useAuthStore((state: any) => state.userOrganizations);
   const [orgLogoUrl, setOrgLogoUrl] = useState<string | null>(null);
 
   // Keyboard shortcuts - Only for Quick Actions
@@ -132,6 +135,16 @@ export function NavbarNew() {
     void loadLogo();
   }, [organizationId]);
 
+  // Auto-select first organization if none selected
+  useEffect(() => {
+    if (!organizationId && userOrganizations && userOrganizations.length > 0) {
+      const firstOrg = userOrganizations[0];
+      if (firstOrg?.organization_id && firstOrg?.organization_name) {
+        setOrganizationId(firstOrg.organization_id, firstOrg.organization_name);
+      }
+    }
+  }, [organizationId, userOrganizations, setOrganizationId]);
+
   const quickActions = [
     { icon: UserPlus, label: 'Invite Member', href: '/members?action=invite', kbd: '⌘N' },
     { icon: Clock, label: 'Manual Attendance', href: '/attendance/add', kbd: '⌘I' },
@@ -162,19 +175,10 @@ export function NavbarNew() {
   //   );
   // }, [user?.display_name, user?.first_name, user?.last_name, user?.email]);
 
-  // const userInitials = useMemo(() => getInitials(userDisplayName, 'U'), [userDisplayName]);
   const orgInitials = useMemo(
     () => getInitials(organizationName ?? '', 'OR'),
     [organizationName]
   );
-
-  // const handleLogout = async () => {
-  //   try {
-  //     const supabase = createClient();
-  //     await supabase.auth.signOut();
-  //   } catch {}
-  //   router.replace('/login');
-  // };
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
@@ -249,7 +253,7 @@ export function NavbarNew() {
               <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="User profile">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user?.profile_photo_url ?? undefined} alt="User avatar" />
-                  <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
+                  <AvatarFallback className="text-xs">{getInitials(userDisplayName, 'U')}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
@@ -258,7 +262,7 @@ export function NavbarNew() {
                 <div className="flex items-center gap-2">
                   <Avatar className="h-7 w-7">
                     <AvatarImage src={user?.profile_photo_url ?? undefined} alt="User avatar" />
-                    <AvatarFallback className="text-[10px]">{userInitials}</AvatarFallback>
+                    <AvatarFallback className="text-[10px]">{getInitials(userDisplayName, 'U')}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium">{userDisplayName || 'User'}</div>
@@ -276,7 +280,7 @@ export function NavbarNew() {
                 Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+              <DropdownMenuItem onClick={() => router.push('/logout')} className="cursor-pointer">
                 Sign out
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -5,7 +5,7 @@ import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_PAYMENTS, DUMMY_PROJECTS } from "@/lib/data/dummy-data"
 import { Button } from "@/components/ui/button"
-import { Download, Search, Filter, CreditCard, Clock, CheckCircle } from "lucide-react"
+import { Download, Search, Filter, CreditCard, Clock, CheckCircle, Settings2 } from "lucide-react"
 import { format } from "date-fns"
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,17 @@ import { cn } from "@/lib/utils"
 import { PaymentsFilterSidebar } from "@/components/report/PaymentsFilterSidebar"
 import { DataTable } from "@/components/tables/data-table"
 import { columns } from "./columns"
+import { toast } from "sonner"
+import { RowSelectionState, VisibilityState } from "@tanstack/react-table"
+import { X } from "lucide-react"
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
@@ -37,6 +48,8 @@ export default function PaymentsPage() {
         status: "all",
         project: "all"
     })
+    const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
 
     const handleSidebarApply = (filters: { method: string, status: string, project: string }) => {
         setSidebarFilters({
@@ -155,8 +168,39 @@ export default function PaymentsPage() {
         link.click();
     }
 
+    const handleBulkMarkAsPaid = () => {
+        const selectedIds = Object.keys(rowSelection)
+        toast.success(`Marked ${selectedIds.length} payments as Paid`, {
+            description: "These payments have been updated successfully."
+        })
+        setRowSelection({})
+    }
+
+    const handleBulkExport = () => {
+        const selectedIds = Object.keys(rowSelection)
+        const selectedData = filteredData.filter(item => selectedIds.includes(item.id))
+
+        console.log("Exporting selected data:", selectedData)
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + ["ID,Member,Date,Amount,Status,Method,Project"].join(",") + "\n"
+            + selectedData.map(row =>
+                `${row.id},${row.member.name},${row.date},${row.amount},${row.status},${row.method},${row.project}`
+            ).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "selected_payments_report.csv");
+        document.body.appendChild(link);
+        link.click();
+
+        toast.success(`Exported ${selectedIds.length} payments`, {
+            description: "Your CSV download has started."
+        })
+        setRowSelection({})
+    }
+
     return (
-        <div className="px-6 py-4 space-y-6">
+        <div className="px-6 pb-6 space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-xl font-semibold">Payments Report</h1>
                 <div className="flex items-center gap-2">
@@ -189,6 +233,39 @@ export default function PaymentsPage() {
                     >
                         <Filter className="w-4 h-4 mr-2" /> Filter
                     </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon" className="h-9 w-9 bg-white border-gray-300 hover:bg-gray-50 text-gray-700">
+                                <Settings2 className="w-4 h-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {columns
+                                .filter((column) => (column as any).accessorKey || column.id)
+                                .map((column) => {
+                                    const id = column.id || ((column as any).accessorKey as string)
+                                    if (!id || id === 'select' || id === 'actions') return null
+
+                                    return (
+                                        <DropdownMenuCheckboxItem
+                                            key={id}
+                                            className="capitalize"
+                                            checked={columnVisibility[id] !== false}
+                                            onCheckedChange={(checked) =>
+                                                setColumnVisibility((prev) => ({
+                                                    ...prev,
+                                                    [id]: checked,
+                                                }))
+                                            }
+                                        >
+                                            {id.replace(/([A-Z])/g, ' $1').trim()}
+                                        </DropdownMenuCheckboxItem>
+                                    )
+                                })}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <Button variant="outline" className="h-9" onClick={handleExport}>
                         <Download className="w-4 h-4 mr-2" />
                         Export
@@ -214,7 +291,6 @@ export default function PaymentsPage() {
                 ))}
             </div>
 
-            {/* Data Table */}
             <div className="bg-white border rounded-lg shadow-sm">
                 <DataTable
                     columns={columns}
@@ -222,8 +298,39 @@ export default function PaymentsPage() {
                     showColumnToggle={false}
                     showFilters={false}
                     showPagination={true}
+                    rowSelection={rowSelection}
+                    onRowSelectionChange={setRowSelection}
+                    columnVisibility={columnVisibility}
+                    onColumnVisibilityChange={setColumnVisibility}
+                    getRowKey={(row) => row.id}
                 />
             </div>
+
+            {Object.keys(rowSelection).length > 0 && (
+                <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white border shadow-lg rounded-full px-6 py-3 flex items-center gap-4 z-50 animate-in slide-in-from-bottom-5">
+                    <span className="text-sm font-medium text-gray-900 border-r pr-4">
+                        {Object.keys(rowSelection).length} selected
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" onClick={handleBulkMarkAsPaid} className="h-8">
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Mark as Paid
+                        </Button>
+                        <Button size="sm" variant="default" onClick={handleBulkExport} className="h-8">
+                            <Download className="w-4 h-4 mr-2" />
+                            Export Selected
+                        </Button>
+                    </div>
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 ml-2 rounded-full hover:bg-gray-100"
+                        onClick={() => setRowSelection({})}
+                    >
+                        <X className="w-4 h-4" />
+                    </Button>
+                </div>
+            )}
 
             <PaymentsFilterSidebar
                 open={filterSidebarOpen}
