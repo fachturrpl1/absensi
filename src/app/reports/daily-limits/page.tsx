@@ -9,10 +9,6 @@ import { Button } from "@/components/ui/button"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { useTimezone } from "@/components/providers/timezone-provider"
-import {
-    Card,
-    CardContent,
-} from "@/components/ui/card"
 import { DailyLimitsFilterSidebar } from "@/components/report/DailyLimitsFilterSidebar"
 import { Input } from "@/components/ui/input"
 import { Filter, Search, Download, Settings2 } from "lucide-react"
@@ -59,20 +55,33 @@ export default function DailyLimitsPage() {
             (sidebarFilters.status === "approaching" && item.status === "Approaching Limit") ||
             (sidebarFilters.status === "within" && item.status === "Within Limit")
 
-        let matchesDay = true
-        // Simple day matching for dummy data
-        const itemDate = item.date
-        // Hardcoded matching for dummy data date strings "2026-02-04" vs "2026-02-03"
-        // In a real app we'd use dynamic dates, but for stable dummy data matching:
-        if (sidebarFilters.day === 'today') {
-            matchesDay = itemDate === '2026-02-04'
-        } else if (sidebarFilters.day === 'yesterday') {
-            matchesDay = itemDate === '2026-02-03'
-        }
+        const matchesMember = selectedFilter.all || item.memberId === selectedFilter.id
+
+
 
         const matchesSearch = item.memberName.toLowerCase().includes(searchQuery.toLowerCase())
 
-        return matchesRole && matchesStatus && matchesSearch && matchesDay
+        // Date Range Filtering
+        // Check if item.date is within dateRange
+        // item.date is YYYY-MM-DD
+        const itemDateObj = new Date(item.date)
+        itemDateObj.setHours(0, 0, 0, 0)
+
+        // Ensure dateRange start/end are comparable
+        const start = new Date(dateRange.startDate)
+        start.setHours(0, 0, 0, 0)
+        const end = new Date(dateRange.endDate)
+        end.setHours(23, 59, 59, 999)
+
+        const matchesDateRange = itemDateObj >= start && itemDateObj <= end
+
+        // If sidebar filter for day is active, it acts as a quick preset.
+        // We should probably respect Date Range if it's set, or intersecting.
+        // For simplicity, let's make Date Range strictly filter the rows.
+        // Note: sidebarFilters.day logic effectively does "Is date == Today/Yesterday".
+        // Use matchesDateRange instead.
+
+        return matchesRole && matchesStatus && matchesSearch && matchesMember && matchesDateRange
     })
 
     // Handlers
@@ -187,8 +196,6 @@ export default function DailyLimitsPage() {
             </InsightsHeader>
 
             {/* Main Table */}
-            <Card className="border shadow-sm rounded-lg">
-                <CardContent className="p-0">
                     <DataTable
                         columns={columns}
                         data={filteredData}
@@ -197,8 +204,6 @@ export default function DailyLimitsPage() {
                         columnVisibility={columnVisibility}
                         onColumnVisibilityChange={setColumnVisibility}
                     />
-                </CardContent>
-            </Card>
 
             <DailyLimitsFilterSidebar
                 open={filterSidebarOpen}

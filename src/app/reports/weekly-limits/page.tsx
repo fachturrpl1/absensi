@@ -9,10 +9,6 @@ import { Button } from "@/components/ui/button"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { useTimezone } from "@/components/providers/timezone-provider"
-import {
-    Card,
-    CardContent,
-} from "@/components/ui/card"
 import { WeeklyLimitsFilterSidebar } from "@/components/report/WeeklyLimitsFilterSidebar"
 import { Input } from "@/components/ui/input"
 import { Filter, Search, Download, Settings2 } from "lucide-react"
@@ -58,9 +54,25 @@ export default function WeeklyLimitsPage() {
             (sidebarFilters.status === "exceeded" && item.status === "Exceeded") ||
             (sidebarFilters.status === "approaching" && item.status === "Approaching Limit") ||
             (sidebarFilters.status === "within" && item.status === "Within Limit")
+
+        const matchesMember = selectedFilter.all || item.memberId === selectedFilter.id
         const matchesSearch = item.memberName.toLowerCase().includes(searchQuery.toLowerCase())
 
-        return matchesRole && matchesStatus && matchesSearch
+        // Date Range Check
+        const start = new Date(dateRange.startDate)
+        start.setHours(0, 0, 0, 0)
+        const end = new Date(dateRange.endDate)
+        end.setHours(23, 59, 59, 999)
+
+        const itemStart = new Date(item.weekStartDate)
+        const itemEnd = new Date(item.weekEndDate)
+
+        // Simple overlap check: Does the week overlap with selected range?
+        // Or strictly: Is the week *within* the range?
+        // Let's go with overlap for broader visibility.
+        const matchesDateRange = itemStart <= end && itemEnd >= start
+
+        return matchesRole && matchesStatus && matchesSearch && matchesMember && matchesDateRange
     })
 
     // Handlers
@@ -178,8 +190,6 @@ export default function WeeklyLimitsPage() {
             </InsightsHeader>
 
             {/* Main Table */}
-            <Card className="border shadow-sm rounded-lg">
-                <CardContent className="p-0">
                     <DataTable
                         columns={columns}
                         data={filteredData}
@@ -188,9 +198,6 @@ export default function WeeklyLimitsPage() {
                         columnVisibility={columnVisibility}
                         onColumnVisibilityChange={setColumnVisibility}
                     />
-                </CardContent>
-            </Card>
-
             <WeeklyLimitsFilterSidebar
                 open={filterSidebarOpen}
                 onOpenChange={setFilterSidebarOpen}

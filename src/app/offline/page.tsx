@@ -15,6 +15,7 @@ import {
   RefreshCcw,
   ShieldCheck,
   WifiOff,
+  ArrowLeft,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -53,7 +54,7 @@ export default function OfflinePage() {
     }
   };
 
-  const handleGoBackTwo = () => {
+  const handleGoBack = () => {
     // Go back 2 steps; fallback to home if history stack too short
     if (typeof window !== 'undefined') {
       if (window.history.length > 2) {
@@ -67,70 +68,85 @@ export default function OfflinePage() {
   };
 
   return (
-    <div className="flex min-h-dvh w-full items-center justify-center bg-neutral-50 p-6 dark:bg-neutral-950">
-      <Card className="w-full max-w-xl border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-900">
-        <CardHeader className="gap-4 text-center">
-          <Badge
-            variant="outline"
-            className="mx-auto flex items-center gap-2 border-neutral-300 text-neutral-700 dark:border-neutral-700 dark:text-neutral-300"
-          >
-            <WifiOff className="size-4" />
-            Offline Mode
-          </Badge>
-          <CardTitle className="text-3xl font-semibold text-neutral-900 dark:text-neutral-100">
-            Connection Lost
-          </CardTitle>
-          <CardDescription className="text-base text-neutral-600 dark:text-neutral-400">
-            Your device appears to be offline. Please check your internet connection and try again.
-          </CardDescription>
+    <div className="flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4 dark:from-neutral-950 dark:to-neutral-900">
+      <Card className="w-full max-w-md border-gray-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-900">
+        <CardHeader className="space-y-4 text-center pb-4">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-neutral-800">
+            <WifiOff className="h-8 w-8 text-gray-600 dark:text-neutral-400" />
+          </div>
+
+          <div className="space-y-2">
+            <CardTitle className="text-2xl font-bold text-gray-900 dark:text-neutral-100">
+              No Internet Connection
+            </CardTitle>
+            <CardDescription className="text-sm text-gray-600 dark:text-neutral-400">
+              Please check your network settings and try again
+            </CardDescription>
+          </div>
+
+          {isOnline && (
+            <Badge
+              variant="outline"
+              className="mx-auto inline-flex items-center gap-2 border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400"
+            >
+              <div className="h-2 w-2 rounded-full bg-green-600 dark:bg-green-400 animate-pulse" />
+              Connection Restored
+            </Badge>
+          )}
         </CardHeader>
 
-        <CardContent className="space-y-6">
-          <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-left dark:border-neutral-800 dark:bg-neutral-800/50">
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="size-6 text-neutral-700 dark:text-neutral-300" />
-              <div>
-                <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                  Your Session is Safe
+        <CardContent className="space-y-4 px-6 pb-6">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-neutral-800 dark:bg-neutral-800/50">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="h-5 w-5 text-gray-600 dark:text-neutral-400 mt-0.5 flex-shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-900 dark:text-neutral-100">
+                  Your data is safe
                 </p>
-                <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                  Don't worry. Your session will automatically resume when you're back online.
+                <p className="text-xs text-gray-600 dark:text-neutral-400">
+                  Don't worry, your session and unsaved changes are preserved. Once you're back online, everything will continue where you left off.
                 </p>
               </div>
             </div>
           </div>
 
-          <Separator className="bg-neutral-200 dark:bg-neutral-800" />
+          <Separator className="bg-gray-200 dark:bg-neutral-800" />
 
-          <div className="text-center">
-            {isOnline ? (
-              <div className="inline-flex items-center gap-2 rounded-lg bg-green-50 px-4 py-2 text-sm font-medium text-green-700 dark:bg-green-900/20 dark:text-green-400">
-                <div className="size-2 rounded-full bg-green-600 dark:bg-green-400" />
-                Back online! Click retry to continue.
-              </div>
-            ) : (
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                Make sure your internet connection is active, then click the button below to try again.
-              </p>
-            )}
+          <div className="space-y-3 text-center text-sm text-gray-600 dark:text-neutral-400">
+            <p className="font-medium">Troubleshooting tips:</p>
+            <ul className="space-y-1.5 text-xs text-left">
+              <li className="flex items-start gap-2">
+                <span className="text-gray-400">•</span>
+                <span>Check if your Wi-Fi or mobile data is turned on</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-gray-400">•</span>
+                <span>Try turning airplane mode off</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-gray-400">•</span>
+                <span>Restart your router if using Wi-Fi</span>
+              </li>
+            </ul>
           </div>
         </CardContent>
 
-        <CardFooter className="grid w-full grid-cols-1 sm:grid-cols-2 gap-3">
-          <Button 
-            className="w-full bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200" 
-            size="lg" 
+        <CardFooter className="flex flex-col gap-2 px-6 pb-6">
+          <Button
+            className="w-full bg-gray-900 text-white hover:bg-gray-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 font-medium"
+            size="lg"
             onClick={handleRetry}
           >
-            <RefreshCcw className="size-4" />
-            Retry
+            <RefreshCcw className="h-4 w-4 mr-2" />
+            Retry Connection
           </Button>
           <Button
-            variant="outline"
+            variant="ghost"
             size="lg"
-            className="w-full border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
-            onClick={handleGoBackTwo}
+            className="w-full text-gray-700 hover:bg-gray-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            onClick={handleGoBack}
           >
+            <ArrowLeft className="h-4 w-4 mr-2" />
             Go Back
           </Button>
         </CardFooter>

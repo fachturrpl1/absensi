@@ -5,6 +5,98 @@ import * as LucideIcons from 'lucide-react'
 // ORGANIZATIONS
 // ============================================================================
 
+export interface TimeOffTransaction {
+    id: string
+    memberId: string
+    memberName: string
+    policyName: string
+    date: string
+    transactionType: 'accrual' | 'usage' | 'adjustment' | 'scheduled' | 'cancellation'
+    amount: number
+    balanceAfter: number
+    notes?: string
+}
+
+export const DUMMY_TIME_OFF_TRANSACTIONS: TimeOffTransaction[] = [
+    {
+        id: "tx-001",
+        memberId: "m1",
+        memberName: "Antonio Galih",
+        policyName: "Annual Leave",
+        date: "2026-01-01T00:00:00Z",
+        transactionType: "accrual",
+        amount: 8,
+        balanceAfter: 8,
+        notes: "Monthly accrual"
+    },
+    {
+        id: "tx-002",
+        memberId: "m1",
+        memberName: "Antonio Galih",
+        policyName: "Annual Leave",
+        date: "2026-01-15T00:00:00Z",
+        transactionType: "usage",
+        amount: -3,
+        balanceAfter: 5,
+        notes: "Vacation taken"
+    },
+    {
+        id: "tx-003",
+        memberId: "m2",
+        memberName: "Lave Lavael",
+        policyName: "Sick Leave",
+        date: "2026-01-10T00:00:00Z",
+        transactionType: "adjustment",
+        amount: 4,
+        balanceAfter: 14,
+        notes: "Manual correction"
+    },
+    {
+        id: "tx-004",
+        memberId: "m2",
+        memberName: "Lave Lavael",
+        policyName: "Sick Leave",
+        date: "2026-01-20T00:00:00Z",
+        transactionType: "usage",
+        amount: -2,
+        balanceAfter: 12,
+        notes: "Sick leave approved"
+    },
+    {
+        id: "tx-005",
+        memberId: "m3",
+        memberName: "Sarah Johnson",
+        policyName: "Annual Leave",
+        date: "2026-01-05T00:00:00Z",
+        transactionType: "scheduled",
+        amount: -5,
+        balanceAfter: 10,
+        notes: "Upcoming vacation"
+    },
+    {
+        id: "tx-006",
+        memberId: "m4",
+        memberName: "Michael Chen",
+        policyName: "Annual Leave",
+        date: "2026-02-01T00:00:00Z",
+        transactionType: "accrual",
+        amount: 8,
+        balanceAfter: 20,
+        notes: "Monthly accrual"
+    },
+    {
+        id: "tx-007",
+        memberId: "m1",
+        memberName: "Antonio Galih",
+        policyName: "Annual Leave",
+        date: "2026-02-01T00:00:00Z",
+        transactionType: "accrual",
+        amount: 8,
+        balanceAfter: 13,
+        notes: "Monthly accrual"
+    }
+]
+
 export interface Organization {
     id: string
     name: string

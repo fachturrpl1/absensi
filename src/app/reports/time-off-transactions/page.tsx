@@ -1,22 +1,24 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, Fragment } from "react"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
-import { DUMMY_PENDING_REQUESTS, DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
+import { DUMMY_TIME_OFF_TRANSACTIONS, DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
 import { Button } from "@/components/ui/button"
-import { Download, Search } from "lucide-react"
+import { Download, Search, Filter, Layers, ChevronDown, ChevronRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { useTimezone } from "@/components/providers/timezone-provider"
-import { cn } from "@/lib/utils"
-
-const requestTypeLabels: Record<string, string> = {
-    annual_leave: 'Annual Leave',
-    sick_leave: 'Sick Leave',
-    overtime: 'Overtime',
-    permission: 'Permission'
-}
+import { TimeOffTransactionsFilterSidebar } from "@/components/report/TimeOffTransactionsFilterSidebar"
+import { PaginationFooter } from "@/components/tables/pagination-footer"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuTrigger,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu"
 
 export default function TimeOffTransactionsPage() {
     const timezone = useTimezone()
@@ -26,66 +28,166 @@ export default function TimeOffTransactionsPage() {
         endDate: new Date(2026, 0, 31)
     })
     const [searchQuery, setSearchQuery] = useState("")
-    const [page, setPage] = useState(1)
-    const pageSize = 10
+    const [isLoading, setIsLoading] = useState(true)
+    const [filterSidebarOpen, setFilterSidebarOpen] = useState(false)
+    const [sidebarFilters, setSidebarFilters] = useState({
+        teamId: "all",
+        memberId: "all",
+        policy: "all",
+        type: "all",
+        changedBy: "all",
+        includeAccruals: false
+    })
+
+    useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 800)
+        return () => clearTimeout(timer)
+    }, [])
+
+    const [groupBy, setGroupBy] = useState<"member" | "policy">("member")
+    const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
 
     const filteredData = useMemo(() => {
-        let data = DUMMY_PENDING_REQUESTS || []
+        let data = DUMMY_TIME_OFF_TRANSACTIONS || []
 
         // Filter by date range
         if (dateRange.startDate && dateRange.endDate) {
-            const startStr = dateRange.startDate.toISOString().slice(0, 10)
-            const endStr = dateRange.endDate.toISOString().slice(0, 10)
-            data = data.filter(item => item.requestDate >= startStr && item.requestDate <= endStr)
+            const startStr = dateRange.startDate.toISOString()
+            const endStr = dateRange.endDate.toISOString()
+            data = data.filter(item => item.date >= startStr && item.date <= endStr)
         }
 
-        // Filter by member/team
-        if (!selectedFilter.all && selectedFilter.id !== 'all') {
-            if (selectedFilter.type === 'members') {
-                data = data.filter(item => item.memberId === selectedFilter.id)
-            } else if (selectedFilter.type === 'teams') {
-                const team = DUMMY_TEAMS.find(t => t.id === selectedFilter.id)
-                if (team) {
-                    data = data.filter(item => team.members.includes(item.memberId))
-                }
+        // Sidebar Filters
+        if (sidebarFilters.teamId !== "all") {
+            const team = DUMMY_TEAMS.find(t => t.id === sidebarFilters.teamId)
+            if (team) {
+                data = data.filter(item => team.members.includes(item.memberId))
             }
         }
 
+        if (sidebarFilters.memberId !== "all") {
+            data = data.filter(item => item.memberId === sidebarFilters.memberId)
+        }
+
+        if (sidebarFilters.policy !== "all") {
+            data = data.filter(item => item.policyName === sidebarFilters.policy)
+        }
+
+        if (sidebarFilters.type !== "all") {
+            data = data.filter(item => item.transactionType === sidebarFilters.type)
+        }
+
+        // Note: 'changedBy' logic would go here if we had that data in dummy-data.
+
+        // If includeAccruals is false, filter OUT accruals (assuming default behavior or request implication)
+        // Adjust logic based on requirement. If "Include accruals" is a toggle to SHOW them, then by default they might be hidden? 
+        // Or if it's just an extra filter. Let's assume standard behavior: if unchecked, maybe hide accruals.
+        if (!sidebarFilters.includeAccruals) {
+            data = data.filter(item => item.transactionType !== 'accrual')
+        }
+
+
+        // Global Search
         if (searchQuery) {
             const query = searchQuery.toLowerCase()
             data = data.filter(item =>
                 item.memberName.toLowerCase().includes(query) ||
+                item.policyName.toLowerCase().includes(query) ||
                 (item.notes && item.notes.toLowerCase().includes(query))
             )
         }
 
         return data
-    }, [dateRange, selectedFilter, searchQuery])
+    }, [dateRange, searchQuery, sidebarFilters])
+
+    // Pagination Logic
+    const totalItems = filteredData.length
+    const totalPages = Math.ceil(totalItems / pageSize)
+    const paginatedData = useMemo(() => {
+        const start = (currentPage - 1) * pageSize
+        return filteredData.slice(start, start + pageSize)
+    }, [filteredData, currentPage, pageSize])
+
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [filteredData])
+
+
+    // Grouping Logic (using paginated data)
+    const groupedData = useMemo(() => {
+        const groups: Record<string, typeof DUMMY_TIME_OFF_TRANSACTIONS> = {}
+
+        paginatedData.forEach(item => {
+            const key = groupBy === 'member' ? item.memberName : item.policyName
+            if (!groups[key]) groups[key] = []
+            groups[key].push(item)
+        })
+
+        return groups
+    }, [paginatedData, groupBy])
+
+    // Expand all groups by default
+    useEffect(() => {
+        if (groupedData) {
+            const initial: Record<string, boolean> = {}
+            Object.keys(groupedData).forEach(key => initial[key] = true)
+            setExpandedGroups(initial)
+        }
+    }, [groupedData])
+
+    const toggleGroup = (group: string) => {
+        setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }))
+    }
+
+    const handleExport = () => {
+        const headers = ["Member,Type,Date,Transaction,Amount,Balance After,Notes"]
+        const rows = filteredData.map(item => [
+            item.memberName,
+            item.policyName,
+            item.date,
+            item.transactionType,
+            item.amount,
+            item.balanceAfter,
+            `"${item.notes || ''}"`
+        ].join(","))
+
+        const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n")
+        const encodedUri = encodeURI(csvContent)
+        const link = document.createElement("a")
+        link.setAttribute("href", encodedUri)
+        link.setAttribute("download", "time_off_transactions.csv")
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+    }
 
     const summaryCards = useMemo(() => {
-        const total = filteredData.length
-        const pending = filteredData.filter(r => r.status === 'pending').length
-        const approved = filteredData.filter(r => r.status === 'approved').length
-        const rejected = filteredData.filter(r => r.status === 'rejected').length
+        const totalTransactions = filteredData.length
+        const totalAccrued = filteredData
+            .filter(t => t.transactionType === 'accrual' || t.transactionType === 'adjustment' && t.amount > 0)
+            .reduce((sum, t) => sum + t.amount, 0)
+        const totalUsed = filteredData
+            .filter(t => t.transactionType === 'usage' || t.transactionType === 'adjustment' && t.amount < 0)
+            .reduce((sum, t) => sum + Math.abs(t.amount), 0)
+        const netChange = filteredData.reduce((sum, t) => sum + t.amount, 0)
 
         return [
-            { label: "Total Requests", value: total },
-            { label: "Pending", value: pending },
-            { label: "Approved", value: approved },
-            { label: "Rejected", value: rejected },
+            { label: "Total Transactions", value: totalTransactions.toString() },
+            { label: "Total Accrued", value: totalAccrued.toFixed(1) },
+            { label: "Total Used", value: totalUsed.toFixed(1) },
+            { label: "Net Change", value: (netChange > 0 ? "+" : "") + netChange.toFixed(1) },
         ]
     }, [filteredData])
 
-    const paginatedData = useMemo(() => {
-        const start = (page - 1) * pageSize
-        return filteredData.slice(start, start + pageSize)
-    }, [filteredData, page])
 
-    const totalPages = Math.ceil(filteredData.length / pageSize)
 
     return (
-        <div className="px-6 py-4">
-            <h1 className="text-xl font-semibold mb-5">Time off transactions</h1>
+        <div className="px-6 pb-6 space-y-6">
+            <h1 className="text-xl font-semibold">Time off transactions</h1>
 
             <InsightsHeader
                 selectedFilter={selectedFilter}
@@ -95,108 +197,163 @@ export default function TimeOffTransactionsPage() {
                 members={DUMMY_MEMBERS}
                 teams={DUMMY_TEAMS}
                 timezone={timezone}
+                hideFilter={true}
             >
-                <Button variant="outline" className="h-9">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                </Button>
-            </InsightsHeader>
-
-            <style jsx global>{`
-                html body .custom-hover-row:hover,
-                html body .custom-hover-row:hover > td {
-                    background-color: #d1d5db !important;
-                }
-            `}</style>
-
-            <div className="mt-6 bg-white border rounded-lg shadow-sm">
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x border-b bg-gray-50/50">
-                    {summaryCards.map((card, idx) => (
-                        <div key={idx} className="p-4">
-                            <p className="text-sm font-medium text-gray-500">{card.label}</p>
-                            <p className="text-2xl font-bold text-gray-900">{card.value}</p>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Search */}
-                <div className="p-4 border-b">
-                    <div className="relative max-w-sm">
+                <div className="flex gap-2">
+                    <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                         <Input
-                            placeholder="Search member..."
+                            placeholder="Search transactions..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="ps-9 pl-9"
+                            className="pl-9 h-10 bg-white max-w-sm"
                         />
                     </div>
-                </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="h-9 gap-2">
+                                <Layers className="w-4 h-4" />
+                                <span className="hidden sm:inline">
+                                    Group by: {groupBy === "member" ? "Member" : "Policy"}
+                                </span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[180px]">
+                            <DropdownMenuLabel>Group data by</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuRadioGroup value={groupBy} onValueChange={(v) => setGroupBy(v as "member" | "policy")}>
+                                <DropdownMenuRadioItem value="member">Member</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="policy">Policy</DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
 
-                {/* Table */}
-                <div className="overflow-x-auto">
+                    <Button
+                        variant="outline"
+                        className="h-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50 font-medium"
+                        onClick={() => setFilterSidebarOpen(true)}
+                    >
+                        <Filter className="w-4 h-4 mr-2" /> Filter
+                    </Button>
+
+                    <Button variant="outline" className="h-9" onClick={handleExport}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Export
+                    </Button>
+                </div>
+            </InsightsHeader>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x border rounded-lg shadow-sm bg-white">
+                {summaryCards.map((card, idx) => (
+                    <div key={idx} className="p-4">
+                        <p className="text-sm font-medium text-gray-500">{card.label}</p>
+                        <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                    </div>
+                ))}
+            </div>
+
+            <div className="space-y-4">
+                <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-600 font-medium border-b">
+                        <thead className="bg-gray-50 text-gray-900 font-semibold border-b">
                             <tr>
-                                <th className="p-4">Member</th>
-                                <th className="p-4">Type</th>
-                                <th className="p-4">Date</th>
-                                <th className="p-4">Notes</th>
-                                <th className="p-4 text-center">Status</th>
+                                <th className="p-3 pl-4 w-48 font-semibold text-gray-900">
+                                    {groupBy === 'policy' ? 'Member' : 'Time Off Type'}
+                                </th>
+                                <th className="p-3 w-32 font-semibold text-gray-900">Date</th>
+                                <th className="p-3 w-40 font-semibold text-gray-900">Transaction Type</th>
+                                <th className="p-3 w-28 text-right font-semibold text-gray-900">Amount</th>
+                                <th className="p-3 w-28 text-right font-semibold text-gray-900">Balance After</th>
+                                <th className="p-3 font-semibold text-gray-900">Notes</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {paginatedData.map((row, idx) => (
-                                <tr
-                                    key={row.id}
-                                    style={{ backgroundColor: idx % 2 === 1 ? '#f1f5f9' : '#ffffff' }}
-                                    className="transition-colors custom-hover-row"
-                                >
-                                    <td className="p-4 font-medium text-gray-900">{row.memberName}</td>
-                                    <td className="p-4">
-                                        <span className={cn(
-                                            "px-2 py-1 rounded text-xs font-medium",
-                                            row.requestType === 'annual_leave' && "bg-blue-100 text-blue-800",
-                                            row.requestType === 'sick_leave' && "bg-orange-100 text-orange-800",
-                                            row.requestType === 'overtime' && "bg-purple-100 text-purple-800",
-                                            row.requestType === 'permission' && "bg-gray-100 text-gray-800",
-                                        )}>
-                                            {requestTypeLabels[row.requestType] || String(row.requestType)}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-gray-600">{row.requestDate}</td>
-                                    <td className="p-4 text-gray-600 max-w-xs truncate">{row.notes || '-'}</td>
-                                    <td className="p-4 text-center">
-                                        <span className={cn(
-                                            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-                                            row.status === 'approved' && "bg-green-100 text-green-800",
-                                            row.status === 'pending' && "bg-yellow-100 text-yellow-800",
-                                            row.status === 'rejected' && "bg-red-100 text-red-800",
-                                        )}>
-                                            {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
-                                        </span>
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={6} className="p-8 text-center text-gray-500">
+                                        Loading...
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (!groupedData || Object.keys(groupedData).length === 0) ? (
+                                <tr>
+                                    <td colSpan={6} className="p-8 text-center text-gray-500">
+                                        No data found.
+                                    </td>
+                                </tr>
+                            ) : (
+                                Object.keys(groupedData).map(groupName => (
+                                    <Fragment key={groupName}>
+                                        <tr className="bg-gray-50/50 hover:bg-gray-50 cursor-pointer" onClick={() => toggleGroup(groupName)}>
+                                            <td colSpan={6} className="p-3">
+                                                <div className="flex items-center gap-2 font-medium text-gray-900">
+                                                    {expandedGroups[groupName] ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                                                    {groupName}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {expandedGroups[groupName] && groupedData[groupName]!.map((item, index) => (
+                                            <tr
+                                                key={item.id}
+                                                className={`transition-colors border-b last:border-0 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100`}
+                                            >
+                                                <td className="py-3 pl-4 font-medium text-gray-900">
+                                                    {groupBy === 'policy' ? item.memberName : item.policyName}
+                                                </td>
+                                                <td className="p-3 text-gray-500">
+                                                    {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                </td>
+                                                <td className="p-3">
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize
+                                                        ${item.transactionType === 'accrual' ? 'bg-green-100 text-green-800' :
+                                                            item.transactionType === 'usage' ? 'bg-red-100 text-red-800' :
+                                                                item.transactionType === 'adjustment' ? 'bg-blue-100 text-blue-800' :
+                                                                    item.transactionType === 'cancellation' ? 'bg-orange-100 text-orange-800' :
+                                                                        'bg-gray-100 text-gray-800'}`}>
+                                                        {item.transactionType}
+                                                    </span>
+                                                </td>
+                                                <td className={`p-3 text-right font-medium ${item.amount > 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                                                    {item.amount > 0 ? "+" : ""}{item.amount}
+                                                </td>
+                                                <td className="p-3 text-right text-gray-900 font-medium">
+                                                    {item.balanceAfter}
+                                                </td>
+                                                <td className="p-3 text-gray-500 truncate max-w-[200px]" title={item.notes}>
+                                                    {item.notes || "-"}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </Fragment>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* Pagination */}
-                <div className="border-t">
-                    <PaginationFooter
-                        page={page}
-                        totalPages={totalPages}
-                        onPageChange={setPage}
-                        from={filteredData.length > 0 ? (page - 1) * pageSize + 1 : 0}
-                        to={Math.min(page * pageSize, filteredData.length)}
-                        total={filteredData.length}
-                        pageSize={pageSize}
-                        onPageSizeChange={() => { }}
-                        className="bg-transparent shadow-none border-none"
-                    />
-                </div>
+                <PaginationFooter
+                    page={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    from={(currentPage - 1) * pageSize + 1}
+                    to={Math.min(currentPage * pageSize, totalItems)}
+                    total={totalItems}
+                    pageSize={pageSize}
+                    onPageSizeChange={(size) => {
+                        setPageSize(size)
+                        setCurrentPage(1)
+                    }}
+                    isLoading={isLoading}
+                />
             </div>
+
+
+            <TimeOffTransactionsFilterSidebar
+                open={filterSidebarOpen}
+                onOpenChange={setFilterSidebarOpen}
+                onApply={setSidebarFilters}
+                teams={DUMMY_TEAMS}
+                members={DUMMY_MEMBERS}
+            />
         </div>
     )
 }
