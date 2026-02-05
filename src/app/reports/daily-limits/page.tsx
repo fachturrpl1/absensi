@@ -61,25 +61,15 @@ export default function DailyLimitsPage() {
 
         const matchesSearch = item.memberName.toLowerCase().includes(searchQuery.toLowerCase())
 
-        // Date Range Filtering
-        // Check if item.date is within dateRange
-        // item.date is YYYY-MM-DD
         const itemDateObj = new Date(item.date)
         itemDateObj.setHours(0, 0, 0, 0)
 
-        // Ensure dateRange start/end are comparable
         const start = new Date(dateRange.startDate)
         start.setHours(0, 0, 0, 0)
         const end = new Date(dateRange.endDate)
         end.setHours(23, 59, 59, 999)
 
         const matchesDateRange = itemDateObj >= start && itemDateObj <= end
-
-        // If sidebar filter for day is active, it acts as a quick preset.
-        // We should probably respect Date Range if it's set, or intersecting.
-        // For simplicity, let's make Date Range strictly filter the rows.
-        // Note: sidebarFilters.day logic effectively does "Is date == Today/Yesterday".
-        // Use matchesDateRange instead.
 
         return matchesRole && matchesStatus && matchesSearch && matchesMember && matchesDateRange
     })
@@ -138,7 +128,7 @@ export default function DailyLimitsPage() {
                 onSelectedFilterChange={setSelectedFilter}
                 dateRange={dateRange}
                 onDateRangeChange={setDateRange}
-                members={DUMMY_MEMBERS} // Using dummy members for the header filter
+                members={DUMMY_MEMBERS}
                 teams={DUMMY_TEAMS}
                 timezone={timezone}
             >

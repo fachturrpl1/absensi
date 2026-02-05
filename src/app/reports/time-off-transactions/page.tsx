@@ -56,9 +56,17 @@ export default function TimeOffTransactionsPage() {
 
         // Filter by date range
         if (dateRange.startDate && dateRange.endDate) {
-            const startStr = dateRange.startDate.toISOString()
-            const endStr = dateRange.endDate.toISOString()
-            data = data.filter(item => item.date >= startStr && item.date <= endStr)
+            // Create start/end of day boundaries
+            const start = new Date(dateRange.startDate)
+            start.setHours(0, 0, 0, 0)
+
+            const end = new Date(dateRange.endDate)
+            end.setHours(23, 59, 59, 999)
+
+            data = data.filter(item => {
+                const itemDate = new Date(item.date)
+                return itemDate >= start && itemDate <= end
+            })
         }
 
         // Sidebar Filters
@@ -81,17 +89,10 @@ export default function TimeOffTransactionsPage() {
             data = data.filter(item => item.transactionType === sidebarFilters.type)
         }
 
-        // Note: 'changedBy' logic would go here if we had that data in dummy-data.
-
-        // If includeAccruals is false, filter OUT accruals (assuming default behavior or request implication)
-        // Adjust logic based on requirement. If "Include accruals" is a toggle to SHOW them, then by default they might be hidden? 
-        // Or if it's just an extra filter. Let's assume standard behavior: if unchecked, maybe hide accruals.
         if (!sidebarFilters.includeAccruals) {
             data = data.filter(item => item.transactionType !== 'accrual')
         }
 
-
-        // Global Search
         if (searchQuery) {
             const query = searchQuery.toLowerCase()
             data = data.filter(item =>
@@ -104,7 +105,6 @@ export default function TimeOffTransactionsPage() {
         return data
     }, [dateRange, searchQuery, sidebarFilters])
 
-    // Pagination Logic
     const totalItems = filteredData.length
     const totalPages = Math.ceil(totalItems / pageSize)
     const paginatedData = useMemo(() => {
@@ -116,8 +116,6 @@ export default function TimeOffTransactionsPage() {
         setCurrentPage(1)
     }, [filteredData])
 
-
-    // Grouping Logic (using paginated data)
     const groupedData = useMemo(() => {
         const groups: Record<string, typeof DUMMY_TIME_OFF_TRANSACTIONS> = {}
 
@@ -130,7 +128,6 @@ export default function TimeOffTransactionsPage() {
         return groups
     }, [paginatedData, groupBy])
 
-    // Expand all groups by default
     useEffect(() => {
         if (groupedData) {
             const initial: Record<string, boolean> = {}
@@ -187,7 +184,7 @@ export default function TimeOffTransactionsPage() {
 
     return (
         <div className="px-6 pb-6 space-y-6">
-            <h1 className="text-xl font-semibold">Time off transactions</h1>
+            <h1 className="text-xl font-semibold">Time off transactions report</h1>
 
             <InsightsHeader
                 selectedFilter={selectedFilter}

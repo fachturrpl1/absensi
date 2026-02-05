@@ -158,7 +158,7 @@ export default function TimeOffBalancesPage() {
 
     return (
         <div className="px-6 pb-6 space-y-6">
-            <h1 className="text-xl font-semibold">Time off balances</h1>
+            <h1 className="text-xl font-semibold">Time off balances report</h1>
 
             <InsightsHeader
                 selectedFilter={selectedFilter}
