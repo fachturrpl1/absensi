@@ -5,24 +5,16 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import L from "leaflet"
 
-const markerIcon = L.icon({
-    iconUrl: "https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png",
-    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon-2x.png",
-    shadowUrl: "https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41]
-})
+const iconUrl = "https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png"
+const iconRetinaUrl = "https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon-2x.png"
+const shadowUrl = "https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png"
 
-function FixMapSize() {
+function ChangeView({ center }: { center: [number, number] }) {
     const map = useMap()
 
     useEffect(() => {
-        setTimeout(() => {
-            map.invalidateSize()
-        }, 300)
-    }, [map])
+        map.setView(center)
+    }, [center, map])
 
     return null
 }
@@ -43,37 +35,46 @@ interface VisitsMapProps {
 }
 
 export default function VisitsMap({ visits }: VisitsMapProps) {
+    useEffect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (L.Icon.Default.prototype as any)._getIconUrl
+        L.Icon.Default.mergeOptions({
+            iconUrl,
+            iconRetinaUrl,
+            shadowUrl,
+        })
+    }, [])
+
     const validVisits = visits.filter(v => v.coordinates)
-    const firstVisitCoords = validVisits[0]?.coordinates
-    const centerPossition: [number, number] = firstVisitCoords
-        ? [firstVisitCoords.lat, firstVisitCoords.lng]
-        : [-6.2088, 106.8456] // Jakarta default
+
+    const center: [number, number] = validVisits[0]?.coordinates
+        ? [validVisits[0].coordinates!.lat, validVisits[0].coordinates!.lng]
+        : [-6.2088, 106.8456]
 
     return (
         <div className="h-[600px] w-full rounded-lg overflow-hidden border shadow-sm z-0 relative">
             <MapContainer
-                key={centerPossition.join(",")}
-                center={centerPossition}
+                center={[-6.2088, 106.8456]}
                 zoom={13}
-                scrollWheelZoom={false}
                 style={{ height: "100%", width: "100%" }}
             >
-                <FixMapSize />
+                <ChangeView center={center} />
+
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                {validVisits.map(visit => (
+
+                {validVisits.map(v => (
                     <Marker
-                        key={visit.id}
-                        position={[visit.coordinates!.lat, visit.coordinates!.lng]}
-                        icon={markerIcon}
+                        key={v.id}
+                        position={[v.coordinates!.lat, v.coordinates!.lng]}
                     >
                         <Popup>
                             <div className="p-1">
-                                <h3 className="font-bold text-sm">{visit.locationName}</h3>
-                                <p className="text-xs text-gray-600">{visit.memberName}</p>
-                                <p className="text-xs text-gray-500 mt-1">{visit.address}</p>
+                                <h3 className="font-bold text-sm">{v.locationName}</h3>
+                                <p className="text-xs text-gray-600">{v.memberName}</p>
+                                <p className="text-xs text-gray-500 mt-1">{v.address}</p>
                             </div>
                         </Popup>
                     </Marker>

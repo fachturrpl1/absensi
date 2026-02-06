@@ -18,6 +18,10 @@ const withPWA = withPWAInit({
     disableDevLogs: true,
     runtimeCaching: [
       {
+        urlPattern: /^https:\/\/.*tile\.openstreetmap\.org\/.*/i,
+        handler: 'NetworkOnly',
+      },
+      {
         urlPattern: /^https:\/\/fonts\.(?:gstatic)\.com\/.*/i,
         handler: 'CacheFirst',
         options: {
@@ -155,8 +159,8 @@ const withPWA = withPWAInit({
       },
       {
         urlPattern: ({ sameOrigin, url: { pathname } }) =>
-          sameOrigin && 
-          !pathname.startsWith('/api/auth/callback') && 
+          sameOrigin &&
+          !pathname.startsWith('/api/auth/callback') &&
           pathname.startsWith('/api/'),
         handler: 'NetworkFirst',
         options: {
@@ -230,16 +234,16 @@ const withPWA = withPWAInit({
 // Content Security Policy untuk production dengan PWA support
 const cspHeader = isDev ? '' : `
   default-src 'self';
-  script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.supabase.co https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live;
-  style-src 'self' 'unsafe-inline';
-  img-src 'self' blob: data: https://*.supabase.co https://*.supabase.in;
+  script-src 'self' 'unsafe-eval' 'unsafe-inline' blob:; https://*.supabase.co https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live;
+  style-src 'self' 'unsafe-inline' https://unpkg.com;
+  img-src 'self' blob: data: https://*.supabase.co https://*.supabase.in https://*.tile.openstreetmap.org https://unpkg.com;
   font-src 'self' data:;
   object-src 'none';
   base-uri 'self';
   form-action 'self';
   frame-src 'self' https://vercel.live https://*.vercel.live;
   frame-ancestors 'none';
-  connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in https://vercel.live https://*.vercel.live wss://vercel.live wss://*.vercel.live;
+  connect-src 'self' https://*.supabase.co https://*.supabase.in https://*.tile.openstreetmap.org wss://*.supabase.co wss://*.supabase.in https://vercel.live https://*.vercel.live wss://vercel.live wss://*.vercel.live;
   media-src 'self';
   worker-src 'self' blob:;
   manifest-src 'self';
@@ -305,38 +309,38 @@ const nextConfig = {
       logLevel: 'error',
     },
   },
-  
+
   // Compiler optimizations
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
   poweredByHeader: false,
   reactStrictMode: true,
-  
+
   eslint: {
     ignoreDuringBuilds: true,
   },
-  
+
   typescript: {
     ignoreBuildErrors: false,
   },
-  
+
   allowedDevOrigins: [
     'http://10.11.112.221:3000',
     'http://localhost:3000',
   ],
-  
+
   serverExternalPackages: ['@supabase/ssr', 'sharp'],
-  
+
   // Disable standalone output to avoid Windows symlink permission issues
   // output: 'standalone',
-  
+
   experimental: {
     serverActions: {
       bodySizeLimit: "20mb",
     },
   },
-  
+
   async headers() {
     const headerRules = [
       {
@@ -389,7 +393,7 @@ const nextConfig = {
 
     return headerRules;
   },
-  
+
   async redirects() {
     return [
       {
@@ -399,7 +403,7 @@ const nextConfig = {
       },
     ];
   },
-  
+
   images: {
     remotePatterns: [
       {
@@ -414,9 +418,9 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60,
   },
-  
+
   // output: 'standalone', // Disabled - causes Windows symlink permission errors
-  
+
   ...(isDev && {
     devIndicators: {
       position: 'bottom-right',
@@ -424,4 +428,4 @@ const nextConfig = {
   }),
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);
