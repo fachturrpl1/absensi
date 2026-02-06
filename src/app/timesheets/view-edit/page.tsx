@@ -255,24 +255,24 @@ export default function ViewEditTimesheetsPage() {
             <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-white text-gray-700 font-semibold border-b border-gray-200">
+                        <thead className="bg-gray-50 text-gray-900 font-semibold border-b border-gray-200">
                             <tr>
                                 {visibleCols.checkbox && (
-                                    <th className="p-4 w-10">
+                                    <th className="p-3 w-10">
                                         <Checkbox
                                             checked={paginatedData.length > 0 && selectedRows.size === paginatedData.length}
                                             onCheckedChange={toggleAll}
                                         />
                                     </th>
                                 )}
-                                {visibleCols.project && <th className="p-4 font-semibold text-gray-900">Project</th>}
-                                {visibleCols.activity && <th className="p-4 font-semibold text-gray-900">Activity</th>}
-                                {visibleCols.idle && <th className="p-4 font-semibold text-gray-900">Idle</th>}
-                                {visibleCols.manual && <th className="p-4 font-semibold text-gray-900">Manual</th>}
-                                {visibleCols.duration && <th className="p-4 font-semibold text-gray-900">Duration</th>}
-                                {visibleCols.source && <th className="p-4 font-semibold text-gray-900">Source</th>}
-                                {visibleCols.time && <th className="p-4 font-semibold text-gray-900">Time</th>}
-                                {visibleCols.actions && <th className="p-4 font-semibold text-gray-900 text-right">Actions</th>}
+                                {visibleCols.project && <th className="p-3 font-semibold text-gray-900">Project</th>}
+                                {visibleCols.activity && <th className="p-3 font-semibold text-gray-900">Activity</th>}
+                                {visibleCols.idle && <th className="p-3 font-semibold text-gray-900">Idle</th>}
+                                {visibleCols.manual && <th className="p-3 font-semibold text-gray-900">Manual</th>}
+                                {visibleCols.duration && <th className="p-3 font-semibold text-gray-900">Duration</th>}
+                                {visibleCols.source && <th className="p-3 font-semibold text-gray-900">Source</th>}
+                                {visibleCols.time && <th className="p-3 font-semibold text-gray-900">Time</th>}
+                                {visibleCols.actions && <th className="p-3 font-semibold text-gray-900 text-right">Actions</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -286,7 +286,7 @@ export default function ViewEditTimesheetsPage() {
                                 </tr>
                             ) : (
                                 paginatedData.map((row) => (
-                                    <tr key={row.id} className="hover:bg-gray-50 even:bg-white bg-white transition-colors group">
+                                    <tr key={row.id} className="hover:bg-gray-100 even:bg-gray-50 transition-colors group">
                                         {visibleCols.checkbox && (
                                             <td className="p-4">
                                                 <Checkbox
