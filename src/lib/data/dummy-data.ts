@@ -571,6 +571,20 @@ export const DUMMY_MEMBERS: Member[] = [
         email: "emma@example.com",
         activityScore: 95,
         avatar: "https://i.pravatar.cc/150?u=m5"
+    },
+    {
+        id: "m6",
+        name: "Budi",
+        email: "budi.manager@example.com",
+        activityScore: 90,
+        avatar: "https://i.pravatar.cc/150?u=m6"
+    },
+    {
+        id: "m7",
+        name: "Siti",
+        email: "siti.admin@example.com",
+        activityScore: 98,
+        avatar: "https://i.pravatar.cc/150?u=m7"
     }
 ]
 
@@ -3149,30 +3163,7 @@ export const DUMMY_CUSTOM_REPORTS: CustomReport[] = [
 // TIMESHEET APPROVALS
 // ============================================================================
 
-export interface TimesheetApproval {
-    id: string
-    memberId: string
-    memberName: string
-    weekStart: string
-    weekEnd: string
-    totalHours: number
-    regularHours: number
-    overtimeHours: number
-    status: 'pending' | 'approved' | 'rejected'
-    submittedAt: string
-    approvedBy?: string
-    approvedAt?: string
-    notes?: string
-}
 
-export const DUMMY_TIMESHEET_APPROVALS: TimesheetApproval[] = [
-    { id: 'ts-1', memberId: 'm1', memberName: 'Antonio Galih', weekStart: '2026-01-13', weekEnd: '2026-01-19', totalHours: 42.5, regularHours: 40, overtimeHours: 2.5, status: 'approved', submittedAt: '2026-01-19T17:00:00', approvedBy: 'Manager', approvedAt: '2026-01-20T09:00:00' },
-    { id: 'ts-2', memberId: 'm2', memberName: 'Lave Lavael', weekStart: '2026-01-13', weekEnd: '2026-01-19', totalHours: 38.0, regularHours: 38, overtimeHours: 0, status: 'pending', submittedAt: '2026-01-19T18:30:00' },
-    { id: 'ts-3', memberId: 'm3', memberName: 'Sarah Johnson', weekStart: '2026-01-13', weekEnd: '2026-01-19', totalHours: 45.0, regularHours: 40, overtimeHours: 5, status: 'approved', submittedAt: '2026-01-19T16:00:00', approvedBy: 'Manager', approvedAt: '2026-01-20T10:00:00' },
-    { id: 'ts-4', memberId: 'm4', memberName: 'Michael Chen', weekStart: '2026-01-13', weekEnd: '2026-01-19', totalHours: 40.0, regularHours: 40, overtimeHours: 0, status: 'pending', submittedAt: '2026-01-19T17:30:00' },
-    { id: 'ts-5', memberId: 'm5', memberName: 'Emma Rodriguez', weekStart: '2026-01-13', weekEnd: '2026-01-19', totalHours: 36.0, regularHours: 36, overtimeHours: 0, status: 'rejected', submittedAt: '2026-01-19T15:00:00', notes: 'Missing project allocation' },
-    { id: 'ts-6', memberId: 'm1', memberName: 'Antonio Galih', weekStart: '2026-01-20', weekEnd: '2026-01-26', totalHours: 41.0, regularHours: 40, overtimeHours: 1, status: 'pending', submittedAt: '2026-01-26T17:00:00' },
-]
 
 // ============================================================================
 // EXPENSES
@@ -4327,5 +4318,548 @@ export const DUMMY_WEEKLY_LIMITS: WeeklyLimitEntry[] = [
         weekStartDate: '2026-02-01',
         weekEndDate: '2026-02-07',
         status: 'Approaching Limit'
+    }
+];
+
+// ============================================================================
+// CLIENT INVOICES
+// ============================================================================
+
+export interface ClientInvoice {
+    id: string
+    invoiceNumber: string
+    clientId: string
+    clientName: string
+    issueDate: string // ISO string
+    status: 'Open' | 'Closed' | 'Paid' | 'Void'
+    total: number
+    paidAmount: number
+    amountDue: number
+    currency: string
+}
+
+export const DUMMY_CLIENT_INVOICES: ClientInvoice[] = [
+    {
+        id: "inv-001",
+        invoiceNumber: "INV-2026-001",
+        clientId: "client-1",
+        clientName: "Patricia",
+        issueDate: "2026-01-05T00:00:00Z",
+        status: "Paid",
+        total: 5000,
+        paidAmount: 5000,
+        amountDue: 0,
+        currency: "USD"
+    },
+    {
+        id: "inv-002",
+        invoiceNumber: "INV-2026-002",
+        clientId: "client-2",
+        clientName: "Tech Corp",
+        issueDate: "2026-01-10T00:00:00Z",
+        status: "Open",
+        total: 12500,
+        paidAmount: 5000,
+        amountDue: 7500,
+        currency: "USD"
+    },
+    {
+        id: "inv-003",
+        invoiceNumber: "INV-2026-003",
+        clientId: "client-2",
+        clientName: "Tech Corp",
+        issueDate: "2026-01-25T00:00:00Z",
+        status: "Open",
+        total: 8000,
+        paidAmount: 0,
+        amountDue: 8000,
+        currency: "USD"
+    },
+    {
+        id: "inv-004",
+        invoiceNumber: "INV-2026-004",
+        clientId: "client-3",
+        clientName: "Creative Agency",
+        issueDate: "2026-01-15T00:00:00Z",
+        status: "Closed",
+        total: 2500,
+        paidAmount: 2500,
+        amountDue: 0,
+        currency: "USD"
+    },
+    {
+        id: "inv-005",
+        invoiceNumber: "INV-2026-005",
+        clientId: "client-4",
+        clientName: "Startup Inc",
+        issueDate: "2026-02-01T00:00:00Z",
+        status: "Open",
+        total: 1500,
+        paidAmount: 0,
+        amountDue: 1500,
+        currency: "USD"
+    },
+    {
+        id: "inv-006",
+        invoiceNumber: "INV-2026-006",
+        clientId: "client-1",
+        clientName: "Patricia",
+        issueDate: "2026-02-03T00:00:00Z",
+        status: "Open",
+        total: 4200,
+        paidAmount: 1000,
+        amountDue: 3200,
+        currency: "USD"
+    }
+]
+
+// ============================================================================
+// TEAM INVOICES
+// ============================================================================
+
+export interface TeamInvoice {
+    id: string
+    invoiceNumber: string
+    memberId: string
+    memberName: string
+    issueDate: string
+    status: 'Open' | 'Closed'
+    total: number
+    paidAmount: number
+    amountDue: number
+    currency: string
+}
+
+export const DUMMY_TEAM_INVOICES: TeamInvoice[] = [
+    {
+        id: "tinv-001",
+        invoiceNumber: "TINV-2026-001",
+        memberId: "m1",
+        memberName: "Antonio Galih",
+        issueDate: "2026-01-15T00:00:00Z",
+        status: "Closed",
+        total: 2500,
+        paidAmount: 2500,
+        amountDue: 0,
+        currency: "USD"
+    },
+    {
+        id: "tinv-002",
+        invoiceNumber: "TINV-2026-002",
+        memberId: "m2",
+        memberName: "Lave Lavael",
+        issueDate: "2026-01-20T00:00:00Z",
+        status: "Open",
+        total: 1800,
+        paidAmount: 1000,
+        amountDue: 800,
+        currency: "USD"
+    },
+    {
+        id: "tinv-003",
+        invoiceNumber: "TINV-2026-003",
+        memberId: "m1",
+        memberName: "Antonio Galih",
+        issueDate: "2026-02-01T00:00:00Z",
+        status: "Open",
+        total: 2600,
+        paidAmount: 0,
+        amountDue: 2600,
+        currency: "USD"
+    },
+    {
+        id: "tinv-004",
+        invoiceNumber: "TINV-2026-004",
+        memberId: "m3",
+        memberName: "Sarah Johnson",
+        issueDate: "2026-01-25T00:00:00Z",
+        status: "Closed",
+        total: 3000,
+        paidAmount: 3000,
+        amountDue: 0,
+        currency: "USD"
+    },
+    {
+        id: "tinv-005",
+        invoiceNumber: "TINV-2026-005",
+        memberId: "m5",
+        memberName: "Alex Morgan",
+        issueDate: "2026-02-02T00:00:00Z",
+        status: "Open",
+        total: 1200,
+        paidAmount: 0,
+        amountDue: 1200,
+        currency: "USD"
+    },
+    {
+        id: "tinv-006",
+        invoiceNumber: "TINV-2026-006",
+        memberId: "m2",
+        memberName: "Lave Lavael",
+        issueDate: "2026-02-04T00:00:00Z",
+        status: "Open",
+        total: 1850,
+        paidAmount: 500,
+        amountDue: 1350,
+        currency: "USD"
+    }
+]
+// ============================================================================
+// VISITS REPORT (NEW)
+// ============================================================================
+
+export interface VisitEntry {
+    id: string
+    memberId: string
+    memberName: string
+    date: string
+    locationName: string
+    address: string
+    checkIn: string
+    checkOut: string
+    duration: string // formatted duration
+    distance: number // km
+    notes: string
+    coordinates: {
+        lat: number
+        lng: number
+    }
+}
+
+export const DUMMY_VISITS: VisitEntry[] = [
+    {
+        id: 'v-1',
+        memberId: 'm1',
+        memberName: 'Antonio Galih',
+        date: '2026-01-15',
+        locationName: 'Headquarters',
+        coordinates: { lat: -6.2088, lng: 106.8456 },
+        address: '123 Main St, Jakarta',
+        checkIn: '09:00 AM',
+        checkOut: '05:00 PM',
+        duration: '08:00',
+        distance: 12.5,
+        notes: 'Regular office day'
+    },
+    {
+        id: 'v-2',
+        memberId: 'm2',
+        memberName: 'Emily Davis',
+        date: '2026-01-15',
+        locationName: 'Client Site A',
+        coordinates: { lat: -6.9175, lng: 107.6191 },
+        address: '456 Business Rd, Bandung',
+        checkIn: '10:00 AM',
+        checkOut: '02:00 PM',
+        duration: '04:00',
+        distance: 45.2,
+        notes: 'Monthly maintenance'
+    },
+    {
+        id: 'v-3',
+        memberId: 'm3',
+        memberName: 'Sarah Johnson',
+        date: '2026-01-16',
+        locationName: 'Vendor Office',
+        coordinates: { lat: -7.2575, lng: 112.7521 },
+        address: '789 Supply St, Surabaya',
+        checkIn: '01:00 PM',
+        checkOut: '03:00 PM',
+        duration: '02:00',
+        distance: 5.0,
+        notes: 'Contract negotiation'
+    },
+    {
+        id: 'v-4',
+        memberId: 'm4',
+        memberName: 'Michael Chen',
+        date: '2026-01-16',
+        locationName: 'Data Center',
+        coordinates: { lat: -6.1751, lng: 106.8650 },
+        address: '101 Server Ave, Jakarta',
+        checkIn: '08:00 AM',
+        checkOut: '06:00 PM',
+        duration: '10:00',
+        distance: 18.0,
+        notes: 'Server migration'
+    },
+    {
+        id: 'v-5',
+        memberId: 'm1',
+        memberName: 'Antonio Galih',
+        date: '2026-01-17',
+        locationName: 'Branch Office',
+        coordinates: { lat: -6.2383, lng: 106.9756 },
+        address: '202 Branch Rd, Bekasi',
+        checkIn: '09:30 AM',
+        checkOut: '04:30 PM',
+        duration: '07:00',
+        distance: 12.0,
+        notes: 'Inventory check'
+    }
+]
+
+// ============================================================================
+// MANUAL TIME EDIT REPORT
+// ============================================================================
+
+export interface ManualTimeEditEntry {
+    id: string
+    memberId: string
+    memberName: string
+    date: string
+    project: string
+    task?: string
+    originalTime?: string
+    editedTime?: string
+    action: 'add' | 'edit' | 'delete'
+    editedBy: string
+    editDate: string
+    reason: string
+}
+
+export const DUMMY_MANUAL_TIME_EDITS: ManualTimeEditEntry[] = [
+    {
+        id: 'edit-1',
+        memberId: 'm1',
+        memberName: 'Antonio Galih',
+        date: '2026-01-15',
+        project: 'Website Redesign',
+        task: 'Homepage Layout',
+        originalTime: '02:00',
+        editedTime: '03:00',
+        action: 'edit',
+        editedBy: 'Siti',
+        editDate: '2026-01-16T10:30:00',
+        reason: 'Forgot to track brainstorming session'
+    },
+    {
+        id: 'edit-2',
+        memberId: 'm2',
+        memberName: 'Emily Davis',
+        date: '2026-01-14',
+        project: 'Mobile App',
+        originalTime: '00:00',
+        editedTime: '04:00',
+        action: 'add',
+        editedBy: 'Emily Davis',
+        editDate: '2026-01-14T18:00:00',
+        reason: 'Manual entry for offline work'
+    },
+    {
+        id: 'edit-3',
+        memberId: 'm3',
+        memberName: 'Sarah Johnson',
+        date: '2026-01-13',
+        project: 'Backend API',
+        originalTime: '01:30',
+        editedTime: '00:00',
+        action: 'delete',
+        editedBy: 'Budi',
+        editDate: '2026-01-13T15:00:00',
+        reason: 'Accidental timer start'
+    },
+    {
+        id: 'edit-4',
+        memberId: 'm1',
+        memberName: 'Antonio Galih',
+        date: '2026-01-12',
+        project: 'Website Redesign',
+        originalTime: '05:00',
+        editedTime: '04:30',
+        action: 'edit',
+        editedBy: 'Siti',
+        editDate: '2026-01-12T17:00:00',
+        reason: 'Adjusted for lunch break'
+    },
+    {
+        id: 'edit-5',
+        memberId: 'm4',
+        memberName: 'Michael Chen',
+        date: '2026-01-15',
+        project: 'Server Maintenance',
+        task: 'Database Update',
+        originalTime: '00:00',
+        editedTime: '02:00',
+        action: 'add',
+        editedBy: 'Michael Chen',
+        editDate: '2026-01-15T09:00:00',
+        reason: 'Forgot to start timer'
+    }
+]
+
+// ============================================================================
+// TIMESHEET APPROVAL REPORT
+// ============================================================================
+
+export interface TimesheetApprovalEntry {
+    id: string
+    memberId: string
+    memberName: string
+    dateStart: string
+    dateEnd: string
+    totalHours: string
+    status: 'pending' | 'approved' | 'rejected'
+    approver?: string
+    approvalDate?: string
+    comments?: string
+}
+
+export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
+    {
+        id: 'ts-1',
+        memberId: 'm1',
+        memberName: 'Antonio Galih',
+        dateStart: '2026-01-01',
+        dateEnd: '2026-01-07',
+        totalHours: '40:00',
+        status: 'approved',
+        approver: 'Siti',
+        approvalDate: '2026-01-08T09:00:00',
+        comments: 'All looks good'
+    },
+    {
+        id: 'ts-2',
+        memberId: 'm2',
+        memberName: 'Emily Davis',
+        dateStart: '2026-01-01',
+        dateEnd: '2026-01-07',
+        totalHours: '38:30',
+        status: 'approved',
+        approver: 'Siti',
+        approvalDate: '2026-01-08T09:05:00',
+    },
+    {
+        id: 'ts-3',
+        memberId: 'm3',
+        memberName: 'Sarah Johnson',
+        dateStart: '2026-01-01',
+        dateEnd: '2026-01-07',
+        totalHours: '45:00',
+        status: 'rejected',
+        approver: 'Budi',
+        approvalDate: '2026-01-08T10:00:00',
+        comments: 'Overtime not authorized. Please review.'
+    },
+    {
+        id: 'ts-4',
+        memberId: 'm4',
+        memberName: 'Michael Chen',
+        dateStart: '2026-01-08',
+        dateEnd: '2026-01-14',
+        totalHours: '40:00',
+        status: 'pending'
+    },
+    {
+        id: 'ts-5',
+        memberId: 'm1',
+        memberName: 'Antonio Galih',
+        dateStart: '2026-01-08',
+        dateEnd: '2026-01-14',
+        totalHours: '41:15',
+        status: 'pending'
+    }
+];
+
+export interface TimeEntry {
+    id: string
+    memberId: string
+    memberName: string
+    date: string
+    startTime: string
+    endTime: string
+    duration: string // formatted HH:mm:ss for display or decimal
+    totalHours: number
+    projectId: string
+    projectName: string
+    taskId?: string
+    taskName?: string
+    source: 'desktop' | 'mobile' | 'web' | 'manual'
+    activityPct: number
+    notes?: string
+    status?: 'approved' | 'pending' | 'rejected'
+    isIdle?: boolean
+}
+
+export const DUMMY_TIME_ENTRIES: TimeEntry[] = [
+    {
+        id: 'te-1',
+        memberId: 'm1',
+        memberName: 'Antonio Galih',
+        date: '2026-02-05',
+        startTime: '09:00:00',
+        endTime: '11:00:00',
+        duration: '02:00:00',
+        totalHours: 2,
+        projectId: 'p1',
+        projectName: 'Website Redesign',
+        taskId: 't1',
+        taskName: 'Design Homepage',
+        source: 'desktop',
+        activityPct: 65,
+        notes: 'Meeting with client',
+        status: 'approved'
+    },
+    {
+        id: 'te-2',
+        memberId: 'm1',
+        memberName: 'Antonio Galih',
+        date: '2026-02-05',
+        startTime: '13:00:00',
+        endTime: '17:00:00',
+        duration: '04:00:00',
+        totalHours: 4,
+        projectId: 'p2',
+        projectName: 'Mobile App',
+        source: 'mobile',
+        activityPct: 0,
+        notes: 'On-site visit',
+        status: 'pending'
+    },
+    {
+        id: 'te-3',
+        memberId: 'm2',
+        memberName: 'Emily Davis',
+        date: '2026-02-05',
+        startTime: '08:00:00',
+        endTime: '12:00:00',
+        duration: '04:00:00',
+        totalHours: 4,
+        projectId: 'p1',
+        projectName: 'Website Redesign',
+        source: 'manual',
+        activityPct: 0,
+        notes: 'Forgot to track',
+        status: 'pending'
+    },
+    {
+        id: 'te-4',
+        memberId: 'm3',
+        memberName: 'Sarah Johnson',
+        date: '2026-02-04',
+        startTime: '10:00:00',
+        endTime: '12:00:00',
+        duration: '02:00:00',
+        totalHours: 2,
+        projectId: 'p3',
+        projectName: 'Backend API',
+        source: 'desktop',
+        activityPct: 82,
+        isIdle: true
+    },
+    {
+        id: 'te-5',
+        memberId: 'm4',
+        memberName: 'Michael Chen',
+        date: '2026-02-04',
+        startTime: '09:00:00',
+        endTime: '17:00:00',
+        duration: '08:00:00',
+        totalHours: 8,
+        projectId: 'p4',
+        projectName: 'Server Maintenance',
+        source: 'web',
+        activityPct: 45,
+        status: 'approved'
     }
 ];

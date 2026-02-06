@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect} from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   Sun,
@@ -25,11 +25,9 @@ import {
   DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Separator } from '@/components/ui/separator';
 
 import { useOrgStore } from '@/store/org-store';
 import { useAuthStore } from '@/store/user-store';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown';
 
 export function NavbarNew() {
@@ -44,7 +42,6 @@ export function NavbarNew() {
   const user = useAuthStore((state: any) => state.user);
   // @ts-ignore
   const userOrganizations = useAuthStore((state: any) => state.userOrganizations);
-  const [orgLogoUrl, setOrgLogoUrl] = useState<string | null>(null);
 
   // Keyboard shortcuts - Only for Quick Actions
   useEffect(() => {
@@ -106,7 +103,6 @@ export function NavbarNew() {
               .maybeSingle();
             if (!error && data?.name) {
               setOrganizationId(storedId, data.name);
-              setOrgLogoUrl(data.logo_url ?? null);
             }
           } catch { }
         }
@@ -117,23 +113,6 @@ export function NavbarNew() {
       void hydrate();
     }
   }, [organizationName, organizationId, setOrganizationId]);
-
-  // Ensure organization logo is loaded whenever organizationId changes
-  useEffect(() => {
-    const loadLogo = async () => {
-      if (!organizationId) return;
-      try {
-        const supabase = createClient();
-        const { data } = await supabase
-          .from('organizations')
-          .select('logo_url')
-          .eq('id', organizationId)
-          .maybeSingle();
-        setOrgLogoUrl(data?.logo_url ?? null);
-      } catch { }
-    };
-    void loadLogo();
-  }, [organizationId]);
 
   // Auto-select first organization if none selected
   useEffect(() => {
@@ -151,35 +130,6 @@ export function NavbarNew() {
     { icon: MapPin, label: 'Add Location', href: '/attendance/locations/new', kbd: '⌘L' },
   ];
 
-  // Safe helper to compute initials without unsafe indexing
-  const getInitials = (name: string, fallback: string): string => {
-    const trimmed = (name || '').trim();
-    if (!trimmed) return fallback;
-    const tokens = trimmed.split(/\s+/).filter(Boolean);
-    if (tokens.length >= 2) {
-      const a = tokens[0]?.charAt(0) ?? '';
-      const b = tokens[1]?.charAt(0) ?? '';
-      const res = (a + b).toUpperCase();
-      return res || fallback;
-    }
-    const first = (tokens[0]?.slice(0, 2) ?? '').toUpperCase();
-    return first || fallback;
-  };
-
-  // const userDisplayName = useMemo(() => {
-  //   return (
-  //     user?.display_name ||
-  //     [user?.first_name, user?.last_name].filter(Boolean).join(' ') ||
-  //     user?.email ||
-  //     ''
-  //   );
-  // }, [user?.display_name, user?.first_name, user?.last_name, user?.email]);
-
-  const orgInitials = useMemo(
-    () => getInitials(organizationName ?? '', 'OR'),
-    [organizationName]
-  );
-
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
       <div className="flex items-center gap-2">
@@ -191,9 +141,6 @@ export function NavbarNew() {
       <div className="ml-auto flex items-center gap-2">
         {showActions && (
           <>
-            {/* Search */}
-
-            {/* Quick Actions */}
             <DropdownMenu>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
@@ -243,83 +190,6 @@ export function NavbarNew() {
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-
-        <Separator orientation="vertical" className="mx-2 h-6 border-b" />
-
-        <div className="flex items-center">
-          {/* User dropdown */}
-          {/* <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="User profile">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.profile_photo_url ?? undefined} alt="User avatar" />
-                  <AvatarFallback className="text-xs">{getInitials(userDisplayName, 'U')}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-7 w-7">
-                    <AvatarImage src={user?.profile_photo_url ?? undefined} alt="User avatar" />
-                    <AvatarFallback className="text-[10px]">{getInitials(userDisplayName, 'U')}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium">{userDisplayName || 'User'}</div>
-                    {user?.email && (
-                      <div className="truncate text-xs text-muted-foreground">{user.email}</div>
-                    )}
-                  </div>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push('/profile')} className="cursor-pointer">
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer">
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push('/logout')} className="cursor-pointer">
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu> */}
-
-
-
-          {/* Organization dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Organization profile">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={orgLogoUrl ?? undefined} alt="Organization logo" />
-                  <AvatarFallback className="text-xs">{orgInitials}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72">
-              <DropdownMenuLabel>
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-7 w-7">
-                    <AvatarImage src={orgLogoUrl ?? undefined} alt="Organization logo" />
-                    <AvatarFallback className="text-[10px]">{orgInitials}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium">{organizationName || 'Organization'}</div>
-                  </div>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push('/organization')} className="cursor-pointer">
-                Organizations menu
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/organization/settings')} className="cursor-pointer">
-                Organization settings
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
       </div>
     </header>
   );

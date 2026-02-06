@@ -18,6 +18,8 @@ export type PaginationFooterProps = {
   className?: string
 }
 
+import { cn } from "@/lib/utils"
+
 export function PaginationFooter({
   page,
   totalPages,
@@ -44,7 +46,7 @@ export function PaginationFooter({
   }, [page])
 
   return (
-    <div className={`mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 py-4 px-4 bg-muted/50 rounded-md border shadow-sm ${className}`}>
+    <div className={cn("mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 py-4 px-4 bg-muted/50 rounded-md border shadow-sm", className)}>
       <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
         <Button
           variant="ghost"

@@ -59,7 +59,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: {
       template: '%s',
-      default: 'Presensi',
+      default: 'Absensi',
     },
     description,
     metadataBase: new URL(
@@ -74,20 +74,20 @@ export async function generateMetadata(): Promise<Metadata> {
     appleWebApp: {
       capable: true,
       statusBarStyle: "default",
-      title: "Presensi",
+      title: "Absensi",
     },
     formatDetection: {
       telephone: false,
     },
     openGraph: {
       url: "/",
-      title: 'Presensi',
+      title: 'Absensi',
       description,
       type: "website",
     },
     twitter: {
       card: "summary_large_image",
-      title: 'Presensi',
+      title: 'Absensi',
       description,
     },
   };

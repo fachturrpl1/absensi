@@ -28,8 +28,8 @@ export default function TimeOffBalancesPage() {
     const timezone = useTimezone()
     const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({ type: "members", all: true, id: "all" })
     const [dateRange, setDateRange] = useState<DateRange>({
-        startDate: new Date(new Date().getFullYear(), 0, 1),
-        endDate: new Date(new Date().getFullYear(), 11, 31)
+        startDate: new Date(),
+        endDate: new Date()
     })
     const [filterSidebarOpen, setFilterSidebarOpen] = useState(false)
     const [sidebarFilters, setSidebarFilters] = useState({ policy: "all" })
@@ -43,6 +43,11 @@ export default function TimeOffBalancesPage() {
     // Simulate loading
     const [isLoading, setIsLoading] = useState(true)
     useEffect(() => {
+        // Set default date range (Current Year)
+        setDateRange({
+            startDate: new Date(new Date().getFullYear(), 0, 1),
+            endDate: new Date(new Date().getFullYear(), 11, 31)
+        })
         const timer = setTimeout(() => setIsLoading(false), 800)
         return () => clearTimeout(timer)
     }, [])

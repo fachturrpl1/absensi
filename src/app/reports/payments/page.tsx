@@ -9,7 +9,6 @@ import { Download, Search, Filter, CreditCard, Clock, CheckCircle, Settings2 } f
 import { format } from "date-fns"
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
 
 import { PaymentsFilterSidebar } from "@/components/report/PaymentsFilterSidebar"
 import { DataTable } from "@/components/tables/data-table"
@@ -273,20 +272,15 @@ export default function PaymentsPage() {
                 </div>
             </InsightsHeader>
 
-            {/* Separated Summary Cards - 3 Distinct Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x border rounded-lg shadow-sm bg-white">
                 {summaryCards.map((card, idx) => (
-                    <div key={idx} className="p-6 bg-white border rounded-xl shadow-sm flex items-start justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-gray-500 mb-1">{card.label}</p>
-                            <p className="text-2xl font-bold text-gray-900">{card.value}</p>
-                            {card.subValue && (
-                                <p className="text-xs text-gray-500 mt-1">{card.subValue}</p>
-                            )}
-                        </div>
-                        <div className={cn("p-2 rounded-lg", card.className)}>
-                            <card.icon className="w-5 h-5" />
-                        </div>
+                    <div key={idx} className="p-4">
+                        <p className="text-sm font-medium text-gray-500">{card.label}</p>
+                        <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
+                        {card.subValue && (
+                            <p className="text-xs text-gray-500 mt-1">{card.subValue}</p>
+                        )}
                     </div>
                 ))}
             </div>

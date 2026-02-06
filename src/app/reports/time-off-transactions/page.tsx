@@ -24,8 +24,8 @@ export default function TimeOffTransactionsPage() {
     const timezone = useTimezone()
     const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({ type: "members", all: true, id: "all" })
     const [dateRange, setDateRange] = useState<DateRange>({
-        startDate: new Date(2026, 0, 1),
-        endDate: new Date(2026, 0, 31)
+        startDate: new Date(),
+        endDate: new Date()
     })
     const [searchQuery, setSearchQuery] = useState("")
     const [isLoading, setIsLoading] = useState(true)
@@ -40,6 +40,11 @@ export default function TimeOffTransactionsPage() {
     })
 
     useEffect(() => {
+        // Set default date range to Jan 2026 to match dummy data
+        setDateRange({
+            startDate: new Date(2026, 0, 1),
+            endDate: new Date(2026, 0, 31)
+        })
         const timer = setTimeout(() => setIsLoading(false), 800)
         return () => clearTimeout(timer)
     }, [])

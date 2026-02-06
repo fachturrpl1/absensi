@@ -41,6 +41,11 @@ export default function WeeklyLimitsPage() {
 
     // Simulate loading
     useEffect(() => {
+        // Set default date range (Today)
+        setDateRange({
+            startDate: new Date(),
+            endDate: new Date()
+        })
         const timer = setTimeout(() => {
             setIsLoading(false)
         }, 1000)
@@ -190,14 +195,14 @@ export default function WeeklyLimitsPage() {
             </InsightsHeader>
 
             {/* Main Table */}
-                    <DataTable
-                        columns={columns}
-                        data={filteredData}
-                        isLoading={isLoading}
-                        showColumnToggle={false}
-                        columnVisibility={columnVisibility}
-                        onColumnVisibilityChange={setColumnVisibility}
-                    />
+            <DataTable
+                columns={columns}
+                data={filteredData}
+                isLoading={isLoading}
+                showColumnToggle={false}
+                columnVisibility={columnVisibility}
+                onColumnVisibilityChange={setColumnVisibility}
+            />
             <WeeklyLimitsFilterSidebar
                 open={filterSidebarOpen}
                 onOpenChange={setFilterSidebarOpen}
