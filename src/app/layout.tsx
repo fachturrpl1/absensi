@@ -12,7 +12,7 @@ import AccountStatusChecker from "@/components/organization/account-status-check
 import { PermissionInitializer } from "@/components/auth/permission-initializer";
 import { ToastProvider } from "@/components/notifications/toast-system";
 import { DashboardLayoutWrapper } from "@/components/layout/dashboard-layout-wrapper";
-
+import "leaflet/dist/leaflet.css"
 import { createClient } from "@/utils/supabase/server";
 import {
   getCachedUserProfile,
