@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import L from "leaflet"
@@ -8,18 +9,6 @@ import L from "leaflet"
 const iconUrl = "https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png"
 const iconRetinaUrl = "https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon-2x.png"
 const shadowUrl = "https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png"
-
-const defaultIcon = L.icon({
-    iconUrl: iconUrl,
-    iconRetinaUrl: iconRetinaUrl,
-    shadowUrl: shadowUrl,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41]
-})
-
-L.Marker.prototype.options.icon = defaultIcon
 
 interface Visit {
     id: string
@@ -37,6 +26,17 @@ interface VisitsMapProps {
 }
 
 export default function VisitsMap({ visits }: VisitsMapProps) {
+    useEffect(() => {
+        // Fix Leaflet's default icon path complications
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (L.Icon.Default.prototype as any)._getIconUrl
+        L.Icon.Default.mergeOptions({
+            iconUrl: iconUrl,
+            iconRetinaUrl: iconRetinaUrl,
+            shadowUrl: shadowUrl,
+        })
+    }, [])
+
     const validVisits = visits.filter(v => v.coordinates)
     const firstVisitCoords = validVisits[0]?.coordinates
     const centerPossition: [number, number] = firstVisitCoords

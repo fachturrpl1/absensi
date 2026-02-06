@@ -11,31 +11,24 @@ import {
 } from "@/lib/data/dummy-data"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { Button } from "@/components/ui/button"
-import { Download, SlidersHorizontal, Search, Filter, Plus, Pencil, Trash2 } from "lucide-react"
+import { Download, Search, Filter, Plus, Pencil, Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+
 import { toast } from "sonner"
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { exportToCSV, generateFilename } from "@/lib/export-utils"
-import { format } from "date-fns"
 import { TimesheetsFilterSidebar } from "@/components/timesheets/TimesheetsFilterSidebar"
 import { EditTimeEntryDialog } from "@/components/timesheets/EditTimeEntryDialog"
+import { Checkbox } from "@/components/ui/checkbox"
 
 
 
-const getStatusBadge = (status?: string) => {
-    if (!status) return null
-    switch (status) {
-        case 'approved':
-            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">Approved</span>
-        case 'pending':
-            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">Pending</span>
-        case 'rejected':
-            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">Rejected</span>
-        default:
-            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200">{status}</span>
-    }
+const getProjectInitial = (name: string) => name.charAt(0).toUpperCase()
+
+const getClientName = (projectId: string) => {
+    const project = DUMMY_PROJECTS.find(p => p.id === projectId)
+    return project?.clientName || "No Client"
 }
 
 export default function ViewEditTimesheetsPage() {
@@ -62,6 +55,7 @@ export default function ViewEditTimesheetsPage() {
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null)
     const [data, setData] = useState<TimeEntry[]>([])
+    const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set())
 
     // Load Initial Data
     useEffect(() => {
@@ -79,22 +73,17 @@ export default function ViewEditTimesheetsPage() {
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
 
-    const [visibleCols, setVisibleCols] = useState({
-        member: true,
-        date: true,
-        times: true,
-        duration: true,
+    const [visibleCols] = useState({
+        checkbox: true,
         project: true,
-        source: true,
         activity: true,
-        notes: true,
-        status: true,
+        idle: true,
+        manual: true,
+        duration: true,
+        source: true,
+        time: true,
         actions: true
     })
-
-    const toggleCol = (key: keyof typeof visibleCols, value: boolean) => {
-        setVisibleCols((prev) => ({ ...prev, [key]: value }))
-    }
 
     const filteredData = useMemo(() => {
         return data.filter(item => {
@@ -203,6 +192,22 @@ export default function ViewEditTimesheetsPage() {
         }
     }
 
+    const toggleRow = (id: string) => {
+        const newSelected = new Set(selectedRows)
+        if (newSelected.has(id)) newSelected.delete(id)
+        else newSelected.add(id)
+        setSelectedRows(newSelected)
+    }
+
+    const toggleAll = () => {
+        if (selectedRows.size === paginatedData.length) {
+            setSelectedRows(new Set())
+        } else {
+            setSelectedRows(new Set(paginatedData.map(d => d.id)))
+        }
+    }
+
+
     return (
         <div className="px-6 pb-6 space-y-6">
             <div className="flex justify-between items-center">
@@ -240,27 +245,6 @@ export default function ViewEditTimesheetsPage() {
                         <Filter className="w-4 h-4 mr-2" /> Filter
                     </Button>
 
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-9 bg-white text-gray-700 border-gray-300">
-                                <SlidersHorizontal className="w-4 h-4 mr-2" />
-                                Columns
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuCheckboxItem checked={visibleCols.member} onCheckedChange={(v) => toggleCol('member', !!v)}>Member</DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem checked={visibleCols.date} onCheckedChange={(v) => toggleCol('date', !!v)}>Date</DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem checked={visibleCols.times} onCheckedChange={(v) => toggleCol('times', !!v)}>Times</DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem checked={visibleCols.duration} onCheckedChange={(v) => toggleCol('duration', !!v)}>Duration</DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem checked={visibleCols.project} onCheckedChange={(v) => toggleCol('project', !!v)}>Project</DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem checked={visibleCols.source} onCheckedChange={(v) => toggleCol('source', !!v)}>Source</DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem checked={visibleCols.activity} onCheckedChange={(v) => toggleCol('activity', !!v)}>Activity</DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem checked={visibleCols.notes} onCheckedChange={(v) => toggleCol('notes', !!v)}>Notes</DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem checked={visibleCols.status} onCheckedChange={(v) => toggleCol('status', !!v)}>Status</DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem checked={visibleCols.actions} onCheckedChange={(v) => toggleCol('actions', !!v)}>Actions</DropdownMenuCheckboxItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-
                     <Button variant="outline" className="h-9" onClick={handleExport}>
                         <Download className="w-4 h-4 mr-2" />
                         Export
@@ -271,18 +255,24 @@ export default function ViewEditTimesheetsPage() {
             <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-900 font-semibold border-b border-gray-200">
+                        <thead className="bg-white text-gray-700 font-semibold border-b border-gray-200">
                             <tr>
-                                {visibleCols.member && <th className="p-3 pl-4 font-semibold">Member</th>}
-                                {visibleCols.date && <th className="p-3 font-semibold">Date</th>}
-                                {visibleCols.times && <th className="p-3 font-semibold">Time</th>}
-                                {visibleCols.duration && <th className="p-3 font-semibold">Duration</th>}
-                                {visibleCols.project && <th className="p-3 font-semibold">Project/Task</th>}
-                                {visibleCols.source && <th className="p-3 font-semibold">Source</th>}
-                                {visibleCols.activity && <th className="p-3 font-semibold">Activity</th>}
-                                {visibleCols.notes && <th className="p-3 font-semibold">Notes</th>}
-                                {visibleCols.status && <th className="p-3 font-semibold">Status</th>}
-                                {visibleCols.actions && <th className="p-3 pr-4 font-semibold text-right">Actions</th>}
+                                {visibleCols.checkbox && (
+                                    <th className="p-4 w-10">
+                                        <Checkbox
+                                            checked={paginatedData.length > 0 && selectedRows.size === paginatedData.length}
+                                            onCheckedChange={toggleAll}
+                                        />
+                                    </th>
+                                )}
+                                {visibleCols.project && <th className="p-4 font-semibold text-gray-900">Project</th>}
+                                {visibleCols.activity && <th className="p-4 font-semibold text-gray-900">Activity</th>}
+                                {visibleCols.idle && <th className="p-4 font-semibold text-gray-900">Idle</th>}
+                                {visibleCols.manual && <th className="p-4 font-semibold text-gray-900">Manual</th>}
+                                {visibleCols.duration && <th className="p-4 font-semibold text-gray-900">Duration</th>}
+                                {visibleCols.source && <th className="p-4 font-semibold text-gray-900">Source</th>}
+                                {visibleCols.time && <th className="p-4 font-semibold text-gray-900">Time</th>}
+                                {visibleCols.actions && <th className="p-4 font-semibold text-gray-900 text-right">Actions</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -296,51 +286,67 @@ export default function ViewEditTimesheetsPage() {
                                 </tr>
                             ) : (
                                 paginatedData.map((row) => (
-                                    <tr key={row.id} className="hover:bg-gray-50 even:bg-white bg-white transition-colors">
-                                        {visibleCols.member && (
+                                    <tr key={row.id} className="hover:bg-gray-50 even:bg-white bg-white transition-colors group">
+                                        {visibleCols.checkbox && (
                                             <td className="p-4">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-600">
-                                                        {row.memberName.charAt(0)}
+                                                <Checkbox
+                                                    checked={selectedRows.has(row.id)}
+                                                    onCheckedChange={() => toggleRow(row.id)}
+                                                />
+                                            </td>
+                                        )}
+                                        {visibleCols.project && (
+                                            <td className="p-4">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-emerald-400 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                                                        {getProjectInitial(row.projectName)}
                                                     </div>
-                                                    <span className="font-medium text-gray-900">{row.memberName}</span>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold text-gray-900 text-[15px]">{row.projectName}</span>
+                                                        <span className="text-xs uppercase text-gray-500 font-semibold tracking-wide my-0.5">{getClientName(row.projectId)}</span>
+                                                        <span className="text-sm font-bold text-gray-900 mt-0.5">{row.taskName || "No to-do"}</span>
+                                                    </div>
                                                 </div>
                                             </td>
                                         )}
-                                        {visibleCols.date && <td className="p-4 text-gray-600">{format(new Date(row.date), 'MMM dd, yyyy')}</td>}
-                                        {visibleCols.times && (
-                                            <td className="p-4 text-gray-900 font-mono">
-                                                {row.startTime} - {row.endTime}
+                                        {visibleCols.activity && (
+                                            <td className="p-4 align-top pt-6">
+                                                <span className="text-gray-900">{row.activityPct}%</span>
                                             </td>
                                         )}
-                                        {visibleCols.duration && <td className="p-4 text-gray-900 font-bold">{row.duration}</td>}
-                                        {visibleCols.project && (
-                                            <td className="p-4">
-                                                <div className="font-medium text-gray-900">{row.projectName}</div>
-                                                {row.taskName && <div className="text-xs text-gray-500">{row.taskName}</div>}
+                                        {visibleCols.idle && (
+                                            <td className="p-4 align-top pt-6">
+                                                <span className="text-gray-900">{row.isIdle ? '100%' : '0%'}</span>
+                                            </td>
+                                        )}
+                                        {visibleCols.manual && (
+                                            <td className="p-4 align-top pt-6">
+                                                <span className="text-gray-900">{row.source === 'manual' ? '100%' : '0%'}</span>
+                                            </td>
+                                        )}
+                                        {visibleCols.duration && (
+                                            <td className="p-4 align-top pt-6">
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-blue-500 font-medium">{row.duration}</span>
+                                                    <span className="text-gray-900 font-bold">$</span>
+                                                </div>
                                             </td>
                                         )}
                                         {visibleCols.source && (
-                                            <td className="p-4">
-                                                <span className="capitalize text-gray-900 font-medium">{row.source}</span>
+                                            <td className="p-4 align-top pt-6">
+                                                <span className="text-gray-900">{row.source.charAt(0).toUpperCase() + row.source.slice(1)}</span>
                                             </td>
                                         )}
-                                        {visibleCols.activity && (
-                                            <td className="p-4">
-                                                {row.source === 'manual' ? (
-                                                    <span className="text-gray-400">-</span>
-                                                ) : (
-                                                    <span className={`font-mono ${row.activityPct < 30 ? 'text-red-600' : 'text-green-600'}`}>
-                                                        {row.activityPct}%
-                                                    </span>
-                                                )}
+                                        {visibleCols.time && (
+                                            <td className="p-4 align-top pt-6">
+                                                <span className="text-blue-500 hover:underline cursor-pointer">
+                                                    {row.startTime} - {row.endTime}
+                                                </span>
                                             </td>
                                         )}
-                                        {visibleCols.notes && <td className="p-4 text-gray-500 italic max-w-xs truncate" title={row.notes}>{row.notes}</td>}
-                                        {visibleCols.status && <td className="p-4">{getStatusBadge(row.status)}</td>}
                                         {visibleCols.actions && (
-                                            <td className="p-4 text-right">
-                                                <div className="flex justify-end gap-1">
+                                            <td className="p-4 align-top pt-6 text-right">
+                                                <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-600" onClick={() => handleEdit(row)}>
                                                         <Pencil className="w-3.5 h-3.5" />
                                                     </Button>
