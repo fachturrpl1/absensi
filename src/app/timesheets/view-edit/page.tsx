@@ -2,33 +2,47 @@
 
 import React, { useState, useMemo, useEffect } from "react"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
+import { format } from "date-fns"
 import {
     DUMMY_MEMBERS,
     DUMMY_TEAMS,
     DUMMY_PROJECTS,
+    DUMMY_CLIENTS,
+    DUMMY_TASKS,
     DUMMY_TIME_ENTRIES,
     type TimeEntry
 } from "@/lib/data/dummy-data"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { Button } from "@/components/ui/button"
-import { Download, Search, Filter, Plus, Pencil, Trash2 } from "lucide-react"
+import { Download, Search, Filter, ChevronDown, ChevronRight, Pencil } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 import { toast } from "sonner"
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { exportToCSV, generateFilename } from "@/lib/export-utils"
 import { TimesheetsFilterSidebar } from "@/components/timesheets/TimesheetsFilterSidebar"
-import { EditTimeEntryDialog } from "@/components/timesheets/EditTimeEntryDialog"
+
 import { Checkbox } from "@/components/ui/checkbox"
-
-
+import { EditTimeEntryDialog } from "@/components/timesheets/EditTimeEntryDialog"
+import { SplitTimeEntryDialog } from "@/components/timesheets/SplitTimeEntryDialog"
+import { DeleteTimeEntryDialog } from "@/components/timesheets/DeleteTimeEntryDialog"
 
 const getProjectInitial = (name: string) => name.charAt(0).toUpperCase()
 
-const getClientName = (projectId: string) => {
-    const project = DUMMY_PROJECTS.find(p => p.id === projectId)
-    return project?.clientName || "No Client"
+const findProject = (id: string, name: string) => DUMMY_PROJECTS.find(p => p.id === id || p.name === name)
+
+const getClientName = (projectId: string, projectName: string) => {
+    const project = findProject(projectId, projectName)
+    if (!project?.clientId) return "No Client"
+    return DUMMY_CLIENTS.find(c => c.id === project.clientId)?.name || "No Client"
+}
+
+const getTaskName = (taskId?: string, taskName?: string) => {
+    if (taskName) return taskName
+    if (taskId) return DUMMY_TASKS.find(t => t.id === taskId)?.title
+    return "No to-do"
 }
 
 export default function ViewEditTimesheetsPage() {
@@ -51,19 +65,28 @@ export default function ViewEditTimesheetsPage() {
         status: "all"
     })
 
-    // Dialog State
     const [editDialogOpen, setEditDialogOpen] = useState(false)
-    const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null)
+    const [splitTimeEntryDialogOpen, setSplitTimeEntryDialogOpen] = useState(false)
+    const [deleteEntryDialogOpen, setDeleteEntryDialogOpen] = useState(false)
+
+    const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null)
+
     const [data, setData] = useState<TimeEntry[]>([])
     const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set())
+    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
-    // Load Initial Data
+    const toggleGroup = (date: string) => {
+        const newCollapsed = new Set(collapsedGroups)
+        if (newCollapsed.has(date)) newCollapsed.delete(date)
+        else newCollapsed.add(date)
+        setCollapsedGroups(newCollapsed)
+    }
+
     useEffect(() => {
-        // Simulate fetch
         setData(DUMMY_TIME_ENTRIES)
 
         setDateRange({
-            startDate: new Date(2026, 1, 1), // Feb 2026
+            startDate: new Date(2026, 1, 1),
             endDate: new Date(2026, 1, 28)
         })
         const timer = setTimeout(() => setIsLoading(false), 800)
@@ -87,7 +110,6 @@ export default function ViewEditTimesheetsPage() {
 
     const filteredData = useMemo(() => {
         return data.filter(item => {
-            // Header Filter
             if (!selectedFilter.all && selectedFilter.id !== 'all') {
                 if (selectedFilter.type === 'members') {
                     if (item.memberId !== selectedFilter.id) return false
@@ -97,20 +119,16 @@ export default function ViewEditTimesheetsPage() {
                 }
             }
 
-            // Sidebar Filters
             if (sidebarFilters.memberId !== 'all' && item.memberId !== sidebarFilters.memberId) return false
             if (sidebarFilters.projectId !== 'all' && item.projectId !== sidebarFilters.projectId) return false
             if (sidebarFilters.source !== 'all' && item.source !== sidebarFilters.source) return false
             if (sidebarFilters.status !== 'all' && item.status !== sidebarFilters.status) return false
 
-
-            // Date Range
             if (dateRange.startDate && dateRange.endDate) {
                 const itemDate = new Date(item.date)
                 if (itemDate < dateRange.startDate || itemDate > dateRange.endDate) return false
             }
 
-            // Search
             if (searchQuery) {
                 const lower = searchQuery.toLowerCase()
                 if (!item.memberName.toLowerCase().includes(lower) &&
@@ -120,7 +138,7 @@ export default function ViewEditTimesheetsPage() {
             }
 
             return true
-        })
+        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     }, [selectedFilter, sidebarFilters, dateRange, searchQuery, data])
 
     const totalPages = Math.ceil(filteredData.length / pageSize)
@@ -146,56 +164,66 @@ export default function ViewEditTimesheetsPage() {
         })
         toast.success("Exported successfully")
     }
-
-    const handleAdd = () => {
-        setEditingEntry(null)
-        setEditDialogOpen(true)
-    }
-
     const handleEdit = (entry: TimeEntry) => {
-        setEditingEntry(entry)
+        setActiveEntry(entry)
         setEditDialogOpen(true)
     }
 
-    const handleDelete = (id: string) => {
-        if (confirm("Are you sure you want to delete this time entry?")) {
-            setData(prev => prev.filter(i => i.id !== id))
+    const handleSplitTime = (entry: TimeEntry) => {
+        setActiveEntry(entry)
+        setSplitTimeEntryDialogOpen(true)
+    }
+
+    const handleDeleteEntryClick = (entry: TimeEntry) => {
+        setActiveEntry(entry)
+        setDeleteEntryDialogOpen(true)
+    }
+
+    const onConfirmDelete = () => {
+        if (activeEntry) {
+            setData(prev => prev.filter(i => i.id !== activeEntry.id))
             toast.success("Time entry deleted")
         }
     }
 
+    // Main Edit Save (General)
     const handleSaveEntry = (entry: Partial<TimeEntry>) => {
-        if (editingEntry) {
-            // Edit
-            setData(prev => prev.map(item => item.id === editingEntry.id ? { ...item, ...entry } as TimeEntry : item))
+        if (activeEntry) {
+            setData(prev => prev.map(item => item.id === activeEntry.id ? { ...item, ...entry } as TimeEntry : item))
             toast.success("Time entry updated")
-        } else {
-            // Add
-            const newEntry: TimeEntry = {
-                id: `te-${Date.now()}`,
-                memberId: entry.memberId!,
-                memberName: DUMMY_MEMBERS.find(m => m.id === entry.memberId)?.name || 'Unknown',
-                date: entry.date!,
-                startTime: entry.startTime!,
-                endTime: entry.endTime!,
-                duration: "00:00:00", // Would calculate real duration here
-                totalHours: 0,
-                projectId: entry.projectId!,
-                projectName: DUMMY_PROJECTS.find(p => p.id === entry.projectId)?.name || 'Unknown',
-                source: entry.source as any || 'manual',
-                activityPct: 0,
-                notes: entry.notes,
-                status: 'pending'
-            }
-            setData(prev => [newEntry, ...prev])
-            toast.success("Time entry added")
         }
     }
+
+    const onSplitTimeSave = (originalId: string, entry1: Partial<TimeEntry>, entry2: Partial<TimeEntry>) => {
+        const newEntry1 = { ...activeEntry!, ...entry1, id: `te-${Date.now()}-1` } as TimeEntry
+        const newEntry2 = { ...activeEntry!, ...entry2, id: `te-${Date.now()}-2` } as TimeEntry
+
+        setData(prev => {
+            const list = prev.filter(i => i.id !== originalId)
+            return [...list, newEntry1, newEntry2]
+        })
+        toast.success("Time entry split successfully")
+    }
+
+
 
     const toggleRow = (id: string) => {
         const newSelected = new Set(selectedRows)
         if (newSelected.has(id)) newSelected.delete(id)
         else newSelected.add(id)
+        setSelectedRows(newSelected)
+    }
+
+    const toggleGroupSelection = (date: string, currentRows: TimeEntry[]) => {
+        const dateRows = currentRows.filter(r => r.date === date)
+        const allSelected = dateRows.every(r => selectedRows.has(r.id))
+
+        const newSelected = new Set(selectedRows)
+        if (allSelected) {
+            dateRows.forEach(r => newSelected.delete(r.id))
+        } else {
+            dateRows.forEach(r => newSelected.add(r.id))
+        }
         setSelectedRows(newSelected)
     }
 
@@ -212,9 +240,6 @@ export default function ViewEditTimesheetsPage() {
         <div className="px-6 pb-6 space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-xl font-semibold">View & Edit Timesheets</h1>
-                <Button onClick={handleAdd}>
-                    <Plus className="w-4 h-4 mr-2" /> Add Time
-                </Button>
             </div>
 
             <InsightsHeader
@@ -285,79 +310,127 @@ export default function ViewEditTimesheetsPage() {
                                     <td colSpan={10} className="p-8 text-center text-gray-500">No time entries found.</td>
                                 </tr>
                             ) : (
-                                paginatedData.map((row) => (
-                                    <tr key={row.id} className="hover:bg-gray-100 even:bg-gray-50 transition-colors group">
-                                        {visibleCols.checkbox && (
-                                            <td className="p-4">
-                                                <Checkbox
-                                                    checked={selectedRows.has(row.id)}
-                                                    onCheckedChange={() => toggleRow(row.id)}
-                                                />
-                                            </td>
-                                        )}
-                                        {visibleCols.project && (
-                                            <td className="p-4">
-                                                <div className="flex items-start gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-emerald-400 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                                                        {getProjectInitial(row.projectName)}
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="font-bold text-gray-900 text-[15px]">{row.projectName}</span>
-                                                        <span className="text-xs uppercase text-gray-500 font-semibold tracking-wide my-0.5">{getClientName(row.projectId)}</span>
-                                                        <span className="text-sm font-bold text-gray-900 mt-0.5">{row.taskName || "No to-do"}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        )}
-                                        {visibleCols.activity && (
-                                            <td className="p-4 align-top pt-6">
-                                                <span className="text-gray-900">{row.activityPct}%</span>
-                                            </td>
-                                        )}
-                                        {visibleCols.idle && (
-                                            <td className="p-4 align-top pt-6">
-                                                <span className="text-gray-900">{row.isIdle ? '100%' : '0%'}</span>
-                                            </td>
-                                        )}
-                                        {visibleCols.manual && (
-                                            <td className="p-4 align-top pt-6">
-                                                <span className="text-gray-900">{row.source === 'manual' ? '100%' : '0%'}</span>
-                                            </td>
-                                        )}
-                                        {visibleCols.duration && (
-                                            <td className="p-4 align-top pt-6">
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-blue-500 font-medium">{row.duration}</span>
-                                                    <span className="text-gray-900 font-bold">$</span>
-                                                </div>
-                                            </td>
-                                        )}
-                                        {visibleCols.source && (
-                                            <td className="p-4 align-top pt-6">
-                                                <span className="text-gray-900">{row.source.charAt(0).toUpperCase() + row.source.slice(1)}</span>
-                                            </td>
-                                        )}
-                                        {visibleCols.time && (
-                                            <td className="p-4 align-top pt-6">
-                                                <span className="text-blue-500 hover:underline cursor-pointer">
-                                                    {row.startTime} - {row.endTime}
-                                                </span>
-                                            </td>
-                                        )}
-                                        {visibleCols.actions && (
-                                            <td className="p-4 align-top pt-6 text-right">
-                                                <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-600" onClick={() => handleEdit(row)}>
-                                                        <Pencil className="w-3.5 h-3.5" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-red-600" onClick={() => handleDelete(row.id)}>
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))
+                                paginatedData.map((row, index) => {
+                                    const showHeader = index === 0 || row.date !== paginatedData[index - 1]?.date
+                                    const isCollapsed = collapsedGroups.has(row.date)
+                                    const groupRows = paginatedData.filter(r => r.date === row.date)
+                                    const isGroupSelected = groupRows.length > 0 && groupRows.every(r => selectedRows.has(r.id))
+                                    const isGroupIndeterminate = groupRows.some(r => selectedRows.has(r.id)) && !isGroupSelected
+
+                                    return (
+                                        <React.Fragment key={row.id}>
+                                            {showHeader && (
+                                                <tr
+                                                    className="bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                                                    onClick={() => toggleGroup(row.date)}
+                                                >
+                                                    <td colSpan={10} className="p-3 font-semibold text-gray-900">
+                                                        <div className="flex items-center gap-2">
+                                                            <div onClick={(e) => e.stopPropagation()}>
+                                                                <Checkbox
+                                                                    checked={isGroupSelected || (isGroupIndeterminate ? "indeterminate" : false)}
+                                                                    onCheckedChange={() => toggleGroupSelection(row.date, paginatedData)}
+                                                                />
+                                                            </div>
+                                                            {isCollapsed ? (
+                                                                <ChevronRight className="w-4 h-4 text-gray-500" />
+                                                            ) : (
+                                                                <ChevronDown className="w-4 h-4 text-gray-500" />
+                                                            )}
+                                                            {format(new Date(row.date), 'EEE, dd MMM yyyy')}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {!isCollapsed && (
+                                                <tr className="hover:bg-gray-100 even:bg-gray-50 transition-colors group">
+                                                    {visibleCols.checkbox && (
+                                                        <td className="p-3">
+                                                            <Checkbox
+                                                                checked={selectedRows.has(row.id)}
+                                                                onCheckedChange={() => toggleRow(row.id)}
+                                                            />
+                                                        </td>
+                                                    )}
+                                                    {visibleCols.project && (
+                                                        <td className="p-3">
+                                                            <div className="flex items-start gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs shrink-0">
+                                                                    {getProjectInitial(row.projectName)}
+                                                                </div>
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-bold text-gray-900 hover:text-blue-500 hover:underline cursor-pointer text-sm">{row.projectName}</span>
+                                                                    <span className="text-[10px] uppercase text-gray-500 font-semibold tracking-wide">
+                                                                        {getClientName(row.projectId, row.projectName)}
+                                                                    </span>
+                                                                    <span className="text-xs font-medium text-gray-700 hover:text-blue-500 hover:underline cursor-pointer">
+                                                                        {getTaskName(row.taskId, row.taskName)}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    )}
+                                                    {visibleCols.activity && (
+                                                        <td className="p-3">
+                                                            <span className="text-gray-900">{row.activityPct}%</span>
+                                                        </td>
+                                                    )}
+                                                    {visibleCols.idle && (
+                                                        <td className="p-3">
+                                                            <span className="text-gray-900">{row.isIdle ? '100%' : '0%'}</span>
+                                                        </td>
+                                                    )}
+                                                    {visibleCols.manual && (
+                                                        <td className="p-3">
+                                                            <span className="text-gray-900">{row.source === 'manual' ? '100%' : '0%'}</span>
+                                                        </td>
+                                                    )}
+                                                    {visibleCols.duration && (
+                                                        <td className="p-3">
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-gray-900 hover:text-blue-500 hover:underline cursor-pointer">{row.duration}</span>
+                                                            </div>
+                                                        </td>
+                                                    )}
+                                                    {visibleCols.source && (
+                                                        <td className="p-3">
+                                                            <span className="text-gray-900">{row.source.charAt(0).toUpperCase() + row.source.slice(1)}</span>
+                                                        </td>
+                                                    )}
+                                                    {visibleCols.time && (
+                                                        <td className="p-3">
+                                                            <span className="text-gray-900 hover:text-blue-500 hover:underline cursor-pointer">
+                                                                {row.startTime} - {row.endTime}
+                                                            </span>
+                                                        </td>
+                                                    )}
+                                                    {visibleCols.actions && (
+                                                        <td className="p-3 text-right">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                                                                        <Pencil className="h-3 w-3" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem onClick={() => handleEdit(row)}>
+                                                                        Edit time entry
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleSplitTime(row)}>
+                                                                        Split time entry
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleDeleteEntryClick(row)} className="text-red-600">
+                                                                        Delete this entry
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </td>
+                                                    )}
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    )
+                                })
                             )}
                         </tbody>
                     </table>
@@ -386,11 +459,28 @@ export default function ViewEditTimesheetsPage() {
                 onApply={setSidebarFilters}
             />
 
+
+
             <EditTimeEntryDialog
                 open={editDialogOpen}
                 onOpenChange={setEditDialogOpen}
-                initialData={editingEntry}
+                initialData={activeEntry}
                 onSave={handleSaveEntry}
+            />
+
+            <SplitTimeEntryDialog
+                open={splitTimeEntryDialogOpen}
+                onOpenChange={setSplitTimeEntryDialogOpen}
+                initialData={activeEntry}
+                projects={DUMMY_PROJECTS}
+                tasks={DUMMY_TASKS}
+                onSave={onSplitTimeSave}
+            />
+
+            <DeleteTimeEntryDialog
+                open={deleteEntryDialogOpen}
+                onOpenChange={setDeleteEntryDialogOpen}
+                onConfirm={onConfirmDelete}
             />
         </div>
     )

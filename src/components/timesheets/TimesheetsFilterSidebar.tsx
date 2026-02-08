@@ -1,9 +1,8 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
+"use client"
+
 import { useState } from "react"
+import { FilterSidebar, FilterSection, FilterSubsection } from "@/components/report/FilterSidebar"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Member, Project } from "@/lib/data/dummy-data"
 
 interface TimesheetsFilterSidebarProps {
@@ -21,102 +20,99 @@ export function TimesheetsFilterSidebar({
     projects,
     onApply
 }: TimesheetsFilterSidebarProps) {
-    const [memberId, setMemberId] = useState("all")
-    const [projectId, setProjectId] = useState("all")
-    const [source, setSource] = useState("all")
-    const [status, setStatus] = useState("all")
+    const [selectedMember, setSelectedMember] = useState("all")
+    const [selectedProject, setSelectedProject] = useState("all")
+    const [selectedSource, setSelectedSource] = useState("all")
+    const [selectedStatus, setSelectedStatus] = useState("all")
 
     const handleApply = () => {
-        onApply({ memberId, projectId, source, status })
+        onApply({
+            memberId: selectedMember,
+            projectId: selectedProject,
+            source: selectedSource,
+            status: selectedStatus
+        })
         onOpenChange(false)
     }
 
     const handleReset = () => {
-        setMemberId("all")
-        setProjectId("all")
-        setSource("all")
-        setStatus("all")
+        setSelectedMember("all")
+        setSelectedProject("all")
+        setSelectedSource("all")
+        setSelectedStatus("all")
     }
 
+    const memberOptions = [
+        { value: "all", label: "All Members" },
+        ...members.map(m => ({ value: m.id, label: m.name }))
+    ]
+
+    const projectOptions = [
+        { value: "all", label: "All Projects" },
+        ...projects.map(p => ({ value: p.id, label: p.name }))
+    ]
+
+    const sourceOptions = [
+        { value: "all", label: "All Sources" },
+        { value: "desktop", label: "Desktop App" },
+        { value: "mobile", label: "Mobile App" },
+        { value: "web", label: "Web Timer" },
+        { value: "manual", label: "Manual Entry" }
+    ]
+
+    const statusOptions = [
+        { value: "all", label: "All Statuses" },
+        { value: "pending", label: "Pending" },
+        { value: "approved", label: "Approved" },
+        { value: "rejected", label: "Rejected" }
+    ]
+
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="w-[300px] sm:w-[400px] overflow-y-auto">
-                <SheetHeader>
-                    <SheetTitle>Filter Timesheets</SheetTitle>
-                </SheetHeader>
-                <div className="py-6 space-y-6">
-                    <div className="space-y-4">
-                        <Label>Member</Label>
-                        <Select value={memberId} onValueChange={setMemberId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="All Members" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Members</SelectItem>
-                                {members.map(m => (
-                                    <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+        <FilterSidebar
+            open={open}
+            onOpenChange={onOpenChange}
+            onApply={handleApply}
+            onReset={handleReset}
+            onClear={handleReset}
+        >
+            <FilterSection title="Filters">
+                <FilterSubsection title="Member" onClear={() => setSelectedMember("all")}>
+                    <SearchableSelect
+                        options={memberOptions}
+                        value={selectedMember}
+                        onValueChange={setSelectedMember}
+                        placeholder="Select member"
+                    />
+                </FilterSubsection>
 
-                    <Separator />
+                <FilterSubsection title="Project" onClear={() => setSelectedProject("all")}>
+                    <SearchableSelect
+                        options={projectOptions}
+                        value={selectedProject}
+                        onValueChange={setSelectedProject}
+                        placeholder="Select project"
+                    />
+                </FilterSubsection>
 
-                    <div className="space-y-4">
-                        <Label>Project</Label>
-                        <Select value={projectId} onValueChange={setProjectId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="All Projects" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Projects</SelectItem>
-                                {projects.map(p => (
-                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                <FilterSubsection title="Source" onClear={() => setSelectedSource("all")}>
+                    <SearchableSelect
+                        options={sourceOptions}
+                        value={selectedSource}
+                        onValueChange={setSelectedSource}
+                        placeholder="Select source"
+                    />
+                </FilterSubsection>
 
-                    <Separator />
-
-                    <div className="space-y-4">
-                        <Label>Source</Label>
-                        <Select value={source} onValueChange={setSource}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="All Sources" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Sources</SelectItem>
-                                <SelectItem value="desktop">Desktop App</SelectItem>
-                                <SelectItem value="mobile">Mobile App</SelectItem>
-                                <SelectItem value="web">Web Timer</SelectItem>
-                                <SelectItem value="manual">Manual Entry</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <Separator />
-
-                    <div className="space-y-4">
-                        <Label>Approval Status</Label>
-                        <Select value={status} onValueChange={setStatus}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="All Statuses" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Statuses</SelectItem>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="approved">Approved</SelectItem>
-                                <SelectItem value="rejected">Rejected</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-                <SheetFooter className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t flex-row gap-2 justify-end">
-                    <Button variant="outline" onClick={handleReset} className="flex-1">Reset</Button>
-                    <Button onClick={handleApply} className="flex-1">Apply Filter</Button>
-                </SheetFooter>
-            </SheetContent>
-        </Sheet>
+                <FilterSubsection title="Approval Status" onClear={() => setSelectedStatus("all")}>
+                    <SearchableSelect
+                        options={statusOptions}
+                        value={selectedStatus}
+                        onValueChange={setSelectedStatus}
+                        placeholder="Select status"
+                    />
+                </FilterSubsection>
+            </FilterSection>
+        </FilterSidebar>
     )
 }
+

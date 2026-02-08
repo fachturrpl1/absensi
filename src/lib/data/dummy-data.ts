@@ -4779,6 +4779,16 @@ export interface TimeEntry {
     notes?: string
     status?: 'approved' | 'pending' | 'rejected'
     isIdle?: boolean
+    billable?: boolean
+    reason?: string
+    breaks?: Break[]
+}
+
+export interface Break {
+    id: string
+    startTime: string
+    endTime: string
+    notes?: string
 }
 
 export const DUMMY_TIME_ENTRIES: TimeEntry[] = [
@@ -4791,10 +4801,10 @@ export const DUMMY_TIME_ENTRIES: TimeEntry[] = [
         endTime: '11:00:00',
         duration: '02:00:00',
         totalHours: 2,
-        projectId: 'p1',
+        projectId: 'proj-1',
         projectName: 'Website Redesign',
-        taskId: 't1',
-        taskName: 'Design Homepage',
+        taskId: 'task-1',
+        taskName: 'Design Homepage Concept',
         source: 'desktop',
         activityPct: 65,
         notes: 'Meeting with client',
@@ -4809,8 +4819,8 @@ export const DUMMY_TIME_ENTRIES: TimeEntry[] = [
         endTime: '17:00:00',
         duration: '04:00:00',
         totalHours: 4,
-        projectId: 'p2',
-        projectName: 'Mobile App',
+        projectId: 'proj-2',
+        projectName: 'Mobile App Development',
         source: 'mobile',
         activityPct: 0,
         notes: 'On-site visit',
@@ -4825,7 +4835,7 @@ export const DUMMY_TIME_ENTRIES: TimeEntry[] = [
         endTime: '12:00:00',
         duration: '04:00:00',
         totalHours: 4,
-        projectId: 'p1',
+        projectId: 'proj-1',
         projectName: 'Website Redesign',
         source: 'manual',
         activityPct: 0,
@@ -4841,8 +4851,8 @@ export const DUMMY_TIME_ENTRIES: TimeEntry[] = [
         endTime: '12:00:00',
         duration: '02:00:00',
         totalHours: 2,
-        projectId: 'p3',
-        projectName: 'Backend API',
+        projectId: 'proj-3',
+        projectName: 'Marketing Campaign',
         source: 'desktop',
         activityPct: 82,
         isIdle: true
@@ -4856,8 +4866,8 @@ export const DUMMY_TIME_ENTRIES: TimeEntry[] = [
         endTime: '17:00:00',
         duration: '08:00:00',
         totalHours: 8,
-        projectId: 'p4',
-        projectName: 'Server Maintenance',
+        projectId: 'proj-4',
+        projectName: 'Old Website',
         source: 'web',
         activityPct: 45,
         status: 'approved'
