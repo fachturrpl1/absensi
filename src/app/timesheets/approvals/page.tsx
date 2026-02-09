@@ -250,7 +250,7 @@ export default function TimesheetApprovalsPage() {
                     </Button>
 
                     <Button variant="outline" className="h-9">
-                        <Link href="/timesheets/approvals/settings">
+                        <Link href="/timesheets/settings/Timesheet">
                             <Settings className="w-4 h-4" />
                         </Link>
                     </Button>
