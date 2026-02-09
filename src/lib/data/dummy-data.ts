@@ -4879,6 +4879,9 @@ export interface TimesheetApprovalEntry {
     approver?: string
     approvalDate?: string
     comments?: string
+    activityPct?: number
+    paymentStatus?: 'paid' | 'unpaid' | 'processing'
+    submittedDate?: string
 }
 
 export type TimesheetApproval = TimesheetApprovalEntry;
@@ -4894,7 +4897,10 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         status: 'approved',
         approver: 'Siti',
         approvalDate: '2026-01-08T09:00:00',
-        comments: 'All looks good'
+        comments: 'All looks good',
+        activityPct: 92,
+        paymentStatus: 'paid',
+        submittedDate: '2026-01-07T17:00:00'
     },
     {
         id: 'ts-2',
@@ -4906,6 +4912,9 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         status: 'approved',
         approver: 'Siti',
         approvalDate: '2026-01-08T09:05:00',
+        activityPct: 85,
+        paymentStatus: 'processing',
+        submittedDate: '2026-01-07T17:30:00'
     },
     {
         id: 'ts-3',
@@ -4917,7 +4926,10 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         status: 'rejected',
         approver: 'Budi',
         approvalDate: '2026-01-08T10:00:00',
-        comments: 'Overtime not authorized. Please review.'
+        comments: 'Overtime not authorized. Please review.',
+        activityPct: 78,
+        paymentStatus: 'unpaid',
+        submittedDate: '2026-01-07T18:00:00'
     },
     {
         id: 'ts-4',
@@ -4926,7 +4938,10 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         dateStart: '2026-01-08',
         dateEnd: '2026-01-14',
         totalHours: '40:00',
-        status: 'submitted'
+        status: 'submitted',
+        activityPct: 95,
+        paymentStatus: 'unpaid',
+        submittedDate: '2026-01-14T17:00:00'
     },
     {
         id: 'ts-5',
@@ -4935,7 +4950,10 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         dateStart: '2026-01-08',
         dateEnd: '2026-01-14',
         totalHours: '41:15',
-        status: 'submitted'
+        status: 'submitted',
+        activityPct: 88,
+        paymentStatus: 'unpaid',
+        submittedDate: '2026-01-14T17:15:00'
     },
     {
         id: 'ts-6',
@@ -4945,7 +4963,9 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         dateEnd: '2026-01-21',
         totalHours: '32:00',
         status: 'open',
-        comments: 'Draft in progress'
+        comments: 'Draft in progress',
+        activityPct: 60,
+        paymentStatus: 'unpaid'
     },
     {
         id: 'ts-7',
@@ -4954,7 +4974,10 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         dateStart: '2026-01-15',
         dateEnd: '2026-01-21',
         totalHours: '38:00',
-        status: 'submitted'
+        status: 'submitted',
+        activityPct: 82,
+        paymentStatus: 'unpaid',
+        submittedDate: '2026-01-21T16:00:00'
     },
     {
         id: 'ts-8',
@@ -4964,7 +4987,9 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         dateEnd: '2026-01-21',
         totalHours: '15:30',
         status: 'open',
-        comments: 'Waiting for client confirmation'
+        comments: 'Waiting for client confirmation',
+        activityPct: 45,
+        paymentStatus: 'unpaid'
     },
     {
         id: 'ts-9',
@@ -4973,7 +4998,10 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         dateStart: '2026-01-15',
         dateEnd: '2026-01-21',
         totalHours: '42:00',
-        status: 'submitted'
+        status: 'submitted',
+        activityPct: 91,
+        paymentStatus: 'unpaid',
+        submittedDate: '2026-01-21T17:00:00'
     },
     {
         id: 'ts-10',
@@ -4983,7 +5011,9 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         dateEnd: '2026-01-21',
         totalHours: '40:00',
         status: 'open',
-        comments: 'Incomplete'
+        comments: 'Incomplete',
+        activityPct: 0,
+        paymentStatus: 'unpaid'
     },
     {
         id: 'ts-11',
@@ -4995,7 +5025,10 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         status: 'rejected',
         approver: 'Siti',
         approvalDate: '2026-01-15T10:00:00',
-        comments: 'Please fix the overtime entries.'
+        comments: 'Please fix the overtime entries.',
+        activityPct: 70,
+        paymentStatus: 'unpaid',
+        submittedDate: '2026-01-14T18:00:00'
     }
 ];
 

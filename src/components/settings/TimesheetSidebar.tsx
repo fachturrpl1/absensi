@@ -9,9 +9,9 @@ interface TimesheetSidebarProps {
 }
 
 const sidebarItems: { key: SidebarItemKey; label: string; href: string }[] = [
-    { key: "modify-time", label: "Modify time (manual time)", href: "/settings/Timesheet" },
-    { key: "require-reason", label: "Require reason", href: "/settings/Timesheet/require-reason" },
-    { key: "reasons", label: "Reasons", href: "/settings/Timesheet/reasons" },
+    { key: "modify-time", label: "Modify time (manual time)", href: "/settings/timesheets" },
+    { key: "require-reason", label: "Require reason", href: "/settings/timesheets/require-reason" },
+    { key: "reasons", label: "Reasons", href: "/settings/timesheets/reasons" },
 ]
 
 export function TimesheetSidebar({ activeItem }: TimesheetSidebarProps) {
