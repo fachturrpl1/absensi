@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
 import { DateRange } from "react-day-picker"
-import { PaginationFooter } from "@/components/pagination-footer"
+import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { Input } from "@/components/ui/input"
 import { exportToCSV, generateFilename } from "@/lib/export-utils"
 import { toast } from "sonner"

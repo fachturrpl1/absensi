@@ -107,7 +107,7 @@ export default function SettingsPage() {
       icon: Activity,
       items: [
         { label: 'Activity', href: '/settings/Activity/track-apps-urls' },
-        { label: 'Timesheets', href: '/settings/Timesheet' },
+        { label: 'Timesheets', href: '/settings/timesheets' },
         { label: 'Time & tracking', href: '/settings/tracking/allowed-apps' },
         { label: 'Screenshots', href: '/settings/screenshot' },
       ],

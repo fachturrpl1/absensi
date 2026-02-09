@@ -3,13 +3,14 @@
 import { useState } from "react"
 
 import { Info, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
-import { useSettingsMembers } from "@/hooks/use-settings-members"
+import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
 import { useBlurSettings } from "../blur-context"
 import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
 import { ScreenshotsSidebar } from "@/components/settings/ScreenshotsSidebar"
 
 export default function ScreenshotBlurPage() {
-  const { members, loading } = useSettingsMembers()
+  const members = DUMMY_MEMBERS
+  const loading = false
   const { blurSettings, setGlobalBlur, setMemberBlur, getMemberBlur } = useBlurSettings()
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)

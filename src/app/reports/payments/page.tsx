@@ -5,32 +5,28 @@ import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_PAYMENTS, DUMMY_PROJECTS } from "@/lib/data/dummy-data"
 import { Button } from "@/components/ui/button"
-import { Download, Search, Filter, CreditCard, Clock, CheckCircle } from "lucide-react"
+import { Download, Search, Filter, CreditCard, Clock, CheckCircle, Settings2 } from "lucide-react"
 import { format } from "date-fns"
-import { PaginationFooter } from "@/components/pagination-footer"
-import { useTimezone } from "@/components/timezone-provider"
+import { useTimezone } from "@/components/providers/timezone-provider"
 import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
 
 import { PaymentsFilterSidebar } from "@/components/report/PaymentsFilterSidebar"
-import { AuditLogAuthorCell } from "@/components/report/AuditLogAuthorCell"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { DataTable } from "@/components/tables/data-table"
+import { columns } from "./columns"
+import { toast } from "sonner"
+import { RowSelectionState, VisibilityState } from "@tanstack/react-table"
+import { X } from "lucide-react"
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
-}
-
-const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-        case 'Completed':
-            return "bg-green-100 text-green-700 border-green-200"
-        case 'Pending':
-            return "bg-yellow-100 text-yellow-700 border-yellow-200"
-        case 'Failed':
-            return "bg-red-100 text-red-700 border-red-200"
-        default:
-            return "bg-gray-100 text-gray-700 border-gray-200"
-    }
 }
 
 export default function PaymentsPage() {
@@ -40,8 +36,6 @@ export default function PaymentsPage() {
         startDate: new Date(2026, 0, 15),
         endDate: new Date(2026, 0, 30)
     })
-    const [page, setPage] = useState(1)
-    const pageSize = 10
 
     // Local Filters
     const [searchQuery, setSearchQuery] = useState("")
@@ -53,6 +47,8 @@ export default function PaymentsPage() {
         status: "all",
         project: "all"
     })
+    const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
 
     const handleSidebarApply = (filters: { method: string, status: string, project: string }) => {
         setSidebarFilters({
@@ -85,7 +81,7 @@ export default function PaymentsPage() {
                     data = data.filter(item => item.member.name === selectedMember.name)
                 }
             } else if (selectedFilter.type === 'teams') {
-                // Simple implementation
+                // Simple implementation for teams if needed
             }
         }
 
@@ -136,38 +132,74 @@ export default function PaymentsPage() {
                 label: "Total Paid",
                 value: formatCurrency(totalPaid),
                 icon: CheckCircle,
-                className: "bg-green-50 border-green-200 text-green-700"
+                className: "bg-gray-50 border-gray-200 text-gray-700"
             },
             {
                 label: "Pending Payments",
                 value: formatCurrency(pendingAmount),
                 icon: Clock,
-                className: "bg-yellow-50 border-yellow-200 text-yellow-700"
+                className: "bg-gray-50 border-gray-200 text-gray-700"
             },
             {
                 label: "Work Summary",
                 value: `${totalHours.toFixed(1)} h`,
                 subValue: `Avg Rate: ${formatCurrency(avgRate)}/h`,
                 icon: CreditCard,
-                className: "bg-blue-50 border-blue-200 text-blue-700"
+                className: "bg-gray-50 border-gray-200 text-gray-700"
             },
         ]
     }, [filteredData])
 
-    // Pagination
-    const paginatedData = useMemo(() => {
-        const start = (page - 1) * pageSize
-        return filteredData.slice(start, start + pageSize)
-    }, [filteredData, page])
-
-    const totalPages = Math.ceil(filteredData.length / pageSize)
-
     const handleExport = () => {
-        console.log("Exporting Payments Report", filteredData)
+        // Implementation for CSV export would go here
+        // For now, logging to console
+        console.log("Exporting filtered data:", filteredData)
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + ["ID,Member,Date,Amount,Status,Method,Project"].join(",") + "\n"
+            + filteredData.map(row =>
+                `${row.id},${row.member.name},${row.date},${row.amount},${row.status},${row.method},${row.project}`
+            ).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "payments_report.csv");
+        document.body.appendChild(link);
+        link.click();
+    }
+
+    const handleBulkMarkAsPaid = () => {
+        const selectedIds = Object.keys(rowSelection)
+        toast.success(`Marked ${selectedIds.length} payments as Paid`, {
+            description: "These payments have been updated successfully."
+        })
+        setRowSelection({})
+    }
+
+    const handleBulkExport = () => {
+        const selectedIds = Object.keys(rowSelection)
+        const selectedData = filteredData.filter(item => selectedIds.includes(item.id))
+
+        console.log("Exporting selected data:", selectedData)
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + ["ID,Member,Date,Amount,Status,Method,Project"].join(",") + "\n"
+            + selectedData.map(row =>
+                `${row.id},${row.member.name},${row.date},${row.amount},${row.status},${row.method},${row.project}`
+            ).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "selected_payments_report.csv");
+        document.body.appendChild(link);
+        link.click();
+
+        toast.success(`Exported ${selectedIds.length} payments`, {
+            description: "Your CSV download has started."
+        })
+        setRowSelection({})
     }
 
     return (
-        <div className="px-6 py-4 space-y-6">
+        <div className="px-6 pb-6 space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-xl font-semibold">Payments Report</h1>
                 <div className="flex items-center gap-2">
@@ -200,6 +232,39 @@ export default function PaymentsPage() {
                     >
                         <Filter className="w-4 h-4 mr-2" /> Filter
                     </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon" className="h-9 w-9 bg-white border-gray-300 hover:bg-gray-50 text-gray-700">
+                                <Settings2 className="w-4 h-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {columns
+                                .filter((column) => (column as any).accessorKey || column.id)
+                                .map((column) => {
+                                    const id = column.id || ((column as any).accessorKey as string)
+                                    if (!id || id === 'select' || id === 'actions') return null
+
+                                    return (
+                                        <DropdownMenuCheckboxItem
+                                            key={id}
+                                            className="capitalize"
+                                            checked={columnVisibility[id] !== false}
+                                            onCheckedChange={(checked) =>
+                                                setColumnVisibility((prev) => ({
+                                                    ...prev,
+                                                    [id]: checked,
+                                                }))
+                                            }
+                                        >
+                                            {id.replace(/([A-Z])/g, ' $1').trim()}
+                                        </DropdownMenuCheckboxItem>
+                                    )
+                                })}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <Button variant="outline" className="h-9" onClick={handleExport}>
                         <Download className="w-4 h-4 mr-2" />
                         Export
@@ -207,134 +272,65 @@ export default function PaymentsPage() {
                 </div>
             </InsightsHeader>
 
-            {/* Separated Summary Cards - 3 Distinct Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x border rounded-lg shadow-sm bg-white">
                 {summaryCards.map((card, idx) => (
-                    <div key={idx} className="p-6 bg-white border rounded-xl shadow-sm flex items-start justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-gray-500 mb-1">{card.label}</p>
-                            <p className="text-2xl font-bold text-gray-900">{card.value}</p>
-                            {card.subValue && (
-                                <p className="text-xs text-gray-500 mt-1">{card.subValue}</p>
-                            )}
-                        </div>
-                        <div className={cn("p-2 rounded-lg", card.className)}>
-                            <card.icon className="w-5 h-5" />
-                        </div>
+                    <div key={idx} className="p-4">
+                        <p className="text-sm font-medium text-gray-500">{card.label}</p>
+                        <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
+                        {card.subValue && (
+                            <p className="text-xs text-gray-500 mt-1">{card.subValue}</p>
+                        )}
                     </div>
                 ))}
             </div>
 
-            {/* Table Container */}
             <div className="bg-white border rounded-lg shadow-sm">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-600 font-medium border-b">
-                            <tr>
-                                <th className="p-4 w-48">Member</th>
-                                <th className="p-4 w-40">Project</th>
-                                <th className="p-4 w-32">Date Paid</th>
-                                <th className="p-4 w-32">Method</th>
-                                <th className="p-4 text-right w-24">Hours</th>
-                                <th className="p-4 text-right w-24">Rate</th>
-                                <th className="p-4 text-right w-32">Amount</th>
-                                <th className="p-4 w-32">Status</th>
-                                <th className="p-4">Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {paginatedData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={9} className="p-8 text-center text-gray-500">
-                                        No payments found
-                                    </td>
-                                </tr>
-                            ) : (
-                                paginatedData.map((payment) => (
-                                    <tr
-                                        key={payment.id}
-                                        className="hover:bg-gray-50/50 transition-colors"
-                                    >
-                                        <td className="p-4 align-middle">
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <div className="inline-flex cursor-pointer">
-                                                        <AuditLogAuthorCell
-                                                            author={{
-                                                                ...payment.member,
-                                                                avatarUrl: payment.member.avatar,
-                                                                // Fallback if styling is removed/placeholder
-                                                                color: payment.member.color === 'placeholder' ? undefined : payment.member.color
-                                                            }}
-                                                            showName={true}
-                                                            showRing={true}
-                                                            avatarClassName="ring-2 ring-white"
-                                                            className="bg-white"
-                                                        />
-                                                    </div>
-                                                </TooltipTrigger>
-                                                <TooltipContent className="bg-gray-900 text-white border-0">
-                                                    <p>{payment.member.name}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </td>
-                                        <td className="p-4 align-middle text-gray-900 font-medium">
-                                            {payment.project || "—"}
-                                        </td>
-                                        <td className="p-4 align-middle text-gray-600">
-                                            {format(new Date(payment.date), 'MMM d, yyyy')}
-                                        </td>
-                                        <td className="p-4 align-middle text-gray-600">
-                                            {payment.method}
-                                        </td>
-                                        <td className="p-4 align-middle text-right text-gray-900">
-                                            {payment.hours.toFixed(1)} h
-                                        </td>
-                                        <td className="p-4 align-middle text-right text-gray-600">
-                                            {formatCurrency(payment.rate)}
-                                        </td>
-                                        <td className="p-4 align-middle text-right font-bold text-gray-900">
-                                            {formatCurrency(payment.amount)}
-                                        </td>
-                                        <td className="p-4 align-middle">
-                                            <span className={cn(
-                                                "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
-                                                getStatusBadgeColor(payment.status)
-                                            )}>
-                                                {payment.status}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 align-middle text-gray-500 truncate max-w-xs">
-                                            {payment.notes}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Pagination */}
-                <div className="border-t">
-                    <PaginationFooter
-                        page={page}
-                        totalPages={totalPages}
-                        onPageChange={setPage}
-                        from={paginatedData.length > 0 ? (page - 1) * pageSize + 1 : 0}
-                        to={Math.min(page * pageSize, filteredData.length)}
-                        total={filteredData.length}
-                        pageSize={pageSize}
-                        onPageSizeChange={() => { }}
-                        className="bg-transparent shadow-none border-none"
-                    />
-                </div>
+                <DataTable
+                    columns={columns}
+                    data={filteredData}
+                    showColumnToggle={false}
+                    showFilters={false}
+                    showPagination={true}
+                    rowSelection={rowSelection}
+                    onRowSelectionChange={setRowSelection}
+                    columnVisibility={columnVisibility}
+                    onColumnVisibilityChange={setColumnVisibility}
+                    getRowKey={(row) => row.id}
+                />
             </div>
+
+            {Object.keys(rowSelection).length > 0 && (
+                <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white border shadow-lg rounded-full px-6 py-3 flex items-center gap-4 z-50 animate-in slide-in-from-bottom-5">
+                    <span className="text-sm font-medium text-gray-900 border-r pr-4">
+                        {Object.keys(rowSelection).length} selected
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" onClick={handleBulkMarkAsPaid} className="h-8">
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Mark as Paid
+                        </Button>
+                        <Button size="sm" variant="default" onClick={handleBulkExport} className="h-8">
+                            <Download className="w-4 h-4 mr-2" />
+                            Export Selected
+                        </Button>
+                    </div>
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 ml-2 rounded-full hover:bg-gray-100"
+                        onClick={() => setRowSelection({})}
+                    >
+                        <X className="w-4 h-4" />
+                    </Button>
+                </div>
+            )}
 
             <PaymentsFilterSidebar
                 open={filterSidebarOpen}
                 onOpenChange={setFilterSidebarOpen}
                 onApply={handleSidebarApply}
             />
-        </div>
+        </div >
     )
 }

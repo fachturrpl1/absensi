@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react"
 
 import { Info, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
-import { useSettingsMembers } from "@/hooks/use-settings-members"
+import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
 import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
 import { ScreenshotsSidebar } from "@/components/settings/ScreenshotsSidebar"
 
 export default function ScreenshotDeletePage() {
-  const { members, loading } = useSettingsMembers()
+  const members = DUMMY_MEMBERS
+  const loading = false
   const [globalDelete, setGlobalDelete] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [memberDeletes, setMemberDeletes] = useState<Record<string, boolean>>({})

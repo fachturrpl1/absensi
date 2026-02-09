@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { MembersTable } from "@/components/members-table"
+import { MembersTable } from "@/components/tables/members-table"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useQueryClient } from "@tanstack/react-query"
@@ -44,7 +44,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useQuery } from "@tanstack/react-query"
 import { useDebounce } from "@/utils/debounce"
-import { PaginationFooter } from "@/components/pagination-footer"
+import { PaginationFooter } from "@/components/tables/pagination-footer"
+
 import { computeName, computeGroupName, computeGender, computeNik, MemberLike } from "@/lib/members-mapping"
 
 import { IOrganization_member } from "@/interface"
@@ -861,13 +862,13 @@ export default function MembersPage() {
                     <PaginationFooter
                       page={page}
                       totalPages={totalPages || 1}
-                      onPageChange={(p) => setPage(Math.max(1, Math.min(p, Math.max(1, totalPages))))}
+                      onPageChange={(p: number) => setPage(Math.max(1, Math.min(p, Math.max(1, totalPages))))}
                       isLoading={loading || isFetching}
                       from={total > 0 ? (page - 1) * pageSize + 1 : 0}
                       to={Math.min(page * pageSize, total)}
                       total={total}
                       pageSize={pageSize}
-                      onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+                      onPageSizeChange={(size: number) => { setPageSize(size); setPage(1); }}
                       pageSizeOptions={[10, 50, 100]}
                     />
                   </div>

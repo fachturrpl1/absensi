@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { getOrganizationMembersPaginated, getAllOrganizationMemberIds } from "@/action/members"
+import { useState, useEffect } from "react"
+import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -107,7 +107,12 @@ export function AddWorkBreakPolicyDialog({ open, onOpenChange, onSave, initialDa
     const handleCustomBreakChange = (index: number, field: 'start' | 'end', value: string) => {
         setCustomBreaks(prev => {
             const newBreaks = [...prev]
-            newBreaks[index] = { ...newBreaks[index], [field]: value }
+            if (newBreaks[index]) {
+                newBreaks[index] = {
+                    ...newBreaks[index],
+                    [field]: value
+                } as { start: string, end: string }
+            }
             return newBreaks
         })
     }
@@ -447,51 +452,35 @@ function MemberSelectionModal({ open, onOpenChange, selectedMembers, onSave }: {
     useEffect(() => {
         if (open) {
             setLocalSelected(selectedMembers)
+            setSearchQuery("") // Reset search when modal opens
+            setCurrentPage(1) // Reset to first page
         }
     }, [open, selectedMembers])
 
-    // Fetch members with server-side pagination
-    const fetchMembers = useCallback(async (page: number, query: string) => {
+    // Get filtered and paginated dummy members (client-side)
+    useEffect(() => {
         setIsLoading(true)
-        try {
-            const result = await getOrganizationMembersPaginated({
-                page,
-                pageSize: ITEMS_PER_PAGE,
-                query
-            })
 
-            if (result.success && result.data) {
-                setMembers(result.data)
-                setTotalMembers(result.metadata.total)
-            }
-        } catch (error) {
-            console.error("Failed to fetch members", error)
-        } finally {
-            setIsLoading(false)
-        }
-    }, [])
+        // Filter dummy members based on search query
+        const filtered = DUMMY_MEMBERS.filter(member =>
+            member.name.toLowerCase().includes(searchQuery.toLowerCase())
+        )
 
-    // Debounce search
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setCurrentPage(1)
-            fetchMembers(1, searchQuery)
-        }, 500)
-        return () => clearTimeout(timer)
-    }, [searchQuery, fetchMembers])
+        // Calculate pagination
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+        const endIndex = startIndex + ITEMS_PER_PAGE
+        const paginated = filtered.slice(startIndex, endIndex)
 
-    // Handle page change
-    useEffect(() => {
-        if (currentPage > 1) { // Skip initial load as it's handled by search effect (searchQuery "" -> fetch page 1)
-            fetchMembers(currentPage, searchQuery)
-        }
-        // Note: Initial load (page 1, query "") matches the search effect dependency.
-        // But if we change page, we want to trigger fetch.
-        // The search effect triggers on mount because searchQuery is "", so page 1 is fetched.
-        // We only need to trigger if page changes.
-    }, [currentPage, fetchMembers])
-    // Wait, the above logic might double fetch or miss.
-    // Better: one effect for both.
+        // Map to expected format
+        const mapped = paginated.map(m => ({
+            id: m.id,
+            name: m.name
+        }))
+
+        setMembers(mapped)
+        setTotalMembers(filtered.length)
+        setIsLoading(false)
+    }, [searchQuery, currentPage, open])
 
     // Total pages calculation
     const totalPages = Math.ceil(totalMembers / ITEMS_PER_PAGE)
@@ -526,33 +515,19 @@ function MemberSelectionModal({ open, onOpenChange, selectedMembers, onSave }: {
         if (totalMembers > 0 && localSelected.length >= totalMembers) {
             setLocalSelected([])
         } else {
-            setIsLoading(true)
-            try {
-                const result = await getAllOrganizationMemberIds({ query: searchQuery })
-                if (result.success && result.data) {
-                    // Merge with existing if needed? Or replace? 
-                    // Usually "Select all" implies selecting the result set.
-                    // If we have search query, we should probably Add to existing?
-                    // But if "Select all" is clicked while filtered, we usually expect only filtered actions.
-                    // Let's assume replace or union?
-                    // User request: "Select all".
-                    // If I search "A", get 10 results, "Select all", I expect those 10.
-                    // If I clear search, I see 10 selected. 
+            // Select all filtered members from DUMMY_MEMBERS
+            const filtered = DUMMY_MEMBERS.filter(member =>
+                member.name.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+            const allIds = filtered.map(m => m.id)
 
-                    // IF query is present: Union `result.data` with `localSelected`.
-                    // IF query is empty: Replace `localSelected` with `result.data`.
-
-                    if (searchQuery) {
-                        const newSet = new Set([...localSelected, ...result.data])
-                        setLocalSelected(Array.from(newSet))
-                    } else {
-                        setLocalSelected(result.data)
-                    }
-                }
-            } catch (e) {
-                console.error(e)
-            } finally {
-                setIsLoading(false)
+            if (searchQuery) {
+                // Union with existing selection
+                const newSet = new Set([...localSelected, ...allIds])
+                setLocalSelected(Array.from(newSet))
+            } else {
+                // Replace with all IDs
+                setLocalSelected(allIds)
             }
         }
     }

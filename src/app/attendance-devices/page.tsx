@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/empty"
 import { createClient } from "@/utils/supabase/client"
 import { ActivateDeviceDialog } from "@/components/dialogs/activate-device-dialog"
-import { PaginationFooter } from "@/components/pagination-footer"
+import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { useOrgStore } from "@/store/org-store"
 import { useDebounce } from "@/utils/debounce"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"

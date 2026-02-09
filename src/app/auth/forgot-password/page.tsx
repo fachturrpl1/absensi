@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, Mail } from "lucide-react";
 
-import { ForgotPasswordForm } from "@/components/forgot-password-form";
+import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 

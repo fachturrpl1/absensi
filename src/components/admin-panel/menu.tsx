@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Ellipsis } from "lucide-react";
 import { usePathname } from "next/navigation";
 
-import LogoutButton from "@/components/logout";
+import LogoutButton from "@/components/auth/logout";
 import { cn } from "@/lib/utils";
 import { getMenuList } from "@/lib/menu-list";
 import { Button } from "@/components/ui/button";

@@ -28,7 +28,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { DUMMY_MEMBERS, DUMMY_PROJECTS, DUMMY_TASKS, DUMMY_TEAMS, getClientNameByProjectName } from "@/lib/data/dummy-data"
-import { DataTable } from "@/components/data-table"
+import { DataTable } from "@/components/tables/data-table"
 import { ColumnDef } from "@tanstack/react-table"
 import type { RowSelectionState } from "@tanstack/react-table"
 

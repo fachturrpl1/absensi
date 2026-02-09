@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from "react"
 import { Info, Search, User, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 
+import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
 import { OrganizationHeader } from "@/components/settings/OrganizationHeader"
 import { ProjectSidebar } from "@/components/settings/ProjectSidebar"
-import { useSettingsMembers } from "@/hooks/use-settings-members"
 
 type ProjectRole = "none" | "viewer" | "user" | "manager"
 
@@ -17,26 +17,24 @@ interface MemberWithRole {
 }
 
 export default function DefaultProjectRolePage() {
-    const { members: fetchedMembers, loading } = useSettingsMembers()
+    const loading = false
     const [globalRole, setGlobalRole] = useState<ProjectRole>("none")
     const [members, setMembers] = useState<MemberWithRole[]>([])
     const [searchQuery, setSearchQuery] = useState("")
 
-    // Sync fetched members with local role state
+    // Sync DUMMY_MEMBERS with local role state
     useEffect(() => {
-        if (fetchedMembers.length > 0) {
-            setMembers(prev => {
-                // Keep existing roles for members we already have
-                const existingRoles = new Map(prev.map(m => [m.id, m.role]))
-                return fetchedMembers.map(m => ({
-                    id: m.id,
-                    name: m.name,
-                    avatar: m.avatar,
-                    role: existingRoles.get(m.id) || globalRole
-                }))
-            })
-        }
-    }, [fetchedMembers, globalRole])
+        setMembers(prev => {
+            // Keep existing roles for members we already have
+            const existingRoles = new Map(prev.map(m => [m.id, m.role]))
+            return DUMMY_MEMBERS.map(m => ({
+                id: m.id,
+                name: m.name,
+                avatar: m.avatar,
+                role: existingRoles.get(m.id) || globalRole
+            }))
+        })
+    }, [globalRole])
 
 
 

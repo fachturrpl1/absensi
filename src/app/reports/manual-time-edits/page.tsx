@@ -1,164 +1,158 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import React, { useState, useMemo, useEffect } from "react"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
+import { DUMMY_MEMBERS, DUMMY_PROJECTS, DUMMY_TEAMS, DUMMY_MANUAL_TIME_EDITS } from "@/lib/data/dummy-data"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
-import { DUMMY_MANUAL_EDITS, DUMMY_MEMBERS, DUMMY_TEAMS, type ManualEditEntry } from "@/lib/data/dummy-data"
 import { Button } from "@/components/ui/button"
-import { Download, Info, Search } from "lucide-react"
-import { format } from "date-fns"
+import { Download, SlidersHorizontal, Search, Filter } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { PaginationFooter } from "@/components/pagination-footer"
-import { useTimezone } from "@/components/timezone-provider"
-import { exportToCSV, generateFilename, type ExportColumn } from "@/lib/export-utils"
+import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
+import { useTimezone } from "@/components/providers/timezone-provider"
+import { exportToCSV, generateFilename } from "@/lib/export-utils"
+import { format } from "date-fns"
+import { ManualTimeEditsFilterSidebar } from "@/components/report/ManualTimeEditsFilterSidebar"
+
+const getActionBadge = (action: string) => {
+    switch (action) {
+        case 'add':
+            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">Added</span>
+        case 'edit':
+            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">Edited</span>
+        case 'delete':
+            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">Deleted</span>
+        default:
+            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200">{action}</span>
+    }
+}
 
 export default function ManualTimeEditsPage() {
     const timezone = useTimezone()
-    const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({
-        type: "members",
-        all: true,
-        id: "all"
-    })
+    const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({ type: "members", all: true, id: "all" })
     const [dateRange, setDateRange] = useState<DateRange>({
-        startDate: new Date(2026, 0, 19),
-        endDate: new Date(2026, 0, 25)
+        startDate: new Date(),
+        endDate: new Date()
     })
+
     const [searchQuery, setSearchQuery] = useState("")
+    const [isLoading, setIsLoading] = useState(true)
+
+    const [filterSidebarOpen, setFilterSidebarOpen] = useState(false)
+    const [sidebarFilters, setSidebarFilters] = useState({
+        memberId: "all",
+        projectId: "all",
+        action: "all"
+    })
+
     const [page, setPage] = useState(1)
-    const [activeTab, setActiveTab] = useState<'me' | 'all'>('all')
-    const pageSize = 10
+    const [pageSize, setPageSize] = useState(10)
 
-    // Filter Logic
-    const filteredData = useMemo(() => {
-        let data = DUMMY_MANUAL_EDITS
+    const [visibleCols, setVisibleCols] = useState({
+        member: true,
+        date: true,
+        project: true,
+        activity: true,
+        originalTime: true,
+        editedTime: true,
+        action: true,
+        editedBy: true,
+        editDate: true,
+        notes: true,
+    })
 
-        // Date Range Filter
-        if (dateRange.startDate && dateRange.endDate) {
-            const startStr = format(dateRange.startDate, 'yyyy-MM-dd')
-            const endStr = format(dateRange.endDate, 'yyyy-MM-dd')
-            data = data.filter(item => item.date >= startStr && item.date <= endStr)
-        }
-
-        // Member Filter
-        if (!selectedFilter.all && selectedFilter.id !== 'all') {
-            if (selectedFilter.type === 'members') {
-                data = data.filter(item => item.memberId === selectedFilter.id)
-            }
-        }
-
-        // Search Filter (Member Name, Note, Project)
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase()
-            data = data.filter((item: ManualEditEntry) =>
-                item.memberName.toLowerCase().includes(query) ||
-                item.reason.toLowerCase().includes(query) ||
-                item.projectName.toLowerCase().includes(query) ||
-                item.action.toLowerCase().includes(query) ||
-                (item.taskName && item.taskName.toLowerCase().includes(query))
-            )
-        }
-
-        // Tab Filter (Me vs All - Mocking 'Me' as 'm1' for now)
-        if (activeTab === 'me') {
-            const currentUserId = 'm1' // Assume logged in user is m1
-            data = data.filter((item: ManualEditEntry) => item.memberId === currentUserId)
-        }
-
-        // Sort by changedAt descending
-        return data.sort((a: ManualEditEntry, b: ManualEditEntry) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime())
-    }, [dateRange, selectedFilter, searchQuery, activeTab])
-
-    // Summary Statistics
-    const summaryCards = useMemo(() => {
-        const uniqueMembers = new Set(filteredData.map(e => e.memberId)).size
-
-        // Parse time changes (e.g., "-0:30:00" or "+1:00:00")
-        let addedMinutes = 0
-        let removedMinutes = 0
-
-        filteredData.forEach((entry: ManualEditEntry) => {
-            const isPositive = entry.timeChange.startsWith('+')
-            const timeStr = entry.timeChange.replace(/[+-]/, '')
-            const parts = timeStr.split(':').map(Number)
-            const hours = parts[0] || 0
-            const mins = parts[1] || 0
-            const totalMins = (hours * 60) + mins
-
-            if (isPositive) addedMinutes += totalMins
-            else removedMinutes += totalMins
+    useEffect(() => {
+        setDateRange({
+            startDate: new Date(2026, 0, 1),
+            endDate: new Date(2026, 0, 31)
         })
+        const timer = setTimeout(() => setIsLoading(false), 800)
+        return () => clearTimeout(timer)
+    }, [])
 
-        const formatDuration = (totalMins: number) => {
-            const h = Math.floor(totalMins / 60)
-            const m = totalMins % 60
-            return `${h}:${m.toString().padStart(2, '0')}:00`
-        }
+    const toggleCol = (key: keyof typeof visibleCols, value: boolean) => {
+        setVisibleCols((prev) => ({ ...prev, [key]: value }))
+    }
+
+    const filteredData = useMemo(() => {
+        return DUMMY_MANUAL_TIME_EDITS.filter(item => {
+            // Header Filter
+            if (!selectedFilter.all && selectedFilter.id !== 'all') {
+                if (selectedFilter.type === 'members') {
+                    if (item.memberId !== selectedFilter.id) return false
+                }
+            }
+
+            // Sidebar Filters
+            if (sidebarFilters.memberId !== 'all' && item.memberId !== sidebarFilters.memberId) return false
+            if (sidebarFilters.projectId !== 'all' && item.project !== sidebarFilters.projectId) { // Assuming project name matches or need ID mapping. Using Name for dummy simple match
+                // Check if project matches name in DUMMY_PROJECTS if we had IDs, but dummy data has project name string. 
+                // Let's assume sidebar passes ID but data has Name. Need mapping or simplify.
+                // Simplification: In data `project` is string name. In sidebar we pass Project ID. 
+                // We should fix this mapping. 
+                const proj = DUMMY_PROJECTS.find(p => p.id === sidebarFilters.projectId)
+                if (proj && proj.name !== item.project) return false
+            }
+            if (sidebarFilters.action !== 'all' && item.action !== sidebarFilters.action) return false
+
+            if (dateRange.startDate && dateRange.endDate) {
+                const itemDate = new Date(item.date)
+                if (itemDate < dateRange.startDate || itemDate > dateRange.endDate) return false
+            }
+
+            if (searchQuery) {
+                const lower = searchQuery.toLowerCase()
+                if (!item.memberName.toLowerCase().includes(lower) &&
+                    !item.reason.toLowerCase().includes(lower) &&
+                    !item.project.toLowerCase().includes(lower)) return false
+            }
+
+            return true
+        })
+    }, [selectedFilter, sidebarFilters, dateRange, searchQuery])
+
+    const totalPages = Math.ceil(filteredData.length / pageSize)
+    const paginatedData = filteredData.slice((page - 1) * pageSize, page * pageSize)
+
+    const handleExport = () => {
+        exportToCSV({
+            filename: generateFilename('manual-time-edits'),
+            columns: [
+                { key: 'memberName', label: 'Member' },
+                { key: 'date', label: 'Date' },
+                { key: 'project', label: 'Project' },
+                { key: 'activity', label: 'Activity' },
+                { key: 'originalTime', label: 'Original Time' },
+                { key: 'editedTime', label: 'Edited Time' },
+                { key: 'action', label: 'Action' },
+                { key: 'editedBy', label: 'Edited By' },
+                { key: 'editDate', label: 'Edit Date' },
+                { key: 'reason', label: 'Notes' }
+            ],
+            data: filteredData.map(item => ({ ...item, activity: '0%' }))
+        })
+        toast.success("Exported successfully")
+    }
+
+    const summaryCards = useMemo(() => {
+        const totalEdits = filteredData.length
+        const totalAdds = filteredData.filter(i => i.action === 'add').length
+        const totalEditsAction = filteredData.filter(i => i.action === 'edit').length
+
 
         return [
-            { label: "AFFECTED MEMBERS", value: uniqueMembers, color: "text-gray-600" },
-            { label: "HOURS ADDED", value: formatDuration(addedMinutes), color: "text-gray-600" },
-            { label: "HOURS DELETED", value: formatDuration(removedMinutes), color: "text-gray-600" } // Green as per screenshot for deleted? Or Red? Screenshot shows green.
+            { label: "Total Edits/Changes", value: totalEdits },
+            { label: "Added Entries", value: totalAdds },
+            { label: "Modified Entries", value: totalEditsAction },
+            // { label: "Deleted Entries", value: totalDeletes }, // Optional, maybe fit in 3 cards
         ]
     }, [filteredData])
 
-    // Pagination
-    const paginatedData = useMemo(() => {
-        const start = (page - 1) * pageSize
-        return filteredData.slice(start, start + pageSize)
-    }, [filteredData, page])
-    const totalPages = Math.ceil(filteredData.length / pageSize)
-
-    // Grouping by Date for Display
-    const groupedData = useMemo(() => {
-        const groups: { [key: string]: ManualEditEntry[] } = {}
-        paginatedData.forEach((item: ManualEditEntry) => {
-            if (!groups[item.date]) groups[item.date] = []
-            groups[item.date]!.push(item)
-        })
-        return groups
-    }, [paginatedData])
-
-    const handleExport = () => {
-        const columns: ExportColumn[] = [
-            { label: 'Member', key: 'memberName' },
-            { label: 'Project', key: 'projectName' },
-            { label: 'Task', key: 'taskName' },
-            { label: 'Action', key: 'action' },
-            { label: 'Time Span', key: 'timeSpan' },
-            { label: 'Time Change', key: 'timeChange' },
-            { label: 'Reason', key: 'reason' },
-            { label: 'Changed By', key: 'changedByName' },
-            { label: 'Changed At', key: 'changedAt' },
-            { label: 'Date', key: 'date' }
-        ]
-        const filename = generateFilename('manual-time-edits')
-        exportToCSV({ data: filteredData, columns, filename })
-        toast.success('Manual Edit Report exported successfully')
-    }
-
-    const getActionColor = (action: string) => {
-        switch (action) {
-            case 'Add': return 'bg-green-100 text-green-700'
-            case 'Edit': return 'bg-blue-100 text-blue-700'
-            case 'Delete': return 'bg-red-100 text-red-700'
-            default: return 'bg-gray-100 text-gray-700'
-        }
-    }
-
     return (
-        <div className="px-6 py-4">
-            <h1 className="text-xl font-semibold mb-5">Manual time edits report</h1>
-
-            <div className="flex items-center space-x-4 mb-6">
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'me' | 'all')}>
-                    <TabsList>
-                        <TabsTrigger value="me">ME</TabsTrigger>
-                        <TabsTrigger value="all">ALL</TabsTrigger>
-                    </TabsList>
-                </Tabs>
-            </div>
+        <div className="px-6 pb-6 space-y-6">
+            <h1 className="text-xl font-semibold">Manual Time Edit Report</h1>
 
             <InsightsHeader
                 selectedFilter={selectedFilter}
@@ -168,132 +162,164 @@ export default function ManualTimeEditsPage() {
                 members={DUMMY_MEMBERS}
                 teams={DUMMY_TEAMS}
                 timezone={timezone}
-                hideFilter // Hide default filter if custom one needed, but we used standard
             >
-                <>
+                <div className="flex items-center gap-2">
                     <div className="relative">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                         <Input
-                            placeholder="Search action, member..."
+                            placeholder="Search edits..."
+                            className="pl-9 h-10 bg-white max-w-sm"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9 ps-9 w-[250px]"
                         />
                     </div>
-                    <Button variant="outline" onClick={handleExport}>
+
+                    <Button
+                        variant="outline"
+                        className="h-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50 font-medium"
+                        onClick={() => setFilterSidebarOpen(true)}
+                    >
+                        <Filter className="w-4 h-4 mr-2" /> Filter
+                    </Button>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-9 bg-white text-gray-700 border-gray-300">
+                                <SlidersHorizontal className="w-4 h-4 mr-2" />
+                                Columns
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuCheckboxItem checked={visibleCols.member} onCheckedChange={(v) => toggleCol('member', !!v)}>Member</DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem checked={visibleCols.date} onCheckedChange={(v) => toggleCol('date', !!v)}>Date</DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem checked={visibleCols.project} onCheckedChange={(v) => toggleCol('project', !!v)}>Project</DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem checked={visibleCols.activity} onCheckedChange={(v) => toggleCol('activity', !!v)}>Activity</DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem checked={visibleCols.originalTime} onCheckedChange={(v) => toggleCol('originalTime', !!v)}>Original Time</DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem checked={visibleCols.editedTime} onCheckedChange={(v) => toggleCol('editedTime', !!v)}>Edited Time</DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem checked={visibleCols.action} onCheckedChange={(v) => toggleCol('action', !!v)}>Action</DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem checked={visibleCols.editedBy} onCheckedChange={(v) => toggleCol('editedBy', !!v)}>Edited By</DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem checked={visibleCols.editDate} onCheckedChange={(v) => toggleCol('editDate', !!v)}>Edit Date</DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem checked={visibleCols.notes} onCheckedChange={(v) => toggleCol('notes', !!v)}>Notes</DropdownMenuCheckboxItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <Button variant="outline" className="h-9" onClick={handleExport}>
                         <Download className="w-4 h-4 mr-2" />
                         Export
                     </Button>
-                </>
+                </div>
             </InsightsHeader>
 
             {/* Summary Cards */}
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 divide-x border rounded-lg bg-white mb-6 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x border rounded-lg shadow-sm bg-white">
                 {summaryCards.map((card, idx) => (
-                    <div key={idx} className="p-6">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{card.label}</p>
-                        <p className={`text-3xl font-light ${card.color}`}>{card.value}</p>
+                    <div key={idx} className="p-4">
+                        <p className="text-sm font-medium text-gray-500">{card.label}</p>
+                        <p className="text-2xl font-bold text-gray-900">{card.value}</p>
                     </div>
                 ))}
             </div>
 
-            {/* Main Table Container */}
-            <div className="bg-white border rounded-lg shadow-sm">
-                <div className="p-4 border-b flex justify-between items-center bg-gray-50/50">
-                    <div className="text-sm font-medium text-gray-900">
-                        SMK 100 Brantas <span className="text-gray-500 font-normal">Asia - Bangkok</span>
-                    </div>{/*jangan tambah button send, schedule, export*/}
-                </div>
+            <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-500 font-semibold uppercase tracking-wider text-xs border-b">
+                        <thead className="bg-gray-50 text-gray-900 font-semibold border-b border-gray-200">
                             <tr>
-                                <th className="px-4 py-3 font-medium">Member</th>
-                                <th className="px-4 py-3 font-medium">Project</th>
-                                <th className="px-4 py-3 font-medium">Task</th>
-                                <th className="px-4 py-3 font-medium">Action</th>
-                                <th className="px-4 py-3 font-medium">Time Span</th>
-                                <th className="px-4 py-3 font-medium">Time change</th>
-                                <th className="px-4 py-3 font-medium">Reason</th>
-                                <th className="px-4 py-3 font-medium">Changed by</th>
-                                <th className="px-4 py-3 font-medium text-right">Changed at</th>
+                                {visibleCols.member && <th className="p-3 pl-4 font-semibold">Member</th>}
+                                {visibleCols.date && <th className="p-3 font-semibold">Date of Entry</th>}
+                                {visibleCols.project && <th className="p-3 font-semibold">Project/Task</th>}
+                                {visibleCols.activity && <th className="p-3 font-semibold">Activity</th>}
+                                {visibleCols.originalTime && <th className="p-3 font-semibold">Original</th>}
+                                {visibleCols.editedTime && <th className="p-3 font-semibold">Edited</th>}
+                                {visibleCols.action && <th className="p-3 font-semibold">Action</th>}
+                                {visibleCols.editedBy && <th className="p-3 font-semibold">Edited By</th>}
+                                {visibleCols.editDate && <th className="p-3 font-semibold">Edit Date</th>}
+                                {visibleCols.notes && <th className="p-3 font-semibold">Notes</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {Object.entries(groupedData).flatMap(([date, items]) => [
-                                /* Date Group Header Row */
-                                <tr key={`header-${date}`} className="bg-gray-50/50">
-                                    <td colSpan={9} className="px-4 py-2 text-sm font-medium text-gray-700 border-b border-gray-100">
-                                        Changes made {format(new Date(date), 'EEE, MMM d, yyyy')}
-                                    </td>
-                                </tr>,
-                                /* Items Rows */
-                                ...items.map((item: ManualEditEntry) => (
-                                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 text-xs shrink-0">
-                                                    {item.memberName.charAt(0)}
-                                                </div>
-                                                <span className="font-medium truncate max-w-[120px]" title={item.memberName}>{item.memberName}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 truncate max-w-[120px]" title={item.projectName}>
-                                            {item.projectName}
-                                        </td>
-                                        <td className="px-4 py-3 truncate max-w-[120px] text-gray-500" title={item.taskName || ''}>
-                                            {item.taskName || '-'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${getActionColor(item.action)}`}>
-                                                {item.action}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
-                                            {item.timeSpan || '-'}
-                                        </td>
-                                        <td className="px-4 py-3 font-medium whitespace-nowrap">
-                                            {item.timeChange}
-                                            <Info className="w-3 h-3 inline ml-1 text-gray-400 cursor-help" />
-                                        </td>
-                                        <td className="px-4 py-3 truncate max-w-[150px] text-gray-500" title={item.reason}>
-                                            {item.reason}
-                                        </td>
-                                        <td className="px-4 py-3 truncate max-w-[120px]">
-                                            {item.changedByName}
-                                        </td>
-                                        <td className="px-4 py-3 text-right text-gray-500 whitespace-nowrap">
-                                            {format(new Date(item.changedAt), 'h:mm a')}
-                                        </td>
-                                    </tr>
-                                ))
-                            ])}
-
-                            {Object.keys(groupedData).length === 0 && (
+                            {isLoading ? (
                                 <tr>
                                     <td colSpan={9} className="p-8 text-center text-gray-500">
-                                        No manual edits found for this period.
+                                        Loading...
                                     </td>
                                 </tr>
+                            ) : paginatedData.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="p-8 text-center text-gray-500">
+                                        No edits found.
+                                    </td>
+                                </tr>
+                            ) : (
+                                paginatedData.map((row) => (
+                                    <tr key={row.id} className="hover:bg-gray-100 even:bg-gray-50 transition-colors">
+                                        {visibleCols.member && (
+                                            <td className="p-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-600">
+                                                        {row.memberName.charAt(0)}
+                                                    </div>
+                                                    <span className="font-medium text-gray-900">{row.memberName}</span>
+                                                </div>
+                                            </td>
+                                        )}
+                                        {visibleCols.date && <td className="p-4 text-gray-600">{format(new Date(row.date), 'MMM dd, yyyy')}</td>}
+                                        {visibleCols.project && (
+                                            <td className="p-4">
+                                                <div className="font-medium text-gray-900">{row.project}</div>
+                                                {row.task && <div className="text-xs text-gray-500">{row.task}</div>}
+                                            </td>
+                                        )}
+                                        {visibleCols.activity && <td className="p-4 text-gray-500 font-mono">0%</td>}
+                                        {visibleCols.originalTime && <td className="p-4 text-gray-500 font-mono">{row.originalTime || '-'}</td>}
+                                        {visibleCols.editedTime && <td className="p-4 text-gray-900 font-mono font-medium">{row.editedTime}</td>}
+                                        {visibleCols.action && <td className="p-4">{getActionBadge(row.action)}</td>}
+                                        {visibleCols.editedBy && (
+                                            <td className="p-4">
+                                                {row.editedBy ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-600">
+                                                            {row.editedBy.charAt(0)}
+                                                        </div>
+                                                        <span className="font-medium text-gray-900">{row.editedBy}</span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-600">-</span>
+                                                )}
+                                            </td>
+                                        )}
+                                        {visibleCols.editDate && <td className="p-4 text-gray-500 text-xs">{format(new Date(row.editDate), 'MMM dd, HH:mm')}</td>}
+                                        {visibleCols.notes && <td className="p-4 text-gray-500 italic max-w-xs truncate" title={row.reason}>{row.reason}</td>}
+                                    </tr>
+                                ))
                             )}
                         </tbody>
                     </table>
                 </div>
-
-                <div className="p-4 border-t">
-                    <PaginationFooter
-                        page={page}
-                        totalPages={totalPages}
-                        onPageChange={setPage}
-                        from={filteredData.length > 0 ? (page - 1) * pageSize + 1 : 0}
-                        to={Math.min(page * pageSize, filteredData.length)}
-                        total={filteredData.length}
-                        pageSize={pageSize}
-                        onPageSizeChange={() => { }}
-                        className="bg-transparent shadow-none border-none p-0"
-                    />
-                </div>
             </div>
-        </div>
+
+            <div className="mt-4">
+                <PaginationFooter
+                    page={page}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                    from={filteredData.length > 0 ? (page - 1) * pageSize + 1 : 0}
+                    to={Math.min(page * pageSize, filteredData.length)}
+                    total={filteredData.length}
+                    pageSize={pageSize}
+                    onPageSizeChange={setPageSize}
+                    isLoading={isLoading}
+                />
+            </div>
+
+
+            <ManualTimeEditsFilterSidebar
+                open={filterSidebarOpen}
+                onOpenChange={setFilterSidebarOpen}
+                members={DUMMY_MEMBERS}
+                projects={DUMMY_PROJECTS}
+                onApply={setSidebarFilters}
+            />
+        </div >
     )
 }

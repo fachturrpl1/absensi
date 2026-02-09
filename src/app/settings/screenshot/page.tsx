@@ -5,12 +5,14 @@ import { useState, useEffect } from "react"
 import { Info, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useSettingsMembers } from "@/hooks/use-settings-members"
+import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
 import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
 import { ScreenshotsSidebar } from "@/components/settings/ScreenshotsSidebar"
 
 export default function ScreenshotSettingsPage() {
-  const { members, loading } = useSettingsMembers()
+  const members = DUMMY_MEMBERS
+  const loading = false
+  console.log('[Screenshot Settings] DUMMY_MEMBERS loaded:', members.length, 'members')
   const [globalFrequency, setGlobalFrequency] = useState("1x")
   const [searchQuery, setSearchQuery] = useState("")
   const [memberFrequencies, setMemberFrequencies] = useState<Record<string, string>>({})

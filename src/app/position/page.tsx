@@ -63,7 +63,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { getAllOrganization } from "@/action/organization"
-import { Can } from "@/components/can"
+import { Can } from "@/components/common/can"
 import { useHydration } from "@/hooks/useHydration"
 import { logger } from '@/lib/logger';
 import { getCache, setCache } from "@/lib/local-cache"

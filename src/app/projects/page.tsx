@@ -35,7 +35,7 @@ import EditProjectDialog from "@/components/projects/EditProjectDialog"
 import TransferProjectDialog from "@/components/projects/TransferProjectDialog"
 import type { Project, NewProjectForm } from "@/components/projects/types"
 import { DUMMY_PROJECTS, DUMMY_MEMBERS, PROJECT_MEMBER_MAP, getTaskCountFromTasksPageByProjectId, getTeamNamesByProjectId } from "@/lib/data/dummy-data"
-import { PaginationFooter } from "@/components/pagination-footer"
+import { PaginationFooter } from "@/components/tables/pagination-footer"
 
 // Convert dummy projects to component format
 const INITIAL_DATA: Project[] = DUMMY_PROJECTS.map(p => {

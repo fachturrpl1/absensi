@@ -4,10 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
-import { 
-  Mail, 
-  Send, 
-  Ban, 
+import {
+  Mail,
+  Send,
+  Ban,
   Trash,
   Clock,
   CheckCircle2,
@@ -34,7 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { DataTable } from "@/components/data-table";
+import { DataTable } from "@/components/tables/data-table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Empty,
@@ -45,11 +45,11 @@ import {
   EmptyMedia,
 } from "@/components/ui/empty";
 
-import { 
-  getAllInvitations, 
-  resendInvitation, 
-  cancelInvitation, 
-  deleteInvitation 
+import {
+  getAllInvitations,
+  resendInvitation,
+  cancelInvitation,
+  deleteInvitation
 } from "@/action/invitations";
 import { IMemberInvitation } from "@/interface";
 
@@ -244,7 +244,7 @@ export default function InvitationsClient() {
         type StatusKey = keyof typeof variants;
         const variant = variants[(status as StatusKey)] ?? variants.pending;
         const Icon = variant.icon;
-        
+
         return (
           <Badge className={`${variant.color} border-0`}>
             <Icon className="h-3 w-3 mr-1" />
@@ -258,10 +258,10 @@ export default function InvitationsClient() {
       header: "Invited",
       cell: ({ row }) => {
         const date = new Date(row.original.created_at);
-        return date.toLocaleDateString("id-ID", { 
-          day: "2-digit", 
-          month: "short", 
-          year: "numeric" 
+        return date.toLocaleDateString("id-ID", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric"
         });
       },
     },
@@ -280,8 +280,8 @@ export default function InvitationsClient() {
   ];
 
   // Filter invitations by status
-  const filteredInvitations = activeTab === "all" 
-    ? invitations 
+  const filteredInvitations = activeTab === "all"
+    ? invitations
     : invitations.filter(inv => inv.status === activeTab);
 
   // Stats
@@ -320,7 +320,7 @@ export default function InvitationsClient() {
             <div className="text-2xl font-bold">{stats.total}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -331,7 +331,7 @@ export default function InvitationsClient() {
             <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -342,7 +342,7 @@ export default function InvitationsClient() {
             <div className="text-2xl font-bold text-green-600">{stats.accepted}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -379,7 +379,7 @@ export default function InvitationsClient() {
                 </EmptyMedia>
                 <EmptyTitle>No invitations yet</EmptyTitle>
                 <EmptyDescription>
-                  {activeTab === "all" 
+                  {activeTab === "all"
                     ? "There are no invitations for this organization. Use the \"Invite Member\" button on the Members page to create one."
                     : `No ${activeTab} invitations found.`
                   }

@@ -6,7 +6,7 @@ import { PoliciesSidebar } from "@/components/settings/PoliciesSidebar"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Search, Info, Download, Upload, Loader2, ChevronDown } from "lucide-react"
-import { getAllOrganization_member } from "@/action/members"
+import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -52,21 +52,14 @@ export default function TimeOffBalancesPage() {
                 }
             }
 
-            // 2. Load all organization members (direct call, no dummy email filter)
-            try {
-                const result = await getAllOrganization_member()
-                if (result.success && result.data) {
-                    const mapped = result.data.map((m: any) => ({
-                        id: String(m.id),
-                        name: m.user ? `${m.user.first_name || ''} ${m.user.last_name || ''}`.trim() : (m.biodata?.nama || "Unknown Member"),
-                        email: m.user?.email || null,
-                        user_id: m.user_id ? String(m.user_id) : null
-                    }))
-                    setAllMembers(mapped)
-                }
-            } catch (error) {
-                console.error("Failed to fetch members", error)
-            }
+            // 2. Use dummy members
+            const mapped = DUMMY_MEMBERS.map((m: any) => ({
+                id: String(m.id),
+                name: m.name,
+                email: m.email || null,
+                user_id: String(m.id) // Use same ID for user_id in dummy data
+            }))
+            setAllMembers(mapped)
 
             setMembersLoading(false)
             setIsLoaded(true)

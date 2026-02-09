@@ -7,32 +7,19 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { DUMMY_TEAMS, type Member } from "@/lib/data/dummy-data"
+import { DUMMY_TEAMS, DUMMY_MEMBERS } from "@/lib/data/dummy-data"
 import { DownloadDialog } from "@/components/activity/DownloadDialog"
 import { SelectedMemberProvider } from "./selected-member-context"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { DateRange, SelectedFilter } from "@/components/insights/types"
-import { useTimezone } from "@/components/timezone-provider"
+import { useTimezone } from "@/components/providers/timezone-provider"
 import { BlurProvider } from "@/app/settings/screenshot/blur-context"
-import { useSettingsMembers } from "@/hooks/use-settings-members"
 
 export default function ScreenshotsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const memberIdFromUrl = searchParams.get("memberId")
-  const { members: settingsMembers, loading: membersLoading } = useSettingsMembers()
-
-  // Convert settingsMembers to Member format for compatibility
-  const realMembers: Member[] = useMemo(() => {
-    return settingsMembers.map(m => ({
-      id: m.id,
-      name: m.name,
-      email: m.email,
-      avatar: m.avatar,
-      activityScore: m.activityScore,
-    }))
-  }, [settingsMembers])
 
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false)
@@ -49,7 +36,7 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
       const savedMemberId = sessionStorage.getItem("screenshotSelectedMemberId")
       if (savedMemberId) return savedMemberId
     }
-    return realMembers[0]?.id ?? "m1"
+    return DUMMY_MEMBERS[0]?.id ?? "m1"
   }
 
   const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({
@@ -81,39 +68,13 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
     }
   }, [memberIdFromUrl, selectedFilter.id])
 
-  // Auto-select first real member if current selection is invalid or "m1" (dummy)
-  useEffect(() => {
-    if (realMembers.length > 0 && !membersLoading) {
-      const currentId = selectedFilter.id
-      // Check if current ID exists in real members
-      const isValidMember = realMembers.some(m => m.id === currentId)
 
-      // If invalid or is the default "m1" dummy but "m1" is not in real members (likely), switch to first real member
-      if (!isValidMember || (currentId === "m1" && !realMembers.some(m => m.id === "m1"))) {
-        const firstMemberId = realMembers[0]?.id
-        if (!firstMemberId) return
-
-        setSelectedFilter({
-          type: "members",
-          all: false,
-          id: firstMemberId,
-        })
-        if (typeof window !== "undefined") {
-          sessionStorage.setItem("screenshotSelectedMemberId", firstMemberId)
-          // Update URL without refresh
-          const params = new URLSearchParams(window.location.search)
-          params.set("memberId", firstMemberId)
-          window.history.replaceState({}, '', `${pathname}?${params.toString()}`)
-        }
-      }
-    }
-  }, [realMembers, membersLoading, selectedFilter.id, pathname])
 
   // Sync selectedFilter changes to sessionStorage and URL
   const handleFilterChange = (filter: SelectedFilter) => {
     // Jika all: true (tidak seharusnya terjadi karena hideAllOption), ubah ke member pertama
     if (filter.all) {
-      const firstMemberId = realMembers[0]?.id ?? "m1"
+      const firstMemberId = DUMMY_MEMBERS[0]?.id ?? "m1"
       const newFilter: SelectedFilter = {
         type: "members",
         all: false,
@@ -273,15 +234,15 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
     }
   }, [dateRange, isAllScreenshots])
 
-  const demoMembers = useMemo(() => realMembers, [realMembers])
+  const demoMembers = useMemo(() => DUMMY_MEMBERS, [])
   const demoTeams = useMemo(() => DUMMY_TEAMS, [])
 
   const selectedMember = useMemo(
     () =>
-      realMembers.find((member) => member.id === selectedMemberId) ??
-      realMembers[0] ??
+      DUMMY_MEMBERS.find((member) => member.id === selectedMemberId) ??
+      DUMMY_MEMBERS[0] ??
       null,
-    [selectedMemberId, realMembers]
+    [selectedMemberId]
   )
 
 

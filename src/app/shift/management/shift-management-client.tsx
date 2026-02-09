@@ -7,7 +7,7 @@ import { type Resolver, type SubmitHandler, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
 
-import { DataTable } from "@/components/data-table"
+import { DataTable } from "@/components/tables/data-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {

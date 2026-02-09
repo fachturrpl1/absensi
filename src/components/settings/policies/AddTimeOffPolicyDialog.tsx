@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
-import { getOrganizationMembersPaginated, getAllOrganizationMemberIds } from "@/action/members"
+import { useState, useEffect, useRef } from "react"
+import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Check, Info, Search, X, CloudUpload } from "lucide-react"
+import { Check, Info, Search, CloudUpload } from "lucide-react"
 interface AddTimeOffPolicyDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
@@ -42,7 +42,6 @@ export function AddTimeOffPolicyDialog({ open, onOpenChange, onSave, initialData
     const [autoAdd, setAutoAdd] = useState(false)
     const [isMemberSelectionOpen, setIsMemberSelectionOpen] = useState(false)
     const [selectedMembers, setSelectedMembers] = useState<string[]>([])
-    const [availableMembers, setAvailableMembers] = useState<{ id: string; name: string }[]>([])
 
     const [uploadedFile, setUploadedFile] = useState<File | null>(null)
     const [csvMemberCount, setCsvMemberCount] = useState(0)
@@ -829,45 +828,35 @@ function MemberSelectionModal({ open, onOpenChange, selectedMembers, onSave }: {
     useEffect(() => {
         if (open) {
             setLocalSelected(selectedMembers)
+            setSearchQuery("") // Reset search when modal opens
+            setCurrentPage(1) // Reset to first page
         }
     }, [open, selectedMembers])
 
-    // Fetch members with server-side pagination
-    const fetchMembers = useCallback(async (page: number, query: string) => {
+    // Get filtered and paginated dummy members (client-side)
+    useEffect(() => {
         setIsLoading(true)
-        try {
-            const result = await getOrganizationMembersPaginated({
-                page,
-                pageSize: ITEMS_PER_PAGE,
-                query
-            })
 
-            if (result.success && result.data) {
-                setMembers(result.data)
-                setTotalMembers(result.metadata.total)
-            }
-        } catch (error) {
-            console.error("Failed to fetch members", error)
-        } finally {
-            setIsLoading(false)
-        }
-    }, [])
+        // Filter dummy members based on search query
+        const filtered = DUMMY_MEMBERS.filter(member =>
+            member.name.toLowerCase().includes(searchQuery.toLowerCase())
+        )
 
-    // Debounce search
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setCurrentPage(1)
-            fetchMembers(1, searchQuery)
-        }, 500)
-        return () => clearTimeout(timer)
-    }, [searchQuery, fetchMembers])
+        // Calculate pagination
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+        const endIndex = startIndex + ITEMS_PER_PAGE
+        const paginated = filtered.slice(startIndex, endIndex)
 
-    // Handle page change
-    useEffect(() => {
-        if (currentPage > 1) {
-            fetchMembers(currentPage, searchQuery)
-        }
-    }, [currentPage, fetchMembers])
+        // Map to expected format
+        const mapped = paginated.map(m => ({
+            id: m.id,
+            name: m.name
+        }))
+
+        setMembers(mapped)
+        setTotalMembers(filtered.length)
+        setIsLoading(false)
+    }, [searchQuery, currentPage, open])
 
     const totalPages = Math.ceil(totalMembers / ITEMS_PER_PAGE)
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
@@ -930,7 +919,7 @@ function MemberSelectionModal({ open, onOpenChange, selectedMembers, onSave }: {
                             />
                         </div>
                         <div className="flex gap-2 text-sm">
-                            <button onClick={handleSelectAll} className="text-slate-900 hover:underline font-medium" disabled={isLoading}>
+                            <button onClick={handleSelectAllOnPage} className="text-slate-900 hover:underline font-medium" disabled={isLoading}>
                                 {isLoading ? "Loading..." : (totalMembers > 0 && localSelected.length >= totalMembers ? "Deselect all" : "Select all")}
                             </button>
                             <button onClick={handleClearAll} className="text-slate-500 hover:underline">Clear all</button>
@@ -942,7 +931,7 @@ function MemberSelectionModal({ open, onOpenChange, selectedMembers, onSave }: {
                             <div className="flex items-center gap-3">
                                 <Checkbox
                                     checked={totalMembers > 0 && localSelected.length >= totalMembers}
-                                    onCheckedChange={() => handleSelectAll()}
+                                    onCheckedChange={() => handleSelectAllOnPage()}
                                     className="data-[state=checked]:bg-slate-900 data-[state=checked]:border-slate-900 data-[state=checked]:text-white"
                                 />
                                 <span className="text-sm font-medium text-slate-700">

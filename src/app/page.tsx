@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useOrganizationName } from '@/hooks/use-organization-name';
-// Removed unused spotlight components
 import {
   Clock,
   Users,
@@ -50,7 +49,7 @@ interface AttendanceRecord {
   actual_check_in: string | null;
   actual_check_out: string | null;
   work_duration_minutes: number | null;
-  scheduled_duration_minutes?: number; // Default 8 jam (480 min) untuk estimasi
+  scheduled_duration_minutes?: number;
   attendance_date: string;
   profile_photo_url: string | null;
 }
@@ -66,7 +65,6 @@ interface DashboardStats {
 }
 
 
-// Color Palette
 const COLORS = {
   primary: '#3B82F6',
   success: '#10B981',
@@ -76,8 +74,6 @@ const COLORS = {
   purple: '#8B5CF6',
 };
 
-// Custom Tooltip
-// Ganti definisi CustomTooltip agar kompatibel dengan Recharts
 const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
     return (

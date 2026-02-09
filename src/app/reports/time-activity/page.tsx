@@ -28,9 +28,9 @@ import {
 import { format } from "date-fns"
 import { TimeActivityFilterSidebar } from "@/components/report/TimeActivityFilterSidebar"
 import { SaveReportDialog } from "@/components/report/SaveReportDialog"
-import { PaginationFooter } from "@/components/pagination-footer"
+import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { useTimezone } from "@/components/timezone-provider"
+import { useTimezone } from "@/components/providers/timezone-provider"
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)

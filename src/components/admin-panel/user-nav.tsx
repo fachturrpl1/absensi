@@ -24,7 +24,7 @@ import {
 import { useAuthStore } from "@/store/user-store"
 import { useProfilePhotoUrl } from "@/hooks/use-profile"
 import { safeAvatarSrc, getUserInitials } from "@/lib/avatar-utils"
-import LogoutButton from "../logout"
+import LogoutButton from "@/components/auth/logout"
 
 import { logger } from '@/lib/logger';
 export function UserNav() {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { PoliciesHeader } from "@/components/settings/PoliciesHeader"
 import { WorkBreaksSidebar } from "@/components/settings/WorkBreaksSidebar"
 import { Switch } from "@/components/ui/switch"

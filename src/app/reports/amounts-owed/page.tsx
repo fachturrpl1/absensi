@@ -7,10 +7,10 @@ import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { exportToCSV, generateFilename, formatCurrencyForExport, formatHoursForExport } from "@/lib/export-utils"
-import { PaginationFooter } from "@/components/pagination-footer"
+import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { toast } from "sonner"
 import { DUMMY_AMOUNTS_OWED, DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
-import { useTimezone } from "@/components/timezone-provider"
+import { useTimezone } from "@/components/providers/timezone-provider"
 import {
     LineChart,
     Line,

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { DataTable } from "@/components/data-table"
+import { DataTable } from "@/components/tables/data-table"
 import { ColumnDef } from "@tanstack/react-table"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import { Input } from "@/components/ui/input"
@@ -72,9 +72,9 @@ export default function PositionDetailPage() {
         accessorKey: "nickname",
         header: "Nickname",
         cell: ({ row }) => (
-            <div className="text-primary hover:underline cursor-pointer">
-              {row.original.user?.first_name || '-'}
-            </div>
+          <div className="text-primary hover:underline cursor-pointer">
+            {row.original.user?.first_name || '-'}
+          </div>
         ),
       },
       {
@@ -98,22 +98,22 @@ export default function PositionDetailPage() {
       <div className="p-4 md:p-6 bg-white rounded-lg shadow-sm border border-gray-200 space-y-4">
         <h1 className="text-2xl font-bold">{position?.title || 'Position'} Members</h1>
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between pt-4">
-            <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                <Input
-                    placeholder="Search members by name or email..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                />
-            </div>
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search members by name or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
 
         <div className="mt-2">
           {loading ? (
             <TableSkeleton rows={5} columns={3} />
           ) : (
-            <DataTable columns={columns} data={filteredMembers} showPagination={false}/>
+            <DataTable columns={columns} data={filteredMembers} showPagination={false} />
           )}
         </div>
       </div>
