@@ -317,7 +317,7 @@ export default function ViewEditTimesheetsPage() {
                                 {visibleCols.duration && <th className="p-3 font-semibold text-gray-900">Duration</th>}
                                 {visibleCols.source && <th className="p-3 font-semibold text-gray-900">Source</th>}
                                 {visibleCols.time && <th className="p-3 font-semibold text-gray-900">Time</th>}
-                                {visibleCols.actions && <th className="p-3 font-semibold text-gray-900 text-right">Actions</th>}
+                                {visibleCols.actions && <th className="p-3 font-semibold text-gray-900">Actions</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -429,7 +429,7 @@ export default function ViewEditTimesheetsPage() {
                                                         </td>
                                                     )}
                                                     {visibleCols.actions && (
-                                                        <td className="p-3 text-right">
+                                                        <td className="p-3">
                                                             <DropdownMenu>
                                                                 <DropdownMenuTrigger asChild>
                                                                     <Button variant="outline" size="sm" className="h-8 w-8 p-0">

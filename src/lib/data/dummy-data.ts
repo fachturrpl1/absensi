@@ -4705,6 +4705,8 @@ export interface TimesheetApprovalEntry {
     comments?: string
 }
 
+export type TimesheetApproval = TimesheetApprovalEntry;
+
 export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
     {
         id: 'ts-1',
