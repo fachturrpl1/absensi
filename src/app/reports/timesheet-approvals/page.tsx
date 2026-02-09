@@ -124,12 +124,12 @@ export default function TimesheetApprovalsPage() {
     }
 
     const summaryCards = useMemo(() => {
-        const pending = filteredData.filter(i => i.status === 'pending').length
+        const open = filteredData.filter(i => i.status === 'open').length
         const approved = filteredData.filter(i => i.status === 'approved').length
         const rejected = filteredData.filter(i => i.status === 'rejected').length
 
         return [
-            { label: "Pending Approval", value: pending },
+            { label: "Open (Draft)", value: open },
             { label: "Approved Timesheets", value: approved },
             { label: "Rejected Timesheets", value: rejected },
         ]

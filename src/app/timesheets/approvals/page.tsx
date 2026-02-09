@@ -17,15 +17,17 @@ import { exportToCSV, generateFilename } from "@/lib/export-utils"
 import { format } from "date-fns"
 import { TimesheetApprovalsFilterSidebar } from "@/components/report/TimesheetApprovalsFilterSidebar"
 import { ApprovalDetailDialog } from "@/components/timesheets/approvals/ApprovalDetailDialog"
-import { RejectReasonDialog } from "@/components/timesheets/approvals/RejectReasonDialog"
+import { ActionConfirmDialog } from "@/components/timesheets/approvals/ActionConfirmDialog"
 import type { TimesheetApproval } from "@/lib/data/dummy-data"
 
 const getStatusBadge = (status: string) => {
     switch (status) {
         case 'approved':
             return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">Approved</span>
-        case 'pending':
-            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">Pending</span>
+        case 'submitted':
+            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">Submitted</span>
+        case 'open':
+            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">Open</span>
         case 'rejected':
             return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">Rejected</span>
         default:
@@ -56,10 +58,12 @@ export default function TimesheetApprovalsPage() {
     })
 
     // Dialog States
+    // Dialog States
     const [detailDialogOpen, setDetailDialogOpen] = useState(false)
-    const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
+    const [actionDialogOpen, setActionDialogOpen] = useState(false)
+    const [actionMode, setActionMode] = useState<'approve' | 'reject'>('approve')
     const [activeApproval, setActiveApproval] = useState<TimesheetApproval | null>(null)
-    const [bulkRejectMode, setBulkRejectMode] = useState(false)
+    const [isBulkAction, setIsBulkAction] = useState(false)
 
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
@@ -70,6 +74,7 @@ export default function TimesheetApprovalsPage() {
         dateRange: true,
         totalHours: true,
         status: true,
+        notes: true,
         actions: true
     })
 
@@ -130,40 +135,52 @@ export default function TimesheetApprovalsPage() {
     }
 
     // Action Handlers
-    const handleApprove = (id: string) => {
-        setApprovals(prev => prev.map(a => a.id === id ? { ...a, status: 'approved', approvalDate: new Date().toISOString() } : a))
-        toast.success("Timesheet approved")
-        setDetailDialogOpen(false)
+    // Action Handlers
+    const handleApproveClick = (id: string) => {
+        const approval = approvals.find(a => a.id === id)
+        if (approval) {
+            setActiveApproval(approval)
+            setActionMode('approve')
+            setIsBulkAction(false)
+            setActionDialogOpen(true)
+        }
     }
 
     const handleRejectClick = (approval: TimesheetApproval) => {
         setActiveApproval(approval)
-        setRejectDialogOpen(true)
-        setBulkRejectMode(false)
+        setActionMode('reject')
+        setIsBulkAction(false)
+        setActionDialogOpen(true)
     }
 
-    const handleConfirmReject = (reason: string) => {
-        if (bulkRejectMode) {
-            setApprovals(prev => prev.map(a => selectedRows.has(a.id) ? { ...a, status: 'rejected', comments: reason } : a))
-            toast.success(`${selectedRows.size} timesheets rejected`)
+    const handleConfirmAction = (reason: string) => {
+        const newStatus = actionMode === 'approve' ? 'approved' : 'rejected'
+        const successConfig = actionMode === 'approve'
+            ? { status: 'approved', approvalDate: new Date().toISOString(), comments: reason }
+            : { status: 'rejected', comments: reason }
+
+        if (isBulkAction) {
+            setApprovals(prev => prev.map(a => selectedRows.has(a.id) ? { ...a, ...successConfig } as TimesheetApproval : a))
+            toast.success(`${selectedRows.size} timesheets ${newStatus}`)
             setSelectedRows(new Set())
         } else if (activeApproval) {
-            setApprovals(prev => prev.map(a => a.id === activeApproval.id ? { ...a, status: 'rejected', comments: reason } : a))
-            toast.success("Timesheet rejected")
+            setApprovals(prev => prev.map(a => a.id === activeApproval.id ? { ...a, ...successConfig } as TimesheetApproval : a))
+            toast.success(`Timesheet ${newStatus}`)
         }
         setDetailDialogOpen(false)
-        setRejectDialogOpen(false)
+        setActionDialogOpen(false)
     }
 
     const handleBulkApprove = () => {
-        setApprovals(prev => prev.map(a => selectedRows.has(a.id) ? { ...a, status: 'approved', approvalDate: new Date().toISOString() } : a))
-        toast.success(`${selectedRows.size} timesheets approved`)
-        setSelectedRows(new Set())
+        setActionMode('approve')
+        setIsBulkAction(true)
+        setActionDialogOpen(true)
     }
 
     const handleBulkRejectClick = () => {
-        setBulkRejectMode(true)
-        setRejectDialogOpen(true)
+        setActionMode('reject')
+        setIsBulkAction(true)
+        setActionDialogOpen(true)
     }
 
     const handleViewDetails = (approval: TimesheetApproval) => {
@@ -189,13 +206,15 @@ export default function TimesheetApprovalsPage() {
     }
 
     const summaryCards = useMemo(() => {
-        const pending = approvals.filter(i => i.status === 'pending').length
+        const submitted = approvals.filter(i => i.status === 'submitted').length
         const approved = approvals.filter(i => i.status === 'approved').length
         const rejected = approvals.filter(i => i.status === 'rejected').length
+        const open = approvals.filter(i => i.status === 'open').length
         return [
-            { label: "Pending Approval", value: pending },
-            { label: "Approved Timesheets", value: approved },
-            { label: "Rejected Timesheets", value: rejected },
+            { label: "Submitted", value: submitted },
+            { label: "Approved", value: approved },
+            { label: "Rejected", value: rejected },
+            { label: "Open (Draft)", value: open },
         ]
     }, [approvals])
 
@@ -238,27 +257,27 @@ export default function TimesheetApprovalsPage() {
 
                     <Button
                         variant="outline"
-                        className="h-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50 font-medium"
+                        className="h-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50 hover:cursor-pointer font-medium"
                         onClick={() => setFilterSidebarOpen(true)}
                     >
                         <Filter className="w-4 h-4 mr-2" /> Filter
                     </Button>
 
-                    <Button variant="outline" className="h-9" onClick={handleExport}>
+                    <Button variant="outline" className="h-9 hover:cursor-pointer" onClick={handleExport}>
                         <Download className="w-4 h-4 mr-2" />
                         Export
                     </Button>
 
-                    <Button variant="outline" className="h-9">
-                        <Link href="/timesheets/settings/Timesheet">
-                            <Settings className="w-4 h-4" />
+                    <Button variant="outline" className="h-9 hover:cursor-pointer">
+                        <Link href="/settings/timesheets">
+                            <Settings className="w-5 h-5" />
                         </Link>
                     </Button>
                 </div>
             </InsightsHeader>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x border rounded-lg shadow-sm bg-white">
+            <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x border rounded-lg shadow-sm bg-white">
                 {summaryCards.map((card, idx) => (
                     <div key={idx} className="p-4">
                         <p className="text-sm font-medium text-gray-500">{card.label}</p>
@@ -284,7 +303,8 @@ export default function TimesheetApprovalsPage() {
                                 {visibleCols.dateRange && <th className="p-3 font-semibold">Period</th>}
                                 {visibleCols.totalHours && <th className="p-3 font-semibold">Total Hours</th>}
                                 {visibleCols.status && <th className="p-3 font-semibold">Status</th>}
-                                {visibleCols.actions && <th className="p-3 font-semibold text-right">Actions</th>}
+                                {visibleCols.notes && <th className="p-3 font-semibold">Reason</th>}
+                                {visibleCols.actions && <th className="p-3 font-semibold text-center">Actions</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -319,7 +339,6 @@ export default function TimesheetApprovalsPage() {
                                                     </div>
                                                     <div>
                                                         <div className="font-bold text-gray-900">{row.memberName}</div>
-                                                        <div className="text-xs text-gray-500">{row.comments || "No comments"}</div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -331,19 +350,20 @@ export default function TimesheetApprovalsPage() {
                                         )}
                                         {visibleCols.totalHours && <td className="p-4 text-gray-900 font-mono font-bold">{row.totalHours}</td>}
                                         {visibleCols.status && <td className="p-4">{getStatusBadge(row.status)}</td>}
+                                        {visibleCols.notes && <td className="p-4 text-sm text-gray-500 italic max-w-xs truncate" title={row.comments}>{row.comments || "-"}</td>}
 
                                         {visibleCols.actions && (
-                                            <td className="p-4 text-right">
-                                                <div className="flex items-center justify-end gap-2">
+                                            <td className="p-4 text-left">
+                                                <div className="flex items-left gap-2 hover:cursor-pointer">
                                                     <Button variant="ghost" size="sm" onClick={() => handleViewDetails(row)}>
                                                         <Eye className="w-4 h-4 mr-1" /> View
                                                     </Button>
-                                                    {row.status === 'pending' && (
+                                                    {row.status === 'submitted' && (
                                                         <>
-                                                            <Button variant="ghost" size="icon" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleApprove(row.id)} title="Approve">
+                                                            <Button variant="ghost" size="icon" className="hover:cursor-pointer text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleApproveClick(row.id)} title="Approve">
                                                                 <CheckCircle2 className="w-4 h-4" />
                                                             </Button>
-                                                            <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleRejectClick(row)} title="Reject">
+                                                            <Button variant="ghost" size="icon" className="hover:cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleRejectClick(row)} title="Reject">
                                                                 <XCircle className="w-4 h-4" />
                                                             </Button>
                                                         </>
@@ -384,14 +404,15 @@ export default function TimesheetApprovalsPage() {
                 open={detailDialogOpen}
                 onOpenChange={setDetailDialogOpen}
                 approval={activeApproval}
-                onApprove={handleApprove}
+                onApprove={handleApproveClick}
                 onReject={() => activeApproval && handleRejectClick(activeApproval)}
             />
 
-            <RejectReasonDialog
-                open={rejectDialogOpen}
-                onOpenChange={setRejectDialogOpen}
-                onConfirm={handleConfirmReject}
+            <ActionConfirmDialog
+                open={actionDialogOpen}
+                onOpenChange={setActionDialogOpen}
+                onConfirm={handleConfirmAction}
+                mode={actionMode}
             />
         </div >
     )

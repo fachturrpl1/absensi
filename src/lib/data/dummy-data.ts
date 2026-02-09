@@ -4699,7 +4699,7 @@ export interface TimesheetApprovalEntry {
     dateStart: string
     dateEnd: string
     totalHours: string
-    status: 'pending' | 'approved' | 'rejected'
+    status: 'open' | 'submitted' | 'approved' | 'rejected'
     approver?: string
     approvalDate?: string
     comments?: string
@@ -4750,7 +4750,7 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         dateStart: '2026-01-08',
         dateEnd: '2026-01-14',
         totalHours: '40:00',
-        status: 'pending'
+        status: 'submitted'
     },
     {
         id: 'ts-5',
@@ -4759,7 +4759,67 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         dateStart: '2026-01-08',
         dateEnd: '2026-01-14',
         totalHours: '41:15',
-        status: 'pending'
+        status: 'submitted'
+    },
+    {
+        id: 'ts-6',
+        memberId: 'm5',
+        memberName: 'David Wilson',
+        dateStart: '2026-01-15',
+        dateEnd: '2026-01-21',
+        totalHours: '32:00',
+        status: 'open',
+        comments: 'Draft in progress'
+    },
+    {
+        id: 'ts-7',
+        memberId: 'm3',
+        memberName: 'Sarah Johnson',
+        dateStart: '2026-01-15',
+        dateEnd: '2026-01-21',
+        totalHours: '38:00',
+        status: 'submitted'
+    },
+    {
+        id: 'ts-8',
+        memberId: 'm2',
+        memberName: 'Emily Davis',
+        dateStart: '2026-01-15',
+        dateEnd: '2026-01-21',
+        totalHours: '15:30',
+        status: 'open',
+        comments: 'Waiting for client confirmation'
+    },
+    {
+        id: 'ts-9',
+        memberId: 'm4',
+        memberName: 'Michael Chen',
+        dateStart: '2026-01-15',
+        dateEnd: '2026-01-21',
+        totalHours: '42:00',
+        status: 'submitted'
+    },
+    {
+        id: 'ts-10',
+        memberId: 'm1',
+        memberName: 'Antonio Galih',
+        dateStart: '2026-01-15',
+        dateEnd: '2026-01-21',
+        totalHours: '40:00',
+        status: 'open',
+        comments: 'Incomplete'
+    },
+    {
+        id: 'ts-11',
+        memberId: 'm5',
+        memberName: 'David Wilson',
+        dateStart: '2026-01-08',
+        dateEnd: '2026-01-14',
+        totalHours: '45:00',
+        status: 'rejected',
+        approver: 'Siti',
+        approvalDate: '2026-01-15T10:00:00',
+        comments: 'Please fix the overtime entries.'
     }
 ];
 

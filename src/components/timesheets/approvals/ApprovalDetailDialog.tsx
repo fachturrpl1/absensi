@@ -89,7 +89,7 @@ export function ApprovalDetailDialog({
 
                 <DialogFooter className="mt-4">
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-                    {approval.status === 'pending' && (
+                    {approval.status === 'submitted' && (
                         <>
                             <Button variant="destructive" onClick={() => onReject(approval.id)}>Reject</Button>
                             <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => onApprove(approval.id)}>Approve</Button>
