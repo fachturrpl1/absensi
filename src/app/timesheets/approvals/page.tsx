@@ -381,9 +381,7 @@ export default function TimesheetApprovalsPage() {
                                         {visibleCols.totalHours && <td className="p-4 text-gray-900 font-mono font-bold">{row.totalHours}</td>}
                                         {visibleCols.activityPct && (
                                             <td className="p-4">
-                                                <span className={`font-medium ${(row.activityPct || 0) > 80 ? 'text-green-600' :
-                                                    (row.activityPct || 0) > 50 ? 'text-amber-600' : 'text-red-600'
-                                                    }`}>
+                                                <span className="font-medium text-gray-600">
                                                     {row.activityPct ? `${row.activityPct}%` : '-'}
                                                 </span>
                                             </td>
