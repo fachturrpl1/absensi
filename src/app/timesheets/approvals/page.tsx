@@ -5,12 +5,20 @@ import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_TIMESHEET_APPROVALS } from "@/lib/data/dummy-data"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { Button } from "@/components/ui/button"
-import { Download, Search, Filter, CheckCircle2, XCircle, Eye, Settings } from "lucide-react"
+import { Download, Search, Filter, CheckCircle2, XCircle, Eye, Settings, Pencil } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { toast } from "sonner"
 import { Checkbox } from "@/components/ui/checkbox"
 import Link from "next/link"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { exportToCSV, generateFilename } from "@/lib/export-utils"
@@ -32,6 +40,19 @@ const getStatusBadge = (status: string) => {
             return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">Rejected</span>
         default:
             return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200">{status}</span>
+    }
+}
+
+const getPaymentBadge = (status?: string) => {
+    switch (status) {
+        case 'paid':
+            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">Paid</span>
+        case 'processing':
+            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">Processing</span>
+        case 'unpaid':
+            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">Unpaid</span>
+        default:
+            return <span className="text-gray-400">-</span>
     }
 }
 
@@ -73,6 +94,9 @@ export default function TimesheetApprovalsPage() {
         member: true,
         dateRange: true,
         totalHours: true,
+        activityPct: true,
+        paymentStatus: true,
+        submittedDate: true,
         status: true,
         notes: true,
         actions: true
@@ -196,6 +220,9 @@ export default function TimesheetApprovalsPage() {
                 { key: 'dateStart', label: 'Start Date' },
                 { key: 'dateEnd', label: 'End Date' },
                 { key: 'totalHours', label: 'Total Hours' },
+                { key: 'activityPct', label: 'Activity %' },
+                { key: 'paymentStatus', label: 'Payment Status' },
+                { key: 'submittedDate', label: 'Submitted On' },
                 { key: 'status', label: 'Status' },
                 { key: 'approver', label: 'Approver' },
                 { key: 'comments', label: 'Comments' }
@@ -302,6 +329,9 @@ export default function TimesheetApprovalsPage() {
                                 {visibleCols.member && <th className="p-3 pl-4 font-semibold">Member</th>}
                                 {visibleCols.dateRange && <th className="p-3 font-semibold">Period</th>}
                                 {visibleCols.totalHours && <th className="p-3 font-semibold">Total Hours</th>}
+                                {visibleCols.activityPct && <th className="p-3 font-semibold">Activity %</th>}
+                                {visibleCols.paymentStatus && <th className="p-3 font-semibold">Payment St.</th>}
+                                {visibleCols.submittedDate && <th className="p-3 font-semibold">Submitted On</th>}
                                 {visibleCols.status && <th className="p-3 font-semibold">Status</th>}
                                 {visibleCols.notes && <th className="p-3 font-semibold">Reason</th>}
                                 {visibleCols.actions && <th className="p-3 font-semibold text-center">Actions</th>}
@@ -349,26 +379,54 @@ export default function TimesheetApprovalsPage() {
                                             </td>
                                         )}
                                         {visibleCols.totalHours && <td className="p-4 text-gray-900 font-mono font-bold">{row.totalHours}</td>}
+                                        {visibleCols.activityPct && (
+                                            <td className="p-4">
+                                                <span className={`font-medium ${(row.activityPct || 0) > 80 ? 'text-green-600' :
+                                                    (row.activityPct || 0) > 50 ? 'text-amber-600' : 'text-red-600'
+                                                    }`}>
+                                                    {row.activityPct ? `${row.activityPct}%` : '-'}
+                                                </span>
+                                            </td>
+                                        )}
+                                        {visibleCols.paymentStatus && <td className="p-4">{getPaymentBadge(row.paymentStatus)}</td>}
+                                        {visibleCols.submittedDate && (
+                                            <td className="p-4 text-sm text-gray-500">
+                                                {row.submittedDate ? format(new Date(row.submittedDate), 'MMM dd, HH:mm') : '-'}
+                                            </td>
+                                        )}
                                         {visibleCols.status && <td className="p-4">{getStatusBadge(row.status)}</td>}
                                         {visibleCols.notes && <td className="p-4 text-sm text-gray-500 italic max-w-xs truncate" title={row.comments}>{row.comments || "-"}</td>}
 
                                         {visibleCols.actions && (
-                                            <td className="p-4 text-left">
-                                                <div className="flex items-left gap-2 hover:cursor-pointer">
-                                                    <Button variant="ghost" size="sm" onClick={() => handleViewDetails(row)}>
-                                                        <Eye className="w-4 h-4 mr-1" /> View
-                                                    </Button>
-                                                    {row.status === 'submitted' && (
-                                                        <>
-                                                            <Button variant="ghost" size="icon" className="hover:cursor-pointer text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleApproveClick(row.id)} title="Approve">
-                                                                <CheckCircle2 className="w-4 h-4" />
-                                                            </Button>
-                                                            <Button variant="ghost" size="icon" className="hover:cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleRejectClick(row)} title="Reject">
-                                                                <XCircle className="w-4 h-4" />
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                </div>
+                                            <td className="p-4 text-center">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                                            <span className="sr-only">Open menu</span>
+                                                            <Pencil className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        <DropdownMenuItem onClick={() => handleViewDetails(row)}>
+                                                            <Eye className="mr-2 h-4 w-4" />
+                                                            View Details
+                                                        </DropdownMenuItem>
+                                                        {row.status === 'submitted' && (
+                                                            <>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem onClick={() => handleApproveClick(row.id)} className="text-green-600 focus:text-green-600 focus:bg-green-50">
+                                                                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                                                                    Approve
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleRejectClick(row)} className="text-red-600 focus:text-red-600 focus:bg-red-50">
+                                                                    <XCircle className="mr-2 h-4 w-4" />
+                                                                    Reject
+                                                                </DropdownMenuItem>
+                                                            </>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </td>
                                         )}
                                     </tr>
