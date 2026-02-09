@@ -296,7 +296,7 @@ export default function TimesheetApprovalsPage() {
                     </Button>
 
                     <Button variant="outline" className="h-9 hover:cursor-pointer">
-                        <Link href="/settings/timesheets">
+                        <Link href="/settings/Timesheet">
                             <Settings className="w-5 h-5" />
                         </Link>
                     </Button>
