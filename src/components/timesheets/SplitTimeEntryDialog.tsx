@@ -7,6 +7,11 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { format } from "date-fns"
+import { Calendar as CalendarIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { TimeEntry } from "@/lib/data/dummy-data"
 
 interface Project {
@@ -43,28 +48,27 @@ export function SplitTimeEntryDialog({
     const [projectId1, setProjectId1] = useState("")
     const [taskId1, setTaskId1] = useState("")
     const [notes1, setNotes1] = useState("")
+    const [date1, setDate1] = useState<Date | undefined>(new Date())
 
     // Entry 2 State
     const [projectId2, setProjectId2] = useState("")
     const [taskId2, setTaskId2] = useState("")
     const [notes2, setNotes2] = useState("")
+    const [date2, setDate2] = useState<Date | undefined>(new Date())
 
     useEffect(() => {
         if (initialData) {
             setProjectId1(initialData.projectId)
             setTaskId1(initialData.taskId || "")
             setNotes1(initialData.notes || "")
+            setDate1(new Date(initialData.date))
 
             // Default Entry 2 to same project/task for convenience
             setProjectId2(initialData.projectId)
             setTaskId2(initialData.taskId || "")
             setNotes2(initialData.notes || "")
+            setDate2(new Date(initialData.date))
 
-            // Ideally set split time to halfway, but for simplicity just set to something slightly after start
-            // Or better, let user pick
-            // Assuming format HH:MM:SS
-            // Simple default logic: set split time to end time (user must adjust) or halfway. 
-            // We'll leave empty or default to midway if we implement time math.
             setSplitTime("")
         }
     }, [initialData, open])
@@ -73,7 +77,6 @@ export function SplitTimeEntryDialog({
         if (!initialData || !splitTime) return
 
         // Validation: splitTime must be between startTime and endTime
-        // For simplicity, assuming valid input or basic string comparison for now
         if (splitTime <= initialData.startTime || splitTime >= initialData.endTime) {
             alert("Split time must be between start and end time")
             return
@@ -87,7 +90,7 @@ export function SplitTimeEntryDialog({
             notes: notes1,
             projectName: projects.find(p => p.id === projectId1)?.name || 'Unknown',
             taskName: tasks.find(t => t.id === taskId1)?.title,
-            // Duration calculation would happen here in real app
+            date: date1 ? format(date1, "yyyy-MM-dd") : initialData.date,
         }
 
         const entry2: Partial<TimeEntry> = {
@@ -98,6 +101,7 @@ export function SplitTimeEntryDialog({
             notes: notes2,
             projectName: projects.find(p => p.id === projectId2)?.name || 'Unknown',
             taskName: tasks.find(t => t.id === taskId2)?.title,
+            date: date2 ? format(date2, "yyyy-MM-dd") : initialData.date,
         }
 
         onSave(initialData.id, entry1, entry2)
@@ -108,7 +112,7 @@ export function SplitTimeEntryDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[700px]">
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Split Time Entry</DialogTitle>
                     <DialogDescription>
@@ -134,6 +138,31 @@ export function SplitTimeEntryDialog({
                         {/* Entry 1 */}
                         <div className="space-y-4 border rounded-md p-4 bg-gray-50/50">
                             <h3 className="font-semibold text-sm">First Entry ({initialData.startTime} - {splitTime || "?"})</h3>
+                            <div className="grid gap-2">
+                                <Label>Date</Label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-full justify-between text-left font-normal",
+                                                !date1 && "text-muted-foreground"
+                                            )}
+                                        >
+                                            {date1 ? format(date1, "EEE, MMM d, yyyy") : <span>Pick a date</span>}
+                                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={date1}
+                                            onSelect={setDate1}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
                             <div className="grid gap-2">
                                 <Label>Project</Label>
                                 <Select value={projectId1} onValueChange={setProjectId1}>
@@ -174,6 +203,31 @@ export function SplitTimeEntryDialog({
                         {/* Entry 2 */}
                         <div className="space-y-4 border rounded-md p-4 bg-gray-50/50">
                             <h3 className="font-semibold text-sm">Second Entry ({splitTime || "?"} - {initialData.endTime})</h3>
+                            <div className="grid gap-2">
+                                <Label>Date</Label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-full justify-between text-left font-normal",
+                                                !date2 && "text-muted-foreground"
+                                            )}
+                                        >
+                                            {date2 ? format(date2, "EEE, MMM d, yyyy") : <span>Pick a date</span>}
+                                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={date2}
+                                            onSelect={setDate2}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
                             <div className="grid gap-2">
                                 <Label>Project</Label>
                                 <Select value={projectId2} onValueChange={setProjectId2}>

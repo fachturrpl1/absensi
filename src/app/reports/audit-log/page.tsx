@@ -24,7 +24,7 @@ export default function AuditLogPage() {
         endDate: new Date(2026, 0, 30)
     })
     const [page, setPage] = useState(1)
-    const pageSize = 20
+    const [pageSize, setPageSize] = useState(20)
 
     // Local Filters
     const [searchQuery, setSearchQuery] = useState("")
@@ -114,7 +114,19 @@ export default function AuditLogPage() {
     }
 
     const handleExport = () => {
-        alert("Exporting data...")
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + ["Date,Author,Action,Object,Details,ID"].join(",") + "\n"
+            + filteredData.map(row =>
+                `${row.date},"${row.author.name}",${row.action},"${row.object}","${row.details}",${row.id}`
+            ).join("\n")
+
+        const encodedUri = encodeURI(csvContent)
+        const link = document.createElement("a")
+        link.setAttribute("href", encodedUri)
+        link.setAttribute("download", "audit_log_report.csv")
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
     }
 
     const getActionBadgeColor = (action: string) => {
@@ -279,6 +291,7 @@ export default function AuditLogPage() {
                     </tbody>
                 </table>
             </div>
+            {/* Pagination */}
             <div className="mt-4">
                 <PaginationFooter
                     page={page}
@@ -288,8 +301,10 @@ export default function AuditLogPage() {
                     to={Math.min(page * pageSize, sortedDates.length)}
                     total={sortedDates.length}
                     pageSize={pageSize}
-                    onPageSizeChange={() => { }}
-                    className="bg-transparent shadow-none border-none justify-between"
+                    onPageSizeChange={(size) => {
+                        setPageSize(size)
+                        setPage(1)
+                    }}
                 />
             </div>
 

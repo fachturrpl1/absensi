@@ -14,10 +14,11 @@ import {
 } from "@/lib/data/dummy-data"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { Button } from "@/components/ui/button"
-import { Download, Search, Filter, ChevronDown, ChevronRight, Pencil } from "lucide-react"
+import { Download, Search, Filter, ChevronDown, ChevronRight, Pencil, Plus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import Link from "next/link"
 
 import { toast } from "sonner"
 import { useTimezone } from "@/components/providers/timezone-provider"
@@ -28,6 +29,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { EditTimeEntryDialog } from "@/components/timesheets/EditTimeEntryDialog"
 import { SplitTimeEntryDialog } from "@/components/timesheets/SplitTimeEntryDialog"
 import { DeleteTimeEntryDialog } from "@/components/timesheets/DeleteTimeEntryDialog"
+import { AddTimeEntryDialog } from "@/components/timesheets/AddTimeEntryDialog"
 
 const getProjectInitial = (name: string) => name.charAt(0).toUpperCase()
 
@@ -68,6 +70,7 @@ export default function ViewEditTimesheetsPage() {
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [splitTimeEntryDialogOpen, setSplitTimeEntryDialogOpen] = useState(false)
     const [deleteEntryDialogOpen, setDeleteEntryDialogOpen] = useState(false)
+    const [addDialogOpen, setAddDialogOpen] = useState(false)
 
     const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null)
 
@@ -194,6 +197,18 @@ export default function ViewEditTimesheetsPage() {
         }
     }
 
+    const handleAddEntry = (entry: Partial<TimeEntry>) => {
+        const newEntry = {
+            id: Math.random().toString(),
+            memberName: DUMMY_MEMBERS.find(m => m.id === entry.memberId)?.name || "Unknown",
+            projectName: DUMMY_PROJECTS.find(p => p.id === entry.projectId)?.name || "Unknown",
+            taskName: DUMMY_TASKS.find(t => t.id === entry.taskId)?.title,
+            ...entry
+        } as TimeEntry
+        setData(prev => [newEntry, ...prev])
+        toast.success("Time entry added")
+    }
+
     const onSplitTimeSave = (originalId: string, entry1: Partial<TimeEntry>, entry2: Partial<TimeEntry>) => {
         const newEntry1 = { ...activeEntry!, ...entry1, id: `te-${Date.now()}-1` } as TimeEntry
         const newEntry2 = { ...activeEntry!, ...entry2, id: `te-${Date.now()}-2` } as TimeEntry
@@ -268,6 +283,11 @@ export default function ViewEditTimesheetsPage() {
                         onClick={() => setFilterSidebarOpen(true)}
                     >
                         <Filter className="w-4 h-4 mr-2" /> Filter
+                    </Button>
+
+                    <Button variant="outline" className="h-9" onClick={() => setAddDialogOpen(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add
                     </Button>
 
                     <Button variant="outline" className="h-9" onClick={handleExport}>
@@ -355,11 +375,15 @@ export default function ViewEditTimesheetsPage() {
                                                     {visibleCols.project && (
                                                         <td className="p-3">
                                                             <div className="flex items-start gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs shrink-0">
-                                                                    {getProjectInitial(row.projectName)}
-                                                                </div>
+                                                                <Link href={`/projects/${row.projectId}`}>
+                                                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs shrink-0 hover:bg-gray-200 cursor-pointer transition-colors">
+                                                                        {getProjectInitial(row.projectName)}
+                                                                    </div>
+                                                                </Link>
                                                                 <div className="flex flex-col">
-                                                                    <span className="font-bold text-gray-900 hover:text-blue-500 hover:underline cursor-pointer text-sm">{row.projectName}</span>
+                                                                    <Link href={`/projects/${row.projectId}`} className="font-bold text-gray-900 hover:text-blue-500 hover:underline cursor-pointer text-sm">
+                                                                        {row.projectName}
+                                                                    </Link>
                                                                     <span className="text-[10px] uppercase text-gray-500 font-semibold tracking-wide">
                                                                         {getClientName(row.projectId, row.projectName)}
                                                                     </span>
@@ -475,6 +499,12 @@ export default function ViewEditTimesheetsPage() {
                 projects={DUMMY_PROJECTS}
                 tasks={DUMMY_TASKS}
                 onSave={onSplitTimeSave}
+            />
+
+            <AddTimeEntryDialog
+                open={addDialogOpen}
+                onOpenChange={setAddDialogOpen}
+                onSave={handleAddEntry}
             />
 
             <DeleteTimeEntryDialog

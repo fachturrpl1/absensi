@@ -10,19 +10,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format, differenceInMinutes, parse, isValid, isAfter, isBefore } from "date-fns"
-import { Calendar as CalendarIcon, Clock, Plus, Trash2, Coffee } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, HelpCircle, Plus, Trash2, Coffee } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DUMMY_PROJECTS, DUMMY_MEMBERS, DUMMY_TASKS } from "@/lib/data/dummy-data"
 import type { TimeEntry, Break } from "@/lib/data/dummy-data"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
-import { SplitTimeEntryDialog } from "./SplitTimeEntryDialog"
 
-interface EditTimeEntryDialogProps {
+interface AddTimeEntryDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    initialData?: TimeEntry | null
     onSave: (entry: Partial<TimeEntry>) => void
     isAdmin?: boolean
 }
@@ -35,12 +33,11 @@ const REASONS = [
     "Other"
 ]
 
-export function EditTimeEntryDialog({
+export function AddTimeEntryDialog({
     open,
     onOpenChange,
-    initialData,
     onSave,
-}: EditTimeEntryDialogProps) {
+}: AddTimeEntryDialogProps) {
     const [formData, setFormData] = useState<Partial<TimeEntry>>({
         memberId: "",
         projectId: "",
@@ -50,7 +47,7 @@ export function EditTimeEntryDialog({
         endTime: "17:00",
         notes: "",
         source: "manual",
-        activityPct: 0,
+        activityPct: 100,
         billable: true,
         reason: "",
         breaks: []
@@ -61,35 +58,12 @@ export function EditTimeEntryDialog({
     const [otherReason, setOtherReason] = useState("")
     const [isWorkBreak, setIsWorkBreak] = useState(false)
     const [breaks, setBreaks] = useState<Break[]>([])
-    const [isSplitOpen, setIsSplitOpen] = useState(false)
 
     const startTimeRef = useRef<HTMLInputElement>(null)
     const endTimeRef = useRef<HTMLInputElement>(null)
 
-    // Derived member state
-    const member = DUMMY_MEMBERS.find(m => m.id === formData.memberId)
-
     useEffect(() => {
-        if (initialData) {
-            setFormData({
-                ...initialData,
-                startTime: initialData.startTime.slice(0, 5),
-                endTime: initialData.endTime.slice(0, 5),
-                taskId: initialData.taskId || "",
-                billable: initialData.billable ?? true,
-                reason: initialData.reason || ""
-            })
-            setDate(new Date(initialData.date))
-            setBreaks(initialData.breaks || [])
-
-            if (initialData.reason && !REASONS.includes(initialData.reason) && initialData.reason !== "") {
-                setFormData(prev => ({ ...prev, reason: "Other" }))
-                setOtherReason(initialData.reason)
-            } else {
-                setOtherReason("")
-            }
-
-        } else {
+        if (open) {
             const today = new Date()
             setFormData({
                 memberId: DUMMY_MEMBERS[0]?.id || "",
@@ -108,10 +82,10 @@ export function EditTimeEntryDialog({
             setDate(today)
             setBreaks([])
             setOtherReason("")
+            setTouched({})
+            setIsWorkBreak(false)
         }
-        setTouched({})
-        setIsWorkBreak(false)
-    }, [initialData, open])
+    }, [open])
 
     useEffect(() => {
         if (date) {
@@ -142,7 +116,7 @@ export function EditTimeEntryDialog({
         })
 
         diff -= breakMinutes
-        if (diff < 0) diff = 0 // Should enforce validation instead, but clamp for display
+        if (diff < 0) diff = 0
 
         const hours = Math.floor(diff / 60)
         const minutes = diff % 60
@@ -153,7 +127,6 @@ export function EditTimeEntryDialog({
         if (!formData.startTime || !formData.endTime) return false
         const start = parse(formData.startTime, "HH:mm", new Date())
         const end = parse(formData.endTime, "HH:mm", new Date())
-        // Basic check
         if (!isValid(start) || !isValid(end) || start >= end) return false
         return true
     }
@@ -200,7 +173,6 @@ export function EditTimeEntryDialog({
         }
         const breakError = validateBreaks()
         if (breakError) {
-            // Could show toast or error state
             alert(breakError)
             return
         }
@@ -216,6 +188,7 @@ export function EditTimeEntryDialog({
 
         onSave({
             ...formData,
+            memberId: formData.memberId || DUMMY_MEMBERS[0]?.id,
             projectName: project?.name,
             taskId: formData.taskId || undefined,
             taskName: task?.title,
@@ -230,21 +203,39 @@ export function EditTimeEntryDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Edit time</DialogTitle>
+                    <div className="flex items-center justify-between">
+                        <DialogTitle>Add time</DialogTitle>
+                        <HelpCircle className="h-5 w-5 text-muted-foreground hover:text-foreground cursor-pointer mr-6" />
+                    </div>
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
                     {/* User Info & Break Toggle */}
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                                <AvatarFallback className="bg-gray-100 text-gray-500 text-xs font-bold">
-                                    {member?.name?.match(/\b(\w)/g)?.join('')?.substring(0, 2) || "U"}
-                                </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm font-medium">{member?.name || "User"}</span>
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 space-y-2">
+                            <div className="text-xs font-semibold text-muted-foreground">MEMBER</div>
+                            <Select
+                                value={formData.memberId}
+                                onValueChange={(v) => setFormData({ ...formData, memberId: v })}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select member" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {DUMMY_MEMBERS.map(m => (
+                                        <SelectItem key={m.id} value={m.id}>
+                                            <div className="flex items-center gap-2">
+                                                <Avatar className="h-5 w-5">
+                                                    <AvatarFallback className="text-[10px]">{m.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                                </Avatar>
+                                                {m.name}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 mt-8">
                             <Switch
                                 checked={isWorkBreak}
                                 onCheckedChange={setIsWorkBreak}
@@ -460,29 +451,16 @@ export function EditTimeEntryDialog({
                         )}
 
                         {((formData.reason === "Other" && !otherReason && touched.otherReason) || (!formData.reason && touched.otherReason)) && (
-                            <p className="text-xs text-destructive mt-1">can&apos;t be blank</p>
+                            <p className="text-xs text-destructive mt-1">can't be blank</p>
                         )}
                     </div>
                 </div>
 
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button onClick={handleSave}>Save</Button>
+                    <Button onClick={handleSave}>Add Time</Button>
                 </DialogFooter>
             </DialogContent>
-
-            <SplitTimeEntryDialog
-                open={isSplitOpen}
-                onOpenChange={setIsSplitOpen}
-                initialData={initialData as any}
-                projects={DUMMY_PROJECTS}
-                tasks={DUMMY_TASKS}
-                onSave={(originalId, entry1, entry2) => {
-                    console.log("Split Saved:", originalId, entry1, entry2)
-                    // In a real app, this would call an API to split the entry
-                    onOpenChange(false)
-                }}
-            />
         </Dialog>
     )
 }
