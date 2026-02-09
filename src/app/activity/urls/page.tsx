@@ -2,20 +2,37 @@
 
 import React, { useMemo, useState, useEffect } from "react"
 import { Plus, Minus } from "lucide-react"
-import { DUMMY_URL_ACTIVITIES, DUMMY_MEMBERS, DUMMY_PROJECTS, DUMMY_TEAMS, type UrlActivityEntry } from "@/lib/data/dummy-data"
+import { DUMMY_URL_ACTIVITIES, DUMMY_PROJECTS, DUMMY_TEAMS, type UrlActivityEntry, generateMemberUrlActivities, type Member } from "@/lib/data/dummy-data"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useTimezone } from "@/components/timezone-provider"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { DateRange, SelectedFilter } from "@/components/insights/types"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useSettingsMembers } from "@/hooks/use-settings-members"
 
 export default function UrlsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const memberIdFromUrl = searchParams.get("memberId")
   const timezone = useTimezone()
-  
+
+  const { members: settingsMembers, loading: membersLoading } = useSettingsMembers()
+
+  // Convert settingsMembers to Member format
+  const realMembers: Member[] = useMemo(() => {
+    return settingsMembers.map(m => ({
+      id: m.id,
+      name: m.name,
+      avatar: m.avatar,
+      initials: m.name.substring(0, 2).toUpperCase(),
+      color: "placeholder",
+      email: m.email,
+      activityScore: m.activityScore,
+    }))
+  }, [settingsMembers])
+
   // Get initial memberId: URL > sessionStorage > default
+  // Prioritize URL, then session, then first REAL member if available, else DUMMY fallback (temp)
   const getInitialMemberId = (): string => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search)
@@ -27,7 +44,8 @@ export default function UrlsPage() {
       const savedMemberId = sessionStorage.getItem("urlSelectedMemberId")
       if (savedMemberId) return savedMemberId
     }
-    return DUMMY_MEMBERS[0]?.id ?? "m1"
+    // Return a flag or dummy if loading, will be fixed by useEffect
+    return realMembers[0]?.id ?? "m1"
   }
 
   const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({
@@ -35,7 +53,26 @@ export default function UrlsPage() {
     all: false,
     id: getInitialMemberId(),
   })
-  
+
+  // Auto-select first real member if current selection is invalid
+  useEffect(() => {
+    if (realMembers.length > 0 && !membersLoading) {
+      const currentId = selectedFilter.id
+      const isValidMember = realMembers.some(m => m.id === currentId)
+
+      // If invalid or is the default "m1" dummy but "m1" is not in real members
+      if (!isValidMember || (currentId === "m1" && !realMembers.some(m => m.id === "m1"))) {
+        const firstMemberId = realMembers[0]?.id
+        if (!firstMemberId) return
+
+        setSelectedFilter(prev => ({
+          ...prev,
+          id: firstMemberId,
+        }))
+      }
+    }
+  }, [realMembers, membersLoading, selectedFilter.id])
+
   // Update filter when memberId from URL changes
   useEffect(() => {
     if (memberIdFromUrl && memberIdFromUrl !== selectedFilter.id) {
@@ -58,12 +95,12 @@ export default function UrlsPage() {
       }
     }
   }, [memberIdFromUrl, selectedFilter.id])
-  
+
   // Sync selectedFilter changes to sessionStorage and URL
   const handleFilterChange = (filter: SelectedFilter) => {
     // Jika all: true (tidak seharusnya terjadi karena hideAllOption), ubah ke member pertama
     if (filter.all) {
-      const firstMemberId = DUMMY_MEMBERS[0]?.id ?? "m1"
+      const firstMemberId = realMembers[0]?.id ?? "m1"
       const newFilter: SelectedFilter = {
         type: "members",
         all: false,
@@ -78,7 +115,7 @@ export default function UrlsPage() {
       }
       return
     }
-    
+
     setSelectedFilter(filter)
     if (!filter.all && filter.id && typeof window !== "undefined") {
       sessionStorage.setItem("urlSelectedMemberId", filter.id)
@@ -89,7 +126,7 @@ export default function UrlsPage() {
   }
 
   const selectedMemberId = selectedFilter.all ? null : (selectedFilter.id ?? null)
-  
+
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -112,14 +149,21 @@ export default function UrlsPage() {
 
   // Filter dan group data berdasarkan date
   const groupedData = useMemo(() => {
-    let filtered = [...DUMMY_URL_ACTIVITIES]
+    let filtered: UrlActivityEntry[] = []
+
+    // Use generator if member is selected to get randomized data
+    if (selectedMemberId) {
+      filtered = generateMemberUrlActivities(selectedMemberId)
+    } else {
+      filtered = [...DUMMY_URL_ACTIVITIES]
+    }
 
     // Filter by project
     if (selectedProject !== "all") {
       filtered = filtered.filter(item => item.projectId === selectedProject)
     }
 
-    // Filter by member
+    // Filter by member (redundant if generated, but safe)
     if (selectedMemberId) {
       filtered = filtered.filter(item => item.memberId === selectedMemberId)
     }
@@ -161,7 +205,7 @@ export default function UrlsPage() {
             const firstItem = items[0]!
             const totalTime = items.reduce((sum, item) => sum + item.timeSpent, 0)
             const allDetails = items.flatMap(item => item.details || [])
-            
+
             return {
               id: groupKey,
               projectId: firstItem.projectId,
@@ -174,12 +218,12 @@ export default function UrlsPage() {
             }
           })
           .sort((a, b) => {
-          // Sort by time spent descending, then by site name
-          if (b.timeSpent !== a.timeSpent) {
-            return b.timeSpent - a.timeSpent
-          }
-          return a.site.localeCompare(b.site)
-        })
+            // Sort by time spent descending, then by site name
+            if (b.timeSpent !== a.timeSpent) {
+              return b.timeSpent - a.timeSpent
+            }
+            return a.site.localeCompare(b.site)
+          })
       }))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [selectedProject, selectedMemberId, dateRange])
@@ -217,7 +261,7 @@ export default function UrlsPage() {
           onSelectedFilterChange={handleFilterChange}
           dateRange={dateRange}
           onDateRangeChange={setDateRange}
-          members={DUMMY_MEMBERS}
+          members={realMembers}
           teams={DUMMY_TEAMS}
           timezone={timezone}
           hideAllOption={true}
@@ -263,13 +307,13 @@ export default function UrlsPage() {
             ) : (
               groupedData.map((group) => (
                 <React.Fragment key={group.date}>
-                 
+
                   {/* Data Rows */}
                   {group.groups.map((item) => {
                     const isExpanded = expandedRows.has(item.id)
                     const hasDetails = item.details && item.details.length > 0
-                    
-    return (
+
+                    return (
                       <React.Fragment key={item.id}>
                         <tr className="hover:bg-gray-50">
                           <td className="px-6 py-3 text-sm text-gray-900">
@@ -333,6 +377,6 @@ export default function UrlsPage() {
           </tbody>
         </table>
       </div>
-        </div>
-    )
+    </div>
+  )
 }

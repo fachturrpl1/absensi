@@ -32,7 +32,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
 
   // 2. Determine which organization to fetch
   let targetOrgId = organizationId;
-  
+
   if (!targetOrgId) {
     // If no organizationId provided, get user's first organization
     const { data: member } = await supabase
@@ -61,10 +61,10 @@ export const getAllOrganization_member = async (organizationId?: number) => {
   while (hasMore) {
     const from = currentPage * pageSize;
     const to = from + pageSize - 1;
-    
+
     const { data: pageData, error: pageError } = await adminClient
-    .from("organization_members")
-    .select(`
+      .from("organization_members")
+      .select(`
       *,
       user:user_id (
         id,
@@ -109,8 +109,8 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         description
       )
     `)
-    .eq("organization_id", targetOrgId)
-    .eq("is_active", true)
+      .eq("organization_id", targetOrgId)
+      .eq("is_active", true)
       .order("created_at", { ascending: true })
       .range(from, to);
 
@@ -132,16 +132,16 @@ export const getAllOrganization_member = async (organizationId?: number) => {
             member.departments = null;
           }
         }
-        
+
         // Log untuk debugging
         if (member.department_id && !member.departments) {
           memberLogger.debug(`⚠️ Member ${member.id} has department_id ${member.department_id} but no departments from join`);
         }
       });
-      
+
       allData = allData.concat(pageData);
       memberLogger.debug(`📄 Fetched page ${currentPage + 1}: ${pageData.length} records (total so far: ${allData.length})`);
-      
+
       // If we got less than pageSize, we're done
       if (pageData.length < pageSize) {
         hasMore = false;
@@ -156,7 +156,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
     if (currentPage >= 20) {
       memberLogger.warn('⚠️ Reached safety limit of 20 pages (20,000 records)');
       hasMore = false;
-  }
+    }
   }
 
   const data = allData;
@@ -169,10 +169,10 @@ export const getAllOrganization_member = async (organizationId?: number) => {
     let membersWithoutDept = 0;
     data.forEach((member: any) => {
       // Check if departments is null, undefined, empty array, or doesn't have name
-      const hasValidDept = member.departments && 
+      const hasValidDept = member.departments &&
         (typeof member.departments === 'object' && !Array.isArray(member.departments) && member.departments.name) ||
         (Array.isArray(member.departments) && member.departments.length > 0 && member.departments[0]?.name);
-      
+
       if (member.department_id && !hasValidDept) {
         // Convert to number to ensure consistency
         const deptId = typeof member.department_id === 'string' ? parseInt(member.department_id, 10) : member.department_id;
@@ -184,10 +184,10 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         }
       }
     });
-    
+
     memberLogger.debug(`🔍 Found ${membersWithoutDept} members without departments but with department_id`);
     memberLogger.debug(`📋 Department IDs to fetch:`, Array.from(deptIds));
-    
+
     // Fetch departments untuk semua member yang perlu (baik yang punya user_id maupun tidak)
     const departmentsMap = new Map();
     if (deptIds.size > 0) {
@@ -197,7 +197,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         .from("departments")
         .select("id, name, code, organization_id")
         .in("id", deptIdsArray);
-      
+
       if (deptError) {
         memberLogger.error('❌ Error fetching departments:', deptError);
       } else if (deptList) {
@@ -214,12 +214,12 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         memberLogger.warn('⚠️ No departments returned from query');
       }
     }
-    
+
     const membersWithoutUser = data.filter((m: any) => !m.user_id && (m.biodata_nik || m.employee_id));
-    
+
     if (membersWithoutUser.length > 0) {
       const niks = membersWithoutUser.map((m: any) => m.biodata_nik || m.employee_id).filter(Boolean);
-      
+
       if (niks.length > 0) {
         const { data: biodataList, error: biodataError } = await adminClient
           .from("biodata")
@@ -229,7 +229,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         if (!biodataError && biodataList) {
           // Merge biodata ke dalam member data
           const biodataMap = new Map(biodataList.map((b: any) => [b.nik, b]));
-          
+
           // Tambahkan department_id dari biodata ke set dan fetch jika belum ada di map
           const newDeptIds = new Set<number>();
           biodataList.forEach((b: any) => {
@@ -240,7 +240,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
               }
             }
           });
-          
+
           // Fetch departments baru dari biodata jika ada
           if (newDeptIds.size > 0) {
             const newDeptIdsArray = Array.from(newDeptIds);
@@ -249,7 +249,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
               .from("departments")
               .select("id, name, code, organization_id")
               .in("id", newDeptIdsArray);
-            
+
             if (newDeptError) {
               memberLogger.error('❌ Error fetching additional departments:', newDeptError);
             } else if (newDeptList) {
@@ -262,13 +262,13 @@ export const getAllOrganization_member = async (organizationId?: number) => {
               });
             }
           }
-          
+
           data.forEach((member: any) => {
             // Check if departments is valid
-            const hasValidDept = member.departments && 
+            const hasValidDept = member.departments &&
               (typeof member.departments === 'object' && !Array.isArray(member.departments) && member.departments.name) ||
               (Array.isArray(member.departments) && member.departments.length > 0 && member.departments[0]?.name);
-            
+
             if (!member.user_id && (member.biodata_nik || member.employee_id)) {
               const nik = member.biodata_nik || member.employee_id;
               const biodata = biodataMap.get(nik);
@@ -285,7 +285,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
                 if (!member.biodata) {
                   member.biodata = biodata;
                 }
-                
+
                 // Jika member tidak punya departments tapi biodata punya department_id, ambil dari biodata
                 if (!hasValidDept && biodata.department_id) {
                   const biodataDeptId = typeof biodata.department_id === 'string' ? parseInt(biodata.department_id, 10) : biodata.department_id;
@@ -299,7 +299,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
                 }
               }
             }
-            
+
             // Fallback: jika member punya department_id tapi tidak punya departments (join gagal)
             if (member.department_id && !hasValidDept) {
               const deptId = typeof member.department_id === 'string' ? parseInt(member.department_id, 10) : member.department_id;
@@ -317,20 +317,20 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         }
       }
     }
-    
+
     // Setelah semua processing, pastikan semua member yang punya department_id punya departments
     // (menggunakan departmentsMap yang sudah di-fetch sebelumnya)
     let fixedCount = 0;
     data.forEach((member: any) => {
       // Check if departments is valid
-      const hasValidDept = member.departments && 
+      const hasValidDept = member.departments &&
         (typeof member.departments === 'object' && !Array.isArray(member.departments) && member.departments.name) ||
         (Array.isArray(member.departments) && member.departments.length > 0 && member.departments[0]?.name);
-      
+
       if (member.department_id && !hasValidDept) {
         // Convert department_id to number if it's a string
         const deptId = typeof member.department_id === 'string' ? parseInt(member.department_id, 10) : member.department_id;
-        
+
         if (!isNaN(deptId)) {
           const dept = departmentsMap.get(deptId);
           if (dept) {
@@ -346,7 +346,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         }
       }
     });
-    
+
     memberLogger.info(`🔧 Fixed departments for ${fixedCount} members`);
   }
 
@@ -533,7 +533,7 @@ export const getOrganizationMembersById = async (id: string) => {
       }
     }
   } catch (e) {
-     
+
     memberLogger.warn('getOrganizationMembersById: failed to fetch related records', e)
   }
 
@@ -647,4 +647,258 @@ export const moveMembersToGroup = async (memberIds: string[], targetGroupId: str
   }
 
   return { success: true, message: "Members moved successfully", data };
+};
+
+export const getOrganizationMembersPaginated = async ({
+  page = 1,
+  pageSize = 10,
+  query = "",
+  organizationId,
+}: {
+  page?: number;
+  pageSize?: number;
+  query?: string;
+  organizationId?: string;
+}) => {
+  const supabase = await getSupabase();
+  const adminClient = createAdminClient();
+
+  // 1. Get user and organization if not provided
+  let targetOrgId = organizationId;
+
+  if (!targetOrgId) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return { success: false, message: "User not logged in", data: [], metadata: { total: 0, page, pageSize, totalPages: 0 } };
+    }
+
+    const { data: member } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!member) {
+      return { success: false, message: "User not registered in any organization", data: [], metadata: { total: 0, page, pageSize, totalPages: 0 } };
+    }
+    targetOrgId = member.organization_id.toString();
+  }
+
+  // Calculate range
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  // Build query
+  // We cannot easily filter cross-relations in Supabase JS without !inner join which filters out rows that don't match.
+  // But members might not have users.
+  // So for now, we will paginate ALL members if no query, or filter by user name if query is present (assuming most searches are for users).
+
+  let queryBuilder = adminClient
+    .from("organization_members")
+    .select(`
+      id,
+      biodata_nik,
+      employee_id,
+      user:user_id!inner (
+        first_name,
+        last_name,
+        display_name
+      )
+    `, { count: "exact" })
+    .eq("organization_id", targetOrgId)
+    .eq("is_active", true);
+
+  if (query) {
+    // Use case-insensitive search on user fields
+    // Note: This requires the foreign table alias to match the select part
+    queryBuilder = queryBuilder.or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,display_name.ilike.%${query}%`, { foreignTable: "user" });
+  } else {
+    // If no query, we don't need !inner join on user, so let's modify the select to be left join
+    // Re-create query builder for cleaner logic without !inner if no query
+    queryBuilder = adminClient
+      .from("organization_members")
+      .select(`
+          id,
+          biodata_nik,
+          employee_id,
+          user:user_id (
+            first_name,
+            last_name,
+            display_name
+          )
+        `, { count: "exact" })
+      .eq("organization_id", targetOrgId)
+      .eq("is_active", true);
+  }
+
+  const { data, error, count } = await queryBuilder
+    .range(from, to)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching members:", error);
+    return { success: false, message: error.message, data: [], metadata: { total: 0, page, pageSize, totalPages: 0 } };
+  }
+
+  // Manually fetch biodata for members with no user but having NIK
+  let finalData: any[] = data || [];
+
+  if (finalData.length > 0) {
+    const membersWithoutUser = finalData.filter((m: any) => !m.user && (m.biodata_nik || m.employee_id));
+
+    if (membersWithoutUser.length > 0) {
+      const niks = membersWithoutUser.map((m: any) => m.biodata_nik || m.employee_id).filter(Boolean);
+
+      if (niks.length > 0) {
+        const { data: biodataList } = await adminClient
+          .from("biodata")
+          .select("nik, nama")
+          .in("nik", niks);
+
+        if (biodataList) {
+          const biodataMap = new Map(biodataList.map((b: any) => [b.nik, b]));
+
+          finalData = finalData.map(member => {
+            if (!member.user && (member.biodata_nik || member.employee_id)) {
+              const nik = member.biodata_nik || member.employee_id;
+              const biodata = biodataMap.get(nik);
+              if (biodata) {
+                member.biodata = biodata;
+              }
+            }
+            return member;
+          });
+        }
+      }
+    }
+  }
+
+  const mappedMembers = finalData.map((m: any) => ({
+    id: String(m.id),
+    name: m.user
+      ? `${m.user.first_name || ''} ${m.user.last_name || ''}`.trim() || m.user.display_name
+      : (m.biodata?.nama || "Unknown Member")
+  }));
+
+  return {
+    success: true,
+    data: mappedMembers,
+    metadata: {
+      total: count || 0,
+      page,
+      pageSize,
+      totalPages: Math.ceil((count || 0) / pageSize)
+    }
+  };
+};
+
+export const getAllOrganizationMemberIds = async ({
+  query = "",
+  organizationId,
+}: {
+  query?: string;
+  organizationId?: string;
+}) => {
+  const supabase = await getSupabase();
+  const adminClient = createAdminClient();
+
+  // 1. Get user and organization if not provided
+  let targetOrgId = organizationId;
+
+  if (!targetOrgId) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return { success: false, message: "User not logged in", data: [] };
+    }
+
+    const { data: member } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!member) {
+      return { success: false, message: "User not registered in any organization", data: [] };
+    }
+    targetOrgId = member.organization_id.toString();
+  }
+
+  let allIds: string[] = [];
+  let currentPage = 0;
+  const pageSize = 1000;
+  let hasMore = true;
+
+  while (hasMore) {
+    const from = currentPage * pageSize;
+    const to = from + pageSize - 1;
+
+    // Clone the query builder if needed, but here we just need to add range
+    // Note: queryBuilder is modified in place, so we need to be careful.
+    // However, if we define queryBuilder specific to the loop or just use range.
+
+    // Better to reconstruct query each time or use existing if it supports re-execution with range.
+    // Supabase query builders are immutable-ish until executed? 
+    // Actually, calling .range() returns a new builder usually.
+    // Let's safe bet: reconstruct or use a base builder.
+
+    let pageQuery;
+
+    if (query) {
+      pageQuery = adminClient
+        .from("organization_members")
+        .select(`
+          id,
+          user:user_id!inner (
+            first_name,
+            last_name,
+            display_name
+          )
+        `)
+        .eq("organization_id", targetOrgId)
+        .eq("is_active", true)
+        .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,display_name.ilike.%${query}%`, { foreignTable: "user" });
+    } else {
+      pageQuery = adminClient
+        .from("organization_members")
+        .select(`id`)
+        .eq("organization_id", targetOrgId)
+        .eq("is_active", true);
+    }
+
+    const { data, error } = await pageQuery
+      .range(from, to)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching member IDs page", currentPage, error);
+      // specific error handling? return partial?
+      return { success: false, message: error.message, data: [] };
+    }
+
+    if (data && data.length > 0) {
+      const ids = data.map((m: any) => String(m.id));
+      allIds = allIds.concat(ids);
+
+      if (data.length < pageSize) {
+        hasMore = false;
+      } else {
+        currentPage++;
+      }
+    } else {
+      hasMore = false;
+    }
+
+    // Safety break to prevent infinite loops if something goes wrong
+    if (currentPage > 50) { // 50 * 1000 = 50,000 members
+      console.warn("getAllOrganizationMemberIds reached safety limit of 50 pages");
+      hasMore = false;
+    }
+  }
+
+  return {
+    success: true,
+    data: allIds
+  };
 };

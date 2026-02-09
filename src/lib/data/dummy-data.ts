@@ -2048,6 +2048,56 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa9",
+        projectId: "proj-3",
+        projectName: "Marketing Campaign",
+        memberId: "m3",
+        appName: "Spotify",
+        timeSpent: 4.5, // Listening to music while working
+        sessions: 1,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa10",
+        projectId: "proj-1",
+        projectName: "Website Redesign",
+        memberId: "m1",
+        appName: "Figma",
+        timeSpent: 3.8,
+        sessions: 4,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa11",
+        projectId: "proj-4",
+        projectName: "Internal Tools",
+        memberId: "m4",
+        appName: "Slack",
+        timeSpent: 1.5,
+        sessions: 20,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa12",
+        projectId: "proj-2",
+        projectName: "Mobile App Development",
+        memberId: "m2",
+        appName: "Zoom",
+        timeSpent: 2.0,
+        sessions: 3,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa13",
+        projectId: "proj-5",
+        projectName: "Documentation",
+        memberId: "m5",
+        appName: "Notion",
+        timeSpent: 2.5,
+        sessions: 8,
+        date: "2026-01-26"
+    },
+    {
+        id: "aa38",
         projectId: "proj-1",
         projectName: "hans",
         memberId: "m1",
@@ -2057,7 +2107,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
         date: "2026-01-27"
     },
     {
-        id: "aa10",
+        id: "aa39",
         projectId: "proj-1",
         projectName: "hans",
         memberId: "m1",
@@ -2068,7 +2118,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     // Sarah Johnson (m3) - Marketing Campaign
     {
-        id: "aa11",
+        id: "aa40",
         projectId: "proj-3",
         projectName: "Marketing Campaign",
         memberId: "m3",
@@ -2078,7 +2128,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
         date: "2026-01-26"
     },
     {
-        id: "aa12",
+        id: "aa41",
         projectId: "proj-3",
         projectName: "Marketing Campaign",
         memberId: "m3",
@@ -2088,7 +2138,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
         date: "2026-01-26"
     },
     {
-        id: "aa13",
+        id: "aa42",
         projectId: "proj-3",
         projectName: "Marketing Campaign",
         memberId: "m3",
@@ -2447,6 +2497,69 @@ function generateUrlActivities(): UrlActivityEntry[] {
             details: [
                 { id: "ua4-d1", title: "Project Documentation", url: "https://docs.google.com/document/d/abc123", timeSpent: 0.8 },
                 { id: "ua4-d2", title: "Sprint Planning Sheet", url: "https://docs.google.com/spreadsheets/d/def456", timeSpent: 0.4 }
+            ]
+        },
+        {
+            id: "ua10",
+            projectId: "proj-1",
+            projectName: "Design System",
+            memberId: "m1",
+            site: "figma.com",
+            timeSpent: 3.5,
+            date: today,
+            details: [
+                { id: "ua10-d1", title: "UI Kit - v2.0", url: "https://figma.com/file/xyz789", timeSpent: 2.0 },
+                { id: "ua10-d2", title: "Dashboard Prototypes", url: "https://figma.com/file/abc456", timeSpent: 1.5 }
+            ]
+        },
+        {
+            id: "ua11",
+            projectId: "proj-1",
+            projectName: "Meetings",
+            memberId: "m1",
+            site: "zoom.us",
+            timeSpent: 1.5,
+            date: today,
+            details: [
+                { id: "ua11-d1", title: "Daily Standup", url: "https://zoom.us/j/123456789", timeSpent: 0.5 },
+                { id: "ua11-d2", title: "Client Demo", url: "https://zoom.us/j/987654321", timeSpent: 1.0 }
+            ]
+        },
+        {
+            id: "ua12",
+            projectId: "proj-3",
+            projectName: "Knowledge Base",
+            memberId: "m1",
+            site: "notion.so",
+            timeSpent: 1.8,
+            date: today,
+            details: [
+                { id: "ua12-d1", title: "Engineering Onboarding", url: "https://notion.so/eng/onboarding", timeSpent: 1.0 },
+                { id: "ua12-d2", title: "API Specs", url: "https://notion.so/eng/api-specs", timeSpent: 0.8 }
+            ]
+        },
+        {
+            id: "ua13",
+            projectId: "proj-4",
+            projectName: "Research",
+            memberId: "m1",
+            site: "youtube.com",
+            timeSpent: 0.9,
+            date: today,
+            details: [
+                { id: "ua13-d1", title: "Next.js 14 Tutorial", url: "https://youtube.com/watch?v=xyz", timeSpent: 0.9 }
+            ]
+        },
+        {
+            id: "ua14",
+            projectId: "proj-1",
+            projectName: "Recruiting",
+            memberId: "m1",
+            site: "linkedin.com",
+            timeSpent: 0.6,
+            date: today,
+            details: [
+                { id: "ua14-d1", title: "Candidate Search", url: "https://linkedin.com/jobs", timeSpent: 0.6 }
             ]
         },
         // Lave Lavael (m2) - Today
@@ -4043,11 +4156,75 @@ export const DUMMY_PAYMENTS: PaymentEntry[] = [
 // EXPORT HELPERS FOR ACTIVITY PAGES
 // ============================================================================
 
+
 export function generateMemberAppActivities(memberId: string): AppActivityEntry[] {
-    return DUMMY_APP_ACTIVITIES.filter(a => a.memberId === memberId)
+    // Return all activities but override memberId to match the requested member
+    // To create variety, we can slice different parts of the array based on memberId hash
+    // But user asked to just randomize content per member.
+
+    const allActivities = DUMMY_APP_ACTIVITIES;
+
+    // Simple seeded randomization
+    const seed = memberId.charCodeAt(memberId.length - 1) || 0;
+    const startIndex = seed % Math.max(1, allActivities.length - 3);
+
+    // Pick a subset of 5-8 items, wrapping around
+    // Filter activities to ONLY use those belonging to this member (or generic ones)
+    // This prevents "hans" (m1 project) appearing for "Lave" (m2)
+    let memberActivities = allActivities.filter(a => a.memberId === memberId);
+
+    // If no activities found for this member, fallback to all (or empty?)
+    // But we added activities for m1-m5, so it should be fine.
+    if (memberActivities.length === 0) {
+        memberActivities = allActivities; // Fallback to avoid empty state if unknown member
+    }
+
+    const today = getDateString(0);
+    const yesterday = getDateString(1);
+
+    // We can duplicate the items to create more volume if needed, 
+    // or just return the static items with dynamic dates.
+    // Let's return the items (randomized order?)
+
+    // Seeded shuffle/sort
+    const sorted = [...memberActivities].sort((a, b) => {
+        return (seed + a.id.charCodeAt(0)) - (seed + b.id.charCodeAt(0));
+    });
+
+    return sorted.map((a, idx) => ({
+        ...a,
+        memberId: memberId,
+        // Keep dynamic date so it shows in default view
+        date: (idx + seed) % 3 === 0 ? yesterday : today
+    }));
 }
 
 export function generateMemberUrlActivities(memberId: string): UrlActivityEntry[] {
-    return generateUrlActivities().filter(a => a.memberId === memberId)
+    const allActivities = generateUrlActivities();
+
+    // Filter activities to ONLY use those belonging to this member (or generic ones)
+    let memberActivities = allActivities.filter(a => a.memberId === memberId);
+
+    // If no activities found for this member, fallback to all (or empty?)
+    if (memberActivities.length === 0) {
+        memberActivities = allActivities; // Fallback
+    }
+
+    // Simple seeded randomization
+    const seed = memberId.charCodeAt(memberId.length - 1) || 0;
+
+    // Seeded shuffle/sort
+    const sorted = [...memberActivities].sort((a, b) => {
+        return (seed + a.id.charCodeAt(0)) - (seed + b.id.charCodeAt(0));
+    });
+
+    // We don't need to override date here because generateUrlActivities already has dynamic dates.
+    // However, if we fallback to ALL, we might get items for other members.
+    // But generateUrlActivities has items for m1, m2, etc.
+
+    return sorted.map(a => ({
+        ...a,
+        memberId: memberId // Override memberId just in case
+    }));
 }
 

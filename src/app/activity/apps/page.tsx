@@ -1,20 +1,37 @@
 "use client"
 
 import React, { useMemo, useState, useEffect } from "react"
-import { DUMMY_APP_ACTIVITIES, DUMMY_MEMBERS, DUMMY_PROJECTS, DUMMY_TEAMS, type AppActivityEntry } from "@/lib/data/dummy-data"
+import { DUMMY_APP_ACTIVITIES, DUMMY_PROJECTS, DUMMY_TEAMS, type AppActivityEntry, generateMemberAppActivities, type Member } from "@/lib/data/dummy-data"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useTimezone } from "@/components/timezone-provider"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { DateRange, SelectedFilter } from "@/components/insights/types"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useSettingsMembers } from "@/hooks/use-settings-members"
 
 export default function AppsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const memberIdFromUrl = searchParams.get("memberId")
   const timezone = useTimezone()
-  
+
+  const { members: settingsMembers, loading: membersLoading } = useSettingsMembers()
+
+  // Convert settingsMembers to Member format
+  const realMembers: Member[] = useMemo(() => {
+    return settingsMembers.map(m => ({
+      id: m.id,
+      name: m.name,
+      avatar: m.avatar,
+      initials: m.name.substring(0, 2).toUpperCase(),
+      color: "placeholder",
+      email: m.email,
+      activityScore: m.activityScore,
+    }))
+  }, [settingsMembers])
+
   // Get initial memberId: URL > sessionStorage > default
+  // Prioritize URL, then session, then first REAL member if available, else DUMMY fallback (temp)
   const getInitialMemberId = (): string => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search)
@@ -26,7 +43,8 @@ export default function AppsPage() {
       const savedMemberId = sessionStorage.getItem("appSelectedMemberId")
       if (savedMemberId) return savedMemberId
     }
-    return DUMMY_MEMBERS[0]?.id ?? "m1"
+    // Return a flag or dummy if loading, will be fixed by useEffect
+    return realMembers[0]?.id ?? "m1"
   }
 
   const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({
@@ -34,7 +52,26 @@ export default function AppsPage() {
     all: false,
     id: getInitialMemberId(),
   })
-  
+
+  // Auto-select first real member if current selection is invalid
+  useEffect(() => {
+    if (realMembers.length > 0 && !membersLoading) {
+      const currentId = selectedFilter.id
+      const isValidMember = realMembers.some(m => m.id === currentId)
+
+      // If invalid or is the default "m1" dummy but "m1" is not in real members
+      if (!isValidMember || (currentId === "m1" && !realMembers.some(m => m.id === "m1"))) {
+        const firstMemberId = realMembers[0]?.id
+        if (!firstMemberId) return
+
+        setSelectedFilter(prev => ({
+          ...prev,
+          id: firstMemberId,
+        }))
+      }
+    }
+  }, [realMembers, membersLoading, selectedFilter.id])
+
   // Update filter when memberId from URL changes
   useEffect(() => {
     if (memberIdFromUrl && memberIdFromUrl !== selectedFilter.id) {
@@ -57,12 +94,12 @@ export default function AppsPage() {
       }
     }
   }, [memberIdFromUrl, selectedFilter.id])
-  
+
   // Sync selectedFilter changes to sessionStorage and URL
   const handleFilterChange = (filter: SelectedFilter) => {
     // Jika all: true (tidak seharusnya terjadi karena hideAllOption), ubah ke member pertama
     if (filter.all) {
-      const firstMemberId = DUMMY_MEMBERS[0]?.id ?? "m1"
+      const firstMemberId = realMembers[0]?.id ?? "m1"
       const newFilter: SelectedFilter = {
         type: "members",
         all: false,
@@ -77,7 +114,7 @@ export default function AppsPage() {
       }
       return
     }
-    
+
     setSelectedFilter(filter)
     if (!filter.all && filter.id && typeof window !== "undefined") {
       sessionStorage.setItem("appSelectedMemberId", filter.id)
@@ -88,7 +125,7 @@ export default function AppsPage() {
   }
 
   const selectedMemberId = selectedFilter.all ? null : (selectedFilter.id ?? null)
-  
+
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -110,14 +147,21 @@ export default function AppsPage() {
 
   // Filter dan group data berdasarkan date
   const groupedData = useMemo(() => {
-    let filtered = [...DUMMY_APP_ACTIVITIES]
+    let filtered: AppActivityEntry[] = []
+
+    // Use generator if member is selected to get randomized data
+    if (selectedMemberId) {
+      filtered = generateMemberAppActivities(selectedMemberId)
+    } else {
+      filtered = [...DUMMY_APP_ACTIVITIES]
+    }
 
     // Filter by project
     if (selectedProject !== "all") {
       filtered = filtered.filter(item => item.projectId === selectedProject)
     }
 
-    // Filter by member
+    // Filter by member (redundant if generated, but safe)
     if (selectedMemberId) {
       filtered = filtered.filter(item => item.memberId === selectedMemberId)
     }
@@ -180,7 +224,7 @@ export default function AppsPage() {
           onSelectedFilterChange={handleFilterChange}
           dateRange={dateRange}
           onDateRangeChange={setDateRange}
-          members={DUMMY_MEMBERS}
+          members={realMembers}
           teams={DUMMY_TEAMS}
           timezone={timezone}
           hideAllOption={true}
@@ -227,7 +271,7 @@ export default function AppsPage() {
             ) : (
               groupedData.map((group) => (
                 <React.Fragment key={group.date}>
-                 
+
                   {/* Data Rows */}
                   {group.items.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50">
@@ -247,4 +291,3 @@ export default function AppsPage() {
   )
 }
 
- 

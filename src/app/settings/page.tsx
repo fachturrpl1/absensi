@@ -125,7 +125,7 @@ export default function SettingsPage() {
       icon: FileText,
       items: [
         { label: 'Time off', href: '/settings/Policies' },
-        { label: 'Work breaks', href: '/settings/Policies/work-breaks' },
+        { label: 'Breaks', href: '/settings/Policies/work-breaks' },
         { label: 'Overtime', href: '/settings/Policies/overtime' },
       ],
     },

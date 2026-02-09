@@ -9,8 +9,8 @@ interface WorkBreaksSidebarProps {
 }
 
 const sidebarItems: { key: SidebarItemKey; label: string; href: string }[] = [
-    { key: "policies", label: "Work break policies", href: "/settings/Policies/work-breaks" },
-    { key: "notifications", label: "Work break notifications", href: "/settings/Policies/work-breaks/notifications" },
+    { key: "policies", label: "break policies", href: "/settings/Policies/work-breaks" },
+    { key: "notifications", label: "break notifications", href: "/settings/Policies/work-breaks/notifications" },
 ]
 
 export function WorkBreaksSidebar({ activeItem }: WorkBreaksSidebarProps) {

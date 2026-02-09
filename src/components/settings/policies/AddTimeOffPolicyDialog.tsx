@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { getAllOrganization_member } from "@/action/members"
+import { useState, useEffect, useRef, useCallback } from "react"
+import { getOrganizationMembersPaginated, getAllOrganizationMemberIds } from "@/action/members"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,9 +16,11 @@ interface AddTimeOffPolicyDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     onSave: (policy: any) => void
+    initialData?: any
+    mode?: "default" | "members" | "policy"
 }
 
-export function AddTimeOffPolicyDialog({ open, onOpenChange, onSave }: AddTimeOffPolicyDialogProps) {
+export function AddTimeOffPolicyDialog({ open, onOpenChange, onSave, initialData, mode = "default" }: AddTimeOffPolicyDialogProps) {
     const [step, setStep] = useState(1)
 
     // Form states
@@ -42,71 +44,156 @@ export function AddTimeOffPolicyDialog({ open, onOpenChange, onSave }: AddTimeOf
     const [selectedMembers, setSelectedMembers] = useState<string[]>([])
     const [availableMembers, setAvailableMembers] = useState<{ id: string; name: string }[]>([])
 
-    // Fetch members on mount
+    const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+    const [csvMemberCount, setCsvMemberCount] = useState(0)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
+    // Handle file selection
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            setUploadedFile(file)
+
+            // Parse CSV to count members
+            const reader = new FileReader()
+            reader.onload = (event) => {
+                const text = event.target?.result as string
+                // Split by newline, filter empty lines, remove header (first line)
+                const lines = text.split(/\r\n|\n/).filter(line => line.trim().length > 0)
+                // Assume first line is header, count rest
+                const count = Math.max(0, lines.length - 1)
+                setCsvMemberCount(count)
+            }
+            reader.readAsText(file)
+
+            // Reset input value to allow selecting same file again if needed
+            e.target.value = ''
+        }
+    }
+    // Fetch members on mount - MOVED TO MODAL
     useEffect(() => {
-        const fetchMembers = async () => {
-            try {
-                const result = await getAllOrganization_member()
-                if (result.success && result.data) {
-                    const mappedMembers = result.data.map((m: any) => ({
-                        id: m.id,
-                        name: m.user ? `${m.user.first_name || ''} ${m.user.last_name || ''}`.trim() : (m.biodata?.nama || "Unknown Member")
-                    }))
-                    setAvailableMembers(mappedMembers)
+        // Member fetching is now handled inside MemberSelectionModal
+    }, [])
+
+    // Populate data for Edit Mode
+    useEffect(() => {
+        if (open) {
+            if (initialData) {
+                // Edit Mode: Fill form
+                setPolicyName(initialData.name || "")
+                // Map display string back to value if needed, or store value directly
+                // Assuming 'accrualSchedule' in policy object matches value keys
+                setAccrualSchedule(
+                    initialData.accrualSchedule === "Policy joined date" ? "joined_date" :
+                        initialData.accrualSchedule === "Hours worked" ? "hours_worked" :
+                            initialData.accrualSchedule === "Monthly" ? "monthly" :
+                                initialData.accrualSchedule === "Annual" ? "annual" : "none"
+                )
+
+
+                // Restore member assignment state if available
+                if (initialData.assignMethod) {
+                    setAssignMethod(initialData.assignMethod)
+                    if (initialData.selectedMembers) setSelectedMembers(initialData.selectedMembers)
+                    if (initialData.csvMemberCount) setCsvMemberCount(initialData.csvMemberCount)
+                    if (initialData.autoAdd) setAutoAdd(initialData.autoAdd)
                 }
-            } catch (error) {
-                console.error("Failed to fetch members", error)
+
+                // Restore other policy fields
+                setMaxAccrual(initialData.maxAccrual || "")
+                setAccrualAmount(initialData.accrualAmount || "")
+                setAccrualRate(initialData.accrualRate || "")
+                setAccrualPer(initialData.accrualPer || "")
+                setAccrualDay(initialData.accrualDay || "monthly_anniversary")
+                setStartingBalance(initialData.startingBalance || "")
+                setAllowNegative(initialData.allowNegative !== undefined ? initialData.allowNegative : true)
+                setRollover(initialData.rollover !== undefined ? initialData.rollover : true)
+                setRequireApproval(initialData.requireApproval !== undefined ? initialData.requireApproval : false)
+                setPaidType(initialData.paidType || "paid")
+
+                setStep(1)
+            } else {
+                // Add Mode: Reset form
+                setStep(1)
+                setPolicyName("")
+                setAccrualSchedule("annual")
+                setUploadedFile(null)
+                setCsvMemberCount(0)
+                setSelectedMembers([])
+                setAssignMethod("")
+                setUploadedFile(null)
+
+                // Reset all other fields
+                setMaxAccrual("")
+                setAccrualAmount("")
+                setAccrualRate("")
+                setAccrualPer("")
+                setAccrualDay("monthly_anniversary")
+                setStartingBalance("")
+                setAllowNegative(true)
+                setRollover(true)
+                setRequireApproval(false)
+                setPaidType("paid")
+            }
+            // Override step for members mode
+            if (mode === "members") {
+                setStep(2)
             }
         }
-        fetchMembers()
-    }, [])
+    }, [open, initialData, mode])
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] p-0 gap-0 overflow-hidden flex flex-col">
                 <DialogHeader className="p-6 pb-2 flex-shrink-0">
-                    <DialogTitle className="text-xl">Add time off policy</DialogTitle>
+                    <DialogTitle className="text-xl">
+                        {mode === "members" ? "Edit assigned members" :
+                            mode === "policy" ? "Edit time off policy" :
+                                (initialData ? "Edit time off policy" : "Add time off policy")}
+                    </DialogTitle>
                 </DialogHeader>
 
                 {/* Progress Steps */}
-                <div className="px-6 pb-6 flex-shrink-0">
-                    <div className="relative flex items-center justify-between px-10 mb-4 items-start">
-                        {/* Connecting Line */}
-                        <div className="absolute left-0 right-0 top-4 -translate-y-1/2 h-1.5 bg-slate-200 -z-10 mx-14 rounded-full" />
+                {mode === "default" && (
+                    <div className="px-6 pb-6 flex-shrink-0">
+                        <div className="relative flex items-center justify-between px-10 mb-4 items-start">
+                            {/* Connecting Line */}
+                            <div className="absolute left-0 right-0 top-4 -translate-y-1/2 h-1.5 bg-slate-200 -z-10 mx-14 rounded-full" />
 
-                        {/* Step 1 */}
-                        <div className="flex flex-col items-center gap-2 bg-white z-10">
-                            <div className={cn(
-                                "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium border-2 transition-colors",
-                                step === 1
-                                    ? "border-slate-900 bg-white text-slate-900"
-                                    : "border-green-500 bg-green-500 text-white"
-                            )}>
-                                {step > 1 ? <Check className="h-5 w-5" /> : "1"}
+                            {/* Step 1 */}
+                            <div className="flex flex-col items-center gap-2 bg-white z-10">
+                                <div className={cn(
+                                    "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium border-2 transition-colors",
+                                    step === 1
+                                        ? "border-slate-900 bg-white text-slate-900"
+                                        : "border-slate-900 bg-slate-900 text-white"
+                                )}>
+                                    {step > 1 ? <Check className="h-5 w-5" /> : "1"}
+                                </div>
+                                <span className={cn(
+                                    "text-xs font-medium uppercase",
+                                    step === 1 ? "text-slate-900" : "text-slate-500"
+                                )}>Set up policy</span>
                             </div>
-                            <span className={cn(
-                                "text-xs font-medium uppercase",
-                                step === 1 ? "text-slate-900" : "text-slate-500"
-                            )}>Set up policy</span>
-                        </div>
 
-                        {/* Step 2 */}
-                        <div className="flex flex-col items-center gap-2 bg-white z-10">
-                            <div className={cn(
-                                "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium border-2",
-                                step === 2
-                                    ? "border-slate-900 bg-white text-slate-900"
-                                    : "border-slate-200 bg-white text-slate-300"
-                            )}>
-                                2
+                            {/* Step 2 */}
+                            <div className="flex flex-col items-center gap-2 bg-white z-10">
+                                <div className={cn(
+                                    "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium border-2",
+                                    step === 2
+                                        ? "border-slate-900 bg-white text-slate-900"
+                                        : "border-slate-200 bg-white text-slate-300"
+                                )}>
+                                    2
+                                </div>
+                                <span className={cn(
+                                    "text-xs font-medium uppercase",
+                                    step === 2 ? "text-slate-900" : "text-slate-400"
+                                )}>Assign members</span>
                             </div>
-                            <span className={cn(
-                                "text-xs font-medium uppercase",
-                                step === 2 ? "text-slate-900" : "text-slate-400"
-                            )}>Assign members</span>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Scrollable Content */}
                 <div className="px-6 py-2 overflow-y-auto flex-1 space-y-8">
@@ -228,12 +315,12 @@ export function AddTimeOffPolicyDialog({ open, onOpenChange, onSave }: AddTimeOf
                                     </div>
                                 ) : accrualSchedule === "hours_worked" ? (
                                     <div className="space-y-6">
-                                        <div className="rounded-md bg-blue-50 p-4 border border-blue-100">
+                                        <div className="rounded-md bg-slate-50 p-4 border border-slate-200">
                                             <div className="flex gap-3">
-                                                <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                                                <Info className="h-5 w-5 text-slate-900 flex-shrink-0 mt-0.5" />
                                                 <div className="text-sm text-slate-700">
                                                     <p>
-                                                        Time off hours accrue only when hours are <strong>marked as paid</strong> — they're included in a payment record, not necessarily paid out. <a href="#" className="text-blue-500 hover:underline">Learn more</a>
+                                                        Time off hours accrue only when hours are <strong>marked as paid</strong> — they're included in a payment record, not necessarily paid out. <a href="#" className="text-slate-900 hover:underline">Learn more</a>
                                                     </p>
                                                 </div>
                                             </div>
@@ -273,19 +360,33 @@ export function AddTimeOffPolicyDialog({ open, onOpenChange, onSave }: AddTimeOf
                                                     className="h-11 rounded-r-none border-r-0 w-32 focus-visible:ring-0 focus-visible:border-slate-300 shadow-none z-10"
                                                     value={maxAccrual}
                                                     onChange={(e) => setMaxAccrual(e.target.value)}
+                                                    placeholder="800"
                                                 />
                                                 <div className="flex h-11 items-center px-4 rounded-r-md border border-l-0 bg-slate-100 text-slate-600 text-sm group-focus-within:border-slate-300 transition-colors">
                                                     hours per year
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <div className="space-y-3">
+                                            <Label htmlFor="startingBalance" className="text-xs font-bold text-slate-500 uppercase">
+                                                STARTING BALANCE
+                                            </Label>
+                                            <Input
+                                                id="startingBalance"
+                                                placeholder="Enter initial hours"
+                                                value={startingBalance}
+                                                onChange={(e) => setStartingBalance(e.target.value)}
+                                                className="h-11 border-slate-300"
+                                            />
+                                        </div>
                                     </div>
                                 ) : accrualSchedule === "joined_date" ? (
                                     <div className="space-y-6">
-                                        <div className="rounded-md bg-white p-4 border border-blue-200 shadow-sm relative overflow-hidden">
-                                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
+                                        <div className="rounded-md bg-white p-4 border border-slate-200 shadow-sm relative overflow-hidden">
+                                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-500"></div>
                                             <div className="flex gap-3">
-                                                <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                                                <Info className="h-5 w-5 text-slate-500 flex-shrink-0 mt-0.5" />
                                                 <div className="text-sm text-slate-700">
                                                     <p>
                                                         Balances are prorated and may take up to <strong>24 hours</strong> to display for members added to a time off policy set to &ldquo;Policy joined date&rdquo;.
@@ -304,11 +405,25 @@ export function AddTimeOffPolicyDialog({ open, onOpenChange, onSave }: AddTimeOf
                                                     className="h-11 rounded-r-none border-r-0 w-32 focus-visible:ring-0 focus-visible:border-slate-300 shadow-none z-10"
                                                     value={maxAccrual}
                                                     onChange={(e) => setMaxAccrual(e.target.value)}
+                                                    placeholder="800"
                                                 />
                                                 <div className="flex h-11 items-center px-4 rounded-r-md border border-l-0 bg-slate-100 text-slate-600 text-sm group-focus-within:border-slate-300 transition-colors">
                                                     hours per year
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <Label htmlFor="startingBalance" className="text-xs font-bold text-slate-500 uppercase">
+                                                STARTING BALANCE
+                                            </Label>
+                                            <Input
+                                                id="startingBalance"
+                                                placeholder="Enter initial hours"
+                                                value={startingBalance}
+                                                onChange={(e) => setStartingBalance(e.target.value)}
+                                                className="h-11 border-slate-300"
+                                            />
                                         </div>
                                     </div>
                                 ) : accrualSchedule === "none" ? (
@@ -325,20 +440,36 @@ export function AddTimeOffPolicyDialog({ open, onOpenChange, onSave }: AddTimeOf
                                         />
                                     </div>
                                 ) : (
-                                    <div className="space-y-3">
-                                        <Label htmlFor="maxAccrual" className="text-xs font-bold text-slate-500 uppercase">
-                                            MAXIMUM ACCRUAL AMOUNT*
-                                        </Label>
-                                        <div className="flex items-center group">
-                                            <Input
-                                                id="maxAccrual"
-                                                className="h-11 rounded-r-none border-r-0 w-32 focus-visible:ring-0 focus-visible:border-slate-300 shadow-none z-10"
-                                                value={maxAccrual}
-                                                onChange={(e) => setMaxAccrual(e.target.value)}
-                                            />
-                                            <div className="flex h-11 items-center px-4 rounded-r-md border border-l-0 bg-slate-100 text-slate-600 text-sm group-focus-within:border-slate-300 transition-colors">
-                                                hours per year
+                                    <div className="space-y-6">
+                                        <div className="space-y-3">
+                                            <Label htmlFor="maxAccrual" className="text-xs font-bold text-slate-500 uppercase">
+                                                MAXIMUM ACCRUAL AMOUNT*
+                                            </Label>
+                                            <div className="flex items-center group">
+                                                <Input
+                                                    id="maxAccrual"
+                                                    className="h-11 rounded-r-none border-r-0 w-32 focus-visible:ring-0 focus-visible:border-slate-300 shadow-none z-10"
+                                                    value={maxAccrual}
+                                                    onChange={(e) => setMaxAccrual(e.target.value)}
+                                                    placeholder="800"
+                                                />
+                                                <div className="flex h-11 items-center px-4 rounded-r-md border border-l-0 bg-slate-100 text-slate-600 text-sm group-focus-within:border-slate-300 transition-colors">
+                                                    hours per year
+                                                </div>
                                             </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <Label htmlFor="startingBalance" className="text-xs font-bold text-slate-500 uppercase">
+                                                STARTING BALANCE
+                                            </Label>
+                                            <Input
+                                                id="startingBalance"
+                                                placeholder="Enter initial hours"
+                                                value={startingBalance}
+                                                onChange={(e) => setStartingBalance(e.target.value)}
+                                                className="h-11 border-slate-300"
+                                            />
                                         </div>
                                     </div>
                                 )}
@@ -473,7 +604,7 @@ export function AddTimeOffPolicyDialog({ open, onOpenChange, onSave }: AddTimeOf
                                         {assignMethod ? (
                                             <span className="text-slate-900 font-medium">
                                                 {assignMethod === "list" && "List of members"}
-                                                {assignMethod === "attributes" && "Home country and Employment type"}
+
                                                 {assignMethod === "import" && "Import CSV"}
                                             </span>
                                         ) : (
@@ -487,12 +618,7 @@ export function AddTimeOffPolicyDialog({ open, onOpenChange, onSave }: AddTimeOf
                                                 <span className="text-xs text-slate-500">List of all members belonging to the organization</span>
                                             </div>
                                         </SelectItem>
-                                        <SelectItem value="attributes" textValue="Home country and Employment type" className="py-3 cursor-pointer focus:bg-slate-50">
-                                            <div className="flex flex-col text-left gap-0.5">
-                                                <span className="font-medium text-slate-900">Home country and Employment type</span>
-                                                <span className="text-xs text-slate-500">Auto-assign by country and/or employment type fields from members profile</span>
-                                            </div>
-                                        </SelectItem>
+
                                         <SelectItem value="import" textValue="Import CSV" className="py-3 cursor-pointer focus:bg-slate-50">
                                             <div className="flex flex-col text-left gap-0.5">
                                                 <span className="font-medium text-slate-900">Import CSV</span>
@@ -532,72 +658,86 @@ export function AddTimeOffPolicyDialog({ open, onOpenChange, onSave }: AddTimeOf
                                 </div>
                             )}
 
-                            {assignMethod === "attributes" && (
-                                <div className="space-y-6 pt-2">
-                                    <div className="rounded-md bg-blue-50 p-4 border border-blue-100 flex gap-3">
-                                        <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                                        <div className="text-sm text-slate-700">
-                                            <p>
-                                                This policy is based on <strong>Home address - country</strong> and <strong>Employment type</strong> fields. <a href="#" className="text-blue-500 hover:underline">Member profiles</a> must be up-to-date to ensure proper policy assignment.
-                                            </p>
-                                        </div>
-                                    </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between items-end">
-                                                <Label className="text-xs font-bold text-slate-500 uppercase">
-                                                    HOME ADDRESS - COUNTRY
-                                                </Label>
-                                                <button className="text-sm font-medium text-blue-500 hover:text-blue-600 hover:underline">
-                                                    Select all
-                                                </button>
-                                            </div>
-                                            <Input
-                                                placeholder="Select home country"
-                                                className="h-11"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between items-end">
-                                                <Label className="text-xs font-bold text-slate-500 uppercase">
-                                                    EMPLOYMENT TYPE
-                                                </Label>
-                                                <button className="text-sm font-medium text-blue-500 hover:text-blue-600 hover:underline">
-                                                    Select all
-                                                </button>
-                                            </div>
-                                            <Input
-                                                placeholder="Select employment type"
-                                                className="h-11"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
 
                             {assignMethod === "import" && (
                                 <div className="space-y-4 pt-2">
-                                    <div className="border-2 border-dashed border-slate-200 rounded-lg p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition-colors">
-                                        <div className="h-12 w-12 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4">
-                                            <CloudUpload className="h-6 w-6" />
+                                    {!uploadedFile ? (
+                                        <div
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="border-2 border-dashed border-slate-200 rounded-lg p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition-colors"
+                                        >
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                className="hidden"
+                                                accept=".csv"
+                                                onChange={handleFileChange}
+                                            />
+                                            <div className="h-12 w-12 bg-slate-100 text-slate-900 rounded-full flex items-center justify-center mb-4">
+                                                <CloudUpload className="h-6 w-6" />
+                                            </div>
+                                            <h3 className="text-sm font-medium text-slate-900 mb-1">
+                                                Click to upload or drag and drop
+                                            </h3>
+                                            <p className="text-xs text-slate-500 mb-4">
+                                                CSV file up to 10MB
+                                            </p>
+                                            <Button variant="outline" className="h-9" onClick={(e) => {
+                                                e.stopPropagation()
+                                                fileInputRef.current?.click()
+                                            }}>
+                                                Browse file
+                                            </Button>
                                         </div>
-                                        <h3 className="text-sm font-medium text-slate-900 mb-1">
-                                            Click to upload or drag and drop
-                                        </h3>
-                                        <p className="text-xs text-slate-500 mb-4">
-                                            CSV file up to 10MB
-                                        </p>
-                                        <Button variant="outline" className="h-9">
-                                            Browse file
-                                        </Button>
-                                    </div>
+                                    ) : (
+                                        <div className="border rounded-lg p-4 flex items-center justify-between bg-white">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-10 w-10 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                    <div className="text-green-600 font-bold text-xs">CSV</div>
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium text-slate-900 truncate max-w-[200px]">
+                                                        {uploadedFile.name}
+                                                    </p>
+                                                    <p className="text-xs text-slate-500">
+                                                        {(uploadedFile.size / 1024).toFixed(1)} KB • {csvMemberCount} members found
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setUploadedFile(null)
+                                                    setCsvMemberCount(0)
+                                                }}
+                                                className="text-slate-500 hover:text-red-600 hover:bg-red-50"
+                                            >
+                                                Remove
+                                            </Button>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between items-center text-xs text-slate-500">
                                         <span>Supported format: .csv</span>
-                                        <a href="#" className="text-blue-500 hover:underline flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const csvContent = "Email\nemail1@email.com\nemail2@example.com";
+                                                const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                                                const link = document.createElement("a");
+                                                const url = URL.createObjectURL(blob);
+                                                link.setAttribute("href", url);
+                                                link.setAttribute("download", "members_email.csv");
+                                                link.style.visibility = "hidden";
+                                                document.body.appendChild(link);
+                                                link.click();
+                                                document.body.removeChild(link);
+                                            }}
+                                            className="text-slate-900 hover:underline flex items-center gap-1 font-medium"
+                                        >
                                             Download template
-                                        </a>
+                                        </button>
                                     </div>
                                 </div>
                             )}
@@ -610,23 +750,39 @@ export function AddTimeOffPolicyDialog({ open, onOpenChange, onSave }: AddTimeOf
                         Cancel
                     </Button>
                     <div className="flex gap-2">
-                        {step === 2 && (
+                        {step === 2 && mode !== "members" && (
                             <Button variant="outline" onClick={() => setStep(1)} className="h-11 px-8">
                                 Back
                             </Button>
                         )}
                         <Button
                             onClick={() => {
-                                if (step === 1) {
+                                if (step === 1 && mode !== "policy") {
                                     setStep(2)
                                 } else {
                                     onSave({
                                         name: policyName,
-                                        members: selectedMembers.length,
+                                        members: assignMethod === "import" ? csvMemberCount : selectedMembers.length,
+                                        // Persist state for editing
+                                        assignMethod,
+                                        selectedMembers,
+                                        csvMemberCount,
+                                        autoAdd,
                                         accrualSchedule: accrualSchedule === "joined_date" ? "Policy joined date" :
                                             accrualSchedule === "hours_worked" ? "Hours worked" :
                                                 accrualSchedule === "monthly" ? "Monthly" :
-                                                    accrualSchedule === "annual" ? "Annual" : "None"
+                                                    accrualSchedule === "annual" ? "Annual" : "None",
+                                        // Data fields
+                                        maxAccrual,
+                                        accrualAmount,
+                                        accrualRate,
+                                        accrualPer,
+                                        accrualDay,
+                                        startingBalance,
+                                        allowNegative,
+                                        rollover,
+                                        requireApproval,
+                                        paidType
                                     })
                                     onOpenChange(false)
                                     // Reset step for next time
@@ -637,7 +793,7 @@ export function AddTimeOffPolicyDialog({ open, onOpenChange, onSave }: AddTimeOf
                                 "h-11 px-8 text-white",
                                 "bg-slate-900 hover:bg-slate-800"
                             )}>
-                            {step === 1 ? "Next" : "Save"}
+                            {step === 1 && mode !== "policy" ? "Next" : "Save"}
                         </Button>
                     </div>
                 </DialogFooter>
@@ -648,23 +804,23 @@ export function AddTimeOffPolicyDialog({ open, onOpenChange, onSave }: AddTimeOf
                 onOpenChange={setIsMemberSelectionOpen}
                 selectedMembers={selectedMembers}
                 onSave={setSelectedMembers}
-                members={availableMembers}
             />
         </Dialog >
     )
 }
 
-function MemberSelectionModal({ open, onOpenChange, selectedMembers, onSave, members }: {
+function MemberSelectionModal({ open, onOpenChange, selectedMembers, onSave }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     selectedMembers: string[];
     onSave: (members: string[]) => void;
-    members: { id: string; name: string }[];
 }) {
-    // Mock members data removed
-
     const [localSelected, setLocalSelected] = useState<string[]>(selectedMembers)
     const [searchQuery, setSearchQuery] = useState("")
+
+    const [members, setMembers] = useState<{ id: string; name: string }[]>([])
+    const [totalMembers, setTotalMembers] = useState(0)
+    const [isLoading, setIsLoading] = useState(false)
 
     const [currentPage, setCurrentPage] = useState(1)
     const ITEMS_PER_PAGE = 10
@@ -673,20 +829,48 @@ function MemberSelectionModal({ open, onOpenChange, selectedMembers, onSave, mem
     useEffect(() => {
         if (open) {
             setLocalSelected(selectedMembers)
-            setCurrentPage(1) // Reset to first page on open
         }
     }, [open, selectedMembers])
 
-    // Reset page when search changes
+    // Fetch members with server-side pagination
+    const fetchMembers = useCallback(async (page: number, query: string) => {
+        setIsLoading(true)
+        try {
+            const result = await getOrganizationMembersPaginated({
+                page,
+                pageSize: ITEMS_PER_PAGE,
+                query
+            })
+
+            if (result.success && result.data) {
+                setMembers(result.data)
+                setTotalMembers(result.metadata.total)
+            }
+        } catch (error) {
+            console.error("Failed to fetch members", error)
+        } finally {
+            setIsLoading(false)
+        }
+    }, [])
+
+    // Debounce search
     useEffect(() => {
-        setCurrentPage(1)
-    }, [searchQuery])
+        const timer = setTimeout(() => {
+            setCurrentPage(1)
+            fetchMembers(1, searchQuery)
+        }, 500)
+        return () => clearTimeout(timer)
+    }, [searchQuery, fetchMembers])
 
-    const filteredMembers = members.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    // Handle page change
+    useEffect(() => {
+        if (currentPage > 1) {
+            fetchMembers(currentPage, searchQuery)
+        }
+    }, [currentPage, fetchMembers])
 
-    const totalPages = Math.ceil(filteredMembers.length / ITEMS_PER_PAGE)
+    const totalPages = Math.ceil(totalMembers / ITEMS_PER_PAGE)
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-    const paginatedMembers = filteredMembers.slice(startIndex, startIndex + ITEMS_PER_PAGE)
 
     const handleToggle = (id: string) => {
         if (localSelected.includes(id)) {
@@ -696,9 +880,22 @@ function MemberSelectionModal({ open, onOpenChange, selectedMembers, onSave, mem
         }
     }
 
-    const handleSelectAll = () => {
-        // Select all filtered members (across all pages)
-        setLocalSelected(filteredMembers.map(m => m.id))
+    const handleSelectAllOnPage = () => {
+        const allVisibleSelected = members.every(m => localSelected.includes(m.id));
+
+        if (allVisibleSelected) {
+            const visibleIds = members.map(m => m.id);
+            setLocalSelected(localSelected.filter(id => !visibleIds.includes(id)));
+        } else {
+            const visibleIds = members.map(m => m.id);
+            const newSelected = [...localSelected];
+            visibleIds.forEach(id => {
+                if (!newSelected.includes(id)) {
+                    newSelected.push(id);
+                }
+            });
+            setLocalSelected(newSelected);
+        }
     }
 
     const handleClearAll = () => {
@@ -713,62 +910,57 @@ function MemberSelectionModal({ open, onOpenChange, selectedMembers, onSave, mem
                 </DialogHeader>
 
                 <div className="px-4 pb-0">
-                    <div className="flex border-b border-blue-500 w-max">
-                        <button className="px-1 py-2 text-sm font-medium text-blue-500">
+                    <div className="flex border-b border-slate-900 w-max">
+                        <button className="px-1 py-2 text-sm font-medium text-slate-900">
                             MEMBERS
                         </button>
                     </div>
                 </div>
 
                 <div className="p-4 space-y-4 flex-1 overflow-hidden flex flex-col">
-                    {/* Search and Actions */}
                     <div className="flex items-center gap-4">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <input
+                                type="text"
                                 placeholder="Search members"
-                                className="pl-9 pr-8 h-10 rounded-full border-slate-300"
+                                className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
-                            {searchQuery && (
-                                <button
-                                    onClick={() => setSearchQuery("")}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                                >
-                                    <X className="h-4 w-4" />
-                                </button>
-                            )}
                         </div>
                         <div className="flex gap-2 text-sm">
-                            <button onClick={handleSelectAll} className="text-blue-500 hover:underline font-medium">Select all</button>
+                            <button onClick={handleSelectAll} className="text-slate-900 hover:underline font-medium" disabled={isLoading}>
+                                {isLoading ? "Loading..." : (totalMembers > 0 && localSelected.length >= totalMembers ? "Deselect all" : "Select all")}
+                            </button>
                             <button onClick={handleClearAll} className="text-slate-500 hover:underline">Clear all</button>
                         </div>
                     </div>
 
-                    {/* Members List */}
                     <div className="border border-slate-200 rounded-md flex-1 overflow-hidden flex flex-col">
                         <div className="bg-slate-50 p-3 border-b border-slate-200 flex justify-between items-center">
                             <div className="flex items-center gap-3">
                                 <Checkbox
-                                    checked={localSelected.length > 0 && localSelected.length === filteredMembers.length}
-                                    onCheckedChange={(checked) => checked ? handleSelectAll() : handleClearAll()}
-                                    className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+                                    checked={totalMembers > 0 && localSelected.length >= totalMembers}
+                                    onCheckedChange={() => handleSelectAll()}
+                                    className="data-[state=checked]:bg-slate-900 data-[state=checked]:border-slate-900 data-[state=checked]:text-white"
                                 />
                                 <span className="text-sm font-medium text-slate-700">
-                                    Members ({localSelected.length}/{members.length})
+                                    Selected ({localSelected.length})
                                 </span>
                             </div>
                         </div>
                         <div className="overflow-y-auto flex-1 p-2 space-y-1">
-                            {paginatedMembers.length > 0 ? (
-                                paginatedMembers.map(member => (
+                            {isLoading ? (
+                                <div className="p-4 text-center text-sm text-slate-500">Loading...</div>
+                            ) : members.length > 0 ? (
+                                members.map(member => (
                                     <div key={member.id} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-md transition-colors">
                                         <Checkbox
                                             id={`member-${member.id}`}
                                             checked={localSelected.includes(member.id)}
                                             onCheckedChange={() => handleToggle(member.id)}
-                                            className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+                                            className="data-[state=checked]:bg-slate-900 data-[state=checked]:border-slate-900 data-[state=checked]:text-white"
                                         />
                                         <Label htmlFor={`member-${member.id}`} className="text-sm text-slate-700 font-normal cursor-pointer flex-1">
                                             {member.name}
@@ -782,14 +974,13 @@ function MemberSelectionModal({ open, onOpenChange, selectedMembers, onSave, mem
                             )}
                         </div>
 
-                        {/* Pagination Controls */}
                         {totalPages > 1 && (
                             <div className="p-2 border-t border-slate-100 flex items-center justify-between bg-slate-50">
                                 <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
+                                    disabled={currentPage === 1 || isLoading}
                                     className="h-8 px-2 text-xs"
                                 >
                                     Previous
@@ -801,7 +992,7 @@ function MemberSelectionModal({ open, onOpenChange, selectedMembers, onSave, mem
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
+                                    disabled={currentPage === totalPages || isLoading}
                                     className="h-8 px-2 text-xs"
                                 >
                                     Next
@@ -811,7 +1002,7 @@ function MemberSelectionModal({ open, onOpenChange, selectedMembers, onSave, mem
                     </div>
 
                     <div className="text-xs text-slate-500">
-                        Showing {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredMembers.length)} of {filteredMembers.length} members
+                        Showing {startIndex + 1}-{Math.min(startIndex + members.length, totalMembers)} of {totalMembers} members
                     </div>
                 </div>
 
@@ -821,7 +1012,7 @@ function MemberSelectionModal({ open, onOpenChange, selectedMembers, onSave, mem
                             onSave(localSelected)
                             onOpenChange(false)
                         }}
-                        className="bg-blue-500 hover:bg-blue-600 text-white w-24"
+                        className="bg-slate-900 hover:bg-slate-800 text-white w-24"
                     >
                         Save
                     </Button>

@@ -146,7 +146,7 @@ export default function WorkBreaksPage() {
 
     return (
         <div className="px-6 py-4">
-            <h1 className="text-xl font-semibold mb-5">Work Break Report</h1>
+            <h1 className="text-xl font-semibold mb-5">Break Report</h1>
 
             <InsightsHeader
                 selectedFilter={selectedFilter}

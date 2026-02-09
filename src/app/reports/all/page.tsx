@@ -86,7 +86,7 @@ export default function AllReportsPage() {
                     href: "/reports/expenses"
                 },
                 {
-                    title: "Work breaks",
+                    title: "Breaks",
                     description: "See how many work breaks team members are taking",
                     href: "/reports/work-breaks"
                 },

@@ -1,11 +1,96 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { PoliciesHeader } from "@/components/settings/PoliciesHeader"
 import { WorkBreaksSidebar } from "@/components/settings/WorkBreaksSidebar"
 import { Button } from "@/components/ui/button"
-import { Plus, Coffee } from "lucide-react"
+import { Plus, Coffee, ChevronDown } from "lucide-react"
+import { AddWorkBreakPolicyDialog } from "@/components/settings/policies/AddWorkBreakPolicyDialog"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { User } from "lucide-react"
 
 export default function WorkBreaksPage() {
+    const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [policies, setPolicies] = useState<any[]>([])
+    const [editingPolicy, setEditingPolicy] = useState<any | null>(null)
+    const [activeTab, setActiveTab] = useState<"ACTIVE" | "ARCHIVED">("ACTIVE")
+    const [isViewMode, setIsViewMode] = useState(false)
+
+    // Load policies from localStorage
+    useEffect(() => {
+        const saved = localStorage.getItem("workBreakPolicies")
+        if (saved) {
+            try {
+                setPolicies(JSON.parse(saved))
+            } catch (e) {
+                console.error("Failed to parse break policies", e)
+            }
+        }
+    }, [])
+
+    const handleSavePolicy = (policy: any) => {
+        let newPolicies
+        if (editingPolicy) {
+            // Update existing policy
+            newPolicies = policies.map(p => p.id === editingPolicy.id ? { ...policy, id: editingPolicy.id } : p)
+            setEditingPolicy(null)
+        } else {
+            // Add new policy
+            newPolicies = [...policies, { ...policy, id: Date.now(), status: "ACTIVE" }]
+        }
+        setPolicies(newPolicies)
+        localStorage.setItem("workBreakPolicies", JSON.stringify(newPolicies))
+    }
+
+    const handleEditPolicy = (policy: any) => {
+        setEditingPolicy(policy)
+        setIsViewMode(false)
+        setIsDialogOpen(true)
+    }
+
+    const handleArchivePolicy = (policyId: number) => {
+        const newPolicies = policies.map(p =>
+            p.id === policyId ? { ...p, status: "ARCHIVED" } : p
+        )
+        setPolicies(newPolicies)
+        localStorage.setItem("workBreakPolicies", JSON.stringify(newPolicies))
+    }
+
+    const handleRestorePolicy = (policyId: number) => {
+        const newPolicies = policies.map(p =>
+            p.id === policyId ? { ...p, status: "ACTIVE" } : p
+        )
+        setPolicies(newPolicies)
+        localStorage.setItem("workBreakPolicies", JSON.stringify(newPolicies))
+    }
+
+    const handleViewPolicy = (policy: any) => {
+        setEditingPolicy(policy)
+        setIsViewMode(true)
+        setIsDialogOpen(true)
+    }
+
+    const handleDialogClose = (open: boolean) => {
+        setIsDialogOpen(open)
+        if (!open) {
+            setEditingPolicy(null)
+            setIsViewMode(false)
+        }
+    }
+
     return (
         <div className="flex flex-col min-h-screen bg-white">
             <PoliciesHeader activeTab="work-breaks" />
@@ -14,34 +99,135 @@ export default function WorkBreaksPage() {
                 <div className="flex-1 p-8">
                     {/* Tabs */}
                     <div className="flex border-b border-slate-200 mb-8">
-                        <button className="px-4 py-2 text-sm font-medium text-slate-900 border-b-2 border-slate-900">
+                        <button
+                            className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === "ACTIVE"
+                                ? "text-slate-900 border-b-2 border-slate-900"
+                                : "text-slate-500 hover:text-slate-700"
+                                }`}
+                            onClick={() => setActiveTab("ACTIVE")}
+                        >
                             ACTIVE
                         </button>
-                        <button className="px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-colors">
+                        <button
+                            className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === "ARCHIVED"
+                                ? "text-slate-900 border-b-2 border-slate-900"
+                                : "text-slate-500 hover:text-slate-700"
+                                }`}
+                            onClick={() => setActiveTab("ARCHIVED")}
+                        >
                             ARCHIVED
                         </button>
                     </div>
 
                     {/* Empty State */}
-                    <div className="flex flex-col items-center justify-center py-16 text-center max-w-2xl mx-auto">
-                        <div className="w-64 h-64 mb-6 relative">
-                            {/* Placeholder for the illustration in the screenshot - using Coffee icon as placeholder for now, 
-                                but in a real scenario we might want the specific illustration */}
-                            <div className="w-full h-full bg-slate-50 rounded-full flex items-center justify-center">
-                                <Coffee className="w-24 h-24 text-slate-300" />
+
+                    {/* Content */}
+                    {policies.filter(p => p.status === activeTab).length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-center max-w-2xl mx-auto">
+                            <div className="w-64 h-64 mb-6 relative">
+                                <div className="w-full h-full bg-slate-50 rounded-full flex items-center justify-center">
+                                    <Coffee className="w-24 h-24 text-slate-300" />
+                                </div>
+                            </div>
+                            <h2 className="text-xl font-semibold text-slate-900 mb-2">
+                                No active break policies
+                            </h2>
+                            <p className="text-slate-500 mb-8">
+                                Set up automatic break policies
+                            </p>
+                            <Button
+                                className="bg-slate-900 hover:bg-slate-800 text-white rounded-full h-11 px-6 font-medium"
+                                onClick={() => setIsDialogOpen(true)}
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add break policy
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">BREAK POLICIES</h2>
+                                    <p className="text-slate-500 text-sm">Set up automatic break policies</p>
+                                </div>
+                                <Button
+                                    className="bg-slate-900 hover:bg-slate-800 text-white rounded-md h-10 px-4 font-medium"
+                                    onClick={() => setIsDialogOpen(true)}
+                                >
+                                    Add policy
+                                </Button>
+                            </div>
+
+                            <div className="rounded-md border border-slate-100">
+                                <Table>
+                                    <TableHeader className="bg-white">
+                                        <TableRow className="hover:bg-transparent border-b-slate-100">
+                                            <TableHead className="w-[300px] font-bold text-slate-900">Policy name</TableHead>
+                                            <TableHead className="font-bold text-slate-900">Members</TableHead>
+                                            <TableHead className="font-bold text-slate-900">Type</TableHead>
+                                            <TableHead className="w-[100px]"></TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {policies.filter(p => p.status === activeTab).map((policy) => (
+                                            <TableRow key={policy.id} className="hover:bg-slate-50 border-b-slate-100">
+                                                <TableCell className="font-medium text-slate-700 py-4">
+                                                    {policy.name}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="bg-slate-200 rounded-full w-6 h-6 flex items-center justify-center">
+                                                            <User className="w-3 h-3 text-slate-500" />
+                                                        </div>
+                                                        <span className="text-sm text-slate-600">
+                                                            {policy.members?.length || 0}
+                                                        </span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-slate-600 capitalize">
+                                                    {policy.type}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" className="h-8 w-max px-2 gap-2 text-slate-500 text-xs border border-slate-200 rounded-md hover:bg-white hover:text-slate-700">
+                                                                Actions <ChevronDown className="w-3 h-3" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            {activeTab === "ACTIVE" ? (
+                                                                <>
+                                                                    <DropdownMenuItem onClick={() => handleEditPolicy(policy)}>Edit policy</DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleArchivePolicy(policy.id)}>Archive policy</DropdownMenuItem>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <DropdownMenuItem onClick={() => handleViewPolicy(policy)}>View</DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleRestorePolicy(policy.id)}>Restore</DropdownMenuItem>
+                                                                </>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            <div className="text-sm text-slate-500">
+                                Showing {policies.filter(p => p.status === activeTab).length} of {policies.filter(p => p.status === activeTab).length} policy
                             </div>
                         </div>
-                        <h2 className="text-xl font-semibold text-slate-900 mb-2">
-                            No active work break policies
-                        </h2>
-                        <p className="text-slate-500 mb-8">
-                            Set up automatic work break policies
-                        </p>
-                        <Button className="bg-slate-900 hover:bg-slate-800 text-white rounded-full">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add work break policy
-                        </Button>
-                    </div>
+                    )}
+
+                    <AddWorkBreakPolicyDialog
+                        open={isDialogOpen}
+                        onOpenChange={handleDialogClose}
+                        onSave={handleSavePolicy}
+                        initialData={editingPolicy}
+                        readOnly={isViewMode}
+                    />
                 </div>
             </div>
         </div>

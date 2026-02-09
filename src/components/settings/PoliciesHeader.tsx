@@ -11,7 +11,7 @@ interface PoliciesHeaderProps {
 
 const tabs: { key: TabKey; label: string; href: string }[] = [
     { key: "time-off", label: "TIME OFF", href: "/settings/Policies" },
-    { key: "work-breaks", label: "WORK BREAKS", href: "/settings/Policies/work-breaks" }, // Assuming these routes for now
+    { key: "work-breaks", label: "BREAKS", href: "/settings/Policies/work-breaks" }, // Assuming these routes for now
     { key: "overtime", label: "OVERTIME", href: "/settings/Policies/overtime" },       // Assuming these routes for now
 ]
 

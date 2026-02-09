@@ -17,6 +17,8 @@ export default function TimeOffPoliciesPage() {
     const [activeTab, setActiveTab] = useState<"ACTIVE" | "ARCHIVED">("ACTIVE")
     const [activePolicies, setActivePolicies] = useState<any[]>([])
     const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [editingPolicy, setEditingPolicy] = useState<any>(null)
+    const [editMode, setEditMode] = useState<"default" | "members" | "policy">("default")
     const [isLoaded, setIsLoaded] = useState(false)
 
     // Load from localStorage on mount
@@ -40,8 +42,18 @@ export default function TimeOffPoliciesPage() {
     }, [activePolicies, isLoaded])
 
     const handleSavePolicy = (policy: any) => {
-        const newPolicy = { ...policy, id: Date.now(), status: "ACTIVE" }
-        setActivePolicies([...activePolicies, newPolicy])
+        if (editingPolicy) {
+            // Update existing
+            const updatedPolicies = activePolicies.map(p =>
+                p.id === editingPolicy.id ? { ...p, ...policy } : p
+            )
+            setActivePolicies(updatedPolicies)
+            setEditingPolicy(null)
+        } else {
+            // Add new
+            const newPolicy = { ...policy, id: Date.now(), status: "ACTIVE" }
+            setActivePolicies([...activePolicies, newPolicy])
+        }
     }
 
     const handleArchivePolicy = (policyId: number) => {
@@ -54,6 +66,16 @@ export default function TimeOffPoliciesPage() {
         setActivePolicies(activePolicies.map(p =>
             p.id === policyId ? { ...p, status: "ACTIVE" } : p
         ))
+    }
+
+    const handleRemovePolicy = (policyId: number) => {
+        setActivePolicies(activePolicies.filter(p => p.id !== policyId))
+    }
+
+    const handleEditPolicy = (policy: any, mode: "default" | "members" | "policy" = "default") => {
+        setEditingPolicy(policy)
+        setEditMode(mode)
+        setIsDialogOpen(true)
     }
 
     const filteredPolicies = activePolicies.filter(p => p.status === activeTab)
@@ -103,7 +125,10 @@ export default function TimeOffPoliciesPage() {
                                 </div>
                                 {activeTab === "ACTIVE" && (
                                     <Button
-                                        onClick={() => setIsDialogOpen(true)}
+                                        onClick={() => {
+                                            setEditingPolicy(null)
+                                            setIsDialogOpen(true)
+                                        }}
                                         className="bg-slate-900 hover:bg-slate-800 text-white"
                                     >
                                         Add policy
@@ -126,7 +151,30 @@ export default function TimeOffPoliciesPage() {
                                             <tr key={policy.id} className="border-b border-slate-50">
                                                 <td className="py-4 text-slate-900">{policy.name}</td>
                                                 <td className="py-4 text-slate-900">{policy.members}</td>
-                                                <td className="py-4 text-slate-900">{policy.accrualSchedule}</td>
+                                                <td className="py-4 text-slate-900">
+                                                    <div>
+                                                        <div className="font-medium text-slate-900">
+                                                            {policy.accrualSchedule}
+                                                        </div>
+                                                        <div className="text-sm text-slate-500">
+                                                            {policy.accrualSchedule === "Annual" && policy.maxAccrual && (
+                                                                `${policy.maxAccrual} hours per year`
+                                                            )}
+                                                            {policy.accrualSchedule === "Monthly" && policy.accrualAmount && (
+                                                                `${policy.accrualAmount} hours / month`
+                                                            )}
+                                                            {policy.accrualSchedule === "Hours worked" && policy.accrualRate && policy.accrualPer && (
+                                                                `${policy.accrualRate} hour(s) for every ${policy.accrualPer} hours worked`
+                                                            )}
+                                                            {policy.accrualSchedule === "None" && policy.startingBalance && (
+                                                                `Starting balance: ${policy.startingBalance} hours`
+                                                            )}
+                                                            {policy.accrualSchedule === "Policy joined date" && policy.maxAccrual && (
+                                                                `${policy.maxAccrual} hours per year`
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </td>
                                                 <td className="py-4 text-right">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
@@ -137,10 +185,10 @@ export default function TimeOffPoliciesPage() {
                                                         <DropdownMenuContent align="end" className="w-[160px]">
                                                             {activeTab === "ACTIVE" ? (
                                                                 <>
-                                                                    <DropdownMenuItem className="cursor-pointer">
+                                                                    <DropdownMenuItem className="cursor-pointer" onClick={() => handleEditPolicy(policy, "policy")}>
                                                                         Edit time off
                                                                     </DropdownMenuItem>
-                                                                    <DropdownMenuItem className="cursor-pointer">
+                                                                    <DropdownMenuItem className="cursor-pointer" onClick={() => handleEditPolicy(policy, "members")}>
                                                                         Edit members
                                                                     </DropdownMenuItem>
                                                                     <DropdownMenuItem
@@ -149,7 +197,10 @@ export default function TimeOffPoliciesPage() {
                                                                     >
                                                                         Archive
                                                                     </DropdownMenuItem>
-                                                                    <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600">
+                                                                    <DropdownMenuItem
+                                                                        className="cursor-pointer text-red-600 focus:text-red-600"
+                                                                        onClick={() => handleRemovePolicy(policy.id)}
+                                                                    >
                                                                         Remove
                                                                     </DropdownMenuItem>
                                                                 </>
@@ -214,8 +265,16 @@ export default function TimeOffPoliciesPage() {
             </div>
             <AddTimeOffPolicyDialog
                 open={isDialogOpen}
-                onOpenChange={setIsDialogOpen}
+                onOpenChange={(open) => {
+                    setIsDialogOpen(open)
+                    if (!open) {
+                        setEditingPolicy(null)
+                        setEditMode("default")
+                    }
+                }}
                 onSave={handleSavePolicy}
+                initialData={editingPolicy}
+                mode={editMode}
             />
         </div>
     )
