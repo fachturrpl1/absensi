@@ -39,6 +39,7 @@ import {
   Activity,
   Link as LinkIcon,
   Building,
+  Blocks,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -95,8 +96,8 @@ interface NavGroup {
 
 // Helper function untuk determine menu visibility berdasarkan pathname
 const shouldShowMenuItem = (pathname: string, itemTitle: string): boolean => {
-  // Di halaman /organization kecuali /organization/settings, hanya tampilkan All Organizations saja
-  if (pathname.startsWith('/organization') && !pathname.startsWith('/organization/settings')) {
+  // Di halaman /organization kecuali /organization/settings dan /organization/integrations, hanya tampilkan All Organizations saja
+  if (pathname.startsWith('/organization') && !pathname.startsWith('/organization/settings') && !pathname.startsWith('/organization/integrations')) {
     // Hanya tampilkan All Organizations menu
     return itemTitle === 'All Organizations'
   }
@@ -214,6 +215,7 @@ const getSidebarGroups = (): NavGroup[] => [
         subItems: [
           { title: 'Feature Settings', url: '/settings', icon: Settings },
           { title: 'Organization Settings', url: '/organization/settings', icon: Building },
+          { title: 'Integrations', url: '/organization/integrations', icon: Blocks },
         ],
       },
     ],
