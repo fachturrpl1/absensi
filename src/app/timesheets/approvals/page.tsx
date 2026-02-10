@@ -398,8 +398,8 @@ export default function TimesheetApprovalsPage() {
                                         {visibleCols.screenshots && (
                                             <td className="p-4">
                                                 <Link href={`/activity/screenshots?memberId=${row.memberId}`}>
-                                                    <Button variant="outline" size="sm" className="h-7 text-xs text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100 hover:text-blue-700 rounded-full">
-                                                        {row.screenshotCount || 0} screens
+                                                    <Button variant="outline" size="sm" className="hover:cursor-pointer h-7 text-xs text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100 hover:text-blue-700 rounded-full">
+                                                      screens
                                                     </Button>
                                                 </Link>
                                             </td>

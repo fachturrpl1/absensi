@@ -49,16 +49,6 @@ const getTaskName = (taskId?: string, taskName?: string) => {
     return "No to-do"
 }
 
-const formatTimeAMPM = (time: string) => {
-    if (!time) return ""
-    // Ensure we handle HH:mm:ss or HH:mm
-    const [h = "0", m = "00"] = time.split(':')
-    const hour = parseInt(h, 10)
-    const ampm = hour >= 12 ? 'PM' : 'AM'
-    const hour12 = hour % 12 || 12
-    return `${hour12.toString().padStart(2, '0')}:${m} ${ampm}`
-}
-
 export default function ViewEditTimesheetsPage() {
     const timezone = useTimezone()
     const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({ type: "members", all: true, id: "all" })
@@ -462,7 +452,7 @@ export default function ViewEditTimesheetsPage() {
                                                                 className="text-gray-900 hover:text-blue-500 hover:underline cursor-pointer"
                                                                 onClick={() => handleQuickEdit(row)}
                                                             >
-                                                                {formatTimeAMPM(row.startTime)} - {formatTimeAMPM(row.endTime)}
+                                                                {row.startTime} - {row.endTime}
                                                             </span>
                                                         </td>
                                                     )}

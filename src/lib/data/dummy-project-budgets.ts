@@ -15,7 +15,7 @@ export interface ProjectBudgetEntry {
 export const DUMMY_PROJECT_BUDGETS: ProjectBudgetEntry[] = [
     {
         id: 'pb-1',
-        projectId: 'proj-1',
+        projectId: '1',
         projectName: 'Website Redesign',
         clientName: 'Patricia',
         budgetType: 'cost',
@@ -27,7 +27,7 @@ export const DUMMY_PROJECT_BUDGETS: ProjectBudgetEntry[] = [
     },
     {
         id: 'pb-2',
-        projectId: 'proj-2',
+        projectId: '2',
         projectName: 'Mobile App Development',
         clientName: 'Tech Corp',
         budgetType: 'cost',
@@ -39,7 +39,7 @@ export const DUMMY_PROJECT_BUDGETS: ProjectBudgetEntry[] = [
     },
     {
         id: 'pb-3',
-        projectId: 'proj-3',
+        projectId: '3',
         projectName: 'Marketing Campaign',
         clientName: 'Patricia',
         budgetType: 'hours',
@@ -51,7 +51,7 @@ export const DUMMY_PROJECT_BUDGETS: ProjectBudgetEntry[] = [
     },
     {
         id: 'pb-4',
-        projectId: 'proj-4',
+        projectId: '4',
         projectName: 'Internal Tools',
         clientName: 'Internal',
         budgetType: 'hours',
@@ -63,7 +63,7 @@ export const DUMMY_PROJECT_BUDGETS: ProjectBudgetEntry[] = [
     },
     {
         id: 'pb-5',
-        projectId: 'proj-5',
+        projectId: '5',
         projectName: 'Legacy System Maintenance',
         clientName: 'Old Client',
         budgetType: 'cost',

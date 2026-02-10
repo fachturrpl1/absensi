@@ -140,17 +140,17 @@ export interface ProjectTask {
 }
 
 export const DUMMY_PROJECT_TASKS: ProjectTask[] = [
-    { id: "t-1", title: "Setup repository", projectId: "proj-1", assigneeId: "m1", status: "done" },
-    { id: "t-2", title: "Create design system", projectId: "proj-1", assigneeId: "m2", status: "in_progress" },
-    { id: "t-3", title: "Landing page hero", projectId: "proj-1", assigneeId: "m3", status: "todo" },
-    { id: "t-4", title: "API contracts", projectId: "proj-2", assigneeId: "m4", status: "in_progress" },
-    { id: "t-5", title: "Auth flow", projectId: "proj-2", assigneeId: "m5", status: "todo" },
-    { id: "t-6", title: "Campaign brief", projectId: "proj-3", assigneeId: "m1", status: "done" },
-    { id: "t-7", title: "Asset preparation", projectId: "proj-3", assigneeId: "m5", status: "in_progress" },
-    { id: "t-8", title: "Legacy audit", projectId: "proj-4", assigneeId: "m2", status: "in_progress" },
-    { id: "t-9", title: "Data migration", projectId: "proj-5", assigneeId: "m3", status: "todo" },
-    { id: "t-10", title: "Performance profiling", projectId: "proj-5", assigneeId: "m4", status: "done" },
-    { id: "t-11", title: "Accessibility fixes", projectId: "proj-5", assigneeId: "m3", status: "in_progress" },
+    { id: "t-1", title: "Setup repository", projectId: "1", assigneeId: "m1", status: "done" },
+    { id: "t-2", title: "Create design system", projectId: "1", assigneeId: "m2", status: "in_progress" },
+    { id: "t-3", title: "Landing page hero", projectId: "1", assigneeId: "m3", status: "todo" },
+    { id: "t-4", title: "API contracts", projectId: "2", assigneeId: "m4", status: "in_progress" },
+    { id: "t-5", title: "Auth flow", projectId: "2", assigneeId: "m5", status: "todo" },
+    { id: "t-6", title: "Campaign brief", projectId: "3", assigneeId: "m1", status: "done" },
+    { id: "t-7", title: "Asset preparation", projectId: "3", assigneeId: "m5", status: "in_progress" },
+    { id: "t-8", title: "Legacy audit", projectId: "4", assigneeId: "m2", status: "in_progress" },
+    { id: "t-9", title: "Data migration", projectId: "5", assigneeId: "m3", status: "todo" },
+    { id: "t-10", title: "Performance profiling", projectId: "5", assigneeId: "m4", status: "done" },
+    { id: "t-11", title: "Accessibility fixes", projectId: "5", assigneeId: "m3", status: "in_progress" },
 ]
 
 export function getTasksByProjectMembers(projectId: string): ProjectTask[] {
@@ -178,11 +178,11 @@ export function getTaskCountFromTasksPageByProjectId(projectId: string): number 
 
 // Members assigned per project (dummy)
 export const PROJECT_MEMBER_MAP: Record<string, string[]> = {
-    "proj-1": ["m1", "m2", "m3"],
-    "proj-2": ["m4", "m5"],
-    "proj-3": ["m1", "m5"],
-    "proj-4": ["m2"],
-    "proj-5": ["m3", "m4"],
+    "1": ["m1", "m2", "m3"],
+    "2": ["m4", "m5"],
+    "3": ["m1", "m5"],
+    "4": ["m2"],
+    "5": ["m3", "m4"],
 }
 
 export function getProjectMemberIds(projectId: string): string[] {
@@ -192,9 +192,9 @@ export function getProjectMemberIds(projectId: string): string[] {
 // Teams by project (derived from project members)
 // Explicit mapping: project -> team IDs
 export const PROJECT_TEAM_MAP: Record<string, string[]> = {
-    "proj-1": ["t1"], // Website Redesign -> Team Alpha
-    "proj-2": ["t3"], // Mobile App Development -> Team Gamma
-    "proj-3": ["t2"], // Marketing Campaign -> Team Beta
+    "1": ["t1"], // Website Redesign -> Team Alpha
+    "2": ["t3"], // Mobile App Development -> Team Gamma
+    "3": ["t2"], // Marketing Campaign -> Team Beta
     // Tambahkan mapping lain jika diperlukan
 }
 
@@ -346,7 +346,7 @@ export interface Project {
 
 export const DUMMY_PROJECTS: Project[] = [
     {
-        id: "proj-1",
+        id: "1",
         name: "Website Redesign",
         clientId: "client-1",
         clientName: "Patricia",
@@ -362,7 +362,7 @@ export const DUMMY_PROJECTS: Project[] = [
         createdAt: "2025-01-10"
     },
     {
-        id: "proj-2",
+        id: "2",
         name: "Mobile App Development",
         clientId: "client-2",
         clientName: "Tech Corp",
@@ -378,7 +378,7 @@ export const DUMMY_PROJECTS: Project[] = [
         createdAt: "2025-01-05"
     },
     {
-        id: "proj-3",
+        id: "3",
         name: "Marketing Campaign",
         clientId: "client-1",
         clientName: "Patricia",
@@ -394,7 +394,7 @@ export const DUMMY_PROJECTS: Project[] = [
         createdAt: "2025-01-15"
     },
     {
-        id: "proj-4",
+        id: "4",
         name: "Old Website",
         clientId: null,
         clientName: null,
@@ -410,7 +410,7 @@ export const DUMMY_PROJECTS: Project[] = [
         createdAt: "2024-12-01"
     },
     {
-        id: "proj-5",
+        id: "5",
         name: "Legacy System",
         clientId: "client-3",
         clientName: "Old Client",
@@ -2074,7 +2074,7 @@ export interface AppActivityEntry {
 export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     {
         id: "aa1",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "Website Redesign",
         memberId: "m1",
         appName: "VS Code",
@@ -2084,7 +2084,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa2",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "Website Redesign",
         memberId: "m1",
         appName: "Chrome",
@@ -2094,7 +2094,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa3",
-        projectId: "proj-2",
+        projectId: "2",
         projectName: "Mobile App Development",
         memberId: "m2",
         appName: "Android Studio",
@@ -2104,7 +2104,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa4",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "hans",
         memberId: "m1",
         appName: "Hubstaff",
@@ -2114,7 +2114,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa5",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "hans",
         memberId: "m1",
         appName: "Microsoft Edge",
@@ -2124,7 +2124,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa6",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "Website Redesign",
         memberId: "m1",
         appName: "VS Code",
@@ -2134,7 +2134,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa7",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "Website Redesign",
         memberId: "m1",
         appName: "Chrome",
@@ -2144,7 +2144,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa8",
-        projectId: "proj-2",
+        projectId: "2",
         projectName: "Mobile App Development",
         memberId: "m2",
         appName: "Android Studio",
@@ -2154,7 +2154,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa9",
-        projectId: "proj-3",
+        projectId: "3",
         projectName: "Marketing Campaign",
         memberId: "m3",
         appName: "Spotify",
@@ -2164,7 +2164,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa10",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "Website Redesign",
         memberId: "m1",
         appName: "Figma",
@@ -2174,7 +2174,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa11",
-        projectId: "proj-4",
+        projectId: "4",
         projectName: "Internal Tools",
         memberId: "m4",
         appName: "Slack",
@@ -2184,7 +2184,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa12",
-        projectId: "proj-2",
+        projectId: "2",
         projectName: "Mobile App Development",
         memberId: "m2",
         appName: "Zoom",
@@ -2194,7 +2194,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa13",
-        projectId: "proj-5",
+        projectId: "5",
         projectName: "Documentation",
         memberId: "m5",
         appName: "Notion",
@@ -2204,7 +2204,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa38",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "hans",
         memberId: "m1",
         appName: "Hubstaff",
@@ -2214,7 +2214,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa39",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "hans",
         memberId: "m1",
         appName: "Microsoft Edge",
@@ -2225,7 +2225,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     // Sarah Johnson (m3) - Marketing Campaign
     {
         id: "aa40",
-        projectId: "proj-3",
+        projectId: "3",
         projectName: "Marketing Campaign",
         memberId: "m3",
         appName: "Canva",
@@ -2235,7 +2235,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa41",
-        projectId: "proj-3",
+        projectId: "3",
         projectName: "Marketing Campaign",
         memberId: "m3",
         appName: "Chrome",
@@ -2245,7 +2245,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa42",
-        projectId: "proj-3",
+        projectId: "3",
         projectName: "Marketing Campaign",
         memberId: "m3",
         appName: "Slack",
@@ -2255,7 +2255,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa14",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "Website Redesign",
         memberId: "m3",
         appName: "Figma",
@@ -2266,7 +2266,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     // Michael Chen (m4) - Mobile App Development
     {
         id: "aa15",
-        projectId: "proj-2",
+        projectId: "2",
         projectName: "Mobile App Development",
         memberId: "m4",
         appName: "Xcode",
@@ -2276,7 +2276,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa16",
-        projectId: "proj-2",
+        projectId: "2",
         projectName: "Mobile App Development",
         memberId: "m4",
         appName: "VS Code",
@@ -2286,7 +2286,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa17",
-        projectId: "proj-2",
+        projectId: "2",
         projectName: "Mobile App Development",
         memberId: "m4",
         appName: "Terminal",
@@ -2296,7 +2296,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa18",
-        projectId: "proj-2",
+        projectId: "2",
         projectName: "Mobile App Development",
         memberId: "m4",
         appName: "Chrome",
@@ -2307,7 +2307,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     // Emma Rodriguez (m5) - Website Redesign
     {
         id: "aa19",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "Website Redesign",
         memberId: "m5",
         appName: "Figma",
@@ -2317,7 +2317,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa20",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "Website Redesign",
         memberId: "m5",
         appName: "VS Code",
@@ -2327,7 +2327,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa21",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "Website Redesign",
         memberId: "m5",
         appName: "Chrome",
@@ -2337,7 +2337,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa22",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "Website Redesign",
         memberId: "m5",
         appName: "Adobe Photoshop",
@@ -2349,7 +2349,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     // Antonio Galih (m1) - Yesterday
     {
         id: "aa23",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "Website Redesign",
         memberId: "m1",
         appName: "VS Code",
@@ -2359,7 +2359,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa24",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "Website Redesign",
         memberId: "m1",
         appName: "Chrome",
@@ -2369,7 +2369,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa25",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "hans",
         memberId: "m1",
         appName: "Hubstaff",
@@ -2380,7 +2380,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     // Lave Lavael (m2) - Yesterday
     {
         id: "aa26",
-        projectId: "proj-2",
+        projectId: "2",
         projectName: "Mobile App Development",
         memberId: "m2",
         appName: "Android Studio",
@@ -2390,7 +2390,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa27",
-        projectId: "proj-2",
+        projectId: "2",
         projectName: "Mobile App Development",
         memberId: "m2",
         appName: "VS Code",
@@ -2400,7 +2400,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa28",
-        projectId: "proj-2",
+        projectId: "2",
         projectName: "Mobile App Development",
         memberId: "m2",
         appName: "Chrome",
@@ -2411,7 +2411,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     // Sarah Johnson (m3) - Yesterday
     {
         id: "aa29",
-        projectId: "proj-3",
+        projectId: "3",
         projectName: "Marketing Campaign",
         memberId: "m3",
         appName: "Canva",
@@ -2421,7 +2421,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa30",
-        projectId: "proj-3",
+        projectId: "3",
         projectName: "Marketing Campaign",
         memberId: "m3",
         appName: "Chrome",
@@ -2431,7 +2431,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa31",
-        projectId: "proj-3",
+        projectId: "3",
         projectName: "Marketing Campaign",
         memberId: "m3",
         appName: "Slack",
@@ -2442,7 +2442,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     // Michael Chen (m4) - Yesterday
     {
         id: "aa32",
-        projectId: "proj-2",
+        projectId: "2",
         projectName: "Mobile App Development",
         memberId: "m4",
         appName: "Xcode",
@@ -2452,7 +2452,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa33",
-        projectId: "proj-2",
+        projectId: "2",
         projectName: "Mobile App Development",
         memberId: "m4",
         appName: "VS Code",
@@ -2462,7 +2462,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa34",
-        projectId: "proj-2",
+        projectId: "2",
         projectName: "Mobile App Development",
         memberId: "m4",
         appName: "Terminal",
@@ -2473,7 +2473,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     // Emma Rodriguez (m5) - Yesterday
     {
         id: "aa35",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "Website Redesign",
         memberId: "m5",
         appName: "Figma",
@@ -2483,7 +2483,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa36",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "Website Redesign",
         memberId: "m5",
         appName: "VS Code",
@@ -2493,7 +2493,7 @@ export const DUMMY_APP_ACTIVITIES: AppActivityEntry[] = [
     },
     {
         id: "aa37",
-        projectId: "proj-1",
+        projectId: "1",
         projectName: "Website Redesign",
         memberId: "m5",
         appName: "Chrome",
@@ -2542,7 +2542,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         // Antonio Galih (m1) - Today
         {
             id: "ua1",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "hans",
             memberId: "m1",
             site: "app.hubstaff.com",
@@ -2555,7 +2555,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua1-support",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "hans",
             memberId: "m1",
             site: "support.hubstaff.com",
@@ -2568,7 +2568,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua2",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "Website Redesign",
             memberId: "m1",
             site: "github.com",
@@ -2581,7 +2581,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua3",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "Website Redesign",
             memberId: "m1",
             site: "stackoverflow.com",
@@ -2594,7 +2594,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua4",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "Website Redesign",
             memberId: "m1",
             site: "docs.google.com",
@@ -2607,7 +2607,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua10",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "Design System",
             memberId: "m1",
             site: "figma.com",
@@ -2620,7 +2620,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua11",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "Meetings",
             memberId: "m1",
             site: "zoom.us",
@@ -2633,7 +2633,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua12",
-            projectId: "proj-3",
+            projectId: "3",
             projectName: "Knowledge Base",
             memberId: "m1",
             site: "notion.so",
@@ -2646,7 +2646,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua13",
-            projectId: "proj-4",
+            projectId: "4",
             projectName: "Research",
             memberId: "m1",
             site: "youtube.com",
@@ -2658,7 +2658,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua14",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "Recruiting",
             memberId: "m1",
             site: "linkedin.com",
@@ -2671,7 +2671,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         // Lave Lavael (m2) - Today
         {
             id: "ua5",
-            projectId: "proj-2",
+            projectId: "2",
             projectName: "Mobile App Development",
             memberId: "m2",
             site: "developer.android.com",
@@ -2684,7 +2684,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua6",
-            projectId: "proj-2",
+            projectId: "2",
             projectName: "Mobile App Development",
             memberId: "m2",
             site: "github.com",
@@ -2697,7 +2697,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua7",
-            projectId: "proj-2",
+            projectId: "2",
             projectName: "Mobile App Development",
             memberId: "m2",
             site: "stackoverflow.com",
@@ -2711,7 +2711,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         // Sarah Johnson (m3) - Today
         {
             id: "ua8",
-            projectId: "proj-3",
+            projectId: "3",
             projectName: "Marketing Campaign",
             memberId: "m3",
             site: "canva.com",
@@ -2724,7 +2724,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua9",
-            projectId: "proj-3",
+            projectId: "3",
             projectName: "Marketing Campaign",
             memberId: "m3",
             site: "facebook.com",
@@ -2737,7 +2737,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua10",
-            projectId: "proj-3",
+            projectId: "3",
             projectName: "Marketing Campaign",
             memberId: "m3",
             site: "instagram.com",
@@ -2751,7 +2751,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         // Michael Chen (m4) - Today
         {
             id: "ua11",
-            projectId: "proj-2",
+            projectId: "2",
             projectName: "Mobile App Development",
             memberId: "m4",
             site: "developer.apple.com",
@@ -2764,7 +2764,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua12",
-            projectId: "proj-2",
+            projectId: "2",
             projectName: "Mobile App Development",
             memberId: "m4",
             site: "github.com",
@@ -2778,7 +2778,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         // Emma Rodriguez (m5) - Today
         {
             id: "ua13",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "Website Redesign",
             memberId: "m5",
             site: "figma.com",
@@ -2791,7 +2791,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua14",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "Website Redesign",
             memberId: "m5",
             site: "dribbble.com",
@@ -2805,7 +2805,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         // Data untuk hari kemarin (Yesterday)
         {
             id: "ua15",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "Website Redesign",
             memberId: "m1",
             site: "github.com",
@@ -2818,7 +2818,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua16",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "Website Redesign",
             memberId: "m1",
             site: "stackoverflow.com",
@@ -2831,7 +2831,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua17",
-            projectId: "proj-2",
+            projectId: "2",
             projectName: "Mobile App Development",
             memberId: "m2",
             site: "developer.android.com",
@@ -2844,7 +2844,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua18",
-            projectId: "proj-3",
+            projectId: "3",
             projectName: "Marketing Campaign",
             memberId: "m3",
             site: "canva.com",
@@ -2857,7 +2857,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua19",
-            projectId: "proj-2",
+            projectId: "2",
             projectName: "Mobile App Development",
             memberId: "m4",
             site: "developer.apple.com",
@@ -2870,7 +2870,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua20",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "Website Redesign",
             memberId: "m5",
             site: "figma.com",
@@ -2884,7 +2884,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         // Data untuk 2 hari yang lalu (Two Days Ago)
         {
             id: "ua21",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "hans",
             memberId: "m1",
             site: "app.hubstaff.com",
@@ -2897,7 +2897,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua22",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "Website Redesign",
             memberId: "m1",
             site: "github.com",
@@ -2910,7 +2910,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua23",
-            projectId: "proj-2",
+            projectId: "2",
             projectName: "Mobile App Development",
             memberId: "m2",
             site: "developer.android.com",
@@ -2923,7 +2923,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua24",
-            projectId: "proj-3",
+            projectId: "3",
             projectName: "Marketing Campaign",
             memberId: "m3",
             site: "canva.com",
@@ -2936,7 +2936,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua25",
-            projectId: "proj-2",
+            projectId: "2",
             projectName: "Mobile App Development",
             memberId: "m4",
             site: "developer.apple.com",
@@ -2949,7 +2949,7 @@ function generateUrlActivities(): UrlActivityEntry[] {
         },
         {
             id: "ua26",
-            projectId: "proj-1",
+            projectId: "1",
             projectName: "Website Redesign",
             memberId: "m5",
             site: "figma.com",
@@ -3004,7 +3004,7 @@ function generateReportData(): ReportActivityEntry[] {
     };
 
     const projectRates: Record<string, number> = {
-        "proj-1": 150000, "proj-2": 200000, "proj-3": 175000, "proj-4": 160000, "proj-5": 190000
+        "1": 150000, "2": 200000, "3": 175000, "4": 160000, "5": 190000
     };
 
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -3307,12 +3307,12 @@ export interface ExpenseEntry {
 }
 
 export const DUMMY_EXPENSES: ExpenseEntry[] = [
-    { id: 'exp-1', memberId: 'm1', memberName: 'Antonio Galih', projectId: 'proj-1', projectName: 'Website Redesign', category: 'software', description: 'Adobe Creative Cloud subscription', amount: 850000, currency: 'IDR', date: '2026-01-15', status: 'approved', receiptUrl: 'https://example.com/receipt1.pdf' },
-    { id: 'exp-2', memberId: 'm2', memberName: 'Lave Lavael', projectId: 'proj-2', projectName: 'Mobile App Development', category: 'equipment', description: 'External monitor', amount: 3500000, currency: 'IDR', date: '2026-01-18', status: 'pending' },
-    { id: 'exp-3', memberId: 'm3', memberName: 'Sarah Johnson', projectId: 'proj-1', projectName: 'Website Redesign', category: 'travel', description: 'Client meeting transportation', amount: 250000, currency: 'IDR', date: '2026-01-20', status: 'reimbursed', receiptUrl: 'https://example.com/receipt3.jpg' },
-    { id: 'exp-4', memberId: 'm4', memberName: 'Michael Chen', projectId: 'proj-3', projectName: 'Marketing Campaign', category: 'meals', description: 'Team lunch meeting', amount: 450000, currency: 'IDR', date: '2026-01-19', status: 'approved', receiptUrl: 'https://example.com/receipt4.png' },
-    { id: 'exp-5', memberId: 'm5', memberName: 'Emma Rodriguez', projectId: 'proj-2', projectName: 'Mobile App Development', category: 'software', description: 'Testing tools license', amount: 1200000, currency: 'IDR', date: '2026-01-22', status: 'pending' },
-    { id: 'exp-6', memberId: 'm1', memberName: 'Antonio Galih', projectId: 'proj-4', projectName: 'API Integration', category: 'office', description: 'Office supplies', amount: 150000, currency: 'IDR', date: '2026-01-21', status: 'rejected' },
+    { id: 'exp-1', memberId: 'm1', memberName: 'Antonio Galih', projectId: '1', projectName: 'Website Redesign', category: 'software', description: 'Adobe Creative Cloud subscription', amount: 850000, currency: 'IDR', date: '2026-01-15', status: 'approved', receiptUrl: 'https://example.com/receipt1.pdf' },
+    { id: 'exp-2', memberId: 'm2', memberName: 'Lave Lavael', projectId: '2', projectName: 'Mobile App Development', category: 'equipment', description: 'External monitor', amount: 3500000, currency: 'IDR', date: '2026-01-18', status: 'pending' },
+    { id: 'exp-3', memberId: 'm3', memberName: 'Sarah Johnson', projectId: '1', projectName: 'Website Redesign', category: 'travel', description: 'Client meeting transportation', amount: 250000, currency: 'IDR', date: '2026-01-20', status: 'reimbursed', receiptUrl: 'https://example.com/receipt3.jpg' },
+    { id: 'exp-4', memberId: 'm4', memberName: 'Michael Chen', projectId: '3', projectName: 'Marketing Campaign', category: 'meals', description: 'Team lunch meeting', amount: 450000, currency: 'IDR', date: '2026-01-19', status: 'approved', receiptUrl: 'https://example.com/receipt4.png' },
+    { id: 'exp-5', memberId: 'm5', memberName: 'Emma Rodriguez', projectId: '2', projectName: 'Mobile App Development', category: 'software', description: 'Testing tools license', amount: 1200000, currency: 'IDR', date: '2026-01-22', status: 'pending' },
+    { id: 'exp-6', memberId: 'm1', memberName: 'Antonio Galih', projectId: '4', projectName: 'API Integration', category: 'office', description: 'Office supplies', amount: 150000, currency: 'IDR', date: '2026-01-21', status: 'rejected' },
 ]
 
 
@@ -3339,12 +3339,12 @@ export interface BreakEntry {
 }
 
 export const DUMMY_BREAKS: BreakEntry[] = [
-    { id: 'brk-1', memberId: 'm1', memberName: 'Antonio Galih', projectId: 'proj-1', projectName: 'Website Redesign', startTime: '12:00', endTime: '13:00', duration: '1 hr', date: '2026-01-20', type: 'Lunch', policy: 'Standard Lunch', status: 'Compliant', allottedDuration: 1, actualDuration: 1, paidDuration: 0 },
-    { id: 'brk-2', memberId: 'm2', memberName: 'Lave Lavael', projectId: 'proj-2', projectName: 'Mobile App', startTime: '10:00', endTime: '10:15', duration: '15 mins', date: '2026-01-20', type: 'Coffee', policy: 'Morning Break', status: 'Compliant', allottedDuration: 0.25, actualDuration: 0.25, paidDuration: 0.25 },
-    { id: 'brk-3', memberId: 'm3', memberName: 'Sarah Johnson', projectId: 'proj-1', projectName: 'Website Redesign', startTime: '12:30', endTime: '13:30', duration: '1 hr', date: '2026-01-20', type: 'Lunch', policy: 'Standard Lunch', status: 'Compliant', allottedDuration: 1, actualDuration: 1, paidDuration: 0 },
-    { id: 'brk-4', memberId: 'm1', memberName: 'Antonio Galih', projectId: 'proj-1', projectName: 'Website Redesign', startTime: '15:30', endTime: '15:45', duration: '15 mins', date: '2026-01-20', type: 'Coffee', policy: 'Afternoon Break', status: 'Compliant', allottedDuration: 0.25, actualDuration: 0.25, paidDuration: 0.25 },
-    { id: 'brk-5', memberId: 'm4', memberName: 'Michael Chen', projectId: 'proj-3', projectName: 'Marketing', startTime: '12:15', endTime: '13:15', duration: '1 hr', date: '2026-01-21', type: 'Lunch', policy: 'Standard Lunch', status: 'Compliant', allottedDuration: 1, actualDuration: 1, paidDuration: 0 },
-    { id: 'brk-6', memberId: 'm5', memberName: 'Emma Rodriguez', projectId: 'proj-2', projectName: 'Mobile App', startTime: '11:00', endTime: '11:20', duration: '20 mins', date: '2026-01-21', type: 'Personal', policy: 'Flexible', status: 'Violation', allottedDuration: 0.25, actualDuration: 0.33, paidDuration: 0 },
+    { id: 'brk-1', memberId: 'm1', memberName: 'Antonio Galih', projectId: '1', projectName: 'Website Redesign', startTime: '12:00', endTime: '13:00', duration: '1 hr', date: '2026-01-20', type: 'Lunch', policy: 'Standard Lunch', status: 'Compliant', allottedDuration: 1, actualDuration: 1, paidDuration: 0 },
+    { id: 'brk-2', memberId: 'm2', memberName: 'Lave Lavael', projectId: '2', projectName: 'Mobile App', startTime: '10:00', endTime: '10:15', duration: '15 mins', date: '2026-01-20', type: 'Coffee', policy: 'Morning Break', status: 'Compliant', allottedDuration: 0.25, actualDuration: 0.25, paidDuration: 0.25 },
+    { id: 'brk-3', memberId: 'm3', memberName: 'Sarah Johnson', projectId: '1', projectName: 'Website Redesign', startTime: '12:30', endTime: '13:30', duration: '1 hr', date: '2026-01-20', type: 'Lunch', policy: 'Standard Lunch', status: 'Compliant', allottedDuration: 1, actualDuration: 1, paidDuration: 0 },
+    { id: 'brk-4', memberId: 'm1', memberName: 'Antonio Galih', projectId: '1', projectName: 'Website Redesign', startTime: '15:30', endTime: '15:45', duration: '15 mins', date: '2026-01-20', type: 'Coffee', policy: 'Afternoon Break', status: 'Compliant', allottedDuration: 0.25, actualDuration: 0.25, paidDuration: 0.25 },
+    { id: 'brk-5', memberId: 'm4', memberName: 'Michael Chen', projectId: '3', projectName: 'Marketing', startTime: '12:15', endTime: '13:15', duration: '1 hr', date: '2026-01-21', type: 'Lunch', policy: 'Standard Lunch', status: 'Compliant', allottedDuration: 1, actualDuration: 1, paidDuration: 0 },
+    { id: 'brk-6', memberId: 'm5', memberName: 'Emma Rodriguez', projectId: '2', projectName: 'Mobile App', startTime: '11:00', endTime: '11:20', duration: '20 mins', date: '2026-01-21', type: 'Personal', policy: 'Flexible', status: 'Violation', allottedDuration: 0.25, actualDuration: 0.33, paidDuration: 0 },
 ]
 
 // ============================================================================
@@ -3659,11 +3659,11 @@ export interface JobSiteVisit {
 }
 
 export const DUMMY_JOB_SITE_VISITS: JobSiteVisit[] = [
-    { id: 'visit-1', memberId: 'm1', memberName: 'Antonio Galih', siteName: 'Client Office - Patricia', siteAddress: '123 Main St, Jakarta', entryTime: '09:00', exitTime: '12:30', duration: 210, date: '2026-01-21', projectId: 'proj-1', projectName: 'Website Redesign' },
-    { id: 'visit-2', memberId: 'm3', memberName: 'Sarah Johnson', siteName: 'Tech Corp HQ', siteAddress: '456 Technology Blvd, Surabaya', entryTime: '10:00', exitTime: '15:00', duration: 300, date: '2026-01-21', projectId: 'proj-2', projectName: 'Mobile App Development' },
-    { id: 'visit-3', memberId: 'm2', memberName: 'Lave Lavael', siteName: 'Creative Agency Studio', siteAddress: '789 Design Ave, Bandung', entryTime: '14:00', exitTime: '17:30', duration: 210, date: '2026-01-20', projectId: 'proj-3', projectName: 'Marketing Campaign' },
+    { id: 'visit-1', memberId: 'm1', memberName: 'Antonio Galih', siteName: 'Client Office - Patricia', siteAddress: '123 Main St, Jakarta', entryTime: '09:00', exitTime: '12:30', duration: 210, date: '2026-01-21', projectId: '1', projectName: 'Website Redesign' },
+    { id: 'visit-2', memberId: 'm3', memberName: 'Sarah Johnson', siteName: 'Tech Corp HQ', siteAddress: '456 Technology Blvd, Surabaya', entryTime: '10:00', exitTime: '15:00', duration: 300, date: '2026-01-21', projectId: '2', projectName: 'Mobile App Development' },
+    { id: 'visit-3', memberId: 'm2', memberName: 'Lave Lavael', siteName: 'Creative Agency Studio', siteAddress: '789 Design Ave, Bandung', entryTime: '14:00', exitTime: '17:30', duration: 210, date: '2026-01-20', projectId: '3', projectName: 'Marketing Campaign' },
     { id: 'visit-4', memberId: 'm4', memberName: 'Michael Chen', siteName: 'Startup Inc Office', siteAddress: '321 Innovation Street, Bali', entryTime: '08:30', exitTime: '11:00', duration: 150, date: '2026-01-20' },
-    { id: 'visit-5', memberId: 'm5', memberName: 'Emma Rodriguez', siteName: 'Client Office - Patricia', siteAddress: '123 Main St, Jakarta', entryTime: '13:00', date: '2026-01-21', projectId: 'proj-1', projectName: 'Website Redesign' },
+    { id: 'visit-5', memberId: 'm5', memberName: 'Emma Rodriguez', siteName: 'Client Office - Patricia', siteAddress: '123 Main St, Jakarta', entryTime: '13:00', date: '2026-01-21', projectId: '1', projectName: 'Website Redesign' },
 ]
 
 // ============================================================================
@@ -3713,14 +3713,14 @@ export interface WorkSession {
 }
 
 export const DUMMY_WORK_SESSIONS: WorkSession[] = [
-    { id: 'session-1', memberId: 'm1', memberName: 'Antonio Galih', date: '2026-01-21', startTime: '08:00', endTime: '12:00', duration: 240, session: 'Morning', projectId: 'proj-1', projectName: 'Website Redesign', clientName: 'TechCorp', todo: 'Design Review', manualPercentage: 0, activityPercentage: 85 },
-    { id: 'session-2', memberId: 'm1', memberName: 'Antonio Galih', date: '2026-01-21', startTime: '13:00', endTime: '17:30', duration: 270, session: 'Afternoon', projectId: 'proj-1', projectName: 'Website Redesign', clientName: 'TechCorp', todo: 'Implementation', manualPercentage: 0, activityPercentage: 78 },
-    { id: 'session-3', memberId: 'm2', memberName: 'Lave Lavael', date: '2026-01-21', startTime: '09:25', endTime: '12:30', duration: 185, session: 'Morning', projectId: 'proj-2', projectName: 'Mobile App Development', clientName: 'StartupInc', todo: 'API Integration', manualPercentage: 5, activityPercentage: 92 },
-    { id: 'session-4', memberId: 'm2', memberName: 'Lave Lavael', date: '2026-01-21', startTime: '13:30', endTime: '18:00', duration: 270, session: 'Afternoon', projectId: 'proj-2', projectName: 'Mobile App Development', clientName: 'StartupInc', todo: 'Testing', manualPercentage: 0, activityPercentage: 88 },
-    { id: 'session-5', memberId: 'm3', memberName: 'Sarah Johnson', date: '2026-01-21', startTime: '08:00', endTime: '12:00', duration: 240, session: 'Morning', projectId: 'proj-3', projectName: 'Marketing Campaign', clientName: 'GrowthLtd', todo: 'Content Strategy', manualPercentage: 0, activityPercentage: 65 },
-    { id: 'session-6', memberId: 'm3', memberName: 'Sarah Johnson', date: '2026-01-21', startTime: '12:45', endTime: '16:30', duration: 225, session: 'Afternoon', projectId: 'proj-3', projectName: 'Marketing Campaign', clientName: 'GrowthLtd', todo: 'Ad Setup', manualPercentage: 10, activityPercentage: 70 },
-    { id: 'session-7', memberId: 'm5', memberName: 'Emma Rodriguez', date: '2026-01-21', startTime: '08:02', endTime: '12:15', duration: 253, session: 'Morning', projectId: 'proj-4', projectName: 'API Integration', clientName: 'FinTech', todo: 'Documentation', manualPercentage: 0, activityPercentage: 95 },
-    { id: 'session-8', memberId: 'm5', memberName: 'Emma Rodriguez', date: '2026-01-21', startTime: '13:00', endTime: '17:10', duration: 250, session: 'Afternoon', projectId: 'proj-4', projectName: 'API Integration', clientName: 'FinTech', todo: 'Debugging', manualPercentage: 0, activityPercentage: 91 },
+    { id: 'session-1', memberId: 'm1', memberName: 'Antonio Galih', date: '2026-01-21', startTime: '08:00', endTime: '12:00', duration: 240, session: 'Morning', projectId: '1', projectName: 'Website Redesign', clientName: 'TechCorp', todo: 'Design Review', manualPercentage: 0, activityPercentage: 85 },
+    { id: 'session-2', memberId: 'm1', memberName: 'Antonio Galih', date: '2026-01-21', startTime: '13:00', endTime: '17:30', duration: 270, session: 'Afternoon', projectId: '1', projectName: 'Website Redesign', clientName: 'TechCorp', todo: 'Implementation', manualPercentage: 0, activityPercentage: 78 },
+    { id: 'session-3', memberId: 'm2', memberName: 'Lave Lavael', date: '2026-01-21', startTime: '09:25', endTime: '12:30', duration: 185, session: 'Morning', projectId: '2', projectName: 'Mobile App Development', clientName: 'StartupInc', todo: 'API Integration', manualPercentage: 5, activityPercentage: 92 },
+    { id: 'session-4', memberId: 'm2', memberName: 'Lave Lavael', date: '2026-01-21', startTime: '13:30', endTime: '18:00', duration: 270, session: 'Afternoon', projectId: '2', projectName: 'Mobile App Development', clientName: 'StartupInc', todo: 'Testing', manualPercentage: 0, activityPercentage: 88 },
+    { id: 'session-5', memberId: 'm3', memberName: 'Sarah Johnson', date: '2026-01-21', startTime: '08:00', endTime: '12:00', duration: 240, session: 'Morning', projectId: '3', projectName: 'Marketing Campaign', clientName: 'GrowthLtd', todo: 'Content Strategy', manualPercentage: 0, activityPercentage: 65 },
+    { id: 'session-6', memberId: 'm3', memberName: 'Sarah Johnson', date: '2026-01-21', startTime: '12:45', endTime: '16:30', duration: 225, session: 'Afternoon', projectId: '3', projectName: 'Marketing Campaign', clientName: 'GrowthLtd', todo: 'Ad Setup', manualPercentage: 10, activityPercentage: 70 },
+    { id: 'session-7', memberId: 'm5', memberName: 'Emma Rodriguez', date: '2026-01-21', startTime: '08:02', endTime: '12:15', duration: 253, session: 'Morning', projectId: '4', projectName: 'API Integration', clientName: 'FinTech', todo: 'Documentation', manualPercentage: 0, activityPercentage: 95 },
+    { id: 'session-8', memberId: 'm5', memberName: 'Emma Rodriguez', date: '2026-01-21', startTime: '13:00', endTime: '17:10', duration: 250, session: 'Afternoon', projectId: '4', projectName: 'API Integration', clientName: 'FinTech', todo: 'Debugging', manualPercentage: 0, activityPercentage: 91 },
 ]
 
 // ============================================================================
@@ -3744,7 +3744,7 @@ export interface ProjectBudget {
 export const DUMMY_PROJECT_BUDGETS: ProjectBudget[] = [
     {
         id: 'pb-1',
-        projectId: 'proj-1',
+        projectId: '1',
         projectName: 'Website Redesign',
         clientName: 'Patricia',
         totalBudget: 10000,
@@ -3757,7 +3757,7 @@ export const DUMMY_PROJECT_BUDGETS: ProjectBudget[] = [
     },
     {
         id: 'pb-2',
-        projectId: 'proj-2',
+        projectId: '2',
         projectName: 'Mobile App Development',
         clientName: 'Tech Corp',
         totalBudget: 25000,
@@ -3770,7 +3770,7 @@ export const DUMMY_PROJECT_BUDGETS: ProjectBudget[] = [
     },
     {
         id: 'pb-3',
-        projectId: 'proj-3',
+        projectId: '3',
         projectName: 'Marketing Campaign',
         clientName: 'Patricia',
         totalBudget: 5000,
@@ -3783,7 +3783,7 @@ export const DUMMY_PROJECT_BUDGETS: ProjectBudget[] = [
     },
     {
         id: 'pb-4',
-        projectId: 'proj-4',
+        projectId: '4',
         projectName: 'Old Website',
         clientName: 'Patricia',
         totalBudget: 5000,
@@ -3925,7 +3925,7 @@ export const DUMMY_MANUAL_EDITS: ManualEditEntry[] = [
         memberId: 'm1',
         memberName: 'Antonio Galih',
         memberAvatar: 'https://i.pravatar.cc/150?u=m1',
-        projectId: 'proj-1',
+        projectId: '1',
         projectName: 'Website Redesign',
         taskId: 't-1',
         taskName: 'Setup repository',
@@ -3943,7 +3943,7 @@ export const DUMMY_MANUAL_EDITS: ManualEditEntry[] = [
         memberId: 'm2',
         memberName: 'Lave Lavael',
         memberAvatar: 'https://i.pravatar.cc/150?u=m2',
-        projectId: 'proj-2',
+        projectId: '2',
         projectName: 'Mobile App',
         taskId: 't-4',
         taskName: 'API contracts',
@@ -3961,7 +3961,7 @@ export const DUMMY_MANUAL_EDITS: ManualEditEntry[] = [
         memberId: 'm3',
         memberName: 'Sarah Johnson',
         memberAvatar: 'https://i.pravatar.cc/150?u=m3',
-        projectId: 'proj-1',
+        projectId: '1',
         projectName: 'Website Redesign',
         taskId: 't-3',
         taskName: 'Landing page hero',
@@ -3979,7 +3979,7 @@ export const DUMMY_MANUAL_EDITS: ManualEditEntry[] = [
         memberId: 'm4',
         memberName: 'Michael Chen',
         memberAvatar: 'https://i.pravatar.cc/150?u=m4',
-        projectId: 'proj-3',
+        projectId: '3',
         projectName: 'Marketing Campaign',
         taskId: 't-6',
         taskName: 'Campaign brief',
@@ -3997,7 +3997,7 @@ export const DUMMY_MANUAL_EDITS: ManualEditEntry[] = [
         memberId: 'm1',
         memberName: 'Antonio Galih',
         memberAvatar: 'https://i.pravatar.cc/150?u=m1',
-        projectId: 'proj-1',
+        projectId: '1',
         projectName: 'Website Redesign',
         taskId: 't-2',
         taskName: 'Create design system',
@@ -4015,7 +4015,7 @@ export const DUMMY_MANUAL_EDITS: ManualEditEntry[] = [
         memberId: 'm2',
         memberName: 'Lave Lavael',
         memberAvatar: 'https://i.pravatar.cc/150?u=m2',
-        projectId: 'proj-2',
+        projectId: '2',
         projectName: 'Mobile App',
         taskId: 't-5',
         taskName: 'Auth flow',
@@ -4902,12 +4902,12 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         activityPct: 92,
         paymentStatus: 'paid',
         submittedDate: '2026-01-07T17:00:00',
-        screenshotCount: 42
+        screenshotCount: 0
     },
     {
         id: 'ts-2',
         memberId: 'm2',
-        memberName: 'Emily Davis',
+        memberName: 'Lave Lavael',
         dateStart: '2026-01-01',
         dateEnd: '2026-01-07',
         totalHours: '38:30',
@@ -4917,7 +4917,7 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         activityPct: 85,
         paymentStatus: 'processing',
         submittedDate: '2026-01-07T17:30:00',
-        screenshotCount: 15
+        screenshotCount: 0
     },
     {
         id: 'ts-3',
@@ -4933,7 +4933,7 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         activityPct: 78,
         paymentStatus: 'unpaid',
         submittedDate: '2026-01-07T18:00:00',
-        screenshotCount: 8
+        screenshotCount: 0
     },
     {
         id: 'ts-4',
@@ -4946,7 +4946,7 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         activityPct: 95,
         paymentStatus: 'unpaid',
         submittedDate: '2026-01-14T17:00:00',
-        screenshotCount: 120
+        screenshotCount: 0
     },
     {
         id: 'ts-5',
@@ -4959,12 +4959,12 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         activityPct: 88,
         paymentStatus: 'unpaid',
         submittedDate: '2026-01-14T17:15:00',
-        screenshotCount: 45
+        screenshotCount: 0
     },
     {
         id: 'ts-6',
         memberId: 'm5',
-        memberName: 'David Wilson',
+        memberName: 'Emma Rodriguez',
         dateStart: '2026-01-15',
         dateEnd: '2026-01-21',
         totalHours: '32:00',
@@ -4972,7 +4972,7 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         comments: 'Draft in progress',
         activityPct: 60,
         paymentStatus: 'unpaid',
-        screenshotCount: 0
+        screenshotCount: 3
     },
     {
         id: 'ts-7',
@@ -4985,12 +4985,12 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         activityPct: 82,
         paymentStatus: 'unpaid',
         submittedDate: '2026-01-21T16:00:00',
-        screenshotCount: 30
+        screenshotCount: 3
     },
     {
         id: 'ts-8',
         memberId: 'm2',
-        memberName: 'Emily Davis',
+        memberName: 'Lave Lavael',
         dateStart: '2026-01-15',
         dateEnd: '2026-01-21',
         totalHours: '15:30',
@@ -4998,7 +4998,7 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         comments: 'Waiting for client confirmation',
         activityPct: 45,
         paymentStatus: 'unpaid',
-        screenshotCount: 5
+        screenshotCount: 3
     },
     {
         id: 'ts-9',
@@ -5011,7 +5011,7 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         activityPct: 91,
         paymentStatus: 'unpaid',
         submittedDate: '2026-01-21T17:00:00',
-        screenshotCount: 55
+        screenshotCount: 2
     },
     {
         id: 'ts-10',
@@ -5024,12 +5024,12 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         comments: 'Incomplete',
         activityPct: 0,
         paymentStatus: 'unpaid',
-        screenshotCount: 0
+        screenshotCount: 3
     },
     {
         id: 'ts-11',
         memberId: 'm5',
-        memberName: 'David Wilson',
+        memberName: 'Emma Rodriguez',
         dateStart: '2026-01-08',
         dateEnd: '2026-01-14',
         totalHours: '45:00',
@@ -5040,7 +5040,7 @@ export const DUMMY_TIMESHEET_APPROVALS: TimesheetApprovalEntry[] = [
         activityPct: 70,
         paymentStatus: 'unpaid',
         submittedDate: '2026-01-14T18:00:00',
-        screenshotCount: 18
+        screenshotCount: 0
     }
 ];
 
@@ -5084,7 +5084,7 @@ export const DUMMY_TIME_ENTRIES: TimeEntry[] = [
         endTime: '11:00:00',
         duration: '02:00:00',
         totalHours: 2,
-        projectId: 'proj-1',
+        projectId: '1',
         projectName: 'Website Redesign',
         taskId: 'task-1',
         taskName: 'Design Homepage Concept',
@@ -5102,7 +5102,7 @@ export const DUMMY_TIME_ENTRIES: TimeEntry[] = [
         endTime: '17:00:00',
         duration: '04:00:00',
         totalHours: 4,
-        projectId: 'proj-2',
+        projectId: '2',
         projectName: 'Mobile App Development',
         source: 'mobile',
         activityPct: 0,
@@ -5118,7 +5118,7 @@ export const DUMMY_TIME_ENTRIES: TimeEntry[] = [
         endTime: '12:00:00',
         duration: '04:00:00',
         totalHours: 4,
-        projectId: 'proj-1',
+        projectId: '1',
         projectName: 'Website Redesign',
         source: 'manual',
         activityPct: 0,
@@ -5134,7 +5134,7 @@ export const DUMMY_TIME_ENTRIES: TimeEntry[] = [
         endTime: '12:00:00',
         duration: '02:00:00',
         totalHours: 2,
-        projectId: 'proj-3',
+        projectId: '3',
         projectName: 'Marketing Campaign',
         source: 'desktop',
         activityPct: 82,
@@ -5149,7 +5149,7 @@ export const DUMMY_TIME_ENTRIES: TimeEntry[] = [
         endTime: '17:00:00',
         duration: '08:00:00',
         totalHours: 8,
-        projectId: 'proj-4',
+        projectId: '4',
         projectName: 'Old Website',
         source: 'web',
         activityPct: 45,

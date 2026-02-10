@@ -102,7 +102,7 @@ export interface Project {
 
 export const DUMMY_PROJECTS: Project[] = [
     {
-        id: "proj-1",
+        id: "1",
         name: "Website Redesign",
         clientId: "client-1",
         clientName: "Patricia",
@@ -118,7 +118,7 @@ export const DUMMY_PROJECTS: Project[] = [
         createdAt: "2025-01-10"
     },
     {
-        id: "proj-2",
+        id: "2",
         name: "Mobile App Development",
         clientId: "client-2",
         clientName: "Tech Corp",
@@ -134,7 +134,7 @@ export const DUMMY_PROJECTS: Project[] = [
         createdAt: "2025-01-05"
     },
     {
-        id: "proj-3",
+        id: "3",
         name: "Marketing Campaign",
         clientId: "client-1",
         clientName: "Patricia",
@@ -150,7 +150,7 @@ export const DUMMY_PROJECTS: Project[] = [
         createdAt: "2025-01-15"
     },
     {
-        id: "proj-4",
+        id: "4",
         name: "Old Website",
         clientId: null,
         clientName: null,
@@ -166,7 +166,7 @@ export const DUMMY_PROJECTS: Project[] = [
         createdAt: "2024-12-01"
     },
     {
-        id: "proj-5",
+        id: "5",
         name: "Legacy System",
         clientId: "client-3",
         clientName: "Old Client",
