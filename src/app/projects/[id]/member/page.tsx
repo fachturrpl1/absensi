@@ -79,7 +79,6 @@ export default function ProjectMembersPage({ params }: { params: Promise<{ id: s
             Tasks:
             <Link
               href={`/projects/tasks/list?project=${encodeURIComponent(project?.name ?? "")}`}
-              target="_blank"
               className="font-medium hover:underline text-primary cursor-pointer"
             >
               {taskCount} tasks

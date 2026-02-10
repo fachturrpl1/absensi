@@ -31,6 +31,8 @@ import { SplitTimeEntryDialog } from "@/components/timesheets/SplitTimeEntryDial
 import { DeleteTimeEntryDialog } from "@/components/timesheets/DeleteTimeEntryDialog"
 import { AddTimeEntryDialog } from "@/components/timesheets/AddTimeEntryDialog"
 
+import { QuickEditTimeDialog } from "@/components/timesheets/QuickEditTimeDialog"
+
 const getProjectInitial = (name: string) => name.charAt(0).toUpperCase()
 
 const findProject = (id: string, name: string) => DUMMY_PROJECTS.find(p => p.id === id || p.name === name)
@@ -45,6 +47,16 @@ const getTaskName = (taskId?: string, taskName?: string) => {
     if (taskName) return taskName
     if (taskId) return DUMMY_TASKS.find(t => t.id === taskId)?.title
     return "No to-do"
+}
+
+const formatTimeAMPM = (time: string) => {
+    if (!time) return ""
+    // Ensure we handle HH:mm:ss or HH:mm
+    const [h = "0", m = "00"] = time.split(':')
+    const hour = parseInt(h, 10)
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    const hour12 = hour % 12 || 12
+    return `${hour12.toString().padStart(2, '0')}:${m} ${ampm}`
 }
 
 export default function ViewEditTimesheetsPage() {
@@ -68,11 +80,13 @@ export default function ViewEditTimesheetsPage() {
     })
 
     const [editDialogOpen, setEditDialogOpen] = useState(false)
+    const [quickEditDialogOpen, setQuickEditDialogOpen] = useState(false)
     const [splitTimeEntryDialogOpen, setSplitTimeEntryDialogOpen] = useState(false)
     const [deleteEntryDialogOpen, setDeleteEntryDialogOpen] = useState(false)
     const [addDialogOpen, setAddDialogOpen] = useState(false)
 
     const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null)
+    const [activeQuickEditEntry, setActiveQuickEditEntry] = useState<TimeEntry | null>(null)
 
     const [data, setData] = useState<TimeEntry[]>([])
     const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set())
@@ -195,6 +209,19 @@ export default function ViewEditTimesheetsPage() {
             setData(prev => prev.map(item => item.id === activeEntry.id ? { ...item, ...entry } as TimeEntry : item))
             toast.success("Time entry updated")
         }
+    }
+
+    const handleQuickEditSave = (entry: Partial<TimeEntry>) => {
+        if (activeQuickEditEntry) {
+            setData(prev => prev.map(item => item.id === activeQuickEditEntry.id ? { ...item, ...entry } as TimeEntry : item))
+            toast.success("Time entry updated")
+            setActiveQuickEditEntry(null)
+        }
+    }
+
+    const handleQuickEdit = (entry: TimeEntry) => {
+        setActiveQuickEditEntry(entry)
+        setQuickEditDialogOpen(true)
     }
 
     const handleAddEntry = (entry: Partial<TimeEntry>) => {
@@ -387,9 +414,12 @@ export default function ViewEditTimesheetsPage() {
                                                                     <span className="text-[10px] uppercase text-gray-500 font-semibold tracking-wide">
                                                                         {getClientName(row.projectId, row.projectName)}
                                                                     </span>
-                                                                    <span className="text-xs font-medium text-gray-700 hover:text-blue-500 hover:underline cursor-pointer">
+                                                                    <Link
+                                                                        href={`/projects/tasks/list?project=${encodeURIComponent(row.projectName)}&q=${encodeURIComponent(getTaskName(row.taskId, row.taskName) || "")}`}
+                                                                        className="text-xs font-medium text-gray-700 hover:text-blue-500 hover:underline cursor-pointer"
+                                                                    >
                                                                         {getTaskName(row.taskId, row.taskName)}
-                                                                    </span>
+                                                                    </Link>
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -412,7 +442,12 @@ export default function ViewEditTimesheetsPage() {
                                                     {visibleCols.duration && (
                                                         <td className="p-3">
                                                             <div className="flex items-center gap-1">
-                                                                <span className="text-gray-900 hover:text-blue-500 hover:underline cursor-pointer">{row.duration}</span>
+                                                                <span
+                                                                    className="text-gray-900 hover:text-blue-500 hover:underline cursor-pointer"
+                                                                    onClick={() => handleQuickEdit(row)}
+                                                                >
+                                                                    {row.duration}
+                                                                </span>
                                                             </div>
                                                         </td>
                                                     )}
@@ -423,8 +458,11 @@ export default function ViewEditTimesheetsPage() {
                                                     )}
                                                     {visibleCols.time && (
                                                         <td className="p-3">
-                                                            <span className="text-gray-900 hover:text-blue-500 hover:underline cursor-pointer">
-                                                                {row.startTime} - {row.endTime}
+                                                            <span
+                                                                className="text-gray-900 hover:text-blue-500 hover:underline cursor-pointer"
+                                                                onClick={() => handleQuickEdit(row)}
+                                                            >
+                                                                {formatTimeAMPM(row.startTime)} - {formatTimeAMPM(row.endTime)}
                                                             </span>
                                                         </td>
                                                     )}
@@ -505,6 +543,13 @@ export default function ViewEditTimesheetsPage() {
                 open={addDialogOpen}
                 onOpenChange={setAddDialogOpen}
                 onSave={handleAddEntry}
+            />
+
+            <QuickEditTimeDialog
+                open={quickEditDialogOpen}
+                onOpenChange={setQuickEditDialogOpen}
+                initialData={activeQuickEditEntry}
+                onSave={handleQuickEditSave}
             />
 
             <DeleteTimeEntryDialog

@@ -97,6 +97,7 @@ export default function TimesheetApprovalsPage() {
         activityPct: true,
         paymentStatus: true,
         submittedDate: true,
+        screenshots: true,
         status: true,
         notes: true,
         actions: true
@@ -223,6 +224,7 @@ export default function TimesheetApprovalsPage() {
                 { key: 'activityPct', label: 'Activity %' },
                 { key: 'paymentStatus', label: 'Payment Status' },
                 { key: 'submittedDate', label: 'Submitted On' },
+                { key: 'screenshotCount', label: 'Screenshots' },
                 { key: 'status', label: 'Status' },
                 { key: 'approver', label: 'Approver' },
                 { key: 'comments', label: 'Comments' }
@@ -332,6 +334,7 @@ export default function TimesheetApprovalsPage() {
                                 {visibleCols.activityPct && <th className="p-3 font-semibold">Activity %</th>}
                                 {visibleCols.paymentStatus && <th className="p-3 font-semibold">Payment St.</th>}
                                 {visibleCols.submittedDate && <th className="p-3 font-semibold">Submitted On</th>}
+                                {visibleCols.screenshots && <th className="p-3 font-semibold">Screenshots</th>}
                                 {visibleCols.status && <th className="p-3 font-semibold">Status</th>}
                                 {visibleCols.notes && <th className="p-3 font-semibold">Reason</th>}
                                 {visibleCols.actions && <th className="p-3 font-semibold text-center">Actions</th>}
@@ -390,6 +393,15 @@ export default function TimesheetApprovalsPage() {
                                         {visibleCols.submittedDate && (
                                             <td className="p-4 text-sm text-gray-500">
                                                 {row.submittedDate ? format(new Date(row.submittedDate), 'MMM dd, HH:mm') : '-'}
+                                            </td>
+                                        )}
+                                        {visibleCols.screenshots && (
+                                            <td className="p-4">
+                                                <Link href={`/activity/screenshots?memberId=${row.memberId}`}>
+                                                    <Button variant="outline" size="sm" className="h-7 text-xs text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100 hover:text-blue-700 rounded-full">
+                                                        {row.screenshotCount || 0} screens
+                                                    </Button>
+                                                </Link>
                                             </td>
                                         )}
                                         {visibleCols.status && <td className="p-4">{getStatusBadge(row.status)}</td>}

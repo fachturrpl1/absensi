@@ -48,7 +48,7 @@ export default function ListView() {
 
     const [tasks, setTasks] = useState<TaskRow[]>(DUMMY_TASKS)
     const [activeTab, setActiveTab] = useState<"active" | "completed">("active")
-    const [searchQuery, setSearchQuery] = useState("")
+    const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "")
 
 
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
