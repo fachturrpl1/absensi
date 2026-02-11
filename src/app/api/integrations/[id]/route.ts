@@ -2,6 +2,8 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
+import { decrypt } from "@/lib/integrations/oauth-helpers"
+import { revokeZoomToken } from "@/lib/integrations/zoom-helpers"
 
 /**
  * DELETE /api/integrations/[id]
@@ -37,7 +39,7 @@ export async function DELETE(
         // Build flexible query based on whether 'id' is UUID or provider name
         const query = supabase
             .from('integrations')
-            .select('id')
+            .select('id, access_token, provider') // Select necessary fields for revocation
             .eq('organization_id', member.organization_id)
 
         // Check if 'id' is a valid UUID format
@@ -58,25 +60,33 @@ export async function DELETE(
 
         console.log('[integrations] Initiating disconnect:', {
             integrationId: integration.id,
-            provider: id,
+            provider: integration.provider,
             organizationId: member.organization_id
         })
 
-        // 4. Optional: Revoke token at provider (GitHub, Slack, etc.)
+        // 4. Revoke token at provider
         // This is "best effort" - we proceed with disconnect even if revocation fails
-        try {
-            // TODO: Implement provider-specific token revocation
-            // Example for GitHub:
-            // await fetch(`https://api.github.com/applications/${GITHUB_CLIENT_ID}/token`, {
-            //   method: 'DELETE',
-            //   auth: { username: CLIENT_ID, password: CLIENT_SECRET },
-            //   body: JSON.stringify({ access_token: decrypted_token })
-            // })
+        if (integration.access_token) {
+            try {
+                const accessToken = decrypt(integration.access_token)
 
-            console.log('[integrations] Token revocation skipped (not implemented for this provider)')
-        } catch (revocationError) {
-            // Log but don't fail the disconnect
-            console.warn('[integrations] Token revocation failed (non-critical):', revocationError)
+                switch (integration.provider) {
+                    case 'zoom':
+                        await revokeZoomToken(accessToken)
+                        break
+
+                    // Future implementations:
+                    // case 'slack':
+                    //    await revokeSlackToken(accessToken)
+                    //    break
+                    // case 'github':
+                    //    await revokeGitHubToken(accessToken)
+                    //    break
+                }
+            } catch (revocationError) {
+                // Log but don't fail the disconnect
+                console.warn('[integrations] Token revocation failed (non-critical):', revocationError)
+            }
         }
 
         // 5. Perform "Clean Disconnect" (Soft Delete)
@@ -128,9 +138,6 @@ export async function DELETE(
 /**
  * PATCH /api/integrations/[id]/config
  * * Update integration configuration settings.
- * Note: Walaupun path filenya [id]/route.ts, Next.js akan melayani
- * request PATCH ke /api/integrations/[id] (tanpa /config di URL)
- * kecuali kamu membuat folder khusus /config.
  */
 export async function PATCH(
     req: NextRequest,
@@ -166,8 +173,7 @@ export async function PATCH(
 
         const { config, syncEnabled, syncFrequency } = body
 
-        // 4. Build Update Object (Security: Hanya update field yang diizinkan)
-        // Gunakan Partial<IntegrationType> jika kamu punya TypeScript interface-nya
+        // 4. Build Update Object
         const updates: Record<string, any> = {
             updated_at: new Date().toISOString()
         }
@@ -176,7 +182,7 @@ export async function PATCH(
         if (syncEnabled !== undefined) updates.sync_enabled = syncEnabled
         if (syncFrequency !== undefined) updates.sync_frequency = syncFrequency
 
-        // 5. Update Integration (support UUID or provider name)
+        // 5. Update Integration
         const updateQuery = supabase
             .from('integrations')
             .select('id')

@@ -63,3 +63,43 @@ export async function refreshZoomAccessToken(): Promise<ZoomTokenResponse> {
     // For Server-to-Server OAuth, just get a new token
     return getZoomAccessToken()
 }
+
+/**
+ * Revoke Zoom Access Token
+ * 
+ * @param accessToken The access token to revoke
+ */
+export async function revokeZoomToken(accessToken: string): Promise<void> {
+    const clientId = process.env.ZOOM_CLIENT_ID
+    const clientSecret = process.env.ZOOM_CLIENT_SECRET
+
+    if (!clientId || !clientSecret) {
+        console.warn('[zoom] Cannot revoke token: Missing credentials')
+        return
+    }
+
+    const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+
+    try {
+        const response = await fetch('https://zoom.us/oauth/revoke', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Basic ${credentials}`,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+                token: accessToken
+            })
+        })
+
+        if (!response.ok) {
+            const error = await response.text()
+            console.error('[zoom] Token revocation failed:', error)
+            // Don't throw, just log. We still want to delete from DB.
+        } else {
+            console.log('[zoom] Token revoked successfully')
+        }
+    } catch (error) {
+        console.error('[zoom] Error revoking token:', error)
+    }
+}
