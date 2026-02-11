@@ -139,7 +139,8 @@ export async function GET(req: NextRequest) {
             displayName: integration.display_name,
             lastSyncAt: integration.last_sync_at,
             errorMessage: integration.error_message,
-            syncEnabled: integration.sync_enabled
+            syncEnabled: integration.sync_enabled,
+            connectedAt: integration.updated_at // Use updated_at as connection timestamp
         }))
 
         return NextResponse.json({ data: transformedData })

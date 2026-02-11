@@ -177,22 +177,26 @@ async function getIntegrations(): Promise<IntegrationSection[]> {
             return INTEGRATIONS_CATALOG
         }
 
-        // Expected shape: { data: Array<{ provider: string; connected: boolean }> }
+        // Expected shape: { data: Array<{ provider: string; connected: boolean; connectedAt?: string }> }
         const json = await res.json()
-        const liveMap = new Map<string, boolean>(
-            (json.data ?? []).map((i: { provider: string; connected: boolean }) => [
+        const liveMap = new Map<string, { connected: boolean; connectedAt?: string }>(
+            (json.data ?? []).map((i: any) => [
                 i.provider,
-                i.connected,
+                { connected: i.connected, connectedAt: i.connectedAt },
             ])
         )
 
         // Merge live status into the static catalog without mutating the original.
         return INTEGRATIONS_CATALOG.map((section) => ({
             ...section,
-            items: section.items.map((item) => ({
-                ...item,
-                connected: liveMap.has(item.id) ? liveMap.get(item.id)! : item.connected,
-            })),
+            items: section.items.map((item) => {
+                const liveData = liveMap.get(item.id)
+                return {
+                    ...item,
+                    connected: liveData ? liveData.connected : item.connected,
+                    connectedAt: liveData?.connectedAt,
+                }
+            }),
         }))
     } catch {
         // Network error, cold-start, etc. — degrade gracefully.

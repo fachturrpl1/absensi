@@ -23,9 +23,25 @@ import {
   AlertCircle,
   Unplug,
   Plug,
+  MoreHorizontal,
+  Calendar,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Integration, IntegrationSection, IntegrationStatus } from "@/types/integration"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 // ---------------------------------------------------------------------------
 // Props
@@ -62,6 +78,20 @@ export default function IntegrationsClient({ initialSections }: IntegrationsClie
       }))
       .filter((section) => section.items.length > 0)
   }, [searchTerm, sections])
+
+  // Split filtered sections into Active (Flat list) and Available (Grouped sections)
+  const activeIntegrations = React.useMemo(() => {
+    return filteredSections.flatMap((s) => s.items).filter((i) => i.connected)
+  }, [filteredSections])
+
+  const availableSections = React.useMemo(() => {
+    return filteredSections
+      .map((s) => ({
+        ...s,
+        items: s.items.filter((i) => !i.connected),
+      }))
+      .filter((s) => s.items.length > 0)
+  }, [filteredSections])
 
   // ---------------------------------------------------------------------------
   // Per-card status updater — immutable, returns new sections array
@@ -278,10 +308,28 @@ export default function IntegrationsClient({ initialSections }: IntegrationsClie
 
       {/* ── Integration Sections ────────────────────────────────────────────── */}
       <main className="space-y-16 pb-16">
-        {filteredSections.length === 0 ? (
+
+        {/* Active Integrations Table */}
+        {activeIntegrations.length > 0 && (
+          <section className="space-y-6" aria-labelledby="section-active">
+            <h2
+              id="section-active"
+              className="text-xs font-semibold text-gray-500 uppercase tracking-widest"
+            >
+              Active Integrations
+            </h2>
+            <ActiveIntegrationsTable
+              items={activeIntegrations}
+              onDisconnect={(item) => handleToggle(item)}
+            />
+          </section>
+        )}
+
+        {/* Available Integrations Grid */}
+        {activeIntegrations.length === 0 && availableSections.length === 0 ? (
           <EmptyState searchTerm={searchTerm} />
         ) : (
-          filteredSections.map((section) => (
+          availableSections.map((section) => (
             <section
               key={section.title}
               className="space-y-6"
@@ -523,5 +571,118 @@ function InitialsAvatar({ name }: { name: string }) {
     >
       {initials}
     </span>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// ActiveIntegrationsTable — Table view for connected integrations
+// ---------------------------------------------------------------------------
+function ActiveIntegrationsTable({
+  items,
+  onDisconnect,
+}: {
+  items: Integration[]
+  onDisconnect: (item: Integration) => void
+}) {
+  return (
+    <div className="rounded-md border border-gray-200 bg-white overflow-hidden shadow-sm">
+      <Table>
+        <TableHeader className="bg-gray-50/50">
+          <TableRow>
+            <TableHead className="w-[300px]">Integration</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Last Sync</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item) => (
+            <TableRow key={item.id} className="group hover:bg-gray-50/50 transition-colors">
+              <TableCell className="font-medium">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 flex items-center justify-center rounded-md bg-gray-100 border border-gray-200 p-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.iconUrl}
+                      alt=""
+                      className="h-full w-full object-contain"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-gray-900">{item.name}</div>
+                    <div className="text-xs text-gray-500">{item.category}</div>
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>
+                {item.status === "disconnecting" ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Disconnecting
+                  </span>
+                ) : item.status === "error" ? (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    Error
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Active
+                  </span>
+                )}
+              </TableCell>
+              <TableCell className="text-gray-500">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm">
+                    {item.lastSyncAt
+                      ? new Date(item.lastSyncAt).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "numeric",
+                        timeZoneName: "short"
+                      })
+                      : "Not synced yet"}
+                  </span>
+                </div>
+              </TableCell>
+              <TableCell className="text-right">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900"
+                      disabled={item.status === "disconnecting"}
+                    >
+                      <span className="sr-only">Open menu</span>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-[160px]">
+                    <DropdownMenuItem disabled>
+                      Sync Now
+                      <span className="ml-auto text-xs text-muted-foreground">Soon</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem disabled>
+                      Configure
+                      <span className="ml-auto text-xs text-muted-foreground">Soon</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                      onClick={() => onDisconnect(item)}
+                    >
+                      Disconnect
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   )
 }

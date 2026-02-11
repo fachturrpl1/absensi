@@ -33,6 +33,10 @@ export type Integration = {
   category: IntegrationCategory
   /** Link to the integration's official documentation. */
   docsUrl: string
+  /** Timestamp when the integration was last connected/updated (ISO string). */
+  connectedAt?: string
+  /** Timestamp when the integration last successfully synced (ISO string). */
+  lastSyncAt?: string
 }
 
 export type IntegrationSection = {
