@@ -111,41 +111,61 @@ export default function IntegrationsClient({ initialSections }: IntegrationsClie
         let res: Response
 
         if (item.connected) {
-          // Disconnect: DELETE /api/integrations/[id]
+          // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          // DISCONNECT FLOW
+          // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           res = await fetch(`/api/integrations/${item.id}`, {
             method: "DELETE",
           })
+
+          const data = await res.json().catch(() => ({}))
+
+          if (!res.ok) {
+            throw new Error(data?.error || data?.message || `Disconnect failed (${res.status})`)
+          }
+
+          // Disconnect successful - update UI immediately
+          startTransition(() => {
+            updateItemStatus(item.id, {
+              connected: false,
+              status: "idle",
+              errorMessage: undefined,
+            })
+          })
+
+          console.log('[integrations-ui] Disconnect successful:', item.id)
+
         } else {
-          // Connect: POST to authorize endpoint
-          // For OAuth integrations this may return a redirect URL.
+          // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          // CONNECT FLOW (OAuth)
+          // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           res = await fetch(`/api/integrations/${item.id}/authorize`, {
             method: "POST",
             headers: { "Content-Type": "application/json" }
           })
-        }
 
-        // Read JSON once to avoid "double read" errors
-        const data = await res.json().catch(() => ({}))
+          const data = await res.json().catch(() => ({}))
 
-        if (!res.ok) {
-          throw new Error(data?.error || data?.message || `Request failed (${res.status})`)
-        }
+          if (!res.ok) {
+            throw new Error(data?.error || data?.message || `Connection failed (${res.status})`)
+          }
 
-        // Some integrations return an OAuth redirect URL
-        if (data?.redirectUrl) {
-          // Navigate to OAuth provider — the page will reload after the callback
-          window.location.href = data.redirectUrl
-          return
-        }
+          // OAuth integrations return a redirect URL
+          if (data?.redirectUrl) {
+            console.log('[integrations-ui] Redirecting to OAuth provider:', item.id)
+            window.location.href = data.redirectUrl
+            return
+          }
 
-        // Toggle succeeded — flip connected state, clear status
-        startTransition(() => {
-          updateItemStatus(item.id, {
-            connected: !item.connected,
-            status: "idle",
-            errorMessage: undefined,
+          // Direct toggle (non-OAuth integrations)
+          startTransition(() => {
+            updateItemStatus(item.id, {
+              connected: true,
+              status: "idle",
+              errorMessage: undefined,
+            })
           })
-        })
+        }
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Something went wrong. Try again."

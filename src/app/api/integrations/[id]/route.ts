@@ -56,26 +56,63 @@ export async function DELETE(
             return NextResponse.json({ error: "Integration not found" }, { status: 404 })
         }
 
-        // 4. Perform Disconnect (Soft Delete)
-        // CRITICAL: Use the actual UUID from database, not the incoming 'id'
+        console.log('[integrations] Initiating disconnect:', {
+            integrationId: integration.id,
+            provider: id,
+            organizationId: member.organization_id
+        })
+
+        // 4. Optional: Revoke token at provider (GitHub, Slack, etc.)
+        // This is "best effort" - we proceed with disconnect even if revocation fails
+        try {
+            // TODO: Implement provider-specific token revocation
+            // Example for GitHub:
+            // await fetch(`https://api.github.com/applications/${GITHUB_CLIENT_ID}/token`, {
+            //   method: 'DELETE',
+            //   auth: { username: CLIENT_ID, password: CLIENT_SECRET },
+            //   body: JSON.stringify({ access_token: decrypted_token })
+            // })
+
+            console.log('[integrations] Token revocation skipped (not implemented for this provider)')
+        } catch (revocationError) {
+            // Log but don't fail the disconnect
+            console.warn('[integrations] Token revocation failed (non-critical):', revocationError)
+        }
+
+        // 5. Perform "Clean Disconnect" (Soft Delete)
+        // Clear ALL sensitive data and access credentials
         const { error: updateError } = await supabase
             .from('integrations')
             .update({
+                // Connection status
                 connected: false,
                 status: 'DISCONNECTED',
+
+                // Clear ALL tokens and secrets
                 access_token: null,
                 refresh_token: null,
                 token_expires_at: null,
                 webhook_secret: null,
+
+                // Clear permissions and error state
                 permissions: [],
+                error_message: null,
+                error_count: 0,
+
+                // Metadata
                 updated_at: new Date().toISOString()
             })
-            .eq('id', integration.id) // Use UUID from database
+            .eq('id', integration.id) // Use actual UUID from database
 
         if (updateError) {
             console.error('[integrations] Failed to disconnect:', updateError)
             return NextResponse.json({ error: "Failed to disconnect integration" }, { status: 500 })
         }
+
+        console.log('[integrations] Disconnect successful:', {
+            integrationId: integration.id,
+            provider: id
+        })
 
         return NextResponse.json({
             success: true,

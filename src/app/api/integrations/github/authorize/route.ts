@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
 import { generateOAuthState, buildAuthorizationUrl } from "@/lib/integrations/oauth-helpers"
 
-export async function POST(_req: NextRequest) {
+export async function POST(req: NextRequest) {
     try {
         const supabase = await createClient()
 
-        // Get current user
+        // 1. Authenticate user
         const { data: { user }, error: userError } = await supabase.auth.getUser()
 
         if (userError || !user) {
@@ -16,22 +16,42 @@ export async function POST(_req: NextRequest) {
             )
         }
 
-        // Get user's organization
+        // 2. Get active organization context from cookie
+        // This ensures we connect the integration to the CORRECT organization
+        // when user has multiple organizations
+        const orgId = req.cookies.get('org_id')?.value
+
+        if (!orgId) {
+            return NextResponse.json(
+                { error: "No active organization. Please select an organization first." },
+                { status: 400 }
+            )
+        }
+
+        // 3. Verify user is a member of the requested organization
         const { data: member } = await supabase
             .from('organization_members')
-            .select('organization_id')
+            .select('organization_id, role_id')
             .eq('user_id', user.id)
+            .eq('organization_id', orgId)
             .limit(1)
             .maybeSingle()
 
         if (!member) {
             return NextResponse.json(
-                { error: "Organization not found" },
-                { status: 404 }
+                { error: "Not a member of this organization" },
+                { status: 403 }
             )
         }
 
-        // Check if integration already exists
+        // Log organization context for debugging multi-tenancy
+        console.log('[github-oauth] Organization context:', {
+            userId: user.id,
+            organizationId: member.organization_id,
+            roleId: member.role_id
+        })
+
+        // 4. Check if integration already exists
         const { data: existing } = await supabase
             .from('integrations')
             .select('id')
@@ -41,7 +61,7 @@ export async function POST(_req: NextRequest) {
             .maybeSingle()
 
         if (!existing) {
-            // Create integration entry
+            // 5. Create integration entry if not exists
             const { data: newIntegration, error: createError } = await supabase
                 .from('integrations')
                 .insert({
