@@ -56,6 +56,7 @@ interface IntegrationsClientProps {
 export default function IntegrationsClient({ initialSections }: IntegrationsClientProps) {
   const searchId = useId()
   const [searchTerm, setSearchTerm] = useState("")
+  const [redirectingProvider, setRedirectingProvider] = useState<string | null>(null)
   const [sections, setSections] = useState<IntegrationSection[]>(initialSections)
   const [, startTransition] = useTransition()
 
@@ -210,6 +211,13 @@ export default function IntegrationsClient({ initialSections }: IntegrationsClie
           // OAuth integrations return a redirect URL
           if (data?.redirectUrl) {
             console.log('[integrations-ui] Redirecting to OAuth provider:', item.id)
+
+            // Show full-screen loading overlay
+            setRedirectingProvider(item.name)
+
+            // Small delay to ensure render updates and provide visual feedback
+            await new Promise(resolve => setTimeout(resolve, 800))
+
             // Redirect to OAuth provider in same window
             window.location.href = data.redirectUrl
             return
@@ -266,6 +274,16 @@ export default function IntegrationsClient({ initialSections }: IntegrationsClie
   // ---------------------------------------------------------------------------
   return (
     <div className="w-full flex flex-1 flex-col gap-10 p-6 pt-2 max-w-[1600px] mx-auto">
+      {/* Full-screen Redirect Loading Overlay */}
+      {redirectingProvider && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/95 backdrop-blur-sm animate-in fade-in duration-300">
+          <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-6" />
+          <h2 className="text-xl font-medium text-gray-900 mb-2">
+            Please wait while we redirect you to {redirectingProvider}
+          </h2>
+          <p className="text-gray-500">It should only take a few moments.</p>
+        </div>
+      )}
 
       {/* ── Page Header ────────────────────────────────────────────────────── */}
       <header className="w-full flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
