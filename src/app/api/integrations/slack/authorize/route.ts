@@ -85,12 +85,17 @@ export async function POST(req: NextRequest) {
         // Generate OAuth state
         const state = generateOAuthState('slack', member.organization_id)
 
+        // Dynamic base URL detection for flexible deployment
+        // Priority: NEXT_PUBLIC_APP_URL (production) → VERCEL_URL (preview) → fallback
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
+            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
         // Build authorization URL
         const authUrl = buildAuthorizationUrl(
             {
                 clientId: process.env.SLACK_CLIENT_ID!,
                 clientSecret: process.env.SLACK_CLIENT_SECRET!,
-                redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/slack/callback`,
+                redirectUri: `${baseUrl}/api/integrations/slack/callback`,
                 authorizationUrl: 'https://slack.com/oauth/v2/authorize',
                 tokenUrl: 'https://slack.com/api/oauth.v2.access',
                 scopes: ['chat:write', 'incoming-webhook', 'channels:read', 'users:read']
