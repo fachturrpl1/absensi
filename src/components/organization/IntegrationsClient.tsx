@@ -277,7 +277,7 @@ export default function IntegrationsClient({ initialSections }: IntegrationsClie
       {/* Full-screen Redirect Loading Overlay */}
       {redirectingProvider && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/95 backdrop-blur-sm animate-in fade-in duration-300">
-          <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-6" />
+          <Loader2 className="h-10 w-10 animate-spin text-gray-900 mb-6" />
           <h2 className="text-xl font-medium text-gray-900 mb-2">
             Please wait while we redirect you to {redirectingProvider}
           </h2>
