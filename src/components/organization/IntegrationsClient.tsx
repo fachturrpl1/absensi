@@ -152,15 +152,9 @@ export default function IntegrationsClient({ initialSections }: IntegrationsClie
 
           // OAuth integrations return a redirect URL
           if (data?.redirectUrl) {
-            console.log('[integrations-ui] Opening OAuth provider in new tab:', item.id)
-            // Open OAuth in new tab for better UX
-            window.open(data.redirectUrl, '_blank', 'noopener,noreferrer')
-
-            // Set status to connecting
-            updateItemStatus(item.id, {
-              status: "idle",
-              errorMessage: undefined,
-            })
+            console.log('[integrations-ui] Redirecting to OAuth provider:', item.id)
+            // Redirect to OAuth provider in same window
+            window.location.href = data.redirectUrl
             return
           }
 

@@ -46,11 +46,15 @@ export async function GET(req: NextRequest) {
         }
 
         // Exchange code for tokens
+        // Dynamic base URL detection (matching authorize route)
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
+            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
         const tokens = await exchangeCodeForToken(
             {
                 clientId: process.env.SLACK_CLIENT_ID!,
                 clientSecret: process.env.SLACK_CLIENT_SECRET!,
-                redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/slack/callback`,
+                redirectUri: `${baseUrl}/api/integrations/slack/callback`,
                 authorizationUrl: 'https://slack.com/oauth/v2/authorize',
                 tokenUrl: 'https://slack.com/api/oauth.v2.access',
                 scopes: []

@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
             {
                 clientId: process.env.GITHUB_CLIENT_ID!,
                 clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-                redirectUri: `${baseUrl}/api/integrations/github/callback`,
+                redirectUri: `${baseUrl}/api/auth/code/github`,
                 authorizationUrl: 'https://github.com/login/oauth/authorize',
                 tokenUrl: 'https://github.com/login/oauth/access_token',
                 scopes: ['repo', 'read:user', 'user:email']
