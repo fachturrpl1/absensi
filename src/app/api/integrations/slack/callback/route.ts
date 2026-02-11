@@ -15,6 +15,10 @@ import {
 
 export async function GET(req: NextRequest) {
     try {
+        // Dynamic base URL detection (for redirects and token exchange)
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
+            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
         const searchParams = req.nextUrl.searchParams
         const code = searchParams.get('code')
         const state = searchParams.get('state')
@@ -24,13 +28,13 @@ export async function GET(req: NextRequest) {
         if (error) {
             console.error('[slack] OAuth error:', error)
             return NextResponse.redirect(
-                `${process.env.NEXT_PUBLIC_APP_URL}/organization/integrations?error=${error}`
+                `${baseUrl}/organization/integrations?error=${error}`
             )
         }
 
         if (!code || !state) {
             return NextResponse.redirect(
-                `${process.env.NEXT_PUBLIC_APP_URL}/organization/integrations?error=missing_params`
+                `${baseUrl}/organization/integrations?error=missing_params`
             )
         }
 
@@ -41,15 +45,11 @@ export async function GET(req: NextRequest) {
         } catch (err) {
             console.error('[slack] Invalid state:', err)
             return NextResponse.redirect(
-                `${process.env.NEXT_PUBLIC_APP_URL}/organization/integrations?error=invalid_state`
+                `${baseUrl}/organization/integrations?error=invalid_state`
             )
         }
 
         // Exchange code for tokens
-        // Dynamic base URL detection (matching authorize route)
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-
         const tokens = await exchangeCodeForToken(
             {
                 clientId: process.env.SLACK_CLIENT_ID!,
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
 
         if (!integration) {
             return NextResponse.redirect(
-                `${process.env.NEXT_PUBLIC_APP_URL}/organization/integrations?error=integration_not_found`
+                `${baseUrl}/organization/integrations?error=integration_not_found`
             )
         }
 
@@ -92,13 +92,18 @@ export async function GET(req: NextRequest) {
 
         // Redirect back to integrations page with success
         return NextResponse.redirect(
-            `${process.env.NEXT_PUBLIC_APP_URL}/organization/integrations?success=slack_connected`
+            `${baseUrl}/organization/integrations?success=slack_connected`
         )
 
     } catch (error) {
         console.error('[slack] Callback error:', error)
+
+        // Fallback base URL for error redirect
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
+            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
         return NextResponse.redirect(
-            `${process.env.NEXT_PUBLIC_APP_URL}/organization/integrations?error=callback_failed`
+            `${baseUrl}/organization/integrations?error=callback_failed`
         )
     }
 }

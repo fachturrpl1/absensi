@@ -54,7 +54,7 @@ const INTEGRATIONS_CATALOG: IntegrationSection[] = [
                 description:
                     "Automatically generate Zoom meeting links for scheduled team check-ins and stand-ups.",
                 iconUrl:
-                    "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Zoom_communications_logo.svg/512px-Zoom_communications_logo.svg.png",
+                    "https://cdn.simpleicons.org/zoom/2D8CFF",
                 connected: false,
                 status: "idle",
                 category: "Communication",
@@ -66,7 +66,7 @@ const INTEGRATIONS_CATALOG: IntegrationSection[] = [
                 description:
                     "Push attendance summaries and timesheet approvals into Teams channels and chats.",
                 iconUrl:
-                    "https://upload.wikimedia.org/wikipedia/commons/c/c9/Microsoft_Office_Teams_%282018%E2%80%93present%29.svg",
+                    "https://cdn.simpleicons.org/microsoftteams/6264A7",
                 connected: false,
                 status: "idle",
                 category: "Communication",

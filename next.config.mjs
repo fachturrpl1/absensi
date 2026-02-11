@@ -236,7 +236,7 @@ const cspHeader = isDev ? '' : `
   default-src 'self';
   script-src 'self' 'unsafe-eval' 'unsafe-inline' blob:; https://*.supabase.co https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live;
   style-src 'self' 'unsafe-inline' https://unpkg.com;
-  img-src 'self' blob: data: https://*.supabase.co https://*.supabase.in https://*.tile.openstreetmap.org https://unpkg.com https://cdn.jsdelivr.net https://upload.wikimedia.org;
+  img-src 'self' blob: data: https://*.supabase.co https://*.supabase.in https://*.tile.openstreetmap.org https://unpkg.com https://cdn.jsdelivr.net https://upload.wikimedia.org https://cdn.simpleicons.org;
   font-src 'self' data:;
   object-src 'none';
   base-uri 'self';
@@ -421,6 +421,10 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'upload.wikimedia.org',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.simpleicons.org',
       },
       {
         protocol: 'https',

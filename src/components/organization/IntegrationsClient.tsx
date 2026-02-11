@@ -137,8 +137,36 @@ export default function IntegrationsClient({ initialSections }: IntegrationsClie
 
         } else {
           // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-          // CONNECT FLOW (OAuth)
+          // CONNECT FLOW
           // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+          // Zoom uses Server-to-Server OAuth (no user authorization flow)
+          if (item.id === 'zoom') {
+            res = await fetch(`/api/integrations/zoom/connect`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" }
+            })
+
+            const data = await res.json().catch(() => ({}))
+
+            if (!res.ok) {
+              throw new Error(data?.error || data?.message || `Zoom connection failed (${res.status})`)
+            }
+
+            // Direct connection successful
+            startTransition(() => {
+              updateItemStatus(item.id, {
+                connected: true,
+                status: "idle",
+                errorMessage: undefined,
+              })
+            })
+
+            console.log('[integrations-ui] Zoom connected successfully')
+            return
+          }
+
+          // GitHub/Slack: OAuth flow with user authorization
           res = await fetch(`/api/integrations/${item.id}/authorize`, {
             method: "POST",
             headers: { "Content-Type": "application/json" }
@@ -246,18 +274,6 @@ export default function IntegrationsClient({ initialSections }: IntegrationsClie
               spellCheck={false}
             />
           </div>
-
-          {/* Request Integration CTA */}
-          <Button
-            className="rounded-full shrink-0"
-            onClick={() => {
-              /* TODO: open a modal / mailto / feedback form */
-            }}
-            aria-label="Request a new integration"
-          >
-            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-            Request Integration
-          </Button>
         </div>
       </header>
 
