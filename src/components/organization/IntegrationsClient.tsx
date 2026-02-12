@@ -170,42 +170,9 @@ export default function IntegrationsClient({ initialSections }: IntegrationsClie
           // CONNECT FLOW
           // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-          // Zoom uses Server-to-Server OAuth (no user authorization flow)
-          if (item.id === 'zoom') {
-            // Show loading overlay
-            setLoadingState({
-              provider: item.name,
-              message: `Please wait while we connect to ${item.name}`
-            })
+          // Zoom now uses standard OAuth flow (User OAuth)
+          // Fall through to generic OAuth handler below
 
-            res = await fetch(`/api/integrations/zoom/connect`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" }
-            })
-
-            const data = await res.json().catch(() => ({}))
-
-            // Keep loading screen for a moment to show success/completion feel
-            await new Promise(resolve => setTimeout(resolve, 800))
-
-            if (!res.ok) {
-              setLoadingState(null) // Clear loading on error
-              throw new Error(data?.error || data?.message || `Zoom connection failed (${res.status})`)
-            }
-
-            // Direct connection successful
-            setLoadingState(null) // Clear loading
-            startTransition(() => {
-              updateItemStatus(item.id, {
-                connected: true,
-                status: "idle",
-                errorMessage: undefined,
-              })
-            })
-
-            console.log('[integrations-ui] Zoom connected successfully')
-            return
-          }
 
           // GitHub/Slack: OAuth flow with user authorization
           res = await fetch(`/api/integrations/${item.id}/authorize`, {

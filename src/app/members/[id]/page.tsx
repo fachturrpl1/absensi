@@ -23,18 +23,20 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   const schedule = getMockSchedule()
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-6">
-      <div className="w-full">
-        {member ? (
-          <MemberProfileClient 
-            member={member} 
-            performance={performance}
-            schedule={schedule}
-          />
-        ) : (
-          <div className="text-muted-foreground">Member not found.</div>
-        )}
-      </div>
-    </div>
+    <>
+      {member ? (
+        <MemberProfileClient
+          member={member}
+          performance={performance}
+          schedule={schedule}
+        />
+      ) : (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <p className="text-xl font-semibold text-muted-foreground">Member not found.</p>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

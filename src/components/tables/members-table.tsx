@@ -3,14 +3,9 @@
 import React from "react"
 import { IOrganization_member } from "@/interface"
 import { Button } from "@/components/ui/button"
-import { Trash, Pencil, Eye, Check, X, Columns3Cog } from "lucide-react"
+import { Trash, Pencil, Eye, Check, X } from "lucide-react"
 import { useRouter } from "next/navigation"
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,7 +37,7 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
   const [pageIndex, setPageIndex] = React.useState(0)
   const [globalFilter] = React.useState("")
   const [statusFilter] = React.useState("all")
-  const [visibleColumns, setVisibleColumns] = React.useState({
+  const [visibleColumns] = React.useState({
     members: true,
     // phone: true,
     nik: true,
@@ -220,7 +215,7 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
   }, [totalPages, pageIndex])
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full">
       <style jsx global>{`
         html body .custom-hover-row:hover,
         html body .custom-hover-row:hover > td {
@@ -231,96 +226,18 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
           background-color: #374151 !important;
         }
       `}</style>
-      {/* Filters and Controls */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
-
-        {/* Toggle Columns */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="hidden">
-              <Columns3Cog className="h-4 w-4" /> Columns
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuCheckboxItem
-              checked={visibleColumns.members}
-              onCheckedChange={(checked) =>
-                setVisibleColumns((prev) => ({ ...prev, members: checked }))
-              }
-            >
-              Members
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={visibleColumns.nik}
-              onCheckedChange={(checked) =>
-                setVisibleColumns((prev) => ({ ...prev, nik: checked }))
-              }
-            >
-              NIK
-            </DropdownMenuCheckboxItem>
-            {/* <DropdownMenuCheckboxItem
-              checked={visibleColumns.phone}
-              onCheckedChange={(checked) =>
-                setVisibleColumns((prev) => ({ ...prev, phone: checked }))
-              }
-            >
-              Phone Number
-            </DropdownMenuCheckboxItem> */}
-            <DropdownMenuCheckboxItem
-              checked={visibleColumns.group}
-              onCheckedChange={(checked) =>
-                setVisibleColumns((prev) => ({ ...prev, group: checked }))
-              }
-            >
-              Group
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={visibleColumns.gender}
-              onCheckedChange={(checked) =>
-                setVisibleColumns((prev) => ({ ...prev, gender: checked }))
-              }
-            >
-              Gender
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={visibleColumns.religion}
-              onCheckedChange={(checked) =>
-                setVisibleColumns((prev) => ({ ...prev, religion: checked }))
-              }
-            >
-              Religion
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={visibleColumns.status}
-              onCheckedChange={(checked) =>
-                setVisibleColumns((prev) => ({ ...prev, status: checked }))
-              }
-            >
-              Status
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={visibleColumns.actions}
-              onCheckedChange={(checked) =>
-                setVisibleColumns((prev) => ({ ...prev, actions: checked }))
-              }
-            >
-              Actions
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
 
       {/* Table */}
-      <div className="border rounded-lg overflow-x-auto">
+      <div className="overflow-x-auto">
         <table className="w-full min-w-[880px]">
           {/* Header */}
           <thead className="bg-muted/50 border-b">
             <tr>
               {visibleColumns.members && (
-                <th className="p-3 text-left text-xs font-medium text-foreground">Members</th>
+                <th className="p-3 text-left text-xs font-medium text-foreground">Name</th>
               )}
               {visibleColumns.nik && (
-                <th className="p-3 text-left text-xs font-medium text-foreground">NIK</th>
+                <th className="p-3 text-left text-xs font-medium text-foreground">Identification</th>
               )}
               {/* {visibleColumns.phone && (
               <th className="p-3 text-left text-xs font-medium text-foreground">Phone Number</th>

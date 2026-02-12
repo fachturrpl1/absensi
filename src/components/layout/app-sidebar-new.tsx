@@ -296,7 +296,6 @@ function NavMain({ items }: { items: NavMainItem[] }) {
             );
           }
 
-          // Expanded sidebar: keep the existing collapsible submenu.
           return (
             <SidebarMenuItem key={item.title} className="group/collapsible">
               <Collapsible

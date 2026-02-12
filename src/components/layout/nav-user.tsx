@@ -50,10 +50,10 @@ export const NavUser = memo(function NavUser() {
   // Sync with store user (already fetched server-side)
   useEffect(() => {
     if (storeUser) {
-      const displayName = storeUser.display_name || 
+      const displayName = storeUser.display_name ||
         [storeUser.first_name, storeUser.middle_name, storeUser.last_name]
           .filter(Boolean)
-          .join(' ') || 
+          .join(' ') ||
         'User';
 
       setUser({
@@ -69,7 +69,7 @@ export const NavUser = memo(function NavUser() {
     if (!storeUser?.id) return;
 
     const supabase = createClient();
-    
+
     const channel = supabase
       .channel('user-profile-changes')
       .on(
@@ -127,7 +127,6 @@ export const NavUser = memo(function NavUser() {
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
-                <span className="text-muted-foreground truncate text-xs">{user.email}</span>
               </div>
               <EllipsisVertical className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -146,7 +145,6 @@ export const NavUser = memo(function NavUser() {
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
-                  <span className="text-muted-foreground truncate text-xs">{user.email}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
