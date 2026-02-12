@@ -10,7 +10,7 @@ export function TableSkeleton({ rows = 5, columns = 4 }: { rows?: number; column
           <Skeleton key={i} className="h-5 flex-1" />
         ))}
       </div>
-      
+
       {/* Rows */}
       {Array.from({ length: rows }).map((_, rowIndex) => (
         <div key={rowIndex} className="flex gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900">
@@ -76,7 +76,7 @@ export function DashboardSkeleton() {
           </Card>
         ))}
       </div>
-      
+
       {/* Charts Grid */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="border-gray-200 dark:border-gray-700">
@@ -88,7 +88,7 @@ export function DashboardSkeleton() {
             <Skeleton className="h-[320px] w-full rounded-lg" />
           </CardContent>
         </Card>
-        
+
         <Card className="border-gray-200 dark:border-gray-700">
           <CardHeader>
             <Skeleton className="h-7 w-[200px] mb-2" />
@@ -99,7 +99,7 @@ export function DashboardSkeleton() {
           </CardContent>
         </Card>
       </div>
-      
+
       {/* Table */}
       <Card className="border-gray-200 dark:border-gray-700">
         <CardHeader className="space-y-3">
@@ -125,7 +125,7 @@ export function ProfileSkeleton() {
           <Skeleton className="h-4 w-[150px]" />
         </div>
       </div>
-      
+
       {/* Details */}
       <div className="grid gap-4 md:grid-cols-2">
         {Array.from({ length: 6 }).map((_, i) => (
@@ -161,8 +161,8 @@ export function ChartSkeleton() {
     <div className="w-full h-[300px] flex items-end gap-3 p-6 bg-gray-50 dark:bg-gray-900 rounded-lg">
       {Array.from({ length: 12 }).map((_, i) => (
         <div key={i} className="flex-1 flex flex-col justify-end">
-          <Skeleton 
-            className="w-full rounded-t-lg" 
+          <Skeleton
+            className="w-full rounded-t-lg"
             style={{ height: `${Math.random() * 60 + 40}%` }}
           />
         </div>
@@ -171,27 +171,13 @@ export function ChartSkeleton() {
   );
 }
 
+import { Loader2 } from "lucide-react";
+
 export function PageSkeleton() {
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Page Header */}
-      <div className="space-y-3">
-        <Skeleton className="h-10 w-[350px]" />
-        <Skeleton className="h-5 w-[550px]" />
-      </div>
-      
-      {/* Action Buttons */}
-      <div className="flex gap-3">
-        <Skeleton className="h-11 w-[140px]" />
-        <Skeleton className="h-11 w-[120px]" />
-      </div>
-      
-      {/* Content */}
-      <Card className="border-gray-200 dark:border-gray-700">
-        <CardContent className="p-6">
-          <TableSkeleton rows={8} columns={6} />
-        </CardContent>
-      </Card>
+    <div className="flex min-h-[80vh] w-full flex-col items-center justify-center gap-3">
+      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      <p className="text-sm text-muted-foreground animate-pulse">Loading...</p>
     </div>
   );
 }

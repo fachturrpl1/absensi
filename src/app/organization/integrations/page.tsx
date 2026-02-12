@@ -116,6 +116,23 @@ const INTEGRATIONS_CATALOG: IntegrationSection[] = [
         ],
     },
     {
+        title: "Project Management",
+        items: [
+            {
+                id: "trello",
+                name: "Trello",
+                description:
+                    "Sync Trello cards, boards, and activity to automatically track time and progress.",
+                iconUrl:
+                    "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/trello/trello-plain.svg",
+                connected: false,
+                status: "idle",
+                category: "Project Management",
+                docsUrl: "https://trello.com/guide",
+            },
+        ],
+    },
+    {
         title: "Productivity",
         items: [
             {

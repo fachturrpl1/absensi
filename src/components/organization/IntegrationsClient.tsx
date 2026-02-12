@@ -56,7 +56,7 @@ interface IntegrationsClientProps {
 export default function IntegrationsClient({ initialSections }: IntegrationsClientProps) {
   const searchId = useId()
   const [searchTerm, setSearchTerm] = useState("")
-  const [redirectingProvider, setRedirectingProvider] = useState<string | null>(null)
+  const [loadingState, setLoadingState] = useState<{ provider: string; message: string } | null>(null)
   const [sections, setSections] = useState<IntegrationSection[]>(initialSections)
   const [, startTransition] = useTransition()
 
@@ -172,6 +172,12 @@ export default function IntegrationsClient({ initialSections }: IntegrationsClie
 
           // Zoom uses Server-to-Server OAuth (no user authorization flow)
           if (item.id === 'zoom') {
+            // Show loading overlay
+            setLoadingState({
+              provider: item.name,
+              message: `Please wait while we connect to ${item.name}`
+            })
+
             res = await fetch(`/api/integrations/zoom/connect`, {
               method: "POST",
               headers: { "Content-Type": "application/json" }
@@ -179,11 +185,16 @@ export default function IntegrationsClient({ initialSections }: IntegrationsClie
 
             const data = await res.json().catch(() => ({}))
 
+            // Keep loading screen for a moment to show success/completion feel
+            await new Promise(resolve => setTimeout(resolve, 800))
+
             if (!res.ok) {
+              setLoadingState(null) // Clear loading on error
               throw new Error(data?.error || data?.message || `Zoom connection failed (${res.status})`)
             }
 
             // Direct connection successful
+            setLoadingState(null) // Clear loading
             startTransition(() => {
               updateItemStatus(item.id, {
                 connected: true,
@@ -213,7 +224,10 @@ export default function IntegrationsClient({ initialSections }: IntegrationsClie
             console.log('[integrations-ui] Redirecting to OAuth provider:', item.id)
 
             // Show full-screen loading overlay
-            setRedirectingProvider(item.name)
+            setLoadingState({
+              provider: item.name,
+              message: `Please wait while we redirect you to ${item.name}`
+            })
 
             // Small delay to ensure render updates and provide visual feedback
             await new Promise(resolve => setTimeout(resolve, 800))
@@ -274,14 +288,14 @@ export default function IntegrationsClient({ initialSections }: IntegrationsClie
   // ---------------------------------------------------------------------------
   return (
     <div className="w-full flex flex-1 flex-col gap-10 p-6 pt-2 max-w-[1600px] mx-auto">
-      {/* Full-screen Redirect Loading Overlay */}
-      {redirectingProvider && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/95 backdrop-blur-sm animate-in fade-in duration-300">
-          <Loader2 className="h-10 w-10 animate-spin text-gray-900 mb-6" />
-          <h2 className="text-xl font-medium text-gray-900 mb-2">
-            Please wait while we redirect you to {redirectingProvider}
+      {/* Full-screen Loading Overlay for Redirects/Connections */}
+      {loadingState && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background animate-in fade-in duration-300">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mb-6" />
+          <h2 className="text-xl font-medium text-foreground mb-2">
+            {loadingState.message}
           </h2>
-          <p className="text-gray-500">It should only take a few moments.</p>
+          <p className="text-muted-foreground">It should only take a few moments.</p>
         </div>
       )}
 

@@ -18,6 +18,7 @@ export type IntegrationCategory =
   | "Development"
   | "Productivity"
   | "HR"
+  | "Project Management"
 
 export type Integration = {
   id: string
