@@ -1,58 +1,67 @@
 {
-  "generatedAt": "2025-11-19T02:21:33.471Z",
+  "generatedAt": "2026-02-12T09:59:01.309Z",
   "source": "country-state-city",
   "countries": [
     {
       "code": "ID",
       "name": "Indonesia",
+      "phone_code": "62",
       "states": 34,
       "cities": 889
     },
     {
       "code": "MY",
       "name": "Malaysia",
+      "phone_code": "60",
       "states": 16,
       "cities": 179
     },
     {
       "code": "SG",
       "name": "Singapore",
+      "phone_code": "65",
       "states": 5,
       "cities": 2
     },
     {
       "code": "TH",
       "name": "Thailand",
+      "phone_code": "66",
       "states": 78,
       "cities": 1240
     },
     {
       "code": "PH",
       "name": "Philippines",
+      "phone_code": "63",
       "states": 97,
       "cities": 6520
     },
     {
       "code": "VN",
       "name": "Vietnam",
+      "phone_code": "84",
       "states": 63,
       "cities": 467
     },
     {
       "code": "US",
       "name": "United States",
+      "phone_code": "1",
       "states": 66,
       "cities": 19821
     },
     {
       "code": "GB",
       "name": "United Kingdom",
+      "phone_code": "44",
       "states": 247,
       "cities": 3871
     },
     {
       "code": "AU",
       "name": "Australia",
+      "phone_code": "61",
       "states": 8,
       "cities": 4152
     }

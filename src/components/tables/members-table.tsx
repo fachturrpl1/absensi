@@ -120,9 +120,9 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
 
   const getGender = (member: IOrganization_member): string => {
     const m = member as MemberExtended
-    const gender = m.user?.jenis_kelamin
-    if (gender === 'male') return 'L'
-    if (gender === 'female') return 'P'
+    const gender = m.user?.jenis_kelamin || m.user?.gender
+    if (gender === 'male') return 'Male'
+    if (gender === 'female') return 'Female'
     return String(gender || m.biodata?.jenis_kelamin || '-')
   }
 

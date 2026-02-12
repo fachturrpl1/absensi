@@ -3,13 +3,6 @@ import { getOrganizationMembersById } from "@/action/members"
 import { getMemberPerformance } from "@/action/member_performance"
 import MemberProfileClient from "@/components/members/member-profile-client"
 
-const getMockSchedule = () => ({
-  name: "Standard Office Hours",
-  type: "Fixed",
-  workingHours: "08:00 - 17:00",
-  workingDays: ["Mon", "Tue", "Wed", "Thu", "Fri"],
-})
-
 export default async function MemberProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
@@ -20,7 +13,8 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
   const member = memberRes && memberRes.success ? memberRes.data : null
   const performance = perfRes && perfRes.success ? perfRes.data : undefined
-  const schedule = getMockSchedule()
+  // TODO: Fetch real work schedule data from database
+  const schedule = undefined
 
   return (
     <>

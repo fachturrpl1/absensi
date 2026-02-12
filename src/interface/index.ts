@@ -21,6 +21,13 @@ export interface IUser {
     gender?: "male" | "female" | "other" | "prefer_not_to_say" | null;
     nationality?: string;
     national_id?: string;
+    nik?: string;
+    jalan?: string;
+    rt?: string;
+    rw?: string;
+    dusun?: string;
+    kelurahan?: string;
+    kecamatan?: string;
     profile_photo_url?: string | null;
     emergency_contact?: IEmergencyContact | null;
     is_active?: boolean;
