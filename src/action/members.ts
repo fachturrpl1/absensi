@@ -102,7 +102,7 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         title,
         code
       ),
-      role:role_id (
+      role:system_roles!role_id (
         id,
         code,
         name,
@@ -468,7 +468,7 @@ export const getOrganizationMembersById = async (id: string) => {
     *,
     organizations:organization_id (*),
     rfid_cards (card_number, card_type),
-    role:role_id (
+    role:system_roles!role_id (
       id,
       code,
       name,
@@ -685,14 +685,8 @@ export const getOrganizationMembersPaginated = async ({
     targetOrgId = member.organization_id.toString();
   }
 
-  // Calculate range
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
-
-  // Build query
-  // We cannot easily filter cross-relations in Supabase JS without !inner join which filters out rows that don't match.
-  // But members might not have users.
-  // So for now, we will paginate ALL members if no query, or filter by user name if query is present (assuming most searches are for users).
 
   let queryBuilder = adminClient
     .from("organization_members")
@@ -714,12 +708,8 @@ export const getOrganizationMembersPaginated = async ({
     .eq("is_active", true);
 
   if (query) {
-    // Use case-insensitive search on user fields
-    // Note: This requires the foreign table alias to match the select part
     queryBuilder = queryBuilder.or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,display_name.ilike.%${query}%`, { foreignTable: "user" });
   } else {
-    // If no query, we don't need !inner join on user, so let's modify the select to be left join
-    // Re-create query builder for cleaner logic without !inner if no query
     queryBuilder = adminClient
       .from("organization_members")
       .select(`

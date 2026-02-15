@@ -200,7 +200,7 @@ const getSidebarGroups = (): NavGroup[] => [
         icon: Building2,
       },
       {
-        title: 'Organization',
+        title: 'People',
         icon: Users,
         subItems: [
           { title: 'Members', url: '/members', icon: Users },
