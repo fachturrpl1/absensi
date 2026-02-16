@@ -28,13 +28,13 @@ export async function GET(req: NextRequest) {
         if (error) {
             console.error('[slack] OAuth error:', error)
             return NextResponse.redirect(
-                `${baseUrl}/organization/integrations?error=${error}`
+                `${baseUrl}/organization/applications?error=${error}`
             )
         }
 
         if (!code || !state) {
             return NextResponse.redirect(
-                `${baseUrl}/organization/integrations?error=missing_params`
+                `${baseUrl}/organization/applications?error=missing_params`
             )
         }
 
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
         } catch (err) {
             console.error('[slack] Invalid state:', err)
             return NextResponse.redirect(
-                `${baseUrl}/organization/integrations?error=invalid_state`
+                `${baseUrl}/organization/applications?error=invalid_state`
             )
         }
 
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
 
         if (!integration) {
             return NextResponse.redirect(
-                `${baseUrl}/organization/integrations?error=integration_not_found`
+                `${baseUrl}/organization/applications?error=integration_not_found`
             )
         }
 
@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
 
         // Redirect back to integrations page with success
         return NextResponse.redirect(
-            `${baseUrl}/organization/integrations?success=slack_connected`
+            `${baseUrl}/organization/applications?success=slack_connected`
         )
 
     } catch (error) {
@@ -100,10 +100,10 @@ export async function GET(req: NextRequest) {
 
         // Fallback base URL for error redirect
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3007')
 
         return NextResponse.redirect(
-            `${baseUrl}/organization/integrations?error=callback_failed`
+            `${baseUrl}/organization/applications?error=callback_failed`
         )
     }
 }

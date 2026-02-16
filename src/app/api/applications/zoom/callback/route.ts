@@ -27,11 +27,11 @@ export async function GET(req: NextRequest) {
     // Handle Zoom-side errors (e.g., user denied access)
     if (error) {
         console.error('[zoom-callback] Zoom returned error:', error)
-        return NextResponse.redirect(`${baseUrl}/organization/integrations?error=zoom_auth_denied`)
+        return NextResponse.redirect(`${baseUrl}/organization/applications?error=zoom_auth_denied`)
     }
 
     if (!code || !state) {
-        return NextResponse.redirect(`${baseUrl}/organization/integrations?error=zoom_missing_params`)
+        return NextResponse.redirect(`${baseUrl}/organization/applications?error=zoom_missing_params`)
     }
 
     try {
@@ -102,10 +102,10 @@ export async function GET(req: NextRequest) {
         }
 
         // 4. Redirect Success
-        return NextResponse.redirect(`${baseUrl}/organization/integrations?success=zoom_connected`)
+        return NextResponse.redirect(`${baseUrl}/organization/applications?success=zoom_connected`)
 
     } catch (error) {
         console.error('[zoom-callback] Integration failed:', error)
-        return NextResponse.redirect(`${baseUrl}/organization/integrations?error=zoom_connection_failed`)
+        return NextResponse.redirect(`${baseUrl}/organization/applications?error=zoom_connection_failed`)
     }
 }

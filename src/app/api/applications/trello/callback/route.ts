@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3007')
 
     if (!oauth_token || !oauth_verifier) {
-        return NextResponse.redirect(`${baseUrl}/organization/integrations?error=trello_missing_params`)
+        return NextResponse.redirect(`${baseUrl}/organization/applications?error=trello_missing_params`)
     }
 
     try {
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
         const orgId = cookieStore.get(`trello_org_${oauth_token}`)?.value
 
         if (!tokenSecret || !orgId) {
-            return NextResponse.redirect(`${baseUrl}/organization/integrations?error=trello_session_expired`)
+            return NextResponse.redirect(`${baseUrl}/organization/applications?error=trello_session_expired`)
         }
 
         // 2. Exchange for Access Token (OAuth 1.0a Step 3)
@@ -77,10 +77,10 @@ export async function GET(req: NextRequest) {
         cookieStore.delete(`trello_secret_${oauth_token}`)
         cookieStore.delete(`trello_org_${oauth_token}`)
 
-        return NextResponse.redirect(`${baseUrl}/organization/integrations?success=trello_connected`)
+        return NextResponse.redirect(`${baseUrl}/organization/applications?success=trello_connected`)
 
     } catch (error) {
         console.error('[trello] Callback error:', error)
-        return NextResponse.redirect(`${baseUrl}/organization/integrations?error=trello_callback_failed`)
+        return NextResponse.redirect(`${baseUrl}/organization/applications?error=trello_callback_failed`)
     }
 }

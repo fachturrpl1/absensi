@@ -27,13 +27,13 @@ export async function GET(req: NextRequest) {
         if (error) {
             console.error('[github] OAuth error:', error)
             return NextResponse.redirect(
-                `${process.env.NEXT_PUBLIC_APP_URL}/organization/integrations?error=${error}`
+                `${process.env.NEXT_PUBLIC_APP_URL}/organization/applications?error=${error}`
             )
         }
 
         if (!code || !state) {
             return NextResponse.redirect(
-                `${process.env.NEXT_PUBLIC_APP_URL}/organization/integrations?error=missing_params`
+                `${process.env.NEXT_PUBLIC_APP_URL}/organization/applications?error=missing_params`
             )
         }
 
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
         } catch (err) {
             console.error('[github] Invalid state:', err)
             return NextResponse.redirect(
-                `${process.env.NEXT_PUBLIC_APP_URL}/organization/integrations?error=invalid_state`
+                `${process.env.NEXT_PUBLIC_APP_URL}/organization/applications?error=invalid_state`
             )
         }
 
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
 
         if (!integration) {
             return NextResponse.redirect(
-                `${process.env.NEXT_PUBLIC_APP_URL}/organization/integrations?error=integration_not_found`
+                `${process.env.NEXT_PUBLIC_APP_URL}/organization/applications?error=integration_not_found`
             )
         }
 
@@ -94,13 +94,13 @@ export async function GET(req: NextRequest) {
 
         // Redirect back to integrations page with success
         return NextResponse.redirect(
-            `${process.env.NEXT_PUBLIC_APP_URL}/organization/integrations?success=github_connected`
+            `${process.env.NEXT_PUBLIC_APP_URL}/organization/applications?success=github_connected`
         )
 
     } catch (error) {
         console.error('[github] Callback error:', error)
         return NextResponse.redirect(
-            `${process.env.NEXT_PUBLIC_APP_URL}/organization/integrations?error=callback_failed`
+            `${process.env.NEXT_PUBLIC_APP_URL}/organization/applications?error=callback_failed`
         )
     }
 }
