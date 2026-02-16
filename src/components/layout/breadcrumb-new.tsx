@@ -34,6 +34,7 @@ const pathMapping: Record<string, string> = {
   'attendance-devices': 'Devices',
   'finger': 'Fingerprint',
   'organization': 'Organization',
+  'applications': 'Applications', // New
 };
 
 // Combined paths - paths yang tidak perlu dipisah
@@ -41,6 +42,7 @@ const combinedPaths: Record<string, string> = {
   '/organization': 'Organization',
   '/organization/settings': 'Settings',
   '/organization/finger': 'Fingerprint',
+  '/organization/applications': 'Applications', // New
   '/settings': 'Settings',
   '/settings/invitations': 'Invitations',
 };

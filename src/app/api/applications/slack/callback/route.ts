@@ -1,10 +1,7 @@
 /**
- * GET /api/auth/code/github
+ * GET /api/integrations/slack/callback
  * 
- * Handle GitHub OAuth callback and token exchange.
- * 
- * Note: This replaces the previous /api/integrations/github/callback route
- * to match the user's preferred URL structure / existing configuration.
+ * Handle Slack OAuth callback and token exchange.
  */
 
 import { NextRequest, NextResponse } from "next/server"
@@ -18,6 +15,10 @@ import {
 
 export async function GET(req: NextRequest) {
     try {
+        // Dynamic base URL detection (for redirects and token exchange)
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
+            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
         const searchParams = req.nextUrl.searchParams
         const code = searchParams.get('code')
         const state = searchParams.get('state')
@@ -25,15 +26,15 @@ export async function GET(req: NextRequest) {
 
         // Check for OAuth errors
         if (error) {
-            console.error('[github] OAuth error:', error)
+            console.error('[slack] OAuth error:', error)
             return NextResponse.redirect(
-                `${process.env.NEXT_PUBLIC_APP_URL}/organization/applications?error=${error}`
+                `${baseUrl}/organization/applications?error=${error}`
             )
         }
 
         if (!code || !state) {
             return NextResponse.redirect(
-                `${process.env.NEXT_PUBLIC_APP_URL}/organization/applications?error=missing_params`
+                `${baseUrl}/organization/applications?error=missing_params`
             )
         }
 
@@ -42,23 +43,20 @@ export async function GET(req: NextRequest) {
         try {
             stateData = verifyOAuthState(state)
         } catch (err) {
-            console.error('[github] Invalid state:', err)
+            console.error('[slack] Invalid state:', err)
             return NextResponse.redirect(
-                `${process.env.NEXT_PUBLIC_APP_URL}/organization/applications?error=invalid_state`
+                `${baseUrl}/organization/applications?error=invalid_state`
             )
         }
 
         // Exchange code for tokens
-        // CRITICAL: redirectUri must match EXACLTY what was sent in the authorize step
-        // We are now using the API-style path preferred by the user: /api/auth/code/github
         const tokens = await exchangeCodeForToken(
             {
-                clientId: process.env.GITHUB_CLIENT_ID!,
-                clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-                // MATCHING THE NEW ROUTE PATH
-                redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/code/github`,
-                authorizationUrl: 'https://github.com/login/oauth/authorize',
-                tokenUrl: 'https://github.com/login/oauth/access_token',
+                clientId: process.env.SLACK_CLIENT_ID!,
+                clientSecret: process.env.SLACK_CLIENT_SECRET!,
+                redirectUri: `${baseUrl}/api/applications/slack/callback`,
+                authorizationUrl: 'https://slack.com/oauth/v2/authorize',
+                tokenUrl: 'https://slack.com/api/oauth.v2.access',
                 scopes: []
             },
             code
@@ -70,7 +68,7 @@ export async function GET(req: NextRequest) {
             .from('applications')
             .select('id')
             .eq('organization_id', stateData.organizationId)
-            .eq('provider', 'github')
+            .eq('provider', 'slack')
             .maybeSingle()
 
         let integrationId = integration?.id
@@ -81,10 +79,10 @@ export async function GET(req: NextRequest) {
                 .from('applications')
                 .insert({
                     organization_id: stateData.organizationId,
-                    provider: 'github',
-                    name: 'GitHub Integration',
-                    developer: 'GitHub',
-                    email: 'support@github.com',
+                    provider: 'slack',
+                    name: 'Slack Integration',
+                    developer: 'Slack',
+                    email: 'support@slack.com',
                     status: 'ACTIVE',
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
@@ -93,9 +91,9 @@ export async function GET(req: NextRequest) {
                 .single()
 
             if (createError) {
-                console.error('[github] Failed to create application:', createError)
+                console.error('[slack] Failed to create application:', createError)
                 return NextResponse.redirect(
-                    `${process.env.NEXT_PUBLIC_APP_URL}/organization/applications?error=creation_failed`
+                    `${baseUrl}/organization/applications?error=creation_failed`
                 )
             }
             integrationId = newApp.id
@@ -104,7 +102,7 @@ export async function GET(req: NextRequest) {
         // Store tokens
         await storeOAuthTokens(integrationId, tokens)
 
-        // Generate webhook secret for GitHub
+        // Generate webhook secret for Slack
         const webhookSecret = crypto.randomUUID()
 
         await supabase
@@ -116,13 +114,18 @@ export async function GET(req: NextRequest) {
 
         // Redirect back to integrations page with success
         return NextResponse.redirect(
-            `${process.env.NEXT_PUBLIC_APP_URL}/organization/applications?success=github_connected`
+            `${baseUrl}/organization/applications?success=slack_connected`
         )
 
     } catch (error) {
-        console.error('[github] Callback error:', error)
+        console.error('[slack] Callback error:', error)
+
+        // Fallback base URL for error redirect
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
+            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
         return NextResponse.redirect(
-            `${process.env.NEXT_PUBLIC_APP_URL}/organization/applications?error=callback_failed`
+            `${baseUrl}/organization/applications?error=callback_failed`
         )
     }
 }

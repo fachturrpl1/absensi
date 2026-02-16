@@ -1,13 +1,12 @@
 "use client"
 
 import React, { useState, useEffect, use } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import {
   Mail,
   Clock,
   ChevronDown,
   Info,
-  Settings2,
   X
 } from "lucide-react"
 
@@ -29,7 +28,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useProfilePhotoUrl } from "@/hooks/use-profile"
@@ -143,13 +141,13 @@ function MemberProfileHeader({
   lastTracked: string
 }) {
   return (
-    <div className="flex gap-8 mb-8 pb-8 border-b">
+    <div className="flex gap-8 mb-6 pb-6">
       {/* Left: Avatar */}
       <div className="flex-shrink-0">
         <div className="flex flex-col items-center text-center">
-          <Avatar className="h-20 w-20 bg-primary">
+          <Avatar className="h-20 w-20">
             <AvatarImage src={photoUrl} alt={displayName} />
-            <AvatarFallback className="bg-primary text-lg font-semibold text-primary-foreground">
+            <AvatarFallback className="bg-gray-100 text-gray-700 text-lg font-semibold">
               {getUserInitials(
                 user?.first_name,
                 user?.last_name,
@@ -178,7 +176,11 @@ function MemberProfileHeader({
 export default function MemberProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<TabType>("info")
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+
+  const activeTab = (searchParams.get("tab") as TabType) || "info"
+
   const [isSaving, setIsSaving] = useState(false)
   const [member, setMember] = useState<IOrganization_member | null>(null)
   const [, setPerformance] = useState<IMemberPerformance | undefined>(undefined)
@@ -276,7 +278,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
     <div className="h-full bg-background">
       {/* Top Bar */}
       <div className="bg-card">
-        <div className="mx-auto max-w-7xl px-6 py-4">
+        <div className="px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">{displayName}</h1>
             <div className="flex items-center gap-3">
@@ -311,14 +313,18 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
 
       {/* Tabs */}
       <div className="border-b bg-card">
-        <div className="mx-auto max-w-7xl px-6">
+        <div className="px-4">
           <div className="flex gap-6 overflow-x-auto">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  const params = new URLSearchParams(searchParams.toString())
+                  params.set("tab", tab.id)
+                  router.push(`${pathname}?${params.toString()}`, { scroll: false })
+                }}
                 className={cn(
-                  "whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium transition-colors",
+                  "whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium transition-colors hover:cursor-pointer",
                   activeTab === tab.id
                     ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground"
@@ -332,7 +338,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* Content */}
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="px-4 py-6">
 
         <MemberProfileHeader
           user={user}
@@ -344,7 +350,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
         />
 
         {activeTab === "info" && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             <div className="space-y-4">
               <h2 className="text-sm font-bold">Identity</h2>
               <div className="grid gap-4 md:grid-cols-2">
@@ -416,7 +422,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
         )}
 
         {activeTab === "employment" && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             <div className="space-y-4">
               <h2 className="text-sm font-bold">Employment Timeline</h2>
               <Card>
@@ -496,20 +502,64 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold">Compensation & Pay</h2>
-                <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">Coming Soon</span>
+                <h2 className="text-sm font-bold">Accounting</h2>
+                <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">View Only</span>
               </div>
-              <Card className="bg-muted/30 border-dashed">
-                <CardContent className="p-6 text-center text-muted-foreground text-sm">
-                  Payroll and compensation features are not yet enabled for this organization.
-                </CardContent>
-              </Card>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  label="TAX INFO"
+                  value={member.tax_id_number || "Not set"}
+                  disabled={true}
+                />
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      TAX TYPE
+                    </Label>
+                  </div>
+                  <Select disabled defaultValue={member.tax_type || "employee"}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="employee">Employee</SelectItem>
+                      <SelectItem value="contractor">Contractor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <FormField
+                  label="ACCOUNT CODE"
+                  value={member.account_code || "Not set"}
+                  disabled={true}
+                />
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      CURRENCY
+                    </Label>
+                  </div>
+                  <Select disabled defaultValue={member.currency || "IDR"}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="IDR">IDR - Indonesian Rupiah</SelectItem>
+                      <SelectItem value="USD">USD - US Dollar</SelectItem>
+                      <SelectItem value="EUR">EUR - Euro</SelectItem>
+                      <SelectItem value="SGD">SGD - Singapore Dollar</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
         {activeTab === "roles" && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* Role Selection */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -531,39 +581,6 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
               </Select>
             </div>
 
-            {/* Permissions */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  PERMISSIONS
-                </Label>
-                <button className="text-xs text-primary hover:underline flex items-center gap-1">
-                  <Settings2 className="h-3 w-3" />
-                  Role permissions
-                </button>
-              </div>
-              <Card>
-                <CardContent className="p-0">
-                  <div className="divide-y">
-                    <div className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="perm-financials" className="cursor-pointer text-sm font-medium">Manage Financials (Default)</Label>
-                        <Info className="h-3 w-3 text-muted-foreground" />
-                      </div>
-                      <Switch id="perm-financials" checked={member.role?.name === "Owner"} disabled />
-                    </div>
-                    <div className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="perm-screenshots" className="cursor-pointer text-sm font-medium">View screenshots/activities for other members (Default)</Label>
-                        <Info className="h-3 w-3 text-muted-foreground" />
-                      </div>
-                      <Switch id="perm-screenshots" checked={member.role?.name === "Owner" || member.role?.name === "Manager"} disabled />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
             {/* Projects & Teams */}
             <div className="grid gap-8 md:grid-cols-2">
               {/* Projects Column */}
@@ -576,20 +593,6 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="text-sm text-muted-foreground">Able to track time on these projects</Label>
-                    <button className="text-xs text-primary hover:underline">Select all</button>
-                  </div>
-                  <div className="relative">
-                    <div className="flex min-h-[40px] w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                      <span className="text-muted-foreground">0 projects</span>
-                      <X className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-foreground" />
-                    </div>
-                    <div className="absolute left-0 top-0 h-full w-1 rounded-l-md bg-blue-500"></div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm text-muted-foreground">Manages these projects as <span className="font-semibold text-foreground">Project manager</span></Label>
                     <button className="text-xs text-primary hover:underline">Select all</button>
                   </div>
                   <div className="relative">
@@ -638,6 +641,6 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
           </div>
         )}
       </div>
-    </div>
+    </div >
   )
 }
