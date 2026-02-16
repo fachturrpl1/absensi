@@ -8,7 +8,7 @@ const oauth = new OAuth({
         secret: process.env.TRELLO_API_SECRET!,
     },
     signature_method: 'HMAC-SHA1',
-    hash_function(base_string, key) {
+    hash_function(base_string: string, key: string) {
         return crypto
             .createHmac('sha1', key)
             .update(base_string)

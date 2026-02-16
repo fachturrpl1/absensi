@@ -1,35 +1,61 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Info } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { MembersHeader } from "@/components/settings/MembersHeader"
+import { usePaymentStore } from "@/store/payment-store"
 
 export default function PaymentsPage() {
   const DEFAULT_PROCESS: "manually" | "automatically" = "manually"
   const DEFAULT_DELAY_DAYS = "0"
   const DEFAULT_PROOF_ENABLED = true
 
-  const [processPayments, setProcessPayments] = useState<"manually" | "automatically">("manually")
-  const [delayDays, setDelayDays] = useState("0")
-  const [proofOfPaymentEnabled, setProofOfPaymentEnabled] = useState(true)
+  const {
+    processPayments: storedProcess,
+    delayDays: storedDelay,
+    proofOfPaymentEnabled: storedProof,
+    setProcessPayments: saveProcess,
+    setDelayDays: saveDelay,
+    setProofOfPaymentEnabled: saveProof
+  } = usePaymentStore()
+
+  const [hydrated, setHydrated] = useState(false)
+
+  // Local state for form
+  const [processPayments, setProcessPayments] = useState<"manually" | "automatically">(DEFAULT_PROCESS)
+  const [delayDays, setDelayDays] = useState(DEFAULT_DELAY_DAYS)
+  const [proofOfPaymentEnabled, setProofOfPaymentEnabled] = useState(DEFAULT_PROOF_ENABLED)
+
+  useEffect(() => {
+    setHydrated(true)
+    // Sync local state with store
+    setProcessPayments(storedProcess)
+    setDelayDays(storedDelay)
+    setProofOfPaymentEnabled(storedProof)
+  }, [storedProcess, storedDelay, storedProof])
 
   const handleCancel = () => {
-    setProcessPayments(DEFAULT_PROCESS)
-    setDelayDays(DEFAULT_DELAY_DAYS)
-    setProofOfPaymentEnabled(DEFAULT_PROOF_ENABLED)
+    // Revert to stored values
+    setProcessPayments(storedProcess)
+    setDelayDays(storedDelay)
+    setProofOfPaymentEnabled(storedProof)
   }
 
   const handleSave = () => {
-    // TODO: connect to backend
-    console.log("Save Payments Settings:", {
-      processPayments,
-      delayDays,
-      proofOfPaymentEnabled,
-    })
+    saveProcess(processPayments)
+    saveDelay(delayDays)
+    saveProof(proofOfPaymentEnabled)
+    console.log("Settings saved to store")
+    toast("Payment saved")
+  }
+
+  if (!hydrated) {
+    return null // or a loading skeleton
   }
 
   return (
@@ -179,18 +205,21 @@ export default function PaymentsPage() {
             </div>
           </div>
 
-          {/* Right Column: Image */}
-          <div className="hidden lg:block">
-            <div className="relative w-full h-full min-h-[400px]">
-              <Image
-                src="/images/payment.png"
-                alt="Payment Illustration"
-                fill
-                className="object-contain object-top"
-                priority
-              />
+          {/* Right Column: Image - Only show when Proof of Payment is enabled */}
+          {proofOfPaymentEnabled && (
+            <div className="hidden lg:block">
+              <div className="relative w-full h-full min-h-[400px]">
+                <Image
+                  src="/images/payment.png"
+                  alt="Payment Illustration"
+                  fill
+                  className="object-contain object-top"
+                  priority
+                  unoptimized
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

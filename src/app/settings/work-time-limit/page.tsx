@@ -1,21 +1,31 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Info } from "lucide-react"
+import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { MembersHeader } from "@/components/settings/MembersHeader"
-
-type DayOfWeek = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun"
-
-interface WorkHourEntry {
-    id: string
-    hours: number
-    unit: string
-}
+import { useWorkTimeLimitStore, DayOfWeek, WorkHourEntry } from "@/store/work-time-limit-store"
 
 export default function WorkTimeLimitPage() {
+    const {
+        selectedDays: storedSelectedDays,
+        disableTracking: storedDisableTracking,
+        expectedHours: storedExpectedHours,
+        weeklyLimit: storedWeeklyLimit,
+        dailyLimit: storedDailyLimit,
+        setSelectedDays: saveSelectedDays,
+        setDisableTracking: saveDisableTracking,
+        setExpectedHours: saveExpectedHours,
+        setWeeklyLimit: saveWeeklyLimit,
+        setDailyLimit: saveDailyLimit,
+    } = useWorkTimeLimitStore()
+
+    const [hydrated, setHydrated] = useState(false)
+
+    // Local state for form
     const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>(["Mon", "Tue", "Wed", "Thu", "Fri"])
     const [disableTracking, setDisableTracking] = useState(false)
     const [expectedHours, setExpectedHours] = useState<WorkHourEntry[]>([
@@ -23,6 +33,16 @@ export default function WorkTimeLimitPage() {
     ])
     const [weeklyLimit, setWeeklyLimit] = useState(40)
     const [dailyLimit, setDailyLimit] = useState(8)
+
+    useEffect(() => {
+        setHydrated(true)
+        // Sync local state with store
+        setSelectedDays(storedSelectedDays)
+        setDisableTracking(storedDisableTracking)
+        setExpectedHours(storedExpectedHours)
+        setWeeklyLimit(storedWeeklyLimit)
+        setDailyLimit(storedDailyLimit)
+    }, [storedSelectedDays, storedDisableTracking, storedExpectedHours, storedWeeklyLimit, storedDailyLimit])
 
     const days: DayOfWeek[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -33,7 +53,6 @@ export default function WorkTimeLimitPage() {
                 : [...prev, day]
         )
     }
-
 
     const removeExpectedHours = (id: string) => {
         setExpectedHours(prev => prev.filter(entry => entry.id !== id))
@@ -63,6 +82,32 @@ export default function WorkTimeLimitPage() {
         return selectedDays.join(", ")
     }
 
+    const handleCancel = () => {
+        // Revert to stored values
+        setSelectedDays(storedSelectedDays)
+        setDisableTracking(storedDisableTracking)
+        setExpectedHours(storedExpectedHours)
+        setWeeklyLimit(storedWeeklyLimit)
+        setDailyLimit(storedDailyLimit)
+        // toast("Changes reverted", { description: "Restored to last saved settings" })
+    }
+
+    const handleSave = () => {
+        saveSelectedDays(selectedDays)
+        saveDisableTracking(disableTracking)
+        saveExpectedHours(expectedHours)
+        saveWeeklyLimit(weeklyLimit)
+        saveDailyLimit(dailyLimit)
+
+        toast("Settings saved", {
+            description: "Work time limits have been updated successfully."
+        })
+    }
+
+    if (!hydrated) {
+        return null
+    }
+
     return (
         <div className="flex flex-col min-h-screen bg-white">
             <MembersHeader activeTab="work-time-limits" />
@@ -72,10 +117,16 @@ export default function WorkTimeLimitPage() {
                 {/* Default Settings Header */}
                 <div className="flex items-center gap-4 mb-8">
                     <h2 className="text-lg font-semibold text-gray-900">Default settings</h2>
-                    <Button className="bg-blue-500 hover:bg-blue-600 text-white px-6">
+                    <Button
+                        onClick={handleSave}
+                        className="bg-slate-900 hover:bg-slate-800 text-white px-6"
+                    >
                         Save
                     </Button>
-                    <button className="text-blue-500 hover:text-blue-600 text-sm font-medium">
+                    <button
+                        onClick={handleCancel}
+                        className="text-slate-500 hover:text-slate-900 text-sm font-medium"
+                    >
                         Cancel
                     </button>
                 </div>
@@ -105,7 +156,7 @@ export default function WorkTimeLimitPage() {
                                     key={day}
                                     onClick={() => toggleDay(day)}
                                     className={`w-10 h-10 rounded-full text-sm font-medium transition-colors ${selectedDays.includes(day)
-                                        ? "bg-blue-500 text-white"
+                                        ? "bg-slate-900 text-white"
                                         : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50"
                                         }`}
                                 >
@@ -155,7 +206,7 @@ export default function WorkTimeLimitPage() {
                                     {expectedHours.length > 1 && (
                                         <button
                                             onClick={() => removeExpectedHours(entry.id)}
-                                            className="text-blue-500 hover:text-blue-600 text-sm"
+                                            className="text-slate-500 hover:text-slate-900 text-sm"
                                         >
                                             Remove
                                         </button>
