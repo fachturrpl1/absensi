@@ -215,7 +215,7 @@ const getSidebarGroups = (): NavGroup[] => [
         subItems: [
           { title: 'Feature Settings', url: '/settings', icon: Settings },
           { title: 'Organization Settings', url: '/organization/settings', icon: Building },
-          { title: 'Integrations', url: '/organization/integrations', icon: Blocks },
+          { title: 'Applications', url: '/organization/applications', icon: Blocks },
         ],
       },
     ],
