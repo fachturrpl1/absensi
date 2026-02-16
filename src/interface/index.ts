@@ -113,6 +113,31 @@ export interface IOrganization_member {
     employment_status?: string;
     termination_date?: string;
     work_location?: string;
+
+    // Accounting & Pay
+    tax_id_number?: string;
+    tax_type?: string;
+    account_code?: string;
+    currency?: string;
+
+    // Work Time & Limits
+    daily_limit_hours?: number;
+    weekly_limit_hours?: number;
+
+    allow_tracking?: boolean;
+    require_tasks?: boolean;
+    allow_manual_time?: boolean;
+
+    overtime_daily_threshold?: number;
+    overtime_weekly_threshold?: number;
+
+    idle_timeout_minutes?: number;
+    break_reminder_interval_minutes?: number;
+
+    tracking_window_start?: string; // HH:MM
+    tracking_window_end?: string; // HH:MM
+    lock_entries_after_days?: number;
+
     is_active: boolean;
     created_at: string;
     updated_at?: string;

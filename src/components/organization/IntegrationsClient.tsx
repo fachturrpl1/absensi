@@ -254,7 +254,7 @@ export default function IntegrationsClient({ initialSections }: IntegrationsClie
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <div className="w-full flex flex-1 flex-col gap-10 p-6 pt-2 max-w-[1600px] mx-auto">
+    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
       {/* Full-screen Loading Overlay for Redirects/Connections */}
       {loadingState && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background animate-in fade-in duration-300">

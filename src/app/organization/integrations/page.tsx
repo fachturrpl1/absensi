@@ -66,7 +66,7 @@ const INTEGRATIONS_CATALOG: IntegrationSection[] = [
                 description:
                     "Push attendance summaries and timesheet approvals into Teams channels and chats.",
                 iconUrl:
-                    "https://cdn.simpleicons.org/microsoftteams/6264A7",
+                    "https://cdn.worldvectorlogo.com/logos/microsoft-teams-1.svg",
                 connected: false,
                 status: "idle",
                 category: "Communication",
@@ -240,7 +240,7 @@ export default async function IntegrationsPage() {
 function IntegrationsPageSkeleton() {
     return (
         <div
-            className="w-full flex flex-1 flex-col gap-10 p-6 pt-2 max-w-[1600px] mx-auto"
+            className="flex flex-1 flex-col gap-4 p-4 pt-0"
             aria-label="Loading integrations"
             aria-busy="true"
         >
