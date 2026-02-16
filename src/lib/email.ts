@@ -105,7 +105,7 @@ export async function sendInvitationEmail({
   message,
 }: SendInvitationEmailParams) {
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
-  
+
   if (!RESEND_API_KEY) {
     logger.warn("RESEND_API_KEY not found, skipping email");
     return { success: false, message: "Email service not configured" };
@@ -121,7 +121,7 @@ export async function sendInvitationEmail({
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "no-reply@yourdomain.com", // Ganti dengan domain verified
+        from: "onboarding@resend.dev", // Use resend.dev for testing, change to your domain later
         to: [to],
         subject: `You're invited to join ${organizationName}`,
         html: generateInvitationEmailHTML({
@@ -233,7 +233,7 @@ export async function sendInvitationReminderEmail({
   expiresInDays: number;
 }) {
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
-  
+
   if (!RESEND_API_KEY) {
     return { success: false, message: "Email service not configured" };
   }
@@ -248,7 +248,7 @@ export async function sendInvitationReminderEmail({
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "no-reply@yourdomain.com",
+        from: "onboarding@resend.dev",
         to: [to],
         subject: `Reminder: Your invitation to ${organizationName} expires soon`,
         html: `

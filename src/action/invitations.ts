@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger';
 // Toggle email service:
 // true = Supabase built-in email (only works for NEW emails)
 // false = Resend (works for all emails, but requires third-party)
-const USE_SUPABASE_EMAIL = true;
+const USE_SUPABASE_EMAIL = false; // Using Resend
 
 /**
  * Server Actions for Member Invitation System
@@ -43,7 +43,7 @@ export async function createInvitation(data: CreateInvitationData) {
     if (data.organization_id) {
       organizationId = data.organization_id;
       userId = data.invited_by || '';
-      
+
       // Still verify user exists if invited_by is provided
       if (data.invited_by) {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -144,7 +144,7 @@ export async function createInvitation(data: CreateInvitationData) {
       const expiresAt = new Date(existingInvitation.expires_at);
       const now = new Date();
       const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       return {
         success: false,
         message: `⚠️ A pending invitation already exists for this email (expires in ${daysLeft} days). Please go to Settings > Invitations to resend or cancel it.`,
@@ -451,7 +451,7 @@ export async function acceptInvitation(data: AcceptInvitationData) {
     if (existingMember) {
       // User is already a member - update the invitation status but don't create duplicate
       logger.warn(`User ${userId} is already a member of organization ${invitation.organization_id}`);
-      
+
       // Update invitation status to accepted
       await supabase
         .from("member_invitations")
@@ -696,7 +696,7 @@ export async function resendInvitation(invitationId: string) {
       } else {
         // Option 2: Use Resend
         const { data: { user } } = await supabase.auth.getUser();
-        
+
         if (user) {
           const { data: inviterProfile } = await supabase
             .from("user_profiles")
@@ -793,6 +793,109 @@ export async function deleteInvitation(invitationId: string) {
     };
   } catch (error) {
     logger.error("Error deleting invitation:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+/**
+ * Send invitation reminder email directly (bypasses all database checks)
+ * Use this for sending reminders to already-accepted invitations or existing members
+ */
+export async function sendInvitationReminderDirectly(email: string) {
+  try {
+    const supabase = await createClient();
+    const adminClient = createAdminClient();
+
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return { success: false, message: "User not authenticated" };
+    }
+
+    // Get user's organization
+    const { data: member } = await adminClient
+      .from("organization_members")
+      .select("organization_id, organization:organizations(name)")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!member) {
+      return { success: false, message: "User not member of any organization" };
+    }
+
+    const organizationName = (member.organization as any)?.name || "the organization";
+
+    // Get user profile for inviter name
+    const { data: inviterProfile } = await supabase
+      .from("user_profiles")
+      .select("first_name, last_name")
+      .eq("id", user.id)
+      .single();
+
+    const inviterName = inviterProfile
+      ? `${inviterProfile.first_name || ""} ${inviterProfile.last_name || ""}`.trim()
+      : "Team";
+
+    // Get existing invitation to get token
+    // First, get all invitations for this org to debug
+    const { data: allInvitations, error: fetchError } = await supabase
+      .from("member_invitations")
+      .select("invitation_token, id, status, email")
+      .eq("organization_id", member.organization_id);
+
+    if (fetchError) {
+      logger.error("Error fetching invitations:", fetchError);
+      return { success: false, message: "Failed to fetch invitations" };
+    }
+
+    logger.info(`Found ${allInvitations?.length || 0} invitations for organization`);
+    logger.info(`Looking for email: ${email}`);
+
+    // Find matching invitation by email (case-insensitive)
+    const existingInvitation = allInvitations?.find(
+      inv => inv.email.toLowerCase() === email.toLowerCase()
+    );
+
+    // If no invitation exists, create one first
+    if (!existingInvitation) {
+      logger.warn(`No invitation found for ${email}. Creating new invitation...`);
+
+      // Create new invitation which will also send email
+      const createResult = await createInvitation({
+        email,
+        organization_id: member.organization_id
+      });
+
+      if (!createResult.success) {
+        return { success: false, message: createResult.message || "Failed to create invitation" };
+      }
+
+      return { success: true, message: "Invitation created and sent successfully" };
+    }
+
+    logger.info(`Found invitation for ${email} with status: ${existingInvitation.status}`);
+    const invitationToken = existingInvitation.invitation_token;
+
+    // Send email directly via Resend
+    const emailResult = await sendInvitationEmail({
+      to: email,
+      organizationName,
+      inviterName,
+      invitationToken: invitationToken,
+      message: "This is a reminder about your pending invitation.",
+    });
+
+    if (!emailResult.success) {
+      return { success: false, message: emailResult.message || "Failed to send email" };
+    }
+
+    return { success: true, message: "Reminder email sent successfully" };
+  } catch (error) {
+    logger.error("Error sending reminder email:", error);
     return {
       success: false,
       message: error instanceof Error ? error.message : "Unknown error",
