@@ -1,0 +1,6 @@
+﻿src/components/settings/policies/AddOvertimePolicyDialog.tsx(3,20): error TS6133: 'useRef' is declared but its value is never read.
+src/components/settings/policies/AddOvertimePolicyDialog.tsx(10,1): error TS6133: 'cn' is declared but its value is never read.
+src/components/settings/policies/AddOvertimePolicyDialog.tsx(21,71): error TS6133: 'initialData' is declared but its value is never read.
+src/lib/integrations/trello-oauth.ts(1,19): error TS2307: Cannot find module 'oauth-1.0a' or its corresponding type declarations.
+src/lib/integrations/trello-oauth.ts(11,19): error TS7006: Parameter 'base_string' implicitly has an 'any' type.
+src/lib/integrations/trello-oauth.ts(11,32): error TS7006: Parameter 'key' implicitly has an 'any' type.

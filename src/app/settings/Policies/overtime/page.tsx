@@ -3,15 +3,68 @@
 import { useState } from "react"
 import { PoliciesHeader } from "@/components/settings/PoliciesHeader"
 import { Button } from "@/components/ui/button"
-import { Plus, Clock } from "lucide-react"
+import { Plus, Clock, MoreVertical } from "lucide-react"
+import { AddOvertimePolicyDialog } from "@/components/settings/policies/AddOvertimePolicyDialog"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { format } from "date-fns"
 
 export default function OvertimePage() {
     const [activeTab, setActiveTab] = useState<"ACTIVE" | "ARCHIVED">("ACTIVE")
+    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+    const [policies, setPolicies] = useState<any[]>([])
+
+    const handleSavePolicy = (policy: any) => {
+        const newPolicy = {
+            ...policy,
+            id: Date.now().toString(),
+            status: "PENDING",
+            createdAt: new Date(),
+        }
+        setPolicies([...policies, newPolicy])
+    }
+
+    const handleArchivePolicy = (id: string) => {
+        setPolicies(policies.map(p =>
+            p.id === id ? { ...p, status: "ARCHIVED" } : p
+        ))
+    }
+
+    const handleRestorePolicy = (id: string) => {
+        setPolicies(policies.map(p =>
+            p.id === id ? { ...p, status: "PENDING" } : p
+        ))
+    }
+
+    const activePolicies = policies.filter(p => p.status !== "ARCHIVED")
+    const archivedPolicies = policies.filter(p => p.status === "ARCHIVED")
+    const displayedPolicies = activeTab === "ACTIVE" ? activePolicies : archivedPolicies
 
     return (
         <div className="flex flex-col min-h-screen bg-white">
             <PoliciesHeader activeTab="overtime" />
             <div className="flex-1 p-8 max-w-7xl mx-auto w-full">
+                {/* Header with Add button */}
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 className="text-2xl font-semibold text-slate-900">Overtime policies</h1>
+                        <p className="text-slate-500 text-sm mt-1">Set up automatic overtime policies</p>
+                    </div>
+                    {displayedPolicies.length > 0 && (
+                        <Button
+                            onClick={() => setIsAddDialogOpen(true)}
+                            className="bg-slate-900 hover:bg-slate-800 text-white"
+                        >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add policy
+                        </Button>
+                    )}
+                </div>
+
                 {/* Tabs */}
                 <div className="flex border-b border-slate-200 mb-8">
                     <button
@@ -35,29 +88,144 @@ export default function OvertimePage() {
                 </div>
 
                 {/* Content */}
-                {activeTab === "ACTIVE" ? (
+                {displayedPolicies.length > 0 ? (
+                    <>
+                        {/* Policy Table */}
+                        <div className="border border-slate-200 rounded-lg overflow-hidden">
+                            <table className="w-full">
+                                <thead className="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th className="text-left px-6 py-3 text-sm font-medium text-slate-900">
+                                            Policy name
+                                        </th>
+                                        <th className="text-left px-6 py-3 text-sm font-medium text-slate-900">
+                                            Summary
+                                        </th>
+                                        <th className="text-left px-6 py-3 text-sm font-medium text-slate-900">
+                                            Members
+                                        </th>
+                                        <th className="text-left px-6 py-3 text-sm font-medium text-slate-900">
+                                            Status
+                                        </th>
+                                        <th className="w-16"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200">
+                                    {displayedPolicies.map((policy) => (
+                                        <tr key={policy.id} className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm font-medium text-slate-900">
+                                                    {policy.name}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm text-slate-900">
+                                                    After {policy.weeklyThreshold} hrs per week
+                                                </div>
+                                                <div className="text-sm text-slate-500">
+                                                    {policy.payRateMultiplier} x member's pay rate
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm text-slate-900">
+                                                    {policy.members?.length || 0}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium w-fit ${policy.status === "PENDING"
+                                                            ? "bg-slate-100 text-slate-700"
+                                                            : policy.status === "ACTIVE"
+                                                                ? "bg-slate-900 text-white"
+                                                                : "bg-slate-200 text-slate-600"
+                                                        }`}>
+                                                        {policy.status === "PENDING" ? "Pending" : policy.status === "ACTIVE" ? "Active" : "Archived"}
+                                                    </span>
+                                                    <span className="text-xs text-slate-500">
+                                                        Starts on: {format(policy.createdAt, "E, MMM d, yyyy")}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900"
+                                                        >
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="bg-white border-slate-200">
+                                                        {policy.status !== "ARCHIVED" ? (
+                                                            <>
+                                                                <DropdownMenuItem className="text-slate-900 hover:bg-slate-50 cursor-pointer">
+                                                                    Edit policy
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => handleArchivePolicy(policy.id)}
+                                                                    className="text-slate-900 hover:bg-slate-50 cursor-pointer"
+                                                                >
+                                                                    Archive policy
+                                                                </DropdownMenuItem>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <DropdownMenuItem className="text-slate-900 hover:bg-slate-50 cursor-pointer">
+                                                                    View policy
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => handleRestorePolicy(policy.id)}
+                                                                    className="text-slate-900 hover:bg-slate-50 cursor-pointer"
+                                                                >
+                                                                    Restore policy
+                                                                </DropdownMenuItem>
+                                                            </>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="mt-4 text-sm text-slate-500">
+                            Showing {displayedPolicies.length} of {displayedPolicies.length} policies
+                        </div>
+                    </>
+                ) : (
                     <div className="flex flex-col items-center justify-center py-16 text-center max-w-2xl mx-auto">
                         <div className="w-64 h-64 mb-6 bg-slate-50 rounded-full flex items-center justify-center">
-                            {/* Placeholder for illustration */}
                             <Clock className="w-24 h-24 text-slate-300" />
                         </div>
                         <h2 className="text-xl font-semibold text-slate-900 mb-2">
-                            No active overtime policies
+                            {activeTab === "ACTIVE" ? "No active overtime policies" : "No archived policies"}
                         </h2>
                         <p className="text-slate-500 mb-8">
-                            Set up automatic overtime policies
+                            {activeTab === "ACTIVE" ? "Set up automatic overtime policies" : "No policies have been archived yet"}
                         </p>
-                        <Button className="bg-slate-900 hover:bg-slate-800 text-white rounded-full">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add overtime policy
-                        </Button>
-                    </div>
-                ) : (
-                    <div className="text-center py-12 text-slate-500">
-                        No archived policies found.
+                        {activeTab === "ACTIVE" && (
+                            <Button
+                                onClick={() => setIsAddDialogOpen(true)}
+                                className="bg-slate-900 hover:bg-slate-800 text-white rounded-full"
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add overtime policy
+                            </Button>
+                        )}
                     </div>
                 )}
             </div>
+
+            <AddOvertimePolicyDialog
+                open={isAddDialogOpen}
+                onOpenChange={setIsAddDialogOpen}
+                onSave={handleSavePolicy}
+            />
         </div>
     )
 }
