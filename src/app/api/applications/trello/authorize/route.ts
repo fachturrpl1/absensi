@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
-import { getTrelloRequestToken, getTrelloAuthUrl } from "@/lib/integrations/trello-oauth"
+import { getTrelloRequestToken, getTrelloAuthUrl } from "@/lib/applications/trello-oauth"
 import { cookies } from "next/headers"
 
 export async function POST(req: NextRequest) {
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
             (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
-        const callbackUrl = `${baseUrl}/api/integrations/trello/callback`
+        const callbackUrl = `${baseUrl}/api/applications/trello/callback`
 
         // 5. Get Request Token (OAuth 1.0a Step 1)
         const { oauth_token, oauth_token_secret } = await getTrelloRequestToken(callbackUrl)

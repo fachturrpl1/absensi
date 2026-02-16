@@ -2,8 +2,8 @@
 import { NextResponse } from "next/server"
 
 import { createClient } from "@/utils/supabase/server"
-import { generateOAuthState, buildAuthorizationUrl } from "@/lib/integrations/oauth-helpers"
-import { ZOOM_CONFIG } from "@/lib/integrations/zoom-oauth"
+import { generateOAuthState, buildAuthorizationUrl } from "@/lib/applications/oauth-helpers"
+import { ZOOM_CONFIG } from "@/lib/applications/zoom-oauth"
 
 /**
  * GET /api/integrations/zoom/authorize
@@ -46,7 +46,7 @@ export async function POST() {
         // Zoom requires an EXACT match with the whitelist
         const config = {
             ...ZOOM_CONFIG,
-            redirectUri: `${baseUrl}/api/integrations/zoom/callback`
+            redirectUri: `${baseUrl}/api/applications/zoom/callback`
         }
 
         const url = buildAuthorizationUrl(config, state)

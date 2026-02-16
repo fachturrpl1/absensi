@@ -19,19 +19,13 @@ export type Application = {
   id: string
   name: string
   description: string
-  /** Absolute URL for the integration's logo. Falls back to initials avatar on error. */
   iconUrl: string
   connected: boolean
-  /** Per-card async state — drives loading spinners and disabled states. */
   status: ApplicationStatus
-  /** Optional: last error message to surface in the UI. */
   errorMessage?: string
   category: ApplicationCategory
-  /** Link to the integration's official documentation. */
   docsUrl: string
-  /** Timestamp when the integration was last connected/updated (ISO string). */
   connectedAt?: string
-  /** Timestamp when the integration last successfully synced (ISO string). */
   lastSyncAt?: string
 }
 

@@ -14,7 +14,7 @@ import {
     exchangeCodeForToken,
     storeOAuthTokens,
     encrypt
-} from "@/lib/integrations/oauth-helpers"
+} from "@/lib/applications/oauth-helpers"
 
 export async function GET(req: NextRequest) {
     try {
@@ -73,14 +73,36 @@ export async function GET(req: NextRequest) {
             .eq('provider', 'github')
             .maybeSingle()
 
-        if (!integration) {
-            return NextResponse.redirect(
-                `${process.env.NEXT_PUBLIC_APP_URL}/organization/applications?error=integration_not_found`
-            )
+        let integrationId = integration?.id
+
+        if (!integrationId) {
+            // Create new application record if not exists
+            const { data: newApp, error: createError } = await supabase
+                .from('applications')
+                .insert({
+                    organization_id: stateData.organizationId,
+                    provider: 'github',
+                    name: 'GitHub Integration',
+                    developer: 'GitHub',
+                    email: 'support@github.com',
+                    status: 'ACTIVE',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
+                .select('id')
+                .single()
+
+            if (createError) {
+                console.error('[github] Failed to create application:', createError)
+                return NextResponse.redirect(
+                    `${process.env.NEXT_PUBLIC_APP_URL}/organization/applications?error=creation_failed`
+                )
+            }
+            integrationId = newApp.id
         }
 
         // Store tokens
-        await storeOAuthTokens(integration.id, tokens)
+        await storeOAuthTokens(integrationId, tokens)
 
         // Generate webhook secret for GitHub
         const webhookSecret = crypto.randomUUID()
@@ -90,7 +112,7 @@ export async function GET(req: NextRequest) {
             .update({
                 webhook_secret: encrypt(webhookSecret)
             })
-            .eq('id', integration.id)
+            .eq('id', integrationId)
 
         // Redirect back to integrations page with success
         return NextResponse.redirect(

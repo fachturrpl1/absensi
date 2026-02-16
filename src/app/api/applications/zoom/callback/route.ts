@@ -6,8 +6,8 @@ import {
     exchangeCodeForToken,
 
     encrypt
-} from "@/lib/integrations/oauth-helpers"
-import { ZOOM_CONFIG } from "@/lib/integrations/zoom-oauth"
+} from "@/lib/applications/oauth-helpers"
+import { ZOOM_CONFIG } from "@/lib/applications/zoom-oauth"
 
 /**
  * GET /api/integrations/zoom/callback
@@ -78,7 +78,9 @@ export async function GET(req: NextRequest) {
         const integrationData = {
             organization_id: parseInt(orgId),
             provider: 'zoom',
-            display_name: 'Zoom Team', // Can fetch user info to get account name later
+            name: 'Zoom Team',
+            developer: 'Zoom',
+            email: 'support@zoom.us',
             connected: true,
             status: 'ACTIVE',
             access_token: encrypt(tokens.access_token),

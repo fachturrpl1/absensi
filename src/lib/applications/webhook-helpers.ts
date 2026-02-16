@@ -146,7 +146,7 @@ export async function verifyWebhookSignature(
     // Get webhook secret from database
     const supabase = await createClient()
     const { data, error } = await supabase
-        .from('integrations')
+        .from('applications')
         .select('webhook_secret')
         .eq('id', integrationId)
         .maybeSingle()
@@ -227,7 +227,7 @@ export async function storeWebhookEvent(
 
     // Record metric
     const { data: integration } = await supabase
-        .from('integrations')
+        .from('applications')
         .select('provider, organization_id')
         .eq('id', integrationId)
         .maybeSingle()
@@ -271,14 +271,14 @@ export async function markWebhookProcessed(
         // Get integration details for metrics
         const { data: event } = await supabase
             .from('webhook_events')
-            .select('integration_id, integrations(provider, organization_id)')
+            .select('integration_id, applications(provider, organization_id)')
             .eq('id', eventId)
             .maybeSingle()
 
-        if (event?.integrations) {
+        if (event?.applications) {
             await supabase.rpc('increment_integration_metric', {
-                p_provider: (event.integrations as any).provider,
-                p_organization_id: (event.integrations as any).organization_id,
+                p_provider: (event.applications as any).provider,
+                p_organization_id: (event.applications as any).organization_id,
                 p_metric_name: 'webhooks_processed',
                 p_increment: 1
             })
@@ -345,7 +345,7 @@ export async function processWebhookEvent(event: WebhookEvent): Promise<void> {
 
     // Get integration details
     const { data: integration } = await supabase
-        .from('integrations')
+        .from('applications')
         .select('provider, organization_id, config')
         .eq('id', event.integration_id)
         .maybeSingle()
@@ -449,19 +449,16 @@ async function handleGitWebhook(event: WebhookEvent, _integration: any): Promise
 // Helper functions for specific tasks
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function syncAsanaTask(taskGid: string, _integration: any): Promise<void> {
-    // Placeholder for Asana task sync logic
+async function syncAsanaTask(taskGid: string, _application: any): Promise<void> {
     console.log(`Syncing Asana task: ${taskGid}`)
-    // Implementation would fetch task details from Asana API
-    // and insert/update in external_tasks table
 }
 
-async function deleteExternalTask(integrationId: string, externalId: string): Promise<void> {
+async function deleteExternalTask(applicationId: string, externalId: string): Promise<void> {
     const supabase = await createClient()
 
     await supabase
         .from('external_tasks')
         .delete()
-        .eq('integration_id', integrationId)
+        .eq('application_id', applicationId)
         .eq('external_id', externalId)
 }

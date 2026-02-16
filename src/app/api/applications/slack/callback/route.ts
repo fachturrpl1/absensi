@@ -11,7 +11,7 @@ import {
     exchangeCodeForToken,
     storeOAuthTokens,
     encrypt
-} from "@/lib/integrations/oauth-helpers"
+} from "@/lib/applications/oauth-helpers"
 
 export async function GET(req: NextRequest) {
     try {
@@ -71,14 +71,36 @@ export async function GET(req: NextRequest) {
             .eq('provider', 'slack')
             .maybeSingle()
 
-        if (!integration) {
-            return NextResponse.redirect(
-                `${baseUrl}/organization/applications?error=integration_not_found`
-            )
+        let integrationId = integration?.id
+
+        if (!integrationId) {
+            // Create new application record if not exists
+            const { data: newApp, error: createError } = await supabase
+                .from('applications')
+                .insert({
+                    organization_id: stateData.organizationId,
+                    provider: 'slack',
+                    name: 'Slack Integration',
+                    developer: 'Slack',
+                    email: 'support@slack.com',
+                    status: 'ACTIVE',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
+                .select('id')
+                .single()
+
+            if (createError) {
+                console.error('[slack] Failed to create application:', createError)
+                return NextResponse.redirect(
+                    `${baseUrl}/organization/applications?error=creation_failed`
+                )
+            }
+            integrationId = newApp.id
         }
 
         // Store tokens
-        await storeOAuthTokens(integration.id, tokens)
+        await storeOAuthTokens(integrationId, tokens)
 
         // Generate webhook secret for Slack
         const webhookSecret = crypto.randomUUID()
@@ -88,7 +110,7 @@ export async function GET(req: NextRequest) {
             .update({
                 webhook_secret: encrypt(webhookSecret)
             })
-            .eq('id', integration.id)
+            .eq('id', integrationId)
 
         // Redirect back to integrations page with success
         return NextResponse.redirect(

@@ -11,5 +11,5 @@ export const ZOOM_CONFIG: OAuthConfig = {
 }
 
 export function getZoomRedirectUri(baseUrl: string): string {
-    return `${baseUrl}/api/integrations/zoom/callback`
+    return `${baseUrl}/api/applications/zoom/callback`
 }

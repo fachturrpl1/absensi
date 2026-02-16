@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
-import { generateOAuthState, buildAuthorizationUrl } from "@/lib/integrations/oauth-helpers"
+import { generateOAuthState, buildAuthorizationUrl } from "@/lib/applications/oauth-helpers"
 
 export async function POST(req: NextRequest) {
     try {
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
         // 4. Check if integration already exists
         const { data: existing } = await supabase
-            .from('integrations')
+            .from('applications')
             .select('id')
             .eq('organization_id', member.organization_id)
             .eq('provider', 'slack')
@@ -62,11 +62,13 @@ export async function POST(req: NextRequest) {
         if (!existing) {
             // Create integration entry
             const { data: newIntegration, error: createError } = await supabase
-                .from('integrations')
+                .from('applications')
                 .insert({
                     organization_id: member.organization_id,
                     provider: 'slack',
-                    display_name: 'Slack',
+                    name: 'Slack Integration',
+                    developer: 'Slack',
+                    email: 'support@slack.com',
                     status: 'PENDING',
                     connected: false
                 })
@@ -95,7 +97,7 @@ export async function POST(req: NextRequest) {
             {
                 clientId: process.env.SLACK_CLIENT_ID!,
                 clientSecret: process.env.SLACK_CLIENT_SECRET!,
-                redirectUri: `${baseUrl}/api/integrations/slack/callback`,
+                redirectUri: `${baseUrl}/api/applications/slack/callback`,
                 authorizationUrl: 'https://slack.com/oauth/v2/authorize',
                 tokenUrl: 'https://slack.com/api/oauth.v2.access',
                 scopes: ['chat:write', 'incoming-webhook', 'channels:read', 'users:read']

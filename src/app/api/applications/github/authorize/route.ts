@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
-import { generateOAuthState, buildAuthorizationUrl } from "@/lib/integrations/oauth-helpers"
+import { generateOAuthState, buildAuthorizationUrl } from "@/lib/applications/oauth-helpers"
 
 export async function POST(req: NextRequest) {
     try {
@@ -16,9 +16,6 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        // 2. Get active organization context from cookie
-        // This ensures we connect the integration to the CORRECT organization
-        // when user has multiple organizations
         const orgId = req.cookies.get('org_id')?.value
 
         if (!orgId) {
@@ -53,7 +50,7 @@ export async function POST(req: NextRequest) {
 
         // 4. Check if integration already exists
         const { data: existing } = await supabase
-            .from('integrations')
+            .from('applications')
             .select('id')
             .eq('organization_id', member.organization_id)
             .eq('provider', 'github')
@@ -63,11 +60,13 @@ export async function POST(req: NextRequest) {
         if (!existing) {
             // 5. Create integration entry if not exists
             const { data: newIntegration, error: createError } = await supabase
-                .from('integrations')
+                .from('applications')
                 .insert({
                     organization_id: member.organization_id,
                     provider: 'github',
-                    display_name: 'GitHub',
+                    name: 'GitHub Integration',
+                    developer: 'GitHub',
+                    email: 'support@github.com',
                     status: 'PENDING',
                     connected: false
                 })

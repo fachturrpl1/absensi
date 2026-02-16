@@ -24,7 +24,7 @@ export async function getTrelloRequestToken(callbackUrl: string) {
             oauth_callback: callbackUrl,
             scope: 'read,write',
             expiration: 'never',
-            name: 'Presensi Integration',
+            name: 'Absensi Application',
         },
     }
 
@@ -93,5 +93,5 @@ export async function getTrelloAccessToken(oauthToken: string, oauthVerifier: st
 }
 
 export function getTrelloAuthUrl(oauthToken: string) {
-    return `https://trello.com/1/OAuthAuthorizeToken?oauth_token=${oauthToken}&name=${encodeURIComponent('Presensi Application')}&scope=read,write&expiration=never`
+    return `https://trello.com/1/OAuthAuthorizeToken?oauth_token=${oauthToken}&name=${encodeURIComponent('Absensi Application')}&scope=read,write&expiration=never`
 }

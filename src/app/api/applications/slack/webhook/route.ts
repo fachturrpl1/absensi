@@ -9,7 +9,7 @@ import { createClient } from "@/utils/supabase/server"
 import {
     verifyWebhookSignature,
     storeWebhookEvent
-} from "@/lib/integrations/webhook-helpers"
+} from "@/lib/applications/webhook-helpers"
 
 export async function POST(req: NextRequest) {
     try {
@@ -32,21 +32,21 @@ export async function POST(req: NextRequest) {
 
         const supabase = await createClient()
 
-        // Find integration by Slack team ID (stored in config)
-        const { data: integrations } = await supabase
-            .from('integrations')
+        // Find application by Slack team ID (stored in config)
+        const { data: applications } = await supabase
+            .from('applications')
             .select('id, webhook_secret, config')
             .eq('provider', 'slack')
             .eq('connected', true)
 
-        const integration = integrations?.find(
+        const application = applications?.find(
             i => (i.config as any)?.team_id === teamId
         )
 
-        if (!integration) {
-            console.error('[slack] Integration not found for team:', teamId)
+        if (!application) {
+            console.error('[slack] Application not found for team:', teamId)
             return NextResponse.json(
-                { error: "Integration not found" },
+                { error: "Application not found" },
                 { status: 404 }
             )
         }
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
             'slack',
             body,
             headers,
-            integration.id
+            application.id
         )
 
         if (!verification.valid) {
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
         // Store webhook event for async processing
         const eventType = payload.event?.type || payload.type
         await storeWebhookEvent(
-            integration.id,
+            application.id,
             eventType,
             payload,
             headers

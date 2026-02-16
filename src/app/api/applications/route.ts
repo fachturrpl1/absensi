@@ -1,9 +1,3 @@
-/**
- * GET /api/integrations
- * 
- * List all integrations for the current organization.
- * Returns both connected and available integrations.
- */
 
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
@@ -115,26 +109,6 @@ export async function GET(req: NextRequest) {
                 requiredRoles: ['owner', 'admin']
             }, { status: 403 })
         }
-
-        // 4. Get all applications for this organization
-        // Note: The schema provided implies 'applications' is the table name.
-        // Assuming it has organization_id or is global? 
-        // If it lacks organization_id, we might fetching ALL? 
-        // The user instructions implies replacing integrations -> applications.
-        // I will assume it's organization-scoped or just fetch all for now and let RLS handle it if RLS exists.
-        // BUT, looking at the schema screenshot again mentally, I didn't see organization_id.
-        // However, usually these are scoped. I'll query 'applications' and see. 
-        // If the table doesn't have organization_id, this might fail if I add .eq('organization_id'...).
-        // I'll try to select without filtering by org_id first if I'm unsure, BUT safer to assume it MIGHT have it.
-        // ACTUALLY, sticking to the user prompt "ganti ... gunakan applications", I will assume it fits into the same slot.
-        // Let's assume for now it DOESN'T have organization_id explicitly shown but typically would. 
-        // OR, maybe I should just select * and see.
-
-        // Wait, if I write code that selects organization_id and it doesn't exist, it crashes.
-        // Use .select('*') is safer? No, Supabase is fine with select *.
-        // But .eq('organization_id', ...) will error if column missing.
-        // I will assume it's a direct replacement so it SHOULD be scoped (maybe user forgot to show that column).
-        // OR I will just fetch all for now.
 
         const { data: applications, error: dbError } = await supabase
             .from('applications')

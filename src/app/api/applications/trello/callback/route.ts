@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
-import { getTrelloAccessToken } from "@/lib/integrations/trello-oauth"
+import { getTrelloAccessToken } from "@/lib/applications/trello-oauth"
 import { cookies } from "next/headers"
-import { encrypt } from "@/lib/integrations/oauth-helpers" // Re-use encryption
+import { encrypt } from "@/lib/applications/oauth-helpers" // Re-use encryption
 
 export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams
@@ -45,9 +45,11 @@ export async function GET(req: NextRequest) {
             .maybeSingle()
 
         const integrationData = {
-            organization_id: parseInt(orgId), // Ensure int
+            organization_id: parseInt(orgId),
             provider: 'trello',
-            display_name: 'Trello',
+            name: 'Trello Integration',
+            developer: 'Atlassian',
+            email: 'support@trello.com',
             connected: true,
             status: 'ACTIVE',
             access_token: encrypt(accessTokenData.oauth_token),
