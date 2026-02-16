@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
                 { error: "Not a member of this organization" },
                 { status: 403 }
             )
+
         }
 
         // Log organization context for debugging multi-tenancy
@@ -64,9 +65,7 @@ export async function POST(req: NextRequest) {
                 .insert({
                     organization_id: member.organization_id,
                     provider: 'github',
-                    name: 'GitHub Integration',
-                    developer: 'GitHub',
-                    email: 'support@github.com',
+                    name: 'GitHub',
                     status: 'PENDING',
                     connected: false
                 })

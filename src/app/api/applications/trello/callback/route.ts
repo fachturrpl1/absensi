@@ -48,8 +48,6 @@ export async function GET(req: NextRequest) {
             organization_id: parseInt(orgId),
             provider: 'trello',
             name: 'Trello Integration',
-            developer: 'Atlassian',
-            email: 'support@trello.com',
             connected: true,
             status: 'ACTIVE',
             access_token: encrypt(accessTokenData.oauth_token),

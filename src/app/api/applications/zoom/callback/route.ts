@@ -79,8 +79,6 @@ export async function GET(req: NextRequest) {
             organization_id: parseInt(orgId),
             provider: 'zoom',
             name: 'Zoom Team',
-            developer: 'Zoom',
-            email: 'support@zoom.us',
             connected: true,
             status: 'ACTIVE',
             access_token: encrypt(tokens.access_token),

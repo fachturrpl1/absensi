@@ -573,8 +573,8 @@ function ActiveApplicationsTable({
         <TableHeader className="bg-gray-50/50">
           <TableRow>
             <TableHead className="w-[300px]">Application</TableHead>
-            <TableHead>Status</TableHead>
             <TableHead>Last Sync</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -598,22 +598,6 @@ function ActiveApplicationsTable({
                   </div>
                 </div>
               </TableCell>
-              <TableCell>
-                {item.status === "disconnecting" ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Disconnecting
-                  </span>
-                ) : item.status === "error" ? (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                    Error
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Active
-                  </span>
-                )}
-              </TableCell>
               <TableCell className="text-gray-500">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-400" />
@@ -630,6 +614,22 @@ function ActiveApplicationsTable({
                       : "Not synced yet"}
                   </span>
                 </div>
+              </TableCell>
+              <TableCell>
+                {item.status === "disconnecting" ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Disconnecting
+                  </span>
+                ) : item.status === "error" ? (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    Error
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Active
+                  </span>
+                )}
               </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>

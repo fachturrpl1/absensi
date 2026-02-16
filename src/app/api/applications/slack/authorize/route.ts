@@ -66,9 +66,7 @@ export async function POST(req: NextRequest) {
                 .insert({
                     organization_id: member.organization_id,
                     provider: 'slack',
-                    name: 'Slack Integration',
-                    developer: 'Slack',
-                    email: 'support@slack.com',
+                    name: 'Slack',
                     status: 'PENDING',
                     connected: false
                 })
