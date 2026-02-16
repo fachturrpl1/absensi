@@ -96,8 +96,8 @@ interface NavGroup {
 
 // Helper function untuk determine menu visibility berdasarkan pathname
 const shouldShowMenuItem = (pathname: string, itemTitle: string): boolean => {
-  // Di halaman /organization kecuali /organization/settings dan /organization/integrations, hanya tampilkan All Organizations saja
-  if (pathname.startsWith('/organization') && !pathname.startsWith('/organization/settings') && !pathname.startsWith('/organization/integrations')) {
+  // Di halaman /organization kecuali /organization/settings dan /organization/applications, hanya tampilkan All Organizations saja
+  if (pathname.startsWith('/organization') && !pathname.startsWith('/organization/settings') && !pathname.startsWith('/organization/applications')) {
     // Hanya tampilkan All Organizations menu
     return itemTitle === 'All Organizations'
   }

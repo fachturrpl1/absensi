@@ -1,23 +1,41 @@
 /**
- * app/applications/types.ts
+ * app/application/types.ts
  *
  */
+export type ApplicationStatus =
+  | "idle"       // default — no pending action
+  | "connecting" // OAuth or API call in-flight to connect
+  | "disconnecting" // API call in-flight to disconnect
+  | "error"      // last action failed; message available
 
-export interface Application {
-    id: number
-    name: string
-    developer: string
-    email: string
-    api_key: string
-    // api_secret is omitted from client-side type for security, or made optional
-    api_secret?: string
-    is_active: boolean
-    note?: string
-    created_at: string
-    updated_at: string
+export type ApplicationCategory =
+  | "Communication"
+  | "Development"
+  | "Productivity"
+  | "HR"
+  | "Project Management"
+
+export type Application = {
+  id: string
+  name: string
+  description: string
+  /** Absolute URL for the integration's logo. Falls back to initials avatar on error. */
+  iconUrl: string
+  connected: boolean
+  /** Per-card async state — drives loading spinners and disabled states. */
+  status: ApplicationStatus
+  /** Optional: last error message to surface in the UI. */
+  errorMessage?: string
+  category: ApplicationCategory
+  /** Link to the integration's official documentation. */
+  docsUrl: string
+  /** Timestamp when the integration was last connected/updated (ISO string). */
+  connectedAt?: string
+  /** Timestamp when the integration last successfully synced (ISO string). */
+  lastSyncAt?: string
 }
 
 export type ApplicationSection = {
-    title: string
-    items: Application[]
+  title: string
+  items: Application[]
 }
