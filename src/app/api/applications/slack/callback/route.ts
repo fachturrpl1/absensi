@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
             {
                 clientId: process.env.SLACK_CLIENT_ID!,
                 clientSecret: process.env.SLACK_CLIENT_SECRET!,
-                redirectUri: `${baseUrl}/api/integrations/slack/callback`,
+                redirectUri: `${baseUrl}/api/applications/slack/callback`,
                 authorizationUrl: 'https://slack.com/oauth/v2/authorize',
                 tokenUrl: 'https://slack.com/api/oauth.v2.access',
                 scopes: []
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
         // Get integration
         const supabase = await createClient()
         const { data: integration } = await supabase
-            .from('integrations')
+            .from('applications')
             .select('id')
             .eq('organization_id', stateData.organizationId)
             .eq('provider', 'slack')
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
         const webhookSecret = crypto.randomUUID()
 
         await supabase
-            .from('integrations')
+            .from('applications')
             .update({
                 webhook_secret: encrypt(webhookSecret)
             })
@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
 
         // Fallback base URL for error redirect
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3007')
+            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
         return NextResponse.redirect(
             `${baseUrl}/organization/applications?error=callback_failed`

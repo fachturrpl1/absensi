@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
         // 3a. Check for existing integration
         const { data: existing } = await supabase
-            .from('integrations')
+            .from('applications')
             .select('id')
             .eq('organization_id', orgId)
             .eq('provider', 'trello')
@@ -64,12 +64,12 @@ export async function GET(req: NextRequest) {
 
         if (existing) {
             await supabase
-                .from('integrations')
+                .from('applications')
                 .update(integrationData)
                 .eq('id', existing.id)
         } else {
             await supabase
-                .from('integrations')
+                .from('applications')
                 .insert(integrationData)
         }
 

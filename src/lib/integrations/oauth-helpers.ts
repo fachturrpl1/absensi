@@ -233,7 +233,7 @@ export async function storeOAuthTokens(
         : null
 
     const { error } = await supabase
-        .from('integrations')
+        .from('applications')
         .update({
             access_token: encrypt(tokens.access_token),
             refresh_token: tokens.refresh_token ? encrypt(tokens.refresh_token) : null,
@@ -259,7 +259,7 @@ export async function getAccessToken(integrationId: string): Promise<string> {
     const supabase = await createClient()
 
     const { data, error } = await supabase
-        .from('integrations')
+        .from('applications')
         .select('access_token, token_expires_at, refresh_token')
         .eq('id', integrationId)
         .maybeSingle()

@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
         // Get integration
         const supabase = await createClient()
         const { data: integration } = await supabase
-            .from('integrations')
+            .from('applications')
             .select('id')
             .eq('organization_id', stateData.organizationId)
             .eq('provider', 'github')
@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
         const webhookSecret = crypto.randomUUID()
 
         await supabase
-            .from('integrations')
+            .from('applications')
             .update({
                 webhook_secret: encrypt(webhookSecret)
             })

@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
         // Ensure redirect URI matches exactly what was sent in authorize
         const config = {
             ...ZOOM_CONFIG,
-            redirectUri: `${baseUrl}/api/integrations/zoom/callback`
+            redirectUri: `${baseUrl}/api/applications/zoom/callback`
         }
 
         // Zoom requires Basic Auth header for token endpoint, unlike generic OAuth
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
 
         // Check if integration already exists
         const { data: existing } = await supabase
-            .from('integrations')
+            .from('applications')
             .select('id')
             .eq('organization_id', orgId)
             .eq('provider', 'zoom')
@@ -92,12 +92,12 @@ export async function GET(req: NextRequest) {
 
         if (existing) {
             await supabase
-                .from('integrations')
+                .from('applications')
                 .update(integrationData)
                 .eq('id', existing.id)
         } else {
             await supabase
-                .from('integrations')
+                .from('applications')
                 .insert(integrationData)
         }
 
