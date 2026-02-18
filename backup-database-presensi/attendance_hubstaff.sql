@@ -1,4 +1,4 @@
--- =============================================
+ -- =============================================
 -- HUBSTAFF++ FEATURE EXTENSION FOR ATTENDANCE SYSTEM
 -- Version: 1.0
 -- Extension for attendance.sql

@@ -86,10 +86,10 @@ export function FilterSidebar({
     )
 }
 
-export function FilterSection({ title, children }: { title: string, children: ReactNode }) {
+export function FilterSection({ title, children }: { title?: string, children: ReactNode }) {
     return (
         <div className="space-y-3">
-            <h3 className="font-medium text-sm text-gray-900">{title}</h3>
+            {title && <h3 className="font-medium text-sm text-gray-900">{title}</h3>}
             <div className="space-y-4">
                 {children}
             </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useMemo, useEffect } from "react"
-import { InsightsHeader } from "@/components/insights/InsightsHeader"
+
 import { format } from "date-fns"
 import {
     DUMMY_MEMBERS,
@@ -14,7 +14,7 @@ import {
 } from "@/lib/data/dummy-data"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { Button } from "@/components/ui/button"
-import { Download, Search, Filter, ChevronDown, ChevronRight, Pencil, Plus } from "lucide-react"
+import { Download, Search, Filter, ChevronDown, ChevronRight, Pencil, Plus, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -24,6 +24,8 @@ import { toast } from "sonner"
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { exportToCSV, generateFilename } from "@/lib/export-utils"
 import { TimesheetsFilterSidebar } from "@/components/timesheets/TimesheetsFilterSidebar"
+import { SearchableSelect } from "@/components/ui/searchable-select"
+import { DateRangePicker } from "@/components/insights/DateRangePicker"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import { EditTimeEntryDialog } from "@/components/timesheets/EditTimeEntryDialog"
@@ -151,9 +153,11 @@ export default function ViewEditTimesheetsPage() {
     const totalPages = Math.ceil(filteredData.length / pageSize)
     const paginatedData = filteredData.slice((page - 1) * pageSize, page * pageSize)
 
-    const handleExport = () => {
+    const handleBulkExport = () => {
+        const selectedData = filteredData.filter(item => selectedRows.has(item.id))
+
         exportToCSV({
-            filename: generateFilename('timesheets'),
+            filename: generateFilename('selected-timesheets'),
             columns: [
                 { key: 'memberName', label: 'Member' },
                 { key: 'date', label: 'Date' },
@@ -167,9 +171,10 @@ export default function ViewEditTimesheetsPage() {
                 { key: 'notes', label: 'Notes' },
                 { key: 'status', label: 'Status' }
             ],
-            data: filteredData
+            data: selectedData
         })
-        toast.success("Exported successfully")
+        toast.success(`Exported ${selectedData.length} entries`)
+        setSelectedRows(new Set())
     }
     const handleEdit = (entry: TimeEntry) => {
         setActiveEntry(entry)
@@ -269,50 +274,66 @@ export default function ViewEditTimesheetsPage() {
 
 
     return (
-        <div className="px-6 pb-6 space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-xl font-semibold">View & Edit Timesheets</h1>
+        <div className="px-6 pb-6 space-y-3">
+            <h1 className="text-xl font-semibold">View & Edit Timesheets</h1>
+            <div className="w-full md:w-1/2 lg:w-1/3">
+                <DateRangePicker
+                    dateRange={dateRange}
+                    onDateRangeChange={setDateRange}
+                    timezone={timezone}
+                />
             </div>
 
-            <InsightsHeader
-                selectedFilter={selectedFilter}
-                onSelectedFilterChange={setSelectedFilter}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-                members={DUMMY_MEMBERS}
-                teams={DUMMY_TEAMS}
-                timezone={timezone}
-            >
-                <div className="flex items-center gap-2">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        <Input
-                            placeholder="Search..."
-                            className="pl-9 h-10 bg-white max-w-sm"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-
-                    <Button
-                        variant="outline"
-                        className="h-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50 font-medium"
-                        onClick={() => setFilterSidebarOpen(true)}
+            <div className="w-full md:w-64 space-y-2">
+                <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">MEMBERS</label>
+                    <button
+                        onClick={() => setSelectedFilter({ type: "members", all: true, id: "all" })}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-700"
                     >
-                        <Filter className="w-4 h-4 mr-2" /> Filter
-                    </Button>
+                    </button>
+                </div>
+                <SearchableSelect
+                    value={selectedFilter.id === 'all' || !selectedFilter.id ? "" : selectedFilter.id}
+                    onValueChange={(val) => setSelectedFilter({ type: "members", all: !val, id: val || "all" })}
+                    options={DUMMY_MEMBERS.map(m => ({ value: m.id, label: m.name }))}
+                    placeholder="Select members"
+                    searchPlaceholder="Search members..."
+                    className="w-full"
+                />
+            </div>
 
+            {/* Toolbar: Search, Filter, Add */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-2 pt-2">
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                    <div className="flex w-full md:w-64">
+                        <div className="relative flex-grow">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                            <Input
+                                placeholder="Search..."
+                                className="pl-9 h-10 bg-white w-full rounded-r-none border-r-0 focus-visible:ring-0"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <Button
+                            variant="outline"
+                            className="h-10 rounded-l-none border-l-0 px-3 bg-gray-50 text-gray-600 hover:bg-gray-100"
+                            onClick={() => setFilterSidebarOpen(true)}
+                        >
+                            <Filter className="w-4 h-4 mr-2" />
+                            Filter
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2">
                     <Button variant="outline" className="h-9" onClick={() => setAddDialogOpen(true)}>
                         <Plus className="w-4 h-4 mr-2" />
-                        Add
-                    </Button>
-
-                    <Button variant="outline" className="h-9" onClick={handleExport}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
+                        Add Time
                     </Button>
                 </div>
-            </InsightsHeader>
+            </div>
 
             <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
@@ -547,6 +568,28 @@ export default function ViewEditTimesheetsPage() {
                 onOpenChange={setDeleteEntryDialogOpen}
                 onConfirm={onConfirmDelete}
             />
+
+            {selectedRows.size > 0 && (
+                <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white border shadow-lg rounded-full px-4 sm:px-6 py-3 flex items-center gap-2 sm:gap-4 z-50 animate-in slide-in-from-bottom-5 max-w-[calc(100vw-2rem)] overflow-x-auto">
+                    <span className="text-sm font-medium text-gray-900 border-r pr-3 sm:pr-4 whitespace-nowrap">
+                        {selectedRows.size} selected
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <Button size="sm" variant="default" onClick={handleBulkExport} className="h-8 cursor-pointer px-2 sm:px-3">
+                            <Download className="w-4 h-4 mr-0 sm:mr-2" />
+                            <span className="hidden sm:inline">Export</span>
+                        </Button>
+                    </div>
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 ml-2 rounded-full hover:bg-gray-100"
+                        onClick={() => setSelectedRows(new Set())}
+                    >
+                        <X className="w-4 h-4" />
+                    </Button>
+                </div>
+            )}
         </div>
     )
 }

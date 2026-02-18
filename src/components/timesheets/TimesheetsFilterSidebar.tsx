@@ -75,8 +75,8 @@ export function TimesheetsFilterSidebar({
             onReset={handleReset}
             onClear={handleReset}
         >
-            <FilterSection title="Filters">
-                <FilterSubsection title="Member" onClear={() => setSelectedMember("all")}>
+            <FilterSection>
+                <FilterSubsection title="Member">
                     <SearchableSelect
                         options={memberOptions}
                         value={selectedMember}
@@ -85,7 +85,7 @@ export function TimesheetsFilterSidebar({
                     />
                 </FilterSubsection>
 
-                <FilterSubsection title="Project" onClear={() => setSelectedProject("all")}>
+                <FilterSubsection title="Project">
                     <SearchableSelect
                         options={projectOptions}
                         value={selectedProject}
@@ -94,7 +94,7 @@ export function TimesheetsFilterSidebar({
                     />
                 </FilterSubsection>
 
-                <FilterSubsection title="Source" onClear={() => setSelectedSource("all")}>
+                <FilterSubsection title="Source">
                     <SearchableSelect
                         options={sourceOptions}
                         value={selectedSource}
@@ -103,7 +103,7 @@ export function TimesheetsFilterSidebar({
                     />
                 </FilterSubsection>
 
-                <FilterSubsection title="Approval Status" onClear={() => setSelectedStatus("all")}>
+                <FilterSubsection title="Approval Status">
                     <SearchableSelect
                         options={statusOptions}
                         value={selectedStatus}
