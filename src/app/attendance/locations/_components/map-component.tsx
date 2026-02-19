@@ -185,10 +185,8 @@ export default function MapComponent({
       {/* Floating Controls */}
       <div className="absolute top-2 left-2 right-2 z-[500] pointer-events-none flex justify-between gap-2">
         {/* Search Bar */}
-        <Card className="pointer-events-auto flex items-center p-0.5 shadow-lg border-0 bg-white/90 backdrop-blur-sm w-full max-w-sm">
-          <div className="pl-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-          </div>
+        <Card className="pointer-events-auto flex flex-row items-center p-0.5 shadow-lg border-0 bg-white/90 backdrop-blur-sm w-full max-w-sm">
+
           <Input
             className="border-0 shadow-none focus-visible:ring-0 bg-transparent h-9"
             placeholder="Search place..."
