@@ -29,10 +29,10 @@ export async function getAccountData(): Promise<{
 }> {
   try {
     const supabase = await createClient();
-    
+
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       return { success: false, message: "User not authenticated" };
     }
@@ -56,6 +56,7 @@ export async function getAccountData(): Promise<{
         organization:organizations(*),
         departments!organization_members_department_id_fkey(*),
         positions(*),
+        role:system_roles(*),
         user:user_profiles(*)
       `)
       .eq('user_id', user.id)
@@ -95,17 +96,17 @@ export async function updateUserProfile(profileData: Partial<UserProfile>): Prom
 }> {
   try {
     const supabase = await createClient();
-    
+
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       return { success: false, message: "User not authenticated" };
     }
 
     // Prepare update data (exclude email and id)
     const { email, ...updateData } = profileData;
-    
+
     // Handle emergency_contact - ensure it's properly structured
     if (updateData.emergency_contact) {
       // If all fields are empty, set to null
@@ -114,7 +115,7 @@ export async function updateUserProfile(profileData: Partial<UserProfile>): Prom
         updateData.emergency_contact = null;
       }
     }
-    
+
     // Update user profile in user_profiles table
     const { error: updateError } = await supabase
       .from('user_profiles')
@@ -136,7 +137,7 @@ export async function updateUserProfile(profileData: Partial<UserProfile>): Prom
       const { error: emailError } = await supabase.auth.updateUser({
         email: email,
       });
-      
+
       if (emailError) {
         return {
           success: false,
@@ -166,10 +167,10 @@ export async function updateProfilePhoto(photoUrl: string): Promise<{
 }> {
   try {
     const supabase = await createClient();
-    
+
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       return { success: false, message: "User not authenticated" };
     }
@@ -211,10 +212,10 @@ export async function changePassword(newPassword: string): Promise<{
 }> {
   try {
     const supabase = await createClient();
-    
+
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       return { success: false, message: "User not authenticated" };
     }
@@ -251,27 +252,27 @@ export async function deleteOldProfilePhoto(oldPhotoUrl: string): Promise<{
 }> {
   try {
     const supabase = await createClient();
-    
+
     // Extract file path from URL
     // URL format: https://...supabase.co/storage/v1/object/public/profile-photos/users/user-id/filename
     const urlParts = oldPhotoUrl.split('/profile-photos/');
     if (urlParts.length < 2) {
       return { success: false, message: 'Invalid photo URL format' };
     }
-    
+
     const filePath = urlParts[1]; // users/user-id/filename
-    
+
     if (!filePath) {
       return { success: false, message: 'Invalid file path' };
     }
-    
+
     accountLogger.debug('Deleting old photo:', filePath);
-    
+
     // Delete file from Supabase Storage
     const { error } = await supabase.storage
       .from('profile-photos')
       .remove([filePath]);
-    
+
     if (error) {
       accountLogger.error('Delete error:', error);
       return {
@@ -279,7 +280,7 @@ export async function deleteOldProfilePhoto(oldPhotoUrl: string): Promise<{
         message: `Failed to delete old photo: ${error.message}`,
       };
     }
-    
+
     accountLogger.debug('Old photo deleted successfully:', filePath);
     return {
       success: true,
@@ -303,10 +304,10 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
 }> {
   try {
     const supabase = await createClient();
-    
+
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       accountLogger.error('User authentication error:', userError);
       return { success: false, message: "User not authenticated" };
@@ -350,7 +351,7 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
 
     // Create user-specific folder structure: users/{user-id}/
     const userFolder = `users/${user.id}`;
-    
+
     // Create unique filename (we may change extension after compression)
     const origExt = fileName.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/gi, '') || 'jpg';
     const timestamp = Date.now();
@@ -442,7 +443,7 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
       if (currentProfile?.profile_photo_url) {
         const deleteResult = await deleteOldProfilePhoto(currentProfile.profile_photo_url);
         oldPhotoDeleted = deleteResult.success;
-        
+
         if (!deleteResult.success) {
           accountLogger.warn('Failed to delete old photo, but continuing with upload:', deleteResult.message);
         }
@@ -450,17 +451,17 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
 
       // Update user profile with new photo URL
       const updateResult = await updateProfilePhoto(publicUrl);
-      
+
       if (!updateResult.success) {
         accountLogger.error('Profile update error:', updateResult.message);
-        
+
         // If profile update fails, delete the uploaded file to maintain consistency
         try {
           await supabase.storage.from('profile-photos').remove([filePath]);
         } catch (cleanupError) {
           accountLogger.error('Cleanup error:', cleanupError);
         }
-        
+
         return updateResult;
       }
 
@@ -493,10 +494,10 @@ export async function deleteUserProfilePhoto(): Promise<{
 }> {
   try {
     const supabase = await createClient();
-    
+
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       return { success: false, message: "User not authenticated" };
     }
@@ -524,7 +525,7 @@ export async function deleteUserProfilePhoto(): Promise<{
 
     // Delete the photo file
     const deleteResult = await deleteOldProfilePhoto(currentProfile.profile_photo_url);
-    
+
     if (!deleteResult.success) {
       return deleteResult;
     }

@@ -29,6 +29,8 @@ import { Switch } from "@/components/ui/switch"
 import { IOrganization } from "@/interface"
 import { addOrganization, updateOrganization } from "@/action/organization"
 import ProfilePhotoDialog from "@/components/user/change-foto"
+import { MultiSelect } from "@/components/ui/multi-select"
+import { INDUSTRY_OPTIONS } from "@/lib/constants/industries"
 
 
 interface OrganizationFormProps {
@@ -248,7 +250,12 @@ export default function OrganizationForm({
                 <FormItem>
                   <FormLabel>Industry</FormLabel>
                   <FormControl>
-                    <Input placeholder="Industry Type" {...field} />
+                    <MultiSelect
+                      options={INDUSTRY_OPTIONS}
+                      selected={field.value ? field.value.split(",") : []}
+                      onChange={(selected) => field.onChange(selected.join(","))}
+                      placeholder="Select industries..."
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -30,7 +30,15 @@ export const INDUSTRY_OPTIONS: IndustryOption[] = [
 // Helper function to get industry label by value
 export const getIndustryLabel = (value: string | null): string => {
   if (!value) return "Not specified";
-  
+
+  // Handle multiple values
+  if (value.includes(",")) {
+    return value
+      .split(",")
+      .map(v => getIndustryLabel(v.trim()))
+      .join(", ");
+  }
+
   const industry = INDUSTRY_OPTIONS.find(option => option.value.toLowerCase() === value.toLowerCase());
   return industry ? industry.label : value;
 };
@@ -38,22 +46,22 @@ export const getIndustryLabel = (value: string | null): string => {
 // Helper function to find industry value by partial match (useful for migration)
 export const findIndustryValue = (searchValue: string | null): string => {
   if (!searchValue) return "";
-  
+
   const lowerSearch = searchValue.toLowerCase();
-  
+
   // First try exact match
-  const exactMatch = INDUSTRY_OPTIONS.find(option => 
+  const exactMatch = INDUSTRY_OPTIONS.find(option =>
     option.value.toLowerCase() === lowerSearch
   );
   if (exactMatch) return exactMatch.value;
-  
+
   // Then try partial match on label
-  const labelMatch = INDUSTRY_OPTIONS.find(option => 
-    option.label.toLowerCase().includes(lowerSearch) || 
+  const labelMatch = INDUSTRY_OPTIONS.find(option =>
+    option.label.toLowerCase().includes(lowerSearch) ||
     lowerSearch.includes(option.value.toLowerCase())
   );
   if (labelMatch) return labelMatch.value;
-  
+
   // For legacy data, try to map common variations
   const legacyMappings: Record<string, string> = {
     "tech": "technology",
@@ -73,10 +81,10 @@ export const findIndustryValue = (searchValue: string | null): string => {
     "ngo": "non-profit",
     "nonprofit": "non-profit"
   };
-  
+
   const legacyMatch = legacyMappings[lowerSearch];
   if (legacyMatch) return legacyMatch;
-  
+
   // If no match found, return "other"
   return "other";
 };
