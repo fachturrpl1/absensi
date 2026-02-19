@@ -340,19 +340,20 @@ export default function ExpensesPage() {
                     </table>
                 </div>
 
-                <div className="border-t">
-                    <PaginationFooter
-                        page={page}
-                        totalPages={totalPages}
-                        onPageChange={setPage}
-                        from={filteredData.length > 0 ? (page - 1) * pageSize + 1 : 0}
-                        to={Math.min(page * pageSize, filteredData.length)}
-                        total={filteredData.length}
-                        pageSize={pageSize}
-                        onPageSizeChange={() => { }}
-                        className="bg-transparent shadow-none border-none"
-                    />
-                </div>
+            </div>
+
+            <div className="mt-4">
+                <PaginationFooter
+                    page={page}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                    from={filteredData.length > 0 ? (page - 1) * pageSize + 1 : 0}
+                    to={Math.min(page * pageSize, filteredData.length)}
+                    total={filteredData.length}
+                    pageSize={pageSize}
+                    onPageSizeChange={() => { }}
+                    className="bg-transparent shadow-none border-none p-0"
+                />
             </div>
 
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>

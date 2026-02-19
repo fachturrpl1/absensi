@@ -66,7 +66,7 @@ const APPLICATIONS_CATALOG: ApplicationSection[] = [
                 description:
                     "Push attendance summaries and timesheet approvals into Teams channels and chats.",
                 iconUrl:
-                    "https://cdn.worldvectorlogo.com/logos/microsoft-teams-1.svg",
+                    "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/microsoft/microsoft-original.svg",
                 connected: false,
                 status: "idle",
                 category: "Communication",
@@ -153,7 +153,7 @@ const APPLICATIONS_CATALOG: ApplicationSection[] = [
                 description:
                     "Sync project documentation, task notes, and attendance reports to your Notion workspace.",
                 iconUrl:
-                    "https://upload.wikimedia.org/wikipedia/commons/4/45/Notion_app_logo.png",
+                    "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/notion/notion-original.svg",
                 connected: false,
                 status: "idle",
                 category: "Productivity",

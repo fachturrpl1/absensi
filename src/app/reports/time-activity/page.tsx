@@ -517,18 +517,21 @@ export default function TimeActivityPage() {
                                 )}
                             </tbody>
                         </table>
-                        <PaginationFooter
-                            page={page}
-                            totalPages={totalPages}
-                            onPageChange={setPage}
-                            from={showingFrom}
-                            to={showingTo}
-                            total={totalRows}
-                            pageSize={pageSize}
-                            onPageSizeChange={setPageSize}
-                            className="border-none shadow-none bg-transparent"
-                        />
                     </div>
+                </div>
+
+                <div className="mt-4">
+                    <PaginationFooter
+                        page={page}
+                        totalPages={totalPages}
+                        onPageChange={setPage}
+                        from={showingFrom}
+                        to={showingTo}
+                        total={totalRows}
+                        pageSize={pageSize}
+                        onPageSizeChange={setPageSize}
+                        className="border-none shadow-none bg-transparent p-0"
+                    />
                 </div>
             </main>
 

@@ -2,10 +2,11 @@
 
 import React from "react"
 import { Button } from "@/components/ui/button"
-import { ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export type PaginationFooterProps = {
-  page: number // 1-based
+  page: number
   totalPages: number
   onPageChange: (page: number) => void
   isLoading?: boolean
@@ -17,8 +18,6 @@ export type PaginationFooterProps = {
   pageSizeOptions?: number[]
   className?: string
 }
-
-import { cn } from "@/lib/utils"
 
 export function PaginationFooter({
   page,
@@ -34,109 +33,103 @@ export function PaginationFooter({
   className = "",
 }: PaginationFooterProps) {
   const safeTotalPages = Math.max(1, totalPages || 1)
-  const clamp = (n: number) => Math.max(1, Math.min(n, safeTotalPages))
-  const goto = (p: number) => {
-    const next = clamp(p)
-    if (next !== page) onPageChange(next)
+
+  const getPageNumbers = () => {
+    const delta = 1
+    const range = []
+    const rangeWithDots = []
+    let l
+
+    for (let i = 1; i <= safeTotalPages; i++) {
+      if (i === 1 || i === safeTotalPages || (i >= page - delta && i <= page + delta)) {
+        range.push(i)
+      }
+    }
+
+    for (let i of range) {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1)
+        } else if (i - l !== 1) {
+          rangeWithDots.push('...')
+        }
+      }
+      rangeWithDots.push(i)
+      l = i
+    }
+
+    return rangeWithDots
   }
 
-  const [inputValue, setInputValue] = React.useState<string>(String(page))
-  React.useEffect(() => {
-    setInputValue(String(page))
-  }, [page])
-
   return (
-    <div className={cn("mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 py-4 px-4 bg-muted/50 rounded-md border shadow-sm", className)}>
-      <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+    <div className={cn("mt-4 flex flex-col-reverse sm:flex-row items-center justify-between gap-4 py-4", className)}>
+      {/* Left Side: Info & Page Size */}
+      <div className="flex items-center gap-4 text-sm text-gray-600">
+        <span>
+          Showing <span className="font-medium text-gray-900">{from}-{to}</span> of <span className="font-medium text-gray-900">{total}</span> data
+        </span>
+        <div className="flex items-center gap-2">
+          <span>Rows:</span>
+          <select
+            value={pageSize}
+            onChange={(e) => onPageSizeChange(Number(e.target.value))}
+            disabled={isLoading}
+            className="h-8 px-2 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {pageSizeOptions.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Right Side: Pagination */}
+      <div className="flex items-center gap-1">
         <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => goto(1)}
-          disabled={page <= 1 || isLoading}
+          variant="outline"
+          size="icon"
           className="h-8 w-8 p-0"
-          title="First page"
-        >
-          <ChevronsLeft className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => goto(page - 1)}
+          onClick={() => onPageChange(page - 1)}
           disabled={page <= 1 || isLoading}
-          className="h-8 w-8 p-0"
-          title="Previous page"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        <span className="text-sm text-muted-foreground">Page</span>
-
-        <input
-          type="number"
-          min={1}
-          max={safeTotalPages}
-          value={inputValue}
-          onChange={(e) => {
-            setInputValue(e.target.value)
-          }}
-          onKeyDown={(e) => {
-            if (["-", "+", "e", "E", "."].includes(e.key)) {
-              e.preventDefault();
-            }
-            if (e.key === 'Enter') {
-              const num = Number((inputValue || '1').trim())
-              const next = Number.isFinite(num) ? num : 1
-              goto(next)
-            }
-          }}
-          className="w-14 h-8 px-2 border rounded text-sm text-center bg-background"
-          disabled={isLoading}
-        />
-
-        <span className="text-sm text-muted-foreground">/ {safeTotalPages}</span>
+        {getPageNumbers().map((pageNum, idx) => (
+          pageNum === '...' ? (
+            <span key={`dots-${idx}`} className="px-2 text-gray-400">
+              <MoreHorizontal className="h-4 w-4" />
+            </span>
+          ) : (
+            <Button
+              key={pageNum}
+              variant={page === pageNum ? "default" : "outline"}
+              size="icon"
+              className={cn(
+                "h-8 w-8 p-0",
+                page === pageNum
+                  ? "bg-gray-900 hover:bg-gray-800 text-white"
+                  : "text-gray-600 hover:text-gray-900"
+              )}
+              onClick={() => onPageChange(Number(pageNum))}
+              disabled={isLoading}
+            >
+              {pageNum}
+            </Button>
+          )
+        ))}
 
         <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => goto(page + 1)}
-          disabled={page >= safeTotalPages || isLoading}
+          variant="outline"
+          size="icon"
           className="h-8 w-8 p-0"
-          title="Next page"
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= safeTotalPages || isLoading}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => goto(safeTotalPages)}
-          disabled={page >= safeTotalPages || isLoading}
-          className="h-8 w-8 p-0"
-          title="Last page"
-        >
-          <ChevronsRight className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="flex w-full sm:w-auto flex-col items-center gap-2 sm:flex-row sm:justify-end sm:items-center sm:gap-4">
-        <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-right whitespace-normal">
-          {`Showing ${from} to ${to} of ${total} total records`}
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              const val = Number(e.target.value)
-              const size = Number.isFinite(val) && val > 0 ? val : pageSize
-              onPageSizeChange(size)
-              goto(1)
-            }}
-            className="px-2 py-1 border rounded text-sm bg-background"
-          >
-            {pageSizeOptions.map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
-          </select>
-        </div>
       </div>
     </div>
   )

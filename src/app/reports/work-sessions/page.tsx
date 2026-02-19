@@ -362,19 +362,20 @@ export default function WorkSessionsPage() {
                         </tbody>
                     </table>
 
-                    <div className="border-t border-gray-200">
-                        <PaginationFooter
-                            page={1}
-                            totalPages={1}
-                            onPageChange={() => { }}
-                            from={1}
-                            to={filteredData.length}
-                            total={filteredData.length}
-                            pageSize={10}
-                            onPageSizeChange={() => { }}
-                            className="border-none shadow-none bg-transparent"
-                        />
-                    </div>
+                </div>
+
+                <div className="mt-4">
+                    <PaginationFooter
+                        page={1}
+                        totalPages={1}
+                        onPageChange={() => { }}
+                        from={1}
+                        to={filteredData.length}
+                        total={filteredData.length}
+                        pageSize={10}
+                        onPageSizeChange={() => { }}
+                        className="bg-transparent border-none p-0"
+                    />
                 </div>
             </main>
         </div>

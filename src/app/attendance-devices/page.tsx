@@ -331,18 +331,6 @@ export default function AttendanceDevicesPage() {
                                             </div>
                                         ))}
                                     </div>
-                                    <PaginationFooter
-                                        page={currentPageIndex + 1}
-                                        totalPages={totalPages}
-                                        onPageChange={(p) => setCurrentPageIndex(Math.max(0, Math.min(p - 1, Math.max(0, totalPages - 1))))}
-                                        isLoading={loading}
-                                        from={from}
-                                        to={to}
-                                        total={total}
-                                        pageSize={currentPageSize}
-                                        onPageSizeChange={(size) => { setCurrentPageSize(size); setCurrentPageIndex(0); }}
-                                        pageSizeOptions={[4, 8, 10, 24]}
-                                    />
                                 </div>
                             ) : (
                                 <div className="space-y-4 min-w-full">
@@ -395,98 +383,97 @@ export default function AttendanceDevicesPage() {
                                             </TableBody>
                                         </Table>
                                     </div>
-
-                                    <PaginationFooter
-                                        page={currentPageIndex + 1}
-                                        totalPages={totalPages}
-                                        onPageChange={(p) => setCurrentPageIndex(Math.max(0, Math.min(p - 1, Math.max(0, totalPages - 1))))}
-                                        isLoading={loading}
-                                        from={from}
-                                        to={to}
-                                        total={total}
-                                        pageSize={currentPageSize}
-                                        onPageSizeChange={(size) => { setCurrentPageSize(size); setCurrentPageIndex(0); }}
-                                        pageSizeOptions={[4, 8, 10, 24]}
-                                    />
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
+                <PaginationFooter
+                    page={currentPageIndex + 1}
+                    totalPages={totalPages}
+                    onPageChange={(p) => setCurrentPageIndex(Math.max(0, Math.min(p - 1, Math.max(0, totalPages - 1))))}
+                    isLoading={loading}
+                    from={from}
+                    to={to}
+                    total={total}
+                    pageSize={currentPageSize}
+                    onPageSizeChange={(size) => { setCurrentPageSize(size); setCurrentPageIndex(0); }}
+                    pageSizeOptions={[4, 8, 10, 24]}
+                />
+
+                <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle className="font-semibold tracking-tight border-b pb-4  ">Edit Device</DialogTitle>
+                        </DialogHeader>
+                        {selectedDevice && (
+                            <Form {...editForm}>
+                                <form onSubmit={editForm.handleSubmit(handleEditDevice)} className="space-y-4">
+                                    <FormItem>
+                                        <FormControl>
+                                            <Input
+                                                value={selectedDevice.device_types?.name || '-'}
+                                                disabled
+                                                className="bg-muted cursor-not-allowed"
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                    <FormItem>
+                                        <FormLabel>Serial Number</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                value={selectedDevice.serial_number || '-'}
+                                                disabled
+                                                className="bg-muted cursor-not-allowed"
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                    <FormField
+                                        control={editForm.control}
+                                        name="deviceName"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Device Name</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Enter device name" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={editForm.control}
+                                        name="location"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Location</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Enter location" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <div className="flex gap-3 pt-4">
+                                        <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                                            Cancel
+                                        </Button>
+                                        <Button type="submit" disabled={loading}>
+                                            {loading ? "Saving..." : "Save"}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </Form>
+                        )}
+                    </DialogContent>
+                </Dialog>
+
+                <ActivateDeviceDialog
+                    open={activateDialogOpen}
+                    onOpenChange={setActivateDialogOpen}
+                    onSuccess={fetchDevices}
+                />
             </div>
-
-            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle className="font-semibold tracking-tight border-b pb-4  ">Edit Device</DialogTitle>
-                    </DialogHeader>
-                    {selectedDevice && (
-                        <Form {...editForm}>
-                            <form onSubmit={editForm.handleSubmit(handleEditDevice)} className="space-y-4">
-                                <FormItem>
-                                    <FormControl>
-                                        <Input
-                                            value={selectedDevice.device_types?.name || '-'}
-                                            disabled
-                                            className="bg-muted cursor-not-allowed"
-                                        />
-                                    </FormControl>
-                                </FormItem>
-                                <FormItem>
-                                    <FormLabel>Serial Number</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            value={selectedDevice.serial_number || '-'}
-                                            disabled
-                                            className="bg-muted cursor-not-allowed"
-                                        />
-                                    </FormControl>
-                                </FormItem>
-                                <FormField
-                                    control={editForm.control}
-                                    name="deviceName"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Device Name</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Enter device name" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={editForm.control}
-                                    name="location"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Location</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Enter location" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <div className="flex gap-3 pt-4">
-                                    <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-                                        Cancel
-                                    </Button>
-                                    <Button type="submit" disabled={loading}>
-                                        {loading ? "Saving..." : "Save"}
-                                    </Button>
-                                </div>
-                            </form>
-                        </Form>
-                    )}
-                </DialogContent>
-            </Dialog>
-
-            <ActivateDeviceDialog
-                open={activateDialogOpen}
-                onOpenChange={setActivateDialogOpen}
-                onSuccess={fetchDevices}
-            />
-        </div>
+        </div >
     )
 }

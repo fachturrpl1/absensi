@@ -466,144 +466,151 @@ function ModernAttendanceListCloned() {
         }
       `}</style>
       {SHOW_LOCAL_TOOLBAR && (
-        <div className="space-y-6">
-          <Card className="border border-gray-200 shadow-sm">
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Search */}
-                <div className="flex-1 min-w-[260px] relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <Input
-                    placeholder="Search by name or department..."
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") setSearchQuery(searchInput)
-                    }}
-                    className="pl-10 border-gray-300"
-                  />
-                </div>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold">Attendance list</h1>
+          </div>
 
-                {/* Refresh */}
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => {
-                    try {
-                      localStorage.removeItem(cacheKeyBase)
-                      localStorage.removeItem(`${cacheKeyBase}:loading`)
-                    } catch { }
-                    fetchData()
-                  }}
-                  title="Refresh"
-                  className="border-gray-300 shrink-0"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </Button>
+          <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-2 flex-wrap">
+            {/* Search */}
+            <div className="w-full md:flex-1 md:min-w-[200px] relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                placeholder="Search..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") setSearchQuery(searchInput)
+                }}
+                className="pl-10 border-gray-300 bg-white w-full"
+              />
+            </div>
 
-                {/* Date Filter */}
-                <div className="shrink-0">
-                  <DateFilterBar
-                    dateRange={dateRange}
-                    onDateRangeChange={setDateRange}
-                  />
-                </div>
+            {/* Date Filter */}
+            <div className="w-full md:w-auto shrink-0">
+              <DateFilterBar
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+                className="w-full justify-start"
+              />
+            </div>
 
-                {/* Status Filter */}
-                <div className="flex items-center gap-2 shrink-0">
-                  {isMounted ? (
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-40 border-gray-300">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="present">Present</SelectItem>
-                        <SelectItem value="late">Late</SelectItem>
-                        <SelectItem value="absent">Absent</SelectItem>
-                        <SelectItem value="leave">On Leave</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="w-40 h-9 border border-gray-300 rounded bg-muted/50" aria-hidden />
-                  )}
-                </div>
-
-                {/* Department Filter */}
-                <div className="flex items-center gap-2 shrink-0">
-                  {isMounted ? (
-                    <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                      <SelectTrigger className="w-[180px] border-gray-300">
-                        <SelectValue placeholder="Department" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Groups</SelectItem>
-                        {departments.map((dept) => (
-                          <SelectItem key={dept} value={dept}>
-                            {dept}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="w-[180px] h-9 border border-gray-300 rounded bg-muted/50" aria-hidden />
-                  )}
-                </div>
-
-                {/* Manual Entry & Import */}
-                <Link href="/attendance/list/add" className="shrink-0">
-                  <Button className="bg-black text-white hover:bg-black/90 whitespace-nowrap">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Manual Entry
-                  </Button>
-                </Link>
-                <Link href="/attendance/list/import" className="shrink-0">
-                  <Button variant="outline" className="whitespace-nowrap">
-                    <Download className="mr-2 h-4 w-4" />
-                    Import
-                  </Button>
-                </Link>
+            {/* Status & Department Filter Group */}
+            <div className="flex w-full md:w-auto gap-2 shrink-0">
+              {/* Status Filter */}
+              <div className="flex-1 md:w-auto">
+                {isMounted ? (
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full md:w-[140px] border-gray-300 bg-white">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="present">Present</SelectItem>
+                      <SelectItem value="late">Late</SelectItem>
+                      <SelectItem value="absent">Absent</SelectItem>
+                      <SelectItem value="leave">On Leave</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="w-full md:w-[140px] h-9 border border-gray-300 rounded bg-muted/50" aria-hidden />
+                )}
               </div>
 
-              {/* Selected Actions */}
-              <AnimatePresence>
-                {selectedRecords.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="flex items-center gap-2 rounded-lg bg-muted px-4 py-2"
-                  >
-                    <span className="text-sm font-medium">
-                      {selectedRecords.length} selected
-                    </span>
-                    <Separator orientation="vertical" className="h-6" />
-                    <Button variant="ghost" size="sm" onClick={handleEditClick}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      {selectedRecords.length === 1 ? "Edit" : "Bulk Edit"}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={handleDeleteMultiple}
-                      disabled={isSubmitting}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Selected
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedRecords([])}
-                      className="ml-auto"
-                    >
-                      Clear Selection
-                    </Button>
-                  </motion.div>
+              {/* Department Filter */}
+              <div className="flex-1 md:w-auto">
+                {isMounted ? (
+                  <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                    <SelectTrigger className="w-full md:w-[160px] border-gray-300 bg-white">
+                      <SelectValue placeholder="Groups" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Groups</SelectItem>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="w-full md:w-[160px] h-9 border border-gray-300 rounded bg-muted/50" aria-hidden />
                 )}
-              </AnimatePresence>
-            </CardContent>
-          </Card>
+              </div>
+            </div>
+
+            {/* Actions Group */}
+            <div className="flex w-full md:w-auto gap-2 shrink-0">
+              {/* Refresh */}
+              <Button
+                onClick={() => {
+                  try {
+                    localStorage.removeItem(cacheKeyBase)
+                    localStorage.removeItem(`${cacheKeyBase}:loading`)
+                  } catch { }
+                  fetchData()
+                }}
+                title="Refresh"
+                className="border-gray-300 shrink-0 bg-gray-900 text-white hover:cursor-pointer flex-1 md:flex-none"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </Button>
+
+              {/* Import */}
+              <Link href="/attendance/list/import" className="flex-1 md:flex-none">
+                <Button variant="outline" className="w-full border-gray-300 bg-white whitespace-nowrap">
+                  <Download className="mr-2 h-4 w-4" />
+                  Import
+                </Button>
+              </Link>
+
+              {/* Manual Entry */}
+              <Link href="/attendance/list/add" className="flex-1 md:flex-none">
+                <Button className="w-full bg-black text-white hover:bg-black/90 whitespace-nowrap">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Entry
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Selected Actions */}
+          <AnimatePresence>
+            {selectedRecords.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="flex items-center gap-2 rounded-lg bg-muted px-4 py-2"
+              >
+                <span className="text-sm font-medium">
+                  {selectedRecords.length} selected
+                </span>
+                <Separator orientation="vertical" className="h-6" />
+                <Button variant="ghost" size="sm" onClick={handleEditClick}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  {selectedRecords.length === 1 ? "Edit" : "Bulk Edit"}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteMultiple}
+                  disabled={isSubmitting}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Selected
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedRecords([])}
+                  className="ml-auto"
+                >
+                  Clear Selection
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
@@ -736,14 +743,30 @@ function ModernAttendanceListCloned() {
                             </div>
                           </td>
                           <td className="p-3">
-                            <span className="font-mono text-xs">
-                              {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, "24h", true) : "-"}
-                            </span>
+                            {(() => {
+                              const formatted = record.checkIn ? formatLocalTime(record.checkIn, userTimezone, "24h", true) : "-"
+                              if (formatted === "-") return <span className="text-xs font-mono">-</span>
+                              const [datePart, timePart] = formatted.split(', ')
+                              return (
+                                <div className="flex flex-col text-xs font-mono">
+                                  <span className="font-medium whitespace-nowrap">{datePart}</span>
+                                  <span className="text-muted-foreground">{timePart}</span>
+                                </div>
+                              )
+                            })()}
                           </td>
                           <td className="p-3">
-                            <span className="font-mono text-xs">
-                              {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, "24h", true) : "-"}
-                            </span>
+                            {(() => {
+                              const formatted = record.checkOut ? formatLocalTime(record.checkOut, userTimezone, "24h", true) : "-"
+                              if (formatted === "-") return <span className="text-xs font-mono">-</span>
+                              const [datePart, timePart] = formatted.split(', ')
+                              return (
+                                <div className="flex flex-col text-xs font-mono">
+                                  <span className="font-medium whitespace-nowrap">{datePart}</span>
+                                  <span className="text-muted-foreground">{timePart}</span>
+                                </div>
+                              )
+                            })()}
                           </td>
                           <td className="p-3">
                             <div className="flex flex-col gap-1">
@@ -781,23 +804,24 @@ function ModernAttendanceListCloned() {
                 </table>
               </div>
 
-              {/* Pagination Footer */}
-              {!loading && (
-                <PaginationFooter
-                  page={currentPage}
-                  totalPages={Math.max(1, Math.ceil((Math.max(totalItems, attendanceData.length) || 0) / itemsPerPage))}
-                  onPageChange={(p) => setCurrentPage(Math.max(1, p))}
-                  isLoading={loading}
-                  from={(Math.max(totalItems, attendanceData.length) > 0) ? (currentPage - 1) * itemsPerPage + 1 : 0}
-                  to={(Math.max(totalItems, attendanceData.length) > 0) ? Math.min(currentPage * itemsPerPage, Math.max(totalItems, attendanceData.length)) : 0}
-                  total={Math.max(totalItems, attendanceData.length)}
-                  pageSize={itemsPerPage}
-                  onPageSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
-                  pageSizeOptions={[10, 20, 50]}
-                />
-              )}
             </CardContent>
           </Card>
+
+          {/* Pagination Footer */}
+          {!loading && (
+            <PaginationFooter
+              page={currentPage}
+              totalPages={Math.max(1, Math.ceil((Math.max(totalItems, attendanceData.length) || 0) / itemsPerPage))}
+              onPageChange={(p) => setCurrentPage(Math.max(1, p))}
+              isLoading={loading}
+              from={(Math.max(totalItems, attendanceData.length) > 0) ? (currentPage - 1) * itemsPerPage + 1 : 0}
+              to={(Math.max(totalItems, attendanceData.length) > 0) ? Math.min(currentPage * itemsPerPage, Math.max(totalItems, attendanceData.length)) : 0}
+              total={Math.max(totalItems, attendanceData.length)}
+              pageSize={itemsPerPage}
+              onPageSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
+              pageSizeOptions={[10, 20, 50]}
+            />
+          )}
         </div>
       )}
       {/* Confirm Dialog */}

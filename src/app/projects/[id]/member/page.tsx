@@ -172,19 +172,23 @@ export default function ProjectMembersPage({ params }: { params: Promise<{ id: s
               )}
             </tbody>
           </table>
-          <div className="pt-1 p-3 border-t">
-            <PaginationFooter
-              page={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              isLoading={false}
-              from={paginatedMembers.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
-              to={Math.min(currentPage * pageSize, assignedMembers.length)}
-              total={assignedMembers.length}
-              pageSize={pageSize}
-              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-            />
-          </div>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {activeTab === "members" && (
+        <div className="mt-4">
+          <PaginationFooter
+            page={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            isLoading={false}
+            from={paginatedMembers.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
+            to={Math.min(currentPage * pageSize, assignedMembers.length)}
+            total={assignedMembers.length}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+          />
         </div>
       )}
 

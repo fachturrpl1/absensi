@@ -1,11 +1,12 @@
 "use client"
 
 import React, { useState, useMemo, useEffect } from "react"
-import { InsightsHeader } from "@/components/insights/InsightsHeader"
-import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_TIMESHEET_APPROVALS } from "@/lib/data/dummy-data"
+import { DateRangePicker } from "@/components/insights/DateRangePicker"
+
+import { DUMMY_MEMBERS, DUMMY_TIMESHEET_APPROVALS } from "@/lib/data/dummy-data"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { Button } from "@/components/ui/button"
-import { Download, Search, Filter, CheckCircle2, XCircle, Eye, Settings, Pencil } from "lucide-react"
+import { Download, Search, CheckCircle2, XCircle, Eye, Settings, Pencil, ListFilter, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { toast } from "sonner"
@@ -23,10 +24,14 @@ import {
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { exportToCSV, generateFilename } from "@/lib/export-utils"
 import { format } from "date-fns"
-import { TimesheetApprovalsFilterSidebar } from "@/components/report/TimesheetApprovalsFilterSidebar"
+import { SearchableSelect } from "@/components/ui/searchable-select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ApprovalDetailDialog } from "@/components/timesheets/approvals/ApprovalDetailDialog"
 import { ActionConfirmDialog } from "@/components/timesheets/approvals/ActionConfirmDialog"
 import type { TimesheetApproval } from "@/lib/data/dummy-data"
+
 
 const getStatusBadge = (status: string) => {
     switch (status) {
@@ -72,10 +77,9 @@ export default function TimesheetApprovalsPage() {
     const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set())
 
     // UI State
-    const [filterSidebarOpen, setFilterSidebarOpen] = useState(false)
-    const [sidebarFilters, setSidebarFilters] = useState({
-        memberId: "all",
-        status: "all"
+    const [filters, setFilters] = useState({
+        status: "all",
+        paymentStatus: "all"
     })
 
     // Dialog States
@@ -119,9 +123,10 @@ export default function TimesheetApprovalsPage() {
                 }
             }
 
-            // Sidebar Filters
-            if (sidebarFilters.memberId !== 'all' && item.memberId !== sidebarFilters.memberId) return false
-            if (sidebarFilters.status !== 'all' && item.status !== sidebarFilters.status) return false
+            // Filter Status
+            if (filters.status !== 'all' && item.status !== filters.status) return false
+            // Filter Payment Status
+            if (filters.paymentStatus !== 'all' && item.paymentStatus !== filters.paymentStatus) return false
 
             // Date Range Filter (Check if range overlaps)
             if (dateRange.startDate && dateRange.endDate) {
@@ -138,7 +143,7 @@ export default function TimesheetApprovalsPage() {
 
             return true
         })
-    }, [approvals, selectedFilter, sidebarFilters, dateRange, searchQuery])
+    }, [approvals, selectedFilter, filters, dateRange, searchQuery])
 
     const totalPages = Math.ceil(filteredData.length / pageSize)
     const paginatedData = filteredData.slice((page - 1) * pageSize, page * pageSize)
@@ -213,9 +218,13 @@ export default function TimesheetApprovalsPage() {
         setDetailDialogOpen(true)
     }
 
-    const handleExport = () => {
+
+
+    const handleBulkExport = () => {
+        const selectedData = filteredData.filter(item => selectedRows.has(item.id))
+
         exportToCSV({
-            filename: generateFilename('timesheet-approvals'),
+            filename: generateFilename('selected-timesheets'),
             columns: [
                 { key: 'memberName', label: 'Member' },
                 { key: 'dateStart', label: 'Start Date' },
@@ -224,14 +233,13 @@ export default function TimesheetApprovalsPage() {
                 { key: 'activityPct', label: 'Activity %' },
                 { key: 'paymentStatus', label: 'Payment Status' },
                 { key: 'submittedDate', label: 'Submitted On' },
-                { key: 'screenshotCount', label: 'Screenshots' },
                 { key: 'status', label: 'Status' },
-                { key: 'approver', label: 'Approver' },
                 { key: 'comments', label: 'Comments' }
             ],
-            data: filteredData
+            data: selectedData
         })
-        toast.success("Exported successfully")
+        toast.success(`Exported ${selectedData.length} timesheets`)
+        setSelectedRows(new Set())
     }
 
     const summaryCards = useMemo(() => {
@@ -248,62 +256,135 @@ export default function TimesheetApprovalsPage() {
     }, [approvals])
 
     return (
-        <div className="px-6 pb-6 space-y-6">
+        <div className="px-6 pb-6 space-y-3">
             <h1 className="text-xl font-semibold">Timesheet Approvals</h1>
 
-            <InsightsHeader
-                selectedFilter={selectedFilter}
-                onSelectedFilterChange={setSelectedFilter}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-                members={DUMMY_MEMBERS}
-                teams={DUMMY_TEAMS}
-                timezone={timezone}
-            >
-                <div className="flex items-center gap-2">
-                    {selectedRows.size > 0 && (
-                        <div className="flex items-center gap-2 mr-2 animate-in fade-in slide-in-from-right-4">
-                            <span className="text-sm text-muted-foreground mr-2">{selectedRows.size} selected</span>
-                            <Button size="sm" onClick={handleBulkApprove} className="bg-green-600 hover:bg-green-700 text-white border-green-700">
-                                <CheckCircle2 className="w-4 h-4 mr-1" /> Approve
-                            </Button>
-                            <Button size="sm" variant="destructive" onClick={handleBulkRejectClick}>
-                                <XCircle className="w-4 h-4 mr-1" /> Reject
-                            </Button>
-                            <div className="h-6 w-px bg-gray-200 mx-2" />
-                        </div>
-                    )}
+            {/* 1. Settings Link */}
+            <div>
+                <Link href="/settings/Timesheet" className="inline-flex items-center text-gray-900 hover:text-blue-700 font-medium text-sm">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Manage timesheet approvals
+                </Link>
+            </div>
 
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        <Input
-                            placeholder="Search..."
-                            className="pl-9 h-10 bg-white max-w-sm"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
+            {/* 2. Date Range Picker */}
+            <div className="w-full md:w-1/2 lg:w-1/3">
+                <DateRangePicker
+                    dateRange={dateRange}
+                    onDateRangeChange={setDateRange}
+                    timezone={timezone}
+                />
+            </div>
 
-                    <Button
-                        variant="outline"
-                        className="h-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50 hover:cursor-pointer font-medium"
-                        onClick={() => setFilterSidebarOpen(true)}
+            {/* 3. Members Filter */}
+            <div className="w-full md:w-64 space-y-2">
+                <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">MEMBERS</label>
+                    <button
+                        onClick={() => setSelectedFilter({ type: "members", all: true, id: "all" })}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-700"
                     >
-                        <Filter className="w-4 h-4 mr-2" /> Filter
-                    </Button>
 
-                    <Button variant="outline" className="h-9 hover:cursor-pointer" onClick={handleExport}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
-                    </Button>
-
-                    <Button variant="outline" className="h-9 hover:cursor-pointer">
-                        <Link href="/settings/Timesheet">
-                            <Settings className="w-5 h-5" />
-                        </Link>
-                    </Button>
+                    </button>
                 </div>
-            </InsightsHeader>
+                <SearchableSelect
+                    value={selectedFilter.id === 'all' || !selectedFilter.id ? "" : selectedFilter.id}
+                    onValueChange={(val) => setSelectedFilter({ type: "members", all: !val, id: val || "all" })}
+                    options={DUMMY_MEMBERS.map(m => ({ value: m.id, label: m.name }))}
+                    placeholder="Select members"
+                    searchPlaceholder="Search members..."
+                    className="w-full"
+                />
+            </div>
+
+            {/* Toolbar: Search, Export, Bulk Actions */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-2 pt-2">
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                    <div className="flex w-full md:w-64">
+                        <div className="relative flex-grow">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                            <Input
+                                placeholder="Search..."
+                                className="pl-9 h-10 bg-white w-full rounded-r-none border-r-0 focus-visible:ring-0"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className="h-10 rounded-l-none border-l-0 px-3 bg-gray-50 text-gray-600 hover:bg-gray-100"
+                                >
+                                    <ListFilter className="w-4 h-4 mr-2" />
+                                    Filter
+                                    {(filters.status !== 'all' || filters.paymentStatus !== 'all') && (
+                                        <span className="ml-2 flex h-2 w-2 rounded-full bg-gray-900" />
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 p-4" align="end">
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <h4 className="font-medium leading-none">Filters</h4>
+                                        <p className="text-sm text-muted-foreground">
+                                            Refine approvals by status.
+                                        </p>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <div className="grid gap-1">
+                                            <Label htmlFor="status">Approval Status</Label>
+                                            <Select
+                                                value={filters.status}
+                                                onValueChange={(val) => setFilters(prev => ({ ...prev, status: val }))}
+                                            >
+                                                <SelectTrigger id="status" className="h-8">
+                                                    <SelectValue placeholder="Select status" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">All Statuses</SelectItem>
+                                                    <SelectItem value="submitted">Submitted</SelectItem>
+                                                    <SelectItem value="approved">Approved</SelectItem>
+                                                    <SelectItem value="rejected">Rejected</SelectItem>
+                                                    <SelectItem value="open">Open (Draft)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="grid gap-1">
+                                            <Label htmlFor="payment">Payment Status</Label>
+                                            <Select
+                                                value={filters.paymentStatus}
+                                                onValueChange={(val) => setFilters(prev => ({ ...prev, paymentStatus: val }))}
+                                            >
+                                                <SelectTrigger id="payment" className="h-8">
+                                                    <SelectValue placeholder="Select payment status" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">All Payment Statuses</SelectItem>
+                                                    <SelectItem value="paid">Paid</SelectItem>
+                                                    <SelectItem value="unpaid">Unpaid</SelectItem>
+                                                    <SelectItem value="processing">Processing</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                    {(filters.status !== 'all' || filters.paymentStatus !== 'all') && (
+                                        <Button
+                                            variant="ghost"
+                                            className="w-full h-8 text-white bg-gray-900 hover:cursor-pointer"
+                                            onClick={() => setFilters({ status: "all", paymentStatus: "all" })}
+                                        >
+                                            Reset Filters
+                                        </Button>
+                                    )}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                </div>
+
+
+            </div>
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x border rounded-lg shadow-sm bg-white">
@@ -329,11 +410,11 @@ export default function TimesheetApprovalsPage() {
                                     </th>
                                 )}
                                 {visibleCols.member && <th className="p-3 pl-4 font-semibold">Member</th>}
-                                {visibleCols.dateRange && <th className="p-3 font-semibold">Period</th>}
+                                {visibleCols.dateRange && <th className="p-3 font-semibold min-w-[170px]">Period</th>}
                                 {visibleCols.totalHours && <th className="p-3 font-semibold">Total Hours</th>}
                                 {visibleCols.activityPct && <th className="p-3 font-semibold">Activity %</th>}
                                 {visibleCols.paymentStatus && <th className="p-3 font-semibold">Payment St.</th>}
-                                {visibleCols.submittedDate && <th className="p-3 font-semibold">Submitted On</th>}
+                                {visibleCols.submittedDate && <th className="p-3 font-semibold min-w-[130px]">Submitted On</th>}
                                 {visibleCols.screenshots && <th className="p-3 font-semibold">Screenshots</th>}
                                 {visibleCols.status && <th className="p-3 font-semibold">Status</th>}
                                 {visibleCols.notes && <th className="p-3 font-semibold">Reason</th>}
@@ -367,7 +448,7 @@ export default function TimesheetApprovalsPage() {
                                         {visibleCols.member && (
                                             <td className="p-4">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-600 font-bold">
+                                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-600 font-bold shrink-0">
                                                         {row.memberName.charAt(0)}
                                                     </div>
                                                     <div>
@@ -399,7 +480,7 @@ export default function TimesheetApprovalsPage() {
                                             <td className="p-4">
                                                 <Link href={`/activity/screenshots?memberId=${row.memberId}`}>
                                                     <Button variant="outline" size="sm" className="hover:cursor-pointer h-7 text-xs text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100 hover:text-blue-700 rounded-full">
-                                                      screens
+                                                        Screens
                                                     </Button>
                                                 </Link>
                                             </td>
@@ -461,12 +542,7 @@ export default function TimesheetApprovalsPage() {
                 />
             </div>
 
-            <TimesheetApprovalsFilterSidebar
-                open={filterSidebarOpen}
-                onOpenChange={setFilterSidebarOpen}
-                members={DUMMY_MEMBERS}
-                onApply={setSidebarFilters}
-            />
+
 
             <ApprovalDetailDialog
                 open={detailDialogOpen}
@@ -482,6 +558,39 @@ export default function TimesheetApprovalsPage() {
                 onConfirm={handleConfirmAction}
                 mode={actionMode}
             />
+            {selectedRows.size > 0 && (
+                <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white border shadow-lg rounded-full px-4 sm:px-6 py-3 flex items-center gap-2 sm:gap-4 z-50 animate-in slide-in-from-bottom-5 max-w-[calc(100vw-2rem)] overflow-x-auto">
+                    <span className="text-sm font-medium text-gray-900 border-r pr-3 sm:pr-4 whitespace-nowrap">
+                        {selectedRows.size} selected
+                    </span>
+                    <div className="flex items-center gap-2">
+                        {Array.from(selectedRows).every(id => approvals.find(a => a.id === id)?.status === 'submitted') && (
+                            <>
+                                <Button size="sm" onClick={handleBulkApprove} className="h-8 bg-white hover:bg-gray-900 text-gray-900 hover:text-white cursor-pointer border-gray-900 px-2 sm:px-3">
+                                    <CheckCircle2 className="w-4 h-4 mr-0 sm:mr-2" />
+                                    <span className="hidden sm:inline">Approve</span>
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={handleBulkRejectClick} className="h-8 bg-white text-red-600 hover:bg-red-600 hover:text-white hover:cursor-pointer px-2 sm:px-3">
+                                    <XCircle className="w-4 h-4 mr-0 sm:mr-2" />
+                                    <span className="hidden sm:inline">Reject</span>
+                                </Button>
+                            </>
+                        )}
+                        <Button size="sm" variant="default" onClick={handleBulkExport} className="h-8 cursor-pointer px-2 sm:px-3">
+                            <Download className="w-4 h-4 mr-0 sm:mr-2" />
+                            <span className="hidden sm:inline">Export</span>
+                        </Button>
+                    </div>
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 ml-2 rounded-full hover:bg-gray-100"
+                        onClick={() => setSelectedRows(new Set())}
+                    >
+                        <X className="w-4 h-4" />
+                    </Button>
+                </div>
+            )}
         </div >
     )
 }
