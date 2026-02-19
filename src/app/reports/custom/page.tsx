@@ -451,19 +451,20 @@ export default function CustomizedReportsPage() {
                         ))}
                     </tbody>
                 </table>
-                <div className="border-t border-gray-200">
-                    <PaginationFooter
-                        page={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={setCurrentPage}
-                        from={filteredData.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
-                        to={Math.min(currentPage * pageSize, filteredData.length)}
-                        total={filteredData.length}
-                        pageSize={pageSize}
-                        onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-                        className="border-none shadow-none bg-transparent"
-                    />
-                </div>
+            </div>
+
+            <div className="mt-4">
+                <PaginationFooter
+                    page={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    from={filteredData.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
+                    to={Math.min(currentPage * pageSize, filteredData.length)}
+                    total={filteredData.length}
+                    pageSize={pageSize}
+                    onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+                    className="border-none shadow-none bg-transparent p-0"
+                />
             </div>
 
             {/* Edit Schedule Dialog */}
