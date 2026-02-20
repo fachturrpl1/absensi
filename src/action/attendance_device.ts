@@ -213,19 +213,19 @@ export const activateDevice = async (serialNumber: string, organizationId: numbe
 
     if (fetchError || !device) {
       attendanceLogger.error("❌ Device not found or already activated:", fetchError);
-      return { 
-        success: false, 
-        message: "Device not found or already activated. Please check the serial number." 
+      return {
+        success: false,
+        message: "Device not found or already activated. Please check the serial number."
       };
     }
 
     // Update device with organization_id
     const { data: updatedDevice, error: updateError } = await supabase
       .from("attendance_devices")
-      .update({ 
+      .update({
         organization_id: organizationId,
         is_active: true,
-        updated_at: new Date().toISOString() 
+        updated_at: new Date().toISOString()
       })
       .eq("id", device.id)
       .select()
@@ -236,7 +236,7 @@ export const activateDevice = async (serialNumber: string, organizationId: numbe
       return { success: false, message: updateError.message };
     }
 
-    revalidatePath("/attendance-devices");
+    revalidatePath("/attendance/devices");
     return { success: true, data: updatedDevice, message: "Device activated successfully!" };
   } catch (err) {
     attendanceLogger.error("❌ Exception activating device:", err);
@@ -276,10 +276,10 @@ export const deactivateDevice = async (deviceId: string) => {
 
     const { error } = await supabase
       .from("attendance_devices")
-      .update({ 
+      .update({
         organization_id: null,
         is_active: false,
-        updated_at: new Date().toISOString() 
+        updated_at: new Date().toISOString()
       })
       .eq("id", deviceId);
 
@@ -288,7 +288,7 @@ export const deactivateDevice = async (deviceId: string) => {
       return { success: false, message: error.message };
     }
 
-    revalidatePath("/attendance-devices");
+    revalidatePath("/attendance/devices");
     return { success: true, message: "Device deactivated successfully!" };
   } catch (err) {
     attendanceLogger.error("❌ Exception deactivating device:", err);
@@ -322,7 +322,7 @@ export const createDeviceType = async (payload: {
       return { success: false, message: error.message };
     }
 
-    revalidatePath("/attendance-devices");
+    revalidatePath("/attendance/devices");
     return { success: true, data };
   } catch (err) {
     attendanceLogger.error("❌ Exception creating device type:", err);
@@ -359,7 +359,7 @@ export const updateDeviceType = async (
       return { success: false, message: error.message };
     }
 
-    revalidatePath("/attendance-devices");
+    revalidatePath("/attendance/devices");
     return { success: true, data };
   } catch (err) {
     attendanceLogger.error("❌ Exception updating device type:", err);
@@ -384,7 +384,7 @@ export const deleteDeviceType = async (id: string) => {
       return { success: false, message: error.message };
     }
 
-    revalidatePath("/attendance-devices");
+    revalidatePath("/attendance/devices");
     return { success: true };
   } catch (err) {
     attendanceLogger.error("❌ Exception deleting device type:", err);

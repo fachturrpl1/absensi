@@ -17,7 +17,7 @@ const combinedPaths: Record<string, string> = {
 const parentMapping: Record<string, string> = {
   '/attendance/list': '/attendance',
   '/attendance/locations': '/attendance',
-  '/attendance-devices': '/attendance',
+  '/attendance/devices': '/attendance',
   '/analytics': '/attendance',
   '/member-schedules': '/schedule',
   '/leaves/new': '/leaves',
@@ -55,7 +55,7 @@ const pathMapping: Record<string, string> = {
   'list': 'Attendance List',
   'dashboard': 'Dashboard',
   'devices': 'Devices',
-  'attendance-devices': 'Devices',
+  'attendance/devices': 'Devices',
   'finger': 'Fingerprint',
   'organization': 'Organization',
 };
@@ -73,12 +73,12 @@ interface BreadcrumbItemType {
 
 export function DynamicBreadcrumb() {
   const pathname = usePathname();
-  
+
   // Generate breadcrumb items from pathname
   const breadcrumbs = React.useMemo((): BreadcrumbItemType[] => {
     const paths = pathname.split('/').filter(Boolean);
     console.log('[BREADCRUMB] pathname:', pathname, 'paths:', paths);
-    
+
     if (paths.length === 0) {
       return [{ label: 'Home', href: '/', isCurrentPage: true }];
     }
@@ -99,7 +99,7 @@ export function DynamicBreadcrumb() {
     }
 
     const items: BreadcrumbItemType[] = [{ label: 'Home', href: '/', isCurrentPage: false }];
-    
+
     // Check if current path has a parent in parentMapping
     const parent = parentMapping[pathname];
     let parentSegmentCount = 0;
@@ -109,7 +109,7 @@ export function DynamicBreadcrumb() {
       const lastSegment = parentSegments[parentSegments.length - 1];
       const parentLabel = lastSegment ? pathMapping[lastSegment] || lastSegment : parent;
       console.log('[BREADCRUMB] parent:', parent, 'parentSegments:', parentSegments, 'parentLabel:', parentLabel);
-      
+
       items.push({
         label: parentLabel,
         href: parent,
@@ -117,7 +117,7 @@ export function DynamicBreadcrumb() {
       });
     }
     console.log('[BREADCRUMB] items after parent:', items);
-    
+
     let currentPath = '';
     const pathsToSkip = new Set<number>();
 
@@ -129,7 +129,7 @@ export function DynamicBreadcrumb() {
         console.log('[BREADCRUMB] skipping parent segment:', segment);
         return;
       }
-      
+
       if (pathsToSkip.has(index)) return;
 
       // Check if this and next segment form a combined path
@@ -155,7 +155,7 @@ export function DynamicBreadcrumb() {
 
       currentPath += `/${segment}`;
       const isLast = index === paths.length - 1;
-      const label = pathMapping[segment] || segment.split('-').map(word => 
+      const label = pathMapping[segment] || segment.split('-').map(word =>
         word ? word.charAt(0).toUpperCase() + word.slice(1) : ''
       ).join(' ');
 

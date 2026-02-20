@@ -21,6 +21,7 @@ import { MapPin, Plus, Eye, Search } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { LocationStats } from "./_components/location-stats";
 import { PaginationFooter } from "@/components/tables/pagination-footer";
+import { PageSkeleton } from "@/components/ui/loading-skeleton";
 
 export default function LocationsPage() {
   const router = useRouter();
@@ -94,20 +95,8 @@ export default function LocationsPage() {
     }
   };
 
-  if (!organizationId) {
-    return (
-      <div className="flex flex-1 flex-col gap-4 w-full">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center space-y-4">
-            <div className="text-6xl">📍</div>
-            <h2 className="text-2xl font-semibold">No Organization Selected</h2>
-            <p className="text-muted-foreground max-w-md">
-              Please select an organization to view attendance locations.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
+  if (!isHydrated) {
+    return <PageSkeleton />;
   }
 
   return (
@@ -116,10 +105,6 @@ export default function LocationsPage() {
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
           <div className="">
             <h1 className="text-xl font-semibold">Attendance Locations</h1>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              <span>{devices.length} Locations ({activeCount} Active)</span>
-            </div>
           </div>
 
 

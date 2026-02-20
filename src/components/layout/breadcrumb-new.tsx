@@ -31,7 +31,7 @@ const pathMapping: Record<string, string> = {
   'list': 'Attendance List',
   'dashboard': 'Dashboard',
   'devices': 'Devices',
-  'attendance-devices': 'Devices',
+  'attendance/devices': 'Devices',
   'finger': 'Fingerprint',
   'organization': 'Organization',
   'applications': 'Applications', // New
@@ -51,7 +51,7 @@ const combinedPaths: Record<string, string> = {
 const parentMapping: Record<string, string> = {
   '/attendance/list': '/attendance',
   '/attendance/locations': '/attendance',
-  '/attendance-devices': '/attendance',
+  '/attendance/devices': '/attendance',
   '/analytics': '/attendance',
   '/member-schedules': '/schedule',
   '/leaves/new': '/leaves',

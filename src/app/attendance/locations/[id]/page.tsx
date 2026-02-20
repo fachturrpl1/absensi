@@ -179,7 +179,7 @@ export default function EditLocationPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Map */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="border-border shadow-sm overflow-hidden flex flex-col h-full">
+          <Card className="border-border shadow-sm overflow-hidden flex flex-col">
             <CardHeader className="border-b bg-muted/20 pb-4">
               <div className="flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-primary" />
