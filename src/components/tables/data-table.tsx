@@ -366,7 +366,7 @@ export function DataTable<TData, TValue>({
   )
 
   const tableContent = (
-    <div className="relative w-full rounded-md border overflow-hidden">
+    <div className="relative w-full rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 overflow-hidden">
       {isLoading && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 pointer-events-none">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

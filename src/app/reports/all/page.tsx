@@ -160,14 +160,14 @@ export default function AllReportsPage() {
         <div className="w-full flex flex-1 flex-col gap-10 p-6 pt-2 max-w-[1600px] mx-auto">
             {/* Header */}
             <div className="w-full flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-gray-700">Reports</h1>
+                <h1 className="text-2xl font-bold text-gray-700 dark:text-gray-200">Reports</h1>
                 <div className="relative w-[300px]">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <Input
                         placeholder="Search reports"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="ps-10 pl-10 border-gray-300 rounded-full bg-white shadow-sm focus:border-gray-500 transition-all"
+                        className="ps-10 pl-10 border-gray-300 dark:border-gray-700 rounded-full bg-white dark:bg-gray-950 shadow-sm focus:border-gray-500 transition-all dark:text-gray-200 dark:placeholder:text-gray-500"
                         suppressHydrationWarning
                     />
                 </div>
@@ -181,7 +181,7 @@ export default function AllReportsPage() {
             <div className="space-y-16 pb-16">
                 {filteredSections.map((section, idx) => (
                     <section key={idx} className="space-y-6">
-                        <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{section.title}</h2>
+                        <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">{section.title}</h2>
 
                         <div className={cn(
                             "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
@@ -201,9 +201,9 @@ export default function AllReportsPage() {
                 ))}
 
                 {filteredSections.length === 0 && (
-                    <div className="text-center py-20 text-gray-500">
-                        <Search className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                        <h3 className="text-lg font-medium text-gray-900">No reports found</h3>
+                    <div className="text-center py-20 text-gray-500 dark:text-gray-400">
+                        <Search className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No reports found</h3>
                         <p>Try adjusting your search terms</p>
                     </div>
                 )}
@@ -242,7 +242,7 @@ function FeaturedReportsSection() {
     return (
         <section className="space-y-6">
             <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Customized reports</h2>
+                <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Customized reports</h2>
                 <a href="/reports/custom" className="text-sm font-medium text-gray-900 hover:text-blue-800 hover:underline">
                     View all &rarr;
                 </a>
@@ -252,9 +252,9 @@ function FeaturedReportsSection() {
             {customizedReports.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {customizedReports.map((report) => (
-                        <div key={report.id} className="group flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm hover:border-gray-300 transition-all cursor-pointer">
+                        <div key={report.id} className="group flex items-center justify-between p-4 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg hover:shadow-sm hover:border-gray-300 dark:hover:border-gray-600 transition-all cursor-pointer">
                             <div className="flex flex-col gap-1">
-                                <h3 className="font-semibold text-gray-900 group-hover:text-gray-900 transition-colors">{report.name}</h3>
+                                <h3 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">{report.name}</h3>
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
                                     {report.type}
                                 </span>
@@ -296,7 +296,7 @@ function FeaturedReportsSection() {
                     ))}
                 </div>
             ) : (
-                <div className="w-full rounded-lg border border-dashed border-gray-300 bg-white p-6 text-center text-gray-500">
+                <div className="w-full rounded-lg border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 p-6 text-center text-gray-500 dark:text-gray-400">
                     <p className="text-sm">No customized reports yet.</p>
                 </div>
             )}

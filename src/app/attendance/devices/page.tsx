@@ -40,7 +40,7 @@ import { ActivateDeviceDialog } from "@/components/dialogs/activate-device-dialo
 import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { useOrgStore } from "@/store/org-store"
 import { useDebounce } from "@/utils/debounce"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { CardTable, CardTableHeader, CardTableBody, CardTableCell, CardTableHead, CardTableRow } from "@/components/tables/card-table"
 
 const editDeviceSchema = z.object({
     deviceName: z.string().min(1, "Device name is required"),
@@ -294,82 +294,79 @@ export default function AttendanceDevicesPage() {
                 </div>
 
                 {/* Content */}
-                <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                    {loading ? (
-                        <div className="p-4">
-                            <TableSkeleton rows={5} columns={5} />
-                        </div>
-                    ) : total === 0 ? (
-                        <div className="p-12">
-                            <Empty>
-                                <EmptyHeader>
-                                    <EmptyMedia variant="icon">
-                                        <Smartphone className="h-14 w-14 text-muted-foreground mx-auto" />
-                                    </EmptyMedia>
-                                    <EmptyTitle>No devices found</EmptyTitle>
-                                    <EmptyDescription>
-                                        Try adjusting your filters or activate a new device.
-                                    </EmptyDescription>
-                                </EmptyHeader>
-                            </Empty>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader className="bg-gray-50">
-                                    <TableRow>
-                                        <TableHead className="font-semibold text-gray-600">Device Name</TableHead>
-                                        <TableHead className="font-semibold text-gray-600">Serial Number</TableHead>
-                                        <TableHead className="font-semibold text-gray-600">Type</TableHead>
-                                        <TableHead className="font-semibold text-gray-600">Location</TableHead>
-                                        <TableHead className="font-semibold text-gray-600">Status</TableHead>
-                                        <TableHead className="font-semibold text-gray-600">Created</TableHead>
-                                        <TableHead className="text-right font-semibold text-gray-600">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {devices.map((device: IAttendanceDevice) => (
-                                        <TableRow key={device.id} className="even:bg-gray-50 hover:bg-gray-100">
-                                            <TableCell className="font-medium text-gray-900">{device.device_name}</TableCell>
-                                            <TableCell className="font-mono text-xs text-gray-500">{device.serial_number || '-'}</TableCell>
-                                            <TableCell>
-                                                <div className="font-normal text-gray-600">
-                                                    {device.device_types?.name || '-'}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-gray-600">{device.location || '-'}</TableCell>
-                                            <TableCell>
-                                                <Badge variant={device.is_active ? "default" : "secondary"} className={device.is_active ? "bg-green-600 hover:bg-green-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}>
-                                                    {device.is_active ? "Active" : "Inactive"}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-gray-500 text-xs whitespace-nowrap">
-                                                {new Date(device.created_at).toLocaleDateString()}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => {
-                                                        setSelectedDevice(device)
-                                                        editForm.reset({
-                                                            deviceName: device.device_name,
-                                                            location: device.location || "",
-                                                        })
-                                                        setEditDialogOpen(true)
-                                                    }}
-                                                    className="h-8 w-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 hover:cursor-pointer"
-                                                >
-                                                    <Edit2 className="w-4 h-4" />
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
-                </div>
+                {/* Content */}
+                {loading ? (
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
+                        <TableSkeleton rows={5} columns={5} />
+                    </div>
+                ) : total === 0 ? (
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-12">
+                        <Empty>
+                            <EmptyHeader>
+                                <EmptyMedia variant="icon">
+                                    <Smartphone className="h-14 w-14 text-muted-foreground mx-auto" />
+                                </EmptyMedia>
+                                <EmptyTitle>No devices found</EmptyTitle>
+                                <EmptyDescription>
+                                    Try adjusting your filters or activate a new device.
+                                </EmptyDescription>
+                            </EmptyHeader>
+                        </Empty>
+                    </div>
+                ) : (
+                    <CardTable>
+                        <CardTableHeader>
+                            <CardTableRow>
+                                <CardTableHead>Device Name</CardTableHead>
+                                <CardTableHead>Serial Number</CardTableHead>
+                                <CardTableHead>Type</CardTableHead>
+                                <CardTableHead>Location</CardTableHead>
+                                <CardTableHead>Status</CardTableHead>
+                                <CardTableHead>Created</CardTableHead>
+                                <CardTableHead className="text-right">Actions</CardTableHead>
+                            </CardTableRow>
+                        </CardTableHeader>
+                        <CardTableBody>
+                            {devices.map((device: IAttendanceDevice) => (
+                                <CardTableRow key={device.id}>
+                                    <CardTableCell className="font-medium text-gray-900">{device.device_name}</CardTableCell>
+                                    <CardTableCell className="font-mono text-xs text-gray-500">{device.serial_number || '-'}</CardTableCell>
+                                    <CardTableCell>
+                                        <div className="font-normal text-gray-600">
+                                            {device.device_types?.name || '-'}
+                                        </div>
+                                    </CardTableCell>
+                                    <CardTableCell>{device.location || '-'}</CardTableCell>
+                                    <CardTableCell>
+                                        <Badge variant={device.is_active ? "default" : "secondary"} className={device.is_active ? "bg-green-600 hover:bg-green-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}>
+                                            {device.is_active ? "Active" : "Inactive"}
+                                        </Badge>
+                                    </CardTableCell>
+                                    <CardTableCell className="text-gray-500 text-xs whitespace-nowrap">
+                                        {new Date(device.created_at).toLocaleDateString()}
+                                    </CardTableCell>
+                                    <CardTableCell className="text-right">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => {
+                                                setSelectedDevice(device)
+                                                editForm.reset({
+                                                    deviceName: device.device_name,
+                                                    location: device.location || "",
+                                                })
+                                                setEditDialogOpen(true)
+                                            }}
+                                            className="h-8 w-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 hover:cursor-pointer"
+                                        >
+                                            <Edit2 className="w-4 h-4" />
+                                        </Button>
+                                    </CardTableCell>
+                                </CardTableRow>
+                            ))}
+                        </CardTableBody>
+                    </CardTable>
+                )}
 
                 <PaginationFooter
                     page={currentPageIndex + 1}

@@ -20,7 +20,7 @@ const CardTable = React.forwardRef<
     HTMLTableElement,
     React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm w-full">
+    <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm w-full">
         <div className="overflow-x-auto">
             <Table ref={ref} className={cn("w-full", className)} {...props} />
         </div>
@@ -32,7 +32,7 @@ const CardTableHeader = React.forwardRef<
     HTMLTableSectionElement,
     React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-    <TableHeader ref={ref} className={cn("bg-gray-50 border-b border-gray-200", className)} {...props} />
+    <TableHeader ref={ref} className={cn("bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800", className)} {...props} />
 ))
 CardTableHeader.displayName = "CardTableHeader"
 
@@ -43,7 +43,7 @@ const CardTableRow = React.forwardRef<
     <TableRow
         ref={ref}
         className={cn(
-            "even:bg-gray-50 hover:!bg-gray-200 transition-colors border-b border-gray-100 last:border-0",
+            "even:bg-gray-50 dark:even:bg-gray-900/50 hover:!bg-gray-200 dark:hover:!bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0 data-[state=selected]:bg-blue-50 dark:data-[state=selected]:bg-blue-900/20",
             className
         )}
         {...props}
@@ -58,7 +58,7 @@ const CardTableHead = React.forwardRef<
     <TableHead
         ref={ref}
         className={cn(
-            "font-semibold text-gray-600 h-10 px-4 text-left align-middle [&:has([role=checkbox])]:pr-0",
+            "font-semibold text-gray-600 dark:text-gray-400 h-10 px-4 text-left align-middle [&:has([role=checkbox])]:pr-0",
             className
         )}
         {...props}
@@ -73,7 +73,7 @@ const CardTableCell = React.forwardRef<
 >(({ className, ...props }, ref) => (
     <TableCell
         ref={ref}
-        className={cn("text-gray-600", className)}
+        className={cn("text-gray-600 dark:text-gray-300", className)}
         {...props}
     />
 ))

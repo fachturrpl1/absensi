@@ -228,10 +228,10 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
       `}</style>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800">
         <table className="w-full min-w-[880px]">
           {/* Header */}
-          <thead className="bg-muted/50 border-b">
+          <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
             <tr>
               {visibleColumns.members && (
                 <th className="p-3 text-left text-xs font-medium text-foreground">Name</th>
@@ -275,14 +275,12 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
                 </td>
               </tr>
             ) : (
-              paginatedData.map((member, index) => {
+              paginatedData.map((member) => {
                 return (
                   <tr
                     key={member.id}
-                    style={{
-                      backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
-                    }}
-                    className="border-b transition-colors custom-hover-row"
+                    style={{}}
+                    className="border-b border-gray-100 dark:border-gray-800 transition-colors custom-hover-row even:bg-gray-50 dark:even:bg-gray-900/50"
                   >
                     {visibleColumns.members && (
                       <td className="p-3 text-xs">

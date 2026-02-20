@@ -209,7 +209,7 @@ export default function CustomizedReportsPage() {
         <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-gray-700">Customized Reports</h1>
+                <h1 className="text-2xl font-bold text-gray-700 dark:text-gray-200">Customized Reports</h1>
                 <div className="flex gap-3">
                     <Button variant="outline" onClick={handleExport} className="gap-2">
                         <Download className="w-4 h-4" />
@@ -222,7 +222,7 @@ export default function CustomizedReportsPage() {
             </div>
 
             {/* Filters & Actions */}
-            <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
+            <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm p-4">
                 <div className="flex flex-col gap-4">
                     {/* Row 1: Search & Filters */}
                     <div className="flex items-center gap-3 flex-wrap">
@@ -328,9 +328,9 @@ export default function CustomizedReportsPage() {
             </div>
 
             {/* Table */}
-            <div className="rounded-md border border-gray-200 bg-white shadow-sm">
+            <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm">
                 <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-50 border-b border-gray-200 font-semibold text-gray-600">
+                    <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 font-semibold text-gray-600 dark:text-gray-400">
                         <tr>
                             <th className="p-4 w-10">
                                 <input
@@ -348,7 +348,7 @@ export default function CustomizedReportsPage() {
                             <th className="p-4 w-20"></th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                         {paginatedGroups.map((group) => (
                             <React.Fragment key={group.key}>
                                 {/* Group Header (only if grouped) */}
@@ -388,24 +388,24 @@ export default function CustomizedReportsPage() {
                                                     className="rounded border-gray-300"
                                                 />
                                             </td>
-                                            <td className="p-4 font-medium text-gray-900 hover:underline cursor-pointer">
+                                            <td className="p-4 font-medium text-gray-900 dark:text-gray-100 hover:underline cursor-pointer">
                                                 {report.name}
                                             </td>
-                                            <td className="p-4 text-gray-600">{report.type}</td>
-                                            <td className="p-4 text-gray-600">{report.lastModified}</td>
+                                            <td className="p-4 text-gray-600 dark:text-gray-400">{report.type}</td>
+                                            <td className="p-4 text-gray-600 dark:text-gray-400">{report.lastModified}</td>
                                             <td className="p-4">
                                                 <div className="flex flex-col">
-                                                    <span className="font-medium text-gray-900">{report.scheduleMeta}</span>
-                                                    <span className="text-xs text-gray-500">{report.nextSchedule}</span>
+                                                    <span className="font-medium text-gray-900 dark:text-gray-100">{report.scheduleMeta}</span>
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400">{report.nextSchedule}</span>
                                                 </div>
                                             </td>
                                             <td className="p-4">
                                                 {report.status === "Active" ? (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400">
                                                         Active
                                                     </span>
                                                 ) : (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300">
                                                         {report.status}
                                                     </span>
                                                 )}

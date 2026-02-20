@@ -255,9 +255,9 @@ export default function TimeOffTransactionsPage() {
             </div>
 
             <div className="space-y-4">
-                <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
+                <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden">
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-900 font-semibold border-b">
+                        <thead className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-semibold border-b border-gray-200 dark:border-gray-800">
                             <tr>
                                 <th className="p-3 pl-4 w-48 font-semibold text-gray-900">
                                     {groupBy === 'policy' ? 'Member' : 'Time Off Type'}
@@ -269,7 +269,7 @@ export default function TimeOffTransactionsPage() {
                                 <th className="p-3 font-semibold text-gray-900">Notes</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {isLoading ? (
                                 <tr>
                                     <td colSpan={6} className="p-8 text-center text-gray-500">

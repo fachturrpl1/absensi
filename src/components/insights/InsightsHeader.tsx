@@ -418,21 +418,21 @@ export function InsightsHeader({
         {!hideFilter && (
           <DropdownMenu open={filterDropdownOpen} onOpenChange={setFilterDropdownOpen}>
             <DropdownMenuTrigger asChild>
-              <button className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 min-w-[150px] text-left text-gray-800 flex items-center justify-between">
+              <button className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md text-sm bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 min-w-[150px] text-left text-gray-800 dark:text-gray-200 flex items-center justify-between">
                 {filterLabel}
                 <ChevronDown className="w-4 h-4 opacity-50 ml-2" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-80 p-3">
+            <DropdownMenuContent align="start" className="w-80 p-3 dark:bg-gray-950 dark:border-gray-800">
               {!hideTeamsTab && (
                 <div className="flex items-center gap-2 mb-3">
                   <button
-                    className={`px-3 py-1 rounded-full text-sm border ${filterTab === "members" ? "bg-gray-100 border-black text-black" : "bg-white border-gray-300 text-gray-700"}`}
+                    className={`px-3 py-1 rounded-full text-sm border ${filterTab === "members" ? "bg-gray-100 dark:bg-gray-700 border-black dark:border-gray-400 text-black dark:text-white" : "bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300"}`}
                     onClick={() => { setFilterTab("members"); setFilterSearch("") }}
                   >Members</button>
 
                   <button
-                    className={`px-3 py-1 rounded-full text-sm border ${filterTab === "teams" ? "bg-gray-100 border-black text-black" : "bg-white border-gray-300 text-gray-700"}`}
+                    className={`px-3 py-1 rounded-full text-sm border ${filterTab === "teams" ? "bg-gray-100 dark:bg-gray-700 border-black dark:border-gray-400 text-black dark:text-white" : "bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300"}`}
                     onClick={() => { setFilterTab("teams"); setFilterSearch("") }}
                   >Teams</button>
                 </div>
@@ -456,9 +456,9 @@ export function InsightsHeader({
               </div>
 
               {!hideAllOption && (
-                <div className="mb-2 pb-2 border-b border-gray-200">
+                <div className="mb-2 pb-2 border-b border-gray-200 dark:border-gray-800">
                   <button
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${selectedFilter.all && selectedFilter.type === effectiveFilterTab ? "bg-gray-100 text-black" : "hover:bg-gray-50 text-gray-700"}`}
+                    className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${selectedFilter.all && selectedFilter.type === effectiveFilterTab ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white" : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"}`}
                     onClick={() => handleFilterSelect({ type: effectiveFilterTab, all: true })}
                   >
                     <span className={`inline-block w-2 h-2 rounded-full border ${selectedFilter.all && selectedFilter.type === effectiveFilterTab ? "bg-black border-black" : "border-gray-400"}`} />
@@ -473,7 +473,7 @@ export function InsightsHeader({
                   return (
                     <button
                       key={it.id}
-                      className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${isActive ? "bg-gray-100 text-black" : "hover:bg-gray-50 text-gray-700"}`}
+                      className={`w-full flex items-center gap-2 px-2 py-2 rounded text-sm ${isActive ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white" : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"}`}
                       onClick={() => handleFilterSelect({ type: effectiveFilterTab, all: false, id: it.id })}
                     >
                       <span className={`inline-block w-2 h-2 rounded-full border ${isActive ? "bg-black border-black" : "border-gray-400"}`} />
@@ -498,7 +498,7 @@ export function InsightsHeader({
         {/* Date range */}
         <DropdownMenu open={dateRangeOpen} onOpenChange={setDateRangeOpen}>
           <DropdownMenuTrigger asChild>
-            <button className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 flex items-center gap-2 text-gray-800">
+            <button className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md text-sm bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 flex items-center gap-2 text-gray-800 dark:text-gray-200">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                 <line x1="16" y1="2" x2="16" y2="6" />
@@ -508,39 +508,39 @@ export function InsightsHeader({
               {fmt(dateRange.startDate)} - {fmt(dateRange.endDate)}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-auto p-0">
+          <DropdownMenuContent align="start" className="w-auto p-0 dark:bg-gray-950 dark:border-gray-800">
             <div className="flex">
-              <div className="w-40 border-r border-gray-200 p-3 space-y-1">
+              <div className="w-40 border-r border-gray-200 dark:border-gray-800 p-3 space-y-1">
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'today' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded dark:text-gray-200 ${selectedPreset === 'today' ? 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                   onClick={() => applyPreset("today")}
                 >Today</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'yesterday' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded dark:text-gray-200 ${selectedPreset === 'yesterday' ? 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                   onClick={() => applyPreset("yesterday")}
                 >Yesterday</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_week' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded dark:text-gray-200 ${selectedPreset === 'this_week' ? 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                   onClick={() => applyPreset("this_week")}
                 >This week</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_7_days' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded dark:text-gray-200 ${selectedPreset === 'last_7_days' ? 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                   onClick={() => applyPreset("last_7_days")}
                 >Last 7 days</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_week' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded dark:text-gray-200 ${selectedPreset === 'last_week' ? 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                   onClick={() => applyPreset("last_week")}
                 >Last week</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_2_weeks' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded dark:text-gray-200 ${selectedPreset === 'last_2_weeks' ? 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                   onClick={() => applyPreset("last_2_weeks")}
                 >Last 2 weeks</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_month' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded dark:text-gray-200 ${selectedPreset === 'this_month' ? 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                   onClick={() => applyPreset("this_month")}
                 >This month</button>
                 <button
-                  className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_month' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-sm rounded dark:text-gray-200 ${selectedPreset === 'last_month' ? 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                   onClick={() => applyPreset("last_month")}
                 >Last month</button>
               </div>
@@ -557,15 +557,15 @@ export function InsightsHeader({
                   {/* Left Month */}
                   <div className="w-64">
                     <div className="flex items-center justify-between mb-4">
-                      <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveLeftMonth(-1)}>
+                      <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded" onClick={() => moveLeftMonth(-1)}>
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <polyline points="15 18 9 12 15 6" />
                         </svg>
                       </button>
-                      <span className="font-semibold text-gray-900">
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">
                         {leftMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                       </span>
-                      <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveLeftMonth(1)}>
+                      <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded" onClick={() => moveLeftMonth(1)}>
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <polyline points="9 18 15 12 9 6" />
                         </svg>
@@ -573,13 +573,13 @@ export function InsightsHeader({
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-                      <div className="font-semibold p-1 text-gray-900">Mo</div>
-                      <div className="font-semibold p-1 text-gray-900">Tu</div>
-                      <div className="font-semibold p-1 text-gray-900">We</div>
-                      <div className="font-semibold p-1 text-gray-900">Th</div>
-                      <div className="font-semibold p-1 text-gray-900">Fr</div>
-                      <div className="font-semibold p-1 text-gray-900">Sa</div>
-                      <div className="font-semibold p-1 text-gray-900">Su</div>
+                      <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Mo</div>
+                      <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Tu</div>
+                      <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">We</div>
+                      <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Th</div>
+                      <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Fr</div>
+                      <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Sa</div>
+                      <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Su</div>
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center text-sm">
@@ -590,9 +590,9 @@ export function InsightsHeader({
                           <button
                             key={i}
                             onClick={() => handleDateClick(d.day, leftMonth, d.isCurrentMonth)}
-                            className={`p-2 rounded ${isEdge ? "bg-black text-white hover:bg-gray-800" :
-                              inRange ? "bg-gray-100 hover:bg-gray-200 text-black" :
-                                d.isCurrentMonth ? "text-gray-800 hover:bg-gray-100" : "text-gray-400"}`}
+                            className={`p-2 rounded ${isEdge ? "bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200" :
+                              inRange ? "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-black dark:text-white" :
+                                d.isCurrentMonth ? "text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800" : "text-gray-400 dark:text-gray-600"}`}
                           >
                             {d.day}
                           </button>
@@ -604,15 +604,15 @@ export function InsightsHeader({
                   {/* Right Month */}
                   <div className="w-64">
                     <div className="flex items-center justify-between mb-4">
-                      <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveRightMonth(-1)}>
+                      <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded" onClick={() => moveRightMonth(-1)}>
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <polyline points="15 18 9 12 15 6" />
                         </svg>
                       </button>
-                      <span className="font-semibold text-gray-900">
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">
                         {rightMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                       </span>
-                      <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveRightMonth(1)}>
+                      <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded" onClick={() => moveRightMonth(1)}>
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <polyline points="9 18 15 12 9 6" />
                         </svg>
@@ -620,13 +620,13 @@ export function InsightsHeader({
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-                      <div className="font-semibold p-1 text-gray-900">Mo</div>
-                      <div className="font-semibold p-1 text-gray-900">Tu</div>
-                      <div className="font-semibold p-1 text-gray-900">We</div>
-                      <div className="font-semibold p-1 text-gray-900">Th</div>
-                      <div className="font-semibold p-1 text-gray-900">Fr</div>
-                      <div className="font-semibold p-1 text-gray-900">Sa</div>
-                      <div className="font-semibold p-1 text-gray-900">Su</div>
+                      <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Mo</div>
+                      <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Tu</div>
+                      <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">We</div>
+                      <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Th</div>
+                      <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Fr</div>
+                      <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Sa</div>
+                      <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Su</div>
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center text-sm">
@@ -637,9 +637,9 @@ export function InsightsHeader({
                           <button
                             key={i}
                             onClick={() => handleDateClick(d.day, rightMonth, d.isCurrentMonth)}
-                            className={`p-2 rounded ${isEdge ? "bg-black text-white hover:bg-gray-800" :
-                              inRange ? "bg-gray-100 hover:bg-gray-200" :
-                                d.isCurrentMonth ? "hover:bg-gray-100" : "text-gray-400"}`}
+                            className={`p-2 rounded ${isEdge ? "bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200" :
+                              inRange ? "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-black dark:text-white" :
+                                d.isCurrentMonth ? "text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800" : "text-gray-400 dark:text-gray-600"}`}
                           >
                             {d.day}
                           </button>
@@ -650,14 +650,14 @@ export function InsightsHeader({
                 </div>
 
                 {/* Footer tanggal terpilih + aksi */}
-                <div className="text-xs text-center text-gray-600 mt-2">
+                <div className="text-xs text-center text-gray-600 dark:text-gray-400 mt-2">
                   {fmt(tempStartDate)} - {fmt(tempEndDate)}
                 </div>
-                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
-                  <button className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 font-medium" onClick={applyDateRange}>
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                  <button className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded hover:bg-gray-800 dark:hover:bg-gray-200 font-medium" onClick={applyDateRange}>
                     Apply
                   </button>
-                  <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50" onClick={cancelDateRange}>
+                  <button className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-300" onClick={cancelDateRange}>
                     Cancel
                   </button>
                 </div>
@@ -681,7 +681,7 @@ export function InsightsHeader({
         {children}
         {onToggleSidebar && (
           <button
-            className="p-2 hover:bg-gray-100 rounded"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
             onClick={onToggleSidebar}
             aria-expanded={typeof sidebarOpen === "boolean" ? sidebarOpen : undefined}
             aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}

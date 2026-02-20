@@ -254,7 +254,7 @@ export default function WorkBreaksPage() {
                 </div>
             </div>
 
-            <div className="mt-6 bg-white border rounded-lg shadow-sm">
+            <div className="mt-6 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm">
                 <div className="p-4 border-b flex gap-4 flex-wrap bg-gray-50/50">
                     <div className="relative max-w-sm">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -296,7 +296,7 @@ export default function WorkBreaksPage() {
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-center">
-                        <thead className="bg-gray-50 text-gray-600 font-medium border-b">
+                        <thead className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-800">
                             <tr>
                                 {visibleColumns.member && <th className="p-4 text-left">Member</th>}
                                 {visibleColumns.policy && <th className="p-4">Policy</th>}
@@ -310,7 +310,7 @@ export default function WorkBreaksPage() {
                                 {visibleColumns.project && <th className="p-4 text-left">Project</th>}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {paginatedItems.length === 0 ? (
                                 <tr>
                                     <td colSpan={10} className="p-8 text-center text-gray-500">

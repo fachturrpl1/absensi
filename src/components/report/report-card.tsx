@@ -30,7 +30,7 @@ export function ReportCard({
             href={href}
             target={target}
             className={cn(
-                "group relative flex flex-col rounded-lg border border-gray-200 bg-white p-6 transition-all hover:border-gray-400 hover:shadow-sm",
+                "group relative flex flex-col rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6 transition-all hover:border-gray-400 dark:hover:border-gray-600 hover:shadow-sm",
                 isPopular && "min-h-[200px]",
                 className
             )}
@@ -43,7 +43,7 @@ export function ReportCard({
                             {icon}
                         </div>
                     ) : (
-                        <h3 className="font-semibold text-gray-900 group-hover:text-gray-900 transition-colors">
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
                             {title}
                         </h3>
                     )}
@@ -58,12 +58,12 @@ export function ReportCard({
 
             {/* Title for Popular Reports (below icon) */}
             {isPopular && (
-                <h3 className="font-semibold text-gray-900 group-hover:text-gray-900 transition-colors mb-2">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors mb-2">
                     {title}
                 </h3>
             )}
 
-            <p className="text-sm text-gray-500 line-clamp-3">
+            <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-3">
                 {description}
             </p>
         </Link>

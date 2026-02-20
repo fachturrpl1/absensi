@@ -82,10 +82,10 @@ export function InvitationsTable({ invitations, isLoading = false, onUpdate }: I
 
     const getStatusBadge = (status: string) => {
         const variants = {
-            pending: { icon: Clock, color: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200" },
-            accepted: { icon: CheckCircle2, color: "bg-green-100 text-green-800 hover:bg-green-200" },
-            expired: { icon: XCircle, color: "bg-red-100 text-red-800 hover:bg-red-200" },
-            cancelled: { icon: Ban, color: "bg-gray-100 text-gray-800 hover:bg-gray-200" },
+            pending: { icon: Clock, color: "bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/30" },
+            accepted: { icon: CheckCircle2, color: "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30" },
+            expired: { icon: XCircle, color: "bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/30" },
+            cancelled: { icon: Ban, color: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" },
         } as const;
 
         type StatusKey = keyof typeof variants;
@@ -112,21 +112,21 @@ export function InvitationsTable({ invitations, isLoading = false, onUpdate }: I
           background-color: #374151 !important;
         }
       `}</style>
-            <div className="overflow-x-auto rounded-md border">
+            <div className="overflow-x-auto rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
                 <table className="w-full text-sm text-left">
                     <thead className="bg-transparent border-b">
                         <tr>
                             <th className="p-3 w-8">
                                 <input type="checkbox" className="rounded border-gray-300" />
                             </th>
-                            <th className="p-3 font-medium text-gray-900">Member</th>
-                            <th className="p-3 font-medium text-gray-900">Role</th>
-                            <th className="p-3 font-medium text-gray-900">Teams</th>
-                            <th className="p-3 font-medium text-gray-900">Projects</th>
-                            <th className="p-3 font-medium text-gray-900">Payment</th>
-                            <th className="p-3 font-medium text-gray-900">Weekly limit</th>
-                            <th className="p-3 font-medium text-gray-900">Status</th>
-                            <th className="p-3 font-medium text-gray-900 text-right">Actions</th>
+                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100">Member</th>
+                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100">Role</th>
+                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100">Teams</th>
+                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100">Projects</th>
+                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100">Payment</th>
+                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100">Weekly limit</th>
+                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100">Status</th>
+                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -153,10 +153,10 @@ export function InvitationsTable({ invitations, isLoading = false, onUpdate }: I
                                     <td className="p-3">
                                         <div className="flex items-center gap-2">
                                             {/* Avatar placeholder if needed, or just email */}
-                                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-medium text-xs">
+                                            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-300 font-medium text-xs">
                                                 {invitation.email.substring(0, 2).toUpperCase()}
                                             </div>
-                                            <span className="font-medium text-gray-900">{invitation.email}</span>
+                                            <span className="font-medium text-gray-900 dark:text-gray-100">{invitation.email}</span>
                                         </div>
                                     </td>
                                     <td className="p-3">

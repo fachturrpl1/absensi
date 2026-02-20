@@ -231,7 +231,7 @@ export default function DailyTotalsPage() {
     const membersWorked = tableRows.length;
 
     return (
-        <div className="flex flex-col min-h-screen bg-white">
+        <div className="flex flex-col min-h-screen bg-white dark:bg-gray-950">
             {/* Top Toolbar */}
             <div className="flex flex-col gap-4 p-6 pb-2">
                 <div className="flex items-center justify-between">
@@ -261,19 +261,19 @@ export default function DailyTotalsPage() {
 
                 {/* Metrics Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-2">
-                    <div className="p-3 border-l-4 border-gray-200 bg-white">
+                    <div className="p-3 border-l-4 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950">
                         <div className="text-[10px] font-bold text-gray-400 uppercase">MEMBERS WORKED</div>
                         <div className="text-2xl font-normal text-gray-500">{membersWorked}</div>
                     </div>
-                    <div className="p-3 border-l-4 border-gray-200 bg-white">
+                    <div className="p-3 border-l-4 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950">
                         <div className="text-[10px] font-bold text-gray-400 uppercase">BREAK TIME</div>
                         <div className="text-2xl font-normal text-gray-500">{totalBreakStr}</div>
                     </div>
-                    <div className="p-3 border-l-4 border-gray-200 bg-white">
+                    <div className="p-3 border-l-4 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950">
                         <div className="text-[10px] font-bold text-gray-400 uppercase">AVG. HOURS PER MEMBER</div>
                         <div className="text-2xl font-normal text-gray-500">{avgHoursStr}</div>
                     </div>
-                    <div className="p-3 border-l-4 border-gray-200 bg-white">
+                    <div className="p-3 border-l-4 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950">
                         <div className="text-[10px] font-bold text-gray-400 uppercase">AVG. ACTIVITY</div>
                         <div className="text-2xl font-normal text-gray-500">{avgActivity}%</div>
                     </div>
