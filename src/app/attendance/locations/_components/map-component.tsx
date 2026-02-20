@@ -15,7 +15,7 @@ import "leaflet/dist/leaflet.css";
 import "./leaflet-fix.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MapPin, Loader2, Navigation } from "lucide-react";
+import { Search, MapPin, Loader2, Locate, LocateFixed, LocateOff } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -91,6 +91,8 @@ export default function MapComponent({
   const [searching, setSearching] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [key, setKey] = useState(0);
+  const [locationPermission, setLocationPermission] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown');
+  const [isUserLocationCentered, setIsUserLocationCentered] = useState(false);
   const [alertDialog, setAlertDialog] = useState<{
     open: boolean;
     title: string;
@@ -110,7 +112,28 @@ export default function MapComponent({
     if (onLoad) {
       onLoad();
     }
+
+    // Check initial permission state
+    if ("geolocation" in navigator) {
+      navigator.permissions.query({ name: "geolocation" }).then((result) => {
+        setLocationPermission(result.state);
+        result.onchange = () => {
+          setLocationPermission(result.state);
+        };
+      });
+    } else {
+      setLocationPermission('denied');
+    }
   }, [onLoad]);
+
+  // Listener to reset "Centered" state when user manually moves map
+  function MapInteractionHandler() {
+    useMapEvents({
+      dragstart: () => setIsUserLocationCentered(false),
+      zoomstart: () => setIsUserLocationCentered(false),
+    });
+    return null;
+  }
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -160,10 +183,21 @@ export default function MapComponent({
             setKey((prev) => prev + 1);
           }
           setLocationLoading(false);
+          setIsUserLocationCentered(true);
+          setLocationPermission('granted');
         },
         (error) => {
-          attendanceLogger.error("Geolocation error:", error);
+          attendanceLogger.error("Geolocation error:", {
+            code: error.code,
+            message: error.message,
+          });
           setLocationLoading(false);
+          setIsUserLocationCentered(false);
+
+          if (error.code === error.PERMISSION_DENIED) {
+            setLocationPermission('denied');
+          }
+
           setAlertDialog({
             open: true,
             title: "Location Access Denied",
@@ -172,6 +206,7 @@ export default function MapComponent({
         }
       );
     } else {
+      setLocationPermission('denied');
       setAlertDialog({
         open: true,
         title: "Geolocation Not Supported",
@@ -180,15 +215,20 @@ export default function MapComponent({
     }
   };
 
+  const getLocationIcon = () => {
+    if (locationLoading) return <Loader2 className="h-5 w-5 animate-spin" />;
+    if (locationPermission === 'denied') return <LocateOff className="h-5 w-5 text-destructive" />; // Red slash if denied
+    if (isUserLocationCentered) return <LocateFixed className="h-5 w-5 text-primary" />; // Filled target if centered
+    return <Locate className="h-5 w-5 text-foreground" />; // Outline arrow if available but not centered
+  };
+
   return (
-    <div className="relative group rounded-xl overflow-hidden border shadow-sm h-[500px]">
+    <div className="relative group overflow-hidden border shadow-sm h-[500px]">
       {/* Floating Controls */}
       <div className="absolute top-2 left-2 right-2 z-[500] pointer-events-none flex justify-between gap-2">
         {/* Search Bar */}
-        <Card className="pointer-events-auto flex items-center p-0.5 shadow-lg border-0 bg-white/90 backdrop-blur-sm w-full max-w-sm">
-          <div className="pl-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-          </div>
+        <Card className="pointer-events-auto flex flex-row items-center p-0.5 shadow-lg border-0 bg-white/90 backdrop-blur-sm w-full max-w-sm">
+
           <Input
             className="border-0 shadow-none focus-visible:ring-0 bg-transparent h-9"
             placeholder="Search place..."
@@ -199,7 +239,7 @@ export default function MapComponent({
           <Button
             size="sm"
             variant="ghost"
-            className="h-8 w-8 p-0 hover:bg-black/5 rounded-full"
+            className="h-8 w-8 p-0 hover:cursor-pointer hover:bg-black/5 rounded-full"
             onClick={handleSearch}
             disabled={searching}
           >
@@ -216,9 +256,15 @@ export default function MapComponent({
           className="pointer-events-auto h-10 w-10 rounded-xl shadow-lg bg-white/90 backdrop-blur-sm hover:bg-white border-0"
           onClick={getCurrentLocation}
           disabled={locationLoading}
-          title="Use Current Location"
+          title={
+            locationPermission === 'denied'
+              ? "Location access denied"
+              : isUserLocationCentered
+                ? "You are here"
+                : "Show current location"
+          }
         >
-          {locationLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Navigation className="h-5 w-5 text-primary fill-primary/20" />}
+          {getLocationIcon()}
         </Button>
       </div>
 
@@ -250,6 +296,7 @@ export default function MapComponent({
 
         <ZoomControl position="bottomright" />
 
+        <MapInteractionHandler />
         <MapClickHandler onMapClick={onMapClick} />
         <MapCenterController latitude={latitude} longitude={longitude} />
 

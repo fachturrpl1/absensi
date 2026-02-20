@@ -67,20 +67,20 @@ export function OrgBreadcrumb() {
     const id = parts[1]
     const supabase = createClient()
     let aborted = false
-    ;(async () => {
-      try {
-        type WorkScheduleRow = { name: string | null }
-        const { data } = await supabase
-          .from('work_schedules')
-          .select('name')
-          .eq('id', id)
-          .maybeSingle()
-        const row = data as WorkScheduleRow | null
-        if (!aborted) setScheduleName(row?.name ?? null)
-      } catch {
-        if (!aborted) setScheduleName(null)
-      }
-    })()
+      ; (async () => {
+        try {
+          type WorkScheduleRow = { name: string | null }
+          const { data } = await supabase
+            .from('work_schedules')
+            .select('name')
+            .eq('id', id)
+            .maybeSingle()
+          const row = data as WorkScheduleRow | null
+          if (!aborted) setScheduleName(row?.name ?? null)
+        } catch {
+          if (!aborted) setScheduleName(null)
+        }
+      })()
     return () => { aborted = true }
   }, [pathname])
 
@@ -92,7 +92,7 @@ export function OrgBreadcrumb() {
     '/attendance/list': 'List',
     '/attendance/add': 'Add',
     '/attendance/locations': 'Locations',
-    '/attendance-devices': 'Devices',
+    '/attendance/devices': 'Devices',
     '/analytics': 'Analytics',
     '/attendance/list/add': 'Add',
 
@@ -125,7 +125,7 @@ export function OrgBreadcrumb() {
     '/attendance/list/add': '/attendance/list',
     '/attendance/add': '/attendance',
     '/attendance/locations': '/attendance',
-    '/attendance-devices': '/attendance',
+    '/attendance/devices': '/attendance',
     '/analytics': '/attendance',
     '/group/move': '/group',
     '/member-schedules': '/schedule',

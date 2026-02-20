@@ -185,7 +185,7 @@ export function ImageCropperDialog({
                             min={1}
                             max={3}
                             step={0.1}
-                            onValueChange={(val) => {
+                            onValueChange={(val: number[]) => {
                                 if (val && val.length > 0) setZoom(val[0]!)
                             }}
                             className="flex-1"
@@ -200,7 +200,7 @@ export function ImageCropperDialog({
                             min={0}
                             max={360}
                             step={1}
-                            onValueChange={(val) => {
+                            onValueChange={(val: number[]) => {
                                 if (val && val.length > 0) setRotation(val[0]!)
                             }}
                             className="flex-1"

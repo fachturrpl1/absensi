@@ -488,8 +488,7 @@ export default function AnalyticsPage() {
           </Card>
         </div>
       </motion.div>
-
-      {/* SECTION 3: ATTENDANCE TRENDS */}
+      
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

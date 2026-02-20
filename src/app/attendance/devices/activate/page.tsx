@@ -90,7 +90,7 @@ export default function ActivateDevicePage() {
 
             if (result.success) {
                 toast.success("Device activated successfully")
-                router.push("/attendance-devices")
+                router.push("/attendance/devices")
                 router.refresh()
             } else {
                 toast.error(result.message || "Failed to activate device")
