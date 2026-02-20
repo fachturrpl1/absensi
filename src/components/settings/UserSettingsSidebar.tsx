@@ -9,6 +9,7 @@ interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
     items: {
         href: string
         title: string
+        icon: React.ReactNode
     }[]
 }
 
@@ -32,9 +33,10 @@ export function UserSettingsSidebar({ className, items, ...props }: SidebarNavPr
                         pathname === item.href
                             ? "bg-muted hover:bg-muted"
                             : "hover:bg-transparent hover:underline",
-                        "justify-start"
+                        "justify-start gap-2"
                     )}
                 >
+                    {item.icon}
                     {item.title}
                 </Link>
             ))}

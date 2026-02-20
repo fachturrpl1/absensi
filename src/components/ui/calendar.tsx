@@ -18,7 +18,7 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
         caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium",
+        label: "text-sm font-medium",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
@@ -46,8 +46,13 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
         day_disabled: "text-muted-foreground opacity-50",
         day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_hidden: "invisible",
+        caption_dropdowns: "flex justify-center gap-1",
+        dropdown: "p-2 bg-background shadow-sm border rounded-md",
+        dropdown_icon: "hidden",
+        dropdown_month: "mr-2",
+        dropdown_year: "mr-2",
         ...classNames,
-      }}
+      } as any}
       components={{
         Chevron: ({ orientation, ...iconProps }) => {
           if (orientation === "left") {

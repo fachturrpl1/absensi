@@ -1,0 +1,3 @@
+﻿src/components/settings/appearance-form.tsx(38,35): error TS2304: Cannot find name 'useState'.
+src/components/settings/appearance-form.tsx(41,5): error TS2304: Cannot find name 'useEffect'.
+src/components/settings/appearance-form.tsx(56,5): error TS2304: Cannot find name 'useEffect'.
