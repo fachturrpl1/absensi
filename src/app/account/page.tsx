@@ -36,10 +36,6 @@ export default async function AccountPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 w-full">
       <div className="w-full py-6 px-4 md:px-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Account Settings</h1>
-        </div>
-        
         <AccountForm initialData={accountResult.data} />
       </div>
     </div>

@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger';
 // Toggle email service:
 // true = Supabase built-in email (only works for NEW emails)
 // false = Resend (works for all emails, but requires third-party)
-const USE_SUPABASE_EMAIL = false; // Using Resend
+const USE_SUPABASE_EMAIL = true; // Using Supabase (recommended for development)
 
 /**
  * Server Actions for Member Invitation System
