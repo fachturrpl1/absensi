@@ -58,7 +58,7 @@ export function LoginForm() {
       // Set user in auth store
       useAuthStore.getState().setUser(result.user);
       useAuthStore.getState().setPermissions(result.permissions!.map((p) => p.code));
-      
+
       // Redirect to organization
       // Organization will fetch organizations from store or from API
       router.push("/organization");
@@ -107,7 +107,7 @@ export function LoginForm() {
             <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
           </div>
         </div>
-          <FormField
+        <FormField
           control={form.control}
           name="email"
           render={({ field }) => (
@@ -131,7 +131,7 @@ export function LoginForm() {
                   href="/auth/forgot-password"
                   className="text-sm font-medium text-primary hover:underline"
                 >
-                  Lupa password?
+                  Forgot password?
                 </Link>
               </div>
               <FormControl>

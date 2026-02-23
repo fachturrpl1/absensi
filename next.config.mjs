@@ -326,8 +326,8 @@ const nextConfig = {
   },
 
   allowedDevOrigins: [
-    'http://10.11.112.221:3000',
-    'http://localhost:3000',
+    'http://10.11.112.221:3007',
+    'http://localhost:3007',
   ],
 
   serverExternalPackages: ['@supabase/ssr', 'sharp'],

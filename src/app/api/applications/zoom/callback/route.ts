@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     const error = searchParams.get('error')
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://absensi-ubig.vercel.app')
 
     // Handle Zoom-side errors (e.g., user denied access)
     if (error) {

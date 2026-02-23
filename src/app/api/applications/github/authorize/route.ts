@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
         // Dynamic base URL detection for flexible deployment
         // Priority: NEXT_PUBLIC_APP_URL (production) → VERCEL_URL (preview) → fallback
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://absensi-ubig.vercel.app')
 
         // Build authorization URL
         // GitHub scopes: repo (for private repos), read:user, user:email

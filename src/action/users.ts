@@ -35,7 +35,7 @@ export async function signUp(formData: FormData) {
         display_name: displayName,
       },
       // Ensure email confirmation is handled automatically
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/onboarding`,
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://absensi-ubig.vercel.app'}/onboarding`,
     },
   })
 
@@ -63,7 +63,7 @@ export async function signInWithGoogle() {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://absensi-ubig.vercel.app'}/auth/callback`,
       skipBrowserRedirect: false,
       queryParams: {
         access_type: 'online',
@@ -130,9 +130,9 @@ export async function login(formData: FormData) {
   if (roleError) return { success: false, message: roleError.message }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const roles = (rolesData as any)?.map((r: any) => ({ 
-    id: r.role?.id || r.id, 
-    name: r.role?.name || r.name 
+  const roles = (rolesData as any)?.map((r: any) => ({
+    id: r.role?.id || r.id,
+    name: r.role?.name || r.name
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   })).filter((role: any) => role.id && role.name) ?? []
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -148,9 +148,9 @@ export async function login(formData: FormData) {
     if (permError) return { success: false, message: permError.message }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    permissions = (permData as any)?.map((p: any) => ({ 
-      code: p.permission?.code || p.code, 
-      name: p.permission?.name || p.name 
+    permissions = (permData as any)?.map((p: any) => ({
+      code: p.permission?.code || p.code,
+      name: p.permission?.name || p.name
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     })).filter((perm: any) => perm.code && perm.name) ?? []
   }
@@ -177,10 +177,10 @@ export async function requestPasswordReset(formData: FormData) {
   const email = (formData.get('email') as string)?.trim()
 
   if (!email) {
-    return { success: false, message: 'Email wajib diisi.' }
+    return { success: false, message: 'Email is required.' }
   }
 
-  const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/reset-password`
+  const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://absensi-ubig.vercel.app'}/auth/reset-password`
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: redirectUrl,
@@ -192,7 +192,7 @@ export async function requestPasswordReset(formData: FormData) {
 
   return {
     success: true,
-    message: 'Kami telah mengirimkan tautan reset password ke email Anda.',
+    message: 'We have sent a password reset link to your email.',
   }
 }
 
@@ -202,7 +202,7 @@ export async function resetPassword(formData: FormData) {
   const password = (formData.get('password') as string)?.trim()
 
   if (!password || password.length < 8) {
-    return { success: false, message: 'Password baru minimal 8 karakter.' }
+    return { success: false, message: 'New password must be at least 8 characters.' }
   }
 
   const { error } = await supabase.auth.updateUser({ password })
@@ -216,7 +216,7 @@ export async function resetPassword(formData: FormData) {
 
   return {
     success: true,
-    message: 'Password berhasil diperbarui. Silakan login kembali.',
+    message: 'Password successfully updated. Please login again.',
   }
 }
 

@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
         // 4. Construct Callback URL
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://absensi-ubig.vercel.app')
 
         const callbackUrl = `${baseUrl}/api/applications/trello/callback`
 

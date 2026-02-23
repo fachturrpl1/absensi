@@ -15,13 +15,13 @@ export default function ResetPasswordPage() {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
             <Lock className="h-6 w-6" />
           </div>
-          <CardTitle className="text-2xl font-bold">Atur Ulang Password</CardTitle>
-          <CardDescription>Masukkan password baru Anda untuk menyelesaikan proses reset.</CardDescription>
+          <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
+          <CardDescription>Enter your new password to complete the reset process.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <ResetPasswordForm />
           <Button variant="ghost" className="w-full" asChild>
-            <Link href="/auth/login">Kembali ke login</Link>
+            <Link href="/auth/login">Back to login</Link>
           </Button>
         </CardContent>
       </Card>

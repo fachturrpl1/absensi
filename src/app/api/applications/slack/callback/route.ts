@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     try {
         // Dynamic base URL detection (for redirects and token exchange)
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://absensi-ubig.vercel.app')
 
         const searchParams = req.nextUrl.searchParams
         const code = searchParams.get('code')
@@ -122,7 +122,7 @@ export async function GET(req: NextRequest) {
 
         // Fallback base URL for error redirect
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://absensi-ubig.vercel.app')
 
         return NextResponse.redirect(
             `${baseUrl}/organization/applications?error=callback_failed`
