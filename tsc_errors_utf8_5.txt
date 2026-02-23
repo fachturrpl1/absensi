@@ -1,1 +1,0 @@
-﻿src/components/settings/account-settings-form.tsx(39,9): error TS2353: Object literal may only specify known properties, and 'required_error' does not exist in type '{ error?: string | $ZodErrorMap<$ZodIssueInvalidType<unknown>> | undefined; message?: string | undefined; }'.

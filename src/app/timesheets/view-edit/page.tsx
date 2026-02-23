@@ -18,6 +18,7 @@ import { Download, Search, Filter, ChevronDown, ChevronRight, Pencil, Plus, X } 
 import { Input } from "@/components/ui/input"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { CardTable, CardTableHeader, CardTableBody, CardTableCell, CardTableHead, CardTableRow } from "@/components/tables/card-table"
 import Link from "next/link"
 
 import { toast } from "sonner"
@@ -286,7 +287,7 @@ export default function ViewEditTimesheetsPage() {
 
             <div className="w-full md:w-64 space-y-2">
                 <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">MEMBERS</label>
+                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">MEMBERS</label>
                     <button
                         onClick={() => setSelectedFilter({ type: "members", all: true, id: "all" })}
                         className="text-xs font-semibold text-blue-600 hover:text-blue-700"
@@ -299,7 +300,7 @@ export default function ViewEditTimesheetsPage() {
                     options={DUMMY_MEMBERS.map(m => ({ value: m.id, label: m.name }))}
                     placeholder="Select members"
                     searchPlaceholder="Search members..."
-                    className="w-full"
+                    className="w-full bg-white dark:bg-gray-950 dark:border-gray-800"
                 />
             </div>
 
@@ -311,14 +312,14 @@ export default function ViewEditTimesheetsPage() {
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                             <Input
                                 placeholder="Search..."
-                                className="pl-9 h-10 bg-white w-full rounded-r-none border-r-0 focus-visible:ring-0"
+                                className="pl-9 h-10 bg-white dark:bg-gray-950 w-full rounded-r-none border-r-0 focus-visible:ring-0 dark:border-gray-800"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
                         <Button
                             variant="outline"
-                            className="h-10 rounded-l-none border-l-0 px-3 bg-gray-50 text-gray-600 hover:bg-gray-100"
+                            className="h-10 rounded-l-none border-l-0 px-3 bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-300 dark:border-gray-800 dark:hover:bg-gray-800"
                             onClick={() => setFilterSidebarOpen(true)}
                         >
                             <Filter className="w-4 h-4 mr-2" />
@@ -328,187 +329,183 @@ export default function ViewEditTimesheetsPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" className="h-9" onClick={() => setAddDialogOpen(true)}>
+                    <Button variant="outline" className="h-9 dark:border-gray-800 dark:hover:bg-gray-800" onClick={() => setAddDialogOpen(true)}>
                         <Plus className="w-4 h-4 mr-2" />
                         Add Time
                     </Button>
                 </div>
             </div>
 
-            <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-900 font-semibold border-b border-gray-200">
-                            <tr>
-                                {visibleCols.checkbox && (
-                                    <th className="p-3 w-10">
-                                        <Checkbox
-                                            checked={paginatedData.length > 0 && selectedRows.size === paginatedData.length}
-                                            onCheckedChange={toggleAll}
-                                        />
-                                    </th>
-                                )}
-                                {visibleCols.project && <th className="p-3 font-semibold text-gray-900">Project</th>}
-                                {visibleCols.activity && <th className="p-3 font-semibold text-gray-900">Activity</th>}
-                                {visibleCols.idle && <th className="p-3 font-semibold text-gray-900">Idle</th>}
-                                {visibleCols.manual && <th className="p-3 font-semibold text-gray-900">Manual</th>}
-                                {visibleCols.duration && <th className="p-3 font-semibold text-gray-900">Duration</th>}
-                                {visibleCols.source && <th className="p-3 font-semibold text-gray-900">Source</th>}
-                                {visibleCols.time && <th className="p-3 font-semibold text-gray-900">Time</th>}
-                                {visibleCols.actions && <th className="p-3 font-semibold text-gray-900">Actions</th>}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {isLoading ? (
-                                <tr>
-                                    <td colSpan={10} className="p-8 text-center text-gray-500">Loading...</td>
-                                </tr>
-                            ) : paginatedData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={10} className="p-8 text-center text-gray-500">No time entries found.</td>
-                                </tr>
-                            ) : (
-                                paginatedData.map((row, index) => {
-                                    const showHeader = index === 0 || row.date !== paginatedData[index - 1]?.date
-                                    const isCollapsed = collapsedGroups.has(row.date)
-                                    const groupRows = paginatedData.filter(r => r.date === row.date)
-                                    const isGroupSelected = groupRows.length > 0 && groupRows.every(r => selectedRows.has(r.id))
-                                    const isGroupIndeterminate = groupRows.some(r => selectedRows.has(r.id)) && !isGroupSelected
+            <CardTable>
+                <CardTableHeader>
+                    <CardTableRow>
+                        {visibleCols.checkbox && (
+                            <CardTableHead className="w-10">
+                                <Checkbox
+                                    checked={paginatedData.length > 0 && selectedRows.size === paginatedData.length}
+                                    onCheckedChange={toggleAll}
+                                />
+                            </CardTableHead>
+                        )}
+                        {visibleCols.project && <CardTableHead>Project</CardTableHead>}
+                        {visibleCols.activity && <CardTableHead>Activity</CardTableHead>}
+                        {visibleCols.idle && <CardTableHead>Idle</CardTableHead>}
+                        {visibleCols.manual && <CardTableHead>Manual</CardTableHead>}
+                        {visibleCols.duration && <CardTableHead>Duration</CardTableHead>}
+                        {visibleCols.source && <CardTableHead>Source</CardTableHead>}
+                        {visibleCols.time && <CardTableHead>Time</CardTableHead>}
+                        {visibleCols.actions && <CardTableHead>Actions</CardTableHead>}
+                    </CardTableRow>
+                </CardTableHeader>
+                <CardTableBody>
+                    {isLoading ? (
+                        <CardTableRow>
+                            <CardTableCell colSpan={10} className="p-8 text-center text-gray-500">Loading...</CardTableCell>
+                        </CardTableRow>
+                    ) : paginatedData.length === 0 ? (
+                        <CardTableRow>
+                            <CardTableCell colSpan={10} className="p-8 text-center text-gray-500">No time entries found.</CardTableCell>
+                        </CardTableRow>
+                    ) : (
+                        paginatedData.map((row, index) => {
+                            const showHeader = index === 0 || row.date !== paginatedData[index - 1]?.date
+                            const isCollapsed = collapsedGroups.has(row.date)
+                            const groupRows = paginatedData.filter(r => r.date === row.date)
+                            const isGroupSelected = groupRows.length > 0 && groupRows.every(r => selectedRows.has(r.id))
+                            const isGroupIndeterminate = groupRows.some(r => selectedRows.has(r.id)) && !isGroupSelected
 
-                                    return (
-                                        <React.Fragment key={row.id}>
-                                            {showHeader && (
-                                                <tr
-                                                    className="bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
-                                                    onClick={() => toggleGroup(row.date)}
-                                                >
-                                                    <td colSpan={10} className="p-3 font-semibold text-gray-900">
-                                                        <div className="flex items-center gap-2">
-                                                            <div onClick={(e) => e.stopPropagation()}>
-                                                                <Checkbox
-                                                                    checked={isGroupSelected || (isGroupIndeterminate ? "indeterminate" : false)}
-                                                                    onCheckedChange={() => toggleGroupSelection(row.date, paginatedData)}
-                                                                />
-                                                            </div>
-                                                            {isCollapsed ? (
-                                                                <ChevronRight className="w-4 h-4 text-gray-500" />
-                                                            ) : (
-                                                                <ChevronDown className="w-4 h-4 text-gray-500" />
-                                                            )}
-                                                            {format(new Date(row.date), 'EEE, dd MMM yyyy')}
-                                                        </div>
-                                                    </td>
-                                                </tr>
+                            return (
+                                <React.Fragment key={row.id}>
+                                    {showHeader && (
+                                        <tr
+                                            className="bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors dark:bg-gray-900/50 dark:border-gray-800 dark:hover:bg-gray-900"
+                                            onClick={() => toggleGroup(row.date)}
+                                        >
+                                            <td colSpan={10} className="p-3 font-semibold text-gray-900 dark:text-gray-100">
+                                                <div className="flex items-center gap-2">
+                                                    <div onClick={(e) => e.stopPropagation()}>
+                                                        <Checkbox
+                                                            checked={isGroupSelected || (isGroupIndeterminate ? "indeterminate" : false)}
+                                                            onCheckedChange={() => toggleGroupSelection(row.date, paginatedData)}
+                                                        />
+                                                    </div>
+                                                    {isCollapsed ? (
+                                                        <ChevronRight className="w-4 h-4 text-gray-500" />
+                                                    ) : (
+                                                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                                                    )}
+                                                    {format(new Date(row.date), 'EEE, dd MMM yyyy')}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                    {!isCollapsed && (
+                                        <CardTableRow data-state={selectedRows.has(row.id) ? "selected" : undefined}>
+                                            {visibleCols.checkbox && (
+                                                <CardTableCell>
+                                                    <Checkbox
+                                                        checked={selectedRows.has(row.id)}
+                                                        onCheckedChange={() => toggleRow(row.id)}
+                                                    />
+                                                </CardTableCell>
                                             )}
-                                            {!isCollapsed && (
-                                                <tr className="hover:bg-gray-100 even:bg-gray-50 transition-colors group">
-                                                    {visibleCols.checkbox && (
-                                                        <td className="p-3">
-                                                            <Checkbox
-                                                                checked={selectedRows.has(row.id)}
-                                                                onCheckedChange={() => toggleRow(row.id)}
-                                                            />
-                                                        </td>
-                                                    )}
-                                                    {visibleCols.project && (
-                                                        <td className="p-3">
-                                                            <div className="flex items-start gap-3">
-                                                                <Link href={`/projects/${row.projectId}`}>
-                                                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs shrink-0 hover:bg-gray-200 cursor-pointer transition-colors">
-                                                                        {getProjectInitial(row.projectName)}
-                                                                    </div>
-                                                                </Link>
-                                                                <div className="flex flex-col">
-                                                                    <Link href={`/projects/${row.projectId}`} className="font-bold text-gray-900 hover:text-blue-500 hover:underline cursor-pointer text-sm">
-                                                                        {row.projectName}
-                                                                    </Link>
-                                                                    <span className="text-[10px] uppercase text-gray-500 font-semibold tracking-wide">
-                                                                        {getClientName(row.projectId, row.projectName)}
-                                                                    </span>
-                                                                    <Link
-                                                                        href={`/projects/tasks/list?project=${encodeURIComponent(row.projectName)}&q=${encodeURIComponent(getTaskName(row.taskId, row.taskName) || "")}`}
-                                                                        className="text-xs font-medium text-gray-700 hover:text-blue-500 hover:underline cursor-pointer"
-                                                                    >
-                                                                        {getTaskName(row.taskId, row.taskName)}
-                                                                    </Link>
-                                                                </div>
+                                            {visibleCols.project && (
+                                                <CardTableCell>
+                                                    <div className="flex items-start gap-3">
+                                                        <Link href={`/projects/${row.projectId}`}>
+                                                            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 font-bold text-xs shrink-0 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                                                                {getProjectInitial(row.projectName)}
                                                             </div>
-                                                        </td>
-                                                    )}
-                                                    {visibleCols.activity && (
-                                                        <td className="p-3">
-                                                            <span className="text-gray-900">{row.activityPct}%</span>
-                                                        </td>
-                                                    )}
-                                                    {visibleCols.idle && (
-                                                        <td className="p-3">
-                                                            <span className="text-gray-900">{row.isIdle ? '100%' : '0%'}</span>
-                                                        </td>
-                                                    )}
-                                                    {visibleCols.manual && (
-                                                        <td className="p-3">
-                                                            <span className="text-gray-900">{row.source === 'manual' ? '100%' : '0%'}</span>
-                                                        </td>
-                                                    )}
-                                                    {visibleCols.duration && (
-                                                        <td className="p-3">
-                                                            <div className="flex items-center gap-1">
-                                                                <span
-                                                                    className="text-gray-900 hover:text-blue-500 hover:underline cursor-pointer"
-                                                                    onClick={() => handleQuickEdit(row)}
-                                                                >
-                                                                    {row.duration}
-                                                                </span>
-                                                            </div>
-                                                        </td>
-                                                    )}
-                                                    {visibleCols.source && (
-                                                        <td className="p-3">
-                                                            <span className="text-gray-900">{row.source.charAt(0).toUpperCase() + row.source.slice(1)}</span>
-                                                        </td>
-                                                    )}
-                                                    {visibleCols.time && (
-                                                        <td className="p-3">
-                                                            <span
-                                                                className="text-gray-900 hover:text-blue-500 hover:underline cursor-pointer"
-                                                                onClick={() => handleQuickEdit(row)}
-                                                            >
-                                                                {row.startTime} - {row.endTime}
+                                                        </Link>
+                                                        <div className="flex flex-col">
+                                                            <Link href={`/projects/${row.projectId}`} className="font-bold text-gray-900 dark:text-gray-100 hover:text-blue-500 hover:underline cursor-pointer text-sm">
+                                                                {row.projectName}
+                                                            </Link>
+                                                            <span className="text-[10px] uppercase text-gray-500 dark:text-gray-500 font-semibold tracking-wide">
+                                                                {getClientName(row.projectId, row.projectName)}
                                                             </span>
-                                                        </td>
-                                                    )}
-                                                    {visibleCols.actions && (
-                                                        <td className="p-3">
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                                                        <Pencil className="h-3 w-3" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
-                                                                    <DropdownMenuItem onClick={() => handleEdit(row)}>
-                                                                        Edit time entry
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem onClick={() => handleSplitTime(row)}>
-                                                                        Split time entry
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem onClick={() => handleDeleteEntryClick(row)} className="text-red-600">
-                                                                        Delete this entry
-                                                                    </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                        </td>
-                                                    )}
-                                                </tr>
+                                                            <Link
+                                                                href={`/projects/tasks/list?project=${encodeURIComponent(row.projectName)}&q=${encodeURIComponent(getTaskName(row.taskId, row.taskName) || "")}`}
+                                                                className="text-xs font-medium text-gray-700 dark:text-gray-400 hover:text-blue-500 hover:underline cursor-pointer"
+                                                            >
+                                                                {getTaskName(row.taskId, row.taskName)}
+                                                            </Link>
+                                                        </div>
+                                                    </div>
+                                                </CardTableCell>
                                             )}
-                                        </React.Fragment>
-                                    )
-                                })
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                                            {visibleCols.activity && (
+                                                <CardTableCell>
+                                                    <span className="text-gray-900 dark:text-gray-100">{row.activityPct}%</span>
+                                                </CardTableCell>
+                                            )}
+                                            {visibleCols.idle && (
+                                                <CardTableCell>
+                                                    <span className="text-gray-900 dark:text-gray-100">{row.isIdle ? '100%' : '0%'}</span>
+                                                </CardTableCell>
+                                            )}
+                                            {visibleCols.manual && (
+                                                <CardTableCell>
+                                                    <span className="text-gray-900 dark:text-gray-100">{row.source === 'manual' ? '100%' : '0%'}</span>
+                                                </CardTableCell>
+                                            )}
+                                            {visibleCols.duration && (
+                                                <CardTableCell>
+                                                    <div className="flex items-center gap-1">
+                                                        <span
+                                                            className="text-gray-900 dark:text-gray-100 hover:text-blue-500 hover:underline cursor-pointer"
+                                                            onClick={() => handleQuickEdit(row)}
+                                                        >
+                                                            {row.duration}
+                                                        </span>
+                                                    </div>
+                                                </CardTableCell>
+                                            )}
+                                            {visibleCols.source && (
+                                                <CardTableCell>
+                                                    <span className="text-gray-900 dark:text-gray-100">{row.source.charAt(0).toUpperCase() + row.source.slice(1)}</span>
+                                                </CardTableCell>
+                                            )}
+                                            {visibleCols.time && (
+                                                <CardTableCell>
+                                                    <span
+                                                        className="text-gray-900 dark:text-gray-100 hover:text-blue-500 hover:underline cursor-pointer"
+                                                        onClick={() => handleQuickEdit(row)}
+                                                    >
+                                                        {row.startTime} - {row.endTime}
+                                                    </span>
+                                                </CardTableCell>
+                                            )}
+                                            {visibleCols.actions && (
+                                                <CardTableCell>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="outline" size="sm" className="h-8 w-8 p-0 dark:border-gray-800 dark:hover:bg-gray-800">
+                                                                <Pencil className="h-3 w-3" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => handleEdit(row)}>
+                                                                Edit time entry
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleSplitTime(row)}>
+                                                                Split time entry
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleDeleteEntryClick(row)} className="text-red-600">
+                                                                Delete this entry
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </CardTableCell>
+                                            )}
+                                        </CardTableRow>
+                                    )}
+                                </React.Fragment>
+                            )
+                        })
+                    )}
+                </CardTableBody>
+            </CardTable>
 
             <div className="mt-4">
                 <PaginationFooter

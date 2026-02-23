@@ -161,7 +161,7 @@ export default function AppsUrlsPage() {
                 </Button>
             </InsightsHeader>
 
-            <div className="mt-6 bg-white border rounded-lg shadow-sm">
+            <div className="mt-6 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm">
                 <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as 'apps' | 'urls'); setPage(1); }}>
                     <div className="border-b px-4 py-4">
                         <TabsList className="grid w-[300px] grid-cols-2">
@@ -195,7 +195,7 @@ export default function AppsUrlsPage() {
                     <TabsContent value="apps" className="m-0">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50 text-gray-600 font-medium border-b">
+                                <thead className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-800">
                                     <tr>
                                         <th className="p-4">Application</th>
                                         <th className="p-4">Category</th>
@@ -206,7 +206,7 @@ export default function AppsUrlsPage() {
                                         <th className="p-4 text-right">Percentage</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100">
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                     {(paginatedData as typeof DUMMY_TOP_APPS).map((app, idx) => (
                                         <tr
                                             key={`${app.memberId}-${app.name}-${idx}`}
@@ -242,7 +242,7 @@ export default function AppsUrlsPage() {
                     <TabsContent value="urls" className="m-0">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50 text-gray-600 font-medium border-b">
+                                <thead className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-800">
                                     <tr>
                                         <th className="p-4">Website</th>
                                         <th className="p-4">Project</th>
@@ -251,7 +251,7 @@ export default function AppsUrlsPage() {
                                         <th className="p-4 text-right">Time Spent</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100">
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                     {(paginatedData as typeof DUMMY_URL_ACTIVITIES).map((url, idx) => (
                                         <tr
                                             key={url.id}

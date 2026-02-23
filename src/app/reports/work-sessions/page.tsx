@@ -155,7 +155,7 @@ export default function WorkSessionsPage() {
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-white">
+        <div className="flex flex-col min-h-screen bg-white dark:bg-gray-950">
             <style jsx global>{`
                 html body .custom-hover-row:hover,
                 html body .custom-hover-row:hover > td {
@@ -163,7 +163,7 @@ export default function WorkSessionsPage() {
                 }
             `}</style>
 
-            <div className="sticky top-0 z-20 border-b border-gray-200 bg-white">
+            <div className="sticky top-0 z-20 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
                 <div className="px-6 py-4">
                     <h1 className="text-xl font-semibold mb-5 text-gray-700">Work sessions report</h1>
 
@@ -193,7 +193,7 @@ export default function WorkSessionsPage() {
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     {/* Time Card */}
-                    <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col justify-between h-24 relative overflow-hidden group hover:shadow-md transition-shadow">
+                    <div className="bg-white dark:bg-gray-950 p-4 rounded-lg border border-gray-200 dark:border-gray-800 flex flex-col justify-between h-24 relative overflow-hidden group hover:shadow-md transition-shadow">
                         <div className="flex items-start gap-3 relative z-10">
                             <div className="p-2 bg-gray-50 rounded-md">
                                 <Clock className="w-5 h-5 text-gray-600" />
@@ -206,7 +206,7 @@ export default function WorkSessionsPage() {
                     </div>
 
                     {/* Break Time Card */}
-                    <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col justify-between h-24 relative overflow-hidden group hover:shadow-md transition-shadow">
+                    <div className="bg-white dark:bg-gray-950 p-4 rounded-lg border border-gray-200 dark:border-gray-800 flex flex-col justify-between h-24 relative overflow-hidden group hover:shadow-md transition-shadow">
                         <div className="flex items-start gap-3 relative z-10">
                             <div className="p-2 bg-gray-50 rounded-md">
                                 <Coffee className="w-5 h-5 text-gray-600" />
@@ -219,7 +219,7 @@ export default function WorkSessionsPage() {
                     </div>
 
                     {/* Avg Activity Card */}
-                    <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col justify-between h-24 relative overflow-hidden group hover:shadow-md transition-shadow">
+                    <div className="bg-white dark:bg-gray-950 p-4 rounded-lg border border-gray-200 dark:border-gray-800 flex flex-col justify-between h-24 relative overflow-hidden group hover:shadow-md transition-shadow">
                         <div className="flex items-start gap-3 relative z-10">
                             <div className="p-2 bg-gray-50 rounded-md">
                                 <Activity className="w-5 h-5 text-gray-600" />
@@ -233,7 +233,7 @@ export default function WorkSessionsPage() {
                 </div>
 
                 {/* Chart Section */}
-                <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6 shadow-sm">
+                <div className="bg-white dark:bg-gray-950 p-6 rounded-lg border border-gray-200 dark:border-gray-800 mb-6 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="font-semibold text-gray-700">Chart</h3>
                         <div className="flex items-center gap-2">
@@ -277,7 +277,7 @@ export default function WorkSessionsPage() {
                 </div>
 
                 {/* Table Section */}
-                <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
                         <h2 className="font-semibold text-gray-700">Table</h2>
                         <div className="flex items-center gap-2">
@@ -293,7 +293,7 @@ export default function WorkSessionsPage() {
                             </div>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="sm" className="h-8 text-gray-700 border-gray-300 bg-white hover:bg-gray-50">
+                                    <Button variant="outline" size="sm" className="h-8 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900">
                                         <SlidersHorizontal className="w-4 h-4 mr-2" />
                                         Columns
                                     </Button>
@@ -327,7 +327,7 @@ export default function WorkSessionsPage() {
                                 {visibleCols.activity && <th className="p-4 text-right w-[10%]">Activity</th>}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {groupedData.map(([date, dateItems]) => (
                                 <Fragment key={date}>
                                     {/* Group Header */}

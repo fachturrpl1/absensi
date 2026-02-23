@@ -64,9 +64,9 @@ export function PaginationFooter({
   return (
     <div className={cn("mt-4 flex flex-col-reverse sm:flex-row items-center justify-between gap-4 py-4", className)}>
       {/* Left Side: Info & Page Size */}
-      <div className="flex items-center gap-4 text-sm text-gray-600">
+      <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
         <span>
-          Showing <span className="font-medium text-gray-900">{from}-{to}</span> of <span className="font-medium text-gray-900">{total}</span> data
+          Showing <span className="font-medium text-gray-900 dark:text-gray-100">{from}-{to}</span> of <span className="font-medium text-gray-900 dark:text-gray-100">{total}</span> data
         </span>
         <div className="flex items-center gap-2">
           <span>Rows:</span>
@@ -74,7 +74,7 @@ export function PaginationFooter({
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
             disabled={isLoading}
-            className="h-8 px-2 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="h-8 px-2 rounded-md border border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-100"
           >
             {pageSizeOptions.map((size) => (
               <option key={size} value={size}>
@@ -90,7 +90,7 @@ export function PaginationFooter({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 p-0"
+          className="h-8 w-8 p-0 dark:border-gray-800 dark:hover:bg-gray-800"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1 || isLoading}
         >
@@ -99,7 +99,7 @@ export function PaginationFooter({
 
         {getPageNumbers().map((pageNum, idx) => (
           pageNum === '...' ? (
-            <span key={`dots-${idx}`} className="px-2 text-gray-400">
+            <span key={`dots-${idx}`} className="px-2 text-gray-400 dark:text-gray-600">
               <MoreHorizontal className="h-4 w-4" />
             </span>
           ) : (
@@ -110,8 +110,8 @@ export function PaginationFooter({
               className={cn(
                 "h-8 w-8 p-0",
                 page === pageNum
-                  ? "bg-gray-900 hover:bg-gray-800 text-white"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:hover:bg-gray-200 dark:text-gray-900"
+                  : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
               )}
               onClick={() => onPageChange(Number(pageNum))}
               disabled={isLoading}
@@ -124,7 +124,7 @@ export function PaginationFooter({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 p-0"
+          className="h-8 w-8 p-0 dark:border-gray-800 dark:hover:bg-gray-800"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= safeTotalPages || isLoading}
         >

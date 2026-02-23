@@ -354,11 +354,17 @@ export default function ModernDataTable<TData extends Employee, TValue>({
       <style jsx global>{`
         html body .custom-hover-row:hover,
         html body .custom-hover-row:hover > td {
-          background-color: #d1d5db !important; /* dark gray hover */
+          background-color: #d1d5db !important;
         }
         html body.dark .custom-hover-row:hover,
         html body.dark .custom-hover-row:hover > td {
           background-color: #374151 !important;
+        }
+        html body .custom-even-row:nth-child(even) {
+          background-color: #f3f4f6;
+        }
+        html body.dark .custom-even-row:nth-child(even) {
+          background-color: #111827;
         }
       `}</style>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -481,7 +487,7 @@ export default function ModernDataTable<TData extends Employee, TValue>({
       </AnimatePresence>
 
       {/* Table */}
-      <div className="rounded-lg border bg-background">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -500,14 +506,11 @@ export default function ModernDataTable<TData extends Employee, TValue>({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row, index) => (
+              table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  style={{
-                    backgroundColor: index % 2 === 1 ? '#f3f4f6' : '#ffffff'
-                  }}
-                  className="group transition-colors custom-hover-row"
+                  className="group transition-colors custom-hover-row custom-even-row"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

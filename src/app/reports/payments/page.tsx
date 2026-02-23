@@ -285,7 +285,7 @@ export default function PaymentsPage() {
                 ))}
             </div>
 
-            <div className="bg-white border rounded-lg shadow-sm">
+            <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm">
                 <DataTable
                     columns={columns}
                     data={filteredData}

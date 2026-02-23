@@ -247,12 +247,12 @@ export default function AmountsOwedPage() {
                 </div>
 
                 {/* Table */}
-                <div className="bg-white border rounded-lg shadow-sm">
+                <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm">
                     <div className="bg-gray-50 px-4 py-2 border-b font-medium text-sm text-gray-900">
                         <span suppressHydrationWarning>{todayStr}</span>
                     </div>
                     <table className="w-full text-sm text-left">
-                        <thead className="text-gray-500 font-medium border-b border-gray-100">
+                        <thead className="text-gray-500 dark:text-gray-400 font-medium border-b border-gray-100 dark:border-gray-800">
                             <tr>
                                 {visibleCols.member && <th className="p-4 font-semibold">Member</th>}
                                 {visibleCols.currentRate && <th className="p-4 font-semibold text-right">Current rate</th>}
@@ -260,7 +260,7 @@ export default function AmountsOwedPage() {
                                 {visibleCols.amount && <th className="p-4 font-semibold text-right">Amount</th>}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {paginatedData.map((item, idx) => (
                                 <tr key={idx} className="hover:bg-gray-50 transition-colors custom-hover-row">
                                     {visibleCols.member && (

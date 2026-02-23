@@ -201,9 +201,9 @@ export default function AuditLogPage() {
                 </div>
             </InsightsHeader>
 
-            <div className="bg-white border rounded-lg shadow-sm overflow-hidden mt-4">
+            <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden mt-4">
                 <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-50 text-gray-600 font-medium border-b">
+                    <thead className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-800">
                         <tr>
                             <th className="p-4 w-40">Date & Logs</th>
                             <th className="p-4 w-48">Author</th>
@@ -214,7 +214,7 @@ export default function AuditLogPage() {
                             <th className="p-4">Detail</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                         {paginatedDates.length === 0 ? (
                             <tr>
                                 <td colSpan={7} className="p-8 text-center text-gray-500">

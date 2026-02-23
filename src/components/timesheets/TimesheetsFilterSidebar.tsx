@@ -82,6 +82,7 @@ export function TimesheetsFilterSidebar({
                         value={selectedMember}
                         onValueChange={setSelectedMember}
                         placeholder="Select member"
+                        className="bg-white dark:bg-gray-950 dark:border-gray-800 dark:text-gray-100"
                     />
                 </FilterSubsection>
 
@@ -91,6 +92,7 @@ export function TimesheetsFilterSidebar({
                         value={selectedProject}
                         onValueChange={setSelectedProject}
                         placeholder="Select project"
+                        className="bg-white dark:bg-gray-950 dark:border-gray-800 dark:text-gray-100"
                     />
                 </FilterSubsection>
 
@@ -100,6 +102,7 @@ export function TimesheetsFilterSidebar({
                         value={selectedSource}
                         onValueChange={setSelectedSource}
                         placeholder="Select source"
+                        className="bg-white dark:bg-gray-950 dark:border-gray-800 dark:text-gray-100"
                     />
                 </FilterSubsection>
 
@@ -109,6 +112,7 @@ export function TimesheetsFilterSidebar({
                         value={selectedStatus}
                         onValueChange={setSelectedStatus}
                         placeholder="Select status"
+                        className="bg-white dark:bg-gray-950 dark:border-gray-800 dark:text-gray-100"
                     />
                 </FilterSubsection>
             </FilterSection>

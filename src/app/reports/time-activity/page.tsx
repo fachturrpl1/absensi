@@ -263,7 +263,7 @@ export default function TimeActivityPage() {
 
 
     return (
-        <div className="flex flex-col min-h-screen bg-white">
+        <div className="flex flex-col min-h-screen bg-white dark:bg-gray-950">
             <style jsx global>{`
                 html body .custom-hover-row:hover,
                 html body .custom-hover-row:hover > td {
@@ -275,7 +275,7 @@ export default function TimeActivityPage() {
                 }
             `}</style>
             {/* Header Section */}
-            <div className="sticky top-0 z-20 border-b border-gray-200 bg-white">
+            <div className="sticky top-0 z-20 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
                 <div className="px-6 py-4">
                     <h1 className="text-xl font-semibold mb-5">Time and activity report</h1>
 
@@ -291,7 +291,7 @@ export default function TimeActivityPage() {
                         <div className="flex items-center gap-2">
                             <Button
                                 variant="outline"
-                                className="h-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50 font-medium"
+                                className="h-9 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 font-medium"
                                 onClick={() => setFilterSidebarOpen(true)}
                             >
                                 <Filter className="w-4 h-4 mr-2" /> Filter
@@ -309,57 +309,57 @@ export default function TimeActivityPage() {
                 </div>
             </div>
 
-            <main className="flex-1 bg-gray-50/50 p-6">
+            <main className="flex-1 bg-gray-50/50 dark:bg-gray-900/20 p-6">
                 {/* Summary Cards */}
                 <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col justify-between h-24 relative overflow-hidden group hover:shadow-md transition-shadow">
+                    <div className="bg-white dark:bg-gray-950 p-4 rounded-lg border border-gray-200 dark:border-gray-800 flex flex-col justify-between h-24 relative overflow-hidden group hover:shadow-md transition-shadow">
                         <div className="flex items-start gap-3 relative z-10">
-                            <div className="p-2 bg-gray-50 rounded-md">
-                                <Clock className="w-5 h-5 text-gray-600" />
+                            <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                                <Clock className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Total time</p>
-                                <p className="text-xl font-bold text-gray-900 mt-1">{formatDecimalHours(stats.totalHours)}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Total time</p>
+                                <p className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-1">{formatDecimalHours(stats.totalHours)}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col justify-between h-24 relative overflow-hidden group hover:shadow-md transition-shadow">
+                    <div className="bg-white dark:bg-gray-950 p-4 rounded-lg border border-gray-200 dark:border-gray-800 flex flex-col justify-between h-24 relative overflow-hidden group hover:shadow-md transition-shadow">
                         <div className="flex items-start gap-3 relative z-10">
-                            <div className="p-2 bg-gray-50 rounded-md">
+                            <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                                 <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                                 </svg>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Average activity</p>
-                                <p className="text-xl font-bold text-gray-900 mt-1">{stats.avgActivity.toFixed(1)}%</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Average activity</p>
+                                <p className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-1">{stats.avgActivity.toFixed(1)}%</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col justify-between h-24 relative overflow-hidden group hover:shadow-md transition-shadow">
+                    <div className="bg-white dark:bg-gray-950 p-4 rounded-lg border border-gray-200 dark:border-gray-800 flex flex-col justify-between h-24 relative overflow-hidden group hover:shadow-md transition-shadow">
                         <div className="flex items-start gap-3 relative z-10">
-                            <div className="p-2 bg-gray-50 rounded-md">
+                            <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                                 <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <rect x="2" y="5" width="20" height="14" rx="2" />
                                     <line x1="2" y1="10" x2="22" y2="10" />
                                 </svg>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Total spent</p>
-                                <p className="text-xl font-bold text-gray-900 mt-1">{formatCurrency(stats.totalSpent)}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Total spent</p>
+                                <p className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(stats.totalSpent)}</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Chart Section */}
-                <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6 shadow-sm">
+                <div className="bg-white dark:bg-gray-950 p-6 rounded-lg border border-gray-200 dark:border-gray-800 mb-6 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-gray-700">Chart</h3>
+                        <h3 className="font-semibold text-gray-700 dark:text-gray-300">Chart</h3>
                         <div className="flex items-center gap-2">
-                            <label className="text-xs font-bold text-gray-400 uppercase">Data grouped by</label>
+                            <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">Data grouped by</label>
                             <Select value={groupBy} onValueChange={setGroupBy}>
                                 <SelectTrigger className="w-[140px] h-8 border-gray-300 text-gray-700 text-xs font-medium ring-offset-0 focus:ring-0">
                                     <SelectValue placeholder="Group by" />
@@ -411,12 +411,12 @@ export default function TimeActivityPage() {
                 </div>
 
                 {/* Table Section */}
-                <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-                        <h2 className="font-semibold text-gray-700">Table</h2>
+                <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+                        <h2 className="font-semibold text-gray-700 dark:text-gray-300">Table</h2>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" className="h-8 text-gray-700 border-gray-300 bg-white hover:bg-gray-50">
+                                <Button variant="outline" size="sm" className="h-8 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900">
                                     <SlidersHorizontal className="w-4 h-4 mr-2" />
                                     Columns
                                 </Button>
@@ -440,7 +440,7 @@ export default function TimeActivityPage() {
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200">
+                            <thead className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-semibold border-b border-gray-200 dark:border-gray-800">
                                 <tr>
                                     {visibleCols.date && (<th className="px-4 py-3 min-w-[100px]">Date</th>)}
                                     {visibleCols.client && (<th className="px-4 py-3 min-w-[120px]">Client</th>)}
@@ -456,7 +456,7 @@ export default function TimeActivityPage() {
                                     {visibleCols.holiday && (<th className="px-4 py-3 text-right">Holiday</th>)}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                 {pagedData.length > 0 ? (
                                     pagedData.map((item, idx) => (
                                         <tr
@@ -465,40 +465,40 @@ export default function TimeActivityPage() {
                                             className="transition-colors custom-hover-row"
                                         >
                                             {visibleCols.date && (
-                                                <td className="px-4 py-3 text-gray-900">{new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                                                <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                                             )}
                                             {visibleCols.client && (
-                                                <td className="px-4 py-3 text-gray-600">{item.clientName}</td>
+                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{item.clientName}</td>
                                             )}
                                             {visibleCols.project && (
-                                                <td className="px-4 py-3 text-gray-900 font-medium">{item.projectName}</td>
+                                                <td className="px-4 py-3 text-gray-900 dark:text-gray-100 font-medium">{item.projectName}</td>
                                             )}
                                             {visibleCols.team && (
-                                                <td className="px-4 py-3 text-gray-600">{item.teamName}</td>
+                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{item.teamName}</td>
                                             )}
                                             {visibleCols.tasks && (
-                                                <td className="px-4 py-3 text-gray-600">{item.todoName}</td>
+                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{item.todoName}</td>
                                             )}
                                             {visibleCols.regularHours && (
-                                                <td className="px-4 py-3 text-right text-gray-600">{formatDecimalHours(item.regularHours)}</td>
+                                                <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-400">{formatDecimalHours(item.regularHours)}</td>
                                             )}
                                             {visibleCols.totalHours && (
-                                                <td className="px-4 py-3 text-right text-gray-900 font-medium">{formatDecimalHours(item.totalHours)}</td>
+                                                <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-100 font-medium">{formatDecimalHours(item.totalHours)}</td>
                                             )}
                                             {visibleCols.activityPercent && (
-                                                <td className="px-4 py-3 text-right text-green-600 font-medium">{item.activityPercent}%</td>
+                                                <td className="px-4 py-3 text-right text-green-600 dark:text-green-400 font-medium">{item.activityPercent}%</td>
                                             )}
                                             {visibleCols.totalSpent && (
-                                                <td className="px-4 py-3 text-right text-gray-900">{formatCurrency(item.totalSpent)}</td>
+                                                <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-100">{formatCurrency(item.totalSpent)}</td>
                                             )}
                                             {visibleCols.regularSpent && (
-                                                <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.regularSpent)}</td>
+                                                <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-400">{formatCurrency(item.regularSpent)}</td>
                                             )}
                                             {visibleCols.pto && (
-                                                <td className="px-4 py-3 text-right text-gray-600">{formatDecimalHours(item.ptoHours)}</td>
+                                                <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-400">{formatDecimalHours(item.ptoHours)}</td>
                                             )}
                                             {visibleCols.holiday && (
-                                                <td className="px-4 py-3 text-right text-gray-600">{formatDecimalHours(item.holidayHours)}</td>
+                                                <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-400">{formatDecimalHours(item.holidayHours)}</td>
                                             )}
                                         </tr>
                                     ))

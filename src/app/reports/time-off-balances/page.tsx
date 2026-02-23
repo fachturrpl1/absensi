@@ -182,7 +182,7 @@ export default function TimeOffBalancesPage() {
                             placeholder="Search member or policy..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9 h-10 bg-white max-w-sm"
+                            className="pl-9 h-10 bg-white dark:bg-gray-950 dark:border-gray-800 dark:text-gray-200 max-w-sm"
                         />
                     </div>
                     <DropdownMenu>
@@ -206,7 +206,7 @@ export default function TimeOffBalancesPage() {
 
                     <Button
                         variant="outline"
-                        className="h-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50 font-medium"
+                        className="h-9 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 font-medium"
                         onClick={() => setFilterSidebarOpen(true)}
                     >
                         <Filter className="w-4 h-4 mr-2" /> Filter
@@ -218,32 +218,32 @@ export default function TimeOffBalancesPage() {
                 </div>
             </InsightsHeader>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x border rounded-lg shadow-sm bg-white">
+            <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-gray-200 dark:divide-gray-800 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm bg-white dark:bg-gray-950">
                 {summaryCards.map((card, idx) => (
                     <div key={idx} className="p-4">
-                        <p className="text-sm font-medium text-gray-500">{card.label}</p>
-                        <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{card.label}</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{card.value}</p>
                     </div>
                 ))}
             </div>
 
             {/* Main Content */}
             <div className="space-y-4">
-                <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
+                <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden">
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-900 font-semibold border-b">
+                        <thead className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-semibold border-b border-gray-200 dark:border-gray-800">
                             <tr>
-                                <th className="p-3 w-48 font-semibold text-gray-900">
+                                <th className="p-3 w-48 font-semibold text-gray-900 dark:text-gray-100">
                                     {groupBy === 'policy' ? 'Member' : 'Policy'}
                                 </th>
-                                <th className="p-3 w-28 font-semibold text-gray-900">Accrued</th>
-                                <th className="p-3 w-24 font-semibold text-gray-900">Used</th>
-                                <th className="p-3 w-24 font-semibold text-gray-900">Pending</th>
-                                <th className="p-3 w-24 font-semibold text-gray-900">Balance</th>
-                                <th className="p-3 w-32 font-semibold text-gray-900">Reason</th>
+                                <th className="p-3 w-28 font-semibold text-gray-900 dark:text-gray-100">Accrued</th>
+                                <th className="p-3 w-24 font-semibold text-gray-900 dark:text-gray-100">Used</th>
+                                <th className="p-3 w-24 font-semibold text-gray-900 dark:text-gray-100">Pending</th>
+                                <th className="p-3 w-24 font-semibold text-gray-900 dark:text-gray-100">Balance</th>
+                                <th className="p-3 w-32 font-semibold text-gray-900 dark:text-gray-100">Reason</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {isLoading ? (
                                 <tr>
                                     <td colSpan={6} className="p-8 text-center text-gray-500">
@@ -259,29 +259,29 @@ export default function TimeOffBalancesPage() {
                             ) : (
                                 Object.keys(groupedData).map(groupName => (
                                     <Fragment key={groupName}>
-                                        <tr className="bg-gray-50/50 hover:bg-gray-50 cursor-pointer" onClick={() => toggleGroup(groupName)}>
+                                        <tr className="bg-gray-50/50 dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer" onClick={() => toggleGroup(groupName)}>
                                             <td colSpan={6} className="p-3">
-                                                <div className="flex items-center gap-2 font-medium text-gray-900">
+                                                <div className="flex items-center gap-2 font-medium text-gray-900 dark:text-gray-100">
                                                     {expandedGroups[groupName] ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
                                                     {groupName}
                                                 </div>
                                             </td>
                                         </tr>
                                         {expandedGroups[groupName] && groupedData[groupName]!.map((item, index) => (
-                                            <tr key={item.id} className={`transition-colors border-b last:border-0 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100`}>
-                                                <td className="py-3 pl-12 pr-4 text-gray-900 font-medium">
+                                            <tr key={item.id} className={`transition-colors border-b last:border-0 ${index % 2 === 0 ? 'bg-white dark:bg-gray-950' : 'bg-gray-50 dark:bg-gray-900/50'} hover:bg-gray-100 dark:hover:bg-gray-800`}>
+                                                <td className="py-3 pl-12 pr-4 text-gray-900 dark:text-gray-100 font-medium">
                                                     {groupBy === 'policy' ? item.memberName : item.policyName}
                                                 </td>
-                                                <td className="p-3 text-gray-500">
+                                                <td className="p-3 text-gray-500 dark:text-gray-400">
                                                     {item.accrued} {item.unit}
                                                 </td>
-                                                <td className="p-3 text-gray-500">
+                                                <td className="p-3 text-gray-500 dark:text-gray-400">
                                                     {item.used > 0 ? `${item.used} ${item.unit}` : "-"}
                                                 </td>
-                                                <td className="p-3 text-gray-500">
+                                                <td className="p-3 text-gray-500 dark:text-gray-400">
                                                     {item.pending > 0 ? `${item.pending} ${item.unit}` : "-"}
                                                 </td>
-                                                <td className="p-3 text-gray-900 font-medium">
+                                                <td className="p-3 text-gray-900 dark:text-gray-100 font-medium">
                                                     {item.balance.toFixed(2)}
                                                 </td>
                                                 <td className="p-3 text-gray-500">

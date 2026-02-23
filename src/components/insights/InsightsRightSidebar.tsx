@@ -14,7 +14,21 @@ interface Props {
   onSelectedFilterChange?: (filter: SelectedFilter) => void
 }
 
+import { useEffect } from "react"
+
 export function InsightsRightSidebar({ open, onOpenChange, members, teams, selectedFilter, onSelectedFilterChange }: Props) {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && open) {
+        onOpenChange(false)
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown)
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [open, onOpenChange])
   const [teamsOpen, setTeamsOpen] = useState(true)
   const [membersOpen, setMembersOpen] = useState(true)
   const [memberQuery, setMemberQuery] = useState("")

@@ -1,2 +1,0 @@
-﻿src/components/settings/account-settings-form.tsx(27,1): error TS6133: 'useAuthStore' is declared but its value is never read.
-src/components/settings/account-settings-form.tsx(48,37): error TS6133: 'initialData' is declared but its value is never read.

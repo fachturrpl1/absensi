@@ -62,23 +62,23 @@ export function DateRangePicker({
     now.setHours(23, 59, 59, 999)
     const today = new Date(now)
     today.setHours(0, 0, 0, 0)
-    
+
     // Normalize dates untuk perbandingan - pastikan hanya membandingkan tanggal, bukan waktu
     const startDate = new Date(start)
     startDate.setHours(0, 0, 0, 0)
     const endDate = new Date(end)
     endDate.setHours(23, 59, 59, 999)
-    
+
     const startTime = startDate.getTime()
     const endTime = endDate.getTime()
     const todayTime = today.getTime()
     const nowTime = now.getTime()
-    
+
     // Today - harus start dan end sama dengan today
     if (startTime === todayTime && endTime === nowTime) {
       return "today"
     }
-    
+
     // Yesterday
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
@@ -87,7 +87,7 @@ export function DateRangePicker({
     if (startTime === yesterday.getTime() && endTime === yesterdayEnd.getTime()) {
       return "yesterday"
     }
-    
+
     // Last 7 days - harus dari 6 hari yang lalu sampai hari ini
     const last7Start = new Date(today)
     last7Start.setDate(last7Start.getDate() - 6)
@@ -95,7 +95,7 @@ export function DateRangePicker({
     if (startTime === last7Start.getTime() && endTime === nowTime) {
       return "last_7_days"
     }
-    
+
     // This week
     const dayOfWeek = now.getDay()
     const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1
@@ -105,7 +105,7 @@ export function DateRangePicker({
     if (startTime === thisWeekStart.getTime() && endTime === nowTime) {
       return "this_week"
     }
-    
+
     // Last week
     const lastWeekEnd = new Date(today)
     lastWeekEnd.setDate(lastWeekEnd.getDate() - lastWeekEnd.getDay())
@@ -116,7 +116,7 @@ export function DateRangePicker({
     if (startTime === lastWeekStart.getTime() && endTime === lastWeekEnd.getTime()) {
       return "last_week"
     }
-    
+
     // Last 2 weeks
     const last2WeeksStart = new Date(today)
     last2WeeksStart.setDate(last2WeeksStart.getDate() - 13)
@@ -124,14 +124,14 @@ export function DateRangePicker({
     if (startTime === last2WeeksStart.getTime() && endTime === nowTime) {
       return "last_2_weeks"
     }
-    
+
     // This month
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     thisMonthStart.setHours(0, 0, 0, 0)
     if (startTime === thisMonthStart.getTime() && endTime === nowTime) {
       return "this_month"
     }
-    
+
     // Last month
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     lastMonthStart.setHours(0, 0, 0, 0)
@@ -140,7 +140,7 @@ export function DateRangePicker({
     if (startTime === lastMonthStart.getTime() && endTime === lastMonthEnd.getTime()) {
       return "last_month"
     }
-    
+
     // Jika tidak sesuai dengan preset manapun, return null
     return null
   }
@@ -164,13 +164,13 @@ export function DateRangePicker({
   // Update preset saat tempStartDate atau tempEndDate berubah (saat user memilih tanggal manual)
   useEffect(() => {
     if (!dateRangeOpen) return
-    
+
     // Jika range sudah selesai dipilih (selectingStart = true)
     if (selectingStart) {
       // Deteksi preset berdasarkan tempStartDate dan tempEndDate
       const detectedPreset = detectPreset(tempStartDate, tempEndDate)
       setSelectedPreset(detectedPreset)
-    } 
+    }
     // Jika sedang memilih start date (klik pertama), reset preset
     else {
       setSelectedPreset(null)
@@ -197,7 +197,7 @@ export function DateRangePicker({
     if (!isCurrentMonth) return
     const selectedDate = new Date(month.getFullYear(), month.getMonth(), day)
     selectedDate.setHours(0, 0, 0, 0)
-    
+
     if (selectingStart) {
       // Klik pertama - reset preset dan set start date
       setSelectedPreset(null)
@@ -347,7 +347,7 @@ export function DateRangePicker({
   return (
     <DropdownMenu open={dateRangeOpen} onOpenChange={setDateRangeOpen}>
       <DropdownMenuTrigger asChild>
-        <button className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 flex items-center gap-2 text-gray-800">
+        <button className="px-4 py-2 border border-gray-300 dark:border-gray-800 rounded-md text-sm bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 flex items-center gap-2 text-gray-800 dark:text-gray-200">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
             <line x1="16" y1="2" x2="16" y2="6" />
@@ -357,46 +357,46 @@ export function DateRangePicker({
           {fmt(dateRange.startDate)} - {fmt(dateRange.endDate)}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-auto p-0">
+      <DropdownMenuContent align="start" className="w-auto p-0 dark:bg-gray-950 dark:border-gray-800">
         <div className="flex">
-          <div className="w-40 border-r border-gray-200 p-3 space-y-1">
+          <div className="w-40 border-r border-gray-200 dark:border-gray-800 p-3 space-y-1">
             <button
-              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'today' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'today' ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300'}`}
               onClick={() => applyPreset("today")}
             >Today</button>
             <button
-              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'yesterday' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'yesterday' ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300'}`}
               onClick={() => applyPreset("yesterday")}
             >Yesterday</button>
             <button
-              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_week' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_week' ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300'}`}
               onClick={() => applyPreset("this_week")}
             >This week</button>
             <button
-              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_7_days' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_7_days' ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300'}`}
               onClick={() => applyPreset("last_7_days")}
             >Last 7 days</button>
             <button
-              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_week' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_week' ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300'}`}
               onClick={() => applyPreset("last_week")}
             >Last week</button>
             <button
-              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_2_weeks' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_2_weeks' ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300'}`}
               onClick={() => applyPreset("last_2_weeks")}
             >Last 2 weeks</button>
             <button
-              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_month' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'this_month' ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300'}`}
               onClick={() => applyPreset("this_month")}
             >This month</button>
             <button
-              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_month' ? 'bg-black text-white hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+              className={`w-full text-left px-3 py-2 text-sm rounded ${selectedPreset === 'last_month' ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300'}`}
               onClick={() => applyPreset("last_month")}
             >Last month</button>
           </div>
           <div className="p-4">
             {timezone && (
               <div className="flex justify-end mb-2">
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
                   {timezone}{tzOffset ? ` (${tzOffset})` : ""}
                 </span>
               </div>
@@ -404,15 +404,15 @@ export function DateRangePicker({
             <div className="flex gap-4">
               <div className="w-64">
                 <div className="flex items-center justify-between mb-4">
-                  <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveLeftMonth(-1)}>
+                  <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded dark:text-gray-300" onClick={() => moveLeftMonth(-1)}>
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <polyline points="15 18 9 12 15 6" />
                     </svg>
                   </button>
-                  <span className="font-semibold text-gray-900">
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
                     {leftMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                   </span>
-                  <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveLeftMonth(1)}>
+                  <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded dark:text-gray-300" onClick={() => moveLeftMonth(1)}>
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <polyline points="9 18 15 12 9 6" />
                     </svg>
@@ -420,13 +420,13 @@ export function DateRangePicker({
                 </div>
 
                 <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-                  <div className="font-semibold p-1 text-gray-900">Mo</div>
-                  <div className="font-semibold p-1 text-gray-900">Tu</div>
-                  <div className="font-semibold p-1 text-gray-900">We</div>
-                  <div className="font-semibold p-1 text-gray-900">Th</div>
-                  <div className="font-semibold p-1 text-gray-900">Fr</div>
-                  <div className="font-semibold p-1 text-gray-900">Sa</div>
-                  <div className="font-semibold p-1 text-gray-900">Su</div>
+                  <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Mo</div>
+                  <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Tu</div>
+                  <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">We</div>
+                  <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Th</div>
+                  <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Fr</div>
+                  <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Sa</div>
+                  <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Su</div>
                 </div>
 
                 <div className="grid grid-cols-7 gap-1 text-center text-sm">
@@ -437,9 +437,9 @@ export function DateRangePicker({
                       <button
                         key={i}
                         onClick={() => handleDateClick(d.day, leftMonth, d.isCurrentMonth)}
-                        className={`p-2 rounded ${isEdge ? "bg-black text-white hover:bg-gray-800" :
-                          inRange ? "bg-gray-100 hover:bg-gray-200 text-black" :
-                            d.isCurrentMonth ? "text-gray-800 hover:bg-gray-100" : "text-gray-400"}`}
+                        className={`p-2 rounded ${isEdge ? "bg-black text-white dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200" :
+                          inRange ? "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-black dark:text-white" :
+                            d.isCurrentMonth ? "text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800" : "text-gray-400 dark:text-gray-600"}`}
                       >
                         {d.day}
                       </button>
@@ -450,15 +450,15 @@ export function DateRangePicker({
 
               <div className="w-64">
                 <div className="flex items-center justify-between mb-4">
-                  <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveRightMonth(-1)}>
+                  <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded dark:text-gray-300" onClick={() => moveRightMonth(-1)}>
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <polyline points="15 18 9 12 15 6" />
                     </svg>
                   </button>
-                  <span className="font-semibold text-gray-900">
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
                     {rightMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                   </span>
-                  <button className="p-1 hover:bg-gray-100 rounded" onClick={() => moveRightMonth(1)}>
+                  <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded dark:text-gray-300" onClick={() => moveRightMonth(1)}>
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <polyline points="9 18 15 12 9 6" />
                     </svg>
@@ -466,13 +466,13 @@ export function DateRangePicker({
                 </div>
 
                 <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-                  <div className="font-semibold p-1 text-gray-900">Mo</div>
-                  <div className="font-semibold p-1 text-gray-900">Tu</div>
-                  <div className="font-semibold p-1 text-gray-900">We</div>
-                  <div className="font-semibold p-1 text-gray-900">Th</div>
-                  <div className="font-semibold p-1 text-gray-900">Fr</div>
-                  <div className="font-semibold p-1 text-gray-900">Sa</div>
-                  <div className="font-semibold p-1 text-gray-900">Su</div>
+                  <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Mo</div>
+                  <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Tu</div>
+                  <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">We</div>
+                  <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Th</div>
+                  <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Fr</div>
+                  <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Sa</div>
+                  <div className="font-semibold p-1 text-gray-900 dark:text-gray-100">Su</div>
                 </div>
 
                 <div className="grid grid-cols-7 gap-1 text-center text-sm">
@@ -483,9 +483,9 @@ export function DateRangePicker({
                       <button
                         key={i}
                         onClick={() => handleDateClick(d.day, rightMonth, d.isCurrentMonth)}
-                        className={`p-2 rounded ${isEdge ? "bg-black text-white hover:bg-gray-800" :
-                          inRange ? "bg-gray-100 hover:bg-gray-200" :
-                            d.isCurrentMonth ? "hover:bg-gray-100" : "text-gray-400"}`}
+                        className={`p-2 rounded ${isEdge ? "bg-black text-white dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200" :
+                          inRange ? "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-black dark:text-white" :
+                            d.isCurrentMonth ? "text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800" : "text-gray-400 dark:text-gray-600"}`}
                       >
                         {d.day}
                       </button>
@@ -495,14 +495,14 @@ export function DateRangePicker({
               </div>
             </div>
 
-            <div className="text-xs text-center text-gray-600 mt-2">
+            <div className="text-xs text-center text-gray-600 dark:text-gray-400 mt-2">
               {fmt(tempStartDate)} - {fmt(tempEndDate)}
             </div>
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
-              <button className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 font-medium" onClick={applyDateRange}>
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+              <button className="px-4 py-2 bg-black text-white dark:bg-white dark:text-black rounded hover:bg-gray-800 dark:hover:bg-gray-200 font-medium" onClick={applyDateRange}>
                 Apply
               </button>
-              <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50" onClick={cancelDateRange}>
+              <button className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-200 text-gray-800 hover:text-black" onClick={cancelDateRange}>
                 Cancel
               </button>
             </div>

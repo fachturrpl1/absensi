@@ -183,7 +183,7 @@ export default function ExpensesPage() {
                 }
             `}</style>
 
-            <div className="mt-6 bg-white border rounded-lg shadow-sm">
+            <div className="mt-6 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm">
                 <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x border-b bg-gray-50/50">
                     {summaryCards.map((card, idx) => (
                         <div key={idx} className="p-4">
@@ -237,7 +237,7 @@ export default function ExpensesPage() {
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-600 font-medium border-b">
+                        <thead className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-800">
                             <tr>
                                 <th className="p-4">Member</th>
                                 <th className="p-4">Project</th>
@@ -249,7 +249,7 @@ export default function ExpensesPage() {
                                 <th className="p-4 text-center">Receipt</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {groupBy === 'none' ? (
                                 paginatedItems.map((expense, idx) => (
                                     <tr

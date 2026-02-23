@@ -224,9 +224,9 @@ export default function ShiftAttendancePage() {
                 </div>
 
                 {/* Table */}
-                <div className="bg-white border rounded-lg shadow-sm">
+                <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm">
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
+                        <thead className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-800">
                             <tr>
                                 {visibleCols.member && <th className="p-4 font-semibold">Member</th>}
                                 {visibleCols.date && <th className="p-4 font-semibold">Shift Date</th>}
@@ -236,7 +236,7 @@ export default function ShiftAttendancePage() {
                                 {visibleCols.notes && <th className="p-4 font-semibold">Notes</th>}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {paginatedData.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="p-8 text-center text-gray-500">

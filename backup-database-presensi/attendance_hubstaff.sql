@@ -413,7 +413,7 @@ CREATE TABLE time_off_policies (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_policy_type CHECK (policy_type IS NULL OR policy_type IN ('vacation', 'sick', 'personal', 'unlimited', 'custom')),
     CONSTRAINT chk_accrual_type CHECK (accrual_type IS NULL OR accrual_type IN ('per_year', 'per_month', 'per_hours_worked', 'unlimited'))
-);
+);attendane
 
 -- Time Off Policy Members
 CREATE TABLE time_off_policy_members (

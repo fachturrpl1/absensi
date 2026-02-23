@@ -32,7 +32,7 @@ interface DataTableProps<TData> {
 export function DataTable<TData>({ table, server }: DataTableProps<TData>) {
   return (
     <div className="space-y-4">
-      <div className="rounded-md border">
+      <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

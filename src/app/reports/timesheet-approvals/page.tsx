@@ -18,13 +18,13 @@ import { TimesheetApprovalsFilterSidebar } from "@/components/report/TimesheetAp
 const getStatusBadge = (status: string) => {
     switch (status) {
         case 'approved':
-            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">Approved</span>
+            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">Approved</span>
         case 'pending':
-            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">Pending</span>
+            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">Pending</span>
         case 'rejected':
-            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">Rejected</span>
+            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">Rejected</span>
         default:
-            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200">{status}</span>
+            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">{status}</span>
     }
 }
 
@@ -153,7 +153,7 @@ export default function TimesheetApprovalsPage() {
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                         <Input
                             placeholder="Search approvals..."
-                            className="pl-9 h-10 bg-white max-w-sm"
+                            className="pl-9 h-10 bg-white dark:bg-gray-950 dark:border-gray-800 dark:text-gray-200 max-w-sm"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -161,7 +161,7 @@ export default function TimesheetApprovalsPage() {
 
                     <Button
                         variant="outline"
-                        className="h-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50 font-medium"
+                        className="h-9 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 font-medium"
                         onClick={() => setFilterSidebarOpen(true)}
                     >
                         <Filter className="w-4 h-4 mr-2" /> Filter
@@ -169,7 +169,7 @@ export default function TimesheetApprovalsPage() {
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-9 bg-white text-gray-700 border-gray-300">
+                            <Button variant="outline" size="sm" className="h-9 bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700">
                                 <SlidersHorizontal className="w-4 h-4 mr-2" />
                                 Columns
                             </Button>
@@ -193,19 +193,19 @@ export default function TimesheetApprovalsPage() {
             </InsightsHeader>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x border rounded-lg shadow-sm bg-white">
+            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-200 dark:divide-gray-800 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm bg-white dark:bg-gray-950">
                 {summaryCards.map((card, idx) => (
                     <div key={idx} className="p-4">
-                        <p className="text-sm font-medium text-gray-500">{card.label}</p>
-                        <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{card.label}</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{card.value}</p>
                     </div>
                 ))}
             </div>
 
-            <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-900 font-semibold border-b border-gray-200">
+                        <thead className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-semibold border-b border-gray-200 dark:border-gray-800">
                             <tr>
                                 {visibleCols.member && <th className="p-3 pl-4 font-semibold">Member</th>}
                                 {visibleCols.dateRange && <th className="p-3 font-semibold">Date Range</th>}
@@ -216,7 +216,7 @@ export default function TimesheetApprovalsPage() {
                                 {visibleCols.comments && <th className="p-3 font-semibold">Comments</th>}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {isLoading ? (
                                 <tr>
                                     <td colSpan={7} className="p-8 text-center text-gray-500">
@@ -231,40 +231,40 @@ export default function TimesheetApprovalsPage() {
                                 </tr>
                             ) : (
                                 paginatedData.map((row) => (
-                                    <tr key={row.id} className="hover:bg-gray-100 even:bg-gray-50 transition-colors">
+                                    <tr key={row.id} className="hover:bg-gray-100 dark:hover:bg-gray-800 even:bg-gray-50 dark:even:bg-gray-900/50 transition-colors">
                                         {visibleCols.member && (
                                             <td className="p-4">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-600">
+                                                    <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs text-gray-600 dark:text-gray-400">
                                                         {row.memberName.charAt(0)}
                                                     </div>
-                                                    <span className="font-medium text-gray-900">{row.memberName}</span>
+                                                    <span className="font-medium text-gray-900 dark:text-gray-100">{row.memberName}</span>
                                                 </div>
                                             </td>
                                         )}
                                         {visibleCols.dateRange && (
-                                            <td className="p-4 text-gray-600">
+                                            <td className="p-4 text-gray-600 dark:text-gray-400">
                                                 {format(new Date(row.dateStart), 'MMM dd')} - {format(new Date(row.dateEnd), 'MMM dd, yyyy')}
                                             </td>
                                         )}
-                                        {visibleCols.totalHours && <td className="p-4 text-gray-900 font-mono font-medium">{row.totalHours}</td>}
+                                        {visibleCols.totalHours && <td className="p-4 text-gray-900 dark:text-gray-100 font-mono font-medium">{row.totalHours}</td>}
                                         {visibleCols.status && <td className="p-4">{getStatusBadge(row.status)}</td>}
                                         {visibleCols.approver && (
                                             <td className="p-4">
                                                 {row.approver && row.approver !== '-' ? (
                                                     <div className="flex items-center gap-2">
-                                                        <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-600">
+                                                        <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs text-gray-600 dark:text-gray-400">
                                                             {row.approver.charAt(0)}
                                                         </div>
-                                                        <span className="font-medium text-gray-900">{row.approver}</span>
+                                                        <span className="font-medium text-gray-900 dark:text-gray-100">{row.approver}</span>
                                                     </div>
                                                 ) : (
-                                                    <span className="text-gray-600">-</span>
+                                                    <span className="text-gray-600 dark:text-gray-400">-</span>
                                                 )}
                                             </td>
                                         )}
-                                        {visibleCols.approvalDate && <td className="p-4 text-gray-500 text-xs">{row.approvalDate ? format(new Date(row.approvalDate), 'MMM dd, HH:mm') : '-'}</td>}
-                                        {visibleCols.comments && <td className="p-4 text-gray-500 italic max-w-xs truncate" title={row.comments}>{row.comments || '-'}</td>}
+                                        {visibleCols.approvalDate && <td className="p-4 text-gray-500 dark:text-gray-400 text-xs">{row.approvalDate ? format(new Date(row.approvalDate), 'MMM dd, HH:mm') : '-'}</td>}
+                                        {visibleCols.comments && <td className="p-4 text-gray-500 dark:text-gray-400 italic max-w-xs truncate" title={row.comments}>{row.comments || '-'}</td>}
                                     </tr>
                                 ))
                             )}

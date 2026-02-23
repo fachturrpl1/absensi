@@ -60,7 +60,7 @@ export function SearchableSelect({
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[--trigger-width] p-0" align="start" style={{ width: "100%" }}>
+            <PopoverContent className="w-[--trigger-width] p-0 dark:bg-gray-950 dark:border-gray-800" align="start" style={{ width: "100%" }}>
                 <Command>
                     <CommandInput placeholder={searchPlaceholder} />
                     <CommandList>
@@ -75,11 +75,10 @@ export function SearchableSelect({
                                     key={option.value}
                                     value={option.label}
                                     onSelect={() => {
-                                        // Command uses lowercase labels as values often, so we rely on finding the option.
-                                        // But typically we want the real ID.
                                         onValueChange(option.value === value ? "" : option.value)
                                         setOpen(false)
                                     }}
+                                    className="data-[selected='true']:bg-gray-100 dark:data-[selected='true']:bg-gray-800 dark:text-gray-100 dark:aria-selected:bg-gray-800 dark:aria-selected:text-gray-100"
                                 >
                                     <Check
                                         className={cn(

@@ -117,7 +117,7 @@ export default function DailyLimitsPage() {
                             placeholder="Search members..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9 ps-9 h-9 bg-white"
+                            className="pl-9 ps-9 h-9 bg-white dark:bg-gray-950 dark:border-gray-800 dark:text-gray-200"
                         />
                     </div>
                 </div>
@@ -135,14 +135,14 @@ export default function DailyLimitsPage() {
                 <div className="flex gap-2">
                     <Button
                         variant="outline"
-                        className="h-9 text-gray-700 border-gray-300 bg-white hover:bg-gray-50 font-medium"
+                        className="h-9 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 font-medium"
                         onClick={() => setFilterSidebarOpen(true)}
                     >
                         <Filter className="w-4 h-4 mr-2" /> Filter
                     </Button>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-9 w-9 bg-white border-gray-300 hover:bg-gray-50 text-gray-700">
+                            <Button variant="outline" size="icon" className="h-9 w-9 bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-300">
                                 <Settings2 className="w-4 h-4" />
                             </Button>
                         </DropdownMenuTrigger>
@@ -186,14 +186,14 @@ export default function DailyLimitsPage() {
             </InsightsHeader>
 
             {/* Main Table */}
-                    <DataTable
-                        columns={columns}
-                        data={filteredData}
-                        isLoading={isLoading}
-                        showColumnToggle={false}
-                        columnVisibility={columnVisibility}
-                        onColumnVisibilityChange={setColumnVisibility}
-                    />
+            <DataTable
+                columns={columns}
+                data={filteredData}
+                isLoading={isLoading}
+                showColumnToggle={false}
+                columnVisibility={columnVisibility}
+                onColumnVisibilityChange={setColumnVisibility}
+            />
 
             <DailyLimitsFilterSidebar
                 open={filterSidebarOpen}

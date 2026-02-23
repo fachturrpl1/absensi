@@ -276,10 +276,10 @@ export function GroupsTable({ groups, isLoading = false, onDelete, onEdit }: Gro
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden bg-white dark:bg-gray-950">
         <table className="w-full">
           {/* Header */}
-          <thead className="bg-muted/50 border-b">
+          <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
             <tr>
               {visibleColumns.code && (
                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Code</th>
@@ -334,11 +334,11 @@ export function GroupsTable({ groups, isLoading = false, onDelete, onEdit }: Gro
                   {visibleColumns.status && (
                     <td className="px-4 py-3 text-sm">
                       {group.is_active ? (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 dark:bg-green-600 text-white">
                           Active
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 text-black">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 dark:bg-gray-700 text-black dark:text-gray-200">
                           Inactive
                         </span>
                       )}
