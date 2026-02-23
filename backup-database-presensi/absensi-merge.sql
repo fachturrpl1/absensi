@@ -530,3 +530,205 @@ CREATE POLICY "Productivity categories visible to org" ON productivity_categorie
 CREATE POLICY "Job sites visible to org" ON job_sites FOR SELECT USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid()));
 CREATE POLICY "Job site visits visible to own" ON job_site_visits FOR SELECT USING (organization_member_id IN (SELECT id FROM organization_members WHERE user_id = auth.uid()));
 CREATE POLICY "Location logs visible to own" ON location_logs FOR SELECT USING (organization_member_id IN (SELECT id FROM organization_members WHERE user_id = auth.uid()));
+
+
+-- =============================================
+-- 8. WORK BREAKS (NEW + INTEGRATED)
+-- =============================================
+
+-- Work Break Types (Hubstaff Policies)
+CREATE TABLE IF NOT EXISTS work_break_types (
+    id SERIAL PRIMARY KEY,
+    organization_id INT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    duration_seconds INT,
+    is_paid BOOLEAN DEFAULT false,
+    is_billable BOOLEAN DEFAULT false,
+    is_trackable BOOLEAN DEFAULT true,
+    project_id INT REFERENCES projects(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Work Breaks (Actual Events) - FULLY INTEGRATED
+CREATE TABLE IF NOT EXISTS work_breaks (
+    id SERIAL PRIMARY KEY,
+    organization_member_id INT NOT NULL REFERENCES organization_members(id),
+    work_break_type_id INT REFERENCES work_break_types(id),
+    break_date DATE NOT NULL,
+    starts_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    ends_at TIMESTAMP WITH TIME ZONE,
+    duration_seconds INT,
+    status VARCHAR(50) DEFAULT 'active',
+    -- INTEGRATION LINKS (Hubstaff-style)
+    work_schedule_id INT REFERENCES work_schedules(id),
+    shift_id INT REFERENCES shifts(id),
+    time_entry_id INT REFERENCES time_entries(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_break_status CHECK (status IN ('active', 'completed', 'exceeded'))
+);
+
+-- =============================================
+-- PERFORMANCE INDEXES
+-- =============================================
+CREATE INDEX IF NOT EXISTS idx_work_breaks_member_date ON work_breaks(organization_member_id, break_date);
+CREATE INDEX IF NOT EXISTS idx_work_breaks_status ON work_breaks(status);
+CREATE INDEX IF NOT EXISTS idx_work_breaks_schedule ON work_breaks(work_schedule_id);
+CREATE INDEX IF NOT EXISTS idx_work_breaks_shift ON work_breaks(shift_id);
+
+-- =============================================
+-- ROW LEVEL SECURITY (RLS)
+-- =============================================
+ALTER TABLE work_break_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE work_breaks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Org break types" ON work_break_types
+FOR ALL USING (organization_id IN (
+    SELECT organization_id FROM organization_members 
+    WHERE user_id = auth.uid()
+));
+
+CREATE POLICY "Work breaks access" ON work_breaks
+FOR ALL USING (
+    organization_member_id IN (
+        SELECT id FROM organization_members WHERE user_id = auth.uid()
+    ) OR organization_id IN (
+        SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+    )
+);
+
+-- =============================================
+-- FUNCTIONS & TRIGGERS (Auto-status update)
+-- =============================================
+CREATE OR REPLACE FUNCTION update_break_status()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.ends_at IS NOT NULL AND NEW.duration_seconds > 0 THEN
+        NEW.status = 'completed';
+    ELSIF NEW.starts_at < NOW() - INTERVAL '2 hours' THEN
+        NEW.status = 'exceeded';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_update_break_status
+    BEFORE UPDATE ON work_breaks
+    FOR EACH ROW EXECUTE FUNCTION update_break_status();
+
+-- Trigger for updated_at
+CREATE TRIGGER update_work_break_types_updated_at BEFORE UPDATE ON work_break_types FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_work_breaks_updated_at BEFORE UPDATE ON work_breaks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =============================================
+-- 10. MEMBER LIMITS (ADD TO YOUR MERGE)
+-- =============================================
+
+-- Member Limits (Hubstaff Limits & Expectations)
+CREATE TABLE IF NOT EXISTS member_limits (
+    id SERIAL PRIMARY KEY,
+    organization_member_id INT NOT NULL REFERENCES organization_members(id) ON DELETE CASCADE,
+    daily_limit_hours DECIMAL(5,2),
+    weekly_limit_hours DECIMAL(5,2),
+    expected_per_week_hours DECIMAL(5,2),
+    limits_by_shifts BOOLEAN DEFAULT false,
+    allowed_days VARCHAR(3)[],        -- ['mon','tue','wed','thu','fri']
+    expected_days VARCHAR(3)[],
+    current_daily_override_hours DECIMAL(5,2),
+    current_weekly_override_hours DECIMAL(5,2),
+    -- Hubstaff Refinements
+    weekly_cost_limit DECIMAL(15,2),
+    limit_action VARCHAR(50) DEFAULT 'notify' CHECK (limit_action IN ('notify', 'stop_tracking')),
+    notification_threshold INT DEFAULT 90 CHECK (notification_threshold > 0 AND notification_threshold <= 100),
+    -- Hubstaff Integration Links
+    work_schedule_id INT REFERENCES work_schedules(id),
+    shift_id INT REFERENCES shifts(id),
+    team_id INT REFERENCES teams(id),     -- NEW: Team-based limits
+    project_id INT REFERENCES projects(id), -- NEW: Project-specific limits
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(organization_member_id)
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_member_limits_member ON member_limits(organization_member_id);
+CREATE INDEX IF NOT EXISTS idx_member_limits_team ON member_limits(team_id);
+CREATE INDEX IF NOT EXISTS idx_member_limits_project ON member_limits(project_id);
+
+-- RLS
+ALTER TABLE member_limits ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Member own limits" ON member_limits
+FOR SELECT, UPDATE USING (
+    organization_member_id IN (
+        SELECT id FROM organization_members WHERE user_id = auth.uid()
+    )
+);
+
+CREATE POLICY "Team leads manage limits" ON member_limits
+FOR ALL USING (
+    EXISTS (
+        SELECT 1 FROM team_members tm
+        WHERE tm.team_id = member_limits.team_id 
+        AND tm.role IN ('lead', 'manager')
+        AND tm.organization_member_id IN (
+            SELECT id FROM organization_members WHERE user_id = auth.uid()
+        )
+    )
+    OR EXISTS (
+        SELECT 1 FROM organization_members om
+        JOIN organization_member_roles omr ON om.id = omr.organization_member_id
+        JOIN system_roles sr ON omr.role_id = sr.id
+        WHERE om.user_id = auth.uid()
+        AND sr.code IN ('super_admin', 'org_admin')
+        AND om.organization_id = (
+            SELECT organization_id FROM organization_members 
+            WHERE id = member_limits.organization_member_id
+        )
+    )
+);
+
+-- Auto-generate limits from schedule/team
+CREATE OR REPLACE FUNCTION auto_set_member_limits()
+RETURNS TRIGGER AS $$
+DECLARE
+    schedule_hours DECIMAL(5,2) := 40;
+    member_rate DECIMAL(10,2);
+BEGIN
+    -- From work schedule
+    SELECT COALESCE(SUM(wd.minimum_hours), 40) INTO schedule_hours
+    FROM work_schedule_details wd
+    JOIN work_schedules ws ON wd.work_schedule_id = ws.id
+    WHERE ws.id = NEW.work_schedule_id AND wd.is_working_day = true;
+
+    -- Get member hourly rate if linked to a project
+    IF NEW.project_id IS NOT NULL THEN
+        SELECT hourly_rate INTO member_rate 
+        FROM project_members 
+        WHERE project_id = NEW.project_id 
+        AND organization_member_id = NEW.organization_member_id;
+    END IF;
+
+    NEW.expected_per_week_hours := schedule_hours;
+    NEW.weekly_limit_hours := schedule_hours * 1.1; -- 10% buffer
+    
+    -- Auto-set cost limit if rate is found
+    IF member_rate > 0 THEN
+        NEW.weekly_cost_limit := NEW.weekly_limit_hours * member_rate;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_auto_set_member_limits
+    BEFORE INSERT OR UPDATE OF work_schedule_id, team_id ON member_limits
+    FOR EACH ROW EXECUTE FUNCTION auto_set_member_limits();
+
+-- Updated_at trigger
+CREATE TRIGGER update_member_limits_updated_at 
+BEFORE UPDATE ON member_limits 
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
