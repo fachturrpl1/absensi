@@ -1,6 +1,6 @@
 'use client';
 
-import React ,{ useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
 import {
@@ -58,21 +58,21 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [userTimezone, setUserTimezone] = useState('UTC');
-  
+
   // Date filter state (same as Dashboard)
   const [dateRange, setDateRange] = useState<DateFilterState>(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const endOfToday = new Date(today);
     endOfToday.setHours(23, 59, 59, 999);
-    
+
     return {
       from: today,
       to: endOfToday,
       preset: 'today',
     };
   });
-  
+
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -82,7 +82,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
-  
+
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -115,10 +115,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
           firstItem: data[0],
           allData: data
         });
-        
+
         setAttendanceData(data);
         setTotalItems(listResult.meta?.total || 0);
-        
+
         // Set timezone from first record if available (fallback to UTC)
         const firstRecord = data[0];
         if (firstRecord) {
@@ -127,12 +127,12 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
         // Extract unique departments from current page (simple solution for now)
         if (data.length > 0) {
-        const uniqueDepts = Array.from(new Set(
+          const uniqueDepts = Array.from(new Set(
             data.map((r: any) => r.member?.department)
-        )).filter(dept => dept && dept !== 'No Department').sort();
-        
-        if (departments.length === 0 && uniqueDepts.length > 0) {
-          setDepartments(uniqueDepts);
+          )).filter(dept => dept && dept !== 'No Department').sort();
+
+          if (departments.length === 0 && uniqueDepts.length > 0) {
+            setDepartments(uniqueDepts);
           }
         }
       } else {
@@ -148,7 +148,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       // setTotalItems(0);
       // Only show error if we don't have any data
       if (attendanceData.length === 0) {
-      toast.error('An error occurred while fetching data');
+        toast.error('An error occurred while fetching data');
       }
     } finally {
       setLoading(false);
@@ -160,7 +160,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     console.log('≡ƒöä Fetch triggered:', { currentPage, dateRange, searchQuery, statusFilter, departmentFilter });
     fetchData();
   }, [fetchData]);
-  
+
   // Log attendanceData changes
   useEffect(() => {
     console.log('≡ƒôè Attendance data state updated:', {
@@ -225,10 +225,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
 
   // Pagination Logic
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  
+
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
-    
+
     if (totalPages <= 7) {
       // Show all pages if total pages <= 7
       for (let i = 1; i <= totalPages; i++) {
@@ -237,7 +237,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
     } else {
       // Always show first page
       pages.push(1);
-      
+
       if (currentPage <= 4) {
         // Show: 1 2 3 4 5 ... n
         for (let i = 2; i <= 5; i++) {
@@ -261,7 +261,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
         pages.push(totalPages);
       }
     }
-    
+
     return pages;
   };
 
@@ -310,44 +310,44 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
             {/* Date Filter + Search + View Toggle Row */}
             <div className="flex flex-col gap-3">
               <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-              <div className="flex flex-1 flex-wrap items-center gap-2">
-                {/* Date Filter */}
-                <DateFilterBar 
-                  dateRange={dateRange} 
-                  onDateRangeChange={setDateRange}
-                />
-                
-                {/* Search */}
-                  <div className="relative flex-1 min-w-[200px] sm:min-w-[250px] max-w-full sm:max-w-sm">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by name or department..."
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    className="pl-9 pr-20"
+                <div className="flex flex-1 flex-wrap items-center gap-2">
+                  {/* Date Filter */}
+                  <DateFilterBar
+                    dateRange={dateRange}
+                    onDateRangeChange={setDateRange}
                   />
-                </div>
-              </div>
 
-              {/* View Mode Toggle */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center rounded-lg border">
-                  <Button
-                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('list')}
-                    className="rounded-r-none"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('grid')}
-                    className="rounded-l-none border-l"
-                  >
-                    <Grid3x3 className="h-4 w-4" />
-                  </Button>
+                  {/* Search */}
+                  <div className="relative flex-1 min-w-[200px] sm:min-w-[250px] max-w-full sm:max-w-sm">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name or department..."
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      className="pl-9 pr-20"
+                    />
+                  </div>
+                </div>
+
+                {/* View Mode Toggle */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center rounded-lg border">
+                    <Button
+                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('list')}
+                      className="rounded-r-none"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('grid')}
+                      className="rounded-l-none border-l"
+                    >
+                      <Grid3x3 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -444,7 +444,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
       </Card>
 
       {/* Summary Stats - Interactive Cards - REMOVED as requested */}
-      
+
       {/* Charts Section - REMOVED as requested */}
 
       {/* Attendance List */}
@@ -476,101 +476,127 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     return null;
                   }
                   return (
-                  <div
-                    key={`mobile-${record.id}-${index}`}
-                    className="p-4 space-y-3 border-b last:border-b-0"
-                  >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <input
-                        type="checkbox"
-                        checked={selectedRecords.includes(record.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedRecords([...selectedRecords, record.id]);
-                          } else {
-                            setSelectedRecords(selectedRecords.filter(id => id !== record.id));
-                          }
-                        }}
-                        className="rounded border-gray-300 mt-1"
-                      />
-                      <Avatar className="h-10 w-10 shrink-0">
-                        <AvatarImage src={record.member.avatar} />
-                        <AvatarFallback>
-                          {record.member.name.split(' ').map((n: string) => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium truncate">{record.member.name}</p>
-                        <p className="text-sm text-muted-foreground truncate">{record.member.department}</p>
+                    <div
+                      key={`mobile-${record.id}-${index}`}
+                      className="p-4 space-y-3 border-b last:border-b-0"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={selectedRecords.includes(record.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedRecords([...selectedRecords, record.id]);
+                              } else {
+                                setSelectedRecords(selectedRecords.filter(id => id !== record.id));
+                              }
+                            }}
+                            className="rounded border-gray-300 mt-1"
+                          />
+                          <Avatar className="h-10 w-10 shrink-0">
+                            <AvatarImage src={record.member.avatar} />
+                            <AvatarFallback>
+                              {record.member.name.split(' ').map((n: string) => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium truncate">{record.member.name}</p>
+                            <p className="text-sm text-muted-foreground truncate">{record.member.department}</p>
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Check In</p>
-                      <p className="font-mono text-sm">
-                        {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, '24h', true) : '-'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Check Out</p>
-                      <p className="font-mono text-sm">
-                        {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, '24h', true) : '-'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Work Hours</p>
-                      <div className="flex flex-col gap-1">
-                        <span className="font-medium text-sm">{record.workHours}</span>
-                        {record.overtime && (
-                          <Badge variant="secondary" className="w-fit text-xs">
-                            +{record.overtime} OT
+
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Check In</p>
+                          <div className="flex flex-col">
+                            <p className="font-mono text-sm leading-tight">
+                              {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, '24h', true) : '-'}
+                            </p>
+                            {record.checkInMethod && (
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold leading-tight mt-0.5">
+                                via {record.checkInMethod}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Check Out</p>
+                          <div className="flex flex-col">
+                            <p className="font-mono text-sm leading-tight">
+                              {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, '24h', true) : '-'}
+                            </p>
+                            {record.checkOutMethod && (
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold leading-tight mt-0.5">
+                                via {record.checkOutMethod}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Break In</p>
+                          <p className="font-mono text-sm">
+                            {record.actualBreakStart ? formatLocalTime(record.actualBreakStart, userTimezone, '24h', true) : '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Break Out</p>
+                          <p className="font-mono text-sm">
+                            {record.actualBreakEnd ? formatLocalTime(record.actualBreakEnd, userTimezone, '24h', true) : '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Work Hours</p>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium text-sm">{record.workHours}</span>
+                            {record.overtime && (
+                              <Badge variant="secondary" className="w-fit text-xs">
+                                +{record.overtime} OT
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Status</p>
+                          <Badge className={cn('gap-1', getStatusColor(record.status))}>
+                            {getStatusIcon(record.status)}
+                            <span className="capitalize">{record.status.charAt(0).toUpperCase() + record.status.slice(1)}</span>
                           </Badge>
-                        )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Location</p>
+                        <LocationDisplay
+                          checkInLocationName={record.checkInLocationName}
+                          checkOutLocationName={record.checkOutLocationName}
+                        />
                       </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Status</p>
-                      <Badge className={cn('gap-1', getStatusColor(record.status))}>
-                        {getStatusIcon(record.status)}
-                        {record.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Location</p>
-                    <LocationDisplay 
-                      checkInLocationName={record.checkInLocationName}
-                      checkOutLocationName={record.checkOutLocationName}
-                    />
-                  </div>
-                </div>
                   );
                 }).filter(Boolean)
               )}
@@ -592,6 +618,8 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     <th className="p-4 text-left text-sm font-medium">Member</th>
                     <th className="p-4 text-left text-sm font-medium">Check In</th>
                     <th className="p-4 text-left text-sm font-medium">Check Out</th>
+                    <th className="p-4 text-left text-sm font-medium">Break In</th>
+                    <th className="p-4 text-left text-sm font-medium">Break Out</th>
                     <th className="p-4 text-left text-sm font-medium">Work Hours</th>
                     <th className="p-4 text-left text-sm font-medium">Status</th>
                     <th className="p-4 text-left text-sm font-medium">Location</th>
@@ -627,96 +655,120 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                       }
                       console.log(`≡ƒôï Rendering table row ${index + 1}/${attendanceData.length}:`, record.id, record.member.name);
                       return (
-                    <tr
-                      key={`table-${record.id}-${index}`}
-                      className="border-b hover:bg-muted/50 transition-colors"
-                    >
-                      <td className="p-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedRecords.includes(record.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedRecords([...selectedRecords, record.id]);
-                            } else {
-                              setSelectedRecords(selectedRecords.filter(id => id !== record.id));
-                            }
-                          }}
-                          className="rounded border-gray-300"
-                        />
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={record.member.avatar} />
-                            <AvatarFallback>
-                              {record.member.name.split(' ').map((n: string) => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{record.member.name}</p>
-                            <p className="text-sm text-muted-foreground">{record.member.department}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span className="font-mono text-sm">
-                          {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, '24h', true) : '-'}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <span className="font-mono text-sm">
-                          {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, '24h', true) : '-'}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex flex-col gap-1">
-                          <span className="font-medium text-sm">{record.workHours}</span>
-                          {record.overtime && (
-                            <Badge variant="secondary" className="w-fit text-xs">
-                              +{record.overtime} OT
+                        <tr
+                          key={`table-${record.id}-${index}`}
+                          className="border-b hover:bg-muted/50 transition-colors"
+                        >
+                          <td className="p-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedRecords.includes(record.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedRecords([...selectedRecords, record.id]);
+                                } else {
+                                  setSelectedRecords(selectedRecords.filter(id => id !== record.id));
+                                }
+                              }}
+                              className="rounded border-gray-300"
+                            />
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage src={record.member.avatar} />
+                                <AvatarFallback>
+                                  {record.member.name.split(' ').map((n: string) => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">{record.member.name}</p>
+                                <p className="text-sm text-muted-foreground">{record.member.department}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex flex-col">
+                              <span className="font-mono text-sm leading-tight">
+                                {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, '24h', true) : '-'}
+                              </span>
+                              {record.checkInMethod && (
+                                <span className="text-[10px] text-muted-foreground uppercase font-semibold leading-tight mt-0.5">
+                                  via {record.checkInMethod}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex flex-col">
+                              <span className="font-mono text-sm leading-tight">
+                                {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, '24h', true) : '-'}
+                              </span>
+                              {record.checkOutMethod && (
+                                <span className="text-[10px] text-muted-foreground uppercase font-semibold leading-tight mt-0.5">
+                                  via {record.checkOutMethod}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <span className="font-mono text-sm">
+                              {record.actualBreakStart ? formatLocalTime(record.actualBreakStart, userTimezone, '24h', true) : '-'}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <span className="font-mono text-sm">
+                              {record.actualBreakEnd ? formatLocalTime(record.actualBreakEnd, userTimezone, '24h', true) : '-'}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex flex-col gap-1">
+                              <span className="font-medium text-sm">{record.workHours}</span>
+                              {record.overtime && (
+                                <Badge variant="secondary" className="w-fit text-xs">
+                                  +{record.overtime} OT
+                                </Badge>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <Badge className={cn('gap-1', getStatusColor(record.status))}>
+                              {getStatusIcon(record.status)}
+                              <span className="capitalize">{record.status.charAt(0).toUpperCase() + record.status.slice(1)}</span>
                             </Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <Badge className={cn('gap-1', getStatusColor(record.status))}>
-                          {getStatusIcon(record.status)}
-                          {record.status}
-                        </Badge>
-                      </td>
-                      <td className="p-4">
-                        <LocationDisplay 
-                          checkInLocationName={record.checkInLocationName}
-                          checkOutLocationName={record.checkOutLocationName}
-                        />
-                      </td>
-                      <td className="p-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
+                          </td>
+                          <td className="p-4">
+                            <LocationDisplay
+                              checkInLocationName={record.checkInLocationName}
+                              checkOutLocationName={record.checkOutLocationName}
+                            />
+                          </td>
+                          <td className="p-4">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem>
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive">
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </tr>
                       );
                     }).filter(Boolean)
                   )}
@@ -744,7 +796,7 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                     <ChevronLeft className="h-4 w-4" />
                     Previous
                   </Button>
-                  
+
                   {/* Page Numbers */}
                   {getPageNumbers().map((page, index) => (
                     <React.Fragment key={index}>
@@ -753,7 +805,10 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                           variant={currentPage === page ? "default" : "outline"}
                           size="sm"
                           onClick={() => setCurrentPage(page)}
-                          className="w-9 h-9 p-0"
+                          className={cn(
+                            "w-9 h-9 p-0",
+                            currentPage === page && "bg-zinc-900 text-zinc-50 hover:bg-zinc-900/90 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-50/90 border-0"
+                          )}
                         >
                           {page}
                         </Button>
@@ -811,58 +866,58 @@ export default function ModernAttendanceList({ initialData: _initialData, initia
                 }
                 console.log(`≡ƒÄ┤ Rendering grid card ${index + 1}/${attendanceData.length}:`, record.id, record.member.name);
                 return (
-            <div
-              key={`grid-${record.id}-${index}`}
-            >
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={record.member.avatar} />
-                        <AvatarFallback>
-                          {record.member.name.split(' ').map((n: string) => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-semibold">{record.member.name}</p>
-                        <p className="text-sm text-muted-foreground">{record.member.department}</p>
-                      </div>
-                    </div>
-                    <Badge className={cn('gap-1', getStatusColor(record.status))}>
-                      {getStatusIcon(record.status)}
-                      {record.status}
-                    </Badge>
+                  <div
+                    key={`grid-${record.id}-${index}`}
+                  >
+                    <Card className="hover:shadow-lg transition-shadow">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-12 w-12">
+                              <AvatarImage src={record.member.avatar} />
+                              <AvatarFallback>
+                                {record.member.name.split(' ').map((n: string) => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold">{record.member.name}</p>
+                              <p className="text-sm text-muted-foreground">{record.member.department}</p>
+                            </div>
+                          </div>
+                          <Badge className={cn('gap-1', getStatusColor(record.status))}>
+                            {getStatusIcon(record.status)}
+                            <span className="capitalize">{record.status.charAt(0).toUpperCase() + record.status.slice(1)}</span>
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Check In</p>
+                            <p className="font-mono font-medium">
+                              {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, '24h', true) : '-'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Check Out</p>
+                            <p className="font-mono font-medium">
+                              {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, '24h', true) : '-'}
+                            </p>
+                          </div>
+                        </div>
+                        <Separator />
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Work Hours</span>
+                          <span className="font-semibold">{record.workHours}</span>
+                        </div>
+                        <LocationDisplay
+                          checkInLocationName={record.checkInLocationName}
+                          checkOutLocationName={record.checkOutLocationName}
+                        />
+                      </CardContent>
+                    </Card>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Check In</p>
-                      <p className="font-mono font-medium">
-                        {record.checkIn ? formatLocalTime(record.checkIn, userTimezone, '24h', true) : '-'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Check Out</p>
-                      <p className="font-mono font-medium">
-                        {record.checkOut ? formatLocalTime(record.checkOut, userTimezone, '24h', true) : '-'}
-                      </p>
-                    </div>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Work Hours</span>
-                    <span className="font-semibold">{record.workHours}</span>
-                  </div>
-                  <LocationDisplay 
-                    checkInLocationName={record.checkInLocationName}
-                    checkOutLocationName={record.checkOutLocationName}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-              );
+                );
               }).filter(Boolean)}
             </div>
           )}

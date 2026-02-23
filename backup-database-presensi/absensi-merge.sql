@@ -627,6 +627,7 @@ CREATE TABLE IF NOT EXISTS work_breaks (
     duration_seconds INT,
     status VARCHAR(50) DEFAULT 'active',
     -- INTEGRATION LINKS (Hubstaff-style)
+    attendance_record_id INT REFERENCES attendance_records(id) ON DELETE CASCADE,
     work_schedule_id INT REFERENCES work_schedules(id),
     shift_id INT REFERENCES shifts(id),
     time_entry_id INT REFERENCES time_entries(id),
@@ -634,6 +635,51 @@ CREATE TABLE IF NOT EXISTS work_breaks (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_break_status CHECK (status IN ('active', 'completed', 'exceeded'))
 );
+
+-- Ensure columns exist in attendance_records
+ALTER TABLE attendance_records 
+ADD COLUMN IF NOT EXISTS actual_break_start TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS actual_break_end TIMESTAMP WITH TIME ZONE;
+
+-- Ensure the column exists in work_breaks if the table was created previously
+ALTER TABLE work_breaks ADD COLUMN IF NOT EXISTS attendance_record_id INT REFERENCES attendance_records(id) ON DELETE CASCADE;
+
+-- Index for better join performance
+CREATE INDEX IF NOT EXISTS idx_work_breaks_attendance ON work_breaks(attendance_record_id);
+
+-- Automated Break Duration & Timestamp Calculation for Attendance Records
+CREATE OR REPLACE FUNCTION sync_attendance_break_duration()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Update stats in attendance_records: duration, first break start, and last break end
+    UPDATE attendance_records
+    SET 
+        break_duration_minutes = (
+            SELECT COALESCE(SUM(duration_seconds), 0) / 60
+            FROM work_breaks
+            WHERE attendance_record_id = COALESCE(NEW.attendance_record_id, OLD.attendance_record_id)
+            AND status IN ('completed', 'exceeded')
+        ),
+        actual_break_start = (
+            SELECT MIN(starts_at)
+            FROM work_breaks
+            WHERE attendance_record_id = COALESCE(NEW.attendance_record_id, OLD.attendance_record_id)
+        ),
+        actual_break_end = (
+            SELECT MAX(ends_at)
+            FROM work_breaks
+            WHERE attendance_record_id = COALESCE(NEW.attendance_record_id, OLD.attendance_record_id)
+            AND status IN ('completed', 'exceeded')
+        )
+    WHERE id = COALESCE(NEW.attendance_record_id, OLD.attendance_record_id);
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_sync_break_duration
+    AFTER INSERT OR UPDATE OF duration_seconds, status OR DELETE ON work_breaks
+    FOR EACH ROW EXECUTE FUNCTION sync_attendance_break_duration();
 
 -- =============================================
 -- PERFORMANCE INDEXES

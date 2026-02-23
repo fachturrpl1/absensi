@@ -110,7 +110,7 @@ export function PaginationFooter({
               className={cn(
                 "h-8 w-8 p-0",
                 page === pageNum
-                  ? "bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:hover:bg-gray-200 dark:text-gray-900"
+                  ? "bg-zinc-900 text-zinc-50 hover:bg-zinc-900/90 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-50/90"
                   : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
               )}
               onClick={() => onPageChange(Number(pageNum))}
