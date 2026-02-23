@@ -641,8 +641,8 @@ CREATE TABLE IF NOT EXISTS member_limits (
     current_weekly_override_hours DECIMAL(5,2),
     -- Hubstaff Refinements
     weekly_cost_limit DECIMAL(15,2),
-    limit_action VARCHAR(50) DEFAULT 'notify' CHECK (limit_action IN ('notify', 'stop_tracking')),
-    notification_threshold INT DEFAULT 90 CHECK (notification_threshold > 0 AND notification_threshold <= 100),
+    limit_action VARCHAR(50) DEFAULT 'notify',
+    notification_threshold INT DEFAULT 90,
     -- Hubstaff Integration Links
     work_schedule_id INT REFERENCES work_schedules(id),
     shift_id INT REFERENCES shifts(id),
@@ -652,6 +652,11 @@ CREATE TABLE IF NOT EXISTS member_limits (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(organization_member_id)
 );
+
+-- Separate constraints for better production safety & error message
+ALTER TABLE member_limits 
+ADD CONSTRAINT chk_limit_action CHECK (limit_action IN ('notify', 'stop_tracking')),
+ADD CONSTRAINT chk_notification_threshold CHECK (notification_threshold > 0 AND notification_threshold <= 100);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_member_limits_member ON member_limits(organization_member_id);
