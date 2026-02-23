@@ -584,64 +584,64 @@ CREATE TABLE member_limits (
 -- =============================================
 
 -- Activities
-CREATE INDEX idx_activities_member_date ON activities(organization_member_id, activity_date);
-CREATE INDEX idx_activities_project ON activities(project_id);
-CREATE INDEX idx_activities_time_slot ON activities(time_slot);
-CREATE INDEX idx_activities_timesheet ON activities(timesheet_id);
+CREATE INDEX CONCURRENTLY idx_activities_member_date ON activities(organization_member_id, activity_date);
+CREATE INDEX CONCURRENTLY idx_activities_project ON activities(project_id);
+CREATE INDEX CONCURRENTLY idx_activities_time_slot ON activities(time_slot);
+CREATE INDEX CONCURRENTLY idx_activities_timesheet ON activities(timesheet_id);
 
 -- Screenshots
-CREATE INDEX idx_screenshots_member_date ON screenshots(organization_member_id, screenshot_date);
-CREATE INDEX idx_screenshots_recorded_at ON screenshots(recorded_at);
-CREATE INDEX idx_screenshots_activity ON screenshots(activity_id);
+CREATE INDEX CONCURRENTLY idx_screenshots_member_date ON screenshots(organization_member_id, screenshot_date);
+CREATE INDEX CONCURRENTLY idx_screenshots_recorded_at ON screenshots(recorded_at);
+CREATE INDEX CONCURRENTLY idx_screenshots_activity ON screenshots(activity_id);
 
 -- Time Entries
-CREATE INDEX idx_time_entries_member_date ON time_entries(organization_member_id, entry_date);
-CREATE INDEX idx_time_entries_project ON time_entries(project_id);
-CREATE INDEX idx_time_entries_timesheet ON time_entries(timesheet_id);
+CREATE INDEX CONCURRENTLY idx_time_entries_member_date ON time_entries(organization_member_id, entry_date);
+CREATE INDEX CONCURRENTLY idx_time_entries_project ON time_entries(project_id);
+CREATE INDEX CONCURRENTLY idx_time_entries_timesheet ON time_entries(timesheet_id);
 
 -- Tool Usages
-CREATE INDEX idx_tool_usages_member_date ON tool_usages(organization_member_id, usage_date);
-CREATE INDEX idx_tool_usages_tool_name ON tool_usages(tool_name);
+CREATE INDEX CONCURRENTLY idx_tool_usages_member_date ON tool_usages(organization_member_id, usage_date);
+CREATE INDEX CONCURRENTLY idx_tool_usages_tool_name ON tool_usages(tool_name);
 
 -- URL Visits
-CREATE INDEX idx_url_visits_member_date ON url_visits(organization_member_id, visit_date);
-CREATE INDEX idx_url_visits_domain ON url_visits(domain);
+CREATE INDEX CONCURRENTLY idx_url_visits_member_date ON url_visits(organization_member_id, visit_date);
+CREATE INDEX CONCURRENTLY idx_url_visits_domain ON url_visits(domain);
 
 -- Location Logs
-CREATE INDEX idx_location_logs_member_time ON location_logs(organization_member_id, captured_at);
+CREATE INDEX CONCURRENTLY idx_location_logs_member_time ON location_logs(organization_member_id, captured_at);
 
 -- Job Site Visits
-CREATE INDEX idx_job_site_visits_site ON job_site_visits(job_site_id);
-CREATE INDEX idx_job_site_visits_member ON job_site_visits(organization_member_id);
+CREATE INDEX CONCURRENTLY idx_job_site_visits_site ON job_site_visits(job_site_id);
+CREATE INDEX CONCURRENTLY idx_job_site_visits_member ON job_site_visits(organization_member_id);
 
 -- Timesheets
-CREATE INDEX idx_timesheets_member ON timesheets(organization_member_id);
-CREATE INDEX idx_timesheets_dates ON timesheets(start_date, end_date);
-CREATE INDEX idx_timesheets_status ON timesheets(status);
+CREATE INDEX CONCURRENTLY idx_timesheets_member ON timesheets(organization_member_id);
+CREATE INDEX CONCURRENTLY idx_timesheets_dates ON timesheets(start_date, end_date);
+CREATE INDEX CONCURRENTLY idx_timesheets_status ON timesheets(status);
 
 -- Unusual Activities
-CREATE INDEX idx_unusual_activities_member ON unusual_activities(organization_member_id);
-CREATE INDEX idx_unusual_activities_date ON unusual_activities(activity_date);
+CREATE INDEX CONCURRENTLY idx_unusual_activities_member ON unusual_activities(organization_member_id);
+CREATE INDEX CONCURRENTLY idx_unusual_activities_date ON unusual_activities(activity_date);
 
 -- Projects & Tasks
-CREATE INDEX idx_projects_org ON projects(organization_id);
-CREATE INDEX idx_projects_status ON projects(status);
-CREATE INDEX idx_tasks_project ON tasks(project_id);
-CREATE INDEX idx_tasks_status ON tasks(status);
+CREATE INDEX CONCURRENTLY idx_projects_org ON projects(organization_id);
+CREATE INDEX CONCURRENTLY idx_projects_status ON projects(status);
+CREATE INDEX CONCURRENTLY idx_tasks_project ON tasks(project_id);
+CREATE INDEX CONCURRENTLY idx_tasks_status ON tasks(status);
 
 -- Teams
-CREATE INDEX idx_teams_org ON teams(organization_id);
-CREATE INDEX idx_team_members_team ON team_members(team_id);
-CREATE INDEX idx_team_members_member ON team_members(organization_member_id);
+CREATE INDEX CONCURRENTLY idx_teams_org ON teams(organization_id);
+CREATE INDEX CONCURRENTLY idx_team_members_team ON team_members(team_id);
+CREATE INDEX CONCURRENTLY idx_team_members_member ON team_members(organization_member_id);
 
 -- Time Off
-CREATE INDEX idx_time_off_policies_org ON time_off_policies(organization_id);
-CREATE INDEX idx_time_off_requests_member ON time_off_requests_hs(organization_member_id);
-CREATE INDEX idx_time_off_requests_status ON time_off_requests_hs(status);
+CREATE INDEX CONCURRENTLY idx_time_off_policies_org ON time_off_policies(organization_id);
+CREATE INDEX CONCURRENTLY idx_time_off_requests_member ON time_off_requests_hs(organization_member_id);
+CREATE INDEX CONCURRENTLY idx_time_off_requests_status ON time_off_requests_hs(status);
 
 -- Smart Notifications
-CREATE INDEX idx_smart_notification_rules_org ON smart_notification_rules(organization_id);
-CREATE INDEX idx_smart_notifications_rule ON smart_notifications(rule_id);
+CREATE INDEX CONCURRENTLY idx_smart_notification_rules_org ON smart_notification_rules(organization_id);
+CREATE INDEX CONCURRENTLY idx_smart_notifications_rule ON smart_notifications(rule_id);
 
 -- =============================================
 -- 12. TRIGGERS FOR UPDATED_AT
