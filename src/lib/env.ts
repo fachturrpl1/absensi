@@ -11,22 +11,22 @@ const envSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().startsWith('https://'),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(), // Optional for client-side
-  
+
   // Application Configuration
-  NEXT_PUBLIC_SITE_URL: z.string().url().optional().default('http://localhost:3000'),
-  NEXT_PUBLIC_APP_URL: z.string().url().optional().default('http://localhost:3000'),
-  
+  NEXT_PUBLIC_SITE_URL: z.string().url().optional().default('https://absensi-ubig.vercel.app'),
+  NEXT_PUBLIC_APP_URL: z.string().url().optional().default('https://absensi-ubig.vercel.app'),
+
   // Environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  
+
   // Optional: Monitoring Services
   NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
   NEXT_PUBLIC_GA_MEASUREMENT_ID: z.string().optional(),
-  
+
   // Optional: Feature Flags
   NEXT_PUBLIC_ENABLE_ANALYTICS: z.string().transform(val => val === 'true').optional(),
   NEXT_PUBLIC_ENABLE_PWA: z.string().transform(val => val === 'true').optional(),
-  
+
   // Optional: API Configuration
   NEXT_PUBLIC_API_TIMEOUT: z.string().transform(Number).optional().default(30000),
   NEXT_PUBLIC_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'silent']).optional(),
@@ -35,11 +35,11 @@ const envSchema = z.object({
 // Parse and validate environment variables
 function validateEnv() {
   const parsed = envSchema.safeParse(process.env);
-  
+
   if (!parsed.success) {
     console.error('❌ Invalid environment variables:');
     console.error(JSON.stringify(parsed.error.flatten().fieldErrors, null, 2));
-    
+
     // In production, throw an error to prevent the app from starting
     if (process.env.NODE_ENV === 'production') {
       throw new Error('Invalid environment variables');
@@ -47,11 +47,11 @@ function validateEnv() {
       // In development, show warning but continue
       console.warn('⚠️ Running with invalid environment variables. Some features may not work correctly.');
     }
-    
+
     // Return partial env with defaults
     return envSchema.parse({});
   }
-  
+
   return parsed.data;
 }
 
@@ -86,20 +86,20 @@ export function validateCriticalEnv() {
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   ];
-  
+
   const missing = critical.filter(key => !process.env[key]);
-  
+
   if (missing.length > 0) {
     const message = `Missing critical environment variables: ${missing.join(', ')}`;
     console.error(`❌ ${message}`);
-    
+
     if (isProduction) {
       throw new Error(message);
     }
-    
+
     return false;
   }
-  
+
   return true;
 }
 

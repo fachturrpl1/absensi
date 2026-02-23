@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 
 const FormSchema = z.object({
-  email: z.string().email({ message: "Masukkan email yang valid." }),
+  email: z.string().email({ message: "Please enter a valid email address." }),
 });
 
 export function ForgotPasswordForm() {
@@ -38,13 +38,13 @@ export function ForgotPasswordForm() {
 
     if (!result.success) {
       setStatus("error");
-      setMessage(result.message || "Terjadi kesalahan. Silakan coba lagi.");
+      setMessage(result.message || "Something went wrong. Please try again.");
       setLoading(false);
       return;
     }
 
     setStatus("success");
-    setMessage(result.message || "Silakan cek email Anda untuk tautan reset.");
+    setMessage(result.message || "Please check your email for the reset link.");
     setLoading(false);
   };
 
@@ -56,9 +56,9 @@ export function ForgotPasswordForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Alamat Email</FormLabel>
+              <FormLabel>Email Address</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="nama@perusahaan.com" autoComplete="email" {...field} />
+                <Input type="email" placeholder="name@company.com" autoComplete="email" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -72,7 +72,7 @@ export function ForgotPasswordForm() {
         )}
 
         <Button className="w-full" type="submit" disabled={loading}>
-          {loading ? "Mengirim tautan..." : "Kirim Tautan Reset"}
+          {loading ? "Sending link..." : "Send Reset Link"}
         </Button>
       </form>
     </Form>

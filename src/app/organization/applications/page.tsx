@@ -171,7 +171,7 @@ const APPLICATIONS_CATALOG: ApplicationSection[] = [
 async function getApplications(): Promise<ApplicationSection[]> {
     try {
         const baseUrl =
-            process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3007"
+            process.env.NEXT_PUBLIC_APP_URL ?? "https://absensi-ubig.vercel.app"
 
         const classes = await headers()
         const cookie = classes.get("cookie")

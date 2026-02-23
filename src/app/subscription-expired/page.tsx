@@ -26,14 +26,14 @@ export default function SubscriptionExpiredPage() {
     const interval = setInterval(async () => {
       await checkStatus();
     }, 30000); // Check every 30 seconds
-    
+
     return () => clearInterval(interval);
   }, []);
 
   const checkStatus = async () => {
     try {
       const status = await checkOrganizationStatus();
-      
+
       // If subscription is now valid, redirect to dashboard
       if (status.isValid) {
         toast.success("Subscription renewed! Redirecting...");
@@ -49,7 +49,7 @@ export default function SubscriptionExpiredPage() {
     setChecking(true);
     try {
       const status = await checkOrganizationStatus();
-      
+
       if (status.isValid) {
         toast.success("Subscription renewed! Redirecting to dashboard...");
         router.replace('/');
@@ -68,12 +68,12 @@ export default function SubscriptionExpiredPage() {
   useEffect(() => {
     const sidebar = document.querySelector('[data-sidebar]') || document.querySelector('aside');
     const navbar = document.querySelector('[data-navbar]') || document.querySelector('nav');
-    
+
     if (sidebar instanceof HTMLElement) sidebar.style.display = 'none';
     if (navbar instanceof HTMLElement) navbar.style.display = 'none';
-    
+
     document.body.style.marginLeft = '0';
-    
+
     return () => {
       if (sidebar instanceof HTMLElement) sidebar.style.display = '';
       if (navbar instanceof HTMLElement) navbar.style.display = '';
@@ -133,7 +133,7 @@ export default function SubscriptionExpiredPage() {
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-3 justify-center">
-          <Button 
+          <Button
             onClick={handleRefresh}
             disabled={checking}
             className="flex items-center gap-2 w-full hover:scale-105 transition-transform duration-200 bg-green-600 hover:bg-green-700"
@@ -143,7 +143,7 @@ export default function SubscriptionExpiredPage() {
           </Button>
 
           <a href="mailto:support@presensi.app?subject=Subscription%20Expired%20-%20Renewal%20Request">
-            <Button 
+            <Button
               variant="outline"
               className="flex items-center gap-2 w-full hover:scale-105 transition-transform duration-200"
             >
@@ -151,8 +151,8 @@ export default function SubscriptionExpiredPage() {
               Contact Support
             </Button>
           </a>
-          
-          <Button 
+
+          <Button
             variant="outline"
             onClick={handleSignOut}
             className="flex items-center gap-2 w-full hover:scale-105 transition-transform duration-200"
@@ -166,7 +166,7 @@ export default function SubscriptionExpiredPage() {
           <p className="text-xs text-muted-foreground mb-3">
             After renewing your subscription, click &quot;Check Subscription Status&quot; above
           </p>
-          
+
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">
               The system automatically checks every 30 seconds

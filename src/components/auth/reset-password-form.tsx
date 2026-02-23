@@ -13,11 +13,11 @@ import { Input } from "@/components/ui/input";
 
 const FormSchema = z
   .object({
-    password: z.string().min(8, { message: "Password minimal 8 karakter." }),
-    confirmPassword: z.string().min(8, { message: "Konfirmasi password minimal 8 karakter." }),
+    password: z.string().min(8, { message: "Password must be at least 8 characters." }),
+    confirmPassword: z.string().min(8, { message: "Confirm password must be at least 8 characters." }),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Konfirmasi password tidak cocok.",
+    message: "Passwords do not match.",
     path: ["confirmPassword"],
   });
 
@@ -46,12 +46,12 @@ export function ResetPasswordForm() {
     const result = await resetPassword(formData);
 
     if (!result.success) {
-      setError(result.message || "Gagal memperbarui password.");
+      setError(result.message || "Failed to update password.");
       setLoading(false);
       return;
     }
 
-    setSuccess(result.message || "Password berhasil diperbarui.");
+    setSuccess(result.message || "Password updated successfully.");
     setLoading(false);
 
     setTimeout(() => {
@@ -67,7 +67,7 @@ export function ResetPasswordForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password Baru</FormLabel>
+              <FormLabel>New Password</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" autoComplete="new-password" {...field} />
               </FormControl>
@@ -80,7 +80,7 @@ export function ResetPasswordForm() {
           name="confirmPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Konfirmasi Password</FormLabel>
+              <FormLabel>Confirm Password</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" autoComplete="new-password" {...field} />
               </FormControl>
@@ -93,44 +93,9 @@ export function ResetPasswordForm() {
         {success && <p className="text-sm text-green-600">{success}</p>}
 
         <Button className="w-full" type="submit" disabled={loading}>
-          {loading ? "Menyimpan..." : "Simpan Password Baru"}
+          {loading ? "Saving..." : "Save New Password"}
         </Button>
       </form>
     </Form>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

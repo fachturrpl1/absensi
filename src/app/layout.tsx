@@ -67,7 +67,7 @@ export async function generateMetadata(): Promise<Metadata> {
         ? `${process.env.APP_URL}`
         : process.env.VERCEL_URL
           ? `https://${process.env.VERCEL_URL}`
-          : `http://localhost:${process.env.PORT || 3000}`
+          : `https://absensi-ubig.vercel.app`
     ),
     alternates: { canonical: "/" },
     manifest: "/manifest.json",

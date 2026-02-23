@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const oauth_verifier = searchParams.get('oauth_verifier')
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3007')
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://absensi-ubig.vercel.app')
 
     if (!oauth_token || !oauth_verifier) {
         return NextResponse.redirect(`${baseUrl}/organization/applications?error=trello_missing_params`)

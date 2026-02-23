@@ -44,7 +44,7 @@ export default function AccountInactivePage() {
     async function fetchProfile() {
       try {
         const supabase = createClient();
-        
+
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -98,7 +98,7 @@ export default function AccountInactivePage() {
     const interval = setInterval(async () => {
       await checkStatus();
     }, 30000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -106,7 +106,7 @@ export default function AccountInactivePage() {
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) return;
 
       const { data: member } = await supabase
@@ -130,7 +130,7 @@ export default function AccountInactivePage() {
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         toast.error("Please log in again");
         router.push("/auth/login");
@@ -161,12 +161,12 @@ export default function AccountInactivePage() {
   useEffect(() => {
     const sidebar = document.querySelector('[data-sidebar]') || document.querySelector('aside');
     const navbar = document.querySelector('[data-navbar]') || document.querySelector('nav');
-    
+
     if (sidebar instanceof HTMLElement) sidebar.style.display = 'none';
     if (navbar instanceof HTMLElement) navbar.style.display = 'none';
-    
+
     document.body.style.marginLeft = '0';
-    
+
     return () => {
       if (sidebar instanceof HTMLElement) sidebar.style.display = '';
       if (navbar instanceof HTMLElement) navbar.style.display = '';
@@ -187,8 +187,8 @@ export default function AccountInactivePage() {
 
   const fullName = profile
     ? [profile.first_name, profile.middle_name, profile.last_name]
-        .filter(Boolean)
-        .join(" ")
+      .filter(Boolean)
+      .join(" ")
     : "User";
 
   if (loading) {
@@ -284,7 +284,7 @@ export default function AccountInactivePage() {
 
         {/* Action Buttons */}
         <div className="space-y-3">
-          <Button 
+          <Button
             onClick={handleRefresh}
             disabled={checking}
             className="w-full flex items-center gap-2 hover:scale-105 transition-transform duration-200 bg-green-600 hover:bg-green-700"
@@ -294,16 +294,16 @@ export default function AccountInactivePage() {
           </Button>
 
           <div className="flex gap-3">
-            <Button 
+            <Button
               variant="outline"
               onClick={handleSignOut}
               className="flex-1 hover:scale-105 transition-transform duration-200"
             >
               Sign Out
             </Button>
-            
+
             <a href="mailto:hr@company.com?subject=Account%20Reactivation%20Request" className="flex-1">
-              <Button 
+              <Button
                 variant="outline"
                 className="w-full hover:scale-105 transition-transform duration-200"
               >
