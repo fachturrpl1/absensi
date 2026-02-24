@@ -2,6 +2,8 @@
 
 import React, { useMemo, useState } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
+import { getProjects } from "@/action/project"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -34,18 +36,16 @@ import AddProjectDialog from "@/components/projects/AddProjectDialog"
 import EditProjectDialog from "@/components/projects/EditProjectDialog"
 import TransferProjectDialog from "@/components/projects/TransferProjectDialog"
 import type { Project, NewProjectForm } from "@/components/projects/types"
-import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_CLIENTS, DUMMY_PROJECTS, PROJECT_MEMBER_MAP, getTaskCountFromTasksPageByProjectId, getTeamNamesByProjectId } from "@/lib/data/dummy-data"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { getAllProjects, createProject, updateProject, deleteProject, archiveProject, unarchiveProject, IProject, getSimpleMembersForDropdown } from "@/action/projects"
 import { useOrgStore } from "@/store/org-store"
+
+import { PaginationFooter } from "@/components/tables/pagination-footer"
 
 function mapProjectData(p: IProject): Project {
     // Build members list from real team_members data
     const memberMap = new Map<string, { id: string; name: string; avatarUrl: string | null }>();
 
     if (p.team_projects && Array.isArray(p.team_projects)) {
-        // Debug
-        console.log(`[mapProjectData] project=${p.name} team_projects:`, JSON.stringify(p.team_projects?.slice(0, 1), null, 2));
         p.team_projects.forEach((tp: any) => {
             if (tp.teams?.team_members && Array.isArray(tp.teams.team_members)) {
                 tp.teams.team_members.forEach((tm: any) => {
@@ -54,11 +54,7 @@ function mapProjectData(p: IProject): Project {
                         const uid = profile.id || tm.organization_members?.user_id;
                         if (!memberMap.has(uid)) {
                             const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Unknown";
-                            memberMap.set(uid, {
-                                id: uid,
-                                name: fullName,
-                                avatarUrl: profile.profile_photo_url || null,
-                            });
+                            memberMap.set(uid, { id: uid, name: fullName, avatarUrl: profile.profile_photo_url || null });
                         }
                     }
                 });
@@ -71,7 +67,6 @@ function mapProjectData(p: IProject): Project {
         ? p.team_projects.map((tp: any) => tp.teams?.name).filter(Boolean)
         : [];
 
-    // Read real client name from client_projects → clients join
     const clientName: string | null =
         (p as any).client_projects?.[0]?.clients?.name ?? null;
 
@@ -96,6 +91,8 @@ function initialsFromName(name: string): string {
 }
 
 export default function ProjectsPage() {
+    const searchParams = useSearchParams()
+    const urlClientName = searchParams.get("client")
     const [activeTab, setActiveTab] = useState<"active" | "archived">("active")
     const [search, setSearch] = useState("")
     const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -117,12 +114,11 @@ export default function ProjectsPage() {
             setIsLoading(false);
             return;
         }
-
         const res = await getAllProjects(organizationId);
         if (res.success && res.data) {
             setData((res.data as IProject[]).map(mapProjectData));
         } else {
-            console.error("fetchProjects returned false. message:", res.message);
+            console.error("fetchProjects failed:", res.message);
             setFetchError(res.message || "Failed to fetch projects");
         }
         setIsLoading(false);
@@ -130,13 +126,11 @@ export default function ProjectsPage() {
 
     React.useEffect(() => {
         fetchProjects();
-        // Also fetch real org members for dialogs
         if (organizationId) {
             getSimpleMembersForDropdown(organizationId)
                 .then(res => { if (res.success) setRealMembers(res.data); });
         }
     }, [organizationId]);
-
     // dialogs
     const [addOpen, setAddOpen] = useState(false)
     const [importOpen, setImportOpen] = useState(false)
@@ -200,11 +194,19 @@ export default function ProjectsPage() {
     const [transferProject, setTransferProject] = useState<Project | null>(null)
 
     const filtered = useMemo(() => {
-        const byTab = data.filter(p => (activeTab === "active" ? !p.archived : p.archived))
+        let result = data.filter(p => (activeTab === "active" ? !p.archived : p.archived))
+
         const q = search.trim().toLowerCase()
-        if (!q) return byTab
-        return byTab.filter(p => p.name.toLowerCase().includes(q))
-    }, [activeTab, data, search])
+        if (q) {
+            result = result.filter(p => p.name.toLowerCase().includes(q))
+        }
+
+        if (urlClientName) {
+            result = result.filter(p => p.clientName?.toLowerCase() === urlClientName.toLowerCase())
+        }
+
+        return result
+    }, [activeTab, data, search, urlClientName])
 
     const paginated = useMemo(() => {
         const start = (currentPage - 1) * pageSize
@@ -243,7 +245,7 @@ export default function ProjectsPage() {
     }
 
     return (
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <div className="flex flex-col gap-4 p-4 pt-0">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold">Projects</h1>
@@ -319,7 +321,7 @@ export default function ProjectsPage() {
                         </span>
                     </div>
 
-                    <Separator className="my-8" />
+                    <Separator className="my-4" />
 
                     {/* Table */}
                     <div className="mt-4 md:mt-6">

@@ -98,6 +98,19 @@ export interface IPositions {
 
 }
 
+export interface IProject {
+    id: number;
+    organization_id: number;
+    name: string;
+    client_id?: number | null;
+    is_billable: boolean;
+    is_active: boolean;
+    archived: boolean;
+    color?: string | null;
+    created_at: string;
+    updated_at?: string;
+}
+
 export interface IOrganization_member {
     id: string;
     organization_id: string;
@@ -423,4 +436,67 @@ export interface IMemberInvitation {
     role?: IRole;
     department?: IDepartments;
     position?: IPositions;
+}
+
+export interface ITask {
+    id: number;
+    project_id: number;
+    parent_task_id?: number | null;
+    name: string;
+    description?: string | null;
+    status: 'todo' | 'in_progress' | 'review' | 'done' | 'archived' | 'deleted';
+    priority: 'low' | 'medium' | 'high' | 'urgent';
+    estimated_hours?: number | null;
+    actual_hours?: number;
+    due_date?: string | null;
+    created_at?: string;
+    updated_at?: string;
+    deleted_at?: string | null;
+
+    project?: {
+        id: number;
+        name: string;
+        client?: Array<{
+            id: number;
+            name: string;
+        }>;
+    };
+    assignees?: ITaskAssignee[];
+}
+
+export interface ITaskAssignee {
+    id: number;
+    task_id: number;
+    organization_member_id: number;
+    role: 'assignee' | 'reviewer' | 'watcher';
+    is_primary: boolean;
+    assigned_at?: string;
+    updated_at?: string;
+
+    member?: IOrganization_member;
+}
+
+export interface IClient {
+    id: number;
+    organization_id: number;
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    status: 'active' | 'inactive' | 'archived' | 'deleted';
+    budget_type?: 'total_hours' | 'total_cost' | 'monthly_hours' | 'monthly_cost' | null;
+    budget_amount?: number | null;
+    budget_currency?: string | null;
+    notify_percentage?: number | null;
+    invoice_notes?: string | null;
+    net_terms_days?: number | null;
+    auto_invoice_frequency?: string | null;
+    created_at?: string;
+    updated_at?: string;
+    deleted_at?: string | null;
+
+    // Computed or Joined fields
+    project_count?: number;
+    task_count?: number;
+    projects?: IProject[];
 }

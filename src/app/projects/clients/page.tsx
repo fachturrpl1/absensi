@@ -1,15 +1,17 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog"
-import { Plus, Search } from "lucide-react"
+import { Plus, Search, Loader2 } from "lucide-react"
 import { AddClientDialog, type ClientFormData } from "@/components/projects/AddClientDialog"
 import { ClientsTable, type Client } from "@/components/projects/ClientsTable"
-import { DUMMY_CLIENTS } from "@/lib/data/dummy-data"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { getClients, createClientAction, updateClientAction, updateClientStatus, deleteClientAction } from "@/action/client"
+import { IClient } from "@/interface"
+import { toast } from "sonner"
 
 export default function ClientsPage() {
     const [activeTab, setActiveTab] = useState<"active" | "archived">("active")
@@ -23,8 +25,45 @@ export default function ClientsPage() {
     const [archiveTargets, setArchiveTargets] = useState<string[]>([])
     const [clientToDelete, setClientToDelete] = useState<string | null>(null)
 
-    // Use dummy data from file
-    const [clients, setClients] = useState<Client[]>(DUMMY_CLIENTS)
+    // Use real data from database
+    const [clients, setClients] = useState<Client[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+
+    const fetchData = async () => {
+        setIsLoading(true)
+        const response = await getClients()
+        if (response.success) {
+            // Map IClient to UI Client interface
+            const mappedClients: Client[] = response.data.map((c: IClient) => ({
+                id: c.id.toString(),
+                name: c.name,
+                budget: c.budget_amount ? `Budget: ${c.budget_amount}` : "Budget: none",
+                autoInvoicing: !!c.auto_invoice_frequency,
+                isArchived: c.status === 'archived',
+                address: c.address || "",
+                phone: c.phone || "",
+                emails: c.email ? [c.email] : [],
+                projectCount: c.project_count,
+                taskCount: c.task_count,
+                budgetType: c.budget_type || "",
+                budgetAmount: c.budget_amount || 0,
+                notifyPercentage: c.notify_percentage || 80,
+                invoiceNotes: c.invoice_notes || "",
+                netTermsDays: c.net_terms_days || 30,
+                autoInvoiceFrequency: c.auto_invoice_frequency || "",
+                projectIds: c.projects?.map(p => p.id.toString()) || [],
+                createdAt: c.created_at
+            }))
+            setClients(mappedClients)
+        } else {
+            toast.error(response.message || "Failed to fetch clients")
+        }
+        setIsLoading(false)
+    }
+
+    useEffect(() => {
+        fetchData()
+    }, [])
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1)
@@ -48,19 +87,32 @@ export default function ClientsPage() {
 
     const totalPages = Math.ceil(filteredClients.length / pageSize) || 1
 
-    const handleAddClient = (formData: ClientFormData) => {
-        const newClient: Client = {
-            id: Date.now().toString(),
+    const handleAddClient = async (formData: ClientFormData) => {
+        const newClient: Partial<IClient> = {
             name: formData.name,
-            budget: "Budget: none",
-            autoInvoicing: false,
-            isArchived: false,
             address: formData.address,
             phone: formData.phone,
-            emails: formData.emails ? formData.emails.split(",").map((e) => e.trim()) : [],
+            email: formData.emails.split(",")[0]?.trim() || null,
+            status: 'active',
+            budget_type: formData.budgetType as any || null,
+            budget_amount: parseFloat(formData.budgetCost) || null,
+            notify_percentage: parseInt(formData.budgetNotifyAt) || 80,
+            invoice_notes: formData.invoiceNotes,
+            net_terms_days: parseInt(formData.invoiceNetTerms) || 30,
+            auto_invoice_frequency: formData.autoInvoicing === 'custom' ? formData.aiFrequency : null
         }
-        setClients([...clients, newClient])
-        setSelectedIds([])
+
+        const projectIds = formData.projects.map(id => parseInt(id))
+
+        const response = await createClientAction(newClient, projectIds)
+        if (response.success) {
+            toast.success("Client added successfully")
+            fetchData()
+            setDialogOpen(false)
+            setSelectedIds([])
+        } else {
+            toast.error(response.message || "Failed to add client")
+        }
     }
 
     const handleEditClient = (client: Client) => {
@@ -68,22 +120,32 @@ export default function ClientsPage() {
         setDialogOpen(true)
     }
 
-    const handleUpdateClient = (formData: ClientFormData) => {
+    const handleUpdateClient = async (formData: ClientFormData) => {
         if (!editingClient) return
-        setClients(
-            clients.map((c) =>
-                c.id === editingClient.id
-                    ? {
-                        ...c,
-                        name: formData.name,
-                        address: formData.address,
-                        phone: formData.phone,
-                        emails: formData.emails ? formData.emails.split(",").map((e) => e.trim()) : [],
-                    }
-                    : c
-            )
-        )
-        setEditingClient(null)
+        const updatedData: Partial<IClient> = {
+            name: formData.name,
+            address: formData.address,
+            phone: formData.phone,
+            email: formData.emails.split(",")[0]?.trim() || null,
+            budget_type: formData.budgetType as any || null,
+            budget_amount: parseFloat(formData.budgetCost) || null,
+            notify_percentage: parseInt(formData.budgetNotifyAt) || 80,
+            invoice_notes: formData.invoiceNotes,
+            net_terms_days: parseInt(formData.invoiceNetTerms) || 30,
+            auto_invoice_frequency: formData.autoInvoicing === 'custom' ? formData.aiFrequency : null
+        }
+
+        const projectIds = formData.projects.map(id => parseInt(id))
+
+        const response = await updateClientAction(parseInt(editingClient.id), updatedData, projectIds)
+        if (response.success) {
+            toast.success("Client updated successfully")
+            fetchData()
+            setDialogOpen(false)
+            setEditingClient(null)
+        } else {
+            toast.error(response.message || "Failed to update client")
+        }
     }
 
     const handleArchive = (id: string) => {
@@ -117,28 +179,45 @@ export default function ClientsPage() {
         setClientToDelete(id)
     }
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (clientToDelete) {
-            setClients(clients.filter(c => c.id !== clientToDelete))
-            setSelectedIds(selectedIds.filter(sid => sid !== clientToDelete))
+            const response = await deleteClientAction(parseInt(clientToDelete))
+            if (response.success) {
+                toast.success("Client deleted successfully")
+                fetchData()
+                setSelectedIds(selectedIds.filter(sid => sid !== clientToDelete))
+            } else {
+                toast.error(response.message || "Failed to delete client")
+            }
             setClientToDelete(null)
         }
     }
 
-    const confirmArchive = () => {
+    const confirmArchive = async () => {
         if (archiveTargets.length > 0) {
-            setClients(clients.map((c) =>
-                archiveTargets.includes(c.id) ? { ...c, isArchived: true } : c
-            ))
-            setSelectedIds(prev => prev.filter(id => !archiveTargets.includes(id)))
-            setActiveTab("archived")
+            const isRestore = activeTab === "archived";
+            const newStatus = isRestore ? 'active' : 'archived';
+
+            // We handle batch update by sequence for now or we could add a batch action
+            const promises = archiveTargets.map(id => updateClientStatus(parseInt(id), newStatus as any))
+            const results = await Promise.all(promises)
+
+            const successCount = results.filter(r => r.success).length
+            if (successCount > 0) {
+                toast.success(`${successCount} clients ${isRestore ? 'restored' : 'archived'}`)
+                fetchData()
+                setSelectedIds(prev => prev.filter(id => !archiveTargets.includes(id)))
+                setActiveTab(isRestore ? "active" : "archived")
+            } else {
+                toast.error("Failed to update clients")
+            }
         }
         setArchiveOpen(false)
         setArchiveTargets([])
     }
 
     return (
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <div className="flex flex-col gap-4 p-4 pt-0">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold">Clients</h1>
@@ -220,10 +299,15 @@ export default function ClientsPage() {
                         </div>
                     )}
 
-                    <Separator className="my-8" />
+                    <Separator className="my-4" />
 
                     {/* Table */}
-                    <div className="overflow-x-auto w-full mt-4 md:mt-6">
+                    <div className="overflow-x-auto w-full mt-4 md:mt-6 relative">
+                        {isLoading && (
+                            <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
+                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                            </div>
+                        )}
                         <ClientsTable
                             clients={paginatedClients}
                             selectedIds={selectedIds}
@@ -246,7 +330,7 @@ export default function ClientsPage() {
                         page={currentPage}
                         totalPages={totalPages}
                         onPageChange={(p) => setCurrentPage(p)}
-                        isLoading={false}
+                        isLoading={isLoading}
                         from={paginatedClients.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
                         to={Math.min(currentPage * pageSize, filteredClients.length)}
                         total={filteredClients.length}
@@ -272,27 +356,27 @@ export default function ClientsPage() {
                             phone: editingClient.phone || "",
                             phoneCountry: "id",
                             emails: editingClient.emails?.join(", ") || "",
-                            projects: [],
+                            projects: editingClient.projectIds || [],
                             teams: [],
                             // Budget
-                            budgetType: "",
-                            budgetBasedOn: "",
-                            budgetCost: "",
-                            budgetNotifyAt: "80",
-                            budgetResets: "never",
+                            budgetType: editingClient.budgetType || "",
+                            budgetBasedOn: editingClient.budgetType?.includes('hours') ? 'hours' : 'cost',
+                            budgetCost: editingClient.budgetAmount?.toString() || "",
+                            budgetNotifyAt: editingClient.notifyPercentage?.toString() || "80",
+                            budgetResets: editingClient.budgetType?.includes('monthly') ? 'monthly' : 'never',
                             budgetStartDate: "",
                             budgetIncludeNonBillable: false,
                             // Invoicing
-                            invoiceNotesCustom: false,
-                            invoiceNotes: "",
-                            invoiceNetTermsCustom: false,
-                            invoiceNetTerms: "30",
+                            invoiceNotesCustom: !!editingClient.invoiceNotes,
+                            invoiceNotes: editingClient.invoiceNotes || "",
+                            invoiceNetTermsCustom: editingClient.netTermsDays !== 30,
+                            invoiceNetTerms: editingClient.netTermsDays?.toString() || "30",
                             invoiceTaxRateCustom: false,
                             invoiceTaxRate: "",
-                            autoInvoicing: "off",
+                            autoInvoicing: editingClient.autoInvoiceFrequency ? "custom" : "off",
                             aiAmountBasedOn: "hourly",
                             aiFixedPrice: "",
-                            aiFrequency: "monthly",
+                            aiFrequency: editingClient.autoInvoiceFrequency || "monthly",
                             aiDelaySending: "0",
                             aiSendReminder: "0",
                             aiLineItems: "user-project-date",

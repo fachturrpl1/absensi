@@ -1,6 +1,4 @@
-"use client"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -12,7 +10,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { DUMMY_PROJECTS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
+import { DUMMY_TEAMS } from "@/lib/data/dummy-data"
+import { getProjects } from "@/action/project"
+import { IProject } from "@/interface"
 
 interface AddClientDialogProps {
     open: boolean
@@ -93,6 +93,20 @@ export function AddClientDialog({ open, onOpenChange, onSave, initialData }: Add
             aiIncludeExpenses: false
         }
     )
+
+    const [allProjects, setAllProjects] = useState<IProject[]>([])
+
+    useEffect(() => {
+        const fetchProjects = async () => {
+            const response = await getProjects()
+            if (response.success) {
+                setAllProjects(response.data)
+            }
+        }
+        if (open) {
+            fetchProjects()
+        }
+    }, [open])
 
     const handleSave = () => {
         if (!formData.name.trim()) {
@@ -224,33 +238,37 @@ export function AddClientDialog({ open, onOpenChange, onSave, initialData }: Add
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <div className="text-xs font-semibold text-muted-foreground">PROJECTS / WORK ORDERS</div>
-                                <Button variant="link" className="h-auto p-0 text-gray-900 hover:cursor-pointer" onClick={() => setFormData({ ...formData, projects: DUMMY_PROJECTS.map(p => p.id) })}>
+                                <Button variant="link" className="h-auto p-0 text-gray-900 hover:cursor-pointer" onClick={() => setFormData({ ...formData, projects: allProjects.map(p => p.id.toString()) })}>
                                     Select all
                                 </Button>
                             </div>
                         </div>
                         <ScrollArea className="h-[200px] w-full rounded-md border p-4">
                             <div className="space-y-4">
-                                {DUMMY_PROJECTS.map((project) => (
-                                    <div key={project.id} className="flex items-center space-x-2">
-                                        <Checkbox
-                                            id={project.id}
-                                            checked={formData.projects.includes(project.id)}
-                                            onCheckedChange={(checked) => {
-                                                const newProjects = checked
-                                                    ? [...formData.projects, project.id]
-                                                    : formData.projects.filter(p => p !== project.id)
-                                                setFormData({ ...formData, projects: newProjects })
-                                            }}
-                                        />
-                                        <label
-                                            htmlFor={project.id}
-                                            className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                        >
-                                            {project.name}
-                                        </label>
-                                    </div>
-                                ))}
+                                {allProjects.length === 0 ? (
+                                    <div className="text-sm text-muted-foreground text-center py-4">No projects found</div>
+                                ) : (
+                                    allProjects.map((project) => (
+                                        <div key={project.id} className="flex items-center space-x-2">
+                                            <Checkbox
+                                                id={project.id.toString()}
+                                                checked={formData.projects.includes(project.id.toString())}
+                                                onCheckedChange={(checked) => {
+                                                    const newProjects = checked
+                                                        ? [...formData.projects, project.id.toString()]
+                                                        : formData.projects.filter(p => p !== project.id.toString())
+                                                    setFormData({ ...formData, projects: newProjects })
+                                                }}
+                                            />
+                                            <label
+                                                htmlFor={project.id.toString()}
+                                                className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                            >
+                                                {project.name}
+                                            </label>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </ScrollArea>
                     </TabsContent>
