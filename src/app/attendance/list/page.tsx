@@ -412,25 +412,6 @@ function ModernAttendanceListCloned() {
     }
   }
 
-  function MethodDisplay(props: { checkInMethod?: string | null; checkOutMethod?: string | null }) {
-    const fmt = (s?: string | null) => {
-      if (!s) return "None"
-      return String(s).toLowerCase().replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-    }
-    return (
-      <div className="flex flex-col gap-1 text-xs">
-        <div className="flex items-center gap-1">
-          <span className="text-muted-foreground">IN:</span>
-          <span className="font-medium">{fmt(props.checkInMethod)}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-muted-foreground">OUT:</span>
-          <span className="font-medium">{fmt(props.checkOutMethod)}</span>
-        </div>
-      </div>
-    )
-  }
-
   const LocationDisplay: React.FC<{ checkInLocationName: string | null; checkOutLocationName: string | null }> = () => null
 
   const handleSelectAll = () => {
@@ -551,7 +532,7 @@ function ModernAttendanceListCloned() {
                   fetchData()
                 }}
                 title="Refresh"
-                className="border-gray-300 shrink-0 bg-gray-900 text-white hover:cursor-pointer flex-1 md:flex-none"
+                className="shrink-0 bg-zinc-900 text-zinc-50 hover:bg-zinc-900/90 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-50/90 hover:cursor-pointer flex-1 md:flex-none border-0"
               >
                 <RotateCcw className="w-4 h-4" />
               </Button>
@@ -566,7 +547,7 @@ function ModernAttendanceListCloned() {
 
               {/* Manual Entry */}
               <Link href="/attendance/list/add" className="flex-1 md:flex-none">
-                <Button className="w-full bg-black text-white hover:bg-black/90 whitespace-nowrap">
+                <Button className="w-full bg-zinc-900 text-zinc-50 hover:bg-zinc-900/90 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-50/90 whitespace-nowrap border-0">
                   <Plus className="mr-2 h-4 w-4" />
                   Entry
                 </Button>
@@ -670,9 +651,10 @@ function ModernAttendanceListCloned() {
                       <th className="p-3 text-left text-xs font-medium">Member</th>
                       <th className="p-3 text-left text-xs font-medium">Check In</th>
                       <th className="p-3 text-left text-xs font-medium">Check Out</th>
+                      <th className="p-3 text-left text-xs font-medium">Break In</th>
+                      <th className="p-3 text-left text-xs font-medium">Break Out</th>
                       <th className="p-3 text-left text-xs font-medium">Work Hours</th>
                       <th className="p-3 text-left text-xs font-medium">Status</th>
-                      <th className="p-3 text-left text-xs font-medium">Method</th>
                       {SHOW_LOCATION ? <th className="p-3 text-left text-xs font-medium">Location</th> : null}
                       <th className="p-3 text-left text-xs font-medium">Actions</th>
                     </tr>
@@ -751,6 +733,11 @@ function ModernAttendanceListCloned() {
                                 <div className="flex flex-col text-xs font-mono">
                                   <span className="font-medium whitespace-nowrap">{datePart}</span>
                                   <span className="text-muted-foreground">{timePart}</span>
+                                  {record.checkInMethod && (
+                                    <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">
+                                      {record.checkInMethod}
+                                    </span>
+                                  )}
                                 </div>
                               )
                             })()}
@@ -758,6 +745,37 @@ function ModernAttendanceListCloned() {
                           <td className="p-3">
                             {(() => {
                               const formatted = record.checkOut ? formatLocalTime(record.checkOut, userTimezone, "24h", true) : "-"
+                              if (formatted === "-") return <span className="text-xs font-mono">-</span>
+                              const [datePart, timePart] = formatted.split(', ')
+                              return (
+                                <div className="flex flex-col text-xs font-mono">
+                                  <span className="font-medium whitespace-nowrap">{datePart}</span>
+                                  <span className="text-muted-foreground">{timePart}</span>
+                                  {record.checkOutMethod && (
+                                    <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">
+                                      {record.checkOutMethod}
+                                    </span>
+                                  )}
+                                </div>
+                              )
+                            })()}
+                          </td>
+                          <td className="p-3">
+                            {(() => {
+                              const formatted = record.actualBreakStart ? formatLocalTime(record.actualBreakStart, userTimezone, "24h", true) : "-"
+                              if (formatted === "-") return <span className="text-xs font-mono">-</span>
+                              const [datePart, timePart] = formatted.split(', ')
+                              return (
+                                <div className="flex flex-col text-xs font-mono">
+                                  <span className="font-medium whitespace-nowrap">{datePart}</span>
+                                  <span className="text-muted-foreground">{timePart}</span>
+                                </div>
+                              )
+                            })()}
+                          </td>
+                          <td className="p-3">
+                            {(() => {
+                              const formatted = record.actualBreakEnd ? formatLocalTime(record.actualBreakEnd, userTimezone, "24h", true) : "-"
                               if (formatted === "-") return <span className="text-xs font-mono">-</span>
                               const [datePart, timePart] = formatted.split(', ')
                               return (
@@ -776,17 +794,15 @@ function ModernAttendanceListCloned() {
                           <td className="p-3">
                             <Badge className={cn("gap-1 px-2 py-0.5 text-xs", getStatusColor(record.status))}>
                               {getStatusIcon(record.status)}
-                              {record.status}
+                              <span className="capitalize">{record.status.charAt(0).toUpperCase() + record.status.slice(1)}</span>
                             </Badge>
                           </td>
-                          <td className="p-3">
-                            <MethodDisplay checkInMethod={record.checkInMethod} checkOutMethod={record.checkOutMethod} />
-                          </td>
-                          {SHOW_LOCATION ? (
-                            <td className="p-3">
-                              <LocationDisplay checkInLocationName={record.checkInLocationName} checkOutLocationName={record.checkOutLocationName} />
-                            </td>
-                          ) : null}
+                          {
+                            SHOW_LOCATION ? (
+                              <td className="p-3" >
+                                <LocationDisplay checkInLocationName={record.checkInLocationName} checkOutLocationName={record.checkOutLocationName} />
+                              </td>
+                            ) : null}
                           <td className="p-3">
                             <div className="flex items-center gap-1">
                               <Button variant="ghost" size="icon" title="Edit" onClick={() => handleEditSingle(record)}>
@@ -804,26 +820,29 @@ function ModernAttendanceListCloned() {
                 </table>
               </div>
 
-            </CardContent>
-          </Card>
+            </CardContent >
+          </Card >
 
           {/* Pagination Footer */}
-          {!loading && (
-            <PaginationFooter
-              page={currentPage}
-              totalPages={Math.max(1, Math.ceil((Math.max(totalItems, attendanceData.length) || 0) / itemsPerPage))}
-              onPageChange={(p) => setCurrentPage(Math.max(1, p))}
-              isLoading={loading}
-              from={(Math.max(totalItems, attendanceData.length) > 0) ? (currentPage - 1) * itemsPerPage + 1 : 0}
-              to={(Math.max(totalItems, attendanceData.length) > 0) ? Math.min(currentPage * itemsPerPage, Math.max(totalItems, attendanceData.length)) : 0}
-              total={Math.max(totalItems, attendanceData.length)}
-              pageSize={itemsPerPage}
-              onPageSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
-              pageSizeOptions={[10, 20, 50]}
-            />
-          )}
-        </div>
-      )}
+          {
+            !loading && (
+              <PaginationFooter
+                page={currentPage}
+                totalPages={Math.max(1, Math.ceil((Math.max(totalItems, attendanceData.length) || 0) / itemsPerPage))}
+                onPageChange={(p) => setCurrentPage(Math.max(1, p))}
+                isLoading={loading}
+                from={(Math.max(totalItems, attendanceData.length) > 0) ? (currentPage - 1) * itemsPerPage + 1 : 0}
+                to={(Math.max(totalItems, attendanceData.length) > 0) ? Math.min(currentPage * itemsPerPage, Math.max(totalItems, attendanceData.length)) : 0}
+                total={Math.max(totalItems, attendanceData.length)}
+                pageSize={itemsPerPage}
+                onPageSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
+                pageSizeOptions={[10, 20, 50]}
+              />
+            )
+          }
+        </div >
+      )
+      }
       {/* Confirm Dialog */}
       <ConfirmDialog
         open={confirmOpen}

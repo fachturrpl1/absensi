@@ -164,23 +164,71 @@ CREATE TABLE IF NOT EXISTS tasks (
     
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    status VARCHAR(50) DEFAULT 'todo',
-    priority VARCHAR(50) DEFAULT 'medium',
+    status VARCHAR(50) DEFAULT 'todo' CHECK (status IN ('todo', 'in_progress', 'review', 'done', 'archived')),
+    priority VARCHAR(50) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
     
     estimated_hours DECIMAL(8,2),
     actual_hours DECIMAL(8,2) DEFAULT 0,
     due_date TIMESTAMP WITH TIME ZONE,
     
-    -- Single Assignee Support (Simpler than many-to-many)
-    assignee_id INT REFERENCES organization_members(id),
-    
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON tasks(assignee_id);
+-- 2. TASK_ASSIGNEES (Many-to-Many: 1 task → N users, 1 user → N tasks)
+CREATE TABLE IF NOT EXISTS task_assignees (
+    id SERIAL PRIMARY KEY,
+    task_id INT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    organization_member_id INT NOT NULL REFERENCES organization_members(id) ON DELETE CASCADE,
+    
+    -- Role support (assignee, reviewer, watcher)
+    role VARCHAR(50) DEFAULT 'assignee' CHECK (role IN ('assignee', 'reviewer', 'watcher')),
+    is_primary BOOLEAN DEFAULT false,  -- Primary assignee untuk quick lookup
+    
+    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    UNIQUE(task_id, organization_member_id)
+);
 
+-- 3. Production Indexes
+CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent_task_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_hierarchy ON tasks(project_id, parent_task_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_assignee_task ON task_assignees(task_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_assignee_member ON task_assignees(organization_member_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_assignee_role ON task_assignees(role);
+
+-- Validasi Assignee (Task-level access) harus memiliki akses ke Project
+CREATE OR REPLACE FUNCTION validate_task_assignee_access()
+RETURNS TRIGGER AS $$
+DECLARE
+    target_project_id INT;
+BEGIN
+    -- Ambil project_id dari task terkait
+    SELECT project_id INTO target_project_id FROM tasks WHERE id = NEW.task_id;
+
+    -- Cek apakah assignee (user) punya akses ke project via Team atau Direct Project Member
+    IF NOT EXISTS (
+        -- Cek via Direct Project Members
+        SELECT 1 FROM project_members 
+        WHERE project_id = target_project_id AND organization_member_id = NEW.organization_member_id
+        UNION
+        -- Cek via Team Members
+        SELECT 1 FROM team_members tm
+        JOIN team_projects tp ON tm.team_id = tp.team_id
+        WHERE tp.project_id = target_project_id AND tm.organization_member_id = NEW.organization_member_id
+    ) THEN
+        RAISE EXCEPTION 'User doesn`t have access to this project from this task (Not a Team Member or Project Member)';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_validate_task_assignee
+    BEFORE INSERT OR UPDATE OF organization_member_id ON task_assignees
+    FOR EACH ROW EXECUTE FUNCTION validate_task_assignee_access();
 
 -- =============================================
 -- 7a. TIMESHEETS & ENTRIES (From Hubstaff)
@@ -516,7 +564,24 @@ ALTER TABLE location_logs ENABLE ROW LEVEL SECURITY;
 -- Basic Organization Isolation Policies
 CREATE POLICY "Teams visible to org" ON teams FOR SELECT USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid()));
 CREATE POLICY "Projects visible to org" ON projects FOR SELECT USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid()));
-CREATE POLICY "Tasks visible to org" ON tasks FOR SELECT USING (project_id IN (SELECT id FROM projects WHERE organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid())));
+CREATE POLICY "Tasks visible to org" ON tasks FOR SELECT USING (
+    id IN (
+        SELECT ta.task_id FROM task_assignees ta 
+        WHERE ta.organization_member_id IN (
+            SELECT id FROM organization_members WHERE user_id = auth.uid()
+        )
+    )
+    OR project_id IN (
+        SELECT project_id FROM project_members pm 
+        WHERE pm.organization_member_id IN (
+            SELECT id FROM organization_members WHERE user_id = auth.uid()
+        )
+    )
+);
+ALTER TABLE task_assignees ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Assignees see own relations" ON task_assignees FOR SELECT USING (
+    organization_member_id IN (SELECT id FROM organization_members WHERE user_id = auth.uid())
+);
 CREATE POLICY "Timesheets visible to own" ON timesheets FOR SELECT USING (organization_member_id IN (SELECT id FROM organization_members WHERE user_id = auth.uid()));
 CREATE POLICY "Time entries visible to own" ON time_entries FOR SELECT USING (organization_member_id IN (SELECT id FROM organization_members WHERE user_id = auth.uid()));
 CREATE POLICY "Activities visible to own" ON activities FOR SELECT USING (organization_member_id IN (SELECT id FROM organization_members WHERE user_id = auth.uid()));
@@ -530,3 +595,427 @@ CREATE POLICY "Productivity categories visible to org" ON productivity_categorie
 CREATE POLICY "Job sites visible to org" ON job_sites FOR SELECT USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid()));
 CREATE POLICY "Job site visits visible to own" ON job_site_visits FOR SELECT USING (organization_member_id IN (SELECT id FROM organization_members WHERE user_id = auth.uid()));
 CREATE POLICY "Location logs visible to own" ON location_logs FOR SELECT USING (organization_member_id IN (SELECT id FROM organization_members WHERE user_id = auth.uid()));
+
+
+-- =============================================
+-- 8. WORK BREAKS (NEW + INTEGRATED)
+-- =============================================
+
+-- Work Break Types (Hubstaff Policies)
+CREATE TABLE IF NOT EXISTS work_break_types (
+    id SERIAL PRIMARY KEY,
+    organization_id INT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    duration_seconds INT,
+    is_paid BOOLEAN DEFAULT false,
+    is_billable BOOLEAN DEFAULT false,
+    is_trackable BOOLEAN DEFAULT true,
+    project_id INT REFERENCES projects(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Work Breaks (Actual Events) - FULLY INTEGRATED
+CREATE TABLE IF NOT EXISTS work_breaks (
+    id SERIAL PRIMARY KEY,
+    organization_member_id INT NOT NULL REFERENCES organization_members(id),
+    work_break_type_id INT REFERENCES work_break_types(id),
+    break_date DATE NOT NULL,
+    starts_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    ends_at TIMESTAMP WITH TIME ZONE,
+    duration_seconds INT,
+    status VARCHAR(50) DEFAULT 'active',
+    -- INTEGRATION LINKS (Hubstaff-style)
+    attendance_record_id INT REFERENCES attendance_records(id) ON DELETE CASCADE,
+    work_schedule_id INT REFERENCES work_schedules(id),
+    shift_id INT REFERENCES shifts(id),
+    time_entry_id INT REFERENCES time_entries(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_break_status CHECK (status IN ('active', 'completed', 'exceeded'))
+);
+
+-- Ensure columns exist in attendance_records
+ALTER TABLE attendance_records 
+ADD COLUMN IF NOT EXISTS actual_break_start TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS actual_break_end TIMESTAMP WITH TIME ZONE;
+
+-- Ensure the column exists in work_breaks if the table was created previously
+ALTER TABLE work_breaks ADD COLUMN IF NOT EXISTS attendance_record_id INT REFERENCES attendance_records(id) ON DELETE CASCADE;
+
+-- Index for better join performance
+CREATE INDEX IF NOT EXISTS idx_work_breaks_attendance ON work_breaks(attendance_record_id);
+
+-- Automated Break Duration & Timestamp Calculation for Attendance Records
+CREATE OR REPLACE FUNCTION sync_attendance_break_duration()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Update stats in attendance_records: duration, first break start, and last break end
+    UPDATE attendance_records
+    SET 
+        break_duration_minutes = (
+            SELECT COALESCE(SUM(duration_seconds), 0) / 60
+            FROM work_breaks
+            WHERE attendance_record_id = COALESCE(NEW.attendance_record_id, OLD.attendance_record_id)
+            AND status IN ('completed', 'exceeded')
+        ),
+        actual_break_start = (
+            SELECT MIN(starts_at)
+            FROM work_breaks
+            WHERE attendance_record_id = COALESCE(NEW.attendance_record_id, OLD.attendance_record_id)
+        ),
+        actual_break_end = (
+            SELECT MAX(ends_at)
+            FROM work_breaks
+            WHERE attendance_record_id = COALESCE(NEW.attendance_record_id, OLD.attendance_record_id)
+            AND status IN ('completed', 'exceeded')
+        )
+    WHERE id = COALESCE(NEW.attendance_record_id, OLD.attendance_record_id);
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_sync_break_duration
+    AFTER INSERT OR UPDATE OF duration_seconds, status OR DELETE ON work_breaks
+    FOR EACH ROW EXECUTE FUNCTION sync_attendance_break_duration();
+
+-- =============================================
+-- PERFORMANCE INDEXES
+-- =============================================
+CREATE INDEX IF NOT EXISTS idx_work_breaks_member_date ON work_breaks(organization_member_id, break_date);
+CREATE INDEX IF NOT EXISTS idx_work_breaks_status ON work_breaks(status);
+CREATE INDEX IF NOT EXISTS idx_work_breaks_schedule ON work_breaks(work_schedule_id);
+CREATE INDEX IF NOT EXISTS idx_work_breaks_shift ON work_breaks(shift_id);
+
+-- =============================================
+-- ROW LEVEL SECURITY (RLS)
+-- =============================================
+ALTER TABLE work_break_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE work_breaks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Org break types" ON work_break_types
+FOR ALL USING (organization_id IN (
+    SELECT organization_id FROM organization_members 
+    WHERE user_id = auth.uid()
+));
+
+CREATE POLICY "Work breaks access" ON work_breaks
+FOR ALL USING (
+    organization_member_id IN (
+        SELECT id FROM organization_members 
+        WHERE organization_id IN (
+            SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+        )
+    )
+);
+
+-- =============================================
+-- FUNCTIONS & TRIGGERS (Auto-status update)
+-- =============================================
+CREATE OR REPLACE FUNCTION update_break_status()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.ends_at IS NOT NULL AND NEW.duration_seconds > 0 THEN
+        NEW.status = 'completed';
+    ELSIF NEW.starts_at < NOW() - INTERVAL '2 hours' THEN
+        NEW.status = 'exceeded';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_update_break_status
+    BEFORE UPDATE ON work_breaks
+    FOR EACH ROW EXECUTE FUNCTION update_break_status();
+
+-- Trigger for updated_at
+CREATE TRIGGER update_work_break_types_updated_at BEFORE UPDATE ON work_break_types FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_work_breaks_updated_at BEFORE UPDATE ON work_breaks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =============================================
+-- 10. MEMBER LIMITS (ADD TO YOUR MERGE)
+-- =============================================
+
+-- Member Limits (Hubstaff Limits & Expectations)
+CREATE TABLE IF NOT EXISTS member_limits (
+    id SERIAL PRIMARY KEY,
+    organization_member_id INT NOT NULL REFERENCES organization_members(id) ON DELETE CASCADE,
+    daily_limit_hours DECIMAL(5,2),
+    weekly_limit_hours DECIMAL(5,2),
+    expected_per_week_hours DECIMAL(5,2),
+    limits_by_shifts BOOLEAN DEFAULT false,
+    allowed_days VARCHAR(3)[],        -- ['mon','tue','wed','thu','fri']
+    expected_days VARCHAR(3)[],
+    current_daily_override_hours DECIMAL(5,2),
+    current_weekly_override_hours DECIMAL(5,2),
+    -- Hubstaff Refinements
+    weekly_cost_limit DECIMAL(15,2),
+    limit_action VARCHAR(50) DEFAULT 'notify',
+    notification_threshold INT DEFAULT 90,
+    -- Hubstaff Integration Links
+    work_schedule_id INT REFERENCES work_schedules(id),
+    shift_id INT REFERENCES shifts(id),
+    team_id INT REFERENCES teams(id),     -- NEW: Team-based limits
+    project_id INT REFERENCES projects(id), -- NEW: Project-specific limits
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(organization_member_id)
+);
+
+-- Separate constraints for better production safety & error message
+ALTER TABLE member_limits 
+ADD CONSTRAINT chk_limit_action CHECK (limit_action IN ('notify', 'stop_tracking')),
+ADD CONSTRAINT chk_notification_threshold CHECK (notification_threshold > 0 AND notification_threshold <= 100);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_member_limits_member ON member_limits(organization_member_id);
+CREATE INDEX IF NOT EXISTS idx_member_limits_team ON member_limits(team_id);
+CREATE INDEX IF NOT EXISTS idx_member_limits_project ON member_limits(project_id);
+
+-- RLS
+ALTER TABLE member_limits ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Member own limits" ON member_limits
+FOR ALL USING (
+    organization_member_id IN (
+        SELECT id FROM organization_members WHERE user_id = auth.uid()
+    )
+);
+
+CREATE POLICY "Team leads manage limits" ON member_limits
+FOR ALL USING (
+    EXISTS (
+        SELECT 1 FROM team_members tm
+        WHERE tm.team_id = member_limits.team_id 
+        AND tm.role IN ('lead', 'manager')
+        AND tm.organization_member_id IN (
+            SELECT id FROM organization_members WHERE user_id = auth.uid()
+        )
+    )
+    OR EXISTS (
+        SELECT 1 FROM organization_members om
+        JOIN organization_member_roles omr ON om.id = omr.organization_member_id
+        JOIN system_roles sr ON omr.role_id = sr.id
+        WHERE om.user_id = auth.uid()
+        AND sr.code IN ('super_admin', 'org_admin')
+        AND om.organization_id = (
+            SELECT organization_id FROM organization_members 
+            WHERE id = member_limits.organization_member_id
+        )
+    )
+);
+
+-- Auto-generate limits from schedule/team
+CREATE OR REPLACE FUNCTION auto_set_member_limits()
+RETURNS TRIGGER AS $$
+DECLARE
+    schedule_hours DECIMAL(5,2) := 40;
+    member_rate DECIMAL(10,2);
+BEGIN
+    -- From work schedule
+    SELECT COALESCE(SUM(wd.minimum_hours), 40) INTO schedule_hours
+    FROM work_schedule_details wd
+    JOIN work_schedules ws ON wd.work_schedule_id = ws.id
+    WHERE ws.id = NEW.work_schedule_id AND wd.is_working_day = true;
+
+    -- Get member hourly rate if linked to a project
+    IF NEW.project_id IS NOT NULL THEN
+        SELECT hourly_rate INTO member_rate 
+        FROM project_members 
+        WHERE project_id = NEW.project_id 
+        AND organization_member_id = NEW.organization_member_id;
+    END IF;
+
+    NEW.expected_per_week_hours := schedule_hours;
+    NEW.weekly_limit_hours := schedule_hours * 1.1; -- 10% buffer
+    
+    -- Auto-set cost limit if rate is found
+    IF member_rate > 0 THEN
+        NEW.weekly_cost_limit := NEW.weekly_limit_hours * member_rate;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_auto_set_member_limits
+    BEFORE INSERT OR UPDATE OF work_schedule_id, team_id ON member_limits
+    FOR EACH ROW EXECUTE FUNCTION auto_set_member_limits();
+
+-- Updated_at trigger
+CREATE TRIGGER update_member_limits_updated_at 
+BEFORE UPDATE ON member_limits 
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =============================================
+-- 11. INDEXES FOR PERFORMANCE (Hubstaff Optimized)
+-- =============================================
+
+-- Activities (High volume)
+CREATE INDEX IF NOT EXISTS idx_activities_member_date ON activities(organization_member_id, activity_date);
+CREATE INDEX IF NOT EXISTS idx_activities_project ON activities(project_id);
+CREATE INDEX IF NOT EXISTS idx_activities_time_slot ON activities(time_slot DESC);
+CREATE INDEX IF NOT EXISTS idx_activities_timesheet ON activities(timesheet_id);
+
+-- Screenshots (10K+/day)
+CREATE INDEX IF NOT EXISTS idx_screenshots_member_date ON screenshots(organization_member_id, screenshot_date DESC);
+CREATE INDEX IF NOT EXISTS idx_screenshots_recorded_at ON screenshots(recorded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_screenshots_activity ON screenshots(activity_id);
+
+-- Time Entries (Core)
+CREATE INDEX IF NOT EXISTS idx_time_entries_member_date ON time_entries(organization_member_id, entry_date);
+CREATE INDEX IF NOT EXISTS idx_time_entries_project ON time_entries(project_id) WHERE is_billable = true;
+CREATE INDEX IF NOT EXISTS idx_time_entries_timesheet ON time_entries(timesheet_id);
+
+-- Productivity Tracking
+CREATE INDEX IF NOT EXISTS idx_tool_usages_member_date ON tool_usages(organization_member_id, usage_date);
+CREATE INDEX IF NOT EXISTS idx_tool_usages_tool_name ON tool_usages(tool_name);
+CREATE INDEX IF NOT EXISTS idx_url_visits_member_date ON url_visits(organization_member_id, visit_date);
+CREATE INDEX IF NOT EXISTS idx_url_visits_domain ON url_visits(domain);
+
+-- GPS/Location
+CREATE INDEX IF NOT EXISTS idx_location_logs_member_time ON location_logs(organization_member_id, captured_at DESC);
+CREATE INDEX IF NOT EXISTS idx_job_site_visits_site ON job_site_visits(job_site_id);
+CREATE INDEX IF NOT EXISTS idx_job_site_visits_member ON job_site_visits(organization_member_id);
+
+-- Dashboard Core
+CREATE INDEX IF NOT EXISTS idx_timesheets_member_dates ON timesheets(organization_member_id, start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_timesheets_status ON timesheets(status) WHERE status IN ('open', 'submitted');
+CREATE INDEX IF NOT EXISTS idx_projects_org_status ON projects(organization_id, status);
+CREATE INDEX IF NOT EXISTS idx_tasks_project_status ON tasks(project_id, status);
+
+-- Teams & Management
+CREATE INDEX IF NOT EXISTS idx_teams_org ON teams(organization_id);
+CREATE INDEX IF NOT EXISTS idx_team_members_member ON team_members(organization_member_id);
+
+-- =============================================
+-- 12. TRIGGERS FOR UPDATED_AT (Dynamic)
+-- =============================================
+DO $$ 
+DECLARE 
+    t text;
+BEGIN 
+    FOR t IN 
+        SELECT table_name 
+        FROM information_schema.columns 
+        WHERE column_name = 'updated_at' 
+        AND table_schema = 'public'
+        AND table_name IN (
+            'projects', 'tasks', 'project_members', 'teams', 'team_members',
+            'task_assignees', 'timesheets', 'time_entries', 'activities', 'screenshots', 
+            'screenshot_settings', 'tool_usages', 'url_visits', 'productivity_categories', 
+            'job_sites', 'job_site_visits', 'work_break_types', 'work_breaks', 'member_limits'
+        )
+    LOOP 
+        EXECUTE format('
+            DROP TRIGGER IF EXISTS update_%s_updated_at ON %s;
+            CREATE TRIGGER update_%s_updated_at
+                BEFORE UPDATE ON %s
+                FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()',
+        t, t, t, t);
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =============================================
+-- 13. DOCUMENTATION COMMENTS (Team Ready)
+-- =============================================
+COMMENT ON TABLE projects IS 'Projects untuk time tracking Hubstaff-style dengan budget & billing';
+COMMENT ON TABLE tasks IS 'Tasks hierarchical dengan assignee & time estimates';
+COMMENT ON TABLE teams IS 'Cross-department teams dengan lead permissions JSONB';
+COMMENT ON TABLE activities IS 'Activity tracking 10 menit slots (keyboard/mouse/input)';
+COMMENT ON TABLE screenshots IS 'Screenshots otomatis dengan blur/delete options';
+COMMENT ON TABLE timesheets IS 'Weekly timesheets approval workflow';
+COMMENT ON TABLE tool_usages IS 'App/website usage tracking dengan productivity score';
+COMMENT ON TABLE work_breaks IS 'Break tracking terintegrasi schedules + time_entries';
+COMMENT ON TABLE member_limits IS 'Hubstaff limits (hours/cost) dengan auto-calculation';
+COMMENT ON TABLE job_sites IS 'Geofencing untuk field workers + auto project switch';
+COMMENT ON TABLE task_assignees IS 'Many-to-many assignment antara tasks dan organization members';
+
+-- =============================================
+-- 14. VIEWS FOR DASHBOARDS (Hubstaff Reports)
+-- =============================================
+
+-- View to see active tasks with all their assignees aggregated
+CREATE OR REPLACE VIEW active_tasks_with_assignees AS
+SELECT 
+    t.*,
+    json_agg(
+        json_build_object(
+            
+            'id', om.id,
+            'name', up.display_name,
+            'role', ta.role,
+            'is_primary', ta.is_primary
+        )
+    ) FILTER (WHERE ta.organization_member_id IS NOT NULL) as assignees,
+    COUNT(ta.id) as assignee_count
+FROM tasks t
+LEFT JOIN task_assignees ta ON t.id = ta.task_id
+LEFT JOIN organization_members om ON ta.organization_member_id = om.id
+LEFT JOIN user_profiles up ON om.user_id = up.id
+WHERE t.status != 'archived'
+GROUP BY t.id;
+
+CREATE OR REPLACE VIEW member_limits_dashboard AS
+SELECT 
+    ml.*,
+    up.display_name,
+    om.employee_id,
+    COALESCE(SUM(te.duration_seconds)/3600.0, 0) as current_week_hours,
+    ROUND(
+        COALESCE(SUM(te.duration_seconds)/3600.0 / NULLIF(ml.weekly_limit_hours, 0) * 100, 0)
+    ) as compliance_pct,
+    CASE 
+        WHEN SUM(te.duration_seconds)/3600.0 >= ml.weekly_limit_hours THEN 'LIMIT_REACHED'
+        ELSE 'OK'
+    END as status
+FROM member_limits ml
+JOIN organization_members om ON ml.organization_member_id = om.id
+JOIN user_profiles up ON om.user_id = up.id
+LEFT JOIN time_entries te ON om.id = te.organization_member_id
+    AND te.entry_date >= date_trunc('week', CURRENT_DATE)
+GROUP BY ml.id, up.display_name, om.employee_id;
+
+-- =============================================
+-- 15. SAMPLE DATA (Testing)
+-- =============================================
+INSERT INTO work_break_types (organization_id, name, duration_seconds, is_paid) VALUES
+(1, 'Lunch Break', 3600, false),
+(1, 'Short Break', 900, true)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO member_limits (organization_member_id, daily_limit_hours, weekly_limit_hours, allowed_days) VALUES
+(1, 10.0, 50.0, ARRAY['mon','tue','wed','thu','fri'])
+ON CONFLICT DO NOTHING;
+
+-- Multi-Assignee Tasks Sample Data
+INSERT INTO tasks (project_id, name, status, priority, estimated_hours) VALUES
+(1, 'Build Login Page', 'todo', 'high', 16.0),
+(1, 'Payment Integration', 'in_progress', 'urgent', 32.0),
+(1, 'User Profile', 'todo', 'medium', 8.0)
+ON CONFLICT DO NOTHING;
+
+-- Multiple assignees per task
+-- Note: Replace 123, 456, etc. with valid organization_member_ids in real tests
+-- Using dummy IDs for schema demonstration
+INSERT INTO task_assignees (task_id, organization_member_id, role, is_primary) VALUES
+(1, 1, 'assignee', true),   -- Lead
+(1, 2, 'assignee', false),  -- Support
+(1, 3, 'reviewer', false),  -- QA
+(2, 2, 'assignee', true),   -- Lead
+(2, 1, 'assignee', false)   -- Support
+ON CONFLICT DO NOTHING;
+
+-- Archive example (simulation - will fail if tasks table is empty/ID doesn't exist)
+-- UPDATE tasks SET status = 'archived' WHERE id = 1;
+
+-- =============================================
+-- 16. RLS POLICIES (Security)
+-- =============================================
+ALTER TABLE member_limits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE work_breaks ENABLE ROW LEVEL SECURITY;

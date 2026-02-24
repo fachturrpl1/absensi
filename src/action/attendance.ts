@@ -192,6 +192,8 @@ export type AttendanceListItem = {
   checkOutMethod: string | null;
   checkInLocationName: string | null;
   checkOutLocationName: string | null;
+  actualBreakStart: string | null;
+  actualBreakEnd: string | null;
   notes: string;
   timezone: string;
   time_format: string;
@@ -330,6 +332,9 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     status: string;
     created_at: string;
     work_duration_minutes: number | null;
+    break_duration_minutes: number | null;
+    actual_break_start: string | null;
+    actual_break_end: string | null;
     remarks: string | null;
     check_in_method: string | null;
     check_out_method: string | null;
@@ -420,7 +425,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
   const toIdx = fromIdx + limit - 1;
   let listQuery = supabase
     .from('attendance_records')
-    .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, status, created_at, work_duration_minutes, check_in_method, check_out_method, ${listRel}`)
+    .select(`id, organization_member_id, attendance_date, actual_check_in, actual_check_out, actual_break_start, actual_break_end, status, created_at, work_duration_minutes, break_duration_minutes, check_in_method, check_out_method, ${listRel}`)
     .eq('organization_members.organization_id', effectiveOrgId)
   if (effDateFrom) listQuery = listQuery.gte('attendance_date', effDateFrom);
   if (effDateTo) listQuery = listQuery.lte('attendance_date', effDateTo);
@@ -573,6 +578,8 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
       checkOutMethod: outMethod ? String(outMethod) : null,
       checkInLocationName: null,
       checkOutLocationName: null,
+      actualBreakStart: item.actual_break_start,
+      actualBreakEnd: item.actual_break_end,
       notes: '',
       timezone: orgInfo?.timezone || 'Asia/Jakarta',
       time_format: orgInfo?.time_format || '24h',
