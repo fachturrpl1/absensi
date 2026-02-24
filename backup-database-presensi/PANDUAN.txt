@@ -1,9 +1,0 @@
-Ini adalah backup untuk supabase dari database mesin absensi, cara menjalankannya:
-- Login/Daftar supabase
-- Tambahkan database
-- Buka menu sql execution
-- Copy paste kode yang attendance.sql lalu attendance_hubstaff.sql
-
-sebagai informasi database yang fix adalah yang attendance.sql tapi ada revisi
-untuk ditambahkan fitur time tracking jadinya untuk langkah selanjutnya langsung
-eksekusi yang attendance_hubstaff.sql
