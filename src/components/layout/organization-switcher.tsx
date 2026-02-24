@@ -33,12 +33,25 @@ export function OrganizationSwitcher() {
 
   const [selectedOrg, setSelectedOrg] = React.useState<typeof userOrganizations[0] | null>(activeOrg);
 
-  // Sync state when activeOrg changes (e.g. data loaded)
+  // Sync state when activeOrg changes (e.g. data loaded or fallback happened)
   React.useEffect(() => {
-    if (activeOrg && activeOrg.id !== selectedOrg?.id) {
-      setSelectedOrg(activeOrg);
+    if (activeOrg) {
+      if (activeOrg.id !== selectedOrg?.id) {
+        setSelectedOrg(activeOrg);
+      }
+      if (activeOrg.organization_id !== organizationId) {
+        // Automatically fix the global store if the ID was invalid (e.g. from an old session)
+        setOrganizationId(activeOrg.organization_id, activeOrg.organization_name);
+
+        // Ensure the server cookie matches as well
+        fetch("/api/organization/select", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ organizationId: activeOrg.organization_id }),
+        }).catch(console.error);
+      }
     }
-  }, [activeOrg, selectedOrg]);
+  }, [activeOrg, selectedOrg, organizationId, setOrganizationId]);
 
   // Handle switching organization
   const handleSwitchOrg = async (org: typeof userOrganizations[0]) => {

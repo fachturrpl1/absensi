@@ -7,12 +7,14 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { DUMMY_CLIENTS, DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
+import { DUMMY_CLIENTS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
 import type { NewProjectForm } from "./types"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Trash2 } from "lucide-react"
+
+type RealMember = { id: string; name: string }
 
 type AddProjectDialogProps = {
   open: boolean
@@ -20,10 +22,12 @@ type AddProjectDialogProps = {
   form: NewProjectForm
   onFormChange: React.Dispatch<React.SetStateAction<NewProjectForm>>
   onSave: () => void
+  /** Real members from database — pass from parent */
+  members?: RealMember[]
 }
 
 export default function AddProjectDialog(props: AddProjectDialogProps) {
-  const { open, onOpenChange, form, onFormChange, onSave } = props
+  const { open, onOpenChange, form, onFormChange, onSave, members = [] } = props
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -104,8 +108,8 @@ export default function AddProjectDialog(props: AddProjectDialogProps) {
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select manager" />
                 </SelectTrigger>
-                <SelectContent>
-                  {DUMMY_MEMBERS.map(m => {
+                <SelectContent position="popper" className="max-h-60 overflow-y-auto">
+                  {members.map(m => {
                     const isAlreadyAssigned = form.members?.slice(1).includes(m.id)
                     return (
                       <SelectItem
@@ -135,8 +139,8 @@ export default function AddProjectDialog(props: AddProjectDialogProps) {
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select user" />
                 </SelectTrigger>
-                <SelectContent>
-                  {DUMMY_MEMBERS.map(m => {
+                <SelectContent position="popper" className="max-h-60 overflow-y-auto">
+                  {members.map(m => {
                     const isManager = form.members?.[0] === m.id
                     const isViewer = form.members?.[2] === m.id
                     const isAlreadyAssigned = isManager || isViewer
@@ -168,8 +172,8 @@ export default function AddProjectDialog(props: AddProjectDialogProps) {
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select viewer" />
                 </SelectTrigger>
-                <SelectContent>
-                  {DUMMY_MEMBERS.map(m => {
+                <SelectContent position="popper" className="max-h-60 overflow-y-auto">
+                  {members.map(m => {
                     const isManager = form.members?.[0] === m.id
                     const isUser = form.members?.[1] === m.id
                     const isAlreadyAssigned = isManager || isUser
@@ -411,8 +415,8 @@ export default function AddProjectDialog(props: AddProjectDialogProps) {
                           <SelectTrigger>
                             <SelectValue placeholder="Select member" />
                           </SelectTrigger>
-                          <SelectContent>
-                            {DUMMY_MEMBERS.map(m => (
+                          <SelectContent position="popper" className="max-h-60 overflow-y-auto">
+                            {members.map(m => (
                               <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                             ))}
                           </SelectContent>

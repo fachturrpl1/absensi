@@ -36,26 +36,52 @@ import TransferProjectDialog from "@/components/projects/TransferProjectDialog"
 import type { Project, NewProjectForm } from "@/components/projects/types"
 import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_CLIENTS, DUMMY_PROJECTS, PROJECT_MEMBER_MAP, getTaskCountFromTasksPageByProjectId, getTeamNamesByProjectId } from "@/lib/data/dummy-data"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
-import { getAllProjects, createProject, updateProject, deleteProject, archiveProject, unarchiveProject, IProject } from "@/action/projects"
+import { getAllProjects, createProject, updateProject, deleteProject, archiveProject, unarchiveProject, IProject, getSimpleMembersForDropdown } from "@/action/projects"
+import { useOrgStore } from "@/store/org-store"
 
 function mapProjectData(p: IProject): Project {
-    const defaultMembers: Project["members"] = [];
-    if (p.metadata?.members && Array.isArray(p.metadata.members)) {
-        p.metadata.members.forEach((mid: string) => {
-            const m = DUMMY_MEMBERS.find(x => x.id === mid)
-            if (m) defaultMembers.push({ id: m.id, name: m.name, avatarUrl: m.avatar ?? null })
+    // Build members list from real team_members data
+    const memberMap = new Map<string, { id: string; name: string; avatarUrl: string | null }>();
+
+    if (p.team_projects && Array.isArray(p.team_projects)) {
+        // Debug
+        console.log(`[mapProjectData] project=${p.name} team_projects:`, JSON.stringify(p.team_projects?.slice(0, 1), null, 2));
+        p.team_projects.forEach((tp: any) => {
+            if (tp.teams?.team_members && Array.isArray(tp.teams.team_members)) {
+                tp.teams.team_members.forEach((tm: any) => {
+                    const profile = tm.organization_members?.user_profiles;
+                    if (profile) {
+                        const uid = profile.id || tm.organization_members?.user_id;
+                        if (!memberMap.has(uid)) {
+                            const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Unknown";
+                            memberMap.set(uid, {
+                                id: uid,
+                                name: fullName,
+                                avatarUrl: profile.profile_photo_url || null,
+                            });
+                        }
+                    }
+                });
+            }
         });
     }
+    const realMembers = Array.from(memberMap.values());
 
-    const tIds = p.team_projects ? p.team_projects.map((tp: any) => tp.team_id) : [];
-    const teams = DUMMY_TEAMS.filter(t => tIds.includes(parseInt(t.id.replace(/\D/g, '')))).map(t => t.name)
+    const tNames = p.team_projects
+        ? p.team_projects.map((tp: any) => tp.teams?.name).filter(Boolean)
+        : [];
+
+    // Read real client name from client_projects → clients join
+    const clientName: string | null =
+        (p as any).client_projects?.[0]?.clients?.name ?? null;
 
     return {
         id: String(p.id),
         name: p.name,
-        clientName: p.metadata?.clientName ?? null,
-        teams: teams.length ? teams : [],
-        members: defaultMembers,
+        clientName,
+        teams: tNames,
+        members: realMembers,
+        taskCount: (p as any).tasks?.[0]?.count ?? 0,
         budgetLabel: p.metadata?.budgetType === 'cost' ? `$${p.metadata?.budgetCost ?? 0}` : `${p.metadata?.budgetCost ?? 0} hours`,
         memberLimitLabel: p.metadata?.memberLimits ? `${p.metadata.memberLimits.length} limits` : '0 limits',
         archived: p.status === 'archived',
@@ -78,11 +104,21 @@ export default function ProjectsPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
+    const [realMembers, setRealMembers] = useState<{ id: string; name: string }[]>([])
+
+    const { organizationId } = useOrgStore()
 
     const fetchProjects = async () => {
         setIsLoading(true);
         setFetchError(null);
-        const res = await getAllProjects();
+        if (!organizationId) {
+            setFetchError("No organization active");
+            setData([]);
+            setIsLoading(false);
+            return;
+        }
+
+        const res = await getAllProjects(organizationId);
         if (res.success && res.data) {
             setData((res.data as IProject[]).map(mapProjectData));
         } else {
@@ -94,7 +130,12 @@ export default function ProjectsPage() {
 
     React.useEffect(() => {
         fetchProjects();
-    }, []);
+        // Also fetch real org members for dialogs
+        if (organizationId) {
+            getSimpleMembersForDropdown(organizationId)
+                .then(res => { if (res.success) setRealMembers(res.data); });
+        }
+    }, [organizationId]);
 
     // dialogs
     const [addOpen, setAddOpen] = useState(false)
@@ -358,7 +399,7 @@ export default function ProjectsPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-muted-foreground">
-                                                {getTaskCountFromTasksPageByProjectId(p.id)}
+                                                {p.taskCount}
                                             </TableCell>
                                             {/* <TableCell className="text-muted-foreground">{p.memberLimitLabel}</TableCell> */}
                                             <TableCell>
@@ -455,6 +496,7 @@ export default function ProjectsPage() {
                         onOpenChange={setAddOpen}
                         form={form}
                         onFormChange={setForm}
+                        members={realMembers}
                         onSave={async () => {
                             const names = form.names.split('\n').map(n => n.trim()).filter(Boolean);
                             const clientName = DUMMY_CLIENTS.find(c => c.id === form.clientId)?.name || null;
@@ -464,7 +506,7 @@ export default function ProjectsPage() {
                                     is_billable: form.billable,
                                     teams: form.teams.map(t => parseInt(t.replace(/\D/g, ''))).filter(t => !isNaN(t)),
                                     metadata: { ...form, names: undefined, teams: undefined, clientName }
-                                });
+                                }, organizationId || undefined);
                             }
                             await fetchProjects();
                             setAddOpen(false);
@@ -477,6 +519,7 @@ export default function ProjectsPage() {
                         onOpenChange={(o: boolean) => { if (!o) setEditing(null) }}
                         project={editing}
                         initialTab={editTab}
+                        members={realMembers}
                         onSave={async (updatedForm) => {
                             if (editing) {
                                 await updateProject(Number(editing.id), {

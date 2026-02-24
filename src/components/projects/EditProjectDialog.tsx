@@ -11,8 +11,10 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Trash2 } from "lucide-react"
-import { DUMMY_TEAMS, DUMMY_MEMBERS } from "@/lib/data/dummy-data"
+import { DUMMY_TEAMS } from "@/lib/data/dummy-data"
 import type { NewProjectForm, Project } from "./types"
+
+type RealMember = { id: string; name: string }
 
 type EditProjectDialogProps = {
   open: boolean
@@ -20,10 +22,12 @@ type EditProjectDialogProps = {
   project: Project | null
   onSave: (form: NewProjectForm) => void
   initialTab?: "general" | "members" | "budget" | "teams"
+  /** Real members from database */
+  members?: RealMember[]
 }
 
 export default function EditProjectDialog(props: EditProjectDialogProps) {
-  const { open, onOpenChange, project, onSave, initialTab } = props
+  const { open, onOpenChange, project, onSave, initialTab, members = [] } = props
   const [form, setForm] = useState<NewProjectForm>({
     names: "",
     billable: true,
@@ -184,8 +188,8 @@ export default function EditProjectDialog(props: EditProjectDialogProps) {
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select manager" />
                 </SelectTrigger>
-                <SelectContent>
-                  {DUMMY_MEMBERS.map(m => {
+                <SelectContent position="popper" className="max-h-60 overflow-y-auto">
+                  {members.map(m => {
                     const isAlreadyAssigned = form.members?.slice(1).includes(m.id)
                     return (
                       <SelectItem
@@ -214,8 +218,8 @@ export default function EditProjectDialog(props: EditProjectDialogProps) {
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select user" />
                 </SelectTrigger>
-                <SelectContent>
-                  {DUMMY_MEMBERS.map(m => {
+                <SelectContent position="popper" className="max-h-60 overflow-y-auto">
+                  {members.map(m => {
                     const isManager = form.members?.[0] === m.id
                     const isViewer = form.members?.[2] === m.id
                     const isAlreadyAssigned = isManager || isViewer
@@ -246,8 +250,8 @@ export default function EditProjectDialog(props: EditProjectDialogProps) {
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select viewer" />
                 </SelectTrigger>
-                <SelectContent>
-                  {DUMMY_MEMBERS.map(m => {
+                <SelectContent position="popper" className="max-h-60 overflow-y-auto">
+                  {members.map(m => {
                     const isManager = form.members?.[0] === m.id
                     const isUser = form.members?.[1] === m.id
                     const isAlreadyAssigned = isManager || isUser
@@ -489,8 +493,8 @@ export default function EditProjectDialog(props: EditProjectDialogProps) {
                           <SelectTrigger>
                             <SelectValue placeholder="Select member" />
                           </SelectTrigger>
-                          <SelectContent>
-                            {DUMMY_MEMBERS.map(m => (
+                          <SelectContent position="popper" className="max-h-60 overflow-y-auto">
+                            {members.map(m => (
                               <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                             ))}
                           </SelectContent>

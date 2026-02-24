@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { getUserOrganization } from "@/utils/get-user-org";
 
 export interface IProject {
@@ -30,6 +31,24 @@ export interface IProject {
     };
     team_projects?: {
         team_id: number;
+        teams?: {
+            id: number;
+            name: string;
+            team_members?: {
+                id: number;
+                role: string;
+                organization_members?: {
+                    id: number;
+                    user_id: string;
+                    user_profiles?: {
+                        id: string;
+                        first_name: string;
+                        last_name: string;
+                        profile_photo_url: string;
+                    }
+                }
+            }[];
+        };
     }[];
 }
 
@@ -47,13 +66,17 @@ export const getAllProjects = async (organizationId?: number | string) => {
         }
     }
 
-    // Fetch projects joined with organizations and team_projects
+    console.log(`[ACTION getAllProjects] Received orgId: ${organizationId}, Resolved finalOrgId: ${finalOrgId}`);
+
+    // Step 1: Fetch projects with basic team info (team names) + task count + client
     const { data, error } = await supabase
         .from("projects")
         .select(`
             *,
             organizations(id, name),
-            team_projects(team_id)
+            team_projects(team_id, teams(id, name)),
+            tasks(count),
+            client_projects(client_id, clients(id, name))
         `)
         .eq("organization_id", finalOrgId)
         .neq("status", "deleted")
@@ -64,7 +87,68 @@ export const getAllProjects = async (organizationId?: number | string) => {
         return { success: false, message: error.message, data: [] };
     }
 
-    return { success: true, data: (data || []) as unknown as IProject[] };
+    // Step 2: Collect all team_ids from all projects
+    const allTeamIds: number[] = [];
+    (data || []).forEach((proj: any) => {
+        (proj.team_projects || []).forEach((tp: any) => {
+            if (tp.team_id && !allTeamIds.includes(tp.team_id)) {
+                allTeamIds.push(tp.team_id);
+            }
+        });
+    });
+
+    console.log("[getAllProjects] allTeamIds:", allTeamIds);
+
+    // Step 3: Fetch all team members for those teams (use adminClient to bypass RLS)
+    const adminClient = createAdminClient();
+    let teamMembersByTeamId: Record<number, any[]> = {};
+    if (allTeamIds.length > 0) {
+        const { data: tmData, error: tmError } = await adminClient
+            .from("team_members")
+            .select(`
+                team_id,
+                organization_member_id,
+                role,
+                organization_members!team_members_organization_member_id_fkey(
+                    id,
+                    user_id,
+                    user_profiles!organization_members_user_id_fkey(
+                        id,
+                        first_name,
+                        last_name,
+                        profile_photo_url
+                    )
+                )
+            `)
+            .in("team_id", allTeamIds);
+
+        console.log("[getAllProjects] team_members query error:", tmError);
+        console.log("[getAllProjects] team_members count:", tmData?.length, "sample:", JSON.stringify(tmData?.slice(0, 1), null, 2));
+
+        if (!tmError && tmData) {
+            tmData.forEach((tm: any) => {
+                const tid = tm.team_id as number;
+                if (!teamMembersByTeamId[tid]) {
+                    teamMembersByTeamId[tid] = [];
+                }
+                teamMembersByTeamId[tid].push(tm);
+            });
+        }
+    }
+
+    // Step 4: Inject team_members into each project's team_projects
+    const enrichedData = (data || []).map((proj: any) => ({
+        ...proj,
+        team_projects: (proj.team_projects || []).map((tp: any) => ({
+            ...tp,
+            teams: tp.teams ? {
+                ...tp.teams,
+                team_members: teamMembersByTeamId[tp.team_id] || []
+            } : null,
+        })),
+    }));
+
+    return { success: true, data: enrichedData as unknown as IProject[] };
 };
 
 export const createProject = async (payload: {
@@ -72,17 +156,19 @@ export const createProject = async (payload: {
     is_billable?: boolean;
     metadata?: any;
     teams?: number[];
-}) => {
+}, organizationId?: number) => {
     const supabase = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, message: "Unauthenticated" };
 
-    let orgId: number;
-    try {
-        orgId = await getUserOrganization(supabase);
-    } catch (error: any) {
-        return { success: false, message: error.message || "Failed to get organization" };
+    let orgId = organizationId;
+    if (!orgId) {
+        try {
+            orgId = await getUserOrganization(supabase);
+        } catch (error: any) {
+            return { success: false, message: error.message || "Failed to get organization" };
+        }
     }
 
     // Create auto-generated code
@@ -185,4 +271,43 @@ export const deleteProject = async (id: number) => {
 
     if (error) return { success: false, message: error.message };
     return { success: true };
+};
+
+/**
+ * Fetch a flat list of { id, name } for member dropdown pickers.
+ * Uses admin client so RLS doesn't block results.
+ */
+export const getSimpleMembersForDropdown = async (organizationId: number | string) => {
+    const adminClient = createAdminClient();
+
+    const { data, error } = await adminClient
+        .from("organization_members")
+        .select(`
+            id,
+            user_profiles!organization_members_user_id_fkey(
+                id,
+                first_name,
+                last_name,
+                display_name,
+                profile_photo_url
+            )
+        `)
+        .eq("organization_id", organizationId)
+        .eq("is_active", true);
+
+    if (error) {
+        console.error("[getSimpleMembersForDropdown] error:", error.message);
+        return { success: false, data: [] as { id: string; name: string }[] };
+    }
+
+    const members = (data || []).map((m: any) => {
+        const profile = m.user_profiles;
+        const name = profile
+            ? ([profile.first_name, profile.last_name].filter(Boolean).join(" ") || profile.display_name || "Unknown")
+            : "Unknown";
+        return { id: String(m.id), name };
+    }).filter(m => m.name !== "Unknown");
+
+    console.log("[getSimpleMembersForDropdown] count:", members.length);
+    return { success: true, data: members };
 };
