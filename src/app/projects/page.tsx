@@ -34,30 +34,33 @@ import AddProjectDialog from "@/components/projects/AddProjectDialog"
 import EditProjectDialog from "@/components/projects/EditProjectDialog"
 import TransferProjectDialog from "@/components/projects/TransferProjectDialog"
 import type { Project, NewProjectForm } from "@/components/projects/types"
-import { DUMMY_PROJECTS, DUMMY_MEMBERS, PROJECT_MEMBER_MAP, getTaskCountFromTasksPageByProjectId, getTeamNamesByProjectId } from "@/lib/data/dummy-data"
+import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_CLIENTS, DUMMY_PROJECTS, PROJECT_MEMBER_MAP, getTaskCountFromTasksPageByProjectId, getTeamNamesByProjectId } from "@/lib/data/dummy-data"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { getAllProjects, createProject, updateProject, deleteProject, archiveProject, unarchiveProject, IProject } from "@/action/projects"
 
-// Convert dummy projects to component format
-const INITIAL_DATA: Project[] = DUMMY_PROJECTS.map(p => {
-    const memberIds = PROJECT_MEMBER_MAP[p.id] ?? []
-    const members: Project["members"] = memberIds
-        .map(mid => {
+function mapProjectData(p: IProject): Project {
+    const defaultMembers: Project["members"] = [];
+    if (p.metadata?.members && Array.isArray(p.metadata.members)) {
+        p.metadata.members.forEach((mid: string) => {
             const m = DUMMY_MEMBERS.find(x => x.id === mid)
-            return m ? { id: m.id, name: m.name, avatarUrl: m.avatar ?? null } : null
-        })
-        .filter((x): x is NonNullable<typeof x> => Boolean(x))
+            if (m) defaultMembers.push({ id: m.id, name: m.name, avatarUrl: m.avatar ?? null })
+        });
+    }
+
+    const tIds = p.team_projects ? p.team_projects.map((tp: any) => tp.team_id) : [];
+    const teams = DUMMY_TEAMS.filter(t => tIds.includes(parseInt(t.id.replace(/\D/g, '')))).map(t => t.name)
 
     return {
-        id: p.id,
+        id: String(p.id),
         name: p.name,
-        clientName: p.clientName ?? null,
-        teams: getTeamNamesByProjectId(p.id),
-        members,
-        budgetLabel: p.budgetLabel,
-        memberLimitLabel: p.memberLimitLabel,
-        archived: p.archived,
+        clientName: p.metadata?.clientName ?? null,
+        teams: teams.length ? teams : [],
+        members: defaultMembers,
+        budgetLabel: p.metadata?.budgetType === 'cost' ? `$${p.metadata?.budgetCost ?? 0}` : `${p.metadata?.budgetCost ?? 0} hours`,
+        memberLimitLabel: p.metadata?.memberLimits ? `${p.metadata.memberLimits.length} limits` : '0 limits',
+        archived: p.status === 'archived',
     }
-})
+}
 
 function initialsFromName(name: string): string {
     const parts = (name || "").trim().split(/\s+/).filter(Boolean)
@@ -70,9 +73,28 @@ export default function ProjectsPage() {
     const [activeTab, setActiveTab] = useState<"active" | "archived">("active")
     const [search, setSearch] = useState("")
     const [selectedIds, setSelectedIds] = useState<string[]>([])
-    const [data, setData] = useState<Project[]>(INITIAL_DATA)
+    const [data, setData] = useState<Project[]>([])
+    const [fetchError, setFetchError] = useState<string | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
+
+    const fetchProjects = async () => {
+        setIsLoading(true);
+        setFetchError(null);
+        const res = await getAllProjects();
+        if (res.success && res.data) {
+            setData((res.data as IProject[]).map(mapProjectData));
+        } else {
+            console.error("fetchProjects returned false. message:", res.message);
+            setFetchError(res.message || "Failed to fetch projects");
+        }
+        setIsLoading(false);
+    }
+
+    React.useEffect(() => {
+        fetchProjects();
+    }, []);
 
     // dialogs
     const [addOpen, setAddOpen] = useState(false)
@@ -167,8 +189,9 @@ export default function ProjectsPage() {
         setSelectedIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))
     }
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (deleteTarget) {
+            await deleteProject(Number(deleteTarget.id));
             setData(prev => prev.filter(p => p.id !== deleteTarget.id))
             setDeleteOpen(false)
             setDeleteTarget(null)
@@ -282,7 +305,11 @@ export default function ProjectsPage() {
                                 {filtered.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={7} className="text-center text-muted-foreground py-6">
-                                            No projects found
+                                            {fetchError ? (
+                                                <div className="text-red-500 font-medium">Error loading projects: {fetchError}</div>
+                                            ) : (
+                                                isLoading ? "Loading projects..." : "No projects found"
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 ) : (
@@ -377,7 +404,8 @@ export default function ProjectsPage() {
                                                                 <DropdownMenuItem onSelect={() => { setEditTab("members"); setEditing(p) }}>Manage members</DropdownMenuItem>
                                                                 <DropdownMenuItem disabled>Duplicate project</DropdownMenuItem>
                                                                 <DropdownMenuItem
-                                                                    onSelect={() => {
+                                                                    onSelect={async () => {
+                                                                        await unarchiveProject(Number(p.id));
                                                                         setData(prev => prev.map(it => it.id === p.id ? { ...it, archived: false } : it))
                                                                         setSelectedIds(prev => prev.filter(id => id !== p.id))
                                                                         setActiveTab("active")
@@ -427,7 +455,21 @@ export default function ProjectsPage() {
                         onOpenChange={setAddOpen}
                         form={form}
                         onFormChange={setForm}
-                        onSave={() => setAddOpen(false)}
+                        onSave={async () => {
+                            const names = form.names.split('\n').map(n => n.trim()).filter(Boolean);
+                            const clientName = DUMMY_CLIENTS.find(c => c.id === form.clientId)?.name || null;
+                            for (const name of names) {
+                                await createProject({
+                                    name,
+                                    is_billable: form.billable,
+                                    teams: form.teams.map(t => parseInt(t.replace(/\D/g, ''))).filter(t => !isNaN(t)),
+                                    metadata: { ...form, names: undefined, teams: undefined, clientName }
+                                });
+                            }
+                            await fetchProjects();
+                            setAddOpen(false);
+                            setForm({ ...form, names: "" });
+                        }}
                     />
 
                     <EditProjectDialog
@@ -435,7 +477,19 @@ export default function ProjectsPage() {
                         onOpenChange={(o: boolean) => { if (!o) setEditing(null) }}
                         project={editing}
                         initialTab={editTab}
-                        onSave={() => setEditing(null)}
+                        onSave={async (updatedForm) => {
+                            if (editing) {
+                                await updateProject(Number(editing.id), {
+                                    name: updatedForm.names,
+                                    is_billable: updatedForm.billable,
+                                    teams: updatedForm.teams.map(t => parseInt(t.replace(/\D/g, ''))).filter(t => !isNaN(t)),
+                                    status: editing.archived ? 'archived' : 'active',
+                                    metadata: { ...updatedForm, names: undefined, teams: undefined, clientName: DUMMY_CLIENTS.find(c => c.id === updatedForm.clientId)?.name || null }
+                                });
+                                await fetchProjects();
+                            }
+                            setEditing(null);
+                        }}
                     />
 
 
@@ -486,8 +540,11 @@ export default function ProjectsPage() {
                                 </Button>
                                 <Button
                                     variant="destructive"
-                                    onClick={() => {
+                                    onClick={async () => {
                                         if (archiveTargets.length > 0) {
+                                            for (const id of archiveTargets) {
+                                                await archiveProject(Number(id));
+                                            }
                                             setData(prev => prev.map(it => archiveTargets.includes(it.id) ? { ...it, archived: true } : it))
                                             setSelectedIds(prev => prev.filter(id => !archiveTargets.includes(id)))
                                             setActiveTab("archived")

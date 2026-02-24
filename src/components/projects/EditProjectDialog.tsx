@@ -18,7 +18,7 @@ type EditProjectDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   project: Project | null
-  onSave: () => void
+  onSave: (form: NewProjectForm) => void
   initialTab?: "general" | "members" | "budget" | "teams"
 }
 
@@ -673,7 +673,7 @@ export default function EditProjectDialog(props: EditProjectDialogProps) {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={onSave}>Save</Button>
+          <Button onClick={() => onSave(form)}>Save</Button>
         </DialogFooter>
       </DialogContent >
     </Dialog >
