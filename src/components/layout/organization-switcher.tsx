@@ -41,13 +41,33 @@ export function OrganizationSwitcher() {
   }, [activeOrg, selectedOrg]);
 
   // Handle switching organization
-  const handleSwitchOrg = (org: typeof userOrganizations[0]) => {
-    setSelectedOrg(org);
-    // Update global store
-    setOrganizationId(org.organization_id, org.organization_name);
+  const handleSwitchOrg = async (org: typeof userOrganizations[0]) => {
+    try {
+      setSelectedOrg(org);
+      // Update global store
+      setOrganizationId(org.organization_id, org.organization_name);
 
-    // Optional: Force reload or trigger server action if switching requires backend validation/session update
-    // window.location.reload(); 
+      // Call API to set cookie (this handles setting the `org_id` correctly on the server)
+      const cookieResponse = await fetch("/api/organization/select", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ organizationId: org.organization_id }),
+      });
+
+      if (!cookieResponse.ok) {
+        throw new Error("Failed to set organization cookie");
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 300));
+      // Force reload to trigger server action to refetch data with new context
+      window.location.reload();
+    } catch (e) {
+      console.error(e);
+      document.cookie = `org_id=${org.organization_id}; path=/; max-age=31536000`; // 1 year expiry fallback
+      window.location.reload();
+    }
   };
 
 

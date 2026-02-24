@@ -273,15 +273,14 @@ export function ProfileSettingsForm({ initialData }: ProfileSettingsFormProps) {
                 onChange={handlePhotoSelect}
             />
 
-            {/* Avatar Section */}
-            <div className="flex items-center gap-x-8">
+            <div className="flex items-center gap-3">
                 <Avatar className="h-24 w-24">
                     <AvatarImage src={avatarSrc || undefined} className="object-cover" />
                     <AvatarFallback className="text-2xl bg-gradient-to-br from-gray-700 to-gray-900 text-white">
                         {userInitials}
                     </AvatarFallback>
                 </Avatar>
-                <div className="flex gap-x-4 items-center">
+                <div className="flex gap-3 items-center">
                     <Button
                         type="button"
                         variant="secondary"

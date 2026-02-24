@@ -46,7 +46,9 @@ export default function OrganizationPage() {
           orgStore.setOrganizations(result.organizations)
           setOrganizations(result.organizations)
         } else {
-          setError(result.message || "No organizations found.")
+          // New user with no organizations — send them to the onboarding wizard
+          router.replace("/onboarding/setup")
+          return
         }
       } catch (err) {
         console.error("Error loading organizations:", err)

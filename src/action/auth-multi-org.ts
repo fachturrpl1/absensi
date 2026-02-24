@@ -191,8 +191,8 @@ export async function getUserOrganizations(): Promise<{
     .eq("organizations.is_active", true)
     .is("organizations.deleted_at", null)
 
-    console.log('🔍 getUserOrganizations: Query result:', orgMembers)
-    console.log('🔍 getUserOrganizations: Query error:', orgMembersError)
+  console.log('🔍 getUserOrganizations: Query result:', orgMembers)
+  console.log('🔍 getUserOrganizations: Query error:', orgMembersError)
   if (orgMembersError) {
     return { success: false, message: "Failed to fetch organizations" }
   }

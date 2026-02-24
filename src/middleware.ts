@@ -1,4 +1,4 @@
-export const runtime='nodejs'
+export const runtime = 'nodejs'
 
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
@@ -18,7 +18,7 @@ const getAuthCookieNames = () => {
   const base = `sb-${projectRef}-auth-token`
   return [base, `${base}.0`, `${base}.1`]
 }
-  
+
 const isNetworkError = (error: unknown) => {
   if (!(error instanceof Error)) return false
   const message = error.message.toLowerCase()
@@ -131,7 +131,7 @@ export async function middleware(req: NextRequest) {
   let user = null
   let isOffline = false
   let isRefreshTokenError = false
-  
+
   try {
     const { data, error } = await supabase.auth.getUser()
     user = data?.user
@@ -139,21 +139,21 @@ export async function middleware(req: NextRequest) {
     if (error) {
       // "Auth session missing!" is a normal case when user is not logged in
       const isSessionMissing = error.message === 'Auth session missing!'
-      
+
       if (isSessionMissing) {
         // This is normal - user has no active session, don't log or clear cookies
         // The middleware will handle the redirect to login
       } else {
         const networkError = isNetworkError(error)
-        const refreshTokenError = 
-          (error.message?.toLowerCase().includes('refresh') && 
-           error.message?.toLowerCase().includes('token')) ||
+        const refreshTokenError =
+          (error.message?.toLowerCase().includes('refresh') &&
+            error.message?.toLowerCase().includes('token')) ||
           error.message?.includes('Invalid Refresh Token') ||
           (error.status === 400 && hasSessionCookie)
-        
+
         isOffline = networkError && hasSessionCookie && !refreshTokenError
         isRefreshTokenError = refreshTokenError
-        
+
         if (isOffline) {
           logger.warn("Supabase auth request failed due to network issues; assuming offline session")
         } else if (isRefreshTokenError) {
@@ -172,20 +172,20 @@ export async function middleware(req: NextRequest) {
   } catch (error: any) {
     // "Auth session missing!" is a normal case when user is not logged in
     const isSessionMissing = error?.message === 'Auth session missing!'
-    
+
     if (isSessionMissing) {
       // This is normal - user has no active session, don't log or clear cookies
     } else {
       const networkError = isNetworkError(error)
-      const refreshTokenError = 
-        (error?.message?.toLowerCase().includes('refresh') && 
-         error?.message?.toLowerCase().includes('token')) ||
+      const refreshTokenError =
+        (error?.message?.toLowerCase().includes('refresh') &&
+          error?.message?.toLowerCase().includes('token')) ||
         error?.message?.includes('Invalid Refresh Token') ||
         (error?.status === 400 && hasSessionCookie)
-      
+
       isOffline = networkError && hasSessionCookie && !refreshTokenError
       isRefreshTokenError = refreshTokenError
-      
+
       if (isOffline) {
         logger.warn("Supabase auth network failure, assuming offline session")
       } else if (isRefreshTokenError) {
@@ -262,16 +262,16 @@ export async function middleware(req: NextRequest) {
     // Check if organization ID is in cookies or session
     // If not, redirect to organization
     const orgIdCookie = req.cookies.get('org_id')?.value
-    
+
     logger.info(`[MIDDLEWARE] Checking org_id cookie for user ${user.id} on path ${pathname}`)
     logger.info(`[MIDDLEWARE] org_id cookie value: ${orgIdCookie || 'NOT FOUND'}`)
     logger.info(`[MIDDLEWARE] All cookies: ${JSON.stringify(req.cookies.getAll())}`)
-    
+
     if (!orgIdCookie) {
       logger.warn(`[MIDDLEWARE] No org_id cookie found for path ${pathname}, redirecting to /organization`)
       return NextResponse.redirect(new URL("/organization", req.url))
     }
-    
+
     logger.info(`[MIDDLEWARE] org_id cookie found: ${orgIdCookie}, allowing access to ${pathname}`)
   }
 
