@@ -27,10 +27,16 @@ import {
     DialogDescription,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { DUMMY_MEMBERS, DUMMY_PROJECTS, DUMMY_TASKS, DUMMY_TEAMS, getClientNameByProjectName } from "@/lib/data/dummy-data"
+import { DUMMY_TEAMS } from "@/lib/data/dummy-data"
 import { DataTable } from "@/components/tables/data-table"
 import { ColumnDef } from "@tanstack/react-table"
 import type { RowSelectionState } from "@tanstack/react-table"
+import { getTasks, createTask, updateTask, deleteTask, assignTaskMember } from "@/action/task"
+import { getProjects } from "@/action/project"
+import { getAllOrganization_member } from "@/action/members"
+import { checkDatabaseCounts } from "@/action/debug"
+import { ITask, IProject, IOrganization_member } from "@/interface"
+import { toast } from "sonner"
 
 // Helper for initials
 function initialsFromName(name: string): string {
@@ -40,30 +46,61 @@ function initialsFromName(name: string): string {
     return (first + second).toUpperCase()
 }
 
-type TaskRow = typeof DUMMY_TASKS[number]
 
 export default function ListView() {
     const searchParams = useSearchParams()
     const initialProject = searchParams.get("project")
 
-    const [tasks, setTasks] = useState<TaskRow[]>(DUMMY_TASKS)
+    const [tasks, setTasks] = useState<ITask[]>([])
+    const [projects, setProjects] = useState<IProject[]>([])
+    const [members, setMembers] = useState<IOrganization_member[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+
     const [activeTab, setActiveTab] = useState<"active" | "completed">("active")
     const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "")
+    const urlClientName = searchParams.get("client")
+
+    // Fetch data
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true)
+            try {
+                const [tasksRes, projectsRes, membersRes] = await Promise.all([
+                    getTasks(),
+                    getProjects(),
+                    getAllOrganization_member()
+                ])
+
+                if (tasksRes.success) setTasks(tasksRes.data)
+                if (projectsRes.success) setProjects(projectsRes.data)
+                if (membersRes.success) setMembers(membersRes.data)
+
+                const counts = await checkDatabaseCounts()
+                console.log("Debug Counts:", counts)
+            } catch (error) {
+                console.error("Error fetching data:", error)
+                toast.error("Failed to load data")
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        fetchData()
+    }, [])
 
 
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
     const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false)
 
-    const [taskToDelete, setTaskToDelete] = useState<TaskRow | null>(null)
-    const [editingTask, setEditingTask] = useState<TaskRow | null>(null)
+    const [taskToDelete, setTaskToDelete] = useState<ITask | null>(null)
+    const [editingTask, setEditingTask] = useState<ITask | null>(null)
 
     // Form states
     const [editedTitle, setEditedTitle] = useState("")
-    const [editedAssignee, setEditedAssignee] = useState("")
+    const [editedAssignee, setEditedAssignee] = useState<number | "">("")
     const [newTaskTitle, setNewTaskTitle] = useState("")
-    const [newTaskAssignee, setNewTaskAssignee] = useState("")
-    const [newTaskProject, setNewTaskProject] = useState("")
+    const [newTaskAssignee, setNewTaskAssignee] = useState<number | "">("")
+    const [newTaskProject, setNewTaskProject] = useState<number | "">("")
     const [newTaskTeams, setNewTaskTeams] = useState<string[]>([])
 
     const [editedTeams, setEditedTeams] = useState<string[]>([])
@@ -72,56 +109,52 @@ export default function ListView() {
     const [selectedProject, setSelectedProject] = useState(initialProject || "all")
     const [selectedAssignee, setSelectedAssignee] = useState("all")
 
-    const projectOptions = useMemo(() => DUMMY_PROJECTS.map((project) => project.name).filter(Boolean), [])
-    const uniqueAssignees = useMemo(() => {
-        const taskNames = tasks.map((task) => task.assignee)
-        const memberNames = DUMMY_MEMBERS.map((member) => member.name)
-        return Array.from(new Set([...memberNames, ...taskNames].filter(Boolean)))
-    }, [tasks])
+    const projectOptions = useMemo(() => projects, [projects])
 
     // Assignee list for New Task
-    const dynamicAssignees = useMemo(() => {
-        if (!newTaskTeams || newTaskTeams.length === 0) return uniqueAssignees
-        const memberIds = Array.from(new Set(newTaskTeams.flatMap((teamId) => {
-            const t = DUMMY_TEAMS.find((x) => x.id === teamId)
-            return t ? t.members : []
-        })))
-        const names = DUMMY_MEMBERS.filter((m) => memberIds.includes(m.id)).map((m) => m.name)
-        return names.length > 0 ? names : uniqueAssignees
-    }, [newTaskTeams, uniqueAssignees])
+    const dynamicAssignees = useMemo(() => members, [members])
 
     // Assignee list for Editing Task
-    const dynamicEditedAssignees = useMemo(() => {
-        if (!editedTeams || editedTeams.length === 0) return uniqueAssignees
-        const memberIds = Array.from(new Set(editedTeams.flatMap((teamId) => {
-            const t = DUMMY_TEAMS.find((x) => x.id === teamId)
-            return t ? t.members : []
-        })))
-        const names = DUMMY_MEMBERS.filter((m) => memberIds.includes(m.id)).map((m) => m.name)
-        return names.length > 0 ? names : uniqueAssignees
-    }, [editedTeams, uniqueAssignees])
+    const dynamicEditedAssignees = useMemo(() => members, [members])
 
 
     const filteredTasks = useMemo(() => {
         return tasks.filter((task) => {
             // Tab filter
-            if (activeTab === "active" && task.completed) return false
-            if (activeTab === "completed" && !task.completed) return false
+            const isCompleted = task.status === 'done'
+            if (activeTab === "active" && isCompleted) return false
+            if (activeTab === "completed" && !isCompleted) return false
+
+            // Client filter from URL
+            if (urlClientName) {
+                const clientData = (task.project as any)?.client
+                const clientNames: string[] = Array.isArray(clientData)
+                    ? clientData.map((c: any) => c.name)
+                    : [clientData?.name].filter(Boolean)
+
+                const isMatch = clientNames.some(name => name.toLowerCase() === urlClientName.toLowerCase())
+                console.log(`Task: ${task.name}, ClientNames: ${JSON.stringify(clientNames)}, Filter: ${urlClientName}, Match: ${isMatch}`)
+                if (!isMatch) return false
+            }
 
             // Dropdown filters
-            if (selectedProject !== "all" && task.project !== selectedProject) return false
-            if (selectedAssignee !== "all" && task.assignee !== selectedAssignee) return false
+            if (selectedProject !== "all" && task.project?.name !== selectedProject) return false
+
+            // Assignee filter needs careful matching since we use names in the UI but could use IDs
+            const assigneeName = task.assignees?.[0]?.member?.user?.display_name ||
+                `${task.assignees?.[0]?.member?.user?.first_name || ''} ${task.assignees?.[0]?.member?.user?.last_name || ''}`.trim()
+            if (selectedAssignee !== "all" && assigneeName !== selectedAssignee) return false
 
             // Search
             if (searchQuery) {
                 const query = searchQuery.toLowerCase()
-                const matchesTitle = task.title.toLowerCase().includes(query)
-                const matchesAssignee = task.assignee.toLowerCase().includes(query)
+                const matchesTitle = task.name.toLowerCase().includes(query)
+                const matchesAssignee = assigneeName.toLowerCase().includes(query)
                 if (!matchesTitle && !matchesAssignee) return false
             }
             return true
         })
-    }, [tasks, activeTab, selectedProject, selectedAssignee, searchQuery])
+    }, [tasks, activeTab, selectedProject, selectedAssignee, searchQuery, urlClientName])
 
     // Reset selection on filter change
     useEffect(() => {
@@ -129,7 +162,7 @@ export default function ListView() {
     }, [activeTab, selectedProject, selectedAssignee, searchQuery])
 
     // Columns Definition
-    const columns: ColumnDef<TaskRow>[] = useMemo(() => [
+    const columns: ColumnDef<ITask>[] = useMemo(() => [
         {
             id: "select",
             header: ({ table }) => (
@@ -153,38 +186,50 @@ export default function ListView() {
             size: 40,
         },
         {
-            accessorKey: "title",
+            accessorKey: "name",
             header: "Task",
-            cell: ({ row }) => <span className="font-medium text-foreground">{row.original.title}</span>,
+            cell: ({ row }) => <span className="font-medium text-foreground">{row.original.name}</span>,
         },
         {
-            accessorKey: "assignee",
+            id: "assignee",
             header: "Assignee",
-            cell: ({ row }) => (
-                <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                        <AvatarFallback className="text-[10px] bg-gray-100 text-gray-700">
-                            {initialsFromName(row.original.assignee)}
-                        </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm text-muted-foreground">{row.original.assignee}</span>
-                </div>
-            ),
+            cell: ({ row }) => {
+                const primaryAssignee = row.original.assignees?.[0]
+                const name = primaryAssignee?.member?.user?.display_name ||
+                    `${primaryAssignee?.member?.user?.first_name || ''} ${primaryAssignee?.member?.user?.last_name || ''}`.trim() ||
+                    "Unassigned"
+                return (
+                    <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-[10px] bg-gray-100 text-gray-700">
+                                {initialsFromName(name)}
+                            </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm text-muted-foreground">{name}</span>
+                    </div>
+                )
+            },
         },
         {
-            accessorKey: "project",
+            id: "project",
             header: "Project",
-            cell: ({ row }) => <span className="text-muted-foreground text-sm">{row.original.project}</span>,
+            cell: ({ row }) => <span className="text-muted-foreground text-sm">{row.original.project?.name || "—"}</span>,
         },
         {
             id: "client",
             header: "Client",
-            cell: ({ row }) => <span className="text-muted-foreground text-sm">{getClientNameByProjectName(row.original.project) ?? "—"}</span>,
+            cell: ({ row }) => {
+                const clientData = row.original.project?.client
+                const clientName = Array.isArray(clientData)
+                    ? clientData[0]?.name
+                    : (clientData as any)?.name
+                return <span className="text-muted-foreground text-sm">{clientName || "—"}</span>
+            },
         },
         {
-            accessorKey: "created",
+            accessorKey: "created_at",
             header: "Created",
-            cell: ({ row }) => <span className="text-muted-foreground text-sm">{row.original.created}</span>,
+            cell: ({ row }) => <span className="text-muted-foreground text-sm">{row.original.created_at ? new Date(row.original.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "—"}</span>,
         },
         {
             id: "actions",
@@ -200,16 +245,23 @@ export default function ListView() {
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem onSelect={() => {
                                 setEditingTask(row.original)
-                                setEditedTitle(row.original.title)
-                                setEditedAssignee(row.original.assignee)
+                                setEditedTitle(row.original.name)
+                                setEditedAssignee(Number(row.original.assignees?.[0]?.organization_member_id) || "")
                                 setEditedTeams([])
                             }}>
                                 Edit task
                             </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => {
-                                setTasks(prev => prev.map(t => t.id === row.original.id ? { ...t, completed: !row.original.completed } : t))
+                            <DropdownMenuItem onSelect={async () => {
+                                const newStatus = row.original.status === 'done' ? 'todo' : 'done'
+                                const res = await updateTask(row.original.id.toString(), { status: newStatus })
+                                if (res.success) {
+                                    setTasks(prev => prev.map(t => t.id === row.original.id ? { ...t, status: newStatus } : t))
+                                    toast.success(`Task ${newStatus === 'done' ? 'completed' : 'reopened'}`)
+                                } else {
+                                    toast.error(res.message)
+                                }
                             }}>
-                                {row.original.completed ? "Reopen task" : "Mark as complete"}
+                                {row.original.status === 'done' ? "Reopen task" : "Mark as complete"}
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -230,7 +282,7 @@ export default function ListView() {
     const selectedCount = Object.keys(rowSelection).length
 
     return (
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <div className="flex flex-col gap-4 p-4 pt-0">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold">Tasks</h1>
@@ -242,13 +294,13 @@ export default function ListView() {
                     className={`pb-2 border-b-2 ${activeTab === "active" ? "border-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"}`}
                     onClick={() => setActiveTab("active")}
                 >
-                    ACTIVE ({tasks.filter(t => !t.completed).length})
+                    ACTIVE ({tasks.filter(t => t.status !== 'done').length})
                 </button>
                 <button
                     className={`pb-2 border-b-2 ${activeTab === "completed" ? "border-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"}`}
                     onClick={() => setActiveTab("completed")}
                 >
-                    COMPLETED ({tasks.filter(t => t.completed).length})
+                    COMPLETED ({tasks.filter(t => t.status === 'done').length})
                 </button>
             </div>
 
@@ -274,8 +326,8 @@ export default function ListView() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All projects</SelectItem>
-                                {projectOptions.map((projectName) => (
-                                    <SelectItem key={projectName} value={projectName}>{projectName}</SelectItem>
+                                {projectOptions.map((project) => (
+                                    <SelectItem key={project.id} value={project.name}>{project.name}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -286,9 +338,12 @@ export default function ListView() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All assignees</SelectItem>
-                                {uniqueAssignees.map((assignee) => (
-                                    <SelectItem key={assignee} value={assignee}>{assignee}</SelectItem>
-                                ))}
+                                {members.map((member) => {
+                                    const name = `${member.user?.first_name || ''} ${member.user?.last_name || ''}`.trim() || member.user?.display_name || "Unknown"
+                                    return (
+                                        <SelectItem key={member.id} value={name}>{name}</SelectItem>
+                                    )
+                                })}
                             </SelectContent>
                         </Select>
                     </div>
@@ -310,15 +365,18 @@ export default function ListView() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-48">
                             <DropdownMenuItem
-                                onSelect={() => {
-                                    // Map selection (by row index or id? DataTable by default uses index unless getRowKey is provided)
-                                    // We need to ensure we use IDs. We will pass getRowKey to DataTable.
+                                onSelect={async () => {
                                     const selectedRowIds = Object.keys(rowSelection).filter(k => rowSelection[k])
+                                    const newStatus = activeTab === "active" ? "done" : "todo"
 
-                                    if (activeTab === "active") {
-                                        setTasks(prev => prev.map(t => selectedRowIds.includes(t.id) ? { ...t, completed: true } : t))
+                                    const results = await Promise.all(selectedRowIds.map(id => updateTask(id, { status: newStatus })))
+                                    const successCount = results.filter(r => r.success).length
+
+                                    if (successCount > 0) {
+                                        setTasks(prev => prev.map(t => selectedRowIds.includes(t.id.toString()) ? { ...t, status: newStatus } : t))
+                                        toast.success(`Updated ${successCount} tasks`)
                                     } else {
-                                        setTasks(prev => prev.map(t => selectedRowIds.includes(t.id) ? { ...t, completed: false } : t))
+                                        toast.error("Failed to update tasks")
                                     }
                                     setRowSelection({})
                                 }}
@@ -332,7 +390,7 @@ export default function ListView() {
                     </span>
                 </div>
 
-                <Separator className="my-8" />
+                <Separator className="my-4" />
 
                 {/* Table */}
                 <DataTable
@@ -340,8 +398,9 @@ export default function ListView() {
                     data={filteredTasks}
                     rowSelection={rowSelection}
                     onRowSelectionChange={setRowSelection}
-                    getRowKey={(row) => row.id} // Important for valid selection state by ID
+                    getRowKey={(row) => row.id.toString()} // Important for valid selection state by ID
                     showGlobalFilter={false} // We have manual search
+                    isLoading={isLoading}
                     showFilters={false} // We have custom filters
                     showColumnToggle={false}
                     rowInteractive={false}
@@ -375,32 +434,35 @@ export default function ListView() {
                                 </div>
                                 <div className="space-y-2">
                                     <div className="text-sm font-medium">ASSIGNEE</div>
-                                    <Select value={newTaskAssignee} onValueChange={setNewTaskAssignee}>
+                                    <Select value={newTaskAssignee.toString()} onValueChange={(val) => setNewTaskAssignee(Number(val))}>
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Select assignee" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {dynamicAssignees.map((assignee) => (
-                                                <SelectItem key={assignee} value={assignee}>
-                                                    {assignee}
-                                                </SelectItem>
-                                            ))}
+                                            {dynamicAssignees.map((member) => {
+                                                const name = `${member.user?.first_name || ''} ${member.user?.last_name || ''}`.trim() || member.user?.display_name || "Unknown"
+                                                return (
+                                                    <SelectItem key={member.id} value={member.id.toString()}>
+                                                        {name}
+                                                    </SelectItem>
+                                                )
+                                            })}
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <div className="text-sm font-medium">PROJECT</div>
                                     <Select
-                                        value={newTaskProject || (selectedProject !== "all" ? selectedProject : projectOptions[0])}
-                                        onValueChange={setNewTaskProject}
+                                        value={newTaskProject.toString()}
+                                        onValueChange={(val) => setNewTaskProject(Number(val))}
                                     >
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Select project" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {projectOptions.map((project) => (
-                                                <SelectItem key={project} value={project}>
-                                                    {project}
+                                                <SelectItem key={project.id} value={project.id.toString()}>
+                                                    {project.name}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -449,22 +511,32 @@ export default function ListView() {
                             Cancel
                         </Button>
                         <Button
-                            onClick={() => {
-                                if (newTaskTitle.trim()) {
-                                    const newTask: TaskRow = {
-                                        id: `task-${Date.now()}`,
-                                        title: newTaskTitle,
-                                        assignee: newTaskAssignee || uniqueAssignees[0] || DUMMY_MEMBERS[0]?.name || "Unassigned",
-                                        project: newTaskProject || (selectedProject !== "all" ? selectedProject : projectOptions[0] || "Default Project"),
-                                        type: "Task",
-                                        created: new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
-                                        status: "task",
-                                        completed: false
+                            onClick={async () => {
+                                if (newTaskTitle.trim() && newTaskProject) {
+                                    const res = await createTask({
+                                        name: newTaskTitle,
+                                        project_id: Number(newTaskProject),
+                                        status: "todo",
+                                        priority: "medium"
+                                    })
+                                    if (res.success && res.data) {
+                                        const createdTask = res.data;
+                                        // Assign member if selected
+                                        if (newTaskAssignee) {
+                                            await assignTaskMember(createdTask.id, Number(newTaskAssignee))
+                                        }
+
+                                        // Refetch tasks to get updated list with assignees
+                                        const tasksRes = await getTasks();
+                                        if (tasksRes.success) setTasks(tasksRes.data);
+
+                                        setNewTaskTitle("")
+                                        setNewTaskAssignee("")
+                                        setIsNewTaskDialogOpen(false)
+                                        toast.success("Task created")
+                                    } else {
+                                        toast.error(res.message)
                                     }
-                                    setTasks([...tasks, newTask])
-                                    setNewTaskTitle("")
-                                    setNewTaskAssignee("")
-                                    setIsNewTaskDialogOpen(false)
                                 }
                             }}
                         >
@@ -481,7 +553,7 @@ export default function ListView() {
                     <DialogHeader>
                         <DialogTitle>Delete task</DialogTitle>
                         <DialogDescription className="text-sm text-muted-foreground">
-                            Are you sure you want to delete{taskToDelete ? ` "${taskToDelete.title}"` : ""}?
+                            Are you sure you want to delete{taskToDelete ? ` "${taskToDelete.name}"` : ""}?
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="flex flex-col gap-2 sm:flex-row">
@@ -493,9 +565,15 @@ export default function ListView() {
                         <Button
                             className="w-full sm:w-auto"
                             variant="destructive"
-                            onClick={() => {
+                            onClick={async () => {
                                 if (taskToDelete) {
-                                    setTasks(tasks.filter(task => task.id !== taskToDelete.id))
+                                    const res = await deleteTask(taskToDelete.id.toString())
+                                    if (res.success) {
+                                        setTasks(tasks.filter(task => task.id !== taskToDelete.id))
+                                        toast.success("Task deleted")
+                                    } else {
+                                        toast.error(res.message)
+                                    }
                                 }
                                 setTaskToDelete(null)
                             }}
@@ -527,16 +605,19 @@ export default function ListView() {
                                 </div>
                                 <div className="space-y-2">
                                     <div className="text-sm font-medium">ASSIGNEE</div>
-                                    <Select value={editedAssignee} onValueChange={(value) => setEditedAssignee(value)}>
+                                    <Select value={editedAssignee.toString()} onValueChange={(value) => setEditedAssignee(Number(value))}>
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Select assignee" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {dynamicEditedAssignees.map((assignee) => (
-                                                <SelectItem key={assignee} value={assignee}>
-                                                    {assignee}
-                                                </SelectItem>
-                                            ))}
+                                            {dynamicEditedAssignees.map((member) => {
+                                                const name = `${member.user?.first_name || ''} ${member.user?.last_name || ''}`.trim() || member.user?.display_name || "Unknown"
+                                                return (
+                                                    <SelectItem key={member.id} value={member.id.toString()}>
+                                                        {name}
+                                                    </SelectItem>
+                                                )
+                                            })}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -578,16 +659,25 @@ export default function ListView() {
                             Cancel
                         </Button>
                         <Button
-                            onClick={() => {
+                            onClick={async () => {
                                 if (!editingTask) return
-                                setTasks((prev) =>
-                                    prev.map((task) =>
-                                        task.id === editingTask.id
-                                            ? { ...task, title: editedTitle, assignee: editedAssignee }
-                                            : task
-                                    )
-                                )
-                                setEditingTask(null)
+                                const res = await updateTask(editingTask.id.toString(), { name: editedTitle })
+                                if (res.success) {
+                                    // Update assignee if changed
+                                    const currentAssigneeId = editingTask.assignees?.[0]?.organization_member_id
+                                    if (editedAssignee && editedAssignee !== currentAssigneeId) {
+                                        // Simplification: In a real app we might need to delete old assignee first or use a join table update action
+                                        await assignTaskMember(editingTask.id, Number(editedAssignee))
+                                    }
+
+                                    const tasksRes = await getTasks();
+                                    if (tasksRes.success) setTasks(tasksRes.data);
+
+                                    setEditingTask(null)
+                                    toast.success("Task updated")
+                                } else {
+                                    toast.error(res.message)
+                                }
                             }}
                         >
                             Save

@@ -1,7 +1,7 @@
 "use client"
+import Link from "next/link"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ClientActionsDropdown } from "./ClientActionsDropdown"
-import { getProjectCountByClientId, getTaskCountByClientId } from "@/lib/data/dummy-data"
 import {
     Table,
     TableBody,
@@ -20,6 +20,17 @@ export interface Client {
     address?: string
     phone?: string
     emails?: string[]
+    projectCount?: number
+    taskCount?: number
+    // New fields for mapping back to form
+    budgetType?: string
+    budgetAmount?: number
+    notifyPercentage?: number
+    invoiceNotes?: string
+    netTermsDays?: number
+    autoInvoiceFrequency?: string
+    projectIds?: string[]
+    createdAt?: string
 }
 
 interface ClientsTableProps {
@@ -61,6 +72,7 @@ export function ClientsTable({
                     <TableHead>Projects</TableHead>
                     <TableHead>Tasks</TableHead>
                     <TableHead>Auto Invoicing</TableHead>
+                    <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>
@@ -80,8 +92,8 @@ export function ClientsTable({
                             .join("")
                             .toUpperCase()
                             .slice(0, 2)
-                        const projectCount = getProjectCountByClientId(client.id)
-                        const taskCount = getTaskCountByClientId(client.id)
+                        const projectCount = client.projectCount || 0
+                        const taskCount = client.taskCount || 0
 
                         return (
                             <TableRow key={client.id}>
@@ -106,13 +118,26 @@ export function ClientsTable({
                                     </div>
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
-                                    {projectCount} project{projectCount !== 1 ? "s" : ""}
+                                    <Link
+                                        href={`/projects?client=${encodeURIComponent(client.name)}`}
+                                        className="hover:underline hover:text-primary transition-colors"
+                                    >
+                                        {projectCount} project{projectCount !== 1 ? "s" : ""}
+                                    </Link>
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
-                                    {taskCount} task{taskCount !== 1 ? "s" : ""}
+                                    <Link
+                                        href={`/projects/tasks/list?client=${encodeURIComponent(client.name)}`}
+                                        className="hover:underline hover:text-primary transition-colors"
+                                    >
+                                        {taskCount} task{taskCount !== 1 ? "s" : ""}
+                                    </Link>
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
                                     {client.autoInvoicing ? "On" : "Off"}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                    {client.createdAt ? new Date(client.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "—"}
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <ClientActionsDropdown

@@ -2,6 +2,8 @@
 
 import React, { useMemo, useState } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
+import { getProjects } from "@/action/project"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -37,27 +39,8 @@ import type { Project, NewProjectForm } from "@/components/projects/types"
 import { DUMMY_PROJECTS, DUMMY_MEMBERS, PROJECT_MEMBER_MAP, getTaskCountFromTasksPageByProjectId, getTeamNamesByProjectId } from "@/lib/data/dummy-data"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
 
-// Convert dummy projects to component format
-const INITIAL_DATA: Project[] = DUMMY_PROJECTS.map(p => {
-    const memberIds = PROJECT_MEMBER_MAP[p.id] ?? []
-    const members: Project["members"] = memberIds
-        .map(mid => {
-            const m = DUMMY_MEMBERS.find(x => x.id === mid)
-            return m ? { id: m.id, name: m.name, avatarUrl: m.avatar ?? null } : null
-        })
-        .filter((x): x is NonNullable<typeof x> => Boolean(x))
-
-    return {
-        id: p.id,
-        name: p.name,
-        clientName: p.clientName ?? null,
-        teams: getTeamNamesByProjectId(p.id),
-        members,
-        budgetLabel: p.budgetLabel,
-        memberLimitLabel: p.memberLimitLabel,
-        archived: p.archived,
-    }
-})
+// Initial data placeholder (will be replaced by useEffect)
+const INITIAL_DATA: Project[] = []
 
 function initialsFromName(name: string): string {
     const parts = (name || "").trim().split(/\s+/).filter(Boolean)
@@ -67,12 +50,39 @@ function initialsFromName(name: string): string {
 }
 
 export default function ProjectsPage() {
+    const searchParams = useSearchParams()
+    const urlClientName = searchParams.get("client")
     const [activeTab, setActiveTab] = useState<"active" | "archived">("active")
     const [search, setSearch] = useState("")
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [data, setData] = useState<Project[]>(INITIAL_DATA)
+    const [isLoading, setIsLoading] = useState(true)
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
+
+    // Fetch real data
+    React.useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true)
+            const res = await getProjects()
+            if (res.success) {
+                // Map IProject to Project component type
+                const projects: Project[] = (res.data as any[]).map(p => ({
+                    id: String(p.id),
+                    name: p.name,
+                    clientName: p.clientName || null,
+                    teams: p.teams || [],
+                    members: [], // Need to join members if needed
+                    budgetLabel: p.budget_amount ? `${p.budget_currency} ${p.budget_amount}` : "No budget",
+                    memberLimitLabel: "No limit",
+                    archived: p.status === 'archived'
+                }))
+                setData(projects)
+            }
+            setIsLoading(false)
+        }
+        fetchData()
+    }, [])
 
     // dialogs
     const [addOpen, setAddOpen] = useState(false)
@@ -137,11 +147,19 @@ export default function ProjectsPage() {
     const [transferProject, setTransferProject] = useState<Project | null>(null)
 
     const filtered = useMemo(() => {
-        const byTab = data.filter(p => (activeTab === "active" ? !p.archived : p.archived))
+        let result = data.filter(p => (activeTab === "active" ? !p.archived : p.archived))
+
         const q = search.trim().toLowerCase()
-        if (!q) return byTab
-        return byTab.filter(p => p.name.toLowerCase().includes(q))
-    }, [activeTab, data, search])
+        if (q) {
+            result = result.filter(p => p.name.toLowerCase().includes(q))
+        }
+
+        if (urlClientName) {
+            result = result.filter(p => p.clientName?.toLowerCase() === urlClientName.toLowerCase())
+        }
+
+        return result
+    }, [activeTab, data, search, urlClientName])
 
     const paginated = useMemo(() => {
         const start = (currentPage - 1) * pageSize
@@ -179,7 +197,7 @@ export default function ProjectsPage() {
     }
 
     return (
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <div className="flex flex-col gap-4 p-4 pt-0">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold">Projects</h1>
@@ -255,7 +273,7 @@ export default function ProjectsPage() {
                         </span>
                     </div>
 
-                    <Separator className="my-8" />
+                    <Separator className="my-4" />
 
                     {/* Table */}
                     <div className="mt-4 md:mt-6">
