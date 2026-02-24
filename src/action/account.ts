@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { IUser, IOrganization_member, IEmergencyContact } from "@/interface";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 
 import { accountLogger } from '@/lib/logger';
 interface UserProfile extends Partial<IUser> {
@@ -48,22 +49,33 @@ export async function getAccountData(): Promise<{
       accountLogger.error('Profile error:', profileError);
     }
 
-    // Get organization member data with relations
-    const { data: orgMember, error: orgMemberError } = await supabase
+    // Read org_id cookie to determine which organization context the user is in
+    const cookieStore = await cookies();
+    const activeOrgIdStr = cookieStore.get('org_id')?.value;
+    const activeOrgId = activeOrgIdStr ? parseInt(activeOrgIdStr, 10) : null;
+
+    let orgMemberQuery = supabase
       .from('organization_members')
       .select(`
         *,
         organization:organizations(*),
-        departments!organization_members_department_id_fkey(*),
+        departments:departments!organization_members_department_id_fkey(*),
         positions(*),
         role:system_roles(*),
         user:user_profiles(*)
       `)
-      .eq('user_id', user.id)
+      .eq('user_id', user.id);
+
+    if (activeOrgId) {
+      orgMemberQuery = orgMemberQuery.eq('organization_id', activeOrgId);
+    }
+
+    const { data: orgMember, error: orgMemberError } = await orgMemberQuery
+      .limit(1)
       .maybeSingle();
 
     if (orgMemberError) {
-      accountLogger.error('Org member error:', orgMemberError);
+      accountLogger.error('Org member error:', orgMemberError.message, orgMemberError.details);
     }
 
     const normalizedUserProfile: UserProfile = userProfile ? { ...userProfile } : {};

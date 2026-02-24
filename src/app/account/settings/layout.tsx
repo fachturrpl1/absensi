@@ -13,12 +13,12 @@ import {
 
 const sidebarNavItems = [
     {
-        title: "Profile",
+        title: "Profile Settings",
         href: "/account/settings", // Default active
         icon: <User className="h-4 w-4" />,
     },
     {
-        title: "Account",
+        title: "Account Settings",
         href: "/account/settings/account",
         icon: <Settings className="h-4 w-4" />,
     },
