@@ -116,9 +116,9 @@ export function SignUp() {
             </div>
           </>
         )}
-          <FormField
-            control={form.control}
-            name="first_name"
+        <FormField
+          control={form.control}
+          name="first_name"
           render={({ field }) => (
             <FormItem>
               <FormLabel>First Name</FormLabel>
