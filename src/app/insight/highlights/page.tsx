@@ -137,8 +137,8 @@ export default function HighlightsPage() {
         </div>
       </div>
 
-      <div className="flex">
-        <div className="flex-1 p-6 space-y-6">
+      <div className="flex flex-col lg:flex-row">
+        <div className="flex-1 p-4 md:p-6 space-y-6">
           <section>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -155,27 +155,27 @@ export default function HighlightsPage() {
             </div>
 
             <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
-              <div className="p-6">
-                <div className="flex gap-6">
-                  <div className="space-y-4 min-w-[120px]">
-                    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                      <div className="text-3xl font-bold">
+              <div className="p-4 md:p-6">
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 md:flex md:flex-col gap-4 min-w-[120px]">
+                    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 flex flex-col justify-center">
+                      <div className="text-2xl md:text-3xl font-bold">
                         {new Set(filteredUnusualActivities.map((activity) => activity.memberId)).size}
                       </div>
-                      <div className="text-sm text-gray-600 mt-1">Members</div>
+                      <div className="text-xs md:text-sm text-gray-600 mt-1">Members</div>
                     </div>
 
-                    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                      <div className="text-3xl font-bold">{filteredUnusualActivities.length}</div>
-                      <div className="text-sm text-gray-600 mt-1">Instances</div>
+                    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 flex flex-col justify-center">
+                      <div className="text-2xl md:text-3xl font-bold">{filteredUnusualActivities.length}</div>
+                      <div className="text-xs md:text-sm text-gray-600 mt-1">Instances</div>
                     </div>
 
-                    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                      <div className="text-3xl font-bold">
+                    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 flex flex-col justify-center">
+                      <div className="text-2xl md:text-3xl font-bold">
                         {Math.floor(totalUnusualMinutes / 60)}:
                         {(totalUnusualMinutes % 60).toString().padStart(2, "0")}
                       </div>
-                      <div className="text-sm text-gray-600 mt-1">Total time (h:m)</div>
+                      <div className="text-xs md:text-sm text-gray-600 mt-1">Total time (h:m)</div>
                     </div>
                   </div>
 

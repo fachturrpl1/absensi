@@ -20,14 +20,14 @@ export default function OrganizationInactivePage() {
     const interval = setInterval(async () => {
       await checkStatus();
     }, 30000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
   const checkStatus = async () => {
     try {
       const status = await checkOrganizationStatus();
-      
+
       if (status.isValid) {
         toast.success("Organization activated! Redirecting...");
         router.replace('/');
@@ -42,7 +42,7 @@ export default function OrganizationInactivePage() {
     setChecking(true);
     try {
       const status = await checkOrganizationStatus();
-      
+
       if (status.isValid) {
         toast.success("Organization activated! Redirecting to dashboard...");
         router.replace('/');
@@ -61,12 +61,12 @@ export default function OrganizationInactivePage() {
   useEffect(() => {
     const sidebar = document.querySelector('[data-sidebar]') || document.querySelector('aside');
     const navbar = document.querySelector('[data-navbar]') || document.querySelector('nav');
-    
+
     if (sidebar instanceof HTMLElement) sidebar.style.display = 'none';
     if (navbar instanceof HTMLElement) navbar.style.display = 'none';
-    
+
     document.body.style.marginLeft = '0';
-    
+
     return () => {
       if (sidebar instanceof HTMLElement) sidebar.style.display = '';
       if (navbar instanceof HTMLElement) navbar.style.display = '';
@@ -111,7 +111,7 @@ export default function OrganizationInactivePage() {
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-3 justify-center">
-          <Button 
+          <Button
             onClick={handleRefresh}
             disabled={checking}
             className="flex items-center gap-2 w-full hover:scale-105 transition-transform duration-200 bg-green-600 hover:bg-green-700"
@@ -120,8 +120,8 @@ export default function OrganizationInactivePage() {
             {checking ? 'Checking...' : 'Check Organization Status'}
           </Button>
 
-          <a href="mailto:support@presensi.app?subject=Organization%20Suspended%20-%20Access%20Issue">
-            <Button 
+          <a href="mailto:support@absensi.app?subject=Organization%20Suspended%20-%20Access%20Issue">
+            <Button
               variant="outline"
               className="flex items-center gap-2 w-full hover:scale-105 transition-transform duration-200"
             >
@@ -129,8 +129,8 @@ export default function OrganizationInactivePage() {
               Contact Support
             </Button>
           </a>
-          
-          <Button 
+
+          <Button
             variant="outline"
             onClick={handleSignOut}
             className="flex items-center gap-2 w-full hover:scale-105 transition-transform duration-200"
@@ -144,13 +144,13 @@ export default function OrganizationInactivePage() {
           <p className="text-xs text-muted-foreground mb-3">
             After your organization is activated, click &quot;Check Organization Status&quot; above
           </p>
-          
+
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">
               The system automatically checks every 30 seconds
             </p>
             <p className="text-xs text-muted-foreground/60">
-              For support: support@presensi.app
+              For support: support@absensi.app
             </p>
           </div>
         </div>

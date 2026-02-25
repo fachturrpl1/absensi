@@ -373,35 +373,33 @@ export function AppSidebarNew({ ...props }: React.ComponentProps<typeof Sidebar>
     setMounted(true)
   }, [])
 
-  if (!mounted) {
-    return (
-      <div
-        data-slot="sidebar-wrapper"
-        className="group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full"
-        suppressHydrationWarning
-      />
-    )
-  }
-
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        <OrganizationSwitcher />
-      </SidebarHeader>
+      {mounted ? (
+        <>
+          <SidebarHeader>
+            <OrganizationSwitcher />
+          </SidebarHeader>
 
-      <SidebarContent>
-        {sidebarGroups.map((group, index) => (
-          <SidebarGroup key={`group-${index}`}>
-            <SidebarGroupContent>
-              <NavMain items={group.items} />
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
-      </SidebarContent>
+          <SidebarContent>
+            {sidebarGroups.map((group, index) => (
+              <SidebarGroup key={`group-${index}`}>
+                <SidebarGroupContent>
+                  <NavMain items={group.items} />
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))}
+          </SidebarContent>
 
-      <SidebarFooter>
-        <NavUser />
-      </SidebarFooter>
+          <SidebarFooter>
+            <NavUser />
+          </SidebarFooter>
+        </>
+      ) : (
+        <div className="flex h-full w-full items-center justify-center p-4">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      )}
     </Sidebar>
   );
 }
