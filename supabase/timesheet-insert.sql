@@ -62,7 +62,7 @@ INSERT INTO time_entries (
     '2026-02-10 17:00:00+07', 
     28800, 
     'work',          -- time_type example
-    'manual', 
+    'web',           -- Changed from 'manual' to 'web' to satisfy chk_time_entry_source
     'Initial research and setup',
     true,
     false,
@@ -98,6 +98,6 @@ SELECT
     '2026-03-05 12:00:00+07', 
     12600, 
     'work',
-    'manual', 
+    'web',           -- Changed from 'manual' to 'web'
     'Project documentation'
 FROM new_ts;

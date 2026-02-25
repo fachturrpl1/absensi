@@ -34,7 +34,6 @@ import type { RowSelectionState } from "@tanstack/react-table"
 import { getTasks, createTask, updateTask, deleteTask, assignTaskMember } from "@/action/task"
 import { getProjects } from "@/action/project"
 import { getAllOrganization_member } from "@/action/members"
-import { checkDatabaseCounts } from "@/action/debug"
 import { ITask, IProject, IOrganization_member } from "@/interface"
 import { toast } from "sonner"
 
@@ -74,9 +73,6 @@ export default function ListView() {
                 if (tasksRes.success) setTasks(tasksRes.data)
                 if (projectsRes.success) setProjects(projectsRes.data)
                 if (membersRes.success) setMembers(membersRes.data)
-
-                const counts = await checkDatabaseCounts()
-                console.log("Debug Counts:", counts)
             } catch (error) {
                 console.error("Error fetching data:", error)
                 toast.error("Failed to load data")
@@ -396,11 +392,17 @@ export default function ListView() {
                 <DataTable
                     columns={columns}
                     data={filteredTasks}
+                    isLoading={isLoading}
+                    showLoadingOverlay={false}
+                    emptyState={
+                        <div className="py-10 px-4 text-center text-sm text-muted-foreground">
+                            {isLoading ? "Loading tasks..." : "No tasks found"}
+                        </div>
+                    }
                     rowSelection={rowSelection}
                     onRowSelectionChange={setRowSelection}
                     getRowKey={(row) => row.id.toString()} // Important for valid selection state by ID
                     showGlobalFilter={false} // We have manual search
-                    isLoading={isLoading}
                     showFilters={false} // We have custom filters
                     showColumnToggle={false}
                     rowInteractive={false}

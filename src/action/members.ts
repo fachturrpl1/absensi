@@ -35,11 +35,12 @@ export const getAllOrganization_member = async (organizationId?: number) => {
 
   if (!targetOrgId) {
     // If no organizationId provided, get user's first organization
-    const { data: member } = await supabase
+    const { data: memberships } = await supabase
       .from("organization_members")
       .select("organization_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
+      .eq("user_id", user.id);
+
+    const member = memberships?.[0];
 
     if (!member) {
       return { success: true, message: "User not registered in any organization", data: [] };
@@ -379,11 +380,12 @@ export const getMemberSummary = async (): Promise<OrganizationSummary> => {
     };
   }
 
-  const { data: membership, error: membershipError } = await supabase
+  const { data: memberships, error: membershipError } = await supabase
     .from("organization_members")
     .select("organization_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
+    .eq("user_id", user.id);
+
+  const membership = memberships?.[0];
 
   if (membershipError || !membership?.organization_id) {
     return {
@@ -568,11 +570,12 @@ export const getDepartmentMembersByOrganization = async (organizationId: string)
 
 export const getUserOrganizationId = async (userId: string) => {
   const supabase = await getSupabase();
-  const { data, error } = await supabase
+  const { data: memberships, error: error } = await supabase
     .from("organization_members")
     .select("organization_id")
-    .eq("user_id", userId)
-    .maybeSingle(); // allows null when none exists
+    .eq("user_id", userId);
+
+  const data = memberships?.[0];
 
   if (error) {
     return { success: false, message: error.message, organizationId: null };
@@ -673,11 +676,12 @@ export const getOrganizationMembersPaginated = async ({
       return { success: false, message: "User not logged in", data: [], metadata: { total: 0, page, pageSize, totalPages: 0 } };
     }
 
-    const { data: member } = await supabase
+    const { data: memberships } = await supabase
       .from("organization_members")
       .select("organization_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
+      .eq("user_id", user.id);
+
+    const member = memberships?.[0];
 
     if (!member) {
       return { success: false, message: "User not registered in any organization", data: [], metadata: { total: 0, page, pageSize, totalPages: 0 } };
