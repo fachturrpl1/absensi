@@ -11,8 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Trash2 } from "lucide-react"
-import { DUMMY_TEAMS } from "@/lib/data/dummy-data"
-import type { NewProjectForm, Project } from "./types"
+import { NewProjectForm, Project } from "./types"
+import { IClient, IGroup } from "@/interface"
 
 type RealMember = { id: string; name: string }
 
@@ -24,10 +24,12 @@ type EditProjectDialogProps = {
   initialTab?: "general" | "members" | "budget" | "teams"
   /** Real members from database */
   members?: RealMember[]
+  clients?: IClient[]
+  groups?: IGroup[]
 }
 
 export default function EditProjectDialog(props: EditProjectDialogProps) {
-  const { open, onOpenChange, project, onSave, initialTab, members = [] } = props
+  const { open, onOpenChange, project, onSave, initialTab, members = [], clients = [], groups = [] } = props
   const [form, setForm] = useState<NewProjectForm>({
     names: "",
     billable: true,
@@ -166,8 +168,9 @@ export default function EditProjectDialog(props: EditProjectDialogProps) {
                   <SelectValue placeholder="Select a client" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="client-1">Client A</SelectItem>
-                  <SelectItem value="client-2">Client B</SelectItem>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={String(client.id)}>{client.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -646,7 +649,7 @@ export default function EditProjectDialog(props: EditProjectDialogProps) {
                 <Button
                   variant="link"
                   className="h-auto p-0 text-gray-900 hover:cursor-pointer"
-                  onClick={() => setForm(s => ({ ...s, teams: DUMMY_TEAMS.map(t => t.id) }))}
+                  onClick={() => setForm(s => ({ ...s, teams: groups.map(t => String(t.id)) }))}
                 >
                   Select all
                 </Button>
@@ -654,19 +657,19 @@ export default function EditProjectDialog(props: EditProjectDialogProps) {
             </div>
             <ScrollArea className="h-[200px] w-full rounded-md border p-4">
               <div className="space-y-4">
-                {DUMMY_TEAMS.map((team) => (
+                {groups.map((team) => (
                   <div key={team.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`team-${team.id}`}
-                      checked={!!form.teams?.includes(team.id)}
+                      checked={!!form.teams?.includes(String(team.id))}
                       onCheckedChange={(checked) => {
                         const current = new Set(form.teams || [])
-                        if (checked) current.add(team.id); else current.delete(team.id)
+                        if (checked) current.add(String(team.id)); else current.delete(String(team.id))
                         setForm(prev => ({ ...prev, teams: Array.from(current) }))
                       }}
                     />
                     <label htmlFor={`team-${team.id}`} className="text-sm font-medium leading-none">
-                      {team.name} <span className="text-muted-foreground">({team.memberCount} members)</span>
+                      {team.name}
                     </label>
                   </div>
                 ))}
