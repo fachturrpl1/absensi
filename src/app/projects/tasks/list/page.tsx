@@ -392,17 +392,11 @@ export default function ListView() {
                 <DataTable
                     columns={columns}
                     data={filteredTasks}
-                    isLoading={isLoading}
-                    showLoadingOverlay={false}
-                    emptyState={
-                        <div className="py-10 px-4 text-center text-sm text-muted-foreground">
-                            {isLoading ? "Loading tasks..." : "No tasks found"}
-                        </div>
-                    }
                     rowSelection={rowSelection}
                     onRowSelectionChange={setRowSelection}
                     getRowKey={(row) => row.id.toString()} // Important for valid selection state by ID
                     showGlobalFilter={false} // We have manual search
+                    isLoading={isLoading}
                     showFilters={false} // We have custom filters
                     showColumnToggle={false}
                     rowInteractive={false}

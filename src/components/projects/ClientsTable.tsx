@@ -80,6 +80,7 @@ export function ClientsTable({
                 {clients.length === 0 ? (
                     <TableRow>
                         <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                            No clients found
                         </TableCell>
                     </TableRow>
                 ) : (
