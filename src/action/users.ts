@@ -101,23 +101,26 @@ export async function login(formData: FormData) {
 
   const user = data.user
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profiles, error: profileError } = await supabase
     .from("user_profiles")
     .select("*")
     .eq("id", user.id)
-    .single()
+    .limit(1)
+
+  const profile = profiles?.[0]
 
   if (profileError) return { success: false, message: profileError.message }
 
   // Get organization role
-  const { data: orgMember } = await supabase
+  const { data: orgMemberships } = await supabase
     .from("organization_members")
     .select(`
       role:system_roles(code, name)
     `)
     .eq("user_id", user.id)
     .eq("is_active", true)
-    .maybeSingle()
+
+  const orgMember = orgMemberships?.[0]
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orgRole = orgMember?.role ? (Array.isArray(orgMember.role) ? orgMember.role[0]?.code : (orgMember.role as any)?.code) : null
@@ -253,14 +256,18 @@ export async function getOrganizationUsers() {
   }
 
   // Get user's organization membership
-  const { data: member, error: memberError } = await supabase
+  const { data: memberships, error: memberError } = await supabase
     .from("organization_members")
     .select("organization_id")
     .eq("user_id", user.id)
-    .maybeSingle()
 
-  if (memberError || !member) {
+  if (memberError || !memberships || memberships.length === 0) {
     return { success: false, message: "User not in any organization", data: [] }
+  }
+
+  const member = memberships[0];
+  if (!member || !member.organization_id) {
+    return { success: false, message: "User organization data incomplete", data: [] }
   }
 
   // Get all members in the same organization
