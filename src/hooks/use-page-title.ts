@@ -7,15 +7,15 @@ import { useEffect } from 'react';
  */
 export function usePageTitle(pageTitle: string, organizationName?: string | null) {
   useEffect(() => {
-    const fullTitle = organizationName 
+    const fullTitle = organizationName
       ? `${pageTitle} - ${organizationName}`
-      : `${pageTitle} - Presensi`;
-    
+      : `${pageTitle} - Absensi`;
+
     document.title = fullTitle;
-    
+
     // Cleanup: restore to default on unmount
     return () => {
-      document.title = 'Presensi - Sistem Kehadiran Digital';
+      document.title = 'Absensi - Sistem Kehadiran Digital';
     };
   }, [pageTitle, organizationName]);
 }

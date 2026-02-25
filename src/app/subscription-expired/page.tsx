@@ -142,7 +142,7 @@ export default function SubscriptionExpiredPage() {
             {checking ? 'Checking...' : 'Check Subscription Status'}
           </Button>
 
-          <a href="mailto:support@presensi.app?subject=Subscription%20Expired%20-%20Renewal%20Request">
+          <a href="mailto:support@absensi.app?subject=Subscription%20Expired%20-%20Renewal%20Request">
             <Button
               variant="outline"
               className="flex items-center gap-2 w-full hover:scale-105 transition-transform duration-200"
@@ -172,7 +172,7 @@ export default function SubscriptionExpiredPage() {
               The system automatically checks every 30 seconds
             </p>
             <p className="text-xs text-muted-foreground/60">
-              For support: support@presensi.app
+              For support: support@absensi.app
             </p>
           </div>
         </div>

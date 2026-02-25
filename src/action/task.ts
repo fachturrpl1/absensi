@@ -33,35 +33,11 @@ export const getTasks = async (organizationId?: string) => {
 
     console.log("getTasks: fetching for org:", targetOrgId);
 
-    // Fetch tasks with project details and assignees
-    // Note: We filter by project_id belonging to the organization
+    // Fetch tasks from the optimized view which has all details pre-aggregated
     const { data, error } = await supabase
-        .from("tasks")
-        .select(`
-      *,
-      project:projects!inner (
-        id,
-        name,
-        organization_id,
-        client:clients (
-          id,
-          name
-        )
-      ),
-      assignees:task_assignees (
-        *,
-        member:organization_members (
-          id,
-          user:user_profiles (
-            id,
-            display_name,
-            first_name,
-            last_name
-          )
-        )
-      )
-    `)
-        .eq("project.organization_id", targetOrgId)
+        .from("tasks_with_details")
+        .select("*")
+        .eq("organization_id", targetOrgId)
         .order("created_at", { ascending: false });
 
     console.log("getTasks: query result count:", data?.length, "error:", error);
@@ -70,7 +46,17 @@ export const getTasks = async (organizationId?: string) => {
         return { success: false, message: error.message, data: [] };
     }
 
-    return { success: true, data: data as unknown as ITask[] };
+    // Map the flattened view data back to the nested structure expected by ITask
+    const processedData = data?.map((task: any) => ({
+        ...task,
+        project: {
+            id: task.project_id,
+            name: task.project_name,
+            client: task.client_name ? [{ id: task.client_id, name: task.client_name }] : []
+        }
+    }));
+
+    return { success: true, data: processedData as unknown as ITask[] };
 };
 
 /**
