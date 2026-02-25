@@ -20,7 +20,7 @@ import {
 import { useState, useRef, useMemo } from "react"
 import { IUser, IOrganization_member } from "@/interface"
 import { useAuthStore } from "@/store/user-store"
-import { useProfilePhotoDelete } from "@/hooks/use-profile"
+import { useProfilePhotoDelete, useProfilePhotoUrl } from "@/hooks/use-profile"
 import { getUserInitials, safeAvatarSrc } from "@/lib/avatar-utils"
 import { uploadProfilePhotoBase64, updateUserProfile } from "@/action/account"
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog"
@@ -115,15 +115,17 @@ export function ProfileSettingsForm({ initialData }: ProfileSettingsFormProps) {
         mode: "onChange",
     })
 
+    const profilePhotoUrl = useProfilePhotoUrl(currentUser?.profile_photo_url || undefined, currentUser?.id)
+
     // Avatar Logic
     const avatarSrc = useMemo(() => {
-        return safeAvatarSrc(currentUser?.profile_photo_url ?? initialData.user.profile_photo_url);
-    }, [currentUser?.profile_photo_url, initialData.user.profile_photo_url]);
+        const url = profilePhotoUrl ?? safeAvatarSrc(initialData.user.profile_photo_url);
+        return url;
+    }, [profilePhotoUrl, initialData.user.profile_photo_url]);
 
     const userInitials = useMemo(() => {
         return getUserInitials(
             currentUser?.first_name || initialData.user.first_name,
-            currentUser?.last_name || initialData.user.last_name,
             currentUser?.email || initialData.user.email
         );
     }, [currentUser, initialData.user]);
@@ -146,13 +148,14 @@ export function ProfileSettingsForm({ initialData }: ProfileSettingsFormProps) {
 
     const onCropComplete = async (croppedBlob: Blob) => {
         setPhotoUploading(true);
+        const toastId = toast.loading("Uploading profile photo...");
         try {
             const reader = new FileReader();
             reader.readAsDataURL(croppedBlob);
             reader.onloadend = async () => {
                 const base64 = reader.result?.toString();
                 if (!base64) {
-                    toast.error("Failed to process cropped image");
+                    toast.error("Failed to process cropped image", { id: toastId });
                     setPhotoUploading(false);
                     return;
                 }
@@ -166,35 +169,40 @@ export function ProfileSettingsForm({ initialData }: ProfileSettingsFormProps) {
                 });
 
                 if (result.success && result.url) {
-                    toast.success("Profile photo updated successfully");
+                    toast.success("Profile photo updated successfully", { id: toastId });
+
+                    // Update the auth store and refresh profile to sync everything
                     setUser((prev) => {
                         if (!prev) return prev;
                         return { ...prev, profile_photo_url: result.url! };
                     });
                 } else {
-                    toast.error(result.message || "Failed to upload photo");
+                    toast.error(result.message || "Failed to upload photo", { id: toastId });
                 }
                 setPhotoUploading(false);
                 setCropDialogOpen(false);
             };
         } catch (error) {
-            toast.error("An error occurred during upload");
+            toast.error("An error occurred during upload", { id: toastId });
             setPhotoUploading(false);
         }
     };
 
     const handleDeletePhoto = async () => {
         if (confirm("Are you sure you want to delete your profile photo?")) {
+            setPhotoUploading(true);
+            const toastId = toast.loading("Deleting profile photo...");
             const result = await deleteProfilePhoto();
             if (result.success) {
-                toast.success("Profile photo deleted");
+                toast.success("Profile photo deleted", { id: toastId });
                 setUser((prev) => {
                     if (!prev) return prev;
                     return { ...prev, profile_photo_url: null };
                 });
             } else {
-                toast.error(result.message || "Failed to delete photo");
+                toast.error(result.message || "Failed to delete photo", { id: toastId });
             }
+            setPhotoUploading(false);
         }
     }
 

@@ -82,6 +82,63 @@ const statusConfig = {
   },
 };
 
+/**
+ * Pure helper to resolve a Supabase profile photo URL.
+ * Mirrors useProfilePhotoUrl hook but works outside of React components.
+ *
+ * Storage structure: profile-photos/users/{userId}/filename.webp
+ * DB may store: full https URL (new) OR just filename (old, e.g., from mass-profile)
+ */
+function resolveProfilePhotoUrl(profilePhotoUrl?: string | null, userId?: string | null): string | undefined {
+  if (!profilePhotoUrl || profilePhotoUrl === '' || profilePhotoUrl === 'null' || profilePhotoUrl === 'undefined') {
+    return undefined;
+  }
+
+  // If value is exactly the userId (UUID), it's invalid/corrupted data
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(profilePhotoUrl) && profilePhotoUrl === userId) {
+    return undefined;
+  }
+
+  // New uploads store the full public URL — use as-is
+  if (profilePhotoUrl.startsWith('http')) {
+    return profilePhotoUrl;
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) return undefined;
+
+  const base = `${supabaseUrl}/storage/v1/object/public/profile-photos`;
+
+  if (profilePhotoUrl.startsWith('/storage/v1/object/public/')) {
+    return `${supabaseUrl}${profilePhotoUrl}`;
+  }
+  if (profilePhotoUrl.startsWith('profile-photos/')) {
+    return `${supabaseUrl}/storage/v1/object/public/${profilePhotoUrl}`;
+  }
+  if (profilePhotoUrl.startsWith('users/')) {
+    return `${base}/${profilePhotoUrl}`;
+  }
+  if (profilePhotoUrl.includes('/profile-photos/')) {
+    return `${supabaseUrl}/storage/v1/object/public/${profilePhotoUrl.replace(/^\//, '')}`;
+  }
+
+  // Old data: just the filename
+  const cleanFilename = profilePhotoUrl.replace(/^\//, '');
+  if (cleanFilename.startsWith('profile_') && userId) {
+    // New convention: users/{userId}/ folder
+    return `${base}/users/${userId}/${cleanFilename}`;
+  }
+  if (cleanFilename.includes('-') || cleanFilename.length > 20) {
+    // Legacy/mass-profile convention
+    return `${base}/mass-profile/${cleanFilename}`;
+  }
+  if (userId) {
+    return `${base}/users/${userId}/${cleanFilename}`;
+  }
+  return `${base}/${cleanFilename}`;
+}
+
 // Simple cache to prevent duplicate requests
 const attendanceCache: {
   data: AttendanceRecord[] | null;
@@ -225,6 +282,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
           organization_member_id,
           organization_members!inner (
             id,
+            user_id,
             organization_id,
             user_profiles!inner (
               first_name,
@@ -263,7 +321,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
           late_minutes: record.late_minutes,
           notes: record.notes,
           location: null,
-          profile_photo_url: profile?.profile_photo_url,
+          profile_photo_url: resolveProfilePhotoUrl(profile?.profile_photo_url, member?.user_id) || null,
         };
       }) || [];
 

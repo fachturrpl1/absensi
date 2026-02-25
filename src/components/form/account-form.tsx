@@ -300,7 +300,8 @@ export function AccountForm({ initialData }: AccountFormProps) {
 
 
   const profilePhotoUrl = useProfilePhotoUrl(
-    currentUser?.profile_photo_url ?? initialData.user.profile_photo_url ?? undefined
+    currentUser?.profile_photo_url ?? initialData.user.profile_photo_url ?? undefined,
+    currentUser?.id
   );
 
   const avatarSrc = safeAvatarSrc(profilePhotoUrl ?? undefined) || undefined;

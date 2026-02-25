@@ -21,6 +21,7 @@ import {
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 import { useAuthStore } from '@/store/user-store';
+import { useProfilePhotoUrl } from '@/hooks/use-profile';
 
 function getInitials(name: string) {
   return name
@@ -45,7 +46,10 @@ export const NavUser = memo(function NavUser() {
     email: '',
     avatar: null,
   });
+  const setStoreUser = useAuthStore((state) => state.setUser);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const photoUrl = useProfilePhotoUrl(storeUser?.profile_photo_url || undefined, storeUser?.id);
 
   // Sync with store user (already fetched server-side)
   useEffect(() => {
@@ -59,10 +63,10 @@ export const NavUser = memo(function NavUser() {
       setUser({
         name: displayName,
         email: storeUser.email || '',
-        avatar: storeUser.profile_photo_url || null,
+        avatar: photoUrl || null,
       });
     }
-  }, [storeUser]);
+  }, [storeUser, photoUrl]);
 
   // Setup real-time subscription for profile changes only
   useEffect(() => {
@@ -87,11 +91,17 @@ export const NavUser = memo(function NavUser() {
             const { getUserDisplayName } = await import('@/utils/user-display-name');
             const displayName = getUserDisplayName(newProfile);
 
-            setUser({
-              name: displayName,
-              email: newProfile.email || storeUser.email || '',
-              avatar: newProfile.profile_photo_url,
+            // Update global store
+            setStoreUser(prev => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                ...newProfile,
+                display_name: displayName,
+              };
             });
+
+            // Local state will be updated via the first useEffect when storeUser changes
           }
         }
       )
@@ -100,7 +110,7 @@ export const NavUser = memo(function NavUser() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [storeUser?.id, storeUser?.email]);
+  }, [storeUser?.id, storeUser?.email, setStoreUser]);
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
