@@ -353,6 +353,30 @@ export async function createOrganization(
       };
     }
 
+    // Ensure user_profiles record exists BEFORE adding to organization_members
+    // The FK organization_members_user_id_fkey references user_profiles(id), not auth.users(id)
+    // New users may not have a user_profiles record if the trigger didn't fire
+    const { error: profileCheckError } = await adminClient
+      .from("user_profiles")
+      .upsert(
+        {
+          id: user.id,
+          email: user.email || "",
+          first_name: user.user_metadata?.first_name || user.user_metadata?.name?.split(" ")[0] || "",
+          last_name: user.user_metadata?.last_name || user.user_metadata?.name?.split(" ").slice(1).join(" ") || "",
+        },
+        { onConflict: "id", ignoreDuplicates: true }
+      );
+
+    if (profileCheckError) {
+      console.error("[CREATE-ORG] Error ensuring user_profiles exists:", {
+        message: profileCheckError.message,
+        details: profileCheckError.details,
+        code: profileCheckError.code,
+      });
+      // Log but continue — record might already exist (ignoreDuplicates handles it)
+    }
+
     // Add user as organization member (without biodata, so they won't appear in export)
     // This is needed so creator can access the organization
     const { data: member, error: memberError } = await adminClient
@@ -652,7 +676,7 @@ export async function getAvailableTimezones(): Promise<string[]> {
   try {
     // Node 18 supports Intl.supportedValuesOf
     // Provide fallback to a minimal list if not available
-     
+
     const intl: any = Intl as any;
     if (typeof intl.supportedValuesOf === "function") {
       return intl.supportedValuesOf("timeZone");
