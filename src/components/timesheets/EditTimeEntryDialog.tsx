@@ -136,7 +136,7 @@ export function EditTimeEntryDialog({
             const bStart = parse(b.startTime, "HH:mm", new Date())
             const bEnd = parse(b.endTime, "HH:mm", new Date())
             if (isValid(bStart) && isValid(bEnd)) {
-                let bDiff = differenceInMinutes(bEnd, bStart)
+                const bDiff = differenceInMinutes(bEnd, bStart)
                 if (bDiff > 0) breakMinutes += bDiff
             }
         })

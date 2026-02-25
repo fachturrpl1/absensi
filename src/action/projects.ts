@@ -101,7 +101,7 @@ export const getAllProjects = async (organizationId?: number | string) => {
 
     // Step 3: Fetch all team members for those teams (use adminClient to bypass RLS)
     const adminClient = createAdminClient();
-    let teamMembersByTeamId: Record<number, any[]> = {};
+    const teamMembersByTeamId: Record<number, any[]> = {};
     if (allTeamIds.length > 0) {
         const { data: tmData, error: tmError } = await adminClient
             .from("team_members")

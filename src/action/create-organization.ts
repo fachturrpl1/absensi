@@ -652,7 +652,7 @@ export async function getAvailableTimezones(): Promise<string[]> {
   try {
     // Node 18 supports Intl.supportedValuesOf
     // Provide fallback to a minimal list if not available
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const intl: any = Intl as any;
     if (typeof intl.supportedValuesOf === "function") {
       return intl.supportedValuesOf("timeZone");

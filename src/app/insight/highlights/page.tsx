@@ -48,7 +48,7 @@ export default function HighlightsPage() {
         })
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []) // Run ONCE on mount
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const end = new Date()

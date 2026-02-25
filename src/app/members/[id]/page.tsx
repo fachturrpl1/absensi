@@ -237,7 +237,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
   const user: IUser | undefined = member.user
   const email = user?.email || ""
   const phone = user?.phone || ""
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+   
   const photoUrl = useProfilePhotoUrl(user?.profile_photo_url ?? undefined) ?? undefined
 
   const displayName = user

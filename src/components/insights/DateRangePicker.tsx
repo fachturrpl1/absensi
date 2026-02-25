@@ -30,7 +30,7 @@ export function DateRangePicker({
     // Tapi jika modal terbuka, preset akan di-override oleh useEffect yang lain
     const detectedPreset = detectPreset(dateRange.startDate, dateRange.endDate)
     setSelectedPreset(detectedPreset)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [dateRange.startDate.getTime(), dateRange.endDate.getTime()])
 
   const fmt = (d: Date) =>

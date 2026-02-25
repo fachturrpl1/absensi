@@ -316,7 +316,7 @@ export default function ClientBudgetsPage() {
             ) : (
                 <div className="space-y-6">
                     {(() => {
-                        let finalGroupedData = groupedData;
+                        const finalGroupedData = groupedData;
 
                         if (groupBy === "month") {
                             // Render logic logic is handled in derived state 'groupedData' above,

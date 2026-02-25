@@ -122,7 +122,7 @@ export async function login(formData: FormData) {
 
   const orgMember = orgMemberships?.[0]
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const orgRole = orgMember?.role ? (Array.isArray(orgMember.role) ? orgMember.role[0]?.code : (orgMember.role as any)?.code) : null
 
   const { data: rolesData, error: roleError } = await supabase
@@ -132,13 +132,13 @@ export async function login(formData: FormData) {
 
   if (roleError) return { success: false, message: roleError.message }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const roles = (rolesData as any)?.map((r: any) => ({
     id: r.role?.id || r.id,
     name: r.role?.name || r.name
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
   })).filter((role: any) => role.id && role.name) ?? []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const roleIds = roles.map((r: any) => r.id)
 
   let permissions: { code: string; name: string }[] = []
@@ -150,11 +150,11 @@ export async function login(formData: FormData) {
 
     if (permError) return { success: false, message: permError.message }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     permissions = (permData as any)?.map((p: any) => ({
       code: p.permission?.code || p.code,
       name: p.permission?.name || p.name
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
     })).filter((perm: any) => perm.code && perm.name) ?? []
   }
 

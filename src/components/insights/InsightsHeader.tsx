@@ -182,7 +182,7 @@ export function InsightsHeader({
   useEffect(() => {
     const detectedPreset = detectPreset(dateRange.startDate, dateRange.endDate)
     setSelectedPreset(detectedPreset)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [dateRange.startDate.getTime(), dateRange.endDate.getTime()])
 
   useEffect(() => {

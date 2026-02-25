@@ -486,7 +486,7 @@ export const getOrganizationMembersById = async (id: string) => {
 
   // If the member row exists, also fetch related user, department and position records
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const member: any = data
 
     if (member) {

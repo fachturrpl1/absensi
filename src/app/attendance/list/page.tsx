@@ -299,7 +299,7 @@ function ModernAttendanceListCloned() {
     const orgId = selectedOrgId || orgStore.organizationId
     if (!orgId) return
     fetchData({ mode: 'full' })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [dateRange.from, dateRange.to, statusFilter, departmentFilter, searchQuery, itemsPerPage, currentPage, selectedOrgId, orgStore.organizationId])
 
   // Handler Selected Actions (sementara no-op; akan diisi setelah list pindah)
