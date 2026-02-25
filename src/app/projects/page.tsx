@@ -128,16 +128,25 @@ export default function ProjectsPage() {
         setIsLoading(false);
     }
 
+    // Load dropdown data di background (tidak block table loading)
+    const fetchDropdowns = React.useCallback(() => {
+        if (!organizationId) return;
+        Promise.all([
+            getSimpleMembersForDropdown(organizationId),
+            getClients(String(organizationId)),
+            getAllGroups(Number(organizationId)),
+        ]).then(([membersRes, clientsRes, groupsRes]) => {
+            if (membersRes.success) setRealMembers(membersRes.data)
+            if (clientsRes.success) setClients(clientsRes.data)
+            if (groupsRes.success) setGroups(groupsRes.data)
+        })
+    }, [organizationId])
+
     React.useEffect(() => {
+        // Tabel langsung tampil segera setelah projects ready
         fetchProjects();
-        if (organizationId) {
-            getSimpleMembersForDropdown(organizationId)
-                .then(res => { if (res.success) setRealMembers(res.data); });
-            getClients(String(organizationId))
-                .then(res => { if (res.success) setClients(res.data); });
-            getAllGroups(Number(organizationId))
-                .then(res => { if (res.success) setGroups(res.data); });
-        }
+        // Dropdown load di background, tidak mempengaruhi loading tabel
+        fetchDropdowns();
     }, [organizationId]);
     // dialogs
     const [addOpen, setAddOpen] = useState(false)
