@@ -7,24 +7,39 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { DUMMY_TEAMS, DUMMY_MEMBERS } from "@/lib/data/dummy-data"
 import { DownloadDialog } from "@/components/activity/DownloadDialog"
 import { SelectedMemberProvider } from "./selected-member-context"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { DateRange, SelectedFilter } from "@/components/insights/types"
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { BlurProvider } from "@/app/settings/screenshot/blur-context"
+import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
+import { useOrgStore } from "@/store/org-store"
 
 export default function ScreenshotsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const memberIdFromUrl = searchParams.get("memberId")
+  const { organizationId } = useOrgStore()
+
+  // State member dari DB
+  const [realMembers, setRealMembers] = useState<ISimpleMember[]>([])
 
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false)
 
-  // Get initial memberId: URL > sessionStorage > default
+  // Fetch real members dari DB
+  useEffect(() => {
+    if (!organizationId) return
+    getMembersForScreenshot(String(organizationId)).then(res => {
+      if (res.success && res.data && res.data.length > 0) {
+        setRealMembers(res.data)
+      }
+    })
+  }, [organizationId])
+
+  // Get initial memberId: URL > sessionStorage > first real member
   const getInitialMemberId = (): string => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search)
@@ -36,7 +51,7 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
       const savedMemberId = sessionStorage.getItem("screenshotSelectedMemberId")
       if (savedMemberId) return savedMemberId
     }
-    return DUMMY_MEMBERS[0]?.id ?? "m1"
+    return realMembers[0]?.id ?? ""
   }
 
   const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({
@@ -44,6 +59,13 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
     all: false,
     id: getInitialMemberId(),
   })
+
+  // Set default member ID saat data real pertama kali datang
+  useEffect(() => {
+    if (realMembers.length > 0 && !selectedFilter.id) {
+      setSelectedFilter(prev => ({ ...prev, id: realMembers[0]?.id ?? "" }))
+    }
+  }, [realMembers])
 
   // Update filter when memberId from URL changes
   useEffect(() => {
@@ -72,9 +94,9 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
 
   // Sync selectedFilter changes to sessionStorage and URL
   const handleFilterChange = (filter: SelectedFilter) => {
-    // Jika all: true (tidak seharusnya terjadi karena hideAllOption), ubah ke member pertama
+    // Jika all: true, ubah ke member pertama
     if (filter.all) {
-      const firstMemberId = DUMMY_MEMBERS[0]?.id ?? "m1"
+      const firstMemberId = realMembers[0]?.id ?? ""
       const newFilter: SelectedFilter = {
         type: "members",
         all: false,
@@ -234,15 +256,23 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
     }
   }, [dateRange, isAllScreenshots])
 
-  const demoMembers = useMemo(() => DUMMY_MEMBERS, [])
-  const demoTeams = useMemo(() => DUMMY_TEAMS, [])
+  // Map ISimpleMember -> Member shape yang dibutuhkan InsightsHeader
+  const demoMembers = useMemo(() => realMembers.map(m => ({
+    id: m.id,
+    name: m.name,
+    email: "",
+    avatar: m.avatarUrl ?? undefined,
+    activityScore: 0,
+  })), [realMembers])
+
+  const demoTeams = useMemo(() => [], [])
 
   const selectedMember = useMemo(
     () =>
-      DUMMY_MEMBERS.find((member) => member.id === selectedMemberId) ??
-      DUMMY_MEMBERS[0] ??
+      demoMembers.find((member) => member.id === selectedMemberId) ??
+      demoMembers[0] ??
       null,
-    [selectedMemberId]
+    [selectedMemberId, demoMembers]
   )
 
 
