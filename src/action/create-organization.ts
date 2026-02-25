@@ -196,7 +196,7 @@ export async function getUserOrganizations(): Promise<{
   console.log('🔍 getUserOrganizations: User authenticated:', user.id)
 
   const { data: orgMembers, error: orgMembersError } = await supabase
-        .from("organization_members")
+    .from("organization_members")
     .select(`
       id,
       organization_id,
@@ -220,8 +220,8 @@ export async function getUserOrganizations(): Promise<{
     .eq("user_id", user.id)
     .eq("is_active", true)
 
-    console.log('🔍 getUserOrganizations: Query result:', orgMembers)
-    console.log('🔍 getUserOrganizations: Query error:', orgMembersError)
+  console.log('🔍 getUserOrganizations: Query result:', orgMembers)
+  console.log('🔍 getUserOrganizations: Query error:', orgMembersError)
   if (orgMembersError) {
     return { success: false, message: "Failed to fetch organizations" };
   }
@@ -260,8 +260,8 @@ export async function getUserOrganizations(): Promise<{
     }
   }
 
-    return {
-      success: true,
+  return {
+    success: true,
     organizations,
   };
 }
@@ -348,7 +348,7 @@ export async function createOrganization(
       });
       return {
         success: false,
-        message: "Failed to create organization",
+        message: orgError?.message || "Failed to create organization",
         error: orgError?.message || "Database error",
       };
     }
@@ -520,9 +520,9 @@ export async function getOrganizationRoles(organizationId: number): Promise<{
         })
       }
     }
-    }
+  }
 
-    return {
+  return {
     success: true,
     roles,
   };
