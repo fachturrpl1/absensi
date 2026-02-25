@@ -10,12 +10,16 @@ import { AddClientDialog, type ClientFormData } from "@/components/projects/AddC
 import { ClientsTable, type Client } from "@/components/projects/ClientsTable"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { getClients, createClientAction, updateClientAction, updateClientStatus, deleteClientAction } from "@/action/client"
+import { useSearchParams } from "next/navigation"
 import { IClient } from "@/interface"
 import { toast } from "sonner"
 
 export default function ClientsPage() {
+    const searchParams = useSearchParams()
+    const urlQuery = searchParams.get("q") || ""
+
     const [activeTab, setActiveTab] = useState<"active" | "archived">("active")
-    const [searchQuery, setSearchQuery] = useState("")
+    const [searchQuery, setSearchQuery] = useState(urlQuery)
     const [dialogOpen, setDialogOpen] = useState(false)
     const [editingClient, setEditingClient] = useState<Client | null>(null)
     const [selectedIds, setSelectedIds] = useState<string[]>([])

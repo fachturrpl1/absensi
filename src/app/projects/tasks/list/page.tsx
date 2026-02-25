@@ -2,12 +2,13 @@
 
 import { useMemo, useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
-// import Link from "next/link"
+import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Pencil, Trash2, Plus } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useProfilePhotoUrl } from "@/hooks/use-profile"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -39,7 +40,7 @@ import type { RowSelectionState } from "@tanstack/react-table"
 import { getTasks, createTask, updateTask, deleteTask, assignTaskMember } from "@/action/task"
 import { getProjects } from "@/action/project"
 import { getAllOrganization_member } from "@/action/members"
-import { ITask, IProject, IOrganization_member } from "@/interface"
+import { ITask, IProject, IOrganization_member, ITaskAssignee } from "@/interface"
 import { DUMMY_TEAMS } from "@/lib/data/dummy-data"
 import { toast } from "sonner"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
@@ -56,6 +57,28 @@ function initialsFromName(name: string): string {
 export default function ListView() {
     const searchParams = useSearchParams()
     const initialProject = searchParams.get("project")
+
+    function AssigneeAvatar({ asgn }: { asgn: ITaskAssignee }) {
+        const user = asgn.member?.user
+        const photoUrl = useProfilePhotoUrl(user?.profile_photo_url ?? undefined, user?.id)
+        const name = user?.display_name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || "Unknown"
+
+        return (
+            <Link
+                href={`/members/${asgn.organization_member_id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="hover:scale-110 transition-transform"
+            >
+                <Avatar className="h-6 w-6 ring-2 ring-background">
+                    {photoUrl && <AvatarImage src={photoUrl} alt={name} />}
+                    <AvatarFallback className="text-[10px] bg-gray-100 text-gray-700">
+                        {initialsFromName(name)}
+                    </AvatarFallback>
+                </Avatar>
+            </Link>
+        )
+    }
+
 
     const [tasks, setTasks] = useState<ITask[]>([])
     const [projects, setProjects] = useState<IProject[]>([])
@@ -359,10 +382,7 @@ export default function ListView() {
                                 </TableRow>
                             ) : (
                                 paginatedTasks.map((task) => {
-                                    const primaryAssignee = task.assignees?.[0]
-                                    const assigneeName = primaryAssignee?.member?.user?.display_name ||
-                                        `${primaryAssignee?.member?.user?.first_name || ''} ${primaryAssignee?.member?.user?.last_name || ''}`.trim() ||
-                                        "Unassigned"
+
 
                                     const clientData = task.project?.client
                                     const clientName = Array.isArray(clientData)
@@ -384,20 +404,42 @@ export default function ListView() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <Avatar className="h-6 w-6">
-                                                        <AvatarFallback className="text-[10px] bg-gray-100 text-gray-700">
-                                                            {initialsFromName(assigneeName)}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                    <span className="text-sm text-muted-foreground truncate max-w-[120px]">{assigneeName}</span>
+                                                <div className="flex -space-x-2">
+                                                    {(task.assignees || []).slice(0, 3).map((asgn) => (
+                                                        <AssigneeAvatar
+                                                            key={asgn.id || asgn.organization_member_id}
+                                                            asgn={asgn}
+                                                        />
+                                                    ))}
+                                                    {(task.assignees || []).length > 3 && (
+                                                        <div className="h-6 w-6 rounded-full bg-muted text-xs grid place-items-center ring-2 ring-background">
+                                                            +{(task.assignees || []).length - 3}
+                                                        </div>
+                                                    )}
+                                                    {(task.assignees || []).length === 0 && (
+                                                        <span className="text-sm text-muted-foreground italic">Unassigned</span>
+                                                    )}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-muted-foreground text-sm">
-                                                {task.project?.name || "—"}
+                                                <Link
+                                                    href={`/projects/${task.project_id}/member`}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="hover:text-primary hover:underline"
+                                                >
+                                                    {task.project?.name || "—"}
+                                                </Link>
                                             </TableCell>
                                             <TableCell className="text-muted-foreground text-sm">
-                                                {clientName || "—"}
+                                                {clientName ? (
+                                                    <Link
+                                                        href={`/projects/clients?q=${encodeURIComponent(clientName)}`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="hover:text-primary hover:underline"
+                                                    >
+                                                        {clientName}
+                                                    </Link>
+                                                ) : "—"}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground text-sm">
                                                 {task.created_at ? new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "—"}

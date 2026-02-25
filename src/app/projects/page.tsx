@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -94,6 +94,7 @@ function initialsFromName(name: string): string {
 
 export default function ProjectsPage() {
     const searchParams = useSearchParams()
+    const router = useRouter()
     const urlClientName = searchParams.get("client")
     const [activeTab, setActiveTab] = useState<"active" | "archived">("active")
     const [search, setSearch] = useState("")
@@ -374,8 +375,12 @@ export default function ProjectsPage() {
                                     </TableRow>
                                 ) : (
                                     paginated.map((p) => (
-                                        <TableRow key={p.id}>
-                                            <TableCell className="align-top">
+                                        <TableRow
+                                            key={p.id}
+                                            className="cursor-pointer hover:bg-muted/50 transition-colors"
+                                            onClick={() => router.push(`/projects/${p.id}/member`)}
+                                        >
+                                            <TableCell className="align-top" onClick={(e) => e.stopPropagation()}>
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedIds.includes(p.id)}
@@ -396,7 +401,15 @@ export default function ProjectsPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-muted-foreground">
-                                                {p.clientName ?? "—"}
+                                                {p.clientName ? (
+                                                    <Link
+                                                        href={`/projects/clients?q=${encodeURIComponent(p.clientName)}`}
+                                                        className="hover:underline hover:text-foreground transition-colors"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        {p.clientName}
+                                                    </Link>
+                                                ) : "—"}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground">
                                                 {p.teams.length === 0 ? "None" : p.teams.join(", ")}
@@ -421,7 +434,7 @@ export default function ProjectsPage() {
                                                 {p.taskCount}
                                             </TableCell>
                                             {/* <TableCell className="text-muted-foreground">{p.memberLimitLabel}</TableCell> */}
-                                            <TableCell>
+                                            <TableCell onClick={(e) => e.stopPropagation()}>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="outline" size="sm" className="px-3">
