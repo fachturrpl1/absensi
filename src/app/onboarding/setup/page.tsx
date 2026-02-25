@@ -294,9 +294,10 @@ export default function OnboardingSetupPage() {
 
             if (!result.success) {
                 const msg = result.message || "Failed to create organization";
+                const detail = result.error ? ` (${result.error})` : "";
                 toast.dismiss(toastId);
-                toast.error(msg);
-                setGlobalError(msg);
+                toast.error(msg + detail);
+                setGlobalError(msg + detail);
                 return;
             }
 
