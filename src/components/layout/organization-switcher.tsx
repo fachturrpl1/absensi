@@ -98,7 +98,7 @@ export function OrganizationSwitcher() {
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">
-                  {selectedOrg ? selectedOrg.organization_name : "Select Organization"}
+                  {selectedOrg?.organization_name || "Select Organization"}
                 </span>
                 <span className="truncate text-xs">
                   {selectedOrg ? "Active" : "No Organization"}

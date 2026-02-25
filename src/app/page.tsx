@@ -473,7 +473,7 @@ export default function ImprovedDashboard() {
             <Skeleton className="h-9 w-80 mb-2" />
           ) : (
             <h1 className="text-3xl font-bold tracking-tight">
-              Dashboard{organizationName && ` — ${organizationName}`}
+              Dashboard{(organizationName || orgStore.organizationName) && ` — ${organizationName || orgStore.organizationName}`}
             </h1>
           )}
           <p className="text-muted-foreground text-sm mt-1">
