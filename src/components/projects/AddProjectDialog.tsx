@@ -7,8 +7,8 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { DUMMY_CLIENTS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
-import type { NewProjectForm } from "./types"
+import { NewProjectForm } from "./types"
+import { IClient, IGroup } from "@/interface"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
@@ -24,10 +24,12 @@ type AddProjectDialogProps = {
   onSave: () => void
   /** Real members from database — pass from parent */
   members?: RealMember[]
+  clients?: IClient[]
+  groups?: IGroup[]
 }
 
 export default function AddProjectDialog(props: AddProjectDialogProps) {
-  const { open, onOpenChange, form, onFormChange, onSave, members = [] } = props
+  const { open, onOpenChange, form, onFormChange, onSave, members = [], clients = [], groups = [] } = props
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -85,8 +87,8 @@ export default function AddProjectDialog(props: AddProjectDialogProps) {
                   <SelectValue placeholder="Select a client" />
                 </SelectTrigger>
                 <SelectContent>
-                  {DUMMY_CLIENTS.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={String(client.id)}>{client.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -567,7 +569,7 @@ export default function AddProjectDialog(props: AddProjectDialogProps) {
                 <Button
                   variant="link"
                   className="h-auto p-0 text-gray-900 hover:cursor-pointer"
-                  onClick={() => onFormChange(s => ({ ...s, teams: DUMMY_TEAMS.map(t => t.id) }))}
+                  onClick={() => onFormChange(s => ({ ...s, teams: groups.map(t => String(t.id)) }))}
                 >
                   Select all
                 </Button>
@@ -575,19 +577,19 @@ export default function AddProjectDialog(props: AddProjectDialogProps) {
             </div>
             <ScrollArea className="h-[200px] w-full rounded-md border p-4">
               <div className="space-y-4">
-                {DUMMY_TEAMS.map((team) => (
+                {groups.map((team) => (
                   <div key={team.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`team-${team.id}`}
-                      checked={!!form.teams?.includes(team.id)}
+                      checked={!!form.teams?.includes(String(team.id))}
                       onCheckedChange={(checked) => {
                         const current = new Set(form.teams || [])
-                        if (checked) current.add(team.id); else current.delete(team.id)
+                        if (checked) current.add(String(team.id)); else current.delete(String(team.id))
                         onFormChange(prev => ({ ...prev, teams: Array.from(current) }))
                       }}
                     />
                     <label htmlFor={`team-${team.id}`} className="text-sm leading-none">
-                      {team.name} <span className="text-muted-foreground">({team.memberCount} members)</span>
+                      {team.name}
                     </label>
                   </div>
                 ))}

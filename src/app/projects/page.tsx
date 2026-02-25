@@ -3,7 +3,6 @@
 import React, { useMemo, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { getProjects } from "@/action/project"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -37,7 +36,10 @@ import EditProjectDialog from "@/components/projects/EditProjectDialog"
 import TransferProjectDialog from "@/components/projects/TransferProjectDialog"
 import type { Project, NewProjectForm } from "@/components/projects/types"
 import { getAllProjects, createProject, updateProject, deleteProject, archiveProject, unarchiveProject, IProject, getSimpleMembersForDropdown } from "@/action/projects"
+import { getClients } from "@/action/client"
+import { getAllGroups } from "@/action/group"
 import { useOrgStore } from "@/store/org-store"
+import { IClient, IGroup } from "@/interface"
 
 import { PaginationFooter } from "@/components/tables/pagination-footer"
 
@@ -102,6 +104,8 @@ export default function ProjectsPage() {
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
     const [realMembers, setRealMembers] = useState<{ id: string; name: string }[]>([])
+    const [clients, setClients] = useState<IClient[]>([])
+    const [groups, setGroups] = useState<IGroup[]>([])
 
     const { organizationId } = useOrgStore()
 
@@ -129,6 +133,10 @@ export default function ProjectsPage() {
         if (organizationId) {
             getSimpleMembersForDropdown(organizationId)
                 .then(res => { if (res.success) setRealMembers(res.data); });
+            getClients(String(organizationId))
+                .then(res => { if (res.success) setClients(res.data); });
+            getAllGroups(Number(organizationId))
+                .then(res => { if (res.success) setGroups(res.data); });
         }
     }, [organizationId]);
     // dialogs
@@ -499,9 +507,11 @@ export default function ProjectsPage() {
                         form={form}
                         onFormChange={setForm}
                         members={realMembers}
+                        clients={clients}
+                        groups={groups}
                         onSave={async () => {
                             const names = form.names.split('\n').map(n => n.trim()).filter(Boolean);
-                            const clientName = DUMMY_CLIENTS.find(c => c.id === form.clientId)?.name || null;
+                            const clientName = clients.find(c => String(c.id) === form.clientId)?.name || null;
                             for (const name of names) {
                                 await createProject({
                                     name,
@@ -522,6 +532,8 @@ export default function ProjectsPage() {
                         project={editing}
                         initialTab={editTab}
                         members={realMembers}
+                        clients={clients}
+                        groups={groups}
                         onSave={async (updatedForm) => {
                             if (editing) {
                                 await updateProject(Number(editing.id), {
@@ -529,7 +541,7 @@ export default function ProjectsPage() {
                                     is_billable: updatedForm.billable,
                                     teams: updatedForm.teams.map(t => parseInt(t.replace(/\D/g, ''))).filter(t => !isNaN(t)),
                                     status: editing.archived ? 'archived' : 'active',
-                                    metadata: { ...updatedForm, names: undefined, teams: undefined, clientName: DUMMY_CLIENTS.find(c => c.id === updatedForm.clientId)?.name || null }
+                                    metadata: { ...updatedForm, names: undefined, teams: undefined, clientName: clients.find(c => String(c.id) === updatedForm.clientId)?.name || null }
                                 });
                                 await fetchProjects();
                             }
