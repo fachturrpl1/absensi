@@ -700,9 +700,26 @@ export default function OnboardingSetupPage() {
                                     </div>
                                     {formData.address && <ReviewRow label="Street Address" value={formData.address} />}
                                     {formData.stateProvince && (
-                                        <ReviewRow label="State/Province" value={formData.stateProvince} />
+                                        <ReviewRow
+                                            label="State/Province"
+                                            value={
+                                                locationData?.states.find(s => s.value === formData.stateProvince)?.label
+                                                ?? formData.stateProvince
+                                            }
+                                        />
                                     )}
-                                    {formData.city && <ReviewRow label="City" value={formData.city} />}
+                                    {formData.city && (
+                                        <ReviewRow
+                                            label="City"
+                                            value={
+                                                availableCities.find(c => c.value === formData.city)?.label
+                                                ?? locationData?.states
+                                                    .flatMap(s => s.cities)
+                                                    .find(c => c.value === formData.city)?.label
+                                                ?? formData.city
+                                            }
+                                        />
+                                    )}
                                     {formData.postalCode && (
                                         <ReviewRow label="Postal Code" value={formData.postalCode} />
                                     )}
