@@ -88,23 +88,23 @@ export default function ClientsPage() {
     const totalPages = Math.ceil(filteredClients.length / pageSize) || 1
 
     const handleAddClient = async (formData: ClientFormData) => {
-        const newClient: Partial<IClient> = {
-            name: formData.name,
-            address: formData.address,
-            phone: formData.phone,
-            email: formData.emails.split(",")[0]?.trim() || null,
-            status: 'active',
-            budget_type: formData.budgetType as any || null,
-            budget_amount: parseFloat(formData.budgetCost) || null,
-            notify_percentage: parseInt(formData.budgetNotifyAt) || 80,
-            invoice_notes: formData.invoiceNotes,
-            net_terms_days: parseInt(formData.invoiceNetTerms) || 30,
-            auto_invoice_frequency: formData.autoInvoicing === 'custom' ? formData.aiFrequency : null
-        }
+        const fd = new FormData()
+        fd.append("name", formData.name)
+        fd.append("address", formData.address)
+        fd.append("phone", formData.phone)
+        fd.append("email", formData.emails.split(",")[0]?.trim() || "")
+        fd.append("status", 'active')
+        fd.append("budget_type", formData.budgetType || "")
+        fd.append("budget_amount", formData.budgetCost || "0")
+        fd.append("notify_percentage", formData.budgetNotifyAt || "80")
+        fd.append("invoice_notes", formData.invoiceNotes)
+        fd.append("net_terms_days", formData.invoiceNetTerms || "30")
+        fd.append("auto_invoice_frequency", formData.autoInvoicing === 'custom' ? formData.aiFrequency : "")
 
         const projectIds = formData.projects.map(id => parseInt(id))
+        fd.append("project_ids", JSON.stringify(projectIds))
 
-        const response = await createClientAction(newClient, projectIds)
+        const response = await createClientAction(fd)
         if (response.success) {
             toast.success("Client added successfully")
             fetchData()
@@ -122,22 +122,23 @@ export default function ClientsPage() {
 
     const handleUpdateClient = async (formData: ClientFormData) => {
         if (!editingClient) return
-        const updatedData: Partial<IClient> = {
-            name: formData.name,
-            address: formData.address,
-            phone: formData.phone,
-            email: formData.emails.split(",")[0]?.trim() || null,
-            budget_type: formData.budgetType as any || null,
-            budget_amount: parseFloat(formData.budgetCost) || null,
-            notify_percentage: parseInt(formData.budgetNotifyAt) || 80,
-            invoice_notes: formData.invoiceNotes,
-            net_terms_days: parseInt(formData.invoiceNetTerms) || 30,
-            auto_invoice_frequency: formData.autoInvoicing === 'custom' ? formData.aiFrequency : null
-        }
+        const fd = new FormData()
+        fd.append("id", editingClient.id)
+        fd.append("name", formData.name)
+        fd.append("address", formData.address)
+        fd.append("phone", formData.phone)
+        fd.append("email", formData.emails.split(",")[0]?.trim() || "")
+        fd.append("budget_type", formData.budgetType || "")
+        fd.append("budget_amount", formData.budgetCost || "0")
+        fd.append("notify_percentage", formData.budgetNotifyAt || "80")
+        fd.append("invoice_notes", formData.invoiceNotes)
+        fd.append("net_terms_days", formData.invoiceNetTerms || "30")
+        fd.append("auto_invoice_frequency", formData.autoInvoicing === 'custom' ? formData.aiFrequency : "")
 
         const projectIds = formData.projects.map(id => parseInt(id))
+        fd.append("project_ids", JSON.stringify(projectIds))
 
-        const response = await updateClientAction(parseInt(editingClient.id), updatedData, projectIds)
+        const response = await updateClientAction(fd)
         if (response.success) {
             toast.success("Client updated successfully")
             fetchData()
@@ -154,9 +155,7 @@ export default function ClientsPage() {
     }
 
     const handleRestore = (id: string) => {
-        setClients(clients.map((c) => (c.id === id ? { ...c, isArchived: false } : c)))
-        setSelectedIds(selectedIds.filter((sid) => sid !== id))
-        setActiveTab("active")
+        confirmArchiveWithTargets([id], 'active')
     }
 
     const handleBatchArchive = () => {
@@ -167,12 +166,24 @@ export default function ClientsPage() {
 
     const handleBatchRestore = () => {
         if (selectedIds.length === 0) return
-        setClients(
-            clients.map((c) => (selectedIds.includes(c.id) ? { ...c, isArchived: false } : c))
-        )
-        setSelectedIds([])
-        setActiveTab("active")
-        setActiveTab("active")
+        confirmArchiveWithTargets(selectedIds, 'active')
+    }
+
+    const confirmArchiveWithTargets = async (targets: string[], status: 'active' | 'archived') => {
+        const response = await Promise.all(targets.map(id => {
+            const fd = new FormData()
+            fd.append("id", id)
+            fd.append("status", status)
+            return updateClientStatus(fd)
+        }))
+        const successCount = response.filter(r => r.success).length
+        if (successCount > 0) {
+            toast.success(`${successCount} clients updated`)
+            fetchData()
+            setSelectedIds(prev => prev.filter(id => !targets.includes(id)))
+        } else {
+            toast.error("Failed to update clients")
+        }
     }
 
     const handleDelete = (id: string) => {
@@ -181,7 +192,9 @@ export default function ClientsPage() {
 
     const confirmDelete = async () => {
         if (clientToDelete) {
-            const response = await deleteClientAction(parseInt(clientToDelete))
+            const fd = new FormData()
+            fd.append("id", clientToDelete)
+            const response = await deleteClientAction(fd)
             if (response.success) {
                 toast.success("Client deleted successfully")
                 fetchData()
@@ -196,21 +209,7 @@ export default function ClientsPage() {
     const confirmArchive = async () => {
         if (archiveTargets.length > 0) {
             const isRestore = activeTab === "archived";
-            const newStatus = isRestore ? 'active' : 'archived';
-
-            // We handle batch update by sequence for now or we could add a batch action
-            const promises = archiveTargets.map(id => updateClientStatus(parseInt(id), newStatus as any))
-            const results = await Promise.all(promises)
-
-            const successCount = results.filter(r => r.success).length
-            if (successCount > 0) {
-                toast.success(`${successCount} clients ${isRestore ? 'restored' : 'archived'}`)
-                fetchData()
-                setSelectedIds(prev => prev.filter(id => !archiveTargets.includes(id)))
-                setActiveTab(isRestore ? "active" : "archived")
-            } else {
-                toast.error("Failed to update clients")
-            }
+            await confirmArchiveWithTargets(archiveTargets, isRestore ? 'active' : 'archived')
         }
         setArchiveOpen(false)
         setArchiveTargets([])
@@ -223,29 +222,17 @@ export default function ClientsPage() {
                 <h1 className="text-xl font-semibold">Clients</h1>
             </div>
 
-            {/* Custom Tabs - matching Projects page style */}
+            {/* Custom Tabs */}
             <div className="flex items-center gap-6 text-sm">
                 <button
-                    className={`pb-2 border-b-2 ${activeTab === "active"
-                        ? "border-foreground font-medium"
-                        : "border-transparent text-muted-foreground hover:text-foreground"
-                        }`}
-                    onClick={() => {
-                        setActiveTab("active")
-                        setSelectedIds([])
-                    }}
+                    className={`pb-2 border-b-2 ${activeTab === "active" ? "border-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                    onClick={() => { setActiveTab("active"); setSelectedIds([]) }}
                 >
                     ACTIVE ({activeClients.length})
                 </button>
                 <button
-                    className={`pb-2 border-b-2 ${activeTab === "archived"
-                        ? "border-foreground font-medium"
-                        : "border-transparent text-muted-foreground hover:text-foreground"
-                        }`}
-                    onClick={() => {
-                        setActiveTab("archived")
-                        setSelectedIds([])
-                    }}
+                    className={`pb-2 border-b-2 ${activeTab === "archived" ? "border-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                    onClick={() => { setActiveTab("archived"); setSelectedIds([]) }}
                 >
                     ARCHIVED ({archivedClients.length})
                 </button>
@@ -266,38 +253,26 @@ export default function ClientsPage() {
                             />
                         </div>
                         <div className="flex items-center gap-2">
-                            {selectedIds.length > 0 && (
-                                <Button
-                                    variant="outline"
-                                    className="px-3"
-                                    onClick={activeTab === "active" ? handleBatchArchive : handleBatchRestore}
-                                >
-                                    {activeTab === "active" ? "Archive" : "Restore"} ({selectedIds.length})
-                                </Button>
-                            )}
-                            {/* <Button variant="outline" className="px-3 hidden md:inline-flex">
-                                Import clients
-                            </Button> */}
-                            <Button
-                                className="px-3"
-                                onClick={() => {
-                                    setEditingClient(null)
-                                    setDialogOpen(true)
-                                }}
-                            >
+                            <Button className="px-3" onClick={() => { setEditingClient(null); setDialogOpen(true) }}>
                                 <Plus />Add
                             </Button>
                         </div>
                     </div>
 
-                    {/* Selected count */}
-                    {selectedIds.length > 0 && (
-                        <div className="flex items-center gap-3 text-sm">
-                            <span className="text-sm text-muted-foreground">
-                                {selectedIds.length} / {filteredClients.length} selected
-                            </span>
-                        </div>
-                    )}
+                    {/* Batch Actions + Selected Count */}
+                    <div className="flex items-center gap-3 text-sm">
+                        <Button
+                            variant="outline"
+                            className="px-3"
+                            disabled={selectedIds.length === 0}
+                            onClick={activeTab === "active" ? handleBatchArchive : handleBatchRestore}
+                        >
+                            {activeTab === "active" ? "Archive" : "Restore"}
+                        </Button>
+                        <span className="text-sm text-muted-foreground min-w-[90px]">
+                            {selectedIds.length} / {filteredClients.length} selected
+                        </span>
+                    </div>
 
                     <Separator className="my-4" />
 
@@ -358,7 +333,6 @@ export default function ClientsPage() {
                             emails: editingClient.emails?.join(", ") || "",
                             projects: editingClient.projectIds || [],
                             teams: [],
-                            // Budget
                             budgetType: editingClient.budgetType || "",
                             budgetBasedOn: editingClient.budgetType?.includes('hours') ? 'hours' : 'cost',
                             budgetCost: editingClient.budgetAmount?.toString() || "",
@@ -366,7 +340,6 @@ export default function ClientsPage() {
                             budgetResets: editingClient.budgetType?.includes('monthly') ? 'monthly' : 'never',
                             budgetStartDate: "",
                             budgetIncludeNonBillable: false,
-                            // Invoicing
                             invoiceNotesCustom: !!editingClient.invoiceNotes,
                             invoiceNotes: editingClient.invoiceNotes || "",
                             invoiceNetTermsCustom: editingClient.netTermsDays !== 30,
@@ -388,38 +361,19 @@ export default function ClientsPage() {
             />
 
             {/* Archive Confirmation Dialog */}
-            <Dialog
-                open={archiveOpen}
-                onOpenChange={(o) => {
-                    setArchiveOpen(o)
-                    if (!o) setArchiveTargets([])
-                }}
-            >
+            <Dialog open={archiveOpen} onOpenChange={(o) => { setArchiveOpen(o); if (!o) setArchiveTargets([]) }}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle>
-                            {archiveTargets.length <= 1
-                                ? "Archive client?"
-                                : `Archive ${archiveTargets.length} clients?`}
+                            {archiveTargets.length <= 1 ? "Archive client?" : `Archive ${archiveTargets.length} clients?`}
                         </DialogTitle>
                         <DialogDescription>
-                            This will move {archiveTargets.length <= 1 ? "the client" : "the selected clients"} to
-                            Archived. You can restore later.
+                            This will move {archiveTargets.length <= 1 ? "the client" : "the selected clients"} to Archived. You can restore later.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="gap-3">
-                        <Button
-                            variant="outline"
-                            onClick={() => {
-                                setArchiveOpen(false)
-                                setArchiveTargets([])
-                            }}
-                        >
-                            Cancel
-                        </Button>
-                        <Button variant="destructive" onClick={confirmArchive}>
-                            Archive
-                        </Button>
+                        <Button variant="outline" onClick={() => { setArchiveOpen(false); setArchiveTargets([]) }}>Cancel</Button>
+                        <Button variant="destructive" onClick={confirmArchive}>Archive</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -437,9 +391,7 @@ export default function ClientsPage() {
                         <DialogClose asChild>
                             <Button variant="outline">Cancel</Button>
                         </DialogClose>
-                        <Button variant="destructive" onClick={confirmDelete}>
-                            Delete
-                        </Button>
+                        <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

@@ -19,23 +19,30 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
+import {
     Dialog,
-    DialogClose,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
-    DialogDescription,
     DialogTitle,
+    DialogClose,
 } from "@/components/ui/dialog"
-import { DUMMY_TEAMS } from "@/lib/data/dummy-data"
-import { DataTable } from "@/components/tables/data-table"
-import { ColumnDef } from "@tanstack/react-table"
 import type { RowSelectionState } from "@tanstack/react-table"
 import { getTasks, createTask, updateTask, deleteTask, assignTaskMember } from "@/action/task"
 import { getProjects } from "@/action/project"
 import { getAllOrganization_member } from "@/action/members"
 import { ITask, IProject, IOrganization_member } from "@/interface"
+import { DUMMY_TEAMS } from "@/lib/data/dummy-data"
 import { toast } from "sonner"
+import { PaginationFooter } from "@/components/tables/pagination-footer"
 
 // Helper for initials
 function initialsFromName(name: string): string {
@@ -58,6 +65,9 @@ export default function ListView() {
     const [activeTab, setActiveTab] = useState<"active" | "completed">("active")
     const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "")
     const urlClientName = searchParams.get("client")
+
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
 
     // Fetch data
     useEffect(() => {
@@ -129,14 +139,13 @@ export default function ListView() {
                     : [clientData?.name].filter(Boolean)
 
                 const isMatch = clientNames.some(name => name.toLowerCase() === urlClientName.toLowerCase())
-                console.log(`Task: ${task.name}, ClientNames: ${JSON.stringify(clientNames)}, Filter: ${urlClientName}, Match: ${isMatch}`)
                 if (!isMatch) return false
             }
 
             // Dropdown filters
             if (selectedProject !== "all" && task.project?.name !== selectedProject) return false
 
-            // Assignee filter needs careful matching since we use names in the UI but could use IDs
+            // Assignee filter
             const assigneeName = task.assignees?.[0]?.member?.user?.display_name ||
                 `${task.assignees?.[0]?.member?.user?.first_name || ''} ${task.assignees?.[0]?.member?.user?.last_name || ''}`.trim()
             if (selectedAssignee !== "all" && assigneeName !== selectedAssignee) return false
@@ -152,127 +161,46 @@ export default function ListView() {
         })
     }, [tasks, activeTab, selectedProject, selectedAssignee, searchQuery, urlClientName])
 
+    const paginatedTasks = useMemo(() => {
+        const start = (currentPage - 1) * pageSize
+        const end = start + pageSize
+        return filteredTasks.slice(start, end)
+    }, [filteredTasks, currentPage, pageSize])
+
+    const totalPages = Math.ceil(filteredTasks.length / pageSize) || 1
+
     // Reset selection on filter change
     useEffect(() => {
         setRowSelection({})
+        setCurrentPage(1)
     }, [activeTab, selectedProject, selectedAssignee, searchQuery])
 
-    // Columns Definition
-    const columns: ColumnDef<ITask>[] = useMemo(() => [
-        {
-            id: "select",
-            header: ({ table }) => (
-                <Checkbox
-                    checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
-                    onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-                    aria-label="Select all"
-                    className="translate-y-[2px]"
-                />
-            ),
-            cell: ({ row }) => (
-                <Checkbox
-                    checked={row.getIsSelected()}
-                    onCheckedChange={(value) => row.toggleSelected(!!value)}
-                    aria-label="Select row"
-                    className="translate-y-[2px]"
-                />
-            ),
-            enableSorting: false,
-            enableHiding: false,
-            size: 40,
-        },
-        {
-            accessorKey: "name",
-            header: "Task",
-            cell: ({ row }) => <span className="font-medium text-foreground">{row.original.name}</span>,
-        },
-        {
-            id: "assignee",
-            header: "Assignee",
-            cell: ({ row }) => {
-                const primaryAssignee = row.original.assignees?.[0]
-                const name = primaryAssignee?.member?.user?.display_name ||
-                    `${primaryAssignee?.member?.user?.first_name || ''} ${primaryAssignee?.member?.user?.last_name || ''}`.trim() ||
-                    "Unassigned"
-                return (
-                    <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                            <AvatarFallback className="text-[10px] bg-gray-100 text-gray-700">
-                                {initialsFromName(name)}
-                            </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm text-muted-foreground">{name}</span>
-                    </div>
-                )
-            },
-        },
-        {
-            id: "project",
-            header: "Project",
-            cell: ({ row }) => <span className="text-muted-foreground text-sm">{row.original.project?.name || "—"}</span>,
-        },
-        {
-            id: "client",
-            header: "Client",
-            cell: ({ row }) => {
-                const clientData = row.original.project?.client
-                const clientName = Array.isArray(clientData)
-                    ? clientData[0]?.name
-                    : (clientData as any)?.name
-                return <span className="text-muted-foreground text-sm">{clientName || "—"}</span>
-            },
-        },
-        {
-            accessorKey: "created_at",
-            header: "Created",
-            cell: ({ row }) => <span className="text-muted-foreground text-sm">{row.original.created_at ? new Date(row.original.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "—"}</span>,
-        },
-        {
-            id: "actions",
-            header: () => <div>Actions</div>,
-            cell: ({ row }) => (
-                <div className="inline-flex items-center gap-1">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="px-3">
-                                <Pencil className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => {
-                                setEditingTask(row.original)
-                                setEditedTitle(row.original.name)
-                                setEditedAssignee(Number(row.original.assignees?.[0]?.organization_member_id) || "")
-                                setEditedTeams([])
-                            }}>
-                                Edit task
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={async () => {
-                                const newStatus = row.original.status === 'done' ? 'todo' : 'done'
-                                const res = await updateTask(row.original.id.toString(), { status: newStatus })
-                                if (res.success) {
-                                    setTasks(prev => prev.map(t => t.id === row.original.id ? { ...t, status: newStatus } : t))
-                                    toast.success(`Task ${newStatus === 'done' ? 'completed' : 'reopened'}`)
-                                } else {
-                                    toast.error(res.message)
-                                }
-                            }}>
-                                {row.original.status === 'done' ? "Reopen task" : "Mark as complete"}
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="px-3"
-                        onClick={() => setTaskToDelete(row.original)}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                </div>
-            ),
-        },
-    ], [])
+    // Selection helpers
+    const allSelected = paginatedTasks.length > 0 && paginatedTasks.every(t => rowSelection[t.id.toString()])
+
+    const toggleSelectAll = () => {
+        if (allSelected) {
+            setRowSelection(prev => {
+                const next = { ...prev }
+                paginatedTasks.forEach(t => delete next[t.id.toString()])
+                return next
+            })
+        } else {
+            setRowSelection(prev => {
+                const next = { ...prev }
+                paginatedTasks.forEach(t => { next[t.id.toString()] = true })
+                return next
+            })
+        }
+    }
+
+    const toggleSelect = (id: string) => {
+        setRowSelection(prev => {
+            const next = { ...prev }
+            if (next[id]) delete next[id]; else next[id] = true
+            return next
+        })
+    }
 
     // Batch Actions Handler
     const selectedCount = Object.keys(rowSelection).length
@@ -365,7 +293,12 @@ export default function ListView() {
                                     const selectedRowIds = Object.keys(rowSelection).filter(k => rowSelection[k])
                                     const newStatus = activeTab === "active" ? "done" : "todo"
 
-                                    const results = await Promise.all(selectedRowIds.map(id => updateTask(id, { status: newStatus })))
+                                    const results = await Promise.all(selectedRowIds.map(id => {
+                                        const fd = new FormData()
+                                        fd.append("id", id)
+                                        fd.append("status", newStatus)
+                                        return updateTask(fd)
+                                    }))
                                     const successCount = results.filter(r => r.success).length
 
                                     if (successCount > 0) {
@@ -389,17 +322,148 @@ export default function ListView() {
                 <Separator className="my-4" />
 
                 {/* Table */}
-                <DataTable
-                    columns={columns}
-                    data={filteredTasks}
-                    rowSelection={rowSelection}
-                    onRowSelectionChange={setRowSelection}
-                    getRowKey={(row) => row.id.toString()} // Important for valid selection state by ID
-                    showGlobalFilter={false} // We have manual search
+                <div className="mt-4 md:mt-6">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-10">
+                                    <Checkbox
+                                        checked={allSelected}
+                                        onCheckedChange={toggleSelectAll}
+                                        aria-label="Select all"
+                                    />
+                                </TableHead>
+                                <TableHead>Task</TableHead>
+                                <TableHead>Assignee</TableHead>
+                                <TableHead>Project</TableHead>
+                                <TableHead>Client</TableHead>
+                                <TableHead>Created</TableHead>
+                                <TableHead className="text-right pr-4">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="text-center py-10">
+                                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                                            Loading tasks...
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ) : paginatedTasks.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                                        No tasks found
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                paginatedTasks.map((task) => {
+                                    const primaryAssignee = task.assignees?.[0]
+                                    const assigneeName = primaryAssignee?.member?.user?.display_name ||
+                                        `${primaryAssignee?.member?.user?.first_name || ''} ${primaryAssignee?.member?.user?.last_name || ''}`.trim() ||
+                                        "Unassigned"
+
+                                    const clientData = task.project?.client
+                                    const clientName = Array.isArray(clientData)
+                                        ? clientData[0]?.name
+                                        : (clientData as any)?.name
+
+                                    return (
+                                        <TableRow key={task.id}>
+                                            <TableCell className="align-top">
+                                                <Checkbox
+                                                    checked={!!rowSelection[task.id.toString()]}
+                                                    onCheckedChange={() => toggleSelect(task.id.toString())}
+                                                    aria-label={`Select task ${task.name}`}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="min-w-0">
+                                                    <span className="font-medium text-sm block truncate">{task.name}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <Avatar className="h-6 w-6">
+                                                        <AvatarFallback className="text-[10px] bg-gray-100 text-gray-700">
+                                                            {initialsFromName(assigneeName)}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="text-sm text-muted-foreground truncate max-w-[120px]">{assigneeName}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground text-sm">
+                                                {task.project?.name || "—"}
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground text-sm">
+                                                {clientName || "—"}
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground text-sm">
+                                                {task.created_at ? new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "—"}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="inline-flex items-center gap-1 pr-2">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="outline" size="sm" className="px-3">
+                                                                <Pencil className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onSelect={() => {
+                                                                setEditingTask(task)
+                                                                setEditedTitle(task.name)
+                                                                setEditedAssignee(Number(task.assignees?.[0]?.organization_member_id) || "")
+                                                                setEditedTeams([])
+                                                            }}>
+                                                                Edit task
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onSelect={async () => {
+                                                                const newStatus = task.status === 'done' ? 'todo' : 'done'
+                                                                const fd = new FormData()
+                                                                fd.append("id", task.id.toString())
+                                                                fd.append("status", newStatus)
+                                                                const res = await updateTask(fd)
+                                                                if (res.success) {
+                                                                    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t))
+                                                                    toast.success(`Task ${newStatus === 'done' ? 'completed' : 'reopened'}`)
+                                                                } else {
+                                                                    toast.error(res.message)
+                                                                }
+                                                            }}>
+                                                                {task.status === 'done' ? "Reopen task" : "Mark as complete"}
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="px-3"
+                                                        onClick={() => setTaskToDelete(task)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                <PaginationFooter
+                    page={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
                     isLoading={isLoading}
-                    showFilters={false} // We have custom filters
-                    showColumnToggle={false}
-                    rowInteractive={false}
+                    from={paginatedTasks.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
+                    to={Math.min(currentPage * pageSize, filteredTasks.length)}
+                    total={filteredTasks.length}
+                    pageSize={pageSize}
+                    onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1) }}
                 />
             </div>
 
@@ -475,17 +539,17 @@ export default function ListView() {
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <div className="text-xs font-semibold text-muted-foreground">TEAMS</div>
-                                    <Button variant="link" className="h-auto p-0 text-gray-900 hover:cursor-pointer" onClick={() => setNewTaskTeams(DUMMY_TEAMS.map(t => t.id))}>Select all</Button>
+                                    <Button variant="link" className="h-auto p-0 text-gray-900 hover:cursor-pointer" onClick={() => setNewTaskTeams(DUMMY_TEAMS.map((t: any) => t.id))}>Select all</Button>
                                 </div>
                             </div>
                             <ScrollArea className="h-[200px] w-full rounded-md border p-4">
                                 <div className="space-y-4">
-                                    {DUMMY_TEAMS.map((team) => (
+                                    {DUMMY_TEAMS.map((team: any) => (
                                         <div key={team.id} className="flex items-center space-x-2">
                                             <Checkbox
                                                 id={`task-team-${team.id}`}
                                                 checked={newTaskTeams.includes(team.id)}
-                                                onCheckedChange={(checked) => {
+                                                onCheckedChange={(checked: any) => {
                                                     setNewTaskTeams((prev) => {
                                                         const set = new Set(prev)
                                                         if (checked) set.add(team.id); else set.delete(team.id)
@@ -509,12 +573,13 @@ export default function ListView() {
                         <Button
                             onClick={async () => {
                                 if (newTaskTitle.trim() && newTaskProject) {
-                                    const res = await createTask({
-                                        name: newTaskTitle,
-                                        project_id: Number(newTaskProject),
-                                        status: "todo",
-                                        priority: "medium"
-                                    })
+                                    const fd = new FormData()
+                                    fd.append("name", newTaskTitle)
+                                    fd.append("project_id", newTaskProject.toString())
+                                    fd.append("status", "todo")
+                                    fd.append("priority", "medium")
+
+                                    const res = await createTask(fd)
                                     if (res.success && res.data) {
                                         const createdTask = res.data;
                                         // Assign member if selected
@@ -544,7 +609,7 @@ export default function ListView() {
 
 
 
-            <Dialog open={Boolean(taskToDelete)} onOpenChange={(open) => !open && setTaskToDelete(null)}>
+            <Dialog open={Boolean(taskToDelete)} onOpenChange={(open: boolean) => !open && setTaskToDelete(null)}>
                 <DialogContent className="max-w-md space-y-6">
                     <DialogHeader>
                         <DialogTitle>Delete task</DialogTitle>
@@ -563,7 +628,9 @@ export default function ListView() {
                             variant="destructive"
                             onClick={async () => {
                                 if (taskToDelete) {
-                                    const res = await deleteTask(taskToDelete.id.toString())
+                                    const fd = new FormData()
+                                    fd.append("id", taskToDelete.id.toString())
+                                    const res = await deleteTask(fd)
                                     if (res.success) {
                                         setTasks(tasks.filter(task => task.id !== taskToDelete.id))
                                         toast.success("Task deleted")
@@ -580,7 +647,7 @@ export default function ListView() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={Boolean(editingTask)} onOpenChange={(open) => !open && setEditingTask(null)}>
+            <Dialog open={Boolean(editingTask)} onOpenChange={(open: boolean) => !open && setEditingTask(null)}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle>Edit task</DialogTitle>
@@ -623,17 +690,17 @@ export default function ListView() {
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <div className="text-xs font-semibold text-muted-foreground">TEAMS</div>
-                                    <Button variant="link" className="h-auto p-0 text-gray-900 hover:cursor-pointer" onClick={() => setEditedTeams(DUMMY_TEAMS.map(t => t.id))}>Select all</Button>
+                                    <Button variant="link" className="h-auto p-0 text-gray-900 hover:cursor-pointer" onClick={() => setEditedTeams(DUMMY_TEAMS.map((t: any) => t.id))}>Select all</Button>
                                 </div>
                             </div>
                             <ScrollArea className="h-[200px] w-full rounded-md border p-4">
                                 <div className="space-y-4">
-                                    {DUMMY_TEAMS.map((team) => (
+                                    {DUMMY_TEAMS.map((team: any) => (
                                         <div key={team.id} className="flex items-center space-x-2">
                                             <Checkbox
                                                 id={`edit-team-${team.id}`}
                                                 checked={editedTeams.includes(team.id)}
-                                                onCheckedChange={(checked) => {
+                                                onCheckedChange={(checked: any) => {
                                                     setEditedTeams((prev) => {
                                                         const set = new Set(prev)
                                                         if (checked) set.add(team.id); else set.delete(team.id)
@@ -657,7 +724,11 @@ export default function ListView() {
                         <Button
                             onClick={async () => {
                                 if (!editingTask) return
-                                const res = await updateTask(editingTask.id.toString(), { name: editedTitle })
+                                const fd = new FormData()
+                                fd.append("id", editingTask.id.toString())
+                                fd.append("name", editedTitle)
+
+                                const res = await updateTask(fd)
                                 if (res.success) {
                                     // Update assignee if changed
                                     const currentAssigneeId = editingTask.assignees?.[0]?.organization_member_id
