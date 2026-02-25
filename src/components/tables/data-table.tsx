@@ -66,7 +66,6 @@ type DataTableProps<TData, TValue> = {
   onPageSizeChange?: (pageSize: number) => void
   columnVisibility?: VisibilityState
   onColumnVisibilityChange?: OnChangeFn<VisibilityState>
-  showLoadingOverlay?: boolean
 }
 
 export function DataTable<TData, TValue>({
@@ -92,9 +91,11 @@ export function DataTable<TData, TValue>({
   onPageSizeChange: onPageSizeChangeProp,
   rowSelection: controlledRowSelection,
   onRowSelectionChange: onRowSelectionChangeProp,
-  showLoadingOverlay = true,
+  columnVisibility: controlledColumnVisibility,
+  onColumnVisibilityChange: onColumnVisibilityChangeProp,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
+  const [internalColumnVisibility, setInternalColumnVisibility] = React.useState<VisibilityState>({})
   const [internalRowSelection, setInternalRowSelection] = React.useState<Record<string, boolean>>({})
   const [sortOrder, setSortOrder] = React.useState("newest")
   const [pageSize, setPageSize] = React.useState(String(controlledPageSize ?? 10))
@@ -108,6 +109,9 @@ export function DataTable<TData, TValue>({
   // Use controlled selection if provided, otherwise use internal
   const rowSelection = controlledRowSelection ?? internalRowSelection
   const onRowSelectionChange = onRowSelectionChangeProp ?? setInternalRowSelection
+
+  const columnVisibility = controlledColumnVisibility ?? internalColumnVisibility
+  const onColumnVisibilityChange = onColumnVisibilityChangeProp ?? setInternalColumnVisibility
 
   // Handler functions
   const handlePageSizeChange = (value: string) => {
@@ -214,6 +218,7 @@ export function DataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: manualPagination ? undefined : getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    onColumnVisibilityChange: onColumnVisibilityChange,
     onRowSelectionChange: onRowSelectionChange,
     onPaginationChange: (updater) => {
       if (typeof updater === 'function') {
@@ -231,6 +236,7 @@ export function DataTable<TData, TValue>({
       : undefined,
     state: {
       sorting,
+      columnVisibility,
       rowSelection,
       pagination,
     },
@@ -361,7 +367,7 @@ export function DataTable<TData, TValue>({
 
   const tableContent = (
     <div className="relative w-full rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 overflow-hidden">
-      {isLoading && showLoadingOverlay && (
+      {isLoading && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 pointer-events-none">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
