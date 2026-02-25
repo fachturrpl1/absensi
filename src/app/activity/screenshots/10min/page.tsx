@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -13,12 +13,12 @@ import {
 } from "lucide-react"
 import {
   generateMemberInsight,
-  generateMemberScreenshots,
   generateMemberAppActivities,
   generateMemberUrlActivities,
   MemberInsightSummary,
   MemberScreenshotItem,
 } from "@/lib/data/dummy-data"
+import { getScreenshotsByMemberAndDate, type IScreenshotWithActivity } from "@/action/screenshots"
 import { useSelectedMemberContext } from "../selected-member-context"
 import { MemberScreenshotCard } from "@/components/activity/MemberScreenshotCard"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -150,7 +150,177 @@ export default function Every10MinPage() {
   // State permission delete
   const [canDelete, setCanDelete] = useState(true)
 
-  // Load delete permission from localStorage based on CURRENT USER (Actor)
+  // State untuk loading
+  const [isLoading, setIsLoading] = useState(true)
+  // Ref untuk track apakah ini mount pertama kali
+  const isFirstMount = useRef(true)
+  // Ref untuk menyimpan scroll position sebelum modal dibuka
+  const scrollPositionRef = useRef<number>(0)
+  // State untuk sort order (ascending = true, descending = false)
+  const [sortAscending, setSortAscending] = useState(true)
+
+  // State data screenshots dari DB
+  const [dbScreenshots, setDbScreenshots] = useState<IScreenshotWithActivity[]>([])
+
+  // Helper: map DB row -> MemberScreenshotItem
+  const mapDbToItem = (s: IScreenshotWithActivity): MemberScreenshotItem => {
+    const timeSlot = new Date(s.time_slot)
+    const timeSlotEnd = new Date(timeSlot.getTime() + 10 * 60 * 1000)
+    const fmt = (d: Date) => {
+      let h = d.getHours()
+      const m = d.getMinutes()
+      const period = h >= 12 ? 'pm' : 'am'
+      if (h > 12) h -= 12
+      if (h === 0) h = 12
+      return `${h}:${m.toString().padStart(2, '0')} ${period}`
+    }
+    return {
+      id: String(s.id),
+      time: `${fmt(timeSlot)} - ${fmt(timeSlotEnd)}`,
+      progress: s.activity_progress,
+      minutes: 10,
+      image: s.thumb_url ?? s.full_url,
+      screenCount: s.screen_number,
+      noActivity: false,
+    }
+  }
+
+  // Fetch screenshots dari DB
+  const fetchScreenshots = useCallback(async () => {
+    if (!activeMemberId) {
+      setDbScreenshots([])
+      setIsLoading(false)
+      return
+    }
+    setIsLoading(true)
+    const startDate = dateRange.startDate.toISOString().split('T')[0] ?? ''
+    const endDate = dateRange.endDate.toISOString().split('T')[0] ?? ''
+    const res = await getScreenshotsByMemberAndDate(
+      Number(activeMemberId),
+      startDate,
+      endDate
+    )
+    if (res.success && res.data) {
+      setDbScreenshots(res.data)
+    } else {
+      setDbScreenshots([])
+    }
+    setIsLoading(false)
+    isFirstMount.current = false
+  }, [activeMemberId, dateRange.startDate, dateRange.endDate])
+
+  // Check date range validity and determine data display strategy
+  const dateStatus = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const start = new Date(dateRange.startDate)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(dateRange.endDate)
+    end.setHours(23, 59, 59, 999)
+    if (start > today && end > today) return { isValid: false, isToday: false, isYesterday: false, isRange: false }
+    const thirtyDaysAgo = new Date(today)
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    if (end < thirtyDaysAgo && start < thirtyDaysAgo) return { isValid: false, isToday: false, isYesterday: false, isRange: false }
+    const isToday = start.getTime() === today.getTime()
+    const isYesterday = start.getTime() === yesterday.getTime() && end.getTime() <= today.getTime()
+    const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+    const isRange = daysDiff > 1
+    const includesToday = start <= today && end >= today
+    const isWithinValidRange = (start <= today && end >= thirtyDaysAgo) || includesToday
+    if (isToday) return { isValid: true, isToday: true, isYesterday: false, isRange }
+    if (isYesterday) return { isValid: true, isToday: false, isYesterday: true, isRange: false }
+    if (isRange && isWithinValidRange) return { isValid: true, isToday: false, isYesterday: false, isRange: true }
+    if (isWithinValidRange && !isToday && !isYesterday) return { isValid: true, isToday: false, isYesterday: false, isRange: false }
+    if (includesToday || isWithinValidRange) return { isValid: true, isToday: includesToday || isToday, isYesterday: false, isRange }
+    return { isValid: false, isToday: false, isYesterday: false, isRange: false }
+  }, [dateRange])
+
+  // Struktur untuk menyimpan blocks per tanggal
+  interface DateGroupedBlocks {
+    date: string
+    dateLabel: string
+    blocks: Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>
+  }
+
+  const memberTimeBlocks = useMemo(() => {
+    if (isLoading) return []
+    if (!activeMemberId || !dateStatus.isValid) return []
+
+    const baseItems: MemberScreenshotItem[] = dbScreenshots.map(mapDbToItem)
+    if (baseItems.length === 0) return []
+
+    let blocks: Array<{ label: string; summary: string; items: MemberScreenshotItem[] }> = []
+
+    if (dateStatus.isYesterday) {
+      const filteredItems = baseItems.slice(0, Math.min(6, baseItems.length))
+      blocks = buildMemberTimeBlocks(filteredItems, 6)
+    } else if (dateStatus.isRange && dateRange) {
+      // Grupkan berdasarkan screenshot_date dari DB
+      const groupedByDate = new Map<string, MemberScreenshotItem[]>()
+      dbScreenshots.forEach(s => {
+        const dateKey = s.screenshot_date
+        if (!dateKey) return
+        if (!groupedByDate.has(dateKey)) groupedByDate.set(dateKey, [])
+        groupedByDate.get(dateKey)!.push(mapDbToItem(s))
+      })
+
+      const dateGroupedBlocks: DateGroupedBlocks[] = []
+      groupedByDate.forEach((items, dateKey) => {
+        const dateObj = new Date(dateKey)
+        const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        let dayBlocks = buildMemberTimeBlocks(items, 6)
+        if (!sortAscending) dayBlocks = [...dayBlocks].reverse()
+        if (dayBlocks.length > 0) {
+          dateGroupedBlocks.push({ date: dateKey, dateLabel, blocks: dayBlocks })
+        }
+      })
+
+      return dateGroupedBlocks as unknown as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>
+    } else {
+      blocks = buildMemberTimeBlocks(baseItems, 6)
+    }
+
+    if (!sortAscending) blocks = [...blocks].reverse()
+    return blocks
+  }, [activeMemberId, dateStatus, dateRange, isLoading, sortAscending, dbScreenshots])
+
+  const flattenedScreenshots = useMemo(() => {
+    let allItems: MemberScreenshotItem[] = []
+    if (dateStatus.isRange && Array.isArray(memberTimeBlocks) && memberTimeBlocks.length > 0) {
+      const firstBlock = memberTimeBlocks[0]
+      if (firstBlock && 'date' in (firstBlock as any)) {
+        allItems = (memberTimeBlocks as unknown as DateGroupedBlocks[]).flatMap((dateGroup) =>
+          dateGroup.blocks.flatMap((block) => block.items)
+        )
+      }
+    } else {
+      allItems = (memberTimeBlocks as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>).flatMap((block) => block.items)
+    }
+    return allItems.filter(item => !deletedScreenshots.has(item.id))
+  }, [memberTimeBlocks, dateStatus, deletedScreenshots])
+
+  const currentScreenshot = flattenedScreenshots[modalIndex]
+
+  // Fetch saat mount pertama
+  useEffect(() => {
+    setIsMounted(true)
+    fetchScreenshots()
+  }, [])
+
+  // Fetch saat member berubah
+  useEffect(() => {
+    setModalIndex(0)
+    setModalOpen(false)
+    fetchScreenshots()
+  }, [activeMemberId])
+
+  // Fetch saat dateRange berubah (skip mount pertama)
+  useEffect(() => {
+    if (isFirstMount.current) return
+    fetchScreenshots()
+  }, [dateRange.startDate.getTime(), dateRange.endDate.getTime()])
   useEffect(() => {
     if (!currentMemberId) return
 
@@ -178,219 +348,6 @@ export default function Every10MinPage() {
 
     setCanDelete(isDeleteEnabled)
   }, [currentMemberId])
-
-  // State untuk loading
-  const [isLoading, setIsLoading] = useState(true)
-  // Ref untuk track apakah ini mount pertama kali
-  const isFirstMount = useRef(true)
-  // Ref untuk menyimpan scroll position sebelum modal dibuka
-  const scrollPositionRef = useRef<number>(0)
-  // State untuk sort order (ascending = true, descending = false)
-  const [sortAscending, setSortAscending] = useState(true)
-
-  // Check date range validity and determine data display strategy
-  const dateStatus = useMemo(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-
-    const start = new Date(dateRange.startDate)
-    start.setHours(0, 0, 0, 0)
-    const end = new Date(dateRange.endDate)
-    end.setHours(23, 59, 59, 999)
-
-    // Check if range is completely in the future (start > today and end > today)
-    if (start > today && end > today) {
-      return { isValid: false, isToday: false, isYesterday: false, isRange: false }
-    }
-
-    // Check if range is more than 30 days ago (both start and end are more than 30 days ago)
-    const thirtyDaysAgo = new Date(today)
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    if (end < thirtyDaysAgo && start < thirtyDaysAgo) {
-      return { isValid: false, isToday: false, isYesterday: false, isRange: false }
-    }
-
-    // Check if start date is today (range includes today)
-    const isToday = start.getTime() === today.getTime()
-
-    // Check if start date is yesterday
-    const isYesterday = start.getTime() === yesterday.getTime() && end.getTime() <= today.getTime()
-
-    // Check if it's a range (more than 1 day)
-    const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-    const isRange = daysDiff > 1
-
-    // If range includes today or overlaps with today, it's valid
-    const includesToday = start <= today && end >= today
-
-    // If range is within last 30 days or includes today, it's valid
-    const isWithinValidRange = (start <= today && end >= thirtyDaysAgo) || includesToday
-
-    if (isToday) return { isValid: true, isToday: true, isYesterday: false, isRange: isRange }
-    if (isYesterday) return { isValid: true, isToday: false, isYesterday: true, isRange: false }
-    if (isRange && isWithinValidRange) {
-      // Valid range: this week, last 7 days, last week, last 2 weeks, this month, last month
-      return { isValid: true, isToday: false, isYesterday: false, isRange: true }
-    }
-
-    // Single date that's not today or yesterday but within 30 days or includes today
-    if (isWithinValidRange && !isToday && !isYesterday) {
-      return { isValid: true, isToday: false, isYesterday: false, isRange: false }
-    }
-
-    // Default: if range includes today or overlaps with valid range, show data
-    if (includesToday || isWithinValidRange) {
-      return { isValid: true, isToday: includesToday || isToday, isYesterday: false, isRange: isRange }
-    }
-
-    return { isValid: false, isToday: false, isYesterday: false, isRange: false }
-  }, [dateRange])
-
-  // Struktur untuk menyimpan blocks per tanggal
-  interface DateGroupedBlocks {
-    date: string
-    dateLabel: string
-    blocks: Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>
-  }
-
-  const memberTimeBlocks = useMemo(() => {
-    // Jika masih loading, return empty array agar skeleton muncul
-    if (isLoading) return []
-    if (!activeMemberId || !dateStatus.isValid) return []
-
-    // Debug log
-    const baseItems = generateMemberScreenshots(activeMemberId)
-    console.log(`[10min] Generating for member ${activeMemberId}, found ${baseItems.length} items. Date: ${dateRange.startDate.toDateString()} isToday=${dateStatus.isToday}`)
-
-    let blocks: Array<{ label: string; summary: string; items: MemberScreenshotItem[] }> = []
-
-    // Jika kemarin, ambil subset data yang berbeda (misalnya ambil 6 item pertama untuk variasi)
-    if (dateStatus.isYesterday) {
-      const filteredItems = baseItems.slice(0, Math.min(6, baseItems.length))
-      blocks = buildMemberTimeBlocks(filteredItems, 6) // 6 items = 1 jam (6 x 10 menit)
-    }
-    // Jika range (this week, last 7 days, dll), pisahkan berdasarkan tanggal
-    // Hanya gunakan data yang ada: today dan yesterday
-    else if (dateStatus.isRange && dateRange) {
-      const dateGroupedBlocks: DateGroupedBlocks[] = []
-
-      // Hanya ambil data untuk today dan yesterday
-      // Today: gunakan semua data dari member
-      const today = new Date(dateRange.endDate)
-      const todayLabel = today.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      })
-      let todayBlocks = buildMemberTimeBlocks(baseItems, 6)
-      // Apply sort order untuk today blocks
-      if (!sortAscending) {
-        todayBlocks = [...todayBlocks].reverse()
-      }
-      if (todayBlocks.length > 0) {
-        const todayStr = today.toISOString().split('T')[0]
-        if (todayStr) {
-          dateGroupedBlocks.push({
-            date: todayStr,
-            dateLabel: todayLabel,
-            blocks: todayBlocks
-          })
-        }
-      }
-
-      // Yesterday: gunakan subset data (6 item pertama untuk variasi)
-      const yesterday = new Date(dateRange.endDate)
-      yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayLabel = yesterday.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      })
-      const yesterdayItems = baseItems.slice(0, Math.min(6, baseItems.length))
-      let yesterdayBlocks = buildMemberTimeBlocks(yesterdayItems, 6)
-      // Apply sort order untuk yesterday blocks
-      if (!sortAscending) {
-        yesterdayBlocks = [...yesterdayBlocks].reverse()
-      }
-      if (yesterdayBlocks.length > 0) {
-        const yesterdayStr = yesterday.toISOString().split('T')[0]
-        if (yesterdayStr) {
-          dateGroupedBlocks.push({
-            date: yesterdayStr,
-            dateLabel: yesterdayLabel,
-            blocks: yesterdayBlocks
-          })
-        }
-      }
-
-      // Return struktur khusus untuk range (akan di-handle berbeda di rendering)
-      return dateGroupedBlocks as unknown as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>
-    }
-    // Hari ini atau single date - ambil semua data yang ada
-    else {
-      blocks = buildMemberTimeBlocks(baseItems, 6) // 6 items = 1 jam (6 x 10 menit)
-    }
-
-    // Apply sort order: reverse jika descending
-    if (!sortAscending) {
-      blocks = [...blocks].reverse()
-    }
-
-    return blocks
-  }, [activeMemberId, dateStatus, dateRange, isLoading, sortAscending])
-
-  const flattenedScreenshots = useMemo(() => {
-    let allItems: MemberScreenshotItem[] = []
-    // Jika range, flatten dari struktur dateGroupedBlocks
-    if (dateStatus.isRange && Array.isArray(memberTimeBlocks) && memberTimeBlocks.length > 0) {
-      const firstBlock = memberTimeBlocks[0]
-      if (firstBlock && 'date' in (firstBlock as any)) {
-        allItems = (memberTimeBlocks as unknown as DateGroupedBlocks[]).flatMap((dateGroup) =>
-          dateGroup.blocks.flatMap((block) => block.items)
-        )
-      }
-    } else {
-      // Normal case: array of blocks
-      allItems = (memberTimeBlocks as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>).flatMap((block) => block.items)
-    }
-    // Filter out deleted screenshots untuk modal (tapi card tetap ditampilkan)
-    return allItems.filter(item => !deletedScreenshots.has(item.id))
-  }, [memberTimeBlocks, dateStatus, deletedScreenshots])
-  const currentScreenshot = flattenedScreenshots[modalIndex]
-
-  useEffect(() => {
-    setIsMounted(true)
-    // Simulate loading saat pertama kali halaman dibuka
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-      isFirstMount.current = false
-    }, 1500) // Tambah delay lebih lama agar skeleton terlihat jelas
-    return () => clearTimeout(timer)
-  }, [])
-
-  useEffect(() => {
-    setModalIndex(0)
-    setModalOpen(false)
-    // Reset loading saat member berubah
-    setIsLoading(true)
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
-    return () => clearTimeout(timer)
-  }, [activeMemberId])
-
-  // Reset loading saat dateRange berubah (tapi skip saat mount pertama)
-  useEffect(() => {
-    if (isFirstMount.current) return // Skip saat mount pertama
-    setIsLoading(true)
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
-    return () => clearTimeout(timer)
-  }, [dateRange.startDate.getTime(), dateRange.endDate.getTime()])
 
   const openModal = (index: number) => {
     // Simpan scroll position sebelum membuka modal
