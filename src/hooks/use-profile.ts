@@ -128,7 +128,13 @@ export function useProfilePhotoUrl(profilePhotoUrl?: string, userId?: string) {
     }
 
     // Legacy data format: All legacy filenames or old paths are now resolved via mass-profile folder
-    const cleanFilename = profilePhotoUrl.replace(/^\//, '')
+    let cleanFilename = profilePhotoUrl.replace(/^\//, '')
+
+    // Strip deprecated 'users/{id}/' prefix if present
+    if (cleanFilename.startsWith('users/')) {
+      const parts = cleanFilename.split('/')
+      cleanFilename = parts[parts.length - 1] || ''
+    }
 
     if (cleanFilename.startsWith('mass-profile/')) {
       return `${base}/${cleanFilename}`

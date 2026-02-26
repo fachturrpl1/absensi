@@ -51,7 +51,7 @@ function mapProjectData(p: IProject): Project {
         p.team_projects.forEach((tp: any) => {
             if (tp.teams?.team_members && Array.isArray(tp.teams.team_members)) {
                 tp.teams.team_members.forEach((tm: any) => {
-                    const profile = tm.organization_members?.user_profiles;
+                    const profile = tm.organization_members?.user;
                     if (profile) {
                         const uid = profile.id || tm.organization_members?.user_id;
                         if (!memberMap.has(uid)) {

@@ -1,38 +1,60 @@
 "use client"
 
-import { useMemo, useState, use } from "react"
+import { useMemo, useState, use, useEffect } from "react"
 import Link from "next/link"
-import { DUMMY_MEMBERS, DUMMY_PROJECTS, PROJECT_MEMBER_MAP, getTaskCountFromTasksPageByProjectId, type Member } from "@/lib/data/dummy-data"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/common/user-avatar"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Pencil } from "lucide-react"
+import { Pencil, Loader2 } from "lucide-react"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { getProjectWithMembers } from "@/action/projects"
 
-function initialsFromName(name: string): string {
-  const parts = (name || "").trim().split(/\s+/).filter(Boolean)
-  const first = parts[0]?.[0] ?? ""
-  const second = parts[1]?.[0] ?? ""
-  return (first + second).toUpperCase()
+interface ProjectMember {
+  id: string; // organization_member_id
+  userId: string;
+  name: string;
+  photoUrl: string | null;
+}
+
+interface ProjectData {
+  id: number;
+  name: string;
+  clientName: string | null;
+  status: string;
+  members: ProjectMember[];
 }
 
 export default function ProjectMembersPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const project = useMemo(() => DUMMY_PROJECTS.find(p => p.id === id), [id])
+  const [project, setProject] = useState<ProjectData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"members" | "teams">("members")
-
-  const taskCount = useMemo(() => project ? getTaskCountFromTasksPageByProjectId(project.id) : 0, [project])
-
-  const memberIds = PROJECT_MEMBER_MAP[id] ?? []
-  const assignedMembers: Member[] = useMemo(() => {
-    return DUMMY_MEMBERS.filter(m => memberIds.includes(m.id))
-  }, [memberIds])
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+
+  // Dialog States
+  const [editRateMember, setEditRateMember] = useState<ProjectMember | null>(null)
+  const [deleteMemberId, setDeleteMemberId] = useState<string | null>(null)
+  const [payRate, setPayRate] = useState("")
+  const [billRate, setBillRate] = useState("")
+
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      const result = await getProjectWithMembers(id);
+      if (result.success && result.data) {
+        setProject(result.data as any);
+      }
+      setIsLoading(false);
+    }
+    fetchData();
+  }, [id]);
+
+  const assignedMembers = useMemo(() => project?.members ?? [], [project])
 
   // Filtered/Paginated Data
   const paginatedMembers = useMemo(() => {
@@ -43,13 +65,7 @@ export default function ProjectMembersPage({ params }: { params: Promise<{ id: s
 
   const totalPages = Math.ceil(assignedMembers.length / pageSize) || 1
 
-  // Dialog States
-  const [editRateMember, setEditRateMember] = useState<Member | null>(null)
-  const [deleteMemberId, setDeleteMemberId] = useState<string | null>(null)
-  const [payRate, setPayRate] = useState("")
-  const [billRate, setBillRate] = useState("")
-
-  const handleOpenEditRate = (member: Member) => {
+  const handleOpenEditRate = (member: ProjectMember) => {
     setEditRateMember(member)
     setPayRate("")
     setBillRate("")
@@ -67,21 +83,28 @@ export default function ProjectMembersPage({ params }: { params: Promise<{ id: s
     setDeleteMemberId(null)
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6 p-4 pt-0">
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">{project?.name ?? "Project"}</h1>
         <div className="flex gap-4 text-sm text-muted-foreground">
           <div>Client: <span className="font-medium">{project?.clientName ?? "N/A"}</span></div>
-          <div>Status: <span className="font-medium text-green-600">Active</span></div>
-          {/* <div>Budget: <span className="font-medium">{project?.budgetLabel ?? "N/A"}</span></div> */}
+          <div>Status: <span className="font-medium text-green-600 capitalize">{project?.status ?? "active"}</span></div>
           <div className="flex items-center gap-1">
             Tasks:
             <Link
               href={`/projects/tasks/list?project=${encodeURIComponent(project?.name ?? "")}`}
               className="font-medium hover:underline text-primary cursor-pointer"
             >
-              {taskCount} tasks
+              View tasks
             </Link>
           </div>
         </div>
@@ -133,11 +156,12 @@ export default function ProjectMembersPage({ params }: { params: Promise<{ id: s
                   <tr key={m.id} className="hover:bg-muted/30 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-gray-400 text-white text-xs font-medium">
-                            {initialsFromName(m.name)}
-                          </AvatarFallback>
-                        </Avatar>
+                        <UserAvatar
+                          name={m.name}
+                          photoUrl={m.photoUrl}
+                          userId={m.userId}
+                          size={8}
+                        />
                         <span className="font-medium">{m.name}</span>
                       </div>
                     </td>
@@ -198,6 +222,7 @@ export default function ProjectMembersPage({ params }: { params: Promise<{ id: s
           <p className="text-muted-foreground">No teams configured for this project</p>
         </div>
       )}
+
       {/* Edit Rates Dialog */}
       <Dialog open={!!editRateMember} onOpenChange={(open) => !open && setEditRateMember(null)}>
         <DialogContent className="max-w-md">

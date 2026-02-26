@@ -246,6 +246,9 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
           {/* Header */}
           <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
             <tr>
+              {visibleColumns.avatar && (
+                <th className="p-3 text-left text-xs font-medium text-foreground w-10"></th>
+              )}
               {visibleColumns.members && (
                 <th className="p-3 text-left text-xs font-medium text-foreground">Name</th>
               )}
