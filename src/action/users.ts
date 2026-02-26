@@ -122,7 +122,7 @@ export async function login(formData: FormData) {
 
   const orgMember = orgMemberships?.[0]
 
-   
+
   const orgRole = orgMember?.role ? (Array.isArray(orgMember.role) ? orgMember.role[0]?.code : (orgMember.role as any)?.code) : null
 
   const { data: rolesData, error: roleError } = await supabase
@@ -132,13 +132,13 @@ export async function login(formData: FormData) {
 
   if (roleError) return { success: false, message: roleError.message }
 
-   
+
   const roles = (rolesData as any)?.map((r: any) => ({
     id: r.role?.id || r.id,
     name: r.role?.name || r.name
-     
+
   })).filter((role: any) => role.id && role.name) ?? []
-   
+
   const roleIds = roles.map((r: any) => r.id)
 
   let permissions: { code: string; name: string }[] = []
@@ -150,11 +150,11 @@ export async function login(formData: FormData) {
 
     if (permError) return { success: false, message: permError.message }
 
-     
+
     permissions = (permData as any)?.map((p: any) => ({
       code: p.permission?.code || p.code,
       name: p.permission?.name || p.name
-       
+
     })).filter((perm: any) => perm.code && perm.name) ?? []
   }
 
@@ -183,7 +183,7 @@ export async function requestPasswordReset(formData: FormData) {
     return { success: false, message: 'Email is required.' }
   }
 
-  const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://absensi-ubig.vercel.app'}/auth/reset-password`
+  const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://absensi-ubig.vercel.app'}/auth/callback?next=/auth/reset-password`
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: redirectUrl,
