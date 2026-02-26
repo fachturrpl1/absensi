@@ -405,17 +405,9 @@ export default function TimelinePage() {
                                     className="flex items-center px-0.5 z-10 pointer-events-none py-1.5"
                                     style={{ gridRow: rowIndex + 2, gridColumn: `${barCols.startCol} / ${barCols.endCol}` }}
                                 >
-                                    {isParent ? (
-                                        <div className="relative w-full flex items-center h-4">
-                                            <div className="w-full h-full bg-zinc-700 dark:bg-zinc-300 rounded-sm opacity-80" />
-                                            <div className="absolute left-0 top-full w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-zinc-700 dark:border-t-zinc-300 opacity-80" />
-                                            <div className="absolute right-0 top-full w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-zinc-700 dark:border-t-zinc-300 opacity-80" />
-                                        </div>
-                                    ) : (
-                                        <div className={`w-full rounded-md px-2 flex items-center shadow-sm text-[10px] font-medium text-white ${STATUS_COLORS[node.task_status?.code || "todo"]} ${depth > 0 ? "h-5 opacity-80" : "h-7"}`}>
-                                            <span className="truncate">{node.name}</span>
-                                        </div>
-                                    )}
+                                    <div className={`w-full rounded-md px-2 flex items-center shadow-sm text-[10px] font-medium text-white ${STATUS_COLORS[node.task_status?.code || "todo"]} ${depth > 0 ? "h-5 opacity-80" : "h-7"}`}>
+                                        <span className="truncate">{node.name}</span>
+                                    </div>
                                 </div>
                             )}
                         </React.Fragment>

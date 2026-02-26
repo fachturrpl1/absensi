@@ -78,7 +78,78 @@ export function useTasksData() {
     }
 }
 
-// ─── AssigneeAvatar ───────────────────────────────────────────────────────────
+// ─── Assignee Helpers ────────────────────────────────────────────────────────
+
+export function getAssigneeInfo(assignee: ITaskAssignee): { id: string; name: string; photoUrl?: string; userId?: string } {
+    const user = assignee?.member?.user
+    if (user) {
+        const name = user.display_name || `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Unknown"
+        return {
+            id: String(assignee.organization_member_id || assignee.id || "unknown"),
+            name: name,
+            photoUrl: user.profile_photo_url || undefined,
+            userId: user.id
+        }
+    }
+    return { id: "unassigned", name: "Unassigned" }
+}
+
+export function StackedAssignees({ assignees, max = 3, size = 6, showLink = true }: {
+    assignees: ITaskAssignee[],
+    max?: number,
+    size?: number,
+    showLink?: boolean
+}) {
+    if (!assignees || assignees.length === 0) return null
+
+    return (
+        <div className="flex -space-x-2 shrink-0">
+            {assignees.slice(0, max).map((asgn, i) => {
+                const info = getAssigneeInfo(asgn)
+                const avatar = (
+                    <UserAvatar
+                        name={info.name}
+                        photoUrl={info.photoUrl}
+                        userId={info.userId}
+                        size={size}
+                        className="ring-2 ring-white dark:ring-background rounded-full shadow-sm"
+                    />
+                )
+
+                if (showLink) {
+                    return (
+                        <Link
+                            key={i}
+                            href={`/members/${asgn.organization_member_id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="hover:scale-110 transition-transform relative"
+                            style={{ zIndex: max - i }}
+                        >
+                            {avatar}
+                        </Link>
+                    )
+                }
+
+                return (
+                    <div key={i} className="relative" style={{ zIndex: max - i }}>
+                        {avatar}
+                    </div>
+                )
+            })}
+            {assignees.length > max && (
+                <div
+                    className={cn(
+                        "rounded-full bg-gray-100 dark:bg-muted border border-white dark:border-background flex items-center justify-center text-muted-foreground font-bold ring-2 ring-white dark:ring-background z-0",
+                        size === 5 ? "w-5 h-5 text-[8px]" : "w-6 h-6 text-[10px]"
+                    )}
+                >
+                    +{assignees.length - max}
+                </div>
+            )}
+        </div>
+    )
+}
+
 export function AssigneeAvatar({ asgn }: { asgn: ITaskAssignee }) {
     const user = asgn.member?.user
     const name = user?.display_name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || "Unknown"
