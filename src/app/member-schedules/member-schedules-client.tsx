@@ -6,7 +6,7 @@ import { DataTable } from "@/components/tables/data-table"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Trash, Plus, Calendar } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/common/user-avatar"
 import {
   Empty,
   EmptyHeader,
@@ -122,10 +122,12 @@ export default function MemberSchedulesClient({
 
         return (
           <div className="flex gap-3 items-center">
-            <Avatar className="h-9 w-9">
-              <AvatarImage src={user?.profile_photo_url} alt={name} />
-              <AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              name={name}
+              photoUrl={user?.profile_photo_url}
+              userId={user?.id}
+              size={9}
+            />
             <div className="flex flex-col">
               <button
                 type="button"

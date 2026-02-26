@@ -11,8 +11,8 @@ import {
 } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { UserAvatar } from "@/components/common/user-avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,8 +30,6 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useProfilePhotoUrl } from "@/hooks/use-profile"
-import { getUserInitials } from "@/lib/avatar-utils"
 import type { IOrganization_member, IMemberPerformance, IUser } from "@/interface"
 import { cn } from "@/lib/utils"
 // Server Actions
@@ -126,9 +124,9 @@ function FormField({
 }
 
 function MemberProfileHeader({
-  user,
   displayName,
   photoUrl,
+  userId,
   joinDate,
   email,
   lastTracked,
@@ -136,6 +134,7 @@ function MemberProfileHeader({
   user?: IUser
   displayName: string
   photoUrl?: string
+  userId?: string
   joinDate: string
   email: string
   lastTracked: string
@@ -145,17 +144,12 @@ function MemberProfileHeader({
       {/* Left: Avatar */}
       <div className="flex-shrink-0">
         <div className="flex flex-col items-center text-center">
-          <Avatar className="h-20 w-20">
-            <AvatarImage src={photoUrl} alt={displayName} />
-            <AvatarFallback className="bg-gray-100 text-gray-700 text-lg font-semibold">
-              {getUserInitials(
-                user?.first_name,
-                user?.last_name,
-                user?.display_name ?? undefined,
-                user?.email ?? undefined
-              )}
-            </AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            name={displayName}
+            photoUrl={photoUrl}
+            userId={userId}
+            size={20}
+          />
           <p className="mt-3 text-xs text-muted-foreground">
             Joined
             <br />
@@ -237,8 +231,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
   const user: IUser | undefined = member.user
   const email = user?.email || ""
   const phone = user?.phone || ""
-   
-  const photoUrl = useProfilePhotoUrl(user?.profile_photo_url ?? undefined) ?? undefined
+
 
   const displayName = user
     ? [user.first_name, user.middle_name, user.last_name]
@@ -341,9 +334,9 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
       <div className="px-4 py-6">
 
         <MemberProfileHeader
-          user={user}
           displayName={displayName}
-          photoUrl={photoUrl}
+          photoUrl={user?.profile_photo_url || undefined}
+          userId={user?.id}
           joinDate={joinDate}
           email={email}
           lastTracked={lastTracked}

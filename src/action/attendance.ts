@@ -12,42 +12,6 @@ async function getSupabase() {
   return await createClient();
 }
 
-/**
- * Server-side helper to resolve a Supabase profile photo URL.
- * Files may be stored under different paths depending on upload method:
- *   - Full https URL (new uploads via account.ts - use as-is)
- *   - filename only (old data - stored in mass-profile/ folder)
- *   - users/{userId}/filename (new convention)
- */
-function resolveProfilePhotoUrl(profilePhotoUrl?: string | null, userId?: string | null): string | undefined {
-  if (!profilePhotoUrl || profilePhotoUrl === '' || profilePhotoUrl === 'null' || profilePhotoUrl === 'undefined') {
-    return undefined;
-  }
-
-  // UUID-only value == invalid/corrupted
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (uuidRegex.test(profilePhotoUrl) && profilePhotoUrl === userId) return undefined;
-
-  // Already a full URL
-  if (profilePhotoUrl.startsWith('http')) return profilePhotoUrl;
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!supabaseUrl) return undefined;
-
-  const base = `${supabaseUrl}/storage/v1/object/public/profile-photos`;
-
-  if (profilePhotoUrl.startsWith('/storage/v1/object/public/')) return `${supabaseUrl}${profilePhotoUrl}`;
-  if (profilePhotoUrl.startsWith('profile-photos/')) return `${supabaseUrl}/storage/v1/object/public/${profilePhotoUrl}`;
-  if (profilePhotoUrl.startsWith('users/')) return `${base}/${profilePhotoUrl}`;
-  if (profilePhotoUrl.includes('/profile-photos/')) return `${supabaseUrl}/storage/v1/object/public/${profilePhotoUrl.replace(/^\//, '')}`;
-
-  // Old data: just filename
-  const cleanFilename = profilePhotoUrl.replace(/^\//, '');
-  if (cleanFilename.startsWith('profile_') && userId) return `${base}/users/${userId}/${cleanFilename}`;
-  if (cleanFilename.includes('-') || cleanFilename.length > 20) return `${base}/mass-profile/${cleanFilename}`;
-  if (userId) return `${base}/users/${userId}/${cleanFilename}`;
-  return `${base}/${cleanFilename}`;
-}
 
 // Resolve active schedule rule for a member on a given date.
 // Returns null if no active rule or non-working day.
@@ -215,6 +179,7 @@ export type AttendanceListItem = {
   id: string;
   member: {
     id: number;
+    userId?: string;
     name: string;
     avatar?: string;
     position: string;
@@ -602,8 +567,9 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
       id: String(item.id),
       member: {
         id: item.organization_member_id,
+        userId: profile?.id,
         name: effectiveName || `Member #${item.organization_member_id}`,
-        avatar: resolveProfilePhotoUrl(profile?.profile_photo_url, profile?.id) || undefined,
+        avatar: profile?.profile_photo_url || undefined,
         position: '',
         department: departmentName,
       },

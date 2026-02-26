@@ -44,19 +44,13 @@ import {
   AlertCircle,
 } from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/common/user-avatar"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
 import { cn } from "@/lib/utils"
 import { formatLocalTime } from "@/utils/timezone"
 
-function initialsFromName(name: string): string {
-  const parts = (name || "").trim().split(/\s+/).filter(Boolean)
-  const first = parts[0]?.[0] ?? ""
-  const second = parts[1]?.[0] ?? ""
-  return (first + second).toUpperCase()
-}
 
 // Tambahan helper untuk konsistensi tanggal sesuai timezone organisasi
 function toOrgYMD(d: Date, tz?: string): string {
@@ -299,7 +293,7 @@ function ModernAttendanceListCloned() {
     const orgId = selectedOrgId || orgStore.organizationId
     if (!orgId) return
     fetchData({ mode: 'full' })
-     
+
   }, [dateRange.from, dateRange.to, statusFilter, departmentFilter, searchQuery, itemsPerPage, currentPage, selectedOrgId, orgStore.organizationId])
 
   // Handler Selected Actions (sementara no-op; akan diisi setelah list pindah)
@@ -710,10 +704,12 @@ function ModernAttendanceListCloned() {
                           </td>
                           <td className="p-3">
                             <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={record.member.avatar} />
-                                <AvatarFallback>{initialsFromName(record.member.name)}</AvatarFallback>
-                              </Avatar>
+                              <UserAvatar
+                                name={record.member.name}
+                                photoUrl={record.member.avatar}
+                                userId={record.member.userId}
+                                size={8}
+                              />
                               <div>
                                 <p className="font-medium text-sm">
                                   <Link href={`/members/${record.member.id ?? ""}`} className="hover:underline">

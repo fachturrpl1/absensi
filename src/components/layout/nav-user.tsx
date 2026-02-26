@@ -2,7 +2,7 @@
 
 import { useEffect, useState, memo } from 'react';
 import { EllipsisVertical, CircleUser, LogOut } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/common/user-avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,16 +21,6 @@ import {
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 import { useAuthStore } from '@/store/user-store';
-import { useProfilePhotoUrl } from '@/hooks/use-profile';
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 interface UserProfile {
   name: string;
@@ -49,7 +39,6 @@ export const NavUser = memo(function NavUser() {
   const setStoreUser = useAuthStore((state) => state.setUser);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const photoUrl = useProfilePhotoUrl(storeUser?.profile_photo_url || undefined, storeUser?.id);
 
   // Sync with store user (already fetched server-side)
   useEffect(() => {
@@ -63,10 +52,10 @@ export const NavUser = memo(function NavUser() {
       setUser({
         name: displayName,
         email: storeUser.email || '',
-        avatar: photoUrl || null,
+        avatar: storeUser.profile_photo_url || null,
       });
     }
-  }, [storeUser, photoUrl]);
+  }, [storeUser]);
 
   // Setup real-time subscription for profile changes only
   useEffect(() => {
@@ -131,10 +120,13 @@ export const NavUser = memo(function NavUser() {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.avatar || undefined} alt={user.name} className="object-cover" />
-                <AvatarFallback className="rounded-lg">{getInitials(user.name)}</AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                name={user.name}
+                photoUrl={user.avatar}
+                userId={storeUser?.id}
+                size={8}
+                className="rounded-lg"
+              />
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
               </div>
@@ -149,10 +141,13 @@ export const NavUser = memo(function NavUser() {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar || undefined} alt={user.name} className="object-cover" />
-                  <AvatarFallback className="rounded-lg">{getInitials(user.name)}</AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  name={user.name}
+                  photoUrl={user.avatar}
+                  userId={storeUser?.id}
+                  size={8}
+                  className="rounded-lg"
+                />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
                 </div>

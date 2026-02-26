@@ -1,14 +1,13 @@
 "use client"
 
 import { useMemo, useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, usePathname } from "next/navigation"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Pencil, Trash2, Plus } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useProfilePhotoUrl } from "@/hooks/use-profile"
+import { Search, Pencil, Trash2, Plus, ChevronRight, ChevronDown, List, LayoutGrid, GanttChart } from "lucide-react"
+import { UserAvatar } from "@/components/common/user-avatar"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -46,21 +45,52 @@ import { toast } from "sonner"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
 
 // Helper for initials
-function initialsFromName(name: string): string {
-    const parts = (name || "").trim().split(/\s+/).filter(Boolean)
-    const first = parts[0]?.[0] ?? ""
-    const second = parts[1]?.[0] ?? ""
-    return (first + second).toUpperCase()
+
+
+// ─── Nested task tree structure ───────────────────────────────────────────────
+type TaskNode = ITask & { children: TaskNode[] }
+
+/**
+ * Transform a flat list of tasks into a tree based on parent_task_id.
+ * Top-level tasks are those with parent_task_id === null/undefined.
+ */
+function buildTaskTree(tasks: ITask[]): TaskNode[] {
+    const map = new Map<number, TaskNode>()
+    tasks.forEach(t => map.set(t.id, { ...t, children: [] }))
+
+    const roots: TaskNode[] = []
+    map.forEach(node => {
+        if (node.parent_task_id && map.has(node.parent_task_id)) {
+            map.get(node.parent_task_id)!.children.push(node)
+        } else {
+            roots.push(node)
+        }
+    })
+    return roots
+}
+
+/**
+ * Flatten a tree for display, inserting visible children below their expanded parent.
+ */
+function flattenTree(nodes: TaskNode[], expandedIds: Set<number>, depth = 0): { node: TaskNode; depth: number }[] {
+    const result: { node: TaskNode; depth: number }[] = []
+    for (const node of nodes) {
+        result.push({ node, depth })
+        if (expandedIds.has(node.id) && node.children.length > 0) {
+            result.push(...flattenTree(node.children, expandedIds, depth + 1))
+        }
+    }
+    return result
 }
 
 
 export default function ListView() {
     const searchParams = useSearchParams()
+    const pathname = usePathname()
     const initialProject = searchParams.get("project")
 
     function AssigneeAvatar({ asgn }: { asgn: ITaskAssignee }) {
         const user = asgn.member?.user
-        const photoUrl = useProfilePhotoUrl(user?.profile_photo_url ?? undefined, user?.id)
         const name = user?.display_name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || "Unknown"
 
         return (
@@ -69,12 +99,13 @@ export default function ListView() {
                 onClick={(e) => e.stopPropagation()}
                 className="hover:scale-110 transition-transform"
             >
-                <Avatar className="h-6 w-6 ring-2 ring-background">
-                    {photoUrl && <AvatarImage src={photoUrl} alt={name} />}
-                    <AvatarFallback className="text-[10px] bg-gray-100 text-gray-700">
-                        {initialsFromName(name)}
-                    </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                    name={name}
+                    photoUrl={user?.profile_photo_url}
+                    userId={user?.id}
+                    size={6}
+                    className="ring-2 ring-background"
+                />
             </Link>
         )
     }
@@ -118,6 +149,15 @@ export default function ListView() {
 
 
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+    const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set())
+
+    const toggleExpand = (id: number) => {
+        setExpandedTasks(prev => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id); else next.add(id)
+            return next
+        })
+    }
 
     const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false)
 
@@ -147,48 +187,47 @@ export default function ListView() {
     const dynamicEditedAssignees = useMemo(() => members, [members])
 
 
-    const filteredTasks = useMemo(() => {
-        return tasks.filter((task) => {
-            // Tab filter
+    // Build tree and compute filtered flat list
+    const taskTree = useMemo(() => {
+        const filtered = tasks.filter((task) => {
             const isCompleted = task.status === 'done'
             if (activeTab === "active" && isCompleted) return false
             if (activeTab === "completed" && !isCompleted) return false
 
-            // Client filter from URL
             if (urlClientName) {
                 const clientData = (task.project as any)?.client
                 const clientNames: string[] = Array.isArray(clientData)
                     ? clientData.map((c: any) => c.name)
                     : [clientData?.name].filter(Boolean)
-
-                const isMatch = clientNames.some(name => name.toLowerCase() === urlClientName.toLowerCase())
-                if (!isMatch) return false
+                if (!clientNames.some(name => name.toLowerCase() === urlClientName.toLowerCase())) return false
             }
 
-            // Dropdown filters
             if (selectedProject !== "all" && task.project?.name !== selectedProject) return false
 
-            // Assignee filter
             const assigneeName = task.assignees?.[0]?.member?.user?.display_name ||
                 `${task.assignees?.[0]?.member?.user?.first_name || ''} ${task.assignees?.[0]?.member?.user?.last_name || ''}`.trim()
             if (selectedAssignee !== "all" && assigneeName !== selectedAssignee) return false
 
-            // Search
             if (searchQuery) {
                 const query = searchQuery.toLowerCase()
-                const matchesTitle = task.name.toLowerCase().includes(query)
-                const matchesAssignee = assigneeName.toLowerCase().includes(query)
-                if (!matchesTitle && !matchesAssignee) return false
+                if (!task.name.toLowerCase().includes(query) && !assigneeName.toLowerCase().includes(query)) return false
             }
             return true
         })
+        return buildTaskTree(filtered)
     }, [tasks, activeTab, selectedProject, selectedAssignee, searchQuery, urlClientName])
 
-    const paginatedTasks = useMemo(() => {
+    // filteredTasks stays flat for count purposes (total root-level)
+    const filteredTasks = taskTree
+
+    // Paginate top-level tasks only, then flatten with children
+    const paginatedTree = useMemo(() => {
         const start = (currentPage - 1) * pageSize
         const end = start + pageSize
-        return filteredTasks.slice(start, end)
-    }, [filteredTasks, currentPage, pageSize])
+        return taskTree.slice(start, end)
+    }, [taskTree, currentPage, pageSize])
+
+    const displayRows = useMemo(() => flattenTree(paginatedTree, expandedTasks), [paginatedTree, expandedTasks])
 
     const totalPages = Math.ceil(filteredTasks.length / pageSize) || 1
 
@@ -199,19 +238,19 @@ export default function ListView() {
     }, [activeTab, selectedProject, selectedAssignee, searchQuery])
 
     // Selection helpers
-    const allSelected = paginatedTasks.length > 0 && paginatedTasks.every(t => rowSelection[t.id.toString()])
+    const allSelected = paginatedTree.length > 0 && paginatedTree.every(t => rowSelection[t.id.toString()])
 
     const toggleSelectAll = () => {
         if (allSelected) {
             setRowSelection(prev => {
                 const next = { ...prev }
-                paginatedTasks.forEach(t => delete next[t.id.toString()])
+                paginatedTree.forEach(t => delete next[t.id.toString()])
                 return next
             })
         } else {
             setRowSelection(prev => {
                 const next = { ...prev }
-                paginatedTasks.forEach(t => { next[t.id.toString()] = true })
+                paginatedTree.forEach(t => { next[t.id.toString()] = true })
                 return next
             })
         }
@@ -228,11 +267,37 @@ export default function ListView() {
     // Batch Actions Handler
     const selectedCount = Object.keys(rowSelection).length
 
+    const viewLinks = [
+        { label: "List", href: "/projects/tasks/list", icon: List },
+        { label: "Kanban", href: "/projects/tasks/kanban", icon: LayoutGrid },
+        { label: "Timeline", href: "/projects/tasks/timeline", icon: GanttChart },
+    ]
+
     return (
         <div className="flex flex-col gap-4 p-4 pt-0">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold">Tasks</h1>
+            </div>
+
+            {/* View Toggle */}
+            <div className="flex items-center gap-1 border rounded-md w-fit p-1">
+                {viewLinks.map(({ label, href, icon: Icon }) => {
+                    const isActive = pathname === href
+                    return (
+                        <Link
+                            key={href}
+                            href={href}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors ${isActive
+                                ? "bg-foreground text-background"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                                }`}
+                        >
+                            <Icon className="h-4 w-4" />
+                            {label}
+                        </Link>
+                    )
+                })}
             </div>
 
             {/* Tabs */}
@@ -357,6 +422,7 @@ export default function ListView() {
                                     />
                                 </TableHead>
                                 <TableHead>Task</TableHead>
+                                <TableHead>Status</TableHead>
                                 <TableHead>Assignee</TableHead>
                                 <TableHead>Project</TableHead>
                                 <TableHead>Client</TableHead>
@@ -367,22 +433,23 @@ export default function ListView() {
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="text-center py-10">
+                                    <TableCell colSpan={8} className="text-center py-10">
                                         <div className="flex items-center justify-center gap-2 text-muted-foreground">
                                             <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                                             Loading tasks...
                                         </div>
                                     </TableCell>
                                 </TableRow>
-                            ) : paginatedTasks.length === 0 ? (
+                            ) : displayRows.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                                         No tasks found
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                paginatedTasks.map((task) => {
-
+                                displayRows.map(({ node: task, depth }) => {
+                                    const hasChildren = (task as TaskNode).children.length > 0
+                                    const isExpanded = expandedTasks.has(task.id)
 
                                     const clientData = task.project?.client
                                     const clientName = Array.isArray(clientData)
@@ -390,7 +457,10 @@ export default function ListView() {
                                         : (clientData as any)?.name
 
                                     return (
-                                        <TableRow key={task.id}>
+                                        <TableRow
+                                            key={`${task.id}-d${depth}`}
+                                            className={depth > 0 ? "bg-muted/30" : undefined}
+                                        >
                                             <TableCell className="align-top">
                                                 <Checkbox
                                                     checked={!!rowSelection[task.id.toString()]}
@@ -399,13 +469,40 @@ export default function ListView() {
                                                 />
                                             </TableCell>
                                             <TableCell>
-                                                <div className="min-w-0">
-                                                    <span className="font-medium text-sm block truncate">{task.name}</span>
+                                                <div
+                                                    className="min-w-0 flex items-center gap-1"
+                                                    style={{ paddingLeft: `${depth * 24}px` }}
+                                                >
+                                                    <div className="flex items-center gap-1 min-w-0">
+                                                        {hasChildren ? (
+                                                            <button
+                                                                onClick={() => toggleExpand(task.id)}
+                                                                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                                                                aria-label={isExpanded ? "Collapse subtasks" : "Expand subtasks"}
+                                                            >
+                                                                {isExpanded
+                                                                    ? <ChevronDown className="h-4 w-4" />
+                                                                    : <ChevronRight className="h-4 w-4" />}
+                                                            </button>
+                                                        ) : (
+                                                            depth > 0 && <span className="shrink-0 w-4 h-4 block" />
+                                                        )}
+                                                        <span className="font-medium text-sm truncate">{task.name}</span>
+                                                    </div>
                                                 </div>
                                             </TableCell>
                                             <TableCell>
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${task.status === 'done' ? 'bg-green-50 text-green-700 border-green-200' :
+                                                    task.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                        task.status === 'review' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                                            'bg-zinc-50 text-zinc-700 border-zinc-200'
+                                                    }`}>
+                                                    {(task.status || 'todo').charAt(0).toUpperCase() + (task.status || 'todo').slice(1).replace('_', ' ')}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell>
                                                 <div className="flex -space-x-2">
-                                                    {(task.assignees || []).slice(0, 3).map((asgn) => (
+                                                    {(task.assignees || []).slice(0, 3).map((asgn: ITaskAssignee) => (
                                                         <AssigneeAvatar
                                                             key={asgn.id || asgn.organization_member_id}
                                                             asgn={asgn}
@@ -501,7 +598,7 @@ export default function ListView() {
                     totalPages={totalPages}
                     onPageChange={setCurrentPage}
                     isLoading={isLoading}
-                    from={paginatedTasks.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
+                    from={filteredTasks.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
                     to={Math.min(currentPage * pageSize, filteredTasks.length)}
                     total={filteredTasks.length}
                     pageSize={pageSize}

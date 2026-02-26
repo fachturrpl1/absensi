@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/common/user-avatar"
 import { Separator } from "@/components/ui/separator"
 import { Search, Pencil, Plus, Upload } from "lucide-react"
 import {
@@ -85,11 +85,17 @@ function mapProjectData(p: IProject): Project {
     }
 }
 
-function initialsFromName(name: string): string {
-    const parts = (name || "").trim().split(/\s+/).filter(Boolean)
-    const first = parts[0]?.[0] ?? ""
-    const second = parts[1]?.[0] ?? ""
-    return (first + second).toUpperCase()
+
+function MemberAvatar({ member, size = 6 }: { member: { id: string; name: string; avatarUrl?: string | null }; size?: number }) {
+    return (
+        <UserAvatar
+            name={member.name}
+            photoUrl={member.avatarUrl}
+            userId={member.id}
+            size={size}
+            className="ring-2 ring-background"
+        />
+    )
 }
 
 export default function ProjectsPage() {
@@ -390,9 +396,11 @@ export default function ProjectsPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-3">
-                                                    <Avatar className="h-8 w-8">
-                                                        <AvatarFallback className="bg-gray-100 text-gray-700">{initialsFromName(p.name)}</AvatarFallback>
-                                                    </Avatar>
+                                                    <UserAvatar
+                                                        name={p.name}
+                                                        size={8}
+                                                        className="rounded-full"
+                                                    />
                                                     <div className="min-w-0">
                                                         <Link href={`/projects/${p.id}/member`} className="font-medium text-sm hover:underline block truncate">
                                                             {p.name}
@@ -417,11 +425,7 @@ export default function ProjectsPage() {
                                             <TableCell>
                                                 <div className="flex -space-x-2">
                                                     {p.members.slice(0, 3).map((m) => (
-                                                        <Avatar key={m.id} className="h-6 w-6 ring-2 ring-background">
-                                                            <AvatarFallback className="text-[10px] bg-gray-100 text-gray-700">
-                                                                {initialsFromName(m.name)}
-                                                            </AvatarFallback>
-                                                        </Avatar>
+                                                        <MemberAvatar key={m.id} member={m} size={6} />
                                                     ))}
                                                     {p.members.length > 3 && (
                                                         <div className="h-6 w-6 rounded-full bg-muted text-xs grid place-items-center ring-2 ring-background">
