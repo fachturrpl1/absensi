@@ -4,6 +4,7 @@ import React from "react"
 import { IOrganization_member } from "@/interface"
 import { Button } from "@/components/ui/button"
 import { Trash, Pencil, Eye, Check, X } from "lucide-react"
+import { UserAvatar } from "@/components/common/user-avatar"
 import { useRouter } from "next/navigation"
 
 import {
@@ -38,6 +39,7 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
   const [globalFilter] = React.useState("")
   const [statusFilter] = React.useState("all")
   const [visibleColumns] = React.useState({
+    avatar: true,
     members: true,
     // phone: true,
     nik: true,
@@ -129,6 +131,17 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
   const getReligion = (member: IOrganization_member): string => {
     const m = member as MemberExtended
     return String(m.user?.agama || m.biodata?.agama || '-')
+  }
+
+
+  const MemberAvatar = ({ member }: { member: IOrganization_member }) => {
+    const m = member as MemberExtended
+    const user = m.user
+    const name = getFullName(member)
+
+    return (
+      <UserAvatar name={name} photoUrl={user?.profile_photo_url} userId={user?.id} />
+    )
   }
 
   // Filter and sort data
@@ -233,6 +246,9 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
           {/* Header */}
           <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
             <tr>
+              {visibleColumns.avatar && (
+                <th className="p-3 text-left text-xs font-medium text-foreground w-10"></th>
+              )}
               {visibleColumns.members && (
                 <th className="p-3 text-left text-xs font-medium text-foreground">Name</th>
               )}
@@ -282,6 +298,11 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
                     style={{}}
                     className="border-b border-gray-100 dark:border-gray-800 transition-colors custom-hover-row even:bg-gray-50 dark:even:bg-gray-900/50"
                   >
+                    {visibleColumns.avatar && (
+                      <td className="p-3">
+                        <MemberAvatar member={member} />
+                      </td>
+                    )}
                     {visibleColumns.members && (
                       <td className="p-3 text-xs">
                         <button

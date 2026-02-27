@@ -272,7 +272,7 @@ export async function deleteOldProfilePhoto(oldPhotoUrl: string): Promise<{
     const supabase = await createClient();
 
     // Extract file path from URL
-    // URL format: https://...supabase.co/storage/v1/object/public/profile-photos/users/user-id/filename
+    // URL format: https://...supabase.co/storage/v1/object/public/profile-photos/mass-profile/filename
     const urlParts = oldPhotoUrl.split('/profile-photos/');
     if (urlParts.length < 2) {
       return { success: false, message: 'Invalid photo URL format' };
@@ -367,8 +367,8 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
       accountLogger.error('Profile fetch error:', profileError);
     }
 
-    // Create user-specific folder structure: users/{user-id}/
-    const userFolder = `users/${user.id}`;
+    // Folder structure: mass-profile/ (users/ folder is deprecated)
+    const userFolder = `mass-profile`;
 
     // Create unique filename (we may change extension after compression)
     const origExt = fileName.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/gi, '') || 'jpg';

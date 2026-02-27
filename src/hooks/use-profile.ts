@@ -122,38 +122,26 @@ export function useProfilePhotoUrl(profilePhotoUrl?: string, userId?: string) {
       return `${supabaseUrl}/storage/v1/object/public/${profilePhotoUrl}`
     }
 
-    if (profilePhotoUrl.startsWith('users/')) {
-      // Path starting with users/ subfolder
-      return `${base}/${profilePhotoUrl}`
-    }
-
     if (profilePhotoUrl.includes('/profile-photos/')) {
       const cleanPath = profilePhotoUrl.replace(/^\//, '')
       return `${supabaseUrl}/storage/v1/object/public/${cleanPath}`
     }
 
-    // Old data format: just the filename (no folder prefix)
-    // Files are often stored under users/{userId}/ or mass-profile/ subfolders
-    const cleanFilename = profilePhotoUrl.replace(/^\//, '')
+    // Legacy data format: All legacy filenames or old paths are now resolved via mass-profile folder
+    let cleanFilename = profilePhotoUrl.replace(/^\//, '')
 
-    // New convention: filenames start with "profile_" and go into users/{userId}/
-    if (cleanFilename.startsWith('profile_') && userId) {
-      return `${base}/users/${userId}/${cleanFilename}`
+    // Strip deprecated 'users/{id}/' prefix if present
+    if (cleanFilename.startsWith('users/')) {
+      const parts = cleanFilename.split('/')
+      cleanFilename = parts[parts.length - 1] || ''
     }
 
-    // Old convention or mass-profile: filenames are often UUIDs or long strings
-    // If it's not the new format, check mass-profile first as a fallback for legacy data
-    if (cleanFilename.includes('-') || cleanFilename.length > 20) {
-      return `${base}/mass-profile/${cleanFilename}`
+    if (cleanFilename.startsWith('mass-profile/')) {
+      return `${base}/${cleanFilename}`
     }
 
-    // Default fallback to users folder if userId is present
-    if (userId) {
-      return `${base}/users/${userId}/${cleanFilename}`
-    }
-
-    // Last resort: root of bucket
-    return `${base}/${cleanFilename}`
+    // Default fallback: assume file is in mass-profile folder
+    return `${base}/mass-profile/${cleanFilename}`
   }
 
   return getValidProfilePhotoUrl()

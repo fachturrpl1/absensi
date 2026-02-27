@@ -5,7 +5,7 @@ import { MembersTable } from "@/components/tables/members-table"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useQueryClient } from "@tanstack/react-query"
-import { User, Users, Shield, Mail, Plus, FileDown, Loader2, Search, FileSpreadsheet, Minus, RefreshCw, Info, Settings } from "lucide-react"
+import { User, Users, Shield, Mail, Plus, FileDown, Loader2, Search, FileSpreadsheet, Minus, RefreshCw, Settings } from "lucide-react"
 import {
   Empty,
   EmptyHeader,
@@ -763,9 +763,6 @@ export default function MembersPage() {
               onPageSizeChange={(size: number) => { setPageSize(size); setPage(1); }}
               pageSizeOptions={[10, 50, 100]}
             />
-            <div className="mt-4 text-xs text-muted-foreground">
-              {total} of {total} members count toward your pricing plan <Info className="inline h-3 w-3 ml-1" />
-            </div>
           </TabsContent>
 
           <TabsContent value="invites" className="mt-6 space-y-6">

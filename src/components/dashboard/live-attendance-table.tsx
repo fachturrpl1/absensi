@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/common/user-avatar';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -82,62 +82,6 @@ const statusConfig = {
   },
 };
 
-/**
- * Pure helper to resolve a Supabase profile photo URL.
- * Mirrors useProfilePhotoUrl hook but works outside of React components.
- *
- * Storage structure: profile-photos/users/{userId}/filename.webp
- * DB may store: full https URL (new) OR just filename (old, e.g., from mass-profile)
- */
-function resolveProfilePhotoUrl(profilePhotoUrl?: string | null, userId?: string | null): string | undefined {
-  if (!profilePhotoUrl || profilePhotoUrl === '' || profilePhotoUrl === 'null' || profilePhotoUrl === 'undefined') {
-    return undefined;
-  }
-
-  // If value is exactly the userId (UUID), it's invalid/corrupted data
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (uuidRegex.test(profilePhotoUrl) && profilePhotoUrl === userId) {
-    return undefined;
-  }
-
-  // New uploads store the full public URL — use as-is
-  if (profilePhotoUrl.startsWith('http')) {
-    return profilePhotoUrl;
-  }
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!supabaseUrl) return undefined;
-
-  const base = `${supabaseUrl}/storage/v1/object/public/profile-photos`;
-
-  if (profilePhotoUrl.startsWith('/storage/v1/object/public/')) {
-    return `${supabaseUrl}${profilePhotoUrl}`;
-  }
-  if (profilePhotoUrl.startsWith('profile-photos/')) {
-    return `${supabaseUrl}/storage/v1/object/public/${profilePhotoUrl}`;
-  }
-  if (profilePhotoUrl.startsWith('users/')) {
-    return `${base}/${profilePhotoUrl}`;
-  }
-  if (profilePhotoUrl.includes('/profile-photos/')) {
-    return `${supabaseUrl}/storage/v1/object/public/${profilePhotoUrl.replace(/^\//, '')}`;
-  }
-
-  // Old data: just the filename
-  const cleanFilename = profilePhotoUrl.replace(/^\//, '');
-  if (cleanFilename.startsWith('profile_') && userId) {
-    // New convention: users/{userId}/ folder
-    return `${base}/users/${userId}/${cleanFilename}`;
-  }
-  if (cleanFilename.includes('-') || cleanFilename.length > 20) {
-    // Legacy/mass-profile convention
-    return `${base}/mass-profile/${cleanFilename}`;
-  }
-  if (userId) {
-    return `${base}/users/${userId}/${cleanFilename}`;
-  }
-  return `${base}/${cleanFilename}`;
-}
 
 // Simple cache to prevent duplicate requests
 const attendanceCache: {
@@ -151,6 +95,15 @@ const attendanceCache: {
 };
 
 const ATTENDANCE_CACHE_DURATION = 120000; // 2 minutes cache (increased from 10s)
+
+function UserAvatarWrapper({ name, photoUrl, userId }: { name: string; photoUrl: string | null; userId?: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <UserAvatar name={name} photoUrl={photoUrl} userId={userId} size={8} className="border border-border" />
+      <span className="font-medium text-foreground">{name}</span>
+    </div>
+  );
+}
 
 export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 180000, pageSize = 10 }: LiveAttendanceTableProps) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -321,7 +274,8 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
           late_minutes: record.late_minutes,
           notes: record.notes,
           location: null,
-          profile_photo_url: resolveProfilePhotoUrl(profile?.profile_photo_url, member?.user_id) || null,
+          profile_photo_url: profile?.profile_photo_url || null,
+          user_id: member?.user_id, // Add user_id for hook to use
         };
       }) || [];
 
@@ -500,15 +454,11 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
                             </Button>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="w-8 h-8 border border-border">
-                                <AvatarImage src={record.profile_photo_url || undefined} />
-                                <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                                  {record.member_name.split(' ').map(n => n[0]).join('')}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium text-foreground">{record.member_name}</span>
-                            </div>
+                            <UserAvatarWrapper
+                              name={record.member_name}
+                              photoUrl={record.profile_photo_url}
+                              userId={(record as any).user_id}
+                            />
                           </TableCell>
                           <TableCell className="text-muted-foreground">{record.department_name}</TableCell>
                           <TableCell>

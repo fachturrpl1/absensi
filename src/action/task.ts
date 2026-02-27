@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { getUserOrganization } from "@/utils/get-user-org";
-import { ITask } from "@/interface";
+import { ITask, ITaskStatus } from "@/interface";
 
 async function getSupabase() {
     return await createClient();
@@ -25,26 +25,102 @@ export const getTasks = async (organizationId?: string | number) => {
     }
 
     const { data, error } = await supabase
-        .from("tasks_with_details")
-        .select("*")
-        .eq("organization_id", targetOrgId)
+        .from("tasks")
+        .select(`
+            *,
+            project:projects!inner(id, name, organization_id, client:clients(id, name)),
+            assignees:task_assignees(
+                id,
+                organization_member_id,
+                role,
+                member:organization_members(
+                    id,
+                    user:user_profiles(id, first_name, last_name, display_name, profile_photo_url)
+                )
+            ),
+            task_status:task_statuses(*)
+        `)
+        .eq("projects.organization_id", targetOrgId)
         .order("created_at", { ascending: false });
 
     if (error) {
         return { success: false, message: error.message, data: [] };
     }
 
+    let resultData = data || [];
+
+    if (resultData.length > 0) {
+        // Collect all unique user IDs from all task assignees
+        const userIds = new Set<string>();
+        resultData.forEach((task: any) => {
+            if (task.assignees) {
+                task.assignees.forEach((a: any) => {
+                    const userId = a.member?.user?.id || a.organization_member?.user?.id;
+                    if (userId) userIds.add(userId);
+                });
+            }
+        });
+
+        if (userIds.size > 0) {
+            // Fetch profile photos from user_profiles
+            const { data: profiles, error: profileError } = await supabase
+                .from("user_profiles")
+                .select("id, profile_photo_url")
+                .in("id", Array.from(userIds));
+
+            if (!profileError && profiles) {
+                const photoMap = new Map();
+                profiles.forEach((p: any) => {
+                    if (p.profile_photo_url) photoMap.set(p.id, p.profile_photo_url);
+                });
+
+                // Inject profiles into assignees
+                resultData.forEach((task: any) => {
+                    if (task.assignees) {
+                        task.assignees.forEach((a: any) => {
+                            const user = a.member?.user || a.organization_member?.user;
+                            if (user && user.id && photoMap.has(user.id)) {
+                                user.profile_photo_url = photoMap.get(user.id);
+                            }
+                        });
+                    }
+                });
+            }
+        }
+    }
+
     return {
         success: true,
-        data: data?.map((task: any) => ({
-            ...task,
-            project: {
-                id: task.project_id,
-                name: task.project_name,
-                client: task.client_name ? [{ id: task.client_id, name: task.client_name }] : []
-            }
-        })) as ITask[]
+        data: resultData as ITask[]
     };
+};
+
+/**
+ * Fetch task statuses for the organization
+ */
+export const getTaskStatuses = async (organizationId?: string | number) => {
+    const supabase = await getSupabase();
+    let targetOrgId = organizationId;
+
+    if (!targetOrgId) {
+        try {
+            targetOrgId = await getUserOrganization(supabase);
+        } catch (error) {
+            return { success: false, message: "Unauthorized", data: [] };
+        }
+    }
+
+    const { data, error } = await supabase
+        .from("task_statuses")
+        .select("*")
+        .eq("organization_id", targetOrgId)
+        .order("position", { ascending: true });
+
+    if (error) {
+        return { success: false, message: error.message, data: [] };
+    }
+
+    return { success: true, data: data as ITaskStatus[] };
 };
 
 /**
@@ -55,8 +131,11 @@ export const createTask = async (formData: FormData) => {
     const task: Partial<ITask> = {
         name: formData.get("name") as string,
         project_id: Number(formData.get("project_id")),
-        status: (formData.get("status") as any) || "todo",
-        priority: (formData.get("priority") as any) || "medium"
+        status_id: Number(formData.get("status_id")),
+        position_in_column: Number(formData.get("position_in_column") || 1),
+        priority: (formData.get("priority") as any) || "medium",
+        description: formData.get("description") as string || null,
+        parent_task_id: formData.get("parent_task_id") ? Number(formData.get("parent_task_id")) : null
     };
 
     const { data, error } = await supabase
@@ -81,9 +160,11 @@ export const updateTask = async (formData: FormData) => {
     const task: Partial<ITask> = {};
 
     if (formData.has("name")) task.name = formData.get("name") as string;
-    if (formData.has("status")) task.status = formData.get("status") as any;
+    if (formData.has("status_id")) task.status_id = Number(formData.get("status_id"));
+    if (formData.has("position_in_column")) task.position_in_column = Number(formData.get("position_in_column"));
     if (formData.has("priority")) task.priority = formData.get("priority") as any;
     if (formData.has("project_id")) task.project_id = Number(formData.get("project_id"));
+    if (formData.has("description")) task.description = formData.get("description") as string;
 
     const { data, error } = await supabase
         .from("tasks")

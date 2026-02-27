@@ -112,7 +112,7 @@ export const getAllProjects = async (organizationId?: number | string) => {
                 organization_members!team_members_organization_member_id_fkey(
                     id,
                     user_id,
-                    user_profiles!organization_members_user_id_fkey(
+                    user:user_id(
                         id,
                         first_name,
                         last_name,
@@ -310,4 +310,104 @@ export const getSimpleMembersForDropdown = async (organizationId: number | strin
 
     console.log("[getSimpleMembersForDropdown] count:", members.length);
     return { success: true, data: members };
+};
+
+/**
+ * Fetch a single project by ID with its team members
+ */
+export const getProjectWithMembers = async (id: string | number) => {
+    const adminClient = createAdminClient();
+
+    const { data: project, error: projectError } = await adminClient
+        .from("projects")
+        .select(`
+            *,
+            organizations(id, name),
+            client_projects(client_id, clients(id, name))
+        `)
+        .eq("id", id)
+        .single();
+
+    if (projectError || !project) {
+        return { success: false, message: projectError?.message || "Project not found", data: null };
+    }
+
+    // Fetch team IDs first
+    const { data: tpData } = await adminClient
+        .from("team_projects")
+        .select("team_id")
+        .eq("project_id", id);
+
+    const teamIds = (tpData || []).map(tp => tp.team_id);
+
+    if (teamIds.length === 0) {
+        return {
+            success: true,
+            data: {
+                ...project,
+                clientName: (project as any).client_projects?.[0]?.clients?.name ?? null,
+                members: []
+            }
+        };
+    }
+
+    // Fetch team members linked to this project via teams
+    const { data: teamMembers, error: tmError } = await adminClient
+        .from("team_members")
+        .select(`
+            team_id,
+            organization_members!team_members_organization_member_id_fkey(
+                id,
+                user_id,
+                user:user_id(
+                    id,
+                    first_name,
+                    last_name,
+                    profile_photo_url
+                )
+            )
+        `)
+        .in("team_id", teamIds);
+
+    if (tmError) {
+        console.error("[getProjectWithMembers] team_members error:", tmError);
+    }
+
+    // Map to a clean list of members
+    const memberMap = new Map();
+    (teamMembers || []).forEach((tm: any) => {
+        const profile = tm.organization_members?.user;
+        if (profile) {
+            const uid = profile.id || tm.organization_members?.user_id;
+            if (!memberMap.has(uid)) {
+                const name = [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Unknown";
+                memberMap.set(uid, {
+                    id: String(tm.organization_members.id), // We need organization_member_id for routes
+                    userId: uid,
+                    name,
+                    photoUrl: profile.profile_photo_url
+                });
+            }
+        }
+    });
+
+    const result = {
+        ...project,
+        clientName: (project as any).client_projects?.[0]?.clients?.name ?? null,
+        members: Array.from(memberMap.values())
+    };
+
+    return { success: true, data: result };
+};
+
+export const getProjectNames = async (organizationId: number | string) => {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from("projects")
+        .select("id, name")
+        .eq("organization_id", organizationId)
+        .neq("status", "deleted");
+
+    if (error) return { success: false, data: [] };
+    return { success: true, data: data || [] };
 };
