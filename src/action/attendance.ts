@@ -196,6 +196,8 @@ export type AttendanceListItem = {
   checkOutLocationName: string | null;
   actualBreakStart: string | null;
   actualBreakEnd: string | null;
+  breakInMethod: string | null;
+  breakOutMethod: string | null;
   notes: string;
   timezone: string;
   time_format: string;
@@ -584,6 +586,8 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
       checkOutLocationName: null,
       actualBreakStart: item.actual_break_start,
       actualBreakEnd: item.actual_break_end,
+      breakInMethod: inMethod ? String(inMethod) : null,
+      breakOutMethod: inMethod ? String(inMethod) : null,
       notes: '',
       timezone: orgInfo?.timezone || 'Asia/Jakarta',
       time_format: orgInfo?.time_format || '24h',

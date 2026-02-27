@@ -15,10 +15,10 @@ import {
 import {
     useTasksData,
     AssigneeAvatar,
-    TasksHeader,
     buildTaskTree,
     flattenTree,
     TaskNode,
+    TasksViewSwitcher,
 } from "@/components/tasks/tasks-shared"
 import { useMemo, useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
@@ -162,11 +162,17 @@ export default function ListPage() {
     return (
         <div className="flex flex-col gap-4 p-4 pt-0">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <TasksHeader currentView="list" />
-                <Button onClick={() => { setNewTaskTitle(""); setIsNewTaskDialogOpen(true) }} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    New Task
-                </Button>
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Tasks</h1>
+                    <p className="text-muted-foreground text-sm mt-1">Manage and track all granular work items across projects.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button onClick={() => { setNewTaskTitle(""); setIsNewTaskDialogOpen(true) }} className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        New
+                    </Button>
+                    <TasksViewSwitcher currentView="list" />
+                </div>
             </div>
 
             <ListTabs activeTab={activeTab} setActiveTab={setActiveTab} baseFilteredTasks={baseFilteredTasks} />

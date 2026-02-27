@@ -765,6 +765,11 @@ function ModernAttendanceListCloned() {
                                 <div className="flex flex-col text-xs font-mono">
                                   <span className="font-medium whitespace-nowrap">{datePart}</span>
                                   <span className="text-muted-foreground">{timePart}</span>
+                                  {record.breakInMethod && (
+                                    <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">
+                                      {record.breakInMethod}
+                                    </span>
+                                  )}
                                 </div>
                               )
                             })()}
@@ -778,6 +783,11 @@ function ModernAttendanceListCloned() {
                                 <div className="flex flex-col text-xs font-mono">
                                   <span className="font-medium whitespace-nowrap">{datePart}</span>
                                   <span className="text-muted-foreground">{timePart}</span>
+                                  {record.breakOutMethod && (
+                                    <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">
+                                      {record.breakOutMethod}
+                                    </span>
+                                  )}
                                 </div>
                               )
                             })()}
