@@ -2,7 +2,11 @@
 
 import React, { useMemo, useState, useEffect } from "react"
 import { Plus, Minus } from "lucide-react"
-import { DUMMY_URL_ACTIVITIES, DUMMY_PROJECTS, DUMMY_TEAMS, DUMMY_MEMBERS, generateMemberUrlActivities, type UrlActivityEntry } from "@/lib/data/dummy-data"
+import { DUMMY_TEAMS, type UrlActivityEntry } from "@/lib/data/dummy-data"
+import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
+import { getUrlsActivityByMemberAndDate } from "@/action/urls"
+import { getAllProjects, type IProject } from "@/action/projects"
+import { useOrgStore } from "@/store/org-store"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
@@ -14,6 +18,38 @@ export default function UrlsPage() {
   const searchParams = useSearchParams()
   const memberIdFromUrl = searchParams.get("memberId")
   const timezone = useTimezone()
+  const { organizationId } = useOrgStore()
+
+  const [realMembers, setRealMembers] = useState<ISimpleMember[]>([])
+  const [realProjects, setRealProjects] = useState<IProject[]>([])
+  const [urlActivities, setUrlActivities] = useState<UrlActivityEntry[]>([])
+
+  // Fetch real members & projects dari DB
+  useEffect(() => {
+    if (!organizationId) return
+
+    // Fetch members
+    getMembersForScreenshot(String(organizationId)).then(res => {
+      if (res.success && res.data && res.data.length > 0) {
+        setRealMembers(res.data)
+      }
+    })
+
+    // Fetch projects
+    getAllProjects(String(organizationId)).then(res => {
+      if (res.success && res.data) {
+        setRealProjects(res.data)
+      }
+    })
+  }, [organizationId])
+
+  const demoMembers = useMemo(() => realMembers.map(m => ({
+    id: String(m.id),
+    name: m.name,
+    email: "",
+    avatar: m.avatarUrl ?? undefined,
+    activityScore: 0,
+  })), [realMembers])
 
   // Get initial memberId: URL > sessionStorage > default
   const getInitialMemberId = (): string => {
@@ -27,7 +63,7 @@ export default function UrlsPage() {
       const savedMemberId = sessionStorage.getItem("urlSelectedMemberId")
       if (savedMemberId) return savedMemberId
     }
-    return DUMMY_MEMBERS[0]?.id ?? "m1"
+    return realMembers[0]?.id ?? ""
   }
 
   const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({
@@ -63,7 +99,7 @@ export default function UrlsPage() {
   const handleFilterChange = (filter: SelectedFilter) => {
     // Jika all: true (tidak seharusnya terjadi karena hideAllOption), ubah ke member pertama
     if (filter.all) {
-      const firstMemberId = DUMMY_MEMBERS[0]?.id ?? "m1"
+      const firstMemberId = realMembers[0]?.id ?? ""
       const newFilter: SelectedFilter = {
         type: "members",
         all: false,
@@ -100,6 +136,40 @@ export default function UrlsPage() {
   const [selectedProject, setSelectedProject] = useState<string>("all")
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
+  // Set default member ID saat data real pertama kali datang
+  useEffect(() => {
+    if (realMembers.length > 0 && !selectedFilter.id) {
+      setSelectedFilter(prev => ({ ...prev, id: realMembers[0]?.id ?? "" }))
+    }
+  }, [realMembers])
+
+  // Fetch url activities
+  useEffect(() => {
+    if (!selectedMemberId) {
+      setUrlActivities([])
+      return
+    }
+
+    const start = new Date(dateRange.startDate)
+    const end = new Date(dateRange.endDate)
+    const tzOffset = start.getTimezoneOffset() * 60000
+    const startLocal = new Date(start.getTime() - tzOffset).toISOString().split('T')[0]
+    const endLocal = new Date(end.getTime() - tzOffset).toISOString().split('T')[0]
+
+    getUrlsActivityByMemberAndDate(
+      selectedMemberId,
+      startLocal || '',
+      endLocal || '',
+      selectedProject
+    ).then(res => {
+      if (res.success && res.data) {
+        setUrlActivities(res.data)
+      } else {
+        setUrlActivities([])
+      }
+    })
+  }, [selectedMemberId, dateRange.startDate.getTime(), dateRange.endDate.getTime(), selectedProject])
+
   // Format time spent dari hours ke format H:MM:SS (seperti 0:00:57)
   const formatTimeSpent = (hours: number): string => {
     const totalSeconds = Math.floor(hours * 3600)
@@ -112,36 +182,7 @@ export default function UrlsPage() {
 
   // Filter dan group data berdasarkan date
   const groupedData = useMemo(() => {
-    let filtered: UrlActivityEntry[] = []
-
-    // Use generator if member is selected to get randomized data
-    if (selectedMemberId) {
-      filtered = generateMemberUrlActivities(selectedMemberId)
-    } else {
-      filtered = [...DUMMY_URL_ACTIVITIES]
-    }
-
-    // Filter by project
-    if (selectedProject !== "all") {
-      filtered = filtered.filter(item => item.projectId === selectedProject)
-    }
-
-    // Filter by member (redundant if generated, but safe)
-    if (selectedMemberId) {
-      filtered = filtered.filter(item => item.memberId === selectedMemberId)
-    }
-
-    // Filter by date range
-    const start = new Date(dateRange.startDate)
-    start.setHours(0, 0, 0, 0)
-    const end = new Date(dateRange.endDate)
-    end.setHours(23, 59, 59, 999)
-
-    filtered = filtered.filter(item => {
-      const itemDate = new Date(item.date)
-      itemDate.setHours(0, 0, 0, 0)
-      return itemDate >= start && itemDate <= end
-    })
+    let filtered: UrlActivityEntry[] = [...urlActivities]
 
     // Group by date, then by project+site
     const grouped: Record<string, Record<string, UrlActivityEntry[]>> = {}
@@ -189,7 +230,7 @@ export default function UrlsPage() {
           })
       }))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [selectedProject, selectedMemberId, dateRange])
+  }, [urlActivities])
 
 
 
@@ -224,7 +265,7 @@ export default function UrlsPage() {
           onSelectedFilterChange={handleFilterChange}
           dateRange={dateRange}
           onDateRangeChange={setDateRange}
-          members={DUMMY_MEMBERS}
+          members={demoMembers}
           teams={DUMMY_TEAMS}
           timezone={timezone}
           hideAllOption={true}
@@ -242,8 +283,8 @@ export default function UrlsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All projects</SelectItem>
-              {DUMMY_PROJECTS.map(p => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              {realProjects.map(p => (
+                <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

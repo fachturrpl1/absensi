@@ -1,7 +1,11 @@
 "use client"
 
 import React, { useMemo, useState, useEffect } from "react"
-import { DUMMY_APP_ACTIVITIES, DUMMY_PROJECTS, DUMMY_TEAMS, DUMMY_MEMBERS, type AppActivityEntry, generateMemberAppActivities } from "@/lib/data/dummy-data"
+import { DUMMY_TEAMS, type AppActivityEntry } from "@/lib/data/dummy-data"
+import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
+import { getAppsActivityByMemberAndDate } from "@/action/apps"
+import { getAllProjects, type IProject } from "@/action/projects"
+import { useOrgStore } from "@/store/org-store"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
@@ -13,6 +17,38 @@ export default function AppsPage() {
   const searchParams = useSearchParams()
   const memberIdFromUrl = searchParams.get("memberId")
   const timezone = useTimezone()
+  const { organizationId } = useOrgStore()
+
+  const [realMembers, setRealMembers] = useState<ISimpleMember[]>([])
+  const [realProjects, setRealProjects] = useState<IProject[]>([])
+  const [appActivities, setAppActivities] = useState<AppActivityEntry[]>([])
+
+  // Fetch real members & projects dari DB
+  useEffect(() => {
+    if (!organizationId) return
+
+    // Fetch members
+    getMembersForScreenshot(String(organizationId)).then(res => {
+      if (res.success && res.data && res.data.length > 0) {
+        setRealMembers(res.data)
+      }
+    })
+
+    // Fetch projects
+    getAllProjects(String(organizationId)).then(res => {
+      if (res.success && res.data) {
+        setRealProjects(res.data)
+      }
+    })
+  }, [organizationId])
+
+  const demoMembers = useMemo(() => realMembers.map(m => ({
+    id: String(m.id),
+    name: m.name,
+    email: "",
+    avatar: m.avatarUrl ?? undefined,
+    activityScore: 0,
+  })), [realMembers])
 
   // Get initial memberId: URL > sessionStorage > default
   const getInitialMemberId = (): string => {
@@ -26,7 +62,7 @@ export default function AppsPage() {
       const savedMemberId = sessionStorage.getItem("appSelectedMemberId")
       if (savedMemberId) return savedMemberId
     }
-    return DUMMY_MEMBERS[0]?.id ?? "m1"
+    return realMembers[0]?.id ?? ""
   }
 
   const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>({
@@ -62,7 +98,7 @@ export default function AppsPage() {
   const handleFilterChange = (filter: SelectedFilter) => {
     // Jika all: true (tidak seharusnya terjadi karena hideAllOption), ubah ke member pertama
     if (filter.all) {
-      const firstMemberId = DUMMY_MEMBERS[0]?.id ?? "m1"
+      const firstMemberId = realMembers[0]?.id ?? ""
       const newFilter: SelectedFilter = {
         type: "members",
         all: false,
@@ -96,7 +132,44 @@ export default function AppsPage() {
     end.setHours(23, 59, 59, 999)
     return { startDate: today, endDate: end }
   })
+  // Set default member ID saat data real pertama kali datang
+  useEffect(() => {
+    if (realMembers.length > 0 && !selectedFilter.id) {
+      setSelectedFilter(prev => ({ ...prev, id: realMembers[0]?.id ?? "" }))
+    }
+  }, [realMembers])
+
   const [selectedProject, setSelectedProject] = useState<string>("all")
+
+  // Fetch app activities
+  useEffect(() => {
+    if (!selectedMemberId) {
+      setAppActivities([])
+      return
+    }
+
+    // Convert ke timezone lokal member sebelum dikirim ke API
+    const start = new Date(dateRange.startDate)
+    const end = new Date(dateRange.endDate)
+
+    // Format ke string YYYY-MM-DD
+    const tzOffset = start.getTimezoneOffset() * 60000
+    const startLocal = new Date(start.getTime() - tzOffset).toISOString().split('T')[0]
+    const endLocal = new Date(end.getTime() - tzOffset).toISOString().split('T')[0]
+
+    getAppsActivityByMemberAndDate(
+      selectedMemberId,
+      startLocal || '',
+      endLocal || '',
+      selectedProject
+    ).then(res => {
+      if (res.success && res.data) {
+        setAppActivities(res.data)
+      } else {
+        setAppActivities([])
+      }
+    })
+  }, [selectedMemberId, dateRange.startDate.getTime(), dateRange.endDate.getTime(), selectedProject])
 
   // Format time spent dari hours ke format H:MM:SS (seperti 0:01:17)
   const formatTimeSpent = (hours: number): string => {
@@ -110,36 +183,7 @@ export default function AppsPage() {
 
   // Filter dan group data berdasarkan date
   const groupedData = useMemo(() => {
-    let filtered: AppActivityEntry[] = []
-
-    // Use generator if member is selected to get randomized data
-    if (selectedMemberId) {
-      filtered = generateMemberAppActivities(selectedMemberId)
-    } else {
-      filtered = [...DUMMY_APP_ACTIVITIES]
-    }
-
-    // Filter by project
-    if (selectedProject !== "all") {
-      filtered = filtered.filter(item => item.projectId === selectedProject)
-    }
-
-    // Filter by member (redundant if generated, but safe)
-    if (selectedMemberId) {
-      filtered = filtered.filter(item => item.memberId === selectedMemberId)
-    }
-
-    // Filter by date range
-    const start = new Date(dateRange.startDate)
-    start.setHours(0, 0, 0, 0)
-    const end = new Date(dateRange.endDate)
-    end.setHours(23, 59, 59, 999)
-
-    filtered = filtered.filter(item => {
-      const itemDate = new Date(item.date)
-      itemDate.setHours(0, 0, 0, 0)
-      return itemDate >= start && itemDate <= end
-    })
+    let filtered: AppActivityEntry[] = [...appActivities]
 
     // Group by date
     const grouped: Record<string, AppActivityEntry[]> = {}
@@ -164,7 +208,7 @@ export default function AppsPage() {
         })
       }))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [selectedProject, selectedMemberId, dateRange])
+  }, [appActivities])
 
 
 
@@ -187,7 +231,7 @@ export default function AppsPage() {
           onSelectedFilterChange={handleFilterChange}
           dateRange={dateRange}
           onDateRangeChange={setDateRange}
-          members={DUMMY_MEMBERS}
+          members={demoMembers}
           teams={DUMMY_TEAMS}
           timezone={timezone}
           hideAllOption={true}
@@ -205,8 +249,8 @@ export default function AppsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All projects</SelectItem>
-              {DUMMY_PROJECTS.map(p => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              {realProjects.map(p => (
+                <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

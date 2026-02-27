@@ -3,80 +3,114 @@
 import { useState, useEffect } from "react"
 
 import { Info, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
-import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
+import { useOrgStore } from "@/store/org-store"
+import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
+import { getScreenshotSettings, upsertScreenshotSetting } from "@/action/screenshot-settings"
 import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
 import { ScreenshotsSidebar } from "@/components/settings/ScreenshotsSidebar"
 
 export default function ScreenshotDeletePage() {
-  const members = DUMMY_MEMBERS
-  const loading = false
-  const [globalDelete, setGlobalDelete] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
+  const { organizationId } = useOrgStore()
+
+  const [members, setMembers] = useState<ISimpleMember[]>([])
+  const [totalMembers, setTotalMembers] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [globalDelete, setGlobalDelete] = useState(false)
   const [memberDeletes, setMemberDeletes] = useState<Record<string, boolean>>({})
+
+  const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
-  const [isLoaded, setIsLoaded] = useState(false)
 
-  // Load settings from localStorage on mount
+  // Fetch Members and Settings
   useEffect(() => {
-    const savedGlobal = localStorage.getItem("settings_screenshot_global_delete")
-    const savedMembers = localStorage.getItem("settings_screenshot_member_deletes")
+    async function loadData() {
+      if (!organizationId) {
+        setLoading(false)
+        return
+      }
 
-    if (savedGlobal) {
-      setGlobalDelete(savedGlobal === "true")
-    }
-
-    if (savedMembers) {
+      setLoading(true)
       try {
-        setMemberDeletes(JSON.parse(savedMembers))
-      } catch (e) {
-        console.error("Failed to parse member deletes", e)
+        const [membersRes, settingsRes] = await Promise.all([
+          getMembersForScreenshot(
+            String(organizationId),
+            { page: currentPage, limit: itemsPerPage },
+            searchQuery
+          ),
+          getScreenshotSettings(String(organizationId))
+        ])
+
+        if (membersRes.success && membersRes.data) {
+          setMembers(membersRes.data)
+          setTotalMembers(membersRes.total ?? 0)
+        }
+
+        if (settingsRes.success && settingsRes.data) {
+          // Set Global
+          if (settingsRes.data.global) {
+            setGlobalDelete(settingsRes.data.global.allow_delete)
+          }
+
+          // Set Member Deletes
+          const overrides: Record<string, boolean> = {}
+          Object.entries(settingsRes.data.members).forEach(([memIdStr, setting]) => {
+            overrides[memIdStr] = setting.allow_delete
+          })
+          setMemberDeletes(overrides)
+        }
+      } catch (err) {
+        console.error("Failed to load screenshot delete settings", err)
+      } finally {
+        setLoading(false)
       }
     }
-    setIsLoaded(true)
-  }, [])
 
-  // Save global delete when it changes
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem("settings_screenshot_global_delete", String(globalDelete))
-    }
-  }, [globalDelete, isLoaded])
-
-  // Save member deletes when they change
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem("settings_screenshot_member_deletes", JSON.stringify(memberDeletes))
-    }
-  }, [memberDeletes, isLoaded])
+    loadData()
+  }, [organizationId, currentPage, searchQuery])
 
   const getMemberDelete = (memberId: string) => {
     return memberDeletes[memberId] !== undefined ? memberDeletes[memberId] : globalDelete
   }
 
-  const filteredMembers = members.filter(member => {
-    const fullName = member.name.toLowerCase()
-    const deleteStatus = getMemberDelete(member.id) ? "on" : "off"
-    const query = searchQuery.toLowerCase()
-    return fullName.includes(query) || deleteStatus.includes(query)
-  })
+  const setGlobalDeleteSetting = async (value: boolean) => {
+    setGlobalDelete(value)
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedMembers = filteredMembers.slice(startIndex, startIndex + itemsPerPage)
-
-  // Reset to first page when search changes
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value)
-    setCurrentPage(1)
+    if (!organizationId) return
+    try {
+      await upsertScreenshotSetting({
+        organization_id: Number(organizationId),
+        organization_member_id: null,
+        allow_delete: value
+      })
+    } catch (e) {
+      console.error("Failed to update global delete", e)
+    }
   }
 
-  const handleMemberDeleteChange = (memberId: string, checked: boolean) => {
+  const handleMemberDeleteChange = async (memberId: string, checked: boolean) => {
     setMemberDeletes(prev => ({
       ...prev,
       [memberId]: checked
     }))
+
+    if (!organizationId) return
+    try {
+      await upsertScreenshotSetting({
+        organization_id: Number(organizationId),
+        organization_member_id: Number(memberId),
+        allow_delete: checked
+      })
+    } catch (e) {
+      console.error("Failed to update member delete setting", e)
+    }
+  }
+
+  const totalPages = Math.ceil(totalMembers / itemsPerPage)
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    setCurrentPage(1)
   }
 
   return (
@@ -178,68 +212,71 @@ export default function ScreenshotDeletePage() {
                           </div>
                         </td>
                       </tr>
-                    ) : filteredMembers.length === 0 ? (
+                    ) : members.length === 0 ? (
                       <tr>
                         <td colSpan={2} className="px-4 py-8 text-center text-sm text-slate-500">
                           No members found
                         </td>
                       </tr>
-                    ) : (
-                      paginatedMembers.map((member) => {
-                        const memberDelete = getMemberDelete(member.id)
-                        return (
-                          <tr key={member.id} className="hover:bg-slate-50">
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center">
+                    ) : members.map(member => {
+                      const memberCanDelete = getMemberDelete(member.id)
+                      return (
+                        <tr key={member.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden">
+                                {member.avatarUrl ? (
+                                  <img src={member.avatarUrl} alt={member.name} className="h-full w-full object-cover" />
+                                ) : (
                                   <span className="text-xs font-medium text-slate-900">
                                     {member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                                   </span>
-                                </div>
-                                <span className="text-sm text-slate-900">
-                                  {member.name}
-                                </span>
+                                )}
                               </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex justify-end">
-                                {/* Toggle Switch with Off/On labels */}
-                                <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-200 p-1">
-                                  <button
-                                    onClick={() => handleMemberDeleteChange(member.id, false)}
-                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${!memberDelete
-                                      ? "bg-white text-slate-900 shadow-sm"
-                                      : "bg-transparent text-slate-600"
-                                      }`}
-                                  >
-                                    Off
-                                  </button>
-                                  <button
-                                    onClick={() => handleMemberDeleteChange(member.id, true)}
-                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${memberDelete
-                                      ? "bg-white text-slate-900 shadow-sm"
-                                      : "bg-transparent text-slate-600"
-                                      }`}
-                                  >
-                                    On
-                                  </button>
-                                </div>
+                              <span className="text-sm text-slate-900">
+                                {member.name}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end">
+                              {/* Toggle Switch with Off/On labels */}
+                              <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-200 p-1">
+                                <button
+                                  onClick={() => handleMemberDeleteChange(member.id, false)}
+                                  className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${!memberCanDelete
+                                    ? "bg-white text-slate-900 shadow-sm"
+                                    : "bg-transparent text-slate-600"
+                                    }`}
+                                >
+                                  Off
+                                </button>
+                                <button
+                                  onClick={() => handleMemberDeleteChange(member.id, true)}
+                                  className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${memberCanDelete
+                                    ? "bg-white text-slate-900 shadow-sm"
+                                    : "bg-transparent text-slate-600"
+                                    }`}
+                                >
+                                  On
+                                </button>
                               </div>
-                            </td>
-                          </tr>
-                        )
-                      })
-                    )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })
+                    }
                   </tbody>
                 </table>
               </div>
 
               {/* Pagination */}
-              {!loading && filteredMembers.length > 0 && (
+              {!loading && members.length > 0 && (
                 <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-slate-500">
-                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredMembers.length)} of {filteredMembers.length} members
-                  </div>
+                  <p className="text-sm text-slate-500">
+                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalMembers)} of {totalMembers} members
+                  </p>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}

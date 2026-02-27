@@ -1,32 +1,112 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 import { Info, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
-import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
-import { useBlurSettings } from "../blur-context"
+import { useOrgStore } from "@/store/org-store"
+import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
+import { getScreenshotSettings, upsertScreenshotSetting } from "@/action/screenshot-settings"
 import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
 import { ScreenshotsSidebar } from "@/components/settings/ScreenshotsSidebar"
 
 export default function ScreenshotBlurPage() {
-  const members = DUMMY_MEMBERS
-  const loading = false
-  const { blurSettings, setGlobalBlur, setMemberBlur, getMemberBlur } = useBlurSettings()
+  const { organizationId } = useOrgStore()
+
+  const [members, setMembers] = useState<ISimpleMember[]>([])
+  const [totalMembers, setTotalMembers] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [globalBlur, setGlobalBlurState] = useState(false)
+  const [memberBlurs, setMemberBlurs] = useState<Record<string, boolean>>({})
+
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
 
-  const filteredMembers = members.filter(member => {
-    const fullName = member.name.toLowerCase()
-    const blurStatus = getMemberBlur(member.id) ? "on" : "off"
-    const query = searchQuery.toLowerCase()
-    return fullName.includes(query) || blurStatus.includes(query)
-  })
+  // Fetch Members and Settings
+  useEffect(() => {
+    async function loadData() {
+      if (!organizationId) {
+        setLoading(false)
+        return
+      }
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedMembers = filteredMembers.slice(startIndex, startIndex + itemsPerPage)
+      setLoading(true)
+      try {
+        const [membersRes, settingsRes] = await Promise.all([
+          getMembersForScreenshot(
+            String(organizationId),
+            { page: currentPage, limit: itemsPerPage },
+            searchQuery
+          ),
+          getScreenshotSettings(String(organizationId))
+        ])
+
+        if (membersRes.success && membersRes.data) {
+          setMembers(membersRes.data)
+          setTotalMembers(membersRes.total ?? 0)
+        }
+
+        if (settingsRes.success && settingsRes.data) {
+          // Set Global
+          if (settingsRes.data.global) {
+            setGlobalBlurState(settingsRes.data.global.blur_screenshots)
+          }
+
+          // Set Member Blurs
+          const overrides: Record<string, boolean> = {}
+          Object.entries(settingsRes.data.members).forEach(([memIdStr, setting]) => {
+            overrides[memIdStr] = setting.blur_screenshots
+          })
+          setMemberBlurs(overrides)
+        }
+      } catch (err) {
+        console.error("Failed to load screenshot blur settings", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [organizationId, currentPage, searchQuery])
+
+  const getMemberBlur = (memberId: string) => {
+    return memberBlurs[memberId] !== undefined ? memberBlurs[memberId] : globalBlur
+  }
+
+  const setGlobalBlur = async (value: boolean) => {
+    setGlobalBlurState(value)
+
+    if (!organizationId) return
+    try {
+      await upsertScreenshotSetting({
+        organization_id: Number(organizationId),
+        organization_member_id: null,
+        blur_screenshots: value
+      })
+    } catch (e) {
+      console.error("Failed to update global blur", e)
+    }
+  }
+
+  const setMemberBlur = async (memberId: string, value: boolean) => {
+    setMemberBlurs(prev => ({
+      ...prev,
+      [memberId]: value
+    }))
+
+    if (!organizationId) return
+    try {
+      await upsertScreenshotSetting({
+        organization_id: Number(organizationId),
+        organization_member_id: Number(memberId),
+        blur_screenshots: value
+      })
+    } catch (e) {
+      console.error("Failed to update member blur", e)
+    }
+  }
+
+  const totalPages = Math.ceil(totalMembers / itemsPerPage)
 
   // Reset to first page when search changes
   const handleSearchChange = (value: string) => {
@@ -69,7 +149,7 @@ export default function ScreenshotBlurPage() {
                   <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-200 p-1">
                     <button
                       onClick={() => setGlobalBlur(false)}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${!blurSettings.globalBlur
+                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${!globalBlur
                         ? "bg-white text-slate-900 shadow-sm"
                         : "bg-transparent text-slate-600"
                         }`}
@@ -78,7 +158,7 @@ export default function ScreenshotBlurPage() {
                     </button>
                     <button
                       onClick={() => setGlobalBlur(true)}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${blurSettings.globalBlur
+                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${globalBlur
                         ? "bg-white text-slate-900 shadow-sm"
                         : "bg-transparent text-slate-600"
                         }`}
@@ -134,27 +214,31 @@ export default function ScreenshotBlurPage() {
                           </div>
                         </td>
                       </tr>
-                    ) : filteredMembers.length === 0 ? (
+                    ) : members.length === 0 ? (
                       <tr>
                         <td colSpan={2} className="px-4 py-8 text-center text-sm text-slate-500">
                           No members found
                         </td>
                       </tr>
                     ) : (
-                      paginatedMembers.map((member) => {
+                      members.map((member) => {
                         const memberBlur = getMemberBlur(member.id)
                         return (
                           <tr key={member.id} className="hover:bg-slate-50">
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center">
-                                  <span className="text-xs font-medium text-slate-900">
-                                    {member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                                  </span>
+                                <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden">
+                                  {member.avatarUrl ? (
+                                    <img src={member.avatarUrl} alt={member.name} className="h-full w-full object-cover" />
+                                  ) : (
+                                    <span className="text-xs font-medium text-slate-900">
+                                      {member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                                    </span>
+                                  )}
                                 </div>
-                                <span className="text-sm text-slate-900">
-                                  {member.name}
-                                </span>
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-slate-900">{member.name}</span>
+                                </div>
                               </div>
                             </td>
                             <td className="px-4 py-3">
@@ -197,11 +281,11 @@ export default function ScreenshotBlurPage() {
               </div>
 
               {/* Pagination */}
-              {!loading && filteredMembers.length > 0 && (
+              {!loading && members.length > 0 && (
                 <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-slate-500">
-                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredMembers.length)} of {filteredMembers.length} members
-                  </div>
+                  <p className="text-sm text-slate-500">
+                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalMembers)} of {totalMembers} members
+                  </p>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}

@@ -207,46 +207,284 @@ export async function getScreenshotsByMemberAndDate(
 }
 
 // ============================================================
+// Ambil ringkasan insight member (Worked Time, Avg Activity, Focus, Unusual)
+// ============================================================
+
+export async function getMemberInsightsSummary(
+    organizationMemberId: number,
+    startDate: string,
+    endDate: string
+) {
+    const supabase = await createClient()
+
+    try {
+        // 1. Ambil data dari timesheets (Worked Time, Focus, Unusual)
+        const { data: timesheetsData, error: timesheetsError } = await supabase
+            .from('timesheets')
+            .select(`
+                total_tracked_seconds,
+                total_manual_seconds,
+                focus_seconds,
+                unusual_activity_count
+            `)
+            .eq('organization_member_id', organizationMemberId)
+            .gte('start_date', startDate)
+            .lte('end_date', endDate)
+
+        if (timesheetsError) throw new Error(`Timesheets error: ${timesheetsError.message}`)
+
+        let totalWorkedSeconds = 0
+        let totalFocusSeconds = 0
+        let totalUnusualCount = 0
+
+        if (timesheetsData && timesheetsData.length > 0) {
+            timesheetsData.forEach((ts: any) => {
+                totalWorkedSeconds += (ts.total_tracked_seconds || 0) + (ts.total_manual_seconds || 0)
+                totalFocusSeconds += (ts.focus_seconds || 0)
+                totalUnusualCount += (ts.unusual_activity_count || 0)
+            })
+        }
+
+        // 2. Hitung Avg. Activity dari tabel activities
+        const { data: activitiesData, error: activitiesError } = await supabase
+            .from('activities')
+            .select('overall_seconds, tracked_seconds')
+            .eq('organization_member_id', organizationMemberId)
+            .gte('activity_date', startDate)
+            .lte('activity_date', endDate)
+
+        if (activitiesError) throw new Error(`Activities error: ${activitiesError.message}`)
+
+        let totalOverallSeconds = 0
+        let totalTrackedActivitySeconds = 0
+
+        if (activitiesData && activitiesData.length > 0) {
+            activitiesData.forEach((act: any) => {
+                totalOverallSeconds += (act.overall_seconds || 0)
+                totalTrackedActivitySeconds += (act.tracked_seconds || 0)
+            })
+        }
+
+        const avgActivityPercent = totalTrackedActivitySeconds > 0
+            ? Math.round((totalOverallSeconds / totalTrackedActivitySeconds) * 100)
+            : 0
+
+        // 3. Work Classification dari url_visits & tool_usages
+        // Ambil URL Visits
+        const { data: urlsData, error: urlsError } = await supabase
+            .from('url_visits')
+            .select('url, tracked_seconds, is_productive')
+            .eq('organization_member_id', organizationMemberId)
+            .gte('visit_date', startDate)
+            .lte('visit_date', endDate)
+
+        if (urlsError) throw new Error(`URL visits error: ${urlsError.message}`)
+
+        // Ambil Tool Usages
+        const { data: toolsData, error: toolsError } = await supabase
+            .from('tool_usages')
+            .select('tool_name, tracked_seconds, is_productive')
+            .eq('organization_member_id', organizationMemberId)
+            .gte('usage_date', startDate)
+            .lte('usage_date', endDate)
+
+        if (toolsError) throw new Error(`Tool usages error: ${toolsError.message}`)
+
+        // Aggregate Data Classification
+        let coreWorkSeconds = 0
+        let nonCoreWorkSeconds = 0
+        let unproductiveSeconds = 0
+
+        const coreItemsMap: Record<string, number> = {}
+        const nonCoreItemsMap: Record<string, number> = {}
+        const unproductiveItemsMap: Record<string, number> = {}
+
+        const processActivityItem = (name: string, seconds: number, classification: string) => {
+            if (!seconds) return
+
+            if (classification === 'core-work') {
+                coreWorkSeconds += seconds
+                coreItemsMap[name] = (coreItemsMap[name] || 0) + seconds
+            } else if (classification === 'unproductive') {
+                unproductiveSeconds += seconds
+                unproductiveItemsMap[name] = (unproductiveItemsMap[name] || 0) + seconds
+            } else { // non-core-work
+                nonCoreWorkSeconds += seconds
+                nonCoreItemsMap[name] = (nonCoreItemsMap[name] || 0) + seconds
+            }
+        }
+
+        urlsData?.forEach((item: any) => processActivityItem(item.url, item.tracked_seconds, item.is_productive))
+        toolsData?.forEach((item: any) => processActivityItem(item.tool_name, item.tracked_seconds, item.is_productive))
+
+        const totalClassificationSeconds = coreWorkSeconds + nonCoreWorkSeconds + unproductiveSeconds
+
+        const formatItems = (mapObj: Record<string, number>, totalSecs: number) => {
+            return Object.entries(mapObj)
+                .map(([name, time]) => ({
+                    name,
+                    time,
+                    percentage: totalSecs > 0 ? Math.round((time / totalSecs) * 100) : 0
+                }))
+                .sort((a, b) => b.time - a.time)
+                .slice(0, 5) // Top 5
+        }
+
+        const classificationData = {
+            coreWork: {
+                time: coreWorkSeconds,
+                percentage: totalClassificationSeconds > 0 ? Math.round((coreWorkSeconds / totalClassificationSeconds) * 100) : 0,
+                items: formatItems(coreItemsMap, coreWorkSeconds)
+            },
+            nonCoreWork: {
+                time: nonCoreWorkSeconds,
+                percentage: totalClassificationSeconds > 0 ? Math.round((nonCoreWorkSeconds / totalClassificationSeconds) * 100) : 0,
+                items: formatItems(nonCoreItemsMap, nonCoreWorkSeconds)
+            },
+            unproductive: {
+                time: unproductiveSeconds,
+                percentage: totalClassificationSeconds > 0 ? Math.round((unproductiveSeconds / totalClassificationSeconds) * 100) : 0,
+                items: formatItems(unproductiveItemsMap, unproductiveSeconds)
+            }
+        }
+
+        return {
+            success: true,
+            data: {
+                workedSeconds: totalWorkedSeconds,
+                focusSeconds: totalFocusSeconds,
+                unusualCount: totalUnusualCount,
+                avgActivityPercent: Math.min(100, avgActivityPercent),
+                classification: classificationData
+            }
+        }
+    } catch (err: any) {
+        console.error("Error getMemberInsightsSummary:", err)
+        return { success: false, message: err.message }
+    }
+}
+
+// ============================================================
 // Ambil daftar member untuk dropdown (screenshot page)
 // ============================================================
 
 export async function getMembersForScreenshot(
-    organizationId: string
-): Promise<{ success: boolean; data?: ISimpleMember[]; message?: string }> {
+    organizationId: string,
+    pageOptions?: { page: number; limit: number },
+    searchQuery?: string
+): Promise<{ success: boolean; data?: ISimpleMember[]; total?: number; message?: string }> {
     const supabase = await createClient()
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('organization_members')
         .select(`
-      id,
-      user_profiles:user_id (
-        first_name,
-        last_name,
-        display_name,
-        profile_photo_url
-      )
-    `)
+          id,
+          user_profiles!inner (
+            first_name,
+            last_name,
+            display_name,
+            profile_photo_url
+          )
+        `, { count: 'exact' })
         .eq('organization_id', organizationId)
         .eq('is_active', true)
         .order('id', { ascending: true })
 
-    if (error) {
-        return { success: false, message: error.message }
+    if (searchQuery) {
+        // Search across names. Note we use !inner above to enforce the join filter if we use it, 
+        // but Supabase text search on joined tables with `or` syntax can be tricky.
+        // A simpler approach for search is `ilike` on the view, but here profile is a joined table so we do:
+        query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`, { foreignTable: 'user_profiles' })
     }
 
-    const members: ISimpleMember[] = (data ?? []).map((m: any) => {
-        const profile = m.user_profiles
-        const firstName = profile?.first_name ?? ''
-        const lastName = profile?.last_name ?? ''
-        const fullName = `${firstName} ${lastName}`.trim() || profile?.display_name || 'Unknown Member'
-        return {
-            id: String(m.id),
-            name: fullName,
-            avatarUrl: profile?.profile_photo_url ?? null,
-        }
-    })
+    if (pageOptions) {
+        // If pagination is explicitly requested, we do just ONE query for that page
+        const { page, limit } = pageOptions
+        const start = (page - 1) * limit
+        const end = start + limit - 1
+        query = query.range(start, end)
 
-    return { success: true, data: members }
+        const { data, count, error } = await query
+
+        if (error) {
+            return { success: false, message: error.message }
+        }
+
+        const members: ISimpleMember[] = (data || []).map((m: any) => {
+            const profile = m.user_profiles
+            const firstName = profile?.first_name ?? ''
+            const lastName = profile?.last_name ?? ''
+            const fullName = `${firstName} ${lastName}`.trim() || profile?.display_name || 'Unknown Member'
+            return {
+                id: String(m.id),
+                name: fullName,
+                avatarUrl: profile?.profile_photo_url ?? null,
+            }
+        })
+
+        return { success: true, data: members, total: count || 0 }
+    } else {
+        // Existing behavior: fetch ALL members via looping (for backwards compatibility where it's used elsewhere)
+        let allData: any[] = []
+        let hasMore = true
+        let pageIdx = 0
+        const chunkSize = 1000
+        let totalCount = 0
+
+        while (hasMore) {
+            let loopQuery = supabase
+                .from('organization_members')
+                .select(`
+                  id,
+                  user_profiles!inner (
+                    first_name,
+                    last_name,
+                    display_name,
+                    profile_photo_url
+                  )
+                `, { count: 'exact' })
+                .eq('organization_id', organizationId)
+                .eq('is_active', true)
+                .order('id', { ascending: true })
+                .range(pageIdx * chunkSize, (pageIdx + 1) * chunkSize - 1)
+
+            if (searchQuery) {
+                loopQuery = loopQuery.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`, { foreignTable: 'user_profiles' })
+            }
+
+            const { data, count, error } = await loopQuery
+
+            if (error) {
+                return { success: false, message: error.message }
+            }
+
+            if (pageIdx === 0) totalCount = count || 0
+
+            if (data && data.length > 0) {
+                allData = [...allData, ...data]
+                pageIdx++
+                if (data.length < chunkSize) {
+                    hasMore = false
+                }
+            } else {
+                hasMore = false
+            }
+        }
+
+        const members: ISimpleMember[] = allData.map((m: any) => {
+            const profile = m.user_profiles
+            const firstName = profile?.first_name ?? ''
+            const lastName = profile?.last_name ?? ''
+            const fullName = `${firstName} ${lastName}`.trim() || profile?.display_name || 'Unknown Member'
+            return {
+                id: String(m.id),
+                name: fullName,
+                avatarUrl: profile?.profile_photo_url ?? null,
+            }
+        })
+
+        return { success: true, data: members, total: totalCount }
+    }
 }
 
 // ============================================================

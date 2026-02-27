@@ -18,7 +18,12 @@ import {
   MemberInsightSummary,
   MemberScreenshotItem,
 } from "@/lib/data/dummy-data"
-import { getScreenshotsByMemberAndDate, type IScreenshotWithActivity } from "@/action/screenshots"
+import {
+  getScreenshotsByMemberAndDate,
+  getMembersForScreenshot,
+  deleteScreenshot,
+  getMemberInsightsSummary
+} from "@/action/screenshots"
 import { useSelectedMemberContext } from "../selected-member-context"
 import { MemberScreenshotCard } from "@/components/activity/MemberScreenshotCard"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -60,22 +65,91 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
     return []
   }
 
-  // Sort items by time instead of shuffling
+  // Sort items by time
   const sorted = [...items].sort((a, b) => {
     const timeA = parseTimeForSort(a.time)
     const timeB = parseTimeForSort(b.time)
     return timeA - timeB
   })
 
-  const blocks = []
-  for (let i = 0; i < sorted.length; i += chunkSize) {
-    const chunk = sorted.slice(i, i + chunkSize)
+  const formatDuration = (totalMinutes: number) => {
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+    if (hours === 0) return `${minutes}m`
+    return `${hours}h ${minutes.toString().padStart(2, "0")}m`
+  }
 
-    // Pastikan chunk selalu memiliki 6 item, jika kurang tambahkan "No activity" placeholder
+  const parseTimeDetails = (timeStr: string): { hours: number; minutes: number; period: string } => {
+    const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i)
+    if (!match || !match[1] || !match[2] || !match[3]) return { hours: 0, minutes: 0, period: 'am' }
+    let hours = parseInt(match[1], 10)
+    const minutes = parseInt(match[2], 10)
+    if (match[3].toLowerCase() === 'pm' && hours !== 12) hours += 12
+    if (match[3].toLowerCase() === 'am' && hours === 12) hours = 0
+    return { hours, minutes, period: match[3] }
+  }
+
+  const formatTimeFromHoursMinutes = (hours: number, minutes: number): string => {
+    let displayHours = hours
+    let period = 'am'
+    if (hours >= 12) {
+      period = 'pm'
+      if (hours > 12) displayHours = hours - 12
+    }
+    if (displayHours === 0) displayHours = 12
+    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`
+  }
+
+  const blocks = []
+  let currentChunk: MemberScreenshotItem[] = []
+  let startMinutes: number | null = null
+
+  for (let i = 0; i < sorted.length; i++) {
+    const item = sorted[i]
+    const itemMinutes = parseTimeForSort(item.time)
+
+    // Start a new block if:
+    // 1. No block is started
+    // 2. Current block has 6 items (Hubstaff grid is usually 6 wide)
+    // 3. Current item's time is outside the 60-minute window of the block's start
+    if (startMinutes === null || currentChunk.length >= chunkSize || itemMinutes >= startMinutes + 60) {
+      if (currentChunk.length > 0) {
+        // Finalize previous chunk
+        blocks.push(finalizeBlock(currentChunk, startMinutes))
+      }
+      currentChunk = [item]
+      startMinutes = itemMinutes
+    } else {
+      currentChunk.push(item)
+    }
+  }
+
+  // Finalize the last chunk
+  if (currentChunk.length > 0 && startMinutes !== null) {
+    blocks.push(finalizeBlock(currentChunk, startMinutes))
+  }
+
+  function finalizeBlock(chunk: MemberScreenshotItem[], blockStartMins: number) {
+    const totalMinutes = chunk.reduce((sum, item) => sum + (item.minutes ?? 0), 0)
+    const summary = `Total time worked: ${formatDuration(totalMinutes)}`
+
+    // Create labels
+    const startMinsPart = blockStartMins % 60
+    const startHoursPart = Math.floor(blockStartMins / 60)
+
+    const startTimeFormatted = formatTimeFromHoursMinutes(startHoursPart, startMinsPart)
+
+    let endHours = startHoursPart + 1
+    if (endHours >= 24) endHours -= 24
+    const endTimeFormatted = formatTimeFromHoursMinutes(endHours, startMinsPart)
+
+    const label = `${startTimeFormatted} - ${endTimeFormatted}`
+
+    // Pad chunk to 6 items
     const paddedChunk = [...chunk]
     while (paddedChunk.length < chunkSize) {
       paddedChunk.push({
-        id: `placeholder-${i}-${paddedChunk.length}`,
+        id: `placeholder-${blockStartMins}-${paddedChunk.length}`,
         time: "",
         progress: 0,
         minutes: 0,
@@ -85,49 +159,7 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
       })
     }
 
-    const totalMinutes = chunk.reduce((sum, item) => sum + (item.minutes ?? 0), 0)
-    const summary = `Total time worked: ${formatDuration(totalMinutes)}`
-
-    // Calculate 1-hour range from first item's start time
-    const firstTimeStr = chunk[0]?.time.split(" - ")[0] ?? ""
-    if (!firstTimeStr) {
-      blocks.push({ label: chunk[0]?.time ?? `Block ${Math.floor(i / chunkSize) + 1}`, summary, items: paddedChunk })
-      continue
-    }
-
-    // Parse first time and add 1 hour for end time
-    const parseTime = (timeStr: string): { hours: number; minutes: number; period: string } => {
-      const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i)
-      if (!match || !match[1] || !match[2] || !match[3]) return { hours: 0, minutes: 0, period: 'am' }
-      let hours = parseInt(match[1], 10)
-      const minutes = parseInt(match[2], 10)
-      const period = match[3].toLowerCase()
-      if (period === 'pm' && hours !== 12) hours += 12
-      if (period === 'am' && hours === 12) hours = 0
-      return { hours, minutes, period: match[3] }
-    }
-
-    const formatTime = (hours: number, minutes: number): string => {
-      let displayHours = hours
-      let period = 'am'
-      if (hours >= 12) {
-        period = 'pm'
-        if (hours > 12) displayHours = hours - 12
-      }
-      if (displayHours === 0) displayHours = 12
-      return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`
-    }
-
-    const firstTime = parseTime(firstTimeStr)
-    let endHours = firstTime.hours + 1
-    const endMinutes = firstTime.minutes
-    if (endHours >= 24) endHours = endHours - 24
-
-    const startTimeFormatted = firstTimeStr
-    const endTimeFormatted = formatTime(endHours, endMinutes)
-    const label = `${startTimeFormatted} - ${endTimeFormatted}`
-
-    blocks.push({ label, summary, items: paddedChunk })
+    return { label, summary, items: paddedChunk }
   }
 
   return blocks
@@ -161,6 +193,19 @@ export default function Every10MinPage() {
 
   // State data screenshots dari DB
   const [dbScreenshots, setDbScreenshots] = useState<IScreenshotWithActivity[]>([])
+  // State untuk menyimpan data insight dari API
+  const [insightData, setInsightData] = useState<{
+    workedSeconds: number,
+    focusSeconds: number,
+    unusualCount: number,
+    avgActivityPercent: number,
+    classification?: {
+      coreWork: { time: number, percentage: number, items: { name: string, percentage: number, time: number }[] },
+      nonCoreWork: { time: number, percentage: number, items: { name: string, percentage: number, time: number }[] },
+      unproductive: { time: number, percentage: number, items: { name: string, percentage: number, time: number }[] }
+    }
+  } | null>(null)
+
 
   // Helper: map DB row -> MemberScreenshotItem
   const mapDbToItem = (s: IScreenshotWithActivity): MemberScreenshotItem => {
@@ -207,6 +252,22 @@ export default function Every10MinPage() {
     }
     setIsLoading(false)
     isFirstMount.current = false
+  }, [activeMemberId, dateRange.startDate, dateRange.endDate])
+
+  // Fetch member insights
+  const fetchMemberInsights = useCallback(async () => {
+    if (!activeMemberId) {
+      setInsightData(null)
+      return
+    }
+    const startDate = dateRange.startDate.toISOString().split('T')[0] ?? ''
+    const endDate = dateRange.endDate.toISOString().split('T')[0] ?? ''
+    const res = await getMemberInsightsSummary(Number(activeMemberId), startDate, endDate)
+    if (res.success && res.data) {
+      setInsightData(res.data)
+    } else {
+      setInsightData(null)
+    }
   }, [activeMemberId, dateRange.startDate, dateRange.endDate])
 
   // Check date range validity and determine data display strategy
@@ -307,6 +368,7 @@ export default function Every10MinPage() {
   useEffect(() => {
     setIsMounted(true)
     fetchScreenshots()
+    fetchMemberInsights()
   }, [])
 
   // Fetch saat member berubah
@@ -314,12 +376,14 @@ export default function Every10MinPage() {
     setModalIndex(0)
     setModalOpen(false)
     fetchScreenshots()
+    fetchMemberInsights()
   }, [activeMemberId])
 
   // Fetch saat dateRange berubah (skip mount pertama)
   useEffect(() => {
     if (isFirstMount.current) return
     fetchScreenshots()
+    fetchMemberInsights()
   }, [dateRange.startDate.getTime(), dateRange.endDate.getTime()])
   useEffect(() => {
     if (!currentMemberId) return
@@ -395,209 +459,87 @@ export default function Every10MinPage() {
     }
   }
 
-  const memberSummary: MemberInsightSummary = useMemo(() => {
-    // Jika tanggal tidak valid (lebih dari 30 hari sebelumnya atau di masa depan), return data kosong
-    if (!dateStatus.isValid) {
+  // Calculate dynamic stats for currently viewed member
+  const memberSummary = useMemo(() => {
+    if (!insightData || !activeMemberId) {
       return {
-        memberId: "",
-        totalWorkedTime: "0m",
-        focusTime: "0m",
-        focusDescription: "No data available for this date.",
-        avgActivity: "0%",
-        unusualCount: 0,
-        unusualMessage: "No data available for this date.",
-        classificationLabel: "No data",
-        classificationSummary: "No data available for this date.",
-        classificationPercent: 0,
-      }
-    }
-
-    // Jika range (this week, last 7 days, dll), gabungkan data dari semua hari dalam range
-    if (dateStatus.isRange) {
-      // Untuk range, gabungkan data dari member yang berbeda untuk variasi hari
-      // Misalnya: m1 (today) + m2 (yesterday) + m3 (2 hari lalu) dll
-      const memberIds = ["m1", "m2", "m3", "m4", "m5"]
-      const currentIndex = memberIds.indexOf(activeMemberId ?? "m1")
-
-      // Ambil data dari beberapa member untuk menggambarkan variasi hari dalam range
-      const summariesToCombine: MemberInsightSummary[] = []
-
-      // Ambil data dari member saat ini (today)
-      const todaySummary = activeMemberId ? generateMemberInsight(activeMemberId) : undefined
-      if (todaySummary) summariesToCombine.push(todaySummary)
-
-      // Ambil data dari member lain untuk variasi (yesterday, 2 hari lalu, dll)
-      // Untuk range pendek seperti "this week", ambil 1 member tambahan (yesterday)
-      // Untuk range panjang seperti "this month", ambil lebih banyak
-      const daysDiff = dateRange ? Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
-      const maxAdditionalMembers = daysDiff > 14 ? 3 : 1
-      for (let i = 1; i <= Math.min(maxAdditionalMembers, memberIds.length - 1); i++) {
-        const alternateIndex = (currentIndex + i) % memberIds.length
-        const alternateMemberId = memberIds[alternateIndex]
-        if (alternateMemberId) {
-          const alternateSummary = generateMemberInsight(alternateMemberId)
-          if (alternateSummary && !summariesToCombine.find(s => s.memberId === alternateSummary.memberId)) {
-            summariesToCombine.push(alternateSummary)
-          }
-        }
-      }
-
-      if (summariesToCombine.length === 0) {
-        // Fallback ke base summary jika tidak ada data
-        const baseSummary = activeMemberId ? generateMemberInsight(activeMemberId) : undefined
-        if (baseSummary) summariesToCombine.push(baseSummary)
-      }
-
-      // Gabungkan data dari semua summary
-      let totalWorkedMinutes = 0
-      let totalFocusMinutes = 0
-      let totalActivity = 0
-      let totalUnusualCount = 0
-      const allUnusualMessages: string[] = []
-
-      summariesToCombine.forEach(summary => {
-        // Parse worked time
-        const workedMatch = summary.totalWorkedTime.match(/(\d+)h\s*(\d+)m|(\d+)m/)
-        if (workedMatch) {
-          const hours = parseInt(workedMatch[1] || "0", 10)
-          const minutes = parseInt(workedMatch[2] || workedMatch[3] || "0", 10)
-          totalWorkedMinutes += hours * 60 + minutes
-        }
-
-        // Parse focus time
-        const focusMatch = summary.focusTime.match(/(\d+)h\s*(\d+)m|(\d+)m/)
-        if (focusMatch) {
-          const hours = parseInt(focusMatch[1] || "0", 10)
-          const minutes = parseInt(focusMatch[2] || focusMatch[3] || "0", 10)
-          totalFocusMinutes += hours * 60 + minutes
-        }
-
-        // Parse avg activity
-        const activityMatch = summary.avgActivity.match(/(\d+)%/)
-        if (activityMatch && activityMatch[1]) {
-          totalActivity += parseInt(activityMatch[1], 10)
-        }
-
-        // Gabungkan unusual count
-        totalUnusualCount += summary.unusualCount
-
-        // Gabungkan unusual messages
-        if (summary.unusualMessage && summary.unusualMessage !== "- No unusual activity detected.") {
-          const messages = summary.unusualMessage.split("\n").filter(m => m.trim())
-          allUnusualMessages.push(...messages)
-        }
-      })
-
-      const totalWorkedTime = formatDuration(totalWorkedMinutes)
-      const focusTime = formatDuration(totalFocusMinutes)
-      const avgActivity = `${Math.round(totalActivity / summariesToCombine.length)}%`
-      const unusualActivities = totalUnusualCount
-
-      // Buat pesan unusual activity dari gabungan
-      let unusualMessage = "- No unusual activity detected."
-      if (unusualActivities > 0) {
-        // Ambil pesan dari semua summary yang digabungkan
-        if (allUnusualMessages.length > 0) {
-          unusualMessage = allUnusualMessages.slice(0, unusualActivities).join("\n")
-        } else {
-          // Jika tidak ada pesan, buat berdasarkan count
-          const messages: string[] = []
-          if (unusualActivities === 1) {
-            messages.push("- Brief break before diving back into work.")
-          } else if (unusualActivities === 2) {
-            messages.push("- The app switched quickly before returning to work.")
-            messages.push("- Consistent pattern of idle periods detected.")
-          } else if (unusualActivities === 3) {
-            messages.push("- Idle stretch followed by a sprint.")
-            messages.push("- Activity pattern shows frequent interruptions.")
-            messages.push("- Brief break before diving back into work.")
-          } else {
-            // 4 atau lebih
-            messages.push("- Extended breaks interrupted the work flow.")
-            messages.push("- Multiple activity shifts throughout the session.")
-            messages.push("- Work pattern shows frequent interruptions.")
-            while (messages.length < unusualActivities) {
-              messages.push("- Additional unusual activity pattern detected.")
-            }
-          }
-          unusualMessage = messages.slice(0, unusualActivities).join("\n")
-        }
-      }
-
-      // Classification berdasarkan total worked time
-      let classificationLabel = "Balanced"
-      let classificationPercent = 60
-      let classificationSummary = "Maintains consistent work pace."
-
-      if (totalWorkedMinutes >= 480) { // 8+ hours
-        classificationLabel = "High focus"
-        classificationPercent = 85
-        classificationSummary = "Sustained high productivity throughout the period."
-      } else if (totalWorkedMinutes >= 360) { // 6+ hours
-        classificationLabel = "Productive"
-        classificationPercent = 75
-        classificationSummary = "Maintains high focus on work tasks."
-      } else if (totalWorkedMinutes >= 240) { // 4+ hours
-        classificationLabel = "Balanced"
-        classificationPercent = 65
-        classificationSummary = "Punctuated focus with controlled rest."
-      } else if (totalWorkedMinutes >= 120) { // 2+ hours
-        classificationLabel = "Recovery"
-        classificationPercent = 55
-        classificationSummary = "Rebounds strong after periods of rest."
-      } else {
-        classificationLabel = "Creative"
-        classificationPercent = 50
-        classificationSummary = "Switches between tasks calmly."
-      }
-
-      return {
-        memberId: activeMemberId ?? "",
-        totalWorkedTime,
-        focusTime,
-        focusDescription: `Total focus time across ${summariesToCombine.length} day${summariesToCombine.length > 1 ? 's' : ''}.`,
-        avgActivity,
-        unusualCount: unusualActivities,
-        unusualMessage,
-        classificationLabel,
-        classificationSummary,
-        classificationPercent,
-      }
-    }
-
-    const baseSummary = activeMemberId ? generateMemberInsight(activeMemberId) : undefined
-
-    if (!baseSummary) {
-      return {
-        memberId: "",
-        totalWorkedTime: "0m",
-        focusTime: "0m",
+        memberId: activeMemberId || "",
+        totalWorkedTime: "0h 0m",
+        focusTime: "0h 0m",
         focusDescription: "No focus data yet.",
         avgActivity: "0%",
         unusualCount: 0,
         unusualMessage: "No unusual activity detected.",
-        classificationLabel: "Unknown",
-        classificationSummary: "No classification data.",
+        classificationLabel: "Balanced",
+        classificationSummary: "Awaiting data.",
         classificationPercent: 0,
       }
     }
 
-    // Jika kemarin, buat variasi data yang berbeda
-    // Gunakan member yang berbeda untuk variasi (misalnya m2 untuk kemarin jika hari ini m1)
-    if (dateStatus.isYesterday) {
-      // Ambil data dari member yang berbeda untuk variasi, atau modifikasi data sedikit
-      const alternateMemberId = activeMemberId === "m1" ? "m2" : activeMemberId === "m2" ? "m3" : activeMemberId === "m3" ? "m4" : activeMemberId === "m4" ? "m5" : "m1"
-      const alternateSummary = generateMemberInsight(alternateMemberId)
-      return alternateSummary ?? baseSummary
+    const { workedSeconds, focusSeconds, unusualCount, avgActivityPercent } = insightData
+
+    const formatSecondsToHM = (totalSecs: number) => {
+      if (totalSecs === 0) return "0h 0m"
+      const h = Math.floor(totalSecs / 3600)
+      const m = Math.floor((totalSecs % 3600) / 60)
+      if (h > 0 && m > 0) return `${h}h ${m}m`
+      if (h > 0) return `${h}h`
+      return `${m}m`
     }
 
-    // Hari ini, return data asli
-    return baseSummary
-  }, [activeMemberId, dateStatus, dateRange])
+    // Unusual Message logic (simple version)
+    let unusualMessage = "- No unusual activity detected."
+    if (unusualCount > 0) {
+      if (unusualCount === 1) unusualMessage = "- Brief break before diving back into work."
+      else if (unusualCount === 2) unusualMessage = "- Interrupted idle periods detected."
+      else unusualMessage = "- Multiple activity shifts throughout the session."
+    }
+
+    // Classification Label based on worked seconds
+    const totalWorkedMinutes = Math.floor(workedSeconds / 60)
+    let classificationLabel = "Balanced"
+    let classificationPercent = 60
+    let classificationSummary = "Maintains consistent work pace."
+
+    if (totalWorkedMinutes >= 480) { // 8+ hours
+      classificationLabel = "High focus"
+      classificationPercent = 85
+      classificationSummary = "Sustained high productivity throughout the period."
+    } else if (totalWorkedMinutes >= 360) { // 6+ hours
+      classificationLabel = "Productive"
+      classificationPercent = 75
+      classificationSummary = "Maintains high focus on work tasks."
+    } else if (totalWorkedMinutes >= 240) { // 4+ hours
+      classificationLabel = "Balanced"
+      classificationPercent = 65
+      classificationSummary = "Punctuated focus with controlled rest."
+    } else if (totalWorkedMinutes >= 120) { // 2+ hours
+      classificationLabel = "Recovery"
+      classificationPercent = 55
+      classificationSummary = "Rebounds strong after periods of rest."
+    } else {
+      classificationLabel = "Creative"
+      classificationPercent = 50
+      classificationSummary = "Switches between tasks calmly."
+    }
+
+    return {
+      memberId: activeMemberId,
+      totalWorkedTime: formatSecondsToHM(workedSeconds),
+      focusTime: formatSecondsToHM(focusSeconds),
+      focusDescription: "Longest continuous block without idle time.",
+      avgActivity: `${avgActivityPercent}%`,
+      unusualCount,
+      unusualMessage,
+      classificationLabel,
+      classificationSummary,
+      classificationPercent,
+    }
+  }, [insightData, activeMemberId])
 
   // Calculate work classification data from URL and App activities
   const workClassificationData = useMemo(() => {
-    if (!activeMemberId || !dateStatus.isValid) {
+    if (!insightData || !insightData.classification) {
       return {
         coreWork: { percentage: 0, items: [] },
         nonCoreWork: { percentage: 0, items: [] },
@@ -605,111 +547,21 @@ export default function Every10MinPage() {
       }
     }
 
-    // Filter by member and date range
-    const start = new Date(dateRange.startDate)
-    start.setHours(0, 0, 0, 0)
-    const end = new Date(dateRange.endDate)
-    end.setHours(23, 59, 59, 999)
-
-    // Core work apps/sites (development tools)
-    const coreWorkApps = ['VS Code', 'Android Studio', 'IntelliJ IDEA', 'Xcode', 'Sublime Text']
-    const coreWorkSites = ['github.com', 'stackoverflow.com', 'gitlab.com', 'bitbucket.org']
-
-    // Non-core work apps/sites (browsing, documentation)
-    const nonCoreWorkApps = ['Chrome', 'Microsoft Edge', 'Firefox', 'Safari']
-    const nonCoreWorkSites = ['docs.google.com', 'notion.so', 'confluence', 'jira.com']
-
-    // Unproductive apps/sites (social media, entertainment)
-    const unproductiveApps = ['Discord', 'Slack', 'WhatsApp', 'Telegram', 'Spotify', 'YouTube']
-    const unproductiveSites = ['facebook.com', 'twitter.com', 'instagram.com', 'tiktok.com', 'youtube.com', 'reddit.com']
-
-    // Track time and items per category
-    const coreWorkItems: Record<string, number> = {}
-    const nonCoreWorkItems: Record<string, number> = {}
-    const unproductiveItems: Record<string, number> = {}
-
-    let coreWorkTime = 0
-    let nonCoreWorkTime = 0
-    let unproductiveTime = 0
-
-    // Process URL activities
-    const memberUrlActivities = generateMemberUrlActivities(activeMemberId)
-    memberUrlActivities.forEach(activity => {
-      // Use simpler logic: trust the generator for this member
-      // To ensure it appears in the current date range, we assume it counts for the 'viewed' period
-      // (ignoring exact date match for this demo)
-
-      const site = activity.site.toLowerCase()
-      const siteName = activity.site
-
-      if (coreWorkSites.some(s => site.includes(s))) {
-        coreWorkTime += activity.timeSpent
-        coreWorkItems[siteName] = (coreWorkItems[siteName] || 0) + activity.timeSpent
-      } else if (nonCoreWorkSites.some(s => site.includes(s))) {
-        nonCoreWorkTime += activity.timeSpent
-        nonCoreWorkItems[siteName] = (nonCoreWorkItems[siteName] || 0) + activity.timeSpent
-      } else if (unproductiveSites.some(s => site.includes(s))) {
-        unproductiveTime += activity.timeSpent
-        unproductiveItems[siteName] = (unproductiveItems[siteName] || 0) + activity.timeSpent
-      } else {
-        // Default to non-core work for unknown sites
-        nonCoreWorkTime += activity.timeSpent
-        nonCoreWorkItems[siteName] = (nonCoreWorkItems[siteName] || 0) + activity.timeSpent
-      }
-    })
-
-    // Process App activities
-    const memberAppActivities = generateMemberAppActivities(activeMemberId)
-    memberAppActivities.forEach(activity => {
-      const appName = activity.appName
-
-      if (coreWorkApps.includes(appName)) {
-        coreWorkTime += activity.timeSpent
-        coreWorkItems[appName] = (coreWorkItems[appName] || 0) + activity.timeSpent
-      } else if (nonCoreWorkApps.includes(appName)) {
-        nonCoreWorkTime += activity.timeSpent
-        nonCoreWorkItems[appName] = (nonCoreWorkItems[appName] || 0) + activity.timeSpent
-      } else if (unproductiveApps.includes(appName)) {
-        unproductiveTime += activity.timeSpent
-        unproductiveItems[appName] = (unproductiveItems[appName] || 0) + activity.timeSpent
-      } else {
-        // Default to non-core work for unknown apps
-        nonCoreWorkTime += activity.timeSpent
-        nonCoreWorkItems[appName] = (nonCoreWorkItems[appName] || 0) + activity.timeSpent
-      }
-    })
-
-    const totalTime = coreWorkTime + nonCoreWorkTime + unproductiveTime
-    const coreWorkPercentage = totalTime > 0 ? Math.round((coreWorkTime / totalTime) * 100) : 0
-    const nonCoreWorkPercentage = totalTime > 0 ? Math.round((nonCoreWorkTime / totalTime) * 100) : 0
-    const unproductivePercentage = totalTime > 0 ? Math.round((unproductiveTime / totalTime) * 100) : 0
-
-    // Convert items to array with percentages
-    const formatItems = (items: Record<string, number>, categoryTime: number) => {
-      return Object.entries(items)
-        .map(([name, time]) => ({
-          name,
-          percentage: categoryTime > 0 ? Math.round((time / categoryTime) * 100) : 0,
-          time,
-        }))
-        .sort((a, b) => b.time - a.time) // Sort by time descending
-    }
-
     return {
       coreWork: {
-        percentage: coreWorkPercentage,
-        items: formatItems(coreWorkItems, coreWorkTime),
+        percentage: insightData.classification.coreWork?.percentage || 0,
+        items: insightData.classification.coreWork?.items || [],
       },
       nonCoreWork: {
-        percentage: nonCoreWorkPercentage,
-        items: formatItems(nonCoreWorkItems, nonCoreWorkTime),
+        percentage: insightData.classification.nonCoreWork?.percentage || 0,
+        items: insightData.classification.nonCoreWork?.items || [],
       },
       unproductive: {
-        percentage: unproductivePercentage,
-        items: formatItems(unproductiveItems, unproductiveTime),
+        percentage: insightData.classification.unproductive?.percentage || 0,
+        items: insightData.classification.unproductive?.items || [],
       },
     }
-  }, [activeMemberId, dateRange, dateStatus.isValid])
+  }, [insightData])
 
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null)
 

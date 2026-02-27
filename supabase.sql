@@ -251,6 +251,8 @@ CREATE TABLE IF NOT EXISTS timesheets (
     total_manual_seconds INT DEFAULT 0,
     total_billable_seconds INT DEFAULT 0,
     total_paid_seconds INT DEFAULT 0,
+    focus_seconds INT DEFAULT 0,
+    unusual_activity_count INT DEFAULT 0,
     is_paid BOOLEAN DEFAULT false,
     is_locked BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

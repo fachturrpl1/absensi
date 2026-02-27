@@ -5,60 +5,90 @@ import { Search, Lightbulb, Info, Globe, Monitor, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+    getProductivityCategories,
+    getUnclassifiedItems,
+    upsertProductivityCategory,
+    type IProductivityCategory,
+    type IUnclassifiedItem
+} from "@/action/productivity"
+import { useOrgStore } from "@/store/org-store"
+import { toast } from "sonner"
 
+// Keep interfaces but update UrlEntry to match DB structure better
 interface UrlEntry {
-    id: string
+    id: string | number
     name: string
     icon: "globe" | "monitor"
-    classification: "core" | "non-core" | "unproductive"
+    classification: "core-work" | "non-core-work" | "unproductive"
     category: string
+    match_type: 'app_name' | 'domain' | 'url_pattern'
+    productivity_score: number
+    db_id?: number
 }
 
-// Data dummy untuk tampilan
-const DUMMY_URLS: UrlEntry[] = [
-    {
-        id: "1",
-        name: "www.youtube.com",
-        icon: "globe",
-        classification: "core",
-        category: "Entertainment"
-    },
-    {
-        id: "2",
-        name: "Antigravity",
-        icon: "monitor",
-        classification: "core",
-        category: "Uncategorized"
-    },
-    {
-        id: "3",
-        name: "www.github.com",
-        icon: "globe",
-        classification: "core",
-        category: "Development"
-    },
-    {
-        id: "4",
-        name: "www.slack.com",
-        icon: "globe",
-        classification: "core",
-        category: "Communication"
-    },
-    {
-        id: "5",
-        name: "www.figma.com",
-        icon: "globe",
-        classification: "core",
-        category: "Design"
-    }
-]
-
 export default function AppUrlPage() {
-    const [urls, setUrls] = useState<UrlEntry[]>(DUMMY_URLS)
+    const { organizationId } = useOrgStore()
+    const [urls, setUrls] = useState<UrlEntry[]>([])
+    const [isLoading, setIsLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState("")
     const [jobType, setJobType] = useState("all")
     const [sortBy, setSortBy] = useState("most-common")
     const [showFilterDialog, setShowFilterDialog] = useState(false)
+
+    // Fetch data from DB
+    const fetchData = async () => {
+        if (!organizationId) return
+        setIsLoading(true)
+
+        const [catRes, unRes] = await Promise.all([
+            getProductivityCategories(organizationId),
+            getUnclassifiedItems(organizationId)
+        ])
+
+        const mergedItems: UrlEntry[] = []
+
+        // 1. Add classified items
+        if (catRes.success && catRes.data) {
+            catRes.data.forEach(item => {
+                mergedItems.push({
+                    id: item.id || `db-${item.match_pattern}`,
+                    db_id: item.id,
+                    name: item.match_pattern,
+                    icon: item.match_type === 'app_name' ? 'monitor' : 'globe',
+                    classification: item.is_productive,
+                    category: item.name,
+                    match_type: item.match_type,
+                    productivity_score: item.productivity_score
+                })
+            })
+        }
+
+        // 2. Add unclassified items (if not already in mergedItems)
+        if (unRes.success && unRes.data) {
+            unRes.data.forEach(item => {
+                const alreadyExists = mergedItems.find(m => m.match_type === item.type && m.name === item.name)
+                if (!alreadyExists) {
+                    mergedItems.push({
+                        id: `unc-${item.type}-${item.name}`,
+                        name: item.name,
+                        icon: item.type === 'app_name' ? 'monitor' : 'globe',
+                        classification: 'non-core-work', // default
+                        category: 'Uncategorized',
+                        match_type: item.type,
+                        productivity_score: 0
+                    })
+                }
+            })
+        }
+
+        setUrls(mergedItems)
+        setIsLoading(false)
+    }
+
+    useEffect(() => {
+        fetchData()
+    }, [organizationId])
 
     // Handle ESC key to close dialog
     useEffect(() => {
@@ -74,18 +104,79 @@ export default function AppUrlPage() {
     const [filterClassification, setFilterClassification] = useState("")
     const [filterTypeOfItems, setFilterTypeOfItems] = useState("")
 
-    // Filter data berdasarkan search query
-    const filteredUrls = urls.filter(url =>
-        url.name.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    // Filter data berdasarkan search query dan sidebar filters
+    const filteredUrls = urls.filter(url => {
+        const matchesSearch = url.name.toLowerCase().includes(searchQuery.toLowerCase())
+        const matchesClassification = !filterClassification || url.classification === filterClassification
+
+        let matchesType = true
+        if (filterTypeOfItems === 'apps') matchesType = url.match_type === 'app_name'
+        else if (filterTypeOfItems === 'urls') matchesType = url.match_type === 'domain' || url.match_type === 'url_pattern'
+
+        return matchesSearch && matchesClassification && matchesType
+    })
 
     // Handle classification change
-    const handleClassificationChange = (id: string, newClassification: "core" | "non-core" | "unproductive") => {
+    const handleClassificationChange = async (url: UrlEntry, newClassification: "core-work" | "non-core-work" | "unproductive") => {
+        if (!organizationId) return
+
+        // Optimistic UI update
         setUrls(prev =>
-            prev.map(url =>
-                url.id === id ? { ...url, classification: newClassification } : url
+            prev.map(item =>
+                item.id === url.id ? { ...item, classification: newClassification } : item
             )
         )
+
+        // Generate score based on classification
+        let score = 0
+        if (newClassification === 'core-work') score = 90
+        else if (newClassification === 'non-core-work') score = 0
+        else score = -90
+
+        const res = await upsertProductivityCategory({
+            organization_id: Number(organizationId),
+            name: url.category,
+            match_type: url.match_type,
+            match_pattern: url.name,
+            productivity_score: score,
+            is_productive: newClassification
+        })
+
+        if (!res.success) {
+            toast.error("Failed to save classification")
+            // Rollback if failure
+            fetchData()
+        } else {
+            toast.success("Classification saved")
+        }
+    }
+
+    // Handle Category change
+    const handleCategoryChange = async (url: UrlEntry, newCategory: string) => {
+        if (!organizationId) return
+
+        // Optimistic UI update
+        setUrls(prev =>
+            prev.map(item =>
+                item.id === url.id ? { ...item, category: newCategory } : item
+            )
+        )
+
+        const res = await upsertProductivityCategory({
+            organization_id: Number(organizationId),
+            name: newCategory,
+            match_type: url.match_type,
+            match_pattern: url.name,
+            productivity_score: url.productivity_score,
+            is_productive: url.classification
+        })
+
+        if (!res.success) {
+            toast.error("Failed to save category")
+            fetchData()
+        } else {
+            toast.success("Category updated")
+        }
     }
 
     return (
@@ -215,8 +306,8 @@ export default function AppUrlPage() {
                                 <div className="flex justify-center">
                                     <div className="inline-flex rounded-full bg-gray-100 p-0.5">
                                         <button
-                                            onClick={() => handleClassificationChange(url.id, "core")}
-                                            className={`px-5 py-2 text-xs font-medium rounded-full transition-all ${url.classification === "core"
+                                            onClick={() => handleClassificationChange(url, "core-work")}
+                                            className={`px-5 py-2 text-xs font-medium rounded-full transition-all ${url.classification === "core-work"
                                                 ? "bg-white text-gray-900 shadow-sm"
                                                 : "text-gray-500 hover:text-gray-700"
                                                 }`}
@@ -224,8 +315,8 @@ export default function AppUrlPage() {
                                             Core work
                                         </button>
                                         <button
-                                            onClick={() => handleClassificationChange(url.id, "non-core")}
-                                            className={`px-5 py-2 text-xs font-medium rounded-full transition-all ${url.classification === "non-core"
+                                            onClick={() => handleClassificationChange(url, "non-core-work")}
+                                            className={`px-5 py-2 text-xs font-medium rounded-full transition-all ${url.classification === "non-core-work"
                                                 ? "bg-white text-gray-900 shadow-sm"
                                                 : "text-gray-500 hover:text-gray-700"
                                                 }`}
@@ -233,7 +324,7 @@ export default function AppUrlPage() {
                                             Non-core work
                                         </button>
                                         <button
-                                            onClick={() => handleClassificationChange(url.id, "unproductive")}
+                                            onClick={() => handleClassificationChange(url, "unproductive")}
                                             className={`px-5 py-2 text-xs font-medium rounded-full transition-all ${url.classification === "unproductive"
                                                 ? "bg-white text-gray-900 shadow-sm"
                                                 : "text-gray-500 hover:text-gray-700"
@@ -246,7 +337,10 @@ export default function AppUrlPage() {
 
                                 {/* Category Column */}
                                 <div className="flex justify-end">
-                                    <Select defaultValue={url.category}>
+                                    <Select
+                                        value={url.category}
+                                        onValueChange={(val) => handleCategoryChange(url, val)}
+                                    >
                                         <SelectTrigger className="w-[180px] h-10 border-gray-300 bg-white">
                                             <SelectValue />
                                         </SelectTrigger>
@@ -304,8 +398,8 @@ export default function AppUrlPage() {
                                     <SelectValue placeholder="Select an option" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="core">Core work</SelectItem>
-                                    <SelectItem value="non-core">Non-core work</SelectItem>
+                                    <SelectItem value="core-work">Core work</SelectItem>
+                                    <SelectItem value="non-core-work">Non-core work</SelectItem>
                                     <SelectItem value="unproductive">Unproductive</SelectItem>
                                 </SelectContent>
                             </Select>

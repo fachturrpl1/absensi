@@ -31,8 +31,10 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
 
   // Fetch real members dari DB
   useEffect(() => {
+    console.log("ScreenshotsLayout: organizationId is", organizationId);
     if (!organizationId) return
     getMembersForScreenshot(String(organizationId)).then(res => {
+      console.log("ScreenshotsLayout: fetched members response", res);
       if (res.success && res.data && res.data.length > 0) {
         setRealMembers(res.data)
       }
