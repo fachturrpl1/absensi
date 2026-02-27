@@ -181,6 +181,7 @@ export default function MembersPage() {
   const [activeTab, setActiveTab] = React.useState("members")
   const [submittingInvite, setSubmittingInvite] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState<string>("")
+  const [filterDepartment, setFilterDepartment] = React.useState<string>("all")
   const [inviteSearchQuery, setInviteSearchQuery] = React.useState<string>("")
   const [selectedMemberIds] = React.useState<string[]>([])
   const [exportDialogOpen, setExportDialogOpen] = React.useState(false)
@@ -199,7 +200,7 @@ export default function MembersPage() {
   }
 
   const { data: pageData, isLoading: loading, isFetching, refetch } = useQuery<MembersApiPage>({
-    queryKey: ["members", "paged", organizationId, debouncedSearch, page, pageSize],
+    queryKey: ["members", "paged", organizationId, debouncedSearch, filterDepartment, page, pageSize],
     queryFn: async ({ signal }) => {
       const url = new URL('/api/members', window.location.origin)
       url.searchParams.set('limit', String(pageSize))
@@ -209,6 +210,7 @@ export default function MembersPage() {
       // Hanya pass organizationId jika ada; jika belum ada, biarkan API fallback ke org user
       if (organizationId) url.searchParams.set('organizationId', String(organizationId))
       if (debouncedSearch) url.searchParams.set('search', debouncedSearch)
+      if (filterDepartment !== 'all') url.searchParams.set('departmentId', filterDepartment)
       const res = await fetch(url.toString(), { credentials: 'same-origin', signal })
       const json = await res.json()
       if (!json?.success) throw new Error(json?.message || 'Failed to fetch members')
@@ -335,7 +337,7 @@ export default function MembersPage() {
 
   React.useEffect(() => {
     setPage(1)
-  }, [searchQuery])
+  }, [searchQuery, filterDepartment])
 
   //komentar
   // Fetch data for invite form
@@ -345,7 +347,7 @@ export default function MembersPage() {
     enabled: inviteDialogOpen,
   })
 
-  const { data: departments = [], isLoading: deptLoading } = useGroups({ enabled: inviteDialogOpen })
+  const { data: departments = [], isLoading: deptLoading } = useGroups({ enabled: isHydrated })
   const { data: positions = [], isLoading: posLoading } = usePositions({ enabled: inviteDialogOpen })
 
   const inviteForm = useForm<InviteFormValues>({
@@ -384,7 +386,7 @@ export default function MembersPage() {
 
       if (result.success) {
         toast.success("Invitation sent successfully via email!")
-        await queryClient.invalidateQueries({ queryKey: ['members', 'paged', organizationId, searchQuery, page, pageSize] })
+        await queryClient.invalidateQueries({ queryKey: ['members', 'paged', organizationId, searchQuery, filterDepartment, page, pageSize] })
         setInviteDialogOpen(false)
         inviteForm.reset()
         await refetch()
@@ -411,7 +413,7 @@ export default function MembersPage() {
       // Force refresh data
       await refetch()
       toast.success("Data has been refreshed!")
-      await queryClient.invalidateQueries({ queryKey: ['members', 'paged', organizationId, searchQuery, page, pageSize] })
+      await queryClient.invalidateQueries({ queryKey: ['members', 'paged', organizationId, searchQuery, filterDepartment, page, pageSize] })
     } catch (error) {
       toast.error("Failed to refresh data")
     }
@@ -535,14 +537,30 @@ export default function MembersPage() {
             {/* Members Toolbar */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
 
-              <div className="relative flex-1 md:flex-none">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search members..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-10 bg-white w-full md:w-[300px]"
-                />
+              <div className="flex items-center gap-4 w-full md:w-auto flex-1 md:flex-none">
+                <div className="relative flex-1 md:w-[300px]">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search members..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 h-10 bg-white w-full"
+                  />
+                </div>
+
+                <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+                  <SelectTrigger className="w-full md:w-[180px] h-10">
+                    <SelectValue placeholder="All Groups" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Groups</SelectItem>
+                    {departments.map((dept: any) => (
+                      <SelectItem key={dept.id} value={String(dept.id)}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">

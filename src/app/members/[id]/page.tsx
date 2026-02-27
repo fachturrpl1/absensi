@@ -13,6 +13,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/components/common/user-avatar"
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog"
+import { useProfilePhotoUrl } from "@/hooks/use-profile"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -139,17 +141,40 @@ function MemberProfileHeader({
   email: string
   lastTracked: string
 }) {
+  const resolvedPhotoUrl = useProfilePhotoUrl(photoUrl, userId)
+
   return (
     <div className="flex gap-8 mb-6 pb-6">
       {/* Left: Avatar */}
       <div className="flex-shrink-0">
         <div className="flex flex-col items-center text-center">
-          <UserAvatar
-            name={displayName}
-            photoUrl={photoUrl}
-            userId={userId}
-            size={20}
-          />
+          <Dialog>
+            <DialogTrigger asChild>
+              <div className="cursor-pointer hover:opacity-80 transition-opacity rounded-full ring-2 ring-transparent hover:ring-primary/20 ring-offset-2">
+                <UserAvatar
+                  name={displayName}
+                  photoUrl={photoUrl}
+                  userId={userId}
+                  size={20}
+                />
+              </div>
+            </DialogTrigger>
+            <DialogContent className="max-w-fit border-none bg-transparent p-0 shadow-none [&>button]:hidden">
+              <DialogTitle className="sr-only">Profile Picture</DialogTitle>
+              {resolvedPhotoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={resolvedPhotoUrl}
+                  alt={displayName}
+                  className="max-h-[85vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
+                />
+              ) : (
+                <div className="w-64 h-64 bg-slate-100 rounded-full flex items-center justify-center text-5xl text-slate-400 font-semibold shadow-xl">
+                  {displayName.split(/\s+/).filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase()}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
           <p className="mt-3 text-xs text-muted-foreground">
             Joined
             <br />

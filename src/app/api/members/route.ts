@@ -13,7 +13,7 @@ const CACHE_TTL = 60 // seconds
 
 export async function GET(req: Request) {
   const startTime = Date.now()
-  
+
   try {
     // Read query params
     const { searchParams } = new URL(req.url)
@@ -23,6 +23,7 @@ export async function GET(req: Request) {
     const search = searchParams.get('search') || ''
     const orgParam = searchParams.get('organizationId')
     const activeParam = searchParams.get('active') // 'true' | 'false' | 'all'
+    const departmentParam = searchParams.get('departmentId')
     const countMode = (searchParams.get('countMode') as 'exact' | 'planned' | 'none') || null
 
     // Parse and validate limit
@@ -40,29 +41,29 @@ export async function GET(req: Request) {
       const response = await getAllOrganization_member(
         orgParam ? Number(orgParam) : undefined
       )
-      
+
       if (!response.success) {
         return NextResponse.json(
           { success: false, message: response.message },
-          { 
-            status: 400, 
-            headers: { 
+          {
+            status: 400,
+            headers: {
               'Cache-Control': 'private, no-cache, no-store, must-revalidate',
               'Vary': 'Cookie',
               'X-Response-Time': `${Date.now() - startTime}ms`
-            } 
+            }
           }
         )
       }
-      
+
       return NextResponse.json(
         { success: true, data: response.data },
-        { 
-          headers: { 
+        {
+          headers: {
             'Cache-Control': 'private, max-age=60, must-revalidate',
             'Vary': 'Cookie',
             'X-Response-Time': `${Date.now() - startTime}ms`
-          } 
+          }
         }
       )
     }
@@ -73,7 +74,7 @@ export async function GET(req: Request) {
 
     // Resolve organization id
     let organizationId: number | null = orgParam ? Number(orgParam) : null
-    
+
     if (!organizationId) {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
@@ -81,10 +82,10 @@ export async function GET(req: Request) {
           .from('organization_members')
           .select('organization_id')
           .eq('user_id', user.id)
-          .order('created_at', { ascending: true})
+          .order('created_at', { ascending: true })
           .limit(1)
           .maybeSingle()
-        
+
         if (member?.organization_id) {
           organizationId = Number(member.organization_id)
         }
@@ -94,22 +95,22 @@ export async function GET(req: Request) {
     // Return empty if no organization
     if (!organizationId) {
       return NextResponse.json(
-        { 
-          success: true, 
-          data: [], 
-          pagination: { 
-            cursor: null, 
-            limit, 
-            hasMore: false, 
-            total: 0 
-          } 
+        {
+          success: true,
+          data: [],
+          pagination: {
+            cursor: null,
+            limit,
+            hasMore: false,
+            total: 0
+          }
         },
-        { 
-          headers: { 
+        {
+          headers: {
             'Cache-Control': 'private, max-age=30',
             'Vary': 'Cookie',
             'X-Response-Time': `${Date.now() - startTime}ms`
-          } 
+          }
         }
       )
     }
@@ -126,6 +127,9 @@ export async function GET(req: Request) {
       if (activeParam !== 'all') {
         const active = activeParam === 'false' ? false : true
         countQuery = countQuery.eq('is_active', active)
+      }
+      if (departmentParam && departmentParam !== 'all') {
+        countQuery = countQuery.eq('department_id', departmentParam)
       }
       // Note: Search di count query dihapus karena akan dilakukan di client-side
       // untuk mencakup semua field termasuk joined fields (nama, department)
@@ -189,6 +193,9 @@ export async function GET(req: Request) {
       const active = activeParam === 'false' ? false : true
       dataQuery = dataQuery.eq('is_active', active)
     }
+    if (departmentParam && departmentParam !== 'all') {
+      dataQuery = dataQuery.eq('department_id', departmentParam)
+    }
 
     // Note: Search dihapus dari API query karena akan dilakukan di client-side
     // untuk mencakup semua field termasuk joined fields (nama dari user_profiles, department name)
@@ -204,7 +211,7 @@ export async function GET(req: Request) {
 
       const from = (pageNum - 1) * limit
       const to = from + limit - 1
-      
+
       const exec = await dataQuery
         .order('id', { ascending: true })
         .range(from, to)
@@ -232,7 +239,7 @@ export async function GET(req: Request) {
     }
 
     const raw = (itemsRaw || []) as IOrganization_member[]
-    
+
     // Log raw query result for debugging
     if (raw && raw.length > 0) {
       memberLogger.debug(`[API /members] Query returned ${raw.length} members`);
@@ -240,7 +247,7 @@ export async function GET(req: Request) {
       memberLogger.debug(`[API /members] First member keys:`, Object.keys(firstMember));
       memberLogger.debug(`[API /members] First member department_id:`, firstMember.department_id, `(type: ${typeof firstMember.department_id})`);
     }
-    
+
     // Fix departments if join failed (similar to getAllOrganization_member)
     if (raw && raw.length > 0) {
 
@@ -257,7 +264,7 @@ export async function GET(req: Request) {
           is_departments_array: Array.isArray(sample.departments)
         });
       }
-      
+
       // Normalize departments structure (Supabase might return array or object)
       raw.forEach((member: any) => {
         if (member.departments) {
@@ -271,14 +278,14 @@ export async function GET(req: Request) {
           }
         }
       });
-      
+
       // Collect all department_ids that need to be fetched
       const deptIds = new Set<number>();
       raw.forEach((member: any) => {
-        const hasValidDept = member.departments && 
+        const hasValidDept = member.departments &&
           (typeof member.departments === 'object' && !Array.isArray(member.departments) && member.departments.name) ||
           (Array.isArray(member.departments) && member.departments.length > 0 && member.departments[0]?.name);
-        
+
         if (member.department_id && !hasValidDept) {
           const deptId = typeof member.department_id === 'string' ? parseInt(member.department_id, 10) : member.department_id;
           if (!isNaN(deptId)) {
@@ -286,9 +293,9 @@ export async function GET(req: Request) {
           }
         }
       });
-      
+
       memberLogger.debug(`[API /members] Found ${deptIds.size} department_ids to fetch:`, Array.from(deptIds));
-      
+
       // Fetch departments if needed
       if (deptIds.size > 0) {
         const deptIdsArray = Array.from(deptIds);
@@ -297,7 +304,7 @@ export async function GET(req: Request) {
           .from("departments")
           .select("id, name, code, organization_id")
           .in("id", deptIdsArray);
-        
+
         if (deptError) {
           memberLogger.error(`[API /members] Error fetching departments:`, deptError);
         } else if (deptList) {
@@ -310,14 +317,14 @@ export async function GET(req: Request) {
             }
           });
           memberLogger.debug(`[API /members] Departments map keys:`, Array.from(departmentsMap.keys()));
-          
+
           // Set departments for all members that need it
           let fixedCount = 0;
           raw.forEach((member: any) => {
-            const hasValidDept = member.departments && 
+            const hasValidDept = member.departments &&
               (typeof member.departments === 'object' && !Array.isArray(member.departments) && member.departments.name) ||
               (Array.isArray(member.departments) && member.departments.length > 0 && member.departments[0]?.name);
-            
+
             if (member.department_id && !hasValidDept) {
               const deptId = typeof member.department_id === 'string' ? parseInt(member.department_id, 10) : member.department_id;
               if (!isNaN(deptId)) {
@@ -340,7 +347,7 @@ export async function GET(req: Request) {
         memberLogger.debug(`[API /members] No department_ids to fetch`);
       }
     }
-    
+
     let items: IOrganization_member[] = raw
     let hasMore = false
     let nextCursor: string | null = null
@@ -361,6 +368,7 @@ export async function GET(req: Request) {
       organizationId: organizationId.toString(),
       ...(search && { search }),
       ...(activeParam && activeParam !== 'all' && { active: activeParam }),
+      ...(departmentParam && departmentParam !== 'all' && { departmentId: departmentParam }),
       ...(countMode && { countMode })
     })
 
@@ -370,49 +378,49 @@ export async function GET(req: Request) {
       first: `/api/members?${baseParams.toString()}`
     }
 
-// Normalize/augment items for consistent client mapping using user_profiles schema
-{
-  type UserProfile = {
-    display_name?: string
-    first_name?: string
-    middle_name?: string
-    last_name?: string
-    email?: string
-    search_name?: string
-  }
-  type DepartmentObj = { name?: string }
-  type BiodataObj = { nama?: string; nickname?: string; nik?: string }
-  type MemberRow = IOrganization_member & {
-    user?: UserProfile
-    biodata?: BiodataObj
-    departments?: DepartmentObj | DepartmentObj[]
-    groupName?: string
-    biodata_nik?: string
-  }
+    // Normalize/augment items for consistent client mapping using user_profiles schema
+    {
+      type UserProfile = {
+        display_name?: string
+        first_name?: string
+        middle_name?: string
+        last_name?: string
+        email?: string
+        search_name?: string
+      }
+      type DepartmentObj = { name?: string }
+      type BiodataObj = { nama?: string; nickname?: string; nik?: string }
+      type MemberRow = IOrganization_member & {
+        user?: UserProfile
+        biodata?: BiodataObj
+        departments?: DepartmentObj | DepartmentObj[]
+        groupName?: string
+        biodata_nik?: string
+      }
 
-  const normalizeName = (m: MemberRow) => {
-    const displayName = (m.user?.display_name ?? '').trim()
-    const firstName = (m.user?.first_name ?? '').trim()
-    const middleName = (m.user?.middle_name ?? '').trim()
-    const lastName = (m.user?.last_name ?? '').trim()
-    const email = (m.user?.email ?? '').trim()
-    const searchName = (m.user?.search_name ?? '').trim()
-    const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ').trim()
-    const biodataNama = (m.biodata?.nama ?? '').trim()
-    const biodataNickname = (m.biodata?.nickname ?? '').trim()
-    return displayName || fullName || email || searchName || biodataNama || biodataNickname || null
-  }
-  const firstDept = (d?: DepartmentObj | DepartmentObj[] | null) =>
-    Array.isArray(d) ? (d[0] ?? undefined) : (d ?? undefined)
+      const normalizeName = (m: MemberRow) => {
+        const displayName = (m.user?.display_name ?? '').trim()
+        const firstName = (m.user?.first_name ?? '').trim()
+        const middleName = (m.user?.middle_name ?? '').trim()
+        const lastName = (m.user?.last_name ?? '').trim()
+        const email = (m.user?.email ?? '').trim()
+        const searchName = (m.user?.search_name ?? '').trim()
+        const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ').trim()
+        const biodataNama = (m.biodata?.nama ?? '').trim()
+        const biodataNickname = (m.biodata?.nickname ?? '').trim()
+        return displayName || fullName || email || searchName || biodataNama || biodataNickname || null
+      }
+      const firstDept = (d?: DepartmentObj | DepartmentObj[] | null) =>
+        Array.isArray(d) ? (d[0] ?? undefined) : (d ?? undefined)
 
-  items = (items as unknown as MemberRow[]).map((m) => {
-    const computed_name = normalizeName(m)
-    const deptObj = firstDept(m.departments)
-    const groupName = deptObj?.name ?? m.groupName ?? null
-    const biodata_nik = m.biodata_nik ?? m.biodata?.nik ?? null
-    return { ...(m as object), computed_name, groupName, biodata_nik } as unknown as IOrganization_member
-  })
-}
+      items = (items as unknown as MemberRow[]).map((m) => {
+        const computed_name = normalizeName(m)
+        const deptObj = firstDept(m.departments)
+        const groupName = deptObj?.name ?? m.groupName ?? null
+        const biodata_nik = m.biodata_nik ?? m.biodata?.nik ?? null
+        return { ...(m as object), computed_name, groupName, biodata_nik } as unknown as IOrganization_member
+      })
+    }
 
     if (pageParam) {
       const pageNum = Math.max(1, parseInt(pageParam, 10) || 1)
@@ -430,9 +438,9 @@ export async function GET(req: Request) {
 
     // Log final data before return
     if (items && items.length > 0) {
-      const membersWithDept = items.filter((m: any) => m.departments && 
+      const membersWithDept = items.filter((m: any) => m.departments &&
         ((typeof m.departments === 'object' && !Array.isArray(m.departments) && m.departments.name) ||
-         (Array.isArray(m.departments) && m.departments.length > 0 && m.departments[0]?.name)));
+          (Array.isArray(m.departments) && m.departments.length > 0 && m.departments[0]?.name)));
       const membersWithDeptId = items.filter((m: any) => m.department_id != null && m.department_id !== undefined);
       memberLogger.debug(`[API /members] Final data: ${items.length} members, ${membersWithDeptId.length} with department_id, ${membersWithDept.length} with departments`);
       if (membersWithDept.length > 0 && membersWithDept[0]) {
@@ -458,42 +466,42 @@ export async function GET(req: Request) {
     })
 
     return NextResponse.json(
-      { 
-        success: true, 
-        data: items, 
-        pagination: { 
-          cursor: nextCursor, 
-          limit, 
-          hasMore, 
-          total: totalCount || 0 
-        }, 
+      {
+        success: true,
+        data: items,
+        pagination: {
+          cursor: nextCursor,
+          limit,
+          hasMore,
+          total: totalCount || 0
+        },
         links,
         meta: {
           responseTime: `${responseTime}ms`
         }
       },
-      { 
-        headers: { 
+      {
+        headers: {
           'Cache-Control': `private, max-age=${CACHE_TTL}, stale-while-revalidate=300`,
           'Vary': 'Cookie, Authorization',
           'X-Response-Time': `${responseTime}ms`
-        } 
+        }
       }
     )
 
   } catch (error) {
     const responseTime = Date.now() - startTime
     memberLogger.error('API /members error:', error)
-    
+
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: 'Failed to fetch members',
-        error: process.env.NODE_ENV === 'development' 
+        error: process.env.NODE_ENV === 'development'
           ? (error instanceof Error ? error.message : 'Unknown error')
           : undefined
       },
-      { 
+      {
         status: 500,
         headers: {
           'Cache-Control': 'private, no-cache, no-store, must-revalidate',
