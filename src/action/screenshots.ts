@@ -167,7 +167,6 @@ export async function getScreenshotsByMemberAndDate(
 ): Promise<{ success: boolean; data?: IScreenshotWithActivity[]; message?: string }> {
     const supabase = await createClient()
 
-    // Fetch screenshots + join activity untuk keyboard/mouse seconds
     const { data, error } = await supabase
         .from('screenshots')
         .select(`
@@ -182,6 +181,8 @@ export async function getScreenshotsByMemberAndDate(
         .lte('screenshot_date', endDate)
         .eq('is_deleted', false)
         .order('time_slot', { ascending: true })
+
+    // Perbaikan offset timezone dengan menggunakan local date components
 
     if (error) {
         return { success: false, message: error.message }

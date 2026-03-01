@@ -182,8 +182,16 @@ export default function AllScreenshotsPage() {
       return
     }
     setIsLoading(true)
-    const startDate = dateRange.startDate.toISOString().split('T')[0] ?? ''
-    const endDate = dateRange.endDate.toISOString().split('T')[0] ?? ''
+    // Format local date to avoid timezone shift to yesterday
+    const formatLocalDate = (d: Date) => {
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+
+    const startDate = dateRange.startDate ? formatLocalDate(dateRange.startDate) : ''
+    const endDate = dateRange.endDate ? formatLocalDate(dateRange.endDate) : ''
     const res = await getScreenshotsByMemberAndDate(
       Number(activeMemberId),
       startDate,
