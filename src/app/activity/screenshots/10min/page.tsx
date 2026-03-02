@@ -211,8 +211,16 @@ export default function Every10MinPage() {
       return
     }
     setIsLoading(true)
-    const startDate = dateRange.startDate.toISOString().split('T')[0] ?? ''
-    const endDate = dateRange.endDate.toISOString().split('T')[0] ?? ''
+    // Perbaikan offset timezone dengan menggunakan local date components
+    const formatLocalDate = (d: Date) => {
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+
+    const startDate = dateRange.startDate ? formatLocalDate(dateRange.startDate) : ''
+    const endDate = dateRange.endDate ? formatLocalDate(dateRange.endDate) : ''
     const res = await getScreenshotsByMemberAndDate(
       Number(activeMemberId),
       startDate,
@@ -233,8 +241,16 @@ export default function Every10MinPage() {
       setInsightData(null)
       return
     }
-    const startDate = dateRange.startDate.toISOString().split('T')[0] ?? ''
-    const endDate = dateRange.endDate.toISOString().split('T')[0] ?? ''
+    // Format local date to avoid timezone shift to yesterday
+    const formatLocalDate = (d: Date) => {
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+
+    const startDate = dateRange.startDate ? formatLocalDate(dateRange.startDate) : ''
+    const endDate = dateRange.endDate ? formatLocalDate(dateRange.endDate) : ''
     const res = await getMemberInsightsSummary(Number(activeMemberId), startDate, endDate)
     if (res.success && res.data) {
       setInsightData(res.data)
@@ -280,16 +296,19 @@ export default function Every10MinPage() {
 
   const memberTimeBlocks = useMemo(() => {
     if (isLoading) return []
-    if (!activeMemberId || !dateStatus.isValid) return []
+    if (!activeMemberId || !dateStatus.isValid) {
+      console.log("[DEBUG 10min] memberTimeBlocks skipped:", { activeMemberId, isValid: dateStatus.isValid, dbScreenshotsLength: dbScreenshots.length, dateStatus })
+      return []
+    }
 
     const baseItems: MemberScreenshotItem[] = dbScreenshots.map(mapDbToItem)
+    console.log("[DEBUG 10min] mapped baseItems length:", baseItems.length, "db length:", dbScreenshots.length)
     if (baseItems.length === 0) return []
 
     let blocks: Array<{ label: string; summary: string; items: MemberScreenshotItem[] }> = []
 
     if (dateStatus.isYesterday) {
-      const filteredItems = baseItems.slice(0, Math.min(6, baseItems.length))
-      blocks = buildMemberTimeBlocks(filteredItems, 6)
+      blocks = buildMemberTimeBlocks(baseItems, 6)
     } else if (dateStatus.isRange && dateRange) {
       // Grupkan berdasarkan screenshot_date dari DB
       const groupedByDate = new Map<string, MemberScreenshotItem[]>()
