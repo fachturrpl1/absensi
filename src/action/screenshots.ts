@@ -213,61 +213,86 @@ export async function getScreenshotsByMemberAndDate(
 
 export async function getMemberInsightsSummary(
     organizationMemberId: number,
-    startDate: string,
-    endDate: string
-) {
+    startDate: string,   // YYYY-MM-DD
+    endDate: string      // YYYY-MM-DD
+): Promise<{ success: boolean; data?: any; message?: string }> {
     const supabase = await createClient()
 
     try {
         // 1. Ambil data dari timesheets (Worked Time, Focus, Unusual)
+        // PERBAIKAN LOGIK: Cari timesheet yang MENCAKUP rentang tanggal yang dipilih,
+        // bukan yang start/end-nya persis sama dengan range tersebut.
         const { data: timesheetsData, error: timesheetsError } = await supabase
             .from('timesheets')
             .select(`
+                id,
                 total_tracked_seconds,
-                total_manual_seconds,
                 focus_seconds,
-                unusual_activity_count
+                unusual_activity_count,
+                start_date,
+                end_date
             `)
             .eq('organization_member_id', organizationMemberId)
-            .gte('start_date', startDate)
-            .lte('end_date', endDate)
+            .lte('start_date', endDate)   // Timesheet mulai sebelum/pada akhir range
+            .gte('end_date', startDate)   // Timesheet berakhir sesudah/pada awal range
 
-        if (timesheetsError) throw new Error(`Timesheets error: ${timesheetsError.message}`)
+        if (timesheetsError) {
+            return { success: false, message: timesheetsError.message }
+        }
 
         let totalWorkedSeconds = 0
         let totalFocusSeconds = 0
         let totalUnusualCount = 0
+        let avgActivitySum = 0
 
         if (timesheetsData && timesheetsData.length > 0) {
-            timesheetsData.forEach((ts: any) => {
-                totalWorkedSeconds += (ts.total_tracked_seconds || 0) + (ts.total_manual_seconds || 0)
-                totalFocusSeconds += (ts.focus_seconds || 0)
-                totalUnusualCount += (ts.unusual_activity_count || 0)
-            })
+            const ts = timesheetsData[0]
+            if (ts) {
+                totalWorkedSeconds = ts.total_tracked_seconds || 0
+                totalFocusSeconds = ts.focus_seconds || 0
+                totalUnusualCount = ts.unusual_activity_count || 0
+            }
         }
 
-        // 2. Hitung Avg. Activity dari tabel activities
+        // 2. Ambil klasifikasi kerja dari productivity_categories & tool_usages/url_visits
+        // Logika ini tetap sama (menggunakan mock atau query real jika sudah ada)
+        // ... (sisanya tetap sesuai kebutuhan UI)
         const { data: activitiesData, error: activitiesError } = await supabase
             .from('activities')
-            .select('overall_seconds, tracked_seconds')
+            .select('overall_seconds, keyboard_seconds, mouse_seconds')
             .eq('organization_member_id', organizationMemberId)
             .gte('activity_date', startDate)
             .lte('activity_date', endDate)
 
-        if (activitiesError) throw new Error(`Activities error: ${activitiesError.message}`)
+        if (activitiesError) {
+            console.error('Activities error:', activitiesError.message)
+        }
 
         let totalOverallSeconds = 0
-        let totalTrackedActivitySeconds = 0
+        let totalKbdSeconds = 0
+        let totalMouseSeconds = 0
 
         if (activitiesData && activitiesData.length > 0) {
             activitiesData.forEach((act: any) => {
-                totalOverallSeconds += (act.overall_seconds || 0)
-                totalTrackedActivitySeconds += (act.tracked_seconds || 0)
+                let rowOverall = act.overall_seconds || 0
+                // Fallback: Jika overall_seconds 0 tapi ada aktivitas input,
+                // asumsikan slot ini terpakai (600s).
+                if (rowOverall === 0 && ((act.keyboard_seconds || 0) > 0 || (act.mouse_seconds || 0) > 0)) {
+                    rowOverall = 600
+                }
+                totalOverallSeconds += rowOverall
+                totalKbdSeconds += (act.keyboard_seconds || 0)
+                totalMouseSeconds += (act.mouse_seconds || 0)
             })
+
+            // FALLBACK: Jika worked_seconds dari timesheet adalah 0, gunakan totalOverallSeconds dari activities
+            if (totalWorkedSeconds === 0) {
+                totalWorkedSeconds = totalOverallSeconds
+            }
         }
 
-        const avgActivityPercent = totalTrackedActivitySeconds > 0
-            ? Math.round((totalOverallSeconds / totalTrackedActivitySeconds) * 100)
+        const avgActivityPercent = totalOverallSeconds > 0
+            ? Math.min(100, Math.round(((totalKbdSeconds + totalMouseSeconds) / totalOverallSeconds) * 100))
             : 0
 
         // 3. Work Classification dari url_visits & tool_usages
@@ -355,7 +380,7 @@ export async function getMemberInsightsSummary(
                 workedSeconds: totalWorkedSeconds,
                 focusSeconds: totalFocusSeconds,
                 unusualCount: totalUnusualCount,
-                avgActivityPercent: Math.min(100, avgActivityPercent),
+                avgActivityPercent: avgActivitySum || Math.min(100, avgActivityPercent),
                 classification: classificationData
             }
         }

@@ -11,18 +11,24 @@ import {
   X,
   ArrowUpDown,
 } from "lucide-react"
-import { MemberScreenshotItem } from "@/lib/data/dummy-data"
+import {
+  MemberScreenshotItem,
+} from "@/lib/data/dummy-data"
 import {
   getScreenshotsByMemberAndDate,
   getMemberInsightsSummary,
   type IScreenshotWithActivity
 } from "@/action/screenshots"
+import { formatDateLocal } from "@/utils/date-helper"
 import { useSelectedMemberContext } from "../selected-member-context"
 import { MemberScreenshotCard } from "@/components/activity/MemberScreenshotCard"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ScreenshotCardSkeleton } from "@/components/activity/ScreenshotCardSkeleton"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuthStore } from "@/store/user-store"
+
+
+
 
 // Parse time string like "9:00 am - 9:10 am" to get start time for sorting
 const parseTimeForSort = (timeStr: string): number => {
@@ -62,6 +68,8 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
     return `${hours}h ${minutes.toString().padStart(2, "0")}m`
   }
 
+
+
   const formatTimeFromHoursMinutes = (hours: number, minutes: number): string => {
     let displayHours = hours
     let period = 'am'
@@ -78,7 +86,9 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
   let startMinutes: number | null = null
 
   for (let i = 0; i < sorted.length; i++) {
-    const item = sorted[i]!
+    const item = sorted[i]
+    if (!item) continue
+
     const itemMinutes = parseTimeForSort(item.time)
 
     // Start a new block if:
@@ -86,9 +96,9 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
     // 2. Current block has 6 items (Hubstaff grid is usually 6 wide)
     // 3. Current item's time is outside the 60-minute window of the block's start
     if (startMinutes === null || currentChunk.length >= chunkSize || itemMinutes >= startMinutes + 60) {
-      if (currentChunk.length > 0) {
+      if (currentChunk.length > 0 && startMinutes !== null) {
         // Finalize previous chunk
-        blocks.push(finalizeBlock(currentChunk, startMinutes as number))
+        blocks.push(finalizeBlock(currentChunk, startMinutes))
       }
       currentChunk = [item]
       startMinutes = itemMinutes
@@ -99,7 +109,7 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
 
   // Finalize the last chunk
   if (currentChunk.length > 0 && startMinutes !== null) {
-    blocks.push(finalizeBlock(currentChunk, startMinutes as number))
+    blocks.push(finalizeBlock(currentChunk, startMinutes))
   }
 
   function finalizeBlock(chunk: MemberScreenshotItem[], blockStartMins: number) {
@@ -211,16 +221,8 @@ export default function Every10MinPage() {
       return
     }
     setIsLoading(true)
-    // Perbaikan offset timezone dengan menggunakan local date components
-    const formatLocalDate = (d: Date) => {
-      const year = d.getFullYear()
-      const month = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
-
-    const startDate = dateRange.startDate ? formatLocalDate(dateRange.startDate) : ''
-    const endDate = dateRange.endDate ? formatLocalDate(dateRange.endDate) : ''
+    const startDate = formatDateLocal(dateRange.startDate)
+    const endDate = formatDateLocal(dateRange.endDate)
     const res = await getScreenshotsByMemberAndDate(
       Number(activeMemberId),
       startDate,
@@ -241,16 +243,8 @@ export default function Every10MinPage() {
       setInsightData(null)
       return
     }
-    // Format local date to avoid timezone shift to yesterday
-    const formatLocalDate = (d: Date) => {
-      const year = d.getFullYear()
-      const month = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
-
-    const startDate = dateRange.startDate ? formatLocalDate(dateRange.startDate) : ''
-    const endDate = dateRange.endDate ? formatLocalDate(dateRange.endDate) : ''
+    const startDate = formatDateLocal(dateRange.startDate)
+    const endDate = formatDateLocal(dateRange.endDate)
     const res = await getMemberInsightsSummary(Number(activeMemberId), startDate, endDate)
     if (res.success && res.data) {
       setInsightData(res.data)
@@ -296,19 +290,16 @@ export default function Every10MinPage() {
 
   const memberTimeBlocks = useMemo(() => {
     if (isLoading) return []
-    if (!activeMemberId || !dateStatus.isValid) {
-      console.log("[DEBUG 10min] memberTimeBlocks skipped:", { activeMemberId, isValid: dateStatus.isValid, dbScreenshotsLength: dbScreenshots.length, dateStatus })
-      return []
-    }
+    if (!activeMemberId || !dateStatus.isValid) return []
 
     const baseItems: MemberScreenshotItem[] = dbScreenshots.map(mapDbToItem)
-    console.log("[DEBUG 10min] mapped baseItems length:", baseItems.length, "db length:", dbScreenshots.length)
     if (baseItems.length === 0) return []
 
     let blocks: Array<{ label: string; summary: string; items: MemberScreenshotItem[] }> = []
 
     if (dateStatus.isYesterday) {
-      blocks = buildMemberTimeBlocks(baseItems, 6)
+      const filteredItems = baseItems.slice(0, Math.min(6, baseItems.length))
+      blocks = buildMemberTimeBlocks(filteredItems, 6)
     } else if (dateStatus.isRange && dateRange) {
       // Grupkan berdasarkan screenshot_date dari DB
       const groupedByDate = new Map<string, MemberScreenshotItem[]>()
@@ -355,6 +346,10 @@ export default function Every10MinPage() {
   }, [memberTimeBlocks, dateStatus, deletedScreenshots])
 
   const currentScreenshot = flattenedScreenshots[modalIndex]
+
+  if (!currentScreenshot && modalOpen) {
+    return null
+  }
 
   // Fetch saat mount pertama
   useEffect(() => {

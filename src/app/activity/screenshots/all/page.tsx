@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 import { MemberScreenshotItem } from "@/lib/data/dummy-data"
 import { getScreenshotsByMemberAndDate, type IScreenshotWithActivity } from "@/action/screenshots"
+import { formatDateLocal } from "@/utils/date-helper"
 import { useSelectedMemberContext } from "../selected-member-context"
 import { MemberScreenshotCard } from "@/components/activity/MemberScreenshotCard"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -182,28 +183,26 @@ export default function AllScreenshotsPage() {
       return
     }
     setIsLoading(true)
-    // Format local date to avoid timezone shift to yesterday
-    const formatLocalDate = (d: Date) => {
-      const year = d.getFullYear()
-      const month = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
-
-    const startDate = dateRange.startDate ? formatLocalDate(dateRange.startDate) : ''
-    const endDate = dateRange.endDate ? formatLocalDate(dateRange.endDate) : ''
-    const res = await getScreenshotsByMemberAndDate(
-      Number(activeMemberId),
-      startDate,
-      endDate
-    )
-    if (res.success && res.data) {
-      setDbScreenshots(res.data)
-    } else {
+    try {
+      const startDate = formatDateLocal(dateRange.startDate)
+      const endDate = formatDateLocal(dateRange.endDate)
+      const res = await getScreenshotsByMemberAndDate(
+        Number(activeMemberId),
+        startDate,
+        endDate
+      )
+      if (res.success && res.data) {
+        setDbScreenshots(res.data)
+      } else {
+        setDbScreenshots([])
+      }
+    } catch (err) {
+      console.error("Error fetching screenshots:", err)
       setDbScreenshots([])
+    } finally {
+      setIsLoading(false)
+      isFirstMount.current = false
     }
-    setIsLoading(false)
-    isFirstMount.current = false
   }, [activeMemberId, dateRange.startDate, dateRange.endDate])
 
   // Check date range validity
