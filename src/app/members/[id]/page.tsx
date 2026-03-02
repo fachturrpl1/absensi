@@ -162,7 +162,7 @@ function MemberProfileHeader({
             <DialogContent className="max-w-fit border-none bg-transparent p-0 shadow-none [&>button]:hidden">
               <DialogTitle className="sr-only">Profile Picture</DialogTitle>
               {resolvedPhotoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
+                 
                 <img
                   src={resolvedPhotoUrl}
                   alt={displayName}
