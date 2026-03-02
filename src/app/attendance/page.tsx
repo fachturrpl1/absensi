@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users, Clock, Target,
@@ -58,6 +58,7 @@ const COLORS = {
 };
 
 export default function AnalyticsPage() {
+  const supabase = createClient();
   const { organizationId } = useHydration();
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,6 +78,32 @@ export default function AnalyticsPage() {
     };
   });
 
+  const cacheRef = useRef<Map<string, AttendanceRecord[]>>(new Map());
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFetchRef = useRef<{ from: string; to: string } | null>(null);
+
+  const getCacheKey = useCallback((from: Date, to: Date): string => {
+    const fromStr = format(from, 'yyyy-MM-dd');
+    const toStr = format(to, 'yyyy-MM-dd');
+    return `${fromStr}_${toStr}`;
+  }, []);
+
+  const isCached = useCallback((from: Date, to: Date): boolean => {
+    const key = getCacheKey(from, to);
+    return cacheRef.current.has(key);
+  }, [getCacheKey]);
+
+  const getFromCache = useCallback((from: Date, to: Date): AttendanceRecord[] | null => {
+    const key = getCacheKey(from, to);
+    return cacheRef.current.get(key) || null;
+  }, [getCacheKey]);
+
+  // Save data ke cache
+  const saveToCache = useCallback((from: Date, to: Date, data: AttendanceRecord[]) => {
+    const key = getCacheKey(from, to);
+    cacheRef.current.set(key, data);
+  }, [getCacheKey]);
+
   useEffect(() => {
     if (!organizationId) {
       console.log('[DASHBOARD] Waiting for organization ID - orgId:', organizationId)
@@ -85,84 +112,114 @@ export default function AnalyticsPage() {
 
     console.log('[DASHBOARD] Starting to fetch data - orgId:', organizationId)
 
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const supabase = createClient();
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
 
-        if (!organizationId) {
-          console.log('[DASHBOARD] No organization ID from store');
-          setIsLoading(false);
-          return;
-        }
+    debounceTimerRef.current = setTimeout(() => {
+      const fetchData = async () => {
+        try {
+          if (isCached(dateRange.from, dateRange.to)) {
+            const cachedData = getFromCache(dateRange.from, dateRange.to);
+            console.log('[DASHBOARD] Using cached data');
+            setAllRecords(cachedData || []);
+            setIsLoading(false);
+            return;
+          }
 
-        const orgId = organizationId;
 
-        // Fetch master data - still safe as it only counts, doesn't return sensitive data
-        const [membersResult, deptsResult] = await Promise.all([
-          supabase
+          const cacheKey = {
+            from: format(dateRange.from, 'yyyy-MM-dd'),
+            to: format(dateRange.to, 'yyyy-MM-dd'),
+          };
+
+          if (lastFetchRef.current &&
+            lastFetchRef.current.from === cacheKey.from &&
+            lastFetchRef.current.to === cacheKey.to) {
+            console.log('[DASHBOARD] Duplicate fetch prevented');
+            return;
+          }
+
+          if (!organizationId) {
+            console.log('[DASHBOARD] No organization ID from store');
+            setIsLoading(false);
+            return;
+          }
+
+          const orgId = organizationId;
+
+          // Fetch master data - still safe as it only counts, doesn't return sensitive data
+          const [membersResult, deptsResult] = await Promise.all([
+            supabase
+              .from('organization_members')
+              .select('id', { count: 'exact', head: true })
+              .eq('organization_id', orgId)
+              .eq('is_active', true),
+            supabase
+              .from('departments')
+              .select('id, name', { count: 'exact' })
+              .eq('organization_id', orgId)
+          ]);
+
+          setMasterData({
+            totalMembers: membersResult.count || 0,
+            totalDepartments: deptsResult.count || 0,
+            averageTeamSize: (membersResult.count || 0) / (deptsResult.count || 1),
+          });
+
+          // Fetch active member list with departments to compute per-department member counts
+          const { data: memberRows } = await supabase
             .from('organization_members')
-            .select('id', { count: 'exact', head: true })
+            .select('id, is_active, departments:departments!organization_members_department_id_fkey(name)')
             .eq('organization_id', orgId)
-            .eq('is_active', true),
-          supabase
-            .from('departments')
-            .select('id, name', { count: 'exact' })
-            .eq('organization_id', orgId)
-        ]);
+            .eq('is_active', true);
 
-        setMasterData({
-          totalMembers: membersResult.count || 0,
-          totalDepartments: deptsResult.count || 0,
-          averageTeamSize: (membersResult.count || 0) / (deptsResult.count || 1),
-        });
+          const counts: Record<string, number> = {};
+          (memberRows || []).forEach((row: any) => {
+            // departments can be object or array depending on join
+            const depObj = Array.isArray(row.departments) ? row.departments[0] : row.departments;
+            const name: string = depObj?.name || 'Unknown';
+            counts[name] = (counts[name] || 0) + 1;
+          });
+          setDeptMemberCounts(counts);
 
-        // Fetch active member list with departments to compute per-department member counts
-        const { data: memberRows } = await supabase
-          .from('organization_members')
-          .select('id, is_active, departments:departments!organization_members_department_id_fkey(name)')
-          .eq('organization_id', orgId)
-          .eq('is_active', true);
+          // Fetch attendance records using secure API route (server-side filtering)
+          const toYMD = (d: Date) => format(d, 'yyyy-MM-dd');
+          const params = new URLSearchParams();
+          params.set('organizationId', String(orgId));
+          params.set('page', '1');
+          params.set('limit', '1000');
+          params.set('dateFrom', toYMD(dateRange.from));
+          params.set('dateTo', toYMD(dateRange.to));
 
-        const counts: Record<string, number> = {};
-        (memberRows || []).forEach((row: any) => {
-          // departments can be object or array depending on join
-          const depObj = Array.isArray(row.departments) ? row.departments[0] : row.departments;
-          const name: string = depObj?.name || 'Unknown';
-          counts[name] = (counts[name] || 0) + 1;
-        });
-        setDeptMemberCounts(counts);
+          const response = await fetch(`/api/attendance-records?${params.toString()}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+          });
+          const result = await response.json();
 
-        // Fetch attendance records using secure API route (server-side filtering)
-        const toYMD = (d: Date) => format(d, 'yyyy-MM-dd');
-        const params = new URLSearchParams();
-        params.set('organizationId', String(orgId));
-        params.set('page', '1');
-        params.set('limit', '1000');
-        params.set('dateFrom', toYMD(dateRange.from));
-        params.set('dateTo', toYMD(dateRange.to));
-
-        const response = await fetch(`/api/attendance-records?${params.toString()}`, {
-          method: 'GET',
-          credentials: 'same-origin',
-        });
-        const result = await response.json();
-
-        if (result.success && result.data) {
-          setAllRecords(result.data);
-        } else {
-          console.error('Failed to fetch attendance records:', result.message);
-          setAllRecords([]);
+          if (result.success && result.data) {
+            setAllRecords(result.data);
+          } else {
+            console.error('Failed to fetch attendance records:', result.message);
+            setAllRecords([]);
+          }
+        } catch (error) {
+          console.error('Error fetching data:', error);
+        } finally {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setIsLoading(false);
+      };
+
+      fetchData();
+    }, 500);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
     };
-
-    fetchData();
-  }, [organizationId, dateRange]);
+  }, [organizationId, dateRange, isCached, getFromCache, saveToCache]);
 
   const getFilterLabel = () => {
     if (!dateRange.preset) {
@@ -488,7 +545,7 @@ export default function AnalyticsPage() {
           </Card>
         </div>
       </motion.div>
-      
+
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
