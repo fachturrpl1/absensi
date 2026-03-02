@@ -90,7 +90,7 @@ export default function EditOrganizationMembersPage() {
     return (
         <div className="flex flex-1 flex-col gap-4 w-full min-w-0">
             <div className="w-full p-4 md:p-6 lg:p-8 min-w-0">
-                <MemberEditFormImproved 
+                <MemberEditFormImproved
                     initialValues={member}
                     rfidInitial={member.rfid_cards || undefined}
                 />

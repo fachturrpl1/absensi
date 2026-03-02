@@ -76,8 +76,6 @@ export default function KanbanPage() {
         setColumns(map)
     }, [tasks, taskStatuses])
 
-    // (Hilangkan statusById agar tidak error unused)
-
     // Called by Kanban.Root whenever a card is moved
     const handleColumnsChange = useCallback(
         async (newColumns: Record<string, ITask[]>) => {
