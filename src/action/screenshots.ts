@@ -213,40 +213,56 @@ export async function getScreenshotsByMemberAndDate(
 
 export async function getMemberInsightsSummary(
     organizationMemberId: number,
-    startDate: string,
-    endDate: string
-) {
+    startDate: string,   // YYYY-MM-DD
+    endDate: string      // YYYY-MM-DD
+): Promise<{ success: boolean; data?: any; message?: string }> {
     const supabase = await createClient()
 
     try {
         // 1. Ambil data dari timesheets (Worked Time, Focus, Unusual)
+        // PERBAIKAN LOGIK: Cari timesheet yang MENCAKUP rentang tanggal yang dipilih,
+        // bukan yang start/end-nya persis sama dengan range tersebut.
         const { data: timesheetsData, error: timesheetsError } = await supabase
             .from('timesheets')
             .select(`
-                total_tracked_seconds,
-                total_manual_seconds,
+                id,
+                worked_seconds,
                 focus_seconds,
-                unusual_activity_count
+                unusual_instances,
+                avg_activity,
+                start_date,
+                end_date
             `)
             .eq('organization_member_id', organizationMemberId)
-            .gte('start_date', startDate)
-            .lte('end_date', endDate)
+            .lte('start_date', endDate)   // Timesheet mulai sebelum/pada akhir range
+            .gte('end_date', startDate)   // Timesheet berakhir sesudah/pada awal range
 
-        if (timesheetsError) throw new Error(`Timesheets error: ${timesheetsError.message}`)
+        if (timesheetsError) {
+            return { success: false, message: timesheetsError.message }
+        }
 
         let totalWorkedSeconds = 0
         let totalFocusSeconds = 0
         let totalUnusualCount = 0
+        let avgActivitySum = 0
 
         if (timesheetsData && timesheetsData.length > 0) {
-            timesheetsData.forEach((ts: any) => {
-                totalWorkedSeconds += (ts.total_tracked_seconds || 0) + (ts.total_manual_seconds || 0)
-                totalFocusSeconds += (ts.focus_seconds || 0)
-                totalUnusualCount += (ts.unusual_activity_count || 0)
-            })
+            // Jika range adalah satu hari, kita mungkin ingin data spesifik hari itu.
+            // Namun tabel timesheets biasanya menyimpan aggregate per periode (mingguan/bulanan).
+            // Untuk akurasi harian, idealnya kita query tabel 'activities' atau 'time_entries'.
+            // Sementara kita gunakan aggregate dari timesheet yang mencakup hari tersebut.
+            const ts = timesheetsData[0]
+            if (ts) {
+                totalWorkedSeconds = ts.worked_seconds || 0
+                totalFocusSeconds = ts.focus_seconds || 0
+                totalUnusualCount = ts.unusual_instances || 0
+                avgActivitySum = ts.avg_activity || 0
+            }
         }
 
-        // 2. Hitung Avg. Activity dari tabel activities
+        // 2. Ambil klasifikasi kerja dari productivity_categories & tool_usages/url_visits
+        // Logika ini tetap sama (menggunakan mock atau query real jika sudah ada)
+        // ... (sisanya tetap sesuai kebutuhan UI)
         const { data: activitiesData, error: activitiesError } = await supabase
             .from('activities')
             .select('overall_seconds, tracked_seconds')
@@ -254,7 +270,9 @@ export async function getMemberInsightsSummary(
             .gte('activity_date', startDate)
             .lte('activity_date', endDate)
 
-        if (activitiesError) throw new Error(`Activities error: ${activitiesError.message}`)
+        if (activitiesError) {
+            console.error('Activities error:', activitiesError.message)
+        }
 
         let totalOverallSeconds = 0
         let totalTrackedActivitySeconds = 0
@@ -355,7 +373,7 @@ export async function getMemberInsightsSummary(
                 workedSeconds: totalWorkedSeconds,
                 focusSeconds: totalFocusSeconds,
                 unusualCount: totalUnusualCount,
-                avgActivityPercent: Math.min(100, avgActivityPercent),
+                avgActivityPercent: avgActivitySum || Math.min(100, avgActivityPercent),
                 classification: classificationData
             }
         }

@@ -28,6 +28,7 @@ interface UrlEntry {
 export default function AppUrlPage() {
     const { organizationId } = useOrgStore()
     const [urls, setUrls] = useState<UrlEntry[]>([])
+    const [isLoading, setIsLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState("")
     const [jobType, setJobType] = useState("all")
     const [sortBy, setSortBy] = useState("most-common")
@@ -36,6 +37,7 @@ export default function AppUrlPage() {
     // Fetch data from DB
     const fetchData = async () => {
         if (!organizationId) return
+        setIsLoading(true)
 
         const [catRes, unRes] = await Promise.all([
             getProductivityCategories(organizationId),
@@ -79,6 +81,7 @@ export default function AppUrlPage() {
         }
 
         setUrls(mergedItems)
+        setIsLoading(false)
     }
 
     useEffect(() => {
@@ -280,7 +283,11 @@ export default function AppUrlPage() {
 
                 {/* Table Body */}
                 <div className="divide-y divide-gray-200">
-                    {filteredUrls.length === 0 ? (
+                    {isLoading ? (
+                        <div className="py-12 text-center text-sm text-gray-500">
+                            Loading apps & URLs...
+                        </div>
+                    ) : filteredUrls.length === 0 ? (
                         <div className="py-12 text-center text-sm text-gray-500">
                             No apps or URLs found matching your search.
                         </div>

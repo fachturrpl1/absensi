@@ -55,7 +55,8 @@ export async function getUnclassifiedItems(organizationId: string | number) {
     if (memError || !orgMembers) {
         return { success: false, message: memError?.message || 'No members found', data: [] }
     }
-    const memberIds = orgMembers.map((m: { id: string | number }) => m.id)
+
+    const memberIds = (orgMembers || []).map((m: { id: number }) => m.id)
 
     // Fetch Apps
     const { data: apps, error: e1 } = await supabase
@@ -75,12 +76,12 @@ export async function getUnclassifiedItems(organizationId: string | number) {
     }
 
     // UNIQUE and Map
-    const uniqueApps = Array.from(new Set((apps || []).map((a: { tool_name: string }) => a.tool_name)))
-    const uniqueDomains = Array.from(new Set((domains || []).filter((d: { domain: string | null }) => d.domain).map((d: { domain: string }) => d.domain)))
+    const uniqueApps = Array.from(new Set((apps || []).map((a: any) => a.tool_name))) as string[]
+    const uniqueDomains = Array.from(new Set((domains || []).filter((d: any) => d.domain).map((d: any) => d.domain))) as string[]
 
     const unclassified: IUnclassifiedItem[] = [
-        ...uniqueApps.map(name => ({ name: name as string, type: 'app_name' as const })),
-        ...uniqueDomains.map(name => ({ name: name as string, type: 'domain' as const }))
+        ...uniqueApps.map(name => ({ name, type: 'app_name' as const })),
+        ...uniqueDomains.map(name => ({ name, type: 'domain' as const }))
     ]
 
     return { success: true, data: unclassified }

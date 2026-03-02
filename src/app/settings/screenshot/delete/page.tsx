@@ -73,20 +73,20 @@ export default function ScreenshotDeletePage() {
     return memberDeletes[memberId] !== undefined ? memberDeletes[memberId] : globalDelete
   }
 
-  // const setGlobalDeleteSetting = async (value: boolean) => {
-  //   setGlobalDelete(value)
-  //
-  //   if (!organizationId) return
-  //   try {
-  //     await upsertScreenshotSetting({
-  //       organization_id: Number(organizationId),
-  //       organization_member_id: null,
-  //       allow_delete: value
-  //     })
-  //   } catch (e) {
-  //     console.error("Failed to update global delete", e)
-  //   }
-  // }
+  const setGlobalDeleteSetting = async (value: boolean) => {
+    setGlobalDelete(value)
+
+    if (!organizationId) return
+    try {
+      await upsertScreenshotSetting({
+        organization_id: Number(organizationId),
+        organization_member_id: null,
+        allow_delete: value
+      })
+    } catch (e) {
+      console.error("Failed to update global delete", e)
+    }
+  }
 
   const handleMemberDeleteChange = async (memberId: string, checked: boolean) => {
     setMemberDeletes(prev => ({
@@ -146,7 +146,7 @@ export default function ScreenshotDeletePage() {
                   {/* Toggle Switch with Off/On labels */}
                   <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-200 p-1">
                     <button
-                      onClick={() => setGlobalDelete(false)}
+                      onClick={() => setGlobalDeleteSetting(false)}
                       className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${!globalDelete
                         ? "bg-white text-slate-900 shadow-sm"
                         : "bg-transparent text-slate-600"
@@ -155,7 +155,7 @@ export default function ScreenshotDeletePage() {
                       Off
                     </button>
                     <button
-                      onClick={() => setGlobalDelete(true)}
+                      onClick={() => setGlobalDeleteSetting(true)}
                       className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${globalDelete
                         ? "bg-white text-slate-900 shadow-sm"
                         : "bg-transparent text-slate-600"
