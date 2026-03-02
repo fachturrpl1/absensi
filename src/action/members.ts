@@ -469,7 +469,6 @@ export const getOrganizationMembersById = async (id: string) => {
     .select(`
     *,
     organizations:organization_id (*),
-    rfid_cards (card_number, card_type),
     role:system_roles!role_id (
       id,
       code,
@@ -486,7 +485,7 @@ export const getOrganizationMembersById = async (id: string) => {
 
   // If the member row exists, also fetch related user, department and position records
   try {
-     
+
     const member: any = data
 
     if (member) {
@@ -533,9 +532,20 @@ export const getOrganizationMembersById = async (id: string) => {
 
         if (!orgError && orgData) member.organization = orgData
       }
+
+      // Fetch RFID Card explicitly to be robust
+      const memberId = !isNaN(Number(member.id)) ? Number(member.id) : member.id;
+      const { data: rfidData, error: rfidError } = await supabase
+        .from("rfid_cards")
+        .select("*")
+        .eq("organization_member_id", memberId)
+        .maybeSingle()
+
+      if (!rfidError && rfidData) {
+        member.rfid_cards = rfidData
+      }
     }
   } catch (e) {
-
     memberLogger.warn('getOrganizationMembersById: failed to fetch related records', e)
   }
 

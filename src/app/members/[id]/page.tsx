@@ -162,7 +162,7 @@ function MemberProfileHeader({
             <DialogContent className="max-w-fit border-none bg-transparent p-0 shadow-none [&>button]:hidden">
               <DialogTitle className="sr-only">Profile Picture</DialogTitle>
               {resolvedPhotoUrl ? (
-                 
+
                 <img
                   src={resolvedPhotoUrl}
                   alt={displayName}
@@ -278,6 +278,11 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
     ? formatDate(recentAttendance?.[0]?.date)
     : "No recent activity"
 
+  const rfidCards = member.rfid_cards
+  const cardNumber = Array.isArray(rfidCards)
+    ? (rfidCards[0]?.card_member || rfidCards[0]?.card_number)
+    : ((rfidCards as any)?.card_member || (rfidCards as any)?.card_number)
+
   const handleSave = async () => {
     setIsSaving(true)
     setTimeout(() => setIsSaving(false), 1000)
@@ -383,6 +388,13 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
                   value={user?.date_of_birth ?? ""}
                   placeholder="YYYY-MM-DD"
                   type="date"
+                />
+
+                <FormField
+                  label="CARD NUMBER"
+                  value={cardNumber}
+                  placeholder="No card assigned"
+                  disabled={true}
                 />
               </div>
             </div>

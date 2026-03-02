@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { useMemo } from "react"  // ✅ TAMBAH INI
+import { useMemo } from "react"
 import {
     useTasksData,
     TasksHeader,
@@ -12,7 +12,6 @@ import { ITask } from "@/interface"
 export default function KanbanPage() {
     const { tasks, taskStatuses, isLoading } = useTasksData()
 
-    // ✅ OPTIMIZATION 1: Pre-compute tasks by status (O(n) vs O(n*m))
     const tasksByStatus = useMemo(() => {
         const map = new Map<number, ITask[]>()
         tasks.forEach(task => {
@@ -22,7 +21,6 @@ export default function KanbanPage() {
         return map
     }, [tasks])
 
-    // ✅ OPTIMIZATION 2: Sort by position_in_column (Trello order)
     const sortedTasksByStatus = useMemo(() => {
         return taskStatuses.map(status => ({
             ...status,
@@ -36,7 +34,6 @@ export default function KanbanPage() {
             <TasksHeader currentView="board" />
 
             <div className="mt-4">
-                {/* ✅ OPTIMIZED KANBAN - No more N+1! */}
                 <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide">
                     {sortedTasksByStatus.map((status) => (
                         <div key={status.id} className="flex-shrink-0 w-80 flex flex-col gap-4">
@@ -45,7 +42,6 @@ export default function KanbanPage() {
                                 style={{ borderTopColor: status.color || '#e5e7eb' }}
                             >
                                 <h3 className="font-semibold text-sm text-gray-900">{status.name}</h3>
-                                {/* ✅ DIRECT ACCESS - No filter! */}
                                 <span className="text-xs font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
                                     {status.tasks.length}
                                 </span>
@@ -56,7 +52,6 @@ export default function KanbanPage() {
                                 ) : status.tasks.length === 0 ? (
                                     <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">No tasks</div>
                                 ) : (
-                                    /* ✅ DIRECT ACCESS - No filter! */
                                     status.tasks.map((task: ITask) => (
                                         <div key={task.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md group">
                                             <h4 className="font-medium text-sm text-gray-900 leading-snug">{task.name}</h4>
