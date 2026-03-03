@@ -27,7 +27,7 @@ export default function ProjectGridView({ projects, selectedIds, onToggleSelect 
                             className="bg-white/80 backdrop-blur-sm border-gray-300 data-[state=checked]:bg-primary"
                         />
                     </div>
-                    <Link href={`/projects/${project.id}/member`} className="block h-full">
+                    <Link href={`/projects/${project.id}/tasks`} className="block h-full">
                         <Card className={cn(
                             "transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full flex flex-col border-gray-200 dark:border-gray-800",
                             selectedIds.includes(project.id) && "ring-2 ring-primary border-primary/50 bg-primary/[0.02]"
