@@ -80,18 +80,14 @@ export default function AnalyticsPage() {
 
   const [dateRange, setDateRange] = useState<DateFilterState>(initialDateRange);
 
-  // ✅ FIX 2: Refs untuk tracking state
   const cacheRef = useRef<Map<string, AttendanceRecord[]>>(new Map());
   const fetchInProgressRef = useRef<AbortController | null>(null);
   const lastFetchParamsRef = useRef<{ orgId: string; from: string; to: string } | null>(null);
 
-  // ✅ FIX 3: Simplify getCacheKey (no useCallback needed)
   const getCacheKey = (from: Date, to: Date): string => {
     return `${format(from, 'yyyy-MM-dd')}_${format(to, 'yyyy-MM-dd')}`;
   };
 
-
-  // ✅ FIX 4: Effect 1 - Trigger saat organizationId berubah ONLY
   useEffect(() => {
     if (!organizationId) {
       console.log('[DASHBOARD] Waiting for organization ID');
@@ -217,7 +213,7 @@ export default function AnalyticsPage() {
       return;
     }
 
-    // Check duplicate request
+
     const fetchKey = {
       orgId: String(orgId),
       from: format(range.from, 'yyyy-MM-dd'),

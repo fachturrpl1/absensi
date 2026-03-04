@@ -576,8 +576,6 @@ export default function TimesheetApprovalsPage() {
                 />
             </div>
 
-
-
             <ApprovalDetailDialog
                 open={detailDialogOpen}
                 onOpenChange={setDetailDialogOpen}

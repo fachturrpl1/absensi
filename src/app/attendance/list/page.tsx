@@ -6,7 +6,7 @@ import { useOrgStore } from "@/store/org-store"
 import { formatInTimeZone } from "date-fns-tz"
 import type { GetAttendanceResult, AttendanceListItem } from "@/action/attendance"
 import Link from "next/link"
-import { Card, CardContent } from "@/components/ui/card"
+import { CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/utils/supabase/client"
 import { Input } from "@/components/ui/input"
@@ -82,7 +82,7 @@ const AttendanceRowPure: React.FC<AttendanceRowProps> = ({
           type="checkbox"
           checked={isSelected}
           onChange={(e) => onToggleSelect(record.id, e.target.checked)}
-          className="rounded border-gray-300"
+          className="rounded"
         />
       </td>
 
@@ -557,13 +557,13 @@ function ModernAttendanceListCloned() {
   return (
     <>
       <style jsx global>{`
-        html body .custom-hover-row:hover,
-        html body .custom-hover-row:hover > td {
-          background-color: #d1d5db !important;
+        .custom-hover-row:hover,
+        .custom-hover-row:hover > td {
+          background-color: #f4f4f5 !important;
         }
-        html body.dark .custom-hover-row:hover,
-        html body.dark .custom-hover-row:hover > td {
-          background-color: #374151 !important;
+        .dark .custom-hover-row:hover,
+        .dark .custom-hover-row:hover > td {
+          background-color: #27272a !important;
         }
       `}</style>
 
@@ -581,7 +581,7 @@ function ModernAttendanceListCloned() {
               placeholder="Search..."
               value={queryParams.search}
               onChange={(e) => updateQueryParams({ search: e.target.value })}
-              className="pl-10 border-gray-300 bg-white w-full"
+              className="pl-10 bg-white w-full"
             />
           </div>
 
@@ -612,7 +612,7 @@ function ModernAttendanceListCloned() {
                   value={queryParams.status}
                   onValueChange={(v) => updateQueryParams({ status: v })}
                 >
-                  <SelectTrigger className="w-full md:w-[140px] border-gray-300 bg-white">
+                  <SelectTrigger className="w-full md:w-[140px] bg-white">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -624,7 +624,7 @@ function ModernAttendanceListCloned() {
                   </SelectContent>
                 </Select>
               ) : (
-                <div className="w-full md:w-[140px] h-9 border border-gray-300 rounded bg-muted/50" />
+                <div className="w-full md:w-[140px] h-9 border rounded bg-muted/50" />
               )}
             </div>
 
@@ -635,7 +635,7 @@ function ModernAttendanceListCloned() {
                   value={queryParams.department}
                   onValueChange={(v) => updateQueryParams({ department: v })}
                 >
-                  <SelectTrigger className="w-full md:w-40 border-gray-300 bg-white">
+                  <SelectTrigger className="w-full md:w-40 bg-white">
                     <SelectValue placeholder="Groups" />
                   </SelectTrigger>
                   <SelectContent>
@@ -646,7 +646,7 @@ function ModernAttendanceListCloned() {
                   </SelectContent>
                 </Select>
               ) : (
-                <div className="w-full md:w-40 h-9 border border-gray-300 rounded bg-muted/50" />
+                <div className="w-full md:w-40 h-9 border rounded bg-muted/50" />
               )}
             </div>
           </div>
@@ -663,7 +663,7 @@ function ModernAttendanceListCloned() {
             </Button>
 
             <Link href="/attendance/list/import" className="flex-1 md:flex-none">
-              <Button variant="outline" className="w-full border-gray-300 bg-white whitespace-nowrap">
+              <Button variant="outline" className="w-full bg-white whitespace-nowrap">
                 <Download className="mr-2 h-4 w-4" />
                 Import
               </Button>
@@ -719,8 +719,8 @@ function ModernAttendanceListCloned() {
       </div>
 
       {/* Table */}
-      <div className="space-y-6">
-        <Card>
+      <div className="">
+        <div>
           <CardContent className="p-0">
             <div className="overflow-x-auto w-full">
               <table className="w-full min-w-[880px]">
@@ -731,7 +731,7 @@ function ModernAttendanceListCloned() {
                         type="checkbox"
                         checked={selectedIds.size === data.items.length && data.items.length > 0}
                         onChange={() => selectAll()}
-                        className="rounded border-gray-300"
+                        className="rounded"
                       />
                     </th>
                     <th className="p-3 text-left text-xs font-medium">Member</th>
@@ -789,7 +789,7 @@ function ModernAttendanceListCloned() {
               </table>
             </div>
           </CardContent>
-        </Card>
+        </div>
 
         {/* Pagination */}
         {!loading && data.total > queryParams.limit && (
