@@ -196,7 +196,7 @@ export async function getUserOrganizations(): Promise<{
   console.log('🔍 getUserOrganizations: User authenticated:', user.id)
 
   const { data: orgMembers, error: orgMembersError } = await supabase
-        .from("organization_members")
+    .from("organization_members")
     .select(`
       id,
       organization_id,
@@ -220,8 +220,8 @@ export async function getUserOrganizations(): Promise<{
     .eq("user_id", user.id)
     .eq("is_active", true)
 
-    console.log('🔍 getUserOrganizations: Query result:', orgMembers)
-    console.log('🔍 getUserOrganizations: Query error:', orgMembersError)
+  console.log('🔍 getUserOrganizations: Query result:', orgMembers)
+  console.log('🔍 getUserOrganizations: Query error:', orgMembersError)
   if (orgMembersError) {
     return { success: false, message: "Failed to fetch organizations" };
   }
@@ -260,8 +260,8 @@ export async function getUserOrganizations(): Promise<{
     }
   }
 
-    return {
-      success: true,
+  return {
+    success: true,
     organizations,
   };
 }
@@ -348,9 +348,33 @@ export async function createOrganization(
       });
       return {
         success: false,
-        message: "Failed to create organization",
+        message: orgError?.message || "Failed to create organization",
         error: orgError?.message || "Database error",
       };
+    }
+
+    // Ensure user_profiles record exists BEFORE adding to organization_members
+    // The FK organization_members_user_id_fkey references user_profiles(id), not auth.users(id)
+    // New users may not have a user_profiles record if the trigger didn't fire
+    const { error: profileCheckError } = await adminClient
+      .from("user_profiles")
+      .upsert(
+        {
+          id: user.id,
+          email: user.email || "",
+          first_name: user.user_metadata?.first_name || user.user_metadata?.name?.split(" ")[0] || "",
+          last_name: user.user_metadata?.last_name || user.user_metadata?.name?.split(" ").slice(1).join(" ") || "",
+        },
+        { onConflict: "id", ignoreDuplicates: true }
+      );
+
+    if (profileCheckError) {
+      console.error("[CREATE-ORG] Error ensuring user_profiles exists:", {
+        message: profileCheckError.message,
+        details: profileCheckError.details,
+        code: profileCheckError.code,
+      });
+      // Log but continue — record might already exist (ignoreDuplicates handles it)
     }
 
     // Add user as organization member (without biodata, so they won't appear in export)
@@ -520,9 +544,9 @@ export async function getOrganizationRoles(organizationId: number): Promise<{
         })
       }
     }
-    }
+  }
 
-    return {
+  return {
     success: true,
     roles,
   };
@@ -652,7 +676,7 @@ export async function getAvailableTimezones(): Promise<string[]> {
   try {
     // Node 18 supports Intl.supportedValuesOf
     // Provide fallback to a minimal list if not available
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const intl: any = Intl as any;
     if (typeof intl.supportedValuesOf === "function") {
       return intl.supportedValuesOf("timeZone");

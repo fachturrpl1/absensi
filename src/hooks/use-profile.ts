@@ -83,44 +83,65 @@ export function useProfileRefresh() {
 /**
  * Hook for handling profile photo URL
  * Returns properly formatted profile photo URL with support for new folder structure
+ *
+ * Storage structure: profile-photos/users/{userId}/filename.webp
+ * DB may store: full https URL (new) OR just filename (old)
  */
-export function useProfilePhotoUrl(profilePhotoUrl?: string) {
+export function useProfilePhotoUrl(profilePhotoUrl?: string, userId?: string) {
   const getValidProfilePhotoUrl = () => {
-    if (!profilePhotoUrl) return undefined
-    
-    // Check if it's a complete URL (already processed)
+    if (!profilePhotoUrl || profilePhotoUrl === '' || profilePhotoUrl === 'null' || profilePhotoUrl === 'undefined') {
+      return undefined
+    }
+
+    // If value is exactly the userId (UUID), it's invalid/corrupted data
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (uuidRegex.test(profilePhotoUrl) && profilePhotoUrl === userId) {
+      return undefined
+    }
+
+    // New uploads store the full public URL — use as-is
     if (profilePhotoUrl.startsWith('http')) {
       return profilePhotoUrl
     }
-    
-    // Handle Supabase storage URL construction
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    if (supabaseUrl) {
-      
-      let constructedUrl = ''
-      
-      if (profilePhotoUrl.startsWith('/storage/v1/object/public/')) {
-        // Already a full storage path
-        constructedUrl = `${supabaseUrl}${profilePhotoUrl}`
-      } else if (profilePhotoUrl.startsWith('profile-photos/')) {
-        // Bucket relative path
-        constructedUrl = `${supabaseUrl}/storage/v1/object/public/${profilePhotoUrl}`
-      } else if (profilePhotoUrl.includes('/profile-photos/') || profilePhotoUrl.includes('users/')) {
-        // Contains profile-photos or users path
-        const cleanPath = profilePhotoUrl.replace(/^\//, '') // Remove leading slash
-        constructedUrl = `${supabaseUrl}/storage/v1/object/public/profile-photos/${cleanPath}`
-      } else {
-        // Fallback: treat as filename in profile-photos bucket
-        const cleanPath = profilePhotoUrl.replace(/^\//, '')
-        constructedUrl = `${supabaseUrl}/storage/v1/object/public/profile-photos/${cleanPath}`
-      }
-      
-      return constructedUrl
+    if (!supabaseUrl) {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || ''
+      return `${baseUrl}${profilePhotoUrl.startsWith('/') ? '' : '/'}${profilePhotoUrl}`
     }
-    
-    // Fallback: If it's a relative path, prepend API base URL
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || ''
-    return `${baseUrl}${profilePhotoUrl.startsWith('/') ? '' : '/'}${profilePhotoUrl}`
+
+    const base = `${supabaseUrl}/storage/v1/object/public/profile-photos`
+
+    if (profilePhotoUrl.startsWith('/storage/v1/object/public/')) {
+      // Full Supabase storage path (without host)
+      return `${supabaseUrl}${profilePhotoUrl}`
+    }
+
+    if (profilePhotoUrl.startsWith('profile-photos/')) {
+      // Relative path starting from bucket name
+      return `${supabaseUrl}/storage/v1/object/public/${profilePhotoUrl}`
+    }
+
+    if (profilePhotoUrl.includes('/profile-photos/')) {
+      const cleanPath = profilePhotoUrl.replace(/^\//, '')
+      return `${supabaseUrl}/storage/v1/object/public/${cleanPath}`
+    }
+
+    // Legacy data format: All legacy filenames or old paths are now resolved via mass-profile folder
+    let cleanFilename = profilePhotoUrl.replace(/^\//, '')
+
+    // Strip deprecated 'users/{id}/' prefix if present
+    if (cleanFilename.startsWith('users/')) {
+      const parts = cleanFilename.split('/')
+      cleanFilename = parts[parts.length - 1] || ''
+    }
+
+    if (cleanFilename.startsWith('mass-profile/')) {
+      return `${base}/${cleanFilename}`
+    }
+
+    // Default fallback: assume file is in mass-profile folder
+    return `${base}/mass-profile/${cleanFilename}`
   }
 
   return getValidProfilePhotoUrl()
@@ -134,7 +155,7 @@ export function useProfilePhotoDelete() {
   const { refreshProfile } = useProfileRefresh()
   const setUser = useAuthStore((state) => state.setUser)
   const currentUser = useAuthStore((state) => state.user)
-  
+
   const deleteProfilePhoto = async (): Promise<{
     success: boolean
     message: string
@@ -142,20 +163,20 @@ export function useProfilePhotoDelete() {
     try {
       // Import the delete function dynamically to avoid circular imports
       const { deleteUserProfilePhoto } = await import('@/action/account')
-      
+
       const result = await deleteUserProfilePhoto()
-      
+
       if (result.success && currentUser) {
         // Update user data in store immediately
         setUser({
           ...currentUser,
           profile_photo_url: null, // Use null instead of undefined
         })
-        
+
         // Refresh from server to ensure consistency
         await refreshProfile()
       }
-      
+
       return result
     } catch (error) {
       logger.error('Delete profile photo error:', error)
@@ -165,6 +186,6 @@ export function useProfilePhotoDelete() {
       }
     }
   }
-  
+
   return { deleteProfilePhoto }
 }

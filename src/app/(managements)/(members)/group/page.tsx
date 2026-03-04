@@ -4,6 +4,7 @@ import React from "react"
 import { DataTable } from "@/components/tables/data-table"
 import { Button } from "@/components/ui/button"
 import { useQueryClient } from "@tanstack/react-query"
+import { useSearchParams } from "next/navigation"
 import { Plus, Group as GroupIcon, Pencil, Trash, Search, RotateCcw, ChevronRight, FileSpreadsheet } from "lucide-react"
 import {
   Empty,
@@ -85,12 +86,15 @@ export default function GroupsPage() {
   const { isHydrated, organizationId } = useHydration()
   useOrgGuard()
 
+  const searchParams = useSearchParams()
+  const q = searchParams.get("q") || ""
+
   const [isModalOpen, setIsModalOpen] = React.useState(false)
   const [editingDetail, setEditingDetail] = React.useState<IGroup | null>(null)
   const [groups, setGroups] = React.useState<IGroup[]>([])
   const [organizations, setOrganizations] = React.useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = React.useState<boolean>(true)
-  const [searchQuery, setSearchQuery] = React.useState("")
+  const [searchQuery, setSearchQuery] = React.useState(q)
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [sortOrder] = React.useState("z-a")
 

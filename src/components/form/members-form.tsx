@@ -107,11 +107,12 @@ export default function MembersForm({
 
                 if (user) {
                     // 🔑 2. fetch organization_id from organization_members
-                    const { data: member } = await supabase
+                    const { data: memberships } = await supabase
                         .from("organization_members")
                         .select("organization_id")
-                        .eq("user_id", user.id)
-                        .maybeSingle();
+                        .eq("user_id", user.id);
+
+                    const member = memberships?.[0];
 
                     if (member) {
                         // set directly on the form

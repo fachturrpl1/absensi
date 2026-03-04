@@ -152,8 +152,8 @@ export async function getUserOrganizations(): Promise<{
   message?: string
   organizations?: Organization[]
 }> {
+  // Gunakan regular client untuk autentikasi user
   const supabase = await createClient()
-
   const { data: { user }, error: userError } = await supabase.auth.getUser()
 
   if (userError || !user) {
@@ -162,75 +162,103 @@ export async function getUserOrganizations(): Promise<{
 
   console.log('🔍 getUserOrganizations: User authenticated:', user.id)
 
-  const { data: orgMembers, error: orgMembersError } = await supabase
-    .from("organization_members")
-    .select(`
-      id,
-      organization_id,
-      organizations!inner (
-        id,
-        name,
-        code,
-        timezone,
-        country_code,
-        is_active,
-        deleted_at
-      ),
-      organization_member_roles (
-        id,
-        system_roles (
-          id,
-          code,
-          name,
-          description
-        )
-      )
-    `)
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .eq("organizations.is_active", true)
-    .is("organizations.deleted_at", null)
+  // Gunakan admin client (service role) untuk bypass RLS pada tabel organization_members
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 
-  console.log('🔍 getUserOrganizations: Query result:', orgMembers)
-  console.log('🔍 getUserOrganizations: Query error:', orgMembersError)
+  const { createClient: createAdminClient } = await import("@supabase/supabase-js")
+  const adminClient = serviceRoleKey
+    ? createAdminClient(supabaseUrl, serviceRoleKey)
+    : supabase
+
+  // QUERY 1: Ambil semua organization_members untuk user ini
+  const { data: orgMembers, error: orgMembersError } = await adminClient
+    .from("organization_members")
+    .select("id, organization_id, is_active")
+    .eq("user_id", user.id)
+
+  console.log('🔍 getUserOrganizations: orgMembers raw:', orgMembers)
+  console.log('🔍 getUserOrganizations: orgMembers error:', orgMembersError)
+
   if (orgMembersError) {
-    return { success: false, message: "Failed to fetch organizations" }
+    return { success: false, message: "Failed to fetch member records" }
   }
 
-  const organizations: Organization[] = []
+  if (!orgMembers || orgMembers.length === 0) {
+    console.log('🔍 getUserOrganizations: No member records found')
+    return { success: true, organizations: [] }
+  }
 
-  if (orgMembers && orgMembers.length > 0) {
-    for (const member of orgMembers) {
-      const org = member.organizations as any
-      const roles: Role[] = []
+  // Filter: hanya yang aktif (is_active tidak false)
+  const activeMembers = orgMembers.filter(m => m.is_active !== false)
+  if (activeMembers.length === 0) {
+    return { success: true, organizations: [] }
+  }
 
-      if (member.organization_member_roles && Array.isArray(member.organization_member_roles)) {
-        for (const memberRole of member.organization_member_roles) {
-          if (memberRole.system_roles && Array.isArray(memberRole.system_roles) && memberRole.system_roles.length > 0) {
-            const role = memberRole.system_roles[0]!
-            roles.push({
-              id: role.id,
-              code: role.code,
-              name: role.name,
-              description: role.description,
-            })
-          }
-        }
+  const orgIds = activeMembers.map(m => m.organization_id).filter(Boolean)
+  const memberIds = activeMembers.map(m => m.id)
+
+  // QUERY 2: Ambil data organizations
+  const { data: orgsData } = await adminClient
+    .from("organizations")
+    .select("id, name, code, timezone, country_code, is_active, deleted_at")
+    .in("id", orgIds)
+
+  const orgMap: Record<number, any> = {}
+  if (orgsData) {
+    for (const org of orgsData) {
+      if (!org.deleted_at) {  // skip yang sudah dihapus
+        orgMap[org.id] = org
       }
+    }
+  }
 
-      if (org) {
-        organizations.push({
-          id: org.id,
-          name: org.name,
-          code: org.code,
-          timezone: org.timezone,
-          country_code: org.country_code,
-          roles,
+  // QUERY 3: Ambil roles untuk semua member
+  const { data: rolesData } = await adminClient
+    .from("organization_member_roles")
+    .select(`
+      organization_member_id,
+      system_roles (
+        id, code, name, description
+      )
+    `)
+    .in("organization_member_id", memberIds)
+
+  // Build roles map per member
+  const rolesMap: Record<number, Role[]> = {}
+  if (rolesData) {
+    for (const r of rolesData) {
+      const memberId = r.organization_member_id
+      if (!rolesMap[memberId]) rolesMap[memberId] = []
+      const sr = Array.isArray(r.system_roles) ? r.system_roles[0] : (r.system_roles as any)
+      if (sr?.id) {
+        rolesMap[memberId].push({
+          id: sr.id,
+          code: sr.code,
+          name: sr.name,
+          description: sr.description,
         })
       }
     }
   }
 
+  // Build final organizations list
+  const organizations: Organization[] = []
+  for (const member of activeMembers) {
+    const org = orgMap[member.organization_id]
+    if (!org) continue  // org tidak ditemukan atau sudah dihapus
+
+    organizations.push({
+      id: org.id,
+      name: org.name,
+      code: org.code,
+      timezone: org.timezone,
+      country_code: org.country_code,
+      roles: rolesMap[member.id] || [],
+    })
+  }
+
+  console.log('🔍 getUserOrganizations: Returning', organizations.length, 'organizations:', organizations.map(o => o.name))
   return {
     success: true,
     organizations,

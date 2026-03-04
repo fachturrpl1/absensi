@@ -438,13 +438,26 @@ export interface IMemberInvitation {
     position?: IPositions;
 }
 
+export interface ITaskStatus {
+    id: number;
+    organization_id: number;
+    code: string;
+    name: string;
+    color: string;
+    position: number;
+    wip_limit?: number | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
 export interface ITask {
     id: number;
     project_id: number;
     parent_task_id?: number | null;
+    status_id: number;
+    position_in_column: number;
     name: string;
     description?: string | null;
-    status: 'todo' | 'in_progress' | 'review' | 'done' | 'archived' | 'deleted';
     priority: 'low' | 'medium' | 'high' | 'urgent';
     estimated_hours?: number | null;
     actual_hours?: number;
@@ -462,6 +475,7 @@ export interface ITask {
         }>;
     };
     assignees?: ITaskAssignee[];
+    task_status?: ITaskStatus;
 }
 
 export interface ITaskAssignee {

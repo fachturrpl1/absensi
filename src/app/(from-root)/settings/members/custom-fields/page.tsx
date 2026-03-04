@@ -55,7 +55,7 @@ export default function CustomFieldsPage() {
       {/* Main Content */}
       <div className="flex flex-1 w-full">
         {/* Left Sidebar */}
-        <MembersSidebar activeItem="profile-fields" />
+        {/* <MembersSidebar activeItem="profile-fields" /> */}
 
         {/* Main Content Area */}
         <div className="flex-1 p-6">

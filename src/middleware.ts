@@ -282,6 +282,6 @@ export const config = {
   // Exclude static assets, api routes, and PWA files from auth middleware
   // API routes will handle their own authentication
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/|sw.js|workbox-.*\\.js|manifest.json|offline).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/|sw.js|workbox-.*\\.js|manifest.json|offline|icons/).*)",
   ],
 }

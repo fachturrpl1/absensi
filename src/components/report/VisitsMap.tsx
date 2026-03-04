@@ -36,7 +36,7 @@ interface VisitsMapProps {
 
 export default function VisitsMap({ visits }: VisitsMapProps) {
     useEffect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         delete (L.Icon.Default.prototype as any)._getIconUrl
         L.Icon.Default.mergeOptions({
             iconUrl,

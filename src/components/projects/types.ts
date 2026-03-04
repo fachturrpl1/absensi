@@ -10,6 +10,7 @@ export type Project = {
   clientName?: string | null
   teams: string[]
   members: Member[]
+  taskCount: number
   budgetLabel: string
   memberLimitLabel: string
   archived: boolean

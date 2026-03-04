@@ -1,5 +1,5 @@
-// Centralized lucide-react icon re-exports for Presensi
-// Includes icons used in the Presensi project (and copied from Shadboard where needed)
+// Centralized lucide-react icon re-exports for Absensi
+// Includes icons used in the Absensi project (and copied from Shadboard where needed)
 
 import type { LucideIcon } from "lucide-react";
 export type { LucideIcon } from "lucide-react";

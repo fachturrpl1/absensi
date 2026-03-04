@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { createBrowserClient } from "@supabase/ssr";
 
-import { resetPassword } from "@/action/users";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -23,35 +23,90 @@ const FormSchema = z
 
 export function ResetPasswordForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  useEffect(() => {
+    const setupSession = async () => {
+      // PKCE flow: URL berisi ?code=xxx
+      const code = searchParams.get("code");
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (!exchangeError) {
+          setSessionReady(true);
+          return;
+        } else {
+          setError("Link reset password sudah tidak valid atau expired. Silakan request ulang.");
+          return;
+        }
+      }
+
+      // Legacy flow: cek existing session atau hash token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setSessionReady(true);
+        return;
+      }
+
+      // Listen untuk PASSWORD_RECOVERY event (implicit flow)
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+        if (event === "PASSWORD_RECOVERY") {
+          setSessionReady(true);
+        }
+      });
+
+      // Timeout: setelah 5 detik tidak ada session, kasih error
+      const timeout = setTimeout(() => {
+        if (!sessionReady) {
+          setError("Session tidak ditemukan. Silakan klik link dari email lagi.");
+        }
+        subscription.unsubscribe();
+      }, 5000);
+
+      return () => {
+        clearTimeout(timeout);
+        subscription.unsubscribe();
+      };
+    };
+
+    setupSession();
+  }, []);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
-    defaultValues: {
-      password: "",
-      confirmPassword: "",
-    },
+    defaultValues: { password: "", confirmPassword: "" },
   });
 
   const onSubmit = async (values: z.infer<typeof FormSchema>) => {
+    if (!sessionReady) {
+      setError("Session belum siap. Gunakan link dari email.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(null);
 
-    const formData = new FormData();
-    formData.append("password", values.password);
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: values.password,
+    });
 
-    const result = await resetPassword(formData);
-
-    if (!result.success) {
-      setError(result.message || "Failed to update password.");
+    if (updateError) {
+      setError(updateError.message);
       setLoading(false);
       return;
     }
 
-    setSuccess(result.message || "Password updated successfully.");
+    await supabase.auth.signOut();
+    setSuccess("Password berhasil diubah. Silakan login kembali.");
     setLoading(false);
 
     setTimeout(() => {
@@ -89,10 +144,15 @@ export function ResetPasswordForm() {
           )}
         />
 
+        {!sessionReady && !error && (
+          <p className="text-sm text-amber-500">
+            ⏳ Memverifikasi session...
+          </p>
+        )}
         {error && <p className="text-sm text-red-500">{error}</p>}
         {success && <p className="text-sm text-green-600">{success}</p>}
 
-        <Button className="w-full" type="submit" disabled={loading}>
+        <Button className="w-full" type="submit" disabled={loading || !sessionReady}>
           {loading ? "Saving..." : "Save New Password"}
         </Button>
       </form>

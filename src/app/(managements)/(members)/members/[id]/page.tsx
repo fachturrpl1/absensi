@@ -11,8 +11,10 @@ import {
 } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { UserAvatar } from "@/components/common/user-avatar"
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog"
+import { useProfilePhotoUrl } from "@/hooks/use-profile"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,8 +32,6 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useProfilePhotoUrl } from "@/hooks/use-profile"
-import { getUserInitials } from "@/lib/avatar-utils"
 import type { IOrganization_member, IMemberPerformance, IUser } from "@/interface"
 import { cn } from "@/lib/utils"
 // Server Actions
@@ -126,9 +126,9 @@ function FormField({
 }
 
 function MemberProfileHeader({
-  user,
   displayName,
   photoUrl,
+  userId,
   joinDate,
   email,
   lastTracked,
@@ -136,26 +136,45 @@ function MemberProfileHeader({
   user?: IUser
   displayName: string
   photoUrl?: string
+  userId?: string
   joinDate: string
   email: string
   lastTracked: string
 }) {
+  const resolvedPhotoUrl = useProfilePhotoUrl(photoUrl, userId)
+
   return (
     <div className="flex gap-8 mb-6 pb-6">
       {/* Left: Avatar */}
       <div className="flex-shrink-0">
         <div className="flex flex-col items-center text-center">
-          <Avatar className="h-20 w-20">
-            <AvatarImage src={photoUrl} alt={displayName} />
-            <AvatarFallback className="bg-gray-100 text-gray-700 text-lg font-semibold">
-              {getUserInitials(
-                user?.first_name,
-                user?.last_name,
-                user?.display_name ?? undefined,
-                user?.email ?? undefined
+          <Dialog>
+            <DialogTrigger asChild>
+              <div className="cursor-pointer hover:opacity-80 transition-opacity rounded-full ring-2 ring-transparent hover:ring-primary/20 ring-offset-2">
+                <UserAvatar
+                  name={displayName}
+                  photoUrl={photoUrl}
+                  userId={userId}
+                  size={20}
+                />
+              </div>
+            </DialogTrigger>
+            <DialogContent className="max-w-fit border-none bg-transparent p-0 shadow-none [&>button]:hidden">
+              <DialogTitle className="sr-only">Profile Picture</DialogTitle>
+              {resolvedPhotoUrl ? (
+
+                <img
+                  src={resolvedPhotoUrl}
+                  alt={displayName}
+                  className="max-h-[85vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
+                />
+              ) : (
+                <div className="w-64 h-64 bg-slate-100 rounded-full flex items-center justify-center text-5xl text-slate-400 font-semibold shadow-xl">
+                  {displayName.split(/\s+/).filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase()}
+                </div>
               )}
-            </AvatarFallback>
-          </Avatar>
+            </DialogContent>
+          </Dialog>
           <p className="mt-3 text-xs text-muted-foreground">
             Joined
             <br />
@@ -237,8 +256,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
   const user: IUser | undefined = member.user
   const email = user?.email || ""
   const phone = user?.phone || ""
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const photoUrl = useProfilePhotoUrl(user?.profile_photo_url ?? undefined) ?? undefined
+
 
   const displayName = user
     ? [user.first_name, user.middle_name, user.last_name]
@@ -259,6 +277,11 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
   const lastTracked = mounted && recentAttendance && recentAttendance.length > 0
     ? formatDate(recentAttendance?.[0]?.date)
     : "No recent activity"
+
+  const rfidCards = member.rfid_cards
+  const cardNumber = Array.isArray(rfidCards)
+    ? (rfidCards[0]?.card_member || rfidCards[0]?.card_number)
+    : ((rfidCards as any)?.card_member || (rfidCards as any)?.card_number)
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -341,9 +364,9 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
       <div className="px-4 py-6">
 
         <MemberProfileHeader
-          user={user}
           displayName={displayName}
-          photoUrl={photoUrl}
+          photoUrl={user?.profile_photo_url || undefined}
+          userId={user?.id}
           joinDate={joinDate}
           email={email}
           lastTracked={lastTracked}
@@ -365,6 +388,13 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
                   value={user?.date_of_birth ?? ""}
                   placeholder="YYYY-MM-DD"
                   type="date"
+                />
+
+                <FormField
+                  label="CARD NUMBER"
+                  value={cardNumber}
+                  placeholder="No card assigned"
+                  disabled={true}
                 />
               </div>
             </div>

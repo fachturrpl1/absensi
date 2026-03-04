@@ -8,10 +8,9 @@ import {
   X,
   ArrowUpDown,
 } from "lucide-react"
-import {
-  generateMemberScreenshots,
-  MemberScreenshotItem,
-} from "@/lib/data/dummy-data"
+import { MemberScreenshotItem } from "@/lib/data/dummy-data"
+import { getScreenshotsByMemberAndDate, type IScreenshotWithActivity } from "@/action/screenshots"
+import { formatDateLocal } from "@/utils/date-helper"
 import { useSelectedMemberContext } from "../selected-member-context"
 import { MemberScreenshotCard } from "@/components/activity/MemberScreenshotCard"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -52,22 +51,71 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
     return []
   }
 
-  // Sort items by time instead of shuffling
+  // Sort items by time
   const sorted = [...items].sort((a, b) => {
     const timeA = parseTimeForSort(a.time)
     const timeB = parseTimeForSort(b.time)
     return timeA - timeB
   })
 
-  const blocks = []
-  for (let i = 0; i < sorted.length; i += chunkSize) {
-    const chunk = sorted.slice(i, i + chunkSize)
+  const formatTimeFromHoursMinutes = (hours: number, minutes: number): string => {
+    let displayHours = hours
+    let period = 'am'
+    if (hours >= 12) {
+      period = 'pm'
+      if (hours > 12) displayHours = hours - 12
+    }
+    if (displayHours === 0) displayHours = 12
+    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`
+  }
 
-    // Pastikan chunk selalu memiliki 6 item, jika kurang tambahkan "No activity" placeholder
+  const blocks = []
+  let currentChunk: MemberScreenshotItem[] = []
+  let startMinutes: number | null = null
+
+  for (let i = 0; i < sorted.length; i++) {
+    const item = sorted[i]
+    if (!item) continue
+
+    const itemMinutes = parseTimeForSort(item.time)
+
+    // Start a new block if:
+    // 1. No block is started
+    // 2. Current block has 6 items
+    // 3. Current item's time is outside the 60-minute window of the block's start
+    if (startMinutes === null || currentChunk.length >= chunkSize || itemMinutes >= startMinutes + 60) {
+      if (currentChunk.length > 0 && startMinutes !== null) {
+        blocks.push(finalizeBlock(currentChunk, startMinutes))
+      }
+      currentChunk = [item]
+      startMinutes = itemMinutes
+    } else {
+      currentChunk.push(item)
+    }
+  }
+
+  if (currentChunk.length > 0 && startMinutes !== null) {
+    blocks.push(finalizeBlock(currentChunk, startMinutes))
+  }
+
+  function finalizeBlock(chunk: MemberScreenshotItem[], blockStartMins: number) {
+    const totalMinutes = chunk.reduce((sum, item) => sum + (item.minutes ?? 0), 0)
+    const summary = `Total time worked: ${formatDuration(totalMinutes)}`
+
+    const startMinsPart = blockStartMins % 60
+    const startHoursPart = Math.floor(blockStartMins / 60)
+    const startTimeFormatted = formatTimeFromHoursMinutes(startHoursPart, startMinsPart)
+
+    let endHours = startHoursPart + 1
+    if (endHours >= 24) endHours -= 24
+    const endTimeFormatted = formatTimeFromHoursMinutes(endHours, startMinsPart)
+
+    const label = `${startTimeFormatted} - ${endTimeFormatted}`
+
     const paddedChunk = [...chunk]
     while (paddedChunk.length < chunkSize) {
       paddedChunk.push({
-        id: `placeholder-${i}-${paddedChunk.length}`,
+        id: `placeholder-${blockStartMins}-${paddedChunk.length}`,
         time: "",
         progress: 0,
         minutes: 0,
@@ -77,49 +125,7 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
       })
     }
 
-    const totalMinutes = chunk.reduce((sum, item) => sum + (item.minutes ?? 0), 0)
-    const summary = `Total time worked: ${formatDuration(totalMinutes)}`
-
-    // Calculate 1-hour range from first item's start time
-    const firstTimeStr = chunk[0]?.time.split(" - ")[0] ?? ""
-    if (!firstTimeStr) {
-      blocks.push({ label: chunk[0]?.time ?? `Block ${Math.floor(i / chunkSize) + 1}`, summary, items: paddedChunk })
-      continue
-    }
-
-    // Parse first time and add 1 hour for end time
-    const parseTime = (timeStr: string): { hours: number; minutes: number; period: string } => {
-      const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i)
-      if (!match || !match[1] || !match[2] || !match[3]) return { hours: 0, minutes: 0, period: 'am' }
-      let hours = parseInt(match[1], 10)
-      const minutes = parseInt(match[2], 10)
-      const period = match[3].toLowerCase()
-      if (period === 'pm' && hours !== 12) hours += 12
-      if (period === 'am' && hours === 12) hours = 0
-      return { hours, minutes, period: match[3] }
-    }
-
-    const formatTime = (hours: number, minutes: number): string => {
-      let displayHours = hours
-      let period = 'am'
-      if (hours >= 12) {
-        period = 'pm'
-        if (hours > 12) displayHours = hours - 12
-      }
-      if (displayHours === 0) displayHours = 12
-      return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`
-    }
-
-    const firstTime = parseTime(firstTimeStr)
-    let endHours = firstTime.hours + 1
-    const endMinutes = firstTime.minutes
-    if (endHours >= 24) endHours = endHours - 24
-
-    const startTimeFormatted = firstTimeStr
-    const endTimeFormatted = formatTime(endHours, endMinutes)
-    const label = `${startTimeFormatted} - ${endTimeFormatted}`
-
-    blocks.push({ label, summary, items: paddedChunk })
+    return { label, summary, items: paddedChunk }
   }
 
   return blocks
@@ -150,165 +156,155 @@ export default function AllScreenshotsPage() {
   const scrollPositionRef = useRef<number>(0)
   // State untuk sort order (ascending = true, descending = false)
   const [sortAscending, setSortAscending] = useState(true)
+  // State data screenshots dari DB
+  const [dbScreenshots, setDbScreenshots] = useState<IScreenshotWithActivity[]>([])
 
-  // Check date range validity and determine data display strategy
+  // Helper: map DB row -> MemberScreenshotItem
+  const mapDbToItem = (s: IScreenshotWithActivity): MemberScreenshotItem => {
+    const timeSlot = new Date(s.time_slot)
+    const timeSlotEnd = new Date(timeSlot.getTime() + 10 * 60 * 1000)
+    const fmt = (d: Date) => {
+      let h = d.getHours()
+      const m = d.getMinutes()
+      const period = h >= 12 ? 'pm' : 'am'
+      if (h > 12) h -= 12
+      if (h === 0) h = 12
+      return `${h}:${m.toString().padStart(2, '0')} ${period}`
+    }
+    return {
+      id: String(s.id),
+      time: `${fmt(timeSlot)} - ${fmt(timeSlotEnd)}`,
+      progress: s.activity_progress,
+      minutes: 10,
+      image: s.thumb_url ?? s.full_url,
+      screenCount: s.screen_number,
+      noActivity: false,
+    }
+  }
+
+  // Fetch screenshots dari DB
+  const fetchScreenshots = useCallback(async () => {
+    if (!activeMemberId) {
+      setDbScreenshots([])
+      setIsLoading(false)
+      return
+    }
+    setIsLoading(true)
+    try {
+      const startDate = formatDateLocal(dateRange.startDate)
+      const endDate = formatDateLocal(dateRange.endDate)
+      const res = await getScreenshotsByMemberAndDate(
+        Number(activeMemberId),
+        startDate,
+        endDate
+      )
+      if (res.success && res.data) {
+        setDbScreenshots(res.data)
+      } else {
+        setDbScreenshots([])
+      }
+    } catch (err) {
+      console.error("Error fetching screenshots:", err)
+      setDbScreenshots([])
+    } finally {
+      setIsLoading(false)
+      isFirstMount.current = false
+    }
+  }, [activeMemberId, dateRange.startDate, dateRange.endDate])
+
+  // Check date range validity
   const dateStatus = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-
     const start = new Date(dateRange.startDate)
     start.setHours(0, 0, 0, 0)
     const end = new Date(dateRange.endDate)
     end.setHours(23, 59, 59, 999)
-
-    // Check if range is completely in the future (start > today and end > today)
-    if (start > today && end > today) {
-      return { isValid: false, isToday: false, isYesterday: false, isRange: false }
-    }
-
-    // Check if range is more than 30 days ago (both start and end are more than 30 days ago)
+    if (start > today && end > today) return { isValid: false, isToday: false, isYesterday: false, isRange: false }
     const thirtyDaysAgo = new Date(today)
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    if (end < thirtyDaysAgo && start < thirtyDaysAgo) {
-      return { isValid: false, isToday: false, isYesterday: false, isRange: false }
-    }
-
-    // Check if start date is today (range is today)
-    // end harus dalam range hari ini (00:00:00 sampai 23:59:59.999)
+    if (end < thirtyDaysAgo && start < thirtyDaysAgo) return { isValid: false, isToday: false, isYesterday: false, isRange: false }
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
     const todayEnd = new Date(today)
     todayEnd.setHours(23, 59, 59, 999)
     const isToday = start.getTime() === today.getTime() && end.getTime() <= todayEnd.getTime()
-
-    // Check if start date is yesterday (range is yesterday)
     const yesterdayEnd = new Date(yesterday)
     yesterdayEnd.setHours(23, 59, 59, 999)
     const isYesterday = start.getTime() === yesterday.getTime() && end.getTime() <= yesterdayEnd.getTime()
-
-    // Check if it's a range (multiple days)
     const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
     const isRange = daysDiff > 1
-
-    return {
-      isValid: true,
-      isToday,
-      isYesterday,
-      isRange: isRange && !isToday && !isYesterday,
-    }
+    return { isValid: true, isToday, isYesterday, isRange: isRange && !isToday && !isYesterday }
   }, [dateRange])
 
   const memberTimeBlocks = useMemo(() => {
-    // Jika masih loading, return empty array agar skeleton muncul
     if (isLoading) return []
     if (!activeMemberId || !dateStatus.isValid) return []
-    const baseItems = generateMemberScreenshots(activeMemberId)
+
+    const baseItems: MemberScreenshotItem[] = dbScreenshots.map(mapDbToItem)
+    if (baseItems.length === 0) return []
 
     let blocks: Array<{ label: string; summary: string; items: MemberScreenshotItem[] }> = []
 
-    if (dateStatus.isYesterday) {
-      const filteredItems = baseItems.slice(0, Math.min(6, baseItems.length))
-      blocks = buildMemberTimeBlocks(filteredItems, 6)
-    }
-    else if (dateStatus.isRange && dateRange) {
+    if (dateStatus.isRange && dateRange) {
+      // Grupkan berdasarkan screenshot_date dari DB
+      const groupedByDate = new Map<string, MemberScreenshotItem[]>()
+      dbScreenshots.forEach(s => {
+        const dateKey = s.screenshot_date
+        if (!dateKey) return
+        if (!groupedByDate.has(dateKey)) groupedByDate.set(dateKey, [])
+        groupedByDate.get(dateKey)!.push(mapDbToItem(s))
+      })
+
       const dateGroupedBlocks: DateGroupedBlocks[] = []
-      const start = new Date(dateRange.startDate);
-      const end = new Date(dateRange.endDate);
-      const numDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
-      for (let dayOffset = 0; dayOffset < numDays; dayOffset++) {
-        const currentDate = new Date(end);
-        currentDate.setDate(end.getDate() - dayOffset);
-
-        // Filter baseItems by currentDate if they had a date property
-        // Since DUMMY_MEMBER_SCREENSHOTS items don't have a date, we'll just use the baseItems for each day
-        // This simulates having data for each day.
-        const itemsForDay = baseItems; // Using baseItems for each day as per user's request to not create new data
-
-        const dateLabel = currentDate.toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric'
-        });
-
-        let blocksForDay = buildMemberTimeBlocks(itemsForDay, 6);
-        // Apply sort order untuk blocks per hari
-        if (!sortAscending) {
-          blocksForDay = [...blocksForDay].reverse()
-        }
-
-        if (blocksForDay.length > 0) {
-          const dateStr = currentDate.toISOString().split('T')[0]
-          if (dateStr) {
-            dateGroupedBlocks.push({
-              date: dateStr,
-              dateLabel,
-              blocks: blocksForDay
-            });
-          }
-        }
-      }
-      return dateGroupedBlocks as unknown as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>;
-    }
-    else {
-      blocks = buildMemberTimeBlocks(baseItems, 6);
+      groupedByDate.forEach((items, dateKey) => {
+        const dateObj = new Date(dateKey)
+        const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        let dayBlocks = buildMemberTimeBlocks(items, 6)
+        if (!sortAscending) dayBlocks = [...dayBlocks].reverse()
+        if (dayBlocks.length > 0) dateGroupedBlocks.push({ date: dateKey, dateLabel, blocks: dayBlocks })
+      })
+      return dateGroupedBlocks as unknown as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>
+    } else {
+      blocks = buildMemberTimeBlocks(baseItems, 6)
     }
 
-    // Apply sort order: reverse jika descending
-    if (!sortAscending) {
-      blocks = [...blocks].reverse()
-    }
-
-    return blocks;
-  }, [activeMemberId, dateStatus, dateRange, isLoading, sortAscending]);
+    if (!sortAscending) blocks = [...blocks].reverse()
+    return blocks
+  }, [activeMemberId, dateStatus, dateRange, isLoading, sortAscending, dbScreenshots])
 
   const flattenedScreenshots = useMemo(() => {
     let allItems: MemberScreenshotItem[] = []
     if (dateStatus.isRange && Array.isArray(memberTimeBlocks) && memberTimeBlocks.length > 0 && 'date' in (memberTimeBlocks[0] as unknown as DateGroupedBlocks)) {
       allItems = (memberTimeBlocks as unknown as DateGroupedBlocks[]).flatMap((dateGroup) =>
         dateGroup.blocks.flatMap((block) => block.items)
-      );
+      )
     } else {
-      allItems = (memberTimeBlocks as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>).flatMap((block) => block.items);
+      allItems = (memberTimeBlocks as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>).flatMap((block) => block.items)
     }
-    // Filter out deleted screenshots untuk modal (tapi card tetap ditampilkan)
-    return allItems.filter(item => !deletedScreenshots.has(item.id));
-  }, [memberTimeBlocks, dateStatus, deletedScreenshots]);
+    return allItems.filter(item => !deletedScreenshots.has(item.id))
+  }, [memberTimeBlocks, dateStatus, deletedScreenshots])
 
   const currentScreenshot = flattenedScreenshots[modalIndex]
 
+  // Fetch saat mount pertama
   useEffect(() => {
     setIsMounted(true)
-    // Simulate loading saat pertama kali halaman dibuka
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-      isFirstMount.current = false
-    }, 1500) // Tambah delay lebih lama agar skeleton terlihat jelas
-    return () => clearTimeout(timer)
+    fetchScreenshots()
   }, [])
 
+  // Fetch saat member berubah
   useEffect(() => {
     setModalIndex(0)
     setModalOpen(false)
-    // Reset deleted screenshots saat member berubah
     setDeletedScreenshots(new Set())
-    // Reset loading saat member berubah
-    setIsLoading(true)
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
-    return () => clearTimeout(timer)
+    fetchScreenshots()
   }, [activeMemberId])
 
-  // Reset loading saat dateRange berubah (tapi skip saat mount pertama)
+  // Fetch saat dateRange berubah (skip mount pertama)
   useEffect(() => {
-    if (isFirstMount.current) return // Skip saat mount pertama
-    setIsLoading(true)
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
-    return () => clearTimeout(timer)
+    if (isFirstMount.current) return
+    fetchScreenshots()
   }, [dateRange.startDate.getTime(), dateRange.endDate.getTime()])
 
   const openModal = (index: number) => {

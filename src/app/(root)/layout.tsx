@@ -152,7 +152,7 @@ export default async function RootLayout({
   // Generate dynamic short title for mobile based on organization
   const dynamicShortTitle = organizationName
     ? organizationName.split(' ').slice(0, 2).join(' ') // First 2 words for mobile
-    : "Presensi"
+    : "Absensi"
 
   return (
     <html lang="id" suppressHydrationWarning>

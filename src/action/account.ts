@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { IUser, IOrganization_member, IEmergencyContact } from "@/interface";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
@@ -52,9 +53,13 @@ export async function getAccountData(): Promise<{
     // Read org_id cookie to determine which organization context the user is in
     const cookieStore = await cookies();
     const activeOrgIdStr = cookieStore.get('org_id')?.value;
-    const activeOrgId = activeOrgIdStr ? parseInt(activeOrgIdStr, 10) : null;
+    // Gunakan string langsung - parseInt akan NaN jika org_id adalah UUID
+    const activeOrgId = activeOrgIdStr || null;
 
-    let orgMemberQuery = supabase
+    // Gunakan admin client untuk bypass RLS saat join ke organizations
+    const adminClient = createAdminClient();
+
+    let orgMemberQuery = adminClient
       .from('organization_members')
       .select(`
         *,
@@ -64,7 +69,8 @@ export async function getAccountData(): Promise<{
         role:system_roles(*),
         user:user_profiles(*)
       `)
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .eq('is_active', true);
 
     if (activeOrgId) {
       orgMemberQuery = orgMemberQuery.eq('organization_id', activeOrgId);
@@ -266,7 +272,7 @@ export async function deleteOldProfilePhoto(oldPhotoUrl: string): Promise<{
     const supabase = await createClient();
 
     // Extract file path from URL
-    // URL format: https://...supabase.co/storage/v1/object/public/profile-photos/users/user-id/filename
+    // URL format: https://...supabase.co/storage/v1/object/public/profile-photos/mass-profile/filename
     const urlParts = oldPhotoUrl.split('/profile-photos/');
     if (urlParts.length < 2) {
       return { success: false, message: 'Invalid photo URL format' };
@@ -361,8 +367,8 @@ export async function uploadProfilePhotoBase64(uploadData: Base64UploadData): Pr
       accountLogger.error('Profile fetch error:', profileError);
     }
 
-    // Create user-specific folder structure: users/{user-id}/
-    const userFolder = `users/${user.id}`;
+    // Folder structure: mass-profile/ (users/ folder is deprecated)
+    const userFolder = `mass-profile`;
 
     // Create unique filename (we may change extension after compression)
     const origExt = fileName.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/gi, '') || 'jpg';

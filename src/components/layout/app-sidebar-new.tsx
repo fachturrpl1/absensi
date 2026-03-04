@@ -30,7 +30,6 @@ import {
   Gauge,
   History,
   Bell,
-  // SquareArrowOutUpRight,
   MousePointer2,
   ClockPlus,
   Notebook,
@@ -171,7 +170,6 @@ const getSidebarGroups = (): NavGroup[] => [
         icon: Folder,
         subItems: [
           { title: 'Projects', url: '/projects', icon: Folder },
-          { title: 'Tasks', url: '/projects/tasks', icon: ClipboardList },
           { title: 'Clients', url: '/projects/clients', icon: MousePointer2 }
         ]
       },
@@ -373,35 +371,33 @@ export function AppSidebarNew({ ...props }: React.ComponentProps<typeof Sidebar>
     setMounted(true)
   }, [])
 
-  if (!mounted) {
-    return (
-      <div
-        data-slot="sidebar-wrapper"
-        className="group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full"
-        suppressHydrationWarning
-      />
-    )
-  }
-
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        <OrganizationSwitcher />
-      </SidebarHeader>
+      {mounted ? (
+        <>
+          <SidebarHeader>
+            <OrganizationSwitcher />
+          </SidebarHeader>
 
-      <SidebarContent>
-        {sidebarGroups.map((group, index) => (
-          <SidebarGroup key={`group-${index}`}>
-            <SidebarGroupContent>
-              <NavMain items={group.items} />
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
-      </SidebarContent>
+          <SidebarContent>
+            {sidebarGroups.map((group, index) => (
+              <SidebarGroup key={`group-${index}`}>
+                <SidebarGroupContent>
+                  <NavMain items={group.items} />
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))}
+          </SidebarContent>
 
-      <SidebarFooter>
-        <NavUser />
-      </SidebarFooter>
+          <SidebarFooter>
+            <NavUser />
+          </SidebarFooter>
+        </>
+      ) : (
+        <div className="flex h-full w-full items-center justify-center p-4">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      )}
     </Sidebar>
   );
 }

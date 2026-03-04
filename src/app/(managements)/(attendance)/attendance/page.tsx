@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users, Clock, Target,
@@ -57,13 +57,14 @@ const COLORS = {
   excused: '#8b5cf6',
 };
 
-export default function AnalyticsPage() {
+export default function AttendanceDashboardPage() {
   const { organizationId } = useHydration();
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [masterData, setMasterData] = useState<MasterData>({ totalMembers: 0, totalDepartments: 0, averageTeamSize: 0 });
   const [deptMemberCounts, setDeptMemberCounts] = useState<Record<string, number>>({});
-  const [dateRange, setDateRange] = useState<DateFilterState>(() => {
+  // ✅ FIX 1: Initialize dateRange dengan useMemo untuk stability
+  const initialDateRange = useMemo(() => {
     const today = new Date();
     const monthStart = startOfMonth(today);
     monthStart.setHours(0, 0, 0, 0);
@@ -73,32 +74,47 @@ export default function AnalyticsPage() {
     return {
       from: monthStart,
       to: monthEnd,
-      preset: 'thisMonth',
+      preset: 'thisMonth' as const,
     };
-  });
+  }, []);
+
+  const [dateRange, setDateRange] = useState<DateFilterState>(initialDateRange);
+
+  const cacheRef = useRef<Map<string, AttendanceRecord[]>>(new Map());
+  const fetchInProgressRef = useRef<AbortController | null>(null);
+  const lastFetchParamsRef = useRef<{ orgId: string; from: string; to: string } | null>(null);
+
+  const getCacheKey = (from: Date, to: Date): string => {
+    return `${format(from, 'yyyy-MM-dd')}_${format(to, 'yyyy-MM-dd')}`;
+  };
 
   useEffect(() => {
     if (!organizationId) {
-      console.log('[DASHBOARD] Waiting for organization ID - orgId:', organizationId)
-      return
+      console.log('[DASHBOARD] Waiting for organization ID');
+      return;
     }
 
-    console.log('[DASHBOARD] Starting to fetch data - orgId:', organizationId)
+    console.log('[DASHBOARD] Organization changed to:', organizationId);
+
+    // Cancel previous fetch
+    if (fetchInProgressRef.current) {
+      fetchInProgressRef.current.abort();
+    }
+
+    // Reset state
+    setDateRange(initialDateRange);
+    setAllRecords([]);
+    setIsLoading(true);
 
     const fetchData = async () => {
       try {
-        setIsLoading(true);
+        const abortController = new AbortController();
+        fetchInProgressRef.current = abortController;
+
         const supabase = createClient();
-
-        if (!organizationId) {
-          console.log('[DASHBOARD] No organization ID from store');
-          setIsLoading(false);
-          return;
-        }
-
         const orgId = organizationId;
 
-        // Fetch master data - still safe as it only counts, doesn't return sensitive data
+        // Fetch master data
         const [membersResult, deptsResult] = await Promise.all([
           supabase
             .from('organization_members')
@@ -111,58 +127,153 @@ export default function AnalyticsPage() {
             .eq('organization_id', orgId)
         ]);
 
+        if (abortController.signal.aborted) return;
+
         setMasterData({
           totalMembers: membersResult.count || 0,
           totalDepartments: deptsResult.count || 0,
           averageTeamSize: (membersResult.count || 0) / (deptsResult.count || 1),
         });
 
-        // Fetch active member list with departments to compute per-department member counts
+        // Fetch member counts
         const { data: memberRows } = await supabase
           .from('organization_members')
           .select('id, is_active, departments:departments!organization_members_department_id_fkey(name)')
           .eq('organization_id', orgId)
           .eq('is_active', true);
 
+        if (abortController.signal.aborted) return;
+
         const counts: Record<string, number> = {};
         (memberRows || []).forEach((row: any) => {
-          // departments can be object or array depending on join
           const depObj = Array.isArray(row.departments) ? row.departments[0] : row.departments;
           const name: string = depObj?.name || 'Unknown';
           counts[name] = (counts[name] || 0) + 1;
         });
         setDeptMemberCounts(counts);
 
-        // Fetch attendance records using secure API route (server-side filtering)
-        const toYMD = (d: Date) => format(d, 'yyyy-MM-dd');
-        const params = new URLSearchParams();
-        params.set('organizationId', String(orgId));
-        params.set('page', '1');
-        params.set('limit', '1000');
-        params.set('dateFrom', toYMD(dateRange.from));
-        params.set('dateTo', toYMD(dateRange.to));
+        // Fetch initial attendance records
+        await fetchAttendanceRecords(orgId, initialDateRange, abortController);
 
-        const response = await fetch(`/api/attendance-records?${params.toString()}`, {
-          method: 'GET',
-          credentials: 'same-origin',
-        });
-        const result = await response.json();
-
-        if (result.success && result.data) {
-          setAllRecords(result.data);
-        } else {
-          console.error('Failed to fetch attendance records:', result.message);
-          setAllRecords([]);
+        setIsLoading(false);
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          console.log('[DASHBOARD] Fetch aborted');
+          return;
         }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
+        console.error('[DASHBOARD] Error fetching data:', error);
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [organizationId, dateRange]);
+
+    return () => {
+      if (fetchInProgressRef.current) {
+        fetchInProgressRef.current.abort();
+      }
+    };
+  }, [organizationId, initialDateRange]);
+
+  // ✅ FIX 5: Effect 2 - Trigger saat dateRange berubah with debounce
+  useEffect(() => {
+    if (!organizationId) return;
+
+    console.log('[DASHBOARD] Date range changed:', format(dateRange.from, 'yyyy-MM-dd'), '-', format(dateRange.to, 'yyyy-MM-dd'));
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const abortController = new AbortController();
+        fetchInProgressRef.current = abortController;
+
+        await fetchAttendanceRecords(organizationId, dateRange, abortController);
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error('[DASHBOARD] Error fetching records:', error);
+        }
+      }
+    }, 500); // Debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [dateRange, organizationId]);
+
+  // ✅ FIX 6: Helper function untuk fetch attendance records
+  const fetchAttendanceRecords = async (
+    orgId: string | number,
+    range: DateFilterState,
+    abortController: AbortController
+  ) => {
+    const cacheKey = getCacheKey(range.from, range.to);
+
+    // Check cache
+    if (cacheRef.current.has(cacheKey)) {
+      console.log('[DASHBOARD] Using cached data for:', cacheKey);
+      setAllRecords(cacheRef.current.get(cacheKey) || []);
+      setIsLoading(false);
+      return;
+    }
+
+
+    const fetchKey = {
+      orgId: String(orgId),
+      from: format(range.from, 'yyyy-MM-dd'),
+      to: format(range.to, 'yyyy-MM-dd'),
+    };
+
+    if (lastFetchParamsRef.current &&
+      lastFetchParamsRef.current.orgId === fetchKey.orgId &&
+      lastFetchParamsRef.current.from === fetchKey.from &&
+      lastFetchParamsRef.current.to === fetchKey.to) {
+      console.log('[DASHBOARD] Duplicate request prevented');
+      setIsLoading(false);
+      return;
+    }
+
+    console.log('[DASHBOARD] Fetching attendance records for:', fetchKey);
+    setIsLoading(true);
+
+    const toYMD = (d: Date) => format(d, 'yyyy-MM-dd');
+    const params = new URLSearchParams();
+    params.set('organizationId', String(orgId));
+    params.set('page', '1');
+    params.set('limit', '1000');
+    params.set('dateFrom', toYMD(range.from));
+    params.set('dateTo', toYMD(range.to));
+
+    try {
+      const response = await fetch(`/api/attendance-records?${params.toString()}`, {
+        method: 'GET',
+        credentials: 'same-origin',
+        signal: abortController.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (!abortController.signal.aborted) {
+        if (result.success && result.data) {
+          setAllRecords(result.data);
+          // ✅ FIX 7: Save to cache
+          cacheRef.current.set(cacheKey, result.data);
+          // ✅ FIX 8: Update lastFetchRef
+          lastFetchParamsRef.current = fetchKey;
+          console.log('[DASHBOARD] Records fetched and cached');
+        } else {
+          console.error('Failed to fetch records:', result.message);
+          setAllRecords([]);
+        }
+        setIsLoading(false);
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('[DASHBOARD] Fetch error:', error);
+        setIsLoading(false);
+      }
+    }
+  };
 
   const getFilterLabel = () => {
     if (!dateRange.preset) {
@@ -488,7 +599,7 @@ export default function AnalyticsPage() {
           </Card>
         </div>
       </motion.div>
-      
+
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

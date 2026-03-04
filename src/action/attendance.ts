@@ -6,11 +6,12 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 
 import { attendanceLogger } from '@/lib/logger';
-import { getJSON, setJSON, delByPrefix } from '@/lib/cache';
+import { getJSON, setJSON } from '@/lib/cache';
 import { calculateAttendanceStatus, getDayOfWeek, type ScheduleRule } from '@/lib/attendance-status-calculator';
 async function getSupabase() {
   return await createClient();
 }
+
 
 // Resolve active schedule rule for a member on a given date.
 // Returns null if no active rule or non-working day.
@@ -77,17 +78,12 @@ export async function updateAttendanceRecord(payload: {
   try {
     const supabase = await getSupabase();
 
-    // Resolve organization id for cache invalidation
-    let orgId: number | null = null;
     try {
       const { data: recOrg } = await supabase
         .from('attendance_records')
-        .select('organization_member_id, attendance_date, actual_check_in, actual_check_out, organization_members!inner(organization_id)')
+        .select('organization_member_id, attendance_date, actual_check_in, actual_check_out')
         .eq('id', payload.id)
         .maybeSingle();
-      const orgRel = (recOrg as unknown as { organization_members: { organization_id: number } | { organization_id: number }[] | null }).organization_members;
-      const orgObj = Array.isArray(orgRel) ? orgRel[0] : orgRel;
-      orgId = orgObj?.organization_id ?? null;
 
       // Recalculate status only if check-in/out provided
       const shouldRecalc = payload.actual_check_in !== undefined || payload.actual_check_out !== undefined;
@@ -147,12 +143,7 @@ export async function updateAttendanceRecord(payload: {
       return { success: false, message: error.message } as const;
     }
 
-    // Invalidate caches
-    try {
-      if (orgId) await delByPrefix(`attendance:list:${orgId}:`);
-      else await delByPrefix('attendance:list:');
-    } catch (_) { }
-    revalidatePath('/attendance');
+    revalidatePath('/attendance', 'layout');
 
     return { success: true } as const;
   } catch (err) {
@@ -178,10 +169,12 @@ export type AttendanceListItem = {
   id: string;
   member: {
     id: number;
+    userId?: string;
     name: string;
     avatar?: string;
     position: string;
     department: string;
+    email?: string | null;
   };
   date: string;
   checkIn: string | null;
@@ -194,6 +187,8 @@ export type AttendanceListItem = {
   checkOutLocationName: string | null;
   actualBreakStart: string | null;
   actualBreakEnd: string | null;
+  breakInMethod: string | null;
+  breakOutMethod: string | null;
   notes: string;
   timezone: string;
   time_format: string;
@@ -224,7 +219,6 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     status,
     department,
     organizationId,  // Get organization ID from params
-    noCache
   } = params;
 
   // Default date range to today in production to avoid full table scans
@@ -285,43 +279,6 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     return { success: false, data: [], message: "Organization not resolved" };
   }
   attendanceLogger.info("✅ Effective org resolved:", effectiveOrgId, "member:", memberIdForLog);
-  // Cache key per organisasi + filter
-  const cacheKey = [
-    'attendance:list',
-    String(effectiveOrgId),
-    `p=${page}`,
-    `l=${limit}`,
-    `from=${dateFrom || ''}`,
-    `to=${dateTo || ''}`,
-    `status=${status || 'all'}`,
-    `dept=${department || 'all'}`,
-    `q=${(search || '').trim().toLowerCase()}`,
-  ].join(':');
-
-  // Try cache first (safe if Redis down) unless noCache requested
-  if (!noCache) {
-    let cached: GetAttendanceResult | null = null;
-    try {
-      cached = await getJSON<GetAttendanceResult>(cacheKey);
-    } catch (_) {
-      attendanceLogger.warn(`⚠️ Cache read failed for key ${cacheKey}, proceeding without cache`);
-    }
-    if (cached && cached.success) {
-      attendanceLogger.debug(`🗄️ Cache hit: ${cacheKey}`);
-      try {
-        if (cached.meta && Array.isArray(cached.data)) {
-          const rowsLen = cached.data.length;
-          const currentLimit = cached.meta.limit || limit;
-          if ((cached.meta.total ?? 0) < rowsLen) {
-            cached.meta.total = rowsLen;
-            cached.meta.totalPages = Math.ceil(rowsLen / currentLimit);
-            try { await setJSON(cacheKey, cached, 60); } catch { }
-          }
-        }
-      } catch { }
-      return cached;
-    }
-  }
 
   type AttendanceRow = {
     id: number;
@@ -340,6 +297,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     check_out_method: string | null;
   };
   type MemberProfile = {
+    id: string;
     first_name: string | null;
     last_name: string | null;
     display_name: string | null;
@@ -363,45 +321,13 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
   const term = hasSearch ? search!.trim().toLowerCase() : '';
   const pattern = hasSearch ? `%${term}%` : '';
 
-  // Offset variables are no longer needed when using keyset pagination
-
-  // Keyset pagination disabled for now (using offset pagination for stability)
-  // Use single-join filtering (no prefetch of memberIds)
-  // This keeps queries simple and allows PostgREST to optimize joins
-
-  // COUNT (lazy, page 1 saja)
-  // Prepare relation selection for count join (include only needed relations)
   const innerParts: string[] = ['id'];
   if (hasSearch) innerParts.push('user_profiles!organization_members_user_id_fkey!inner(search_name)');
   if (department && department !== 'all') innerParts.push('departments!organization_members_department_id_fkey(name)');
   const countRel = `organization_members!inner(${innerParts.join(',')})`;
 
-  // Cache key for COUNT should be independent of page/limit
-  const countCacheKey = [
-    'attendance:list',
-    String(effectiveOrgId),
-    `from=${effDateFrom || ''}`,
-    `to=${effDateTo || ''}`,
-    `status=${status || 'all'}`,
-    `dept=${department || 'all'}`,
-    `q=${(search || '').trim().toLowerCase()}`,
-    'count'
-  ].join(':');
   let totalCount: number | undefined = undefined;
-  let needCount = page === 1 || Boolean(noCache);
-  if (!needCount && !noCache) {
-    try {
-      const cachedCount = await getJSON<number>(countCacheKey);
-      if (typeof cachedCount === 'number') {
-        totalCount = cachedCount;
-      } else {
-        needCount = true;
-      }
-    } catch {
-      needCount = true;
-    }
-  }
-  if (needCount) {
+  {
     let countQuery = supabase
       .from('attendance_records')
       .select(`id, ${countRel}`, { count: 'exact', head: true })
@@ -413,14 +339,13 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     if (hasSearch) countQuery = countQuery.ilike('organization_members.user_profiles.search_name', pattern);
     const countResp = await countQuery;
     totalCount = (countResp as unknown as { count: number | null }).count ?? 0;
-    try { if (!noCache) await setJSON(countCacheKey, totalCount, 60); } catch { }
   }
 
   // LIST dengan join untuk mengambil profil/departemen/biodata
   // Specify exact FK for departments to avoid PostgREST ambiguous embed error
   const listRel = hasSearch
-    ? 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey!inner(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))'
-    : 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey(first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))';
+    ? 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey!inner(id,first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))'
+    : 'organization_members!inner(id, is_active, user_profiles!organization_members_user_id_fkey(id,first_name,last_name,display_name,email,profile_photo_url,search_name), departments!organization_members_department_id_fkey(name))';
   const fromIdx = (page - 1) * limit;
   const toIdx = fromIdx + limit - 1;
   let listQuery = supabase
@@ -457,7 +382,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     if (hasSearch) freshCount = freshCount.ilike('organization_members.user_profiles.search_name', pattern);
     const freshResp = await freshCount;
     totalCount = (freshResp as unknown as { count: number | null }).count ?? 0;
-    try { await setJSON(countCacheKey, totalCount, 60); } catch { }
+
   }
 
   // If count somehow less than current page size, adjust to at least rows length
@@ -564,10 +489,12 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
       id: String(item.id),
       member: {
         id: item.organization_member_id,
+        userId: profile?.id,
         name: effectiveName || `Member #${item.organization_member_id}`,
         avatar: profile?.profile_photo_url || undefined,
         position: '',
         department: departmentName,
+        email: profile?.email || null,
       },
       date: item.attendance_date,
       checkIn: item.actual_check_in,
@@ -580,6 +507,8 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
       checkOutLocationName: null,
       actualBreakStart: item.actual_break_start,
       actualBreakEnd: item.actual_break_end,
+      breakInMethod: inMethod ? String(inMethod) : null,
+      breakOutMethod: inMethod ? String(inMethod) : null,
       notes: '',
       timezone: orgInfo?.timezone || 'Asia/Jakarta',
       time_format: orgInfo?.time_format || '24h',
@@ -601,15 +530,6 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
     meta: { total, page, limit, totalPages: Math.ceil(total / limit), nextCursor }
   };
 
-  // Save to cache (TTL 120s) unless noCache requested
-  if (!noCache) {
-    try {
-      await setJSON(cacheKey, result, 120);
-      attendanceLogger.debug(`🗄️ Cache set: ${cacheKey}`);
-    } catch (_) {
-      attendanceLogger.warn(`⚠️ Cache write failed for key ${cacheKey}, returning result without cache`);
-    }
-  }
   return result;
 };
 
@@ -823,24 +743,9 @@ export async function createManualAttendance(payload: ManualAttendancePayload) {
     }
 
     attendanceLogger.debug("✓ Attendance created successfully");
-    // Invalidate list cache for the organization of this member
-    try {
-      const memberId = Number(payload.organization_member_id);
-      if (!isNaN(memberId)) {
-        const { data: orgRow } = await supabase
-          .from('organization_members')
-          .select('organization_id')
-          .eq('id', memberId)
-          .maybeSingle();
-        const orgId = orgRow?.organization_id;
-        if (orgId) {
-          await delByPrefix(`attendance:list:${orgId}:`);
-        } else {
-          await delByPrefix('attendance:list:');
-        }
-      }
-    } catch (_) { }
-    revalidatePath("/attendance");
+
+
+    revalidatePath("/attendance", "layout");
 
     return { success: true };
   } catch (err) {
@@ -858,18 +763,7 @@ export async function deleteAttendanceRecord(id: string) {
 
     attendanceLogger.info("🗑️ Deleting attendance record:", id);
 
-    // Fetch orgId before deletion for targeted cache invalidation
-    let orgId: number | null = null;
-    try {
-      const { data: recOrg } = await supabase
-        .from('attendance_records')
-        .select('organization_members!inner(organization_id)')
-        .eq('id', id)
-        .maybeSingle();
-      const orgRel: any = (recOrg as any)?.organization_members;
-      const orgObj = Array.isArray(orgRel) ? orgRel[0] : orgRel;
-      orgId = orgObj?.organization_id ?? null;
-    } catch (_) { }
+
 
     const { error } = await supabase
       .from("attendance_records")
@@ -882,12 +776,7 @@ export async function deleteAttendanceRecord(id: string) {
     }
 
     attendanceLogger.info("✓ Attendance record deleted successfully");
-    // Invalidate caches
-    try {
-      if (orgId) await delByPrefix(`attendance:list:${orgId}:`);
-      else await delByPrefix('attendance:list:');
-    } catch (_) { }
-    revalidatePath("/attendance");
+    revalidatePath("/attendance", "layout");
 
     return { success: true };
   } catch (err) {
@@ -905,26 +794,7 @@ export async function deleteMultipleAttendanceRecords(ids: string[]) {
 
     attendanceLogger.info("🗑️ Deleting multiple attendance records:", ids);
 
-    // Collect affected orgIds first
-    let affectedOrgIds: number[] = [];
-    try {
-      const { data: recs } = await supabase
-        .from('attendance_records')
-        .select('id, organization_members!inner(organization_id)')
-        .in('id', ids);
 
-      if (Array.isArray(recs)) {
-        type RecRow = { organization_members: { organization_id: number } | { organization_id: number }[] | null };
-        const set = new Set<number>();
-        for (const r of recs as RecRow[]) {
-          const rel = r.organization_members ?? null;
-          const obj = Array.isArray(rel) ? rel[0] : rel;
-          const oid = obj?.organization_id;
-          if (typeof oid === 'number') set.add(oid);
-        }
-        affectedOrgIds = Array.from(set);
-      }
-    } catch (_) { }
 
     const { error } = await supabase
       .from("attendance_records")
@@ -938,14 +808,7 @@ export async function deleteMultipleAttendanceRecords(ids: string[]) {
 
     attendanceLogger.info("✓ Attendance records deleted successfully");
     // Invalidate caches for affected orgs
-    try {
-      if (affectedOrgIds.length > 0) {
-        await Promise.all(affectedOrgIds.map((oid) => delByPrefix(`attendance:list:${oid}:`)));
-      } else {
-        await delByPrefix('attendance:list:');
-      }
-    } catch (_) { }
-    revalidatePath("/attendance");
+    revalidatePath("/attendance", "layout");
 
     return { success: true };
   } catch (err) {

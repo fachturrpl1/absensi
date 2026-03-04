@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/common/user-avatar';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -82,6 +82,7 @@ const statusConfig = {
   },
 };
 
+
 // Simple cache to prevent duplicate requests
 const attendanceCache: {
   data: AttendanceRecord[] | null;
@@ -94,6 +95,15 @@ const attendanceCache: {
 };
 
 const ATTENDANCE_CACHE_DURATION = 120000; // 2 minutes cache (increased from 10s)
+
+function UserAvatarWrapper({ name, photoUrl, userId }: { name: string; photoUrl: string | null; userId?: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <UserAvatar name={name} photoUrl={photoUrl} userId={userId} size={8} className="border border-border" />
+      <span className="font-medium text-foreground">{name}</span>
+    </div>
+  );
+}
 
 export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 180000, pageSize = 10 }: LiveAttendanceTableProps) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -225,6 +235,7 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
           organization_member_id,
           organization_members!inner (
             id,
+            user_id,
             organization_id,
             user_profiles!inner (
               first_name,
@@ -263,7 +274,8 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
           late_minutes: record.late_minutes,
           notes: record.notes,
           location: null,
-          profile_photo_url: profile?.profile_photo_url,
+          profile_photo_url: profile?.profile_photo_url || null,
+          user_id: member?.user_id, // Add user_id for hook to use
         };
       }) || [];
 
@@ -442,15 +454,11 @@ export function LiveAttendanceTable({ autoRefresh = true, refreshInterval = 1800
                             </Button>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="w-8 h-8 border border-border">
-                                <AvatarImage src={record.profile_photo_url || undefined} />
-                                <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                                  {record.member_name.split(' ').map(n => n[0]).join('')}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium text-foreground">{record.member_name}</span>
-                            </div>
+                            <UserAvatarWrapper
+                              name={record.member_name}
+                              photoUrl={record.profile_photo_url}
+                              userId={(record as any).user_id}
+                            />
                           </TableCell>
                           <TableCell className="text-muted-foreground">{record.department_name}</TableCell>
                           <TableCell>

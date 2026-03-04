@@ -52,6 +52,12 @@ export function InsightsHeader({
   const [filterSearch, setFilterSearch] = useState("")
   const [dateRangeOpen, setDateRangeOpen] = useState(false)
 
+  // Hydration fix for dates
+  const [isMounted, setIsMounted] = useState(false)
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   // Fungsi untuk mendeteksi preset dari dateRange
   const detectPreset = (start: Date, end: Date): string | null => {
     const now = new Date()
@@ -153,9 +159,9 @@ export function InsightsHeader({
     return source.find(x => x.id === selectedFilter.id)?.name || (selectedFilter.type === "members" ? "Member" : "Team")
   }, [selectedFilter, members, teams])
 
-  // date display helper
+  // date display helper (timeZone "UTC" removed to sync with backend requests)
   const fmt = (d: Date) =>
-    d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: timezone || "UTC" })
+    d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
 
   // timezone offset (e.g. +07, -05, +05:30)
   const tzOffset = useMemo((): string => {
@@ -182,7 +188,7 @@ export function InsightsHeader({
   useEffect(() => {
     const detectedPreset = detectPreset(dateRange.startDate, dateRange.endDate)
     setSelectedPreset(detectedPreset)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [dateRange.startDate.getTime(), dateRange.endDate.getTime()])
 
   useEffect(() => {
@@ -412,13 +418,13 @@ export function InsightsHeader({
   const filtered = source.filter(it => it.name.toLowerCase().includes(filterSearch.toLowerCase()))
 
   return (
-    <div className="flex items-center justify-between w-full">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-4">
+      <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
         {/* Members/Teams filter */}
         {!hideFilter && (
           <DropdownMenu open={filterDropdownOpen} onOpenChange={setFilterDropdownOpen}>
             <DropdownMenuTrigger asChild>
-              <button className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md text-sm bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 min-w-[150px] text-left text-gray-800 dark:text-gray-200 flex items-center justify-between">
+              <button className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md text-sm bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 min-w-[150px] w-full sm:w-auto text-left text-gray-800 dark:text-gray-200 flex items-center justify-between">
                 {filterLabel}
                 <ChevronDown className="w-4 h-4 opacity-50 ml-2" />
               </button>
@@ -498,18 +504,25 @@ export function InsightsHeader({
         {/* Date range */}
         <DropdownMenu open={dateRangeOpen} onOpenChange={setDateRangeOpen}>
           <DropdownMenuTrigger asChild>
-            <button className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md text-sm bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 flex items-center gap-2 text-gray-800 dark:text-gray-200">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
-              </svg>
-              {fmt(dateRange.startDate)} - {fmt(dateRange.endDate)}
+            <button className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md text-sm bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 flex items-center gap-2 text-gray-800 dark:text-gray-200 w-full sm:w-auto justify-between sm:justify-start">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                {isMounted ? (
+                  <span>{fmt(dateRange.startDate)} - {fmt(dateRange.endDate)}</span>
+                ) : (
+                  <span className="opacity-0">Loading dates...</span>
+                )}
+              </div>
+              <ChevronDown className="w-4 h-4 opacity-50 sm:hidden" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-auto p-0 dark:bg-gray-950 dark:border-gray-800">
-            <div className="flex">
+          <DropdownMenuContent align="start" className="w-[calc(100vw-2rem)] sm:w-auto p-0 dark:bg-gray-950 dark:border-gray-800 overflow-hidden">
+            <div className="flex flex-col sm:flex-row max-h-[80vh] overflow-y-auto sm:max-h-none">
               <div className="w-40 border-r border-gray-200 dark:border-gray-800 p-3 space-y-1">
                 <button
                   className={`w-full text-left px-3 py-2 text-sm rounded dark:text-gray-200 ${selectedPreset === 'today' ? 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
@@ -544,8 +557,8 @@ export function InsightsHeader({
                   onClick={() => applyPreset("last_month")}
                 >Last month</button>
               </div>
-              {/* Right Calendar (Dual months) */}
-              <div className="p-4">
+              {/* Right Calendar */}
+              <div className="p-2 sm:p-4">
                 {timezone && (
                   <div className="flex justify-end mb-2">
                     <span className="text-xs text-gray-500">
@@ -553,9 +566,9 @@ export function InsightsHeader({
                     </span>
                   </div>
                 )}
-                <div className="flex gap-4">
+                <div className="flex flex-col md:flex-row gap-4">
                   {/* Left Month */}
-                  <div className="w-64">
+                  <div className="w-full sm:w-64">
                     <div className="flex items-center justify-between mb-4">
                       <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded" onClick={() => moveLeftMonth(-1)}>
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -563,7 +576,7 @@ export function InsightsHeader({
                         </svg>
                       </button>
                       <span className="font-semibold text-gray-900 dark:text-gray-100">
-                        {leftMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                        {isMounted ? leftMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" }) : ""}
                       </span>
                       <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded" onClick={() => moveLeftMonth(1)}>
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -601,8 +614,8 @@ export function InsightsHeader({
                     </div>
                   </div>
 
-                  {/* Right Month */}
-                  <div className="w-64">
+                  {/* Right Month - Hidden on mobile, visible on medium screens+ */}
+                  <div className="w-64 hidden md:block">
                     <div className="flex items-center justify-between mb-4">
                       <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded" onClick={() => moveRightMonth(-1)}>
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -610,7 +623,7 @@ export function InsightsHeader({
                         </svg>
                       </button>
                       <span className="font-semibold text-gray-900 dark:text-gray-100">
-                        {rightMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                        {isMounted ? rightMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" }) : ""}
                       </span>
                       <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded" onClick={() => moveRightMonth(1)}>
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -650,8 +663,8 @@ export function InsightsHeader({
                 </div>
 
                 {/* Footer tanggal terpilih + aksi */}
-                <div className="text-xs text-center text-gray-600 dark:text-gray-400 mt-2">
-                  {fmt(tempStartDate)} - {fmt(tempEndDate)}
+                <div className="text-xs text-center text-gray-600 dark:text-gray-400 mt-2 min-h-[16px]">
+                  {isMounted ? `${fmt(tempStartDate)} - ${fmt(tempEndDate)}` : ""}
                 </div>
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                   <button className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded hover:bg-gray-800 dark:hover:bg-gray-200 font-medium" onClick={applyDateRange}>

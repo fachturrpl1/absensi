@@ -10,6 +10,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export interface Client {
     id: string
@@ -61,11 +62,10 @@ export function ClientsTable({
             <TableHeader>
                 <TableRow>
                     <TableHead className="w-10">
-                        <input
-                            type="checkbox"
+                        <Checkbox
                             checked={allSelected}
-                            onChange={(e) => onSelectAll(e.target.checked)}
-                            className="rounded border-gray-300"
+                            onCheckedChange={(checked) => onSelectAll(!!checked)}
+                            aria-label="Select all"
                         />
                     </TableHead>
                     <TableHead>Name</TableHead>
@@ -98,11 +98,10 @@ export function ClientsTable({
                         return (
                             <TableRow key={client.id}>
                                 <TableCell className="align-top">
-                                    <input
-                                        type="checkbox"
+                                    <Checkbox
                                         checked={isSelected}
-                                        onChange={(e) => onSelectClient(client.id, e.target.checked)}
-                                        className="rounded border-gray-300"
+                                        onCheckedChange={(checked) => onSelectClient(client.id, !!checked)}
+                                        aria-label={`Select client ${client.name}`}
                                     />
                                 </TableCell>
                                 <TableCell>

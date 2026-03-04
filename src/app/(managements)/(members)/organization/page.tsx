@@ -42,10 +42,23 @@ export default function OrganizationPage() {
         setError(null)
         const result = await getUserOrganizations()
 
+        console.log("[ORG-PAGE] getUserOrganizations result:", result)
+
         if (result.success && result.organizations && result.organizations.length > 0) {
           orgStore.setOrganizations(result.organizations)
           setOrganizations(result.organizations)
+
+          // Auto-select jika hanya ada 1 organisasi
+          if (result.organizations.length === 1) {
+            const singleOrg = result.organizations[0]
+            if (singleOrg) {
+              console.log("[ORG-PAGE] Only 1 org found, auto-selecting:", singleOrg)
+              await handleSelectOrganization(singleOrg)
+              return
+            }
+          }
         } else {
+          console.warn("[ORG-PAGE] No organizations found, redirecting to onboarding. Result:", result)
           // New user with no organizations — send them to the onboarding wizard
           router.replace("/onboarding/setup")
           return

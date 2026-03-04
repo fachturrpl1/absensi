@@ -32,8 +32,12 @@ export function PermissionInitializer({ userId }: { userId: string }) {
       // 1. Check in-memory store (FASTEST)
       let currentPermissions = useAuthStore.getState().permissions
       let currentRole = useAuthStore.getState().role
+      const cachedOrgs = useAuthStore.getState().userOrganizations
 
-      if (currentPermissions && currentPermissions.length > 0 && currentRole) {
+      // Jika cache ada tapi semua orgnya "Unknown Organization", paksa re-fetch
+      const hasStaleOrgNames = cachedOrgs.length > 0 && cachedOrgs.every(o => o.organization_name === "Unknown Organization")
+
+      if (currentPermissions && currentPermissions.length > 0 && currentRole && !hasStaleOrgNames) {
         logger.debug("✅ Using cached permissions/role, skipping server fetch")
         return
       }
@@ -51,7 +55,10 @@ export function PermissionInitializer({ userId }: { userId: string }) {
       currentPermissions = useAuthStore.getState().permissions
       currentRole = useAuthStore.getState().role
 
-      if (currentPermissions && currentPermissions.length > 0 && currentRole) {
+      const cachedOrgsAfterHydration = useAuthStore.getState().userOrganizations
+      const hasStaleOrgsAfterHydration = cachedOrgsAfterHydration.length > 0 && cachedOrgsAfterHydration.every(o => o.organization_name === "Unknown Organization")
+
+      if (currentPermissions && currentPermissions.length > 0 && currentRole && !hasStaleOrgsAfterHydration) {
         logger.debug("✅ Using cached permissions/role (after hydration wait), skipping server fetch")
         return
       }
@@ -85,9 +92,18 @@ export function PermissionInitializer({ userId }: { userId: string }) {
             setRole(null)
           }
 
-          // 3. Set Organization ID
+          // 3. Set Organization ID (with actual org name from userOrgs)
           if (bootstrapData.organizationId) {
-            setOrganizationId(bootstrapData.organizationId, "")
+            const matchedOrg = userOrgs.find(o => o.organization_id === bootstrapData.organizationId);
+            const orgName = matchedOrg?.organization_name
+              || userOrgs[0]?.organization_name
+              || "";
+            if (orgName) {
+              setOrganizationId(bootstrapData.organizationId, orgName);
+            } else {
+              // Set ID saja tanpa nama (akan di-update oleh organization-switcher)
+              setOrganizationId(bootstrapData.organizationId, "");
+            }
           }
 
           // 4. Set Organization Status (Prevent OrgStatusChecker from refetching)

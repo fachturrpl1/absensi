@@ -128,7 +128,7 @@ export default function OnboardingSetupPage() {
                 clearTimeout(codeValidationTimeoutRef.current);
             }
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+         
     }, []);
 
     const loadInitialData = async () => {
@@ -294,9 +294,10 @@ export default function OnboardingSetupPage() {
 
             if (!result.success) {
                 const msg = result.message || "Failed to create organization";
+                const detail = result.error ? ` (${result.error})` : "";
                 toast.dismiss(toastId);
-                toast.error(msg);
-                setGlobalError(msg);
+                toast.error(msg + detail);
+                setGlobalError(msg + detail);
                 return;
             }
 
@@ -700,9 +701,26 @@ export default function OnboardingSetupPage() {
                                     </div>
                                     {formData.address && <ReviewRow label="Street Address" value={formData.address} />}
                                     {formData.stateProvince && (
-                                        <ReviewRow label="State/Province" value={formData.stateProvince} />
+                                        <ReviewRow
+                                            label="State/Province"
+                                            value={
+                                                locationData?.states.find(s => s.value === formData.stateProvince)?.label
+                                                ?? formData.stateProvince
+                                            }
+                                        />
                                     )}
-                                    {formData.city && <ReviewRow label="City" value={formData.city} />}
+                                    {formData.city && (
+                                        <ReviewRow
+                                            label="City"
+                                            value={
+                                                availableCities.find(c => c.value === formData.city)?.label
+                                                ?? locationData?.states
+                                                    .flatMap(s => s.cities)
+                                                    .find(c => c.value === formData.city)?.label
+                                                ?? formData.city
+                                            }
+                                        />
+                                    )}
                                     {formData.postalCode && (
                                         <ReviewRow label="Postal Code" value={formData.postalCode} />
                                     )}

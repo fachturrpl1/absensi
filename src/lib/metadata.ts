@@ -15,18 +15,18 @@ export async function generatePageMetadata(
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     const organizationName = user ? await getCachedOrganizationName(user.id) : null;
-    
+
     // Generate title with organization name: [Page] - [Organization]
-    const fullTitle = organizationName 
+    const fullTitle = organizationName
       ? `${pageTitle} - ${organizationName}`
       : pageTitle;
-    
-    const description = pageDescription 
-      ? pageDescription 
-      : `${pageTitle} - ${organizationName || 'Presensi'}`;
-    
+
+    const description = pageDescription
+      ? pageDescription
+      : `${pageTitle} - ${organizationName || 'Absensi'}`;
+
     return {
       title: fullTitle,
       description: description,

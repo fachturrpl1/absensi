@@ -405,7 +405,7 @@ function ApplicationCard({ item, onToggle, onDismissError }: ApplicationCardProp
             {imgError ? (
               <InitialsAvatar name={item.name} />
             ) : (
-              // eslint-disable-next-line @next/next/no-img-element
+               
               <img
                 src={item.iconUrl}
                 alt=""
@@ -584,7 +584,7 @@ function ActiveApplicationsTable({
               <TableCell className="font-medium">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 flex items-center justify-center rounded-md bg-gray-100 border border-gray-200 p-1">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    { }
                     <img
                       src={item.iconUrl}
                       alt=""

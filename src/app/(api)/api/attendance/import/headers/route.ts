@@ -172,8 +172,8 @@ function autoDetectHeaderRow(
                  c.includes('informasi kehadiran') ||
                  c.includes('detail kehadiran') ||
                  c.includes('rincian kehadiran') ||
-                 /^data\s+(kehadiran|attendance|presensi)/i.test(c) ||
-                 /^(data|informasi|detail|rincian)\s+(kehadiran|attendance|presensi)/i.test(c)
+                 /^data\s+(kehadiran|attendance|absensi)/i.test(c) ||
+                 /^(data|informasi|detail|rincian)\s+(kehadiran|attendance|absensi)/i.test(c)
         })
         
         // Check if parent row has merged/spanned headers

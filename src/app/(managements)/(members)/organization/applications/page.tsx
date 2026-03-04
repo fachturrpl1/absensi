@@ -81,7 +81,7 @@ const APPLICATIONS_CATALOG: ApplicationSection[] = [
                 id: "github",
                 name: "GitHub",
                 description:
-                    "Sync issues, pull requests, and commits to Presensi projects for accurate time attribution.",
+                    "Sync issues, pull requests, and commits to Absensi projects for accurate time attribution.",
                 iconUrl:
                     "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg",
                 connected: false,
@@ -105,7 +105,7 @@ const APPLICATIONS_CATALOG: ApplicationSection[] = [
                 id: "gitlab",
                 name: "GitLab",
                 description:
-                    "Mirror GitLab merge requests and CI pipeline events into your Presensi activity feed.",
+                    "Mirror GitLab merge requests and CI pipeline events into your Absensi activity feed.",
                 iconUrl:
                     "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/gitlab/gitlab-original.svg",
                 connected: false,

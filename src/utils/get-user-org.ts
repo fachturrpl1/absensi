@@ -21,7 +21,8 @@ export async function getUserOrganization(supabase: SupabaseClient) {
     query = query.eq("organization_id", activeOrgId);
   }
 
-  const { data: member, error: memberError } = await query.limit(1).maybeSingle();
+  const { data: members, error: memberError } = await query.limit(1);
+  const member = members?.[0];
 
   if (memberError || !member?.organization_id) {
     throw new Error('No organization found');

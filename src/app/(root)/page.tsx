@@ -161,7 +161,7 @@ const EnhancedStatCard = ({
   );
 };
 
-export default function ImprovedDashboard() {
+export default function pageDashboard() {
   const orgStore = useOrgStore();
   const { organizationName, loading: orgLoading } = useOrganizationName();
   const queryClient = useQueryClient();
@@ -473,7 +473,7 @@ export default function ImprovedDashboard() {
             <Skeleton className="h-9 w-80 mb-2" />
           ) : (
             <h1 className="text-3xl font-bold tracking-tight">
-              Dashboard{organizationName && ` — ${organizationName}`}
+              Dashboard{(organizationName || orgStore.organizationName) && ` — ${organizationName || orgStore.organizationName}`}
             </h1>
           )}
           <p className="text-muted-foreground text-sm mt-1">
@@ -588,7 +588,17 @@ export default function ImprovedDashboard() {
                     textAnchor={dateRange.preset === 'today' ? 'end' : 'middle'}
                     height={dateRange.preset === 'today' ? 60 : 30}
                   />
-                  <YAxis stroke="currentColor" opacity={0.5} fontSize={12} />
+                  <YAxis
+                    type="number"
+                    domain={['dataMin', 'dataMax']}
+                    stroke="currentColor"
+                    opacity={0.5}
+                    fontSize={12}
+                    tickFormatter={(value) => Math.floor(value).toString()}
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={0}
+                  />
                   <RechartsTooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey="present" stroke={COLORS.success} fillOpacity={1} fill="url(#colorPresent)" />
                   <Area type="monotone" dataKey="late" stroke={COLORS.warning} fillOpacity={1} fill="url(#colorLate)" />
