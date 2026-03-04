@@ -13,7 +13,6 @@ import { SelectedMemberProvider } from "./selected-member-context"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { DateRange, SelectedFilter } from "@/components/insights/types"
 import { useTimezone } from "@/components/providers/timezone-provider"
-import { BlurProvider } from "@/app/settings/screenshot/blur-context"
 
 export default function ScreenshotsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -267,7 +266,7 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
 
 
   return (
-    <BlurProvider>
+    <>
       <SelectedMemberProvider value={{ selectedMemberId, selectedMember, dateRange }}>
         <div className={`flex min-h-screen flex-col bg-white text-slate-800 ${isSettingsPage ? '' : 'gap-6 px-6 py-8'}`}>
           <DownloadDialog
@@ -393,6 +392,6 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
           )}
         </div>
       </SelectedMemberProvider>
-    </BlurProvider>
+    </>
   )
 }

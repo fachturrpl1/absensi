@@ -36,7 +36,7 @@ import AddProjectDialog from "@/components/projects/AddProjectDialog"
 import EditProjectDialog from "@/components/projects/EditProjectDialog"
 import TransferProjectDialog from "@/components/projects/TransferProjectDialog"
 import type { Project, NewProjectForm } from "@/components/projects/types"
-import { DUMMY_PROJECTS, DUMMY_MEMBERS, PROJECT_MEMBER_MAP, getTaskCountFromTasksPageByProjectId, getTeamNamesByProjectId } from "@/lib/data/dummy-data"
+import { getTaskCountFromTasksPageByProjectId } from "@/lib/data/dummy-data"
 import { PaginationFooter } from "@/components/tables/pagination-footer"
 
 // Initial data placeholder (will be replaced by useEffect)
@@ -56,14 +56,12 @@ export default function ProjectsPage() {
     const [search, setSearch] = useState("")
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [data, setData] = useState<Project[]>(INITIAL_DATA)
-    const [isLoading, setIsLoading] = useState(true)
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
 
     // Fetch real data
     React.useEffect(() => {
         const fetchData = async () => {
-            setIsLoading(true)
             const res = await getProjects()
             if (res.success) {
                 // Map IProject to Project component type
@@ -79,7 +77,6 @@ export default function ProjectsPage() {
                 }))
                 setData(projects)
             }
-            setIsLoading(false)
         }
         fetchData()
     }, [])
