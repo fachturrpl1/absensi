@@ -29,8 +29,6 @@ export async function GET(req: Request) {
       noCache: true,
     })
 
-    console.log('🔥 getAllAttendance RESULT:', result)
-
     return NextResponse.json(result, {
       status: result.success ? 200 : 400,
       headers: {
@@ -45,6 +43,4 @@ export async function GET(req: Request) {
       { status: 500 }
     )
   }
-
-  
 }

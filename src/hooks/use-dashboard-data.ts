@@ -22,6 +22,7 @@ interface UseDashboardDataReturn {
   statusData: { name: string; value: number; color: string }[]
   isLoading: boolean
   dateRange: DateFilterState
+  maxAttendance: number
   setDateRange: (range: DateFilterState) => void
 }
 
@@ -38,7 +39,7 @@ export function useDashboardData(
   })
 
   const { data: records = [], isLoading } = useQuery({
-    queryKey: ['dashboard', organizationId, dateRange],
+    queryKey: ['dashboard', organizationId, dateRange.preset],
     queryFn: () => fetchDashboardData(organizationId!, dateRange),
     staleTime: 0, // No cache
     gcTime: 5 * 60 * 1000,
@@ -48,6 +49,9 @@ export function useDashboardData(
   })
 
 const filteredRecords = useMemo(() => {
+if (!Array.isArray(records) || !records.length) {
+  return []
+}
   const fromDate = new Date(dateRange.from);
   fromDate.setHours(0, 0, 0, 0);
   
@@ -159,6 +163,14 @@ const filteredRecords = useMemo(() => {
     { name: 'Absent', value: stats.totalAbsent, color: '#EF4444' },
   ].filter(item => item.value > 0), [stats])
 
+const maxAttendance = useMemo(() => {
+  if (!chartData?.length) return 1;
+  const values = chartData
+    .map(item => Math.max(item.present || 0, item.late || 0))
+    .filter(v => v > 0);
+  return values.length ? Math.max(...values) : 1;
+}, [chartData]);
+
   return {
     records: filteredRecords,
     stats,
@@ -166,6 +178,7 @@ const filteredRecords = useMemo(() => {
     statusData,
     isLoading,
     dateRange,
+    maxAttendance,
     setDateRange,
   }
 }

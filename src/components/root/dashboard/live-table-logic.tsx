@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-// Removed Collapsible - not compatible with table structure
+
 import {
   ChevronDown,
   ChevronRight,

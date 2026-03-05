@@ -82,8 +82,8 @@ const activityCache: {
 
 const CACHE_DURATION = 60000; // 60 seconds cache (increased from 5s)
 
-export function ActivityTimeline({ 
-  limit = 10, 
+export function ActivityTimeline({
+  limit = 10,
   autoRefresh = true,
   refreshInterval = 120000 // 2 minutes (increased from 30s)
 }: ActivityTimelineProps) {
@@ -93,7 +93,7 @@ export function ActivityTimeline({
 
   const fetchActivities = async (force = false) => {
     const now = Date.now();
-    
+
     // Check cache first (prevent duplicate requests)
     if (!force && activityCache.data && (now - activityCache.timestamp) < CACHE_DURATION) {
       setActivities(activityCache.data);
@@ -113,7 +113,7 @@ export function ActivityTimeline({
     try {
       const response = await fetch(`/api/dashboard/recent-activity?limit=${limit}`);
       const result = await response.json();
-      
+
       if (result.success && result.data) {
         activityCache.data = result.data;
         activityCache.timestamp = Date.now();
@@ -211,7 +211,7 @@ export function ActivityTimeline({
         <div className="relative">
           {/* Timeline Line */}
           <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary/50 via-primary/20 to-transparent" />
-          
+
           <div className="space-y-4">
             {activities.map((activity, index) => {
               const config = statusConfig[activity.status as keyof typeof statusConfig] || statusConfig.absent;
@@ -249,8 +249,8 @@ export function ActivityTimeline({
                           </p>
                         )}
                       </div>
-                      <Badge 
-                        variant="outline" 
+                      <Badge
+                        variant="outline"
                         className={cn("flex-shrink-0 text-xs", config.color)}
                       >
                         {config.label}
@@ -264,9 +264,9 @@ export function ActivityTimeline({
                       </span>
                       <span>•</span>
                       <span>
-                        {formatDistanceToNow(checkInDate, { 
-                          addSuffix: true, 
-                          locale: idLocale 
+                        {formatDistanceToNow(checkInDate, {
+                          addSuffix: true,
+                          locale: idLocale
                         })}
                       </span>
                     </div>
