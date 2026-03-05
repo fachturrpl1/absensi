@@ -15,10 +15,17 @@ export interface DashboardStats {
   activeMembers: number
 }
 
+export interface ChartDataItem {
+  label : string
+  present : number
+  late : number
+  absent : number  
+}
+
 interface UseDashboardDataReturn {
   records: DashboardAttendanceRecord[]
   stats: DashboardStats
-  chartData: any[]
+  chartData: ChartDataItem[]
   statusData: { name: string; value: number; color: string }[]
   isLoading: boolean
   dateRange: DateFilterState
@@ -74,9 +81,10 @@ if (!Array.isArray(records) || !records.length) {
 
   // Calculate stats
   const stats = useMemo((): DashboardStats => {
-    const present = filteredRecords.filter(r => r.status === 'present' || r.status === 'late').length
-    const late = filteredRecords.filter(r => r.status === 'late').length
-    const absent = filteredRecords.filter(r => r.status === 'absent').length
+    const onTimeCount = filteredRecords.filter(r => r.status === 'on-time').length
+    const lateCount = filteredRecords.filter(r => r.status === 'late').length
+    const absentCount = filteredRecords.filter(records => records.status === 'absent').length
+    const presentCount = onTimeCount + lateCount
 
     const totalWorkMinutes = filteredRecords.reduce((sum, r) => {
       return sum + (r.work_duration_minutes || 0)
@@ -89,16 +97,16 @@ if (!Array.isArray(records) || !records.length) {
       filteredRecords.filter(r => r.actual_check_in).map(r => r.member_name)
     )
 
-    return {
-      totalPresent: present,
-      totalLate: late,
-      totalAbsent: absent,
-      onTimeRate: present > 0 ? ((present - late) / present) * 100 : 0,
-      avgWorkHours: avgHours,
-      totalWorkHoursToday: totalWorkHours,
-      activeMembers: uniqueMembers.size,
-    }
-  }, [filteredRecords])
+  return {
+    totalPresent: presentCount,
+    totalLate: lateCount,
+    totalAbsent: absentCount,
+    onTimeRate: presentCount > 0 ? (onTimeCount / presentCount) * 100 : 0,
+    avgWorkHours: avgHours,
+    totalWorkHoursToday: totalWorkHours,
+    activeMembers: uniqueMembers.size,
+  }
+}, [filteredRecords])
 
   // Chart data
   const chartData = useMemo(() => {
@@ -106,7 +114,11 @@ if (!Array.isArray(records) || !records.length) {
     
     if (isToday) {
       const hours = Array.from({ length: 24 }, (_, i) => i)
-      const hourlyMap: Record<number, any> = {}
+      const hourlyMap: Record<number, {
+        present: number;
+        late: number;
+        absent: number;
+      }> = {}
       
       hours.forEach(hour => {
         hourlyMap[hour] = { present: 0, late: 0, absent: 0 }
@@ -133,7 +145,11 @@ if (!Array.isArray(records) || !records.length) {
 
     // Default: daily data
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    const daysMap: Record<string, any> = {}
+    const daysMap: Record<string, {
+      present: number;
+      late: number;
+      absent: number;
+    }> = {}
     
     days.forEach(day => {
       daysMap[day] = { present: 0, late: 0, absent: 0 }
@@ -157,11 +173,29 @@ if (!Array.isArray(records) || !records.length) {
     }))
   }, [filteredRecords, dateRange.preset])
 
-  const statusData = useMemo(() => [
-    { name: 'Present', value: stats.totalPresent, color: '#10B981' },
-    { name: 'Late', value: stats.totalLate, color: '#F59E0B' },
-    { name: 'Absent', value: stats.totalAbsent, color: '#EF4444' },
-  ].filter(item => item.value > 0), [stats])
+const statusData = useMemo(() => {
+  const onTimeCount = filteredRecords.filter(r => r.status === 'on-time').length
+  const lateCount = filteredRecords.filter(r => r.status === 'late').length
+  const absentCount = filteredRecords.filter(r => r.status === 'absent').length
+  const totalRecords = onTimeCount + lateCount + absentCount
+  
+  const data = [
+    { name: 'On Time', value: onTimeCount, color: '#10B981' },
+    { name: 'Late', value: lateCount, color: '#F59E0B' },
+    { name: 'Absent', value: absentCount, color: '#EF4444' },
+  ].filter(item => item.value > 0)
+  
+  // Convert ke percentage dari totalRecords
+  return totalRecords > 0 
+    ? data.map(item => ({
+        name: item.name,
+        value: totalRecords,
+        color: item.color
+      }))
+    : []
+}, [filteredRecords])  // ✅ DEPENDENCY filteredRecords SAJA
+
+
 
 const maxAttendance = useMemo(() => {
   if (!chartData?.length) return 1;
@@ -182,3 +216,4 @@ const maxAttendance = useMemo(() => {
     setDateRange,
   }
 }
+

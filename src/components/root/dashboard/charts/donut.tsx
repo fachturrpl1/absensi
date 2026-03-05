@@ -1,7 +1,7 @@
 'use client'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import { motion } from 'framer-motion'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 
 interface Props {
   statusData: { name: string; value: number; color: string }[]
@@ -18,7 +18,6 @@ export function ChartsPie({ statusData }: Props) {
       <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-lg text-foreground">Status Distribution</CardTitle>
-          <CardDescription className="text-muted-foreground">Breakdown by status</CardDescription>
         </CardHeader>
         <CardContent>
           {statusData.length > 0 ? (

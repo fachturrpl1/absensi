@@ -11,7 +11,7 @@ import { useDashboardData } from '@/hooks/use-dashboard-data'
 import { DashboardHeader } from '@/components/root/dashboard/header'
 import { StatsCards } from '@/components/root/dashboard/stats-cards'
 import { ChartsArea } from '@/components/root/dashboard/charts/area'
-import { ChartsPie } from '@/components/root/dashboard/charts/pie'
+import { ChartsPie } from '@/components/root/dashboard/charts/donut'
 import { RecentActivity } from '@/components/root/dashboard/tables/recent-activity'
 import { LiveTable } from '@/components/root/dashboard/tables/live-table'
 

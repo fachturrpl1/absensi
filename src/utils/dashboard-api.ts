@@ -23,7 +23,51 @@ export interface DashboardStats {
   avgWorkHours: number
 }
 
-// 🔥 NEW: Single function return BOTH records + stats
+export interface StatusDistributionItem {
+  name : string
+  value : number
+  color : string
+}
+
+export async function fetchStatusDistribution(
+  organizationId: number,
+  dateRange: DateFilterState
+): Promise<StatusDistributionItem[]> {
+  const { records } = await fetchDashboardDataFull(organizationId, dateRange)  // ✅ GUNAKAN EXISTING
+  
+  const todayDate = dateRange.to.toISOString().slice(0, 10)
+  const todayRecords = records.filter(r => r.attendance_date === todayDate)
+  
+  // Hitung status count
+  const statusCount: Record<string, number> = {}
+  todayRecords.forEach(r => {
+    const status = r.status.toLowerCase()
+    statusCount[status] = (statusCount[status] || 0) + 1
+  })
+  
+  // Map ke pie chart data + FILTER value > 0 ✅ NO ZERO SLICES
+  const statusData: StatusDistributionItem[] = [
+    { 
+      name: 'On Time', 
+      value: statusCount['on-time'] || 0, 
+      color: '#10b981'  // green
+    },
+    { 
+      name: 'Late', 
+      value: statusCount['late'] || 0, 
+      color: '#f59e0b'  // orange
+    },
+    { 
+      name: 'Absent', 
+      value: statusCount['absent'] || 0, 
+      color: '#ef4444'  // red
+    }
+  ].filter(item => item.value > 0)  // ✅ HANYA DATA REAL
+  
+  return statusData
+}
+
+// Single function return BOTH records + stats
 export async function fetchDashboardDataFull(
   organizationId: number,
   dateRange: DateFilterState
