@@ -125,7 +125,7 @@ export const NavUser = memo(function NavUser() {
                 photoUrl={user.avatar}
                 userId={storeUser?.id}
                 size={8}
-                className="rounded-lg"
+                className="rounded-full"
               />
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
@@ -146,7 +146,7 @@ export const NavUser = memo(function NavUser() {
                   photoUrl={user.avatar}
                   userId={storeUser?.id}
                   size={8}
-                  className="rounded-lg"
+                  className="rounded-full"
                 />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>

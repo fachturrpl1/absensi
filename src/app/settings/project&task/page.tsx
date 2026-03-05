@@ -4,8 +4,9 @@ import React, { useState, useEffect } from "react"
 import { Info, Search, User, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 
 import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
-import { OrganizationHeader } from "@/components/settings/OrganizationHeader"
-import { ProjectSidebar } from "@/components/settings/ProjectSidebar"
+import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import { Building2 } from "lucide-react"
+import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
 type ProjectRole = "none" | "viewer" | "user" | "manager"
 
@@ -79,48 +80,59 @@ export default function DefaultProjectRolePage() {
         setCurrentPage(1)
     }
 
+    const tabs: SettingTab[] = [
+        { label: "PROJECTS & TO-DOS", href: "/settings/project&task", active: true },
+    ]
+
+    const sidebarItems: SidebarItem[] = [
+        { id: "allow-project-tracking", label: "Allow project tracking", href: "/settings/project&task/allow-project-tracking" },
+        { id: "global-todos", label: "Global to-dos", href: "/settings/project&task/global-todos" },
+    ]
+
     return (
         <div className="flex flex-col min-h-screen bg-white">
-            <OrganizationHeader activeTab="projects-todos" />
+            <SettingsHeader
+                title="Organization"
+                Icon={Building2}
+                tabs={tabs}
+                sidebarItems={sidebarItems}
+                activeItemId="default-roles"
+            />
 
             {/* Content */}
-            <div className="flex flex-1">
-                {/* Sidebar */}
-                {/* Sidebar */}
-                <ProjectSidebar activeItem="default-roles" />
-
-                {/* Main Content */}
-                <div className="flex-1 p-6">
+            <div className="flex flex-1 w-full overflow-hidden">
+                {/* Main Content Area */}
+                <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
                     {/* Section Title */}
                     <div className="flex items-center gap-1 mb-2">
-                        <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                             DEFAULT PROJECT ROLE
                         </span>
-                        <Info className="w-3.5 h-3.5 text-gray-400" />
+                        <Info className="w-3.5 h-3.5 text-slate-300" />
                     </div>
 
                     {/* Description */}
-                    <p className="text-sm text-gray-600 mb-6">
+                    <p className="text-sm text-slate-500 mb-8 max-w-2xl leading-relaxed">
                         When creating a new project, members will be assigned by default to the selected role.
                     </p>
 
                     {/* Global Setting */}
-                    <div className="flex items-center gap-1 mb-3">
-                        <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                            GLOBAL:
+                    <div className="flex items-center gap-1 mb-4">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            GLOBAL SETTING:
                         </span>
-                        <Info className="w-3.5 h-3.5 text-gray-400" />
+                        <Info className="w-3.5 h-3.5 text-slate-300" />
                     </div>
 
                     {/* Role Selection Pills */}
-                    <div className="flex items-center bg-gray-100 rounded-full p-1 w-fit mb-10">
+                    <div className="flex flex-wrap items-center bg-slate-100 rounded-2xl p-1.5 w-full sm:w-fit mb-12 gap-1 shadow-inner">
                         {roles.map((role) => (
                             <button
                                 key={role.value}
                                 onClick={() => handleGlobalRoleChange(role.value)}
-                                className={`px-6 py-2 text-sm font-medium rounded-full transition-colors ${globalRole === role.value
-                                    ? "bg-white text-gray-900 shadow-sm"
-                                    : "text-gray-600 hover:text-gray-900"
+                                className={`flex-1 sm:flex-none px-6 py-2.5 text-xs font-bold rounded-xl transition-all ${globalRole === role.value
+                                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
+                                    : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
                                     }`}
                             >
                                 {role.label}
@@ -129,19 +141,19 @@ export default function DefaultProjectRolePage() {
                     </div>
 
                     {/* Individual Settings Section */}
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-2">
                         <div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-1">Individual settings</h3>
-                            <p className="text-sm text-gray-500">Override the organization default for specific members</p>
+                            <h3 className="text-lg font-bold text-slate-900 tracking-tight mb-1">Individual settings</h3>
+                            <p className="text-sm text-slate-500 leading-relaxed">Override the organization default for specific members</p>
                         </div>
-                        <div className="relative">
+                        <div className="relative w-full sm:w-auto">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <input
                                 type="text"
-                                placeholder="Search members"
+                                placeholder="Search members..."
                                 value={searchQuery}
                                 onChange={(e) => handleSearchChange(e.target.value)}
-                                className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
+                                className="pl-10 pr-4 py-2 w-full sm:w-64 border border-slate-200 rounded-full focus:outline-none focus:ring-1 focus:ring-slate-900 text-sm h-10 transition-all bg-white"
                             />
                         </div>
                     </div>
@@ -167,21 +179,21 @@ export default function DefaultProjectRolePage() {
                                     No members found
                                 </div>
                             ) : paginatedMembers.map((member) => (
-                                <div key={member.id} className="flex items-center justify-between py-4">
+                                <div key={member.id} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-5 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 px-2 rounded-xl transition-colors group">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                            <User className="w-4 h-4 text-gray-600" />
+                                        <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 group-hover:bg-white transition-colors">
+                                            <User className="w-4.5 h-4.5 text-slate-400" />
                                         </div>
-                                        <span className="text-sm text-gray-900">{member.name}</span>
+                                        <span className="text-sm font-semibold text-slate-900 group-hover:text-slate-950 transition-colors uppercase tracking-tight">{member.name}</span>
                                     </div>
-                                    <div className="flex items-center bg-gray-100 rounded-full p-1">
+                                    <div className="flex flex-wrap gap-1.5 bg-slate-100 sm:bg-slate-50 rounded-2xl p-1 w-full sm:w-fit shadow-inner">
                                         {roles.map((role) => (
                                             <button
                                                 key={role.value}
                                                 onClick={() => handleMemberRoleChange(member.id, role.value)}
-                                                className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${member.role === role.value
-                                                    ? "bg-white text-gray-900 shadow-sm"
-                                                    : "text-gray-600 hover:text-gray-900"
+                                                className={`flex-1 sm:flex-none px-4 py-1.5 text-[10px] font-bold rounded-xl transition-all uppercase tracking-widest ${member.role === role.value
+                                                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
+                                                    : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
                                                     }`}
                                             >
                                                 {role.label}

@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { PoliciesHeader } from "@/components/settings/PoliciesHeader"
-import { PoliciesSidebar } from "@/components/settings/PoliciesSidebar"
+import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import { ShieldCheck } from "lucide-react"
+import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Search, Info, Download, Upload, Loader2, ChevronDown } from "lucide-react"
@@ -229,47 +230,66 @@ export default function TimeOffBalancesPage() {
 
     const loading = membersLoading || !isLoaded
 
+    const tabs: SettingTab[] = [
+        { label: "TIME OFF", href: "/settings/Policies", active: false },
+        { label: "WORK BREAKS", href: "/settings/Policies/work-breaks", active: false },
+        { label: "OVERTIME", href: "/settings/Policies/overtime", active: false },
+    ]
+
+    const sidebarItems: SidebarItem[] = [
+        { id: "policies", label: "Time off policies", href: "/settings/Policies" },
+        { id: "holidays", label: "Holidays", href: "/settings/Policies/holidays" },
+        { id: "balances", label: "Time off balances", href: "/settings/Policies/time-off-balances" },
+    ]
+
     return (
         <div className="flex flex-col min-h-screen bg-white">
-            <PoliciesHeader activeTab="time-off" />
-            <div className="flex flex-1">
-                <PoliciesSidebar activeItem="balances" />
-                <div className="flex-1 p-8">
+            <SettingsHeader
+                title="Policies"
+                Icon={ShieldCheck}
+                tabs={tabs}
+                sidebarItems={sidebarItems}
+                activeItemId="balances"
+            />
+            {/* Content */}
+            <div className="flex flex-1 w-full overflow-hidden">
+                {/* Main Content Area */}
+                <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
                     {/* Header Section */}
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                         <div>
                             <div className="flex items-center gap-2 mb-1">
-                                <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                     TIME OFF BALANCES
                                 </h2>
-                                <Info className="w-3.5 h-3.5 text-slate-400" />
+                                <Info className="w-3.5 h-3.5 text-slate-300" />
                             </div>
-                            <p className="text-slate-500">
-                                Set up time off balances for members
+                            <p className="text-xl font-bold text-slate-900 tracking-tight">
+                                Manage member balances
                             </p>
                         </div>
-                        <div className="relative">
+                        <div className="relative w-full sm:w-auto">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <input
                                 type="text"
-                                placeholder="Search members"
+                                placeholder="Search members..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-full focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm"
+                                className="pl-10 pr-4 py-2 w-full sm:w-64 border border-slate-200 rounded-full focus:outline-none focus:ring-1 focus:ring-slate-900 text-sm h-10 transition-all bg-white"
                             />
                         </div>
                     </div>
 
-                    <div className="flex justify-end gap-3 mb-8 items-center">
+                    <div className="flex flex-col sm:flex-row sm:justify-end gap-3 mb-8 items-stretch sm:items-center">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="outline"
-                                    className="bg-white text-slate-600 border-slate-200 hover:bg-slate-50 h-10 px-4 font-medium rounded-lg transition-colors shadow-sm"
+                                    className="bg-white text-slate-600 border-slate-200 hover:bg-slate-50 h-10 px-4 font-medium rounded-lg transition-colors shadow-sm flex-1 sm:flex-none justify-center"
                                 >
-                                    <Download className="w-5 h-5 mr-2" />
+                                    <Download className="w-4 h-4 mr-2" />
                                     Export
-                                    <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
+                                    <ChevronDown className="w-3 h-3 ml-2 opacity-50" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-40">
@@ -291,9 +311,9 @@ export default function TimeOffBalancesPage() {
                         />
                         <Button
                             onClick={() => setIsImportModalOpen(true)}
-                            className="bg-slate-900 hover:bg-slate-800 text-white h-10 px-8 font-medium rounded-lg transition-colors shadow-sm border-none"
+                            className="bg-slate-900 hover:bg-slate-800 text-white h-10 px-8 font-medium rounded-lg transition-colors shadow-sm border-none flex-1 sm:flex-none justify-center"
                         >
-                            <Upload className="w-5 h-5 mr-2" />
+                            <Upload className="w-4 h-4 mr-2" />
                             Import
                         </Button>
                     </div>

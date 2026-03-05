@@ -4,8 +4,8 @@ import React, { useState, useMemo } from "react"
 import { Info, Search, User } from "lucide-react"
 
 import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
-import { SchedulesHeader } from "@/components/settings/SchedulesHeader"
-import { MapSidebar } from "@/components/settings/MapSidebar"
+import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import { Calendar } from "lucide-react"
 
 type TrackingOption = "off" | "tracking-time" | "always"
 
@@ -58,18 +58,28 @@ export default function MapPage() {
         member.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
+    const tabs: SettingTab[] = [
+        { label: "CALENDAR", href: "/settings/Calender", active: false },
+        { label: "JOB SITES", href: "/settings/Job-sites", active: false },
+        { label: "MAP", href: "/settings/Map", active: true },
+    ]
+
     return (
         <div className="flex flex-col min-h-screen bg-white">
-            <SchedulesHeader activeTab="map" />
+            <SettingsHeader
+                title="Schedules"
+                Icon={Calendar}
+                tabs={tabs}
+                sidebarItems={[
+                    { id: "track-locations", label: "Track Locations (Mobile Only)", href: "/settings/Map" },
+                ]}
+                activeItemId="track-locations"
+            />
 
             {/* Content */}
-            <div className="flex flex-1">
-                {/* Sidebar */}
-                {/* Sidebar */}
-                <MapSidebar activeItem="track-locations" />
-
-                {/* Main Content */}
-                <div className="flex-1 p-6">
+            <div className="flex flex-1 w-full overflow-hidden">
+                {/* Main Content Area */}
+                <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
                     {/* Section Title */}
                     <div className="flex items-center gap-1 mb-2">
                         <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
@@ -108,7 +118,7 @@ export default function MapPage() {
                     </div>
 
                     {/* Individual Settings Section */}
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
                         <div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-1">Individual settings</h3>
                             <p className="text-sm text-gray-500">Override the organization default for specific members</p>
@@ -120,7 +130,7 @@ export default function MapPage() {
                                 placeholder="Search members"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
+                                className="pl-10 pr-4 py-2 w-full sm:w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                             />
                         </div>
                     </div>
@@ -128,22 +138,22 @@ export default function MapPage() {
                     {/* Members Table */}
                     <div className="mt-6">
                         {/* Table Header */}
-                        <div className="py-3 border-b border-gray-200">
+                        <div className="hidden sm:grid grid-cols-1 py-3 border-b border-gray-200">
                             <span className="text-sm font-semibold text-gray-900">Name</span>
                         </div>
 
                         {/* Table Body */}
                         <div className="divide-y divide-gray-200">
                             {filteredMembers.map((member) => (
-                                <div key={member.id} className="flex items-center justify-between py-4">
+                                <div key={member.id} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-4 border-b border-gray-100 last:border-0">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
                                             <User className="w-4 h-4 text-gray-500" />
                                         </div>
                                         <span className="text-sm text-gray-900">{member.name}</span>
                                     </div>
-                                    {/* Member Toggle Buttons */}
-                                    <div className="inline-flex rounded-full bg-gray-100 p-0.5">
+                                    {/* Member Toggle Buttons - Pill style */}
+                                    <div className="inline-flex flex-wrap rounded-full bg-gray-100 p-0.5 w-fit">
                                         {trackingOptions.map((option) => (
                                             <button
                                                 key={option.value}

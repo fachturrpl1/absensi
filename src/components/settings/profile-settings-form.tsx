@@ -34,6 +34,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import imageCompression from "browser-image-compression"
 
 
 // Schema
@@ -150,12 +151,29 @@ export function ProfileSettingsForm({ initialData }: ProfileSettingsFormProps) {
         setPhotoUploading(true);
         const toastId = toast.loading("Uploading profile photo...");
         try {
+            // Client-side compression
+            // If it's just a Blob, we need a File object for browser-image-compression if possible,
+            // but it usually works with Blobs too. Let's wrap it.
+            const imageFile = new File([croppedBlob], selectedFile?.name || 'profile.png', {
+                type: 'image/png',
+                lastModified: Date.now(),
+            });
+
+            const options = {
+                maxSizeMB: 1,
+                maxWidthOrHeight: 400,
+                useWebWorker: true,
+                fileType: 'image/webp'
+            };
+
+            const compressedFile = await imageCompression(imageFile, options);
+
             const reader = new FileReader();
-            reader.readAsDataURL(croppedBlob);
+            reader.readAsDataURL(compressedFile);
             reader.onloadend = async () => {
                 const base64 = reader.result?.toString();
                 if (!base64) {
-                    toast.error("Failed to process cropped image", { id: toastId });
+                    toast.error("Failed to process compressed image", { id: toastId });
                     setPhotoUploading(false);
                     return;
                 }
@@ -163,9 +181,9 @@ export function ProfileSettingsForm({ initialData }: ProfileSettingsFormProps) {
                 const base64Data = (base64.includes('base64,') ? base64.split('base64,')[1] : base64) || "";
                 const result = await uploadProfilePhotoBase64({
                     base64Data,
-                    fileName: selectedFile?.name || 'profile.png',
-                    fileType: 'image/png',
-                    fileSize: croppedBlob.size,
+                    fileName: compressedFile.name,
+                    fileType: compressedFile.type,
+                    fileSize: compressedFile.size,
                 });
 
                 if (result.success && result.url) {

@@ -6,8 +6,10 @@ import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { MembersHeader } from "@/components/settings/MembersHeader"
+import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import { Users } from "lucide-react"
 import { useWorkTimeLimitStore, DayOfWeek, WorkHourEntry } from "@/store/work-time-limit-store"
+import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
 export default function WorkTimeLimitPage() {
     const {
@@ -108,31 +110,50 @@ export default function WorkTimeLimitPage() {
         return null
     }
 
+    const tabs: SettingTab[] = [
+        { label: "EMAIL NOTIFICATIONS", href: "/settings/members/email-notifications", active: false },
+        { label: "WORK TIME LIMITS", href: "/settings/work-time-limit", active: true },
+        { label: "PAYMENTS", href: "/settings/payments", active: false },
+        { label: "ACHIEVEMENTS", href: "/settings/Achievements", active: false },
+    ]
+
+    const sidebarItems: SidebarItem[] = [
+        { id: "work-time-limit", label: "Work time limits", href: "/settings/work-time-limit" },
+    ]
+
     return (
         <div className="flex flex-col min-h-screen bg-white">
-            <MembersHeader activeTab="work-time-limits" />
+            <SettingsHeader
+                title="Members"
+                Icon={Users}
+                tabs={tabs}
+                sidebarItems={sidebarItems}
+                activeItemId="work-time-limit"
+            />
 
             {/* Content */}
-            <div className="flex-1 p-6">
+            <div className="flex-1 p-4 md:p-6">
                 {/* Default Settings Header */}
-                <div className="flex items-center gap-4 mb-8">
+                <div className="flex flex-wrap items-center gap-4 mb-8">
                     <h2 className="text-lg font-semibold text-gray-900">Default settings</h2>
-                    <Button
-                        onClick={handleSave}
-                        className="bg-slate-900 hover:bg-slate-800 text-white px-6"
-                    >
-                        Save
-                    </Button>
-                    <button
-                        onClick={handleCancel}
-                        className="text-slate-500 hover:text-slate-900 text-sm font-medium"
-                    >
-                        Cancel
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <Button
+                            onClick={handleSave}
+                            className="bg-slate-900 hover:bg-slate-800 text-white px-6"
+                        >
+                            Save
+                        </Button>
+                        <button
+                            onClick={handleCancel}
+                            className="text-slate-500 hover:text-slate-900 text-sm font-medium"
+                        >
+                            Cancel
+                        </button>
+                    </div>
                 </div>
 
                 {/* Two Column Layout */}
-                <div className="grid grid-cols-2 gap-12">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
                     {/* Left Column - Weekly Work Days */}
                     <div>
                         <div className="mb-6">

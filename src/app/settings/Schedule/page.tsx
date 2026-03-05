@@ -2,42 +2,39 @@
 
 import React, { useState } from "react"
 import { Info } from "lucide-react"
-import Link from "next/link"
-import { SchedulesHeader } from "@/components/settings/SchedulesHeader"
+import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import { Calendar } from "lucide-react"
+import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
 export default function SchedulePage() {
     const [calendarType, setCalendarType] = useState<"private" | "collaborative">("private")
 
-    const sidebarItems = [
-        { label: "Calendar type", href: "/settings/Schedule", active: true },
-        { label: "Shift alerts", href: "/settings/Schedule/shift-alerts", active: false },
-        { label: "Grace period", href: "/settings/Schedule/grace-period", active: false },
+    const sidebarItems: SidebarItem[] = [
+        { id: "calendar-type", label: "Calendar type", href: "/settings/Schedule" },
+        { id: "shift-alerts", label: "Shift alerts", href: "/settings/Schedule/shift-alerts" },
+        { id: "grace-period", label: "Grace period", href: "/settings/Schedule/grace-period" },
+    ]
+
+    const tabs: SettingTab[] = [
+        { label: "CALENDAR", href: "/settings/Calender", active: true },
+        { label: "JOB SITES", href: "/settings/Job-sites", active: false },
+        { label: "MAP", href: "/settings/Map", active: false },
     ]
 
     return (
         <div className="flex flex-col min-h-screen bg-white">
-            <SchedulesHeader activeTab="calendar" />
+            <SettingsHeader
+                title="Schedules"
+                Icon={Calendar}
+                tabs={tabs}
+                sidebarItems={sidebarItems}
+                activeItemId="calendar-type"
+            />
 
             {/* Content */}
-            <div className="flex flex-1">
-                {/* Sidebar */}
-                <div className="w-48 border-r border-gray-200 py-6">
-                    {sidebarItems.map((item) => (
-                        <Link
-                            key={item.label}
-                            href={item.href}
-                            className={`block px-6 py-2 text-sm transition-colors ${item.active
-                                ? "text-gray-900 border-l-2 border-gray-900 font-medium"
-                                : "text-gray-500 hover:text-gray-700"
-                                }`}
-                        >
-                            {item.label}
-                        </Link>
-                    ))}
-                </div>
-
-                {/* Main Content */}
-                <div className="flex-1 p-6">
+            <div className="flex flex-1 w-full overflow-hidden">
+                {/* Main Content Area */}
+                <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
                     {/* Section Title */}
                     <div className="flex items-center gap-1 mb-2">
                         <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">

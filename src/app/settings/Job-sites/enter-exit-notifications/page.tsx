@@ -4,8 +4,9 @@ import React, { useState, useMemo } from "react"
 import { Info, Search, User } from "lucide-react"
 
 import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
-import { SchedulesHeader } from "@/components/settings/SchedulesHeader"
-import { JobSitesSidebar } from "@/components/settings/JobSitesSidebar"
+import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import { Calendar } from "lucide-react"
+import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
 interface MemberWithSetting {
     id: string
@@ -50,18 +51,31 @@ export default function EnterExitNotificationsPage() {
         member.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
+    const tabs: SettingTab[] = [
+        { label: "CALENDAR", href: "/settings/Calender", active: false },
+        { label: "JOB SITES", href: "/settings/Job-sites", active: true },
+        { label: "MAP", href: "/settings/Map", active: false },
+    ]
+
+    const sidebarItems: SidebarItem[] = [
+        { id: "restrict-timer", label: "Restrict timer to job sites", href: "/settings/Job-sites" },
+        { id: "enter-exit-notifications", label: "Enter/exit notifications", href: "/settings/Job-sites/enter-exit-notifications" },
+    ]
+
     return (
         <div className="flex flex-col min-h-screen bg-white">
-            <SchedulesHeader activeTab="job-sites" />
+            <SettingsHeader
+                title="Schedules"
+                Icon={Calendar}
+                tabs={tabs}
+                sidebarItems={sidebarItems}
+                activeItemId="enter-exit-notifications"
+            />
 
             {/* Content */}
-            <div className="flex flex-1">
-                {/* Sidebar */}
-                {/* Sidebar */}
-                <JobSitesSidebar activeItem="enter-exit-notifications" />
-
-                {/* Main Content */}
-                <div className="flex-1 p-6">
+            <div className="flex flex-1 w-full overflow-hidden">
+                {/* Main Content Area */}
+                <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
                     {/* Section Title */}
                     <div className="flex items-center gap-1 mb-2">
                         <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">

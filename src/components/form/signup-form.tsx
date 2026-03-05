@@ -14,12 +14,12 @@ import { GoogleIcon } from "@/components/ui/google-icon";
 
 const FormSchema = z
   .object({
-    first_name: z.string().min(1, { message: "First name is required." }),
+    first_name: z.string().min(1, { message: "Nama depan wajib diisi." }),
     middle_name: z.string().optional(),
     last_name: z.string().optional(),
-    email: z.string().email({ message: "Please enter a valid email address." }),
-    password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-    confirmPassword: z.string().min(6, { message: "Confirm Password must be at least 6 characters." }),
+    email: z.string().email({ message: "Email tidak valid. Pastikan menyertakan simbol '@'." }),
+    password: z.string().min(6, { message: "Password minimal harus 6 karakter." }),
+    confirmPassword: z.string().min(6, { message: "Konfirmasi Password minimal harus 6 karakter." }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match.",

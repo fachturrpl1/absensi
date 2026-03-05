@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Info, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Info, Search, Loader2, ChevronLeft, ChevronRight, Activity } from "lucide-react"
 import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
-import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
-import { TrackingSidebar } from "@/components/settings/TrackingSidebar"
+import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import type { SidebarItem } from "@/components/settings/SettingsSidebar"
+import { Star } from "lucide-react"
 
 type KeepIdleTimeOption = "prompt" | "always" | "never"
 
@@ -50,18 +51,33 @@ export default function TrackingPage() {
         }))
     }
 
+    const tabs: SettingTab[] = [
+        { label: "ACTIVITY", href: "/settings/Activity", active: false },
+        { label: "TIMESHEETS", href: "/settings/Timesheet", active: false },
+        { label: "TRACKING", href: "/settings/tracking", active: true },
+        { label: "SCREENSHOTS", href: "/settings/screenshot", active: false },
+    ]
+
+    const sidebarItems: SidebarItem[] = [
+        { id: "keep-idle-time", label: "Keep idle time", href: "/settings/tracking" },
+        { id: "idle-timeout", label: "Idle timeout", href: "/settings/tracking/idle-timeout" },
+        { id: "allowed-apps", label: "Allowed apps", href: "/settings/tracking/allowed-apps", icon: Star },
+    ]
+
     return (
         <div className="flex flex-col min-h-screen bg-white w-full">
-            <ActivityTrackingHeader activeTab="tracking" />
+            <SettingsHeader
+                title="Activity & Tracking"
+                Icon={Activity}
+                tabs={tabs}
+                sidebarItems={sidebarItems}
+                activeItemId="keep-idle-time"
+            />
 
-            {/* Main Content */}
-            <div className="flex flex-1 w-full">
-                {/* Left Sidebar */}
-                {/* Left Sidebar */}
-                <TrackingSidebar activeItem="keep-idle-time" />
-
-                {/* Right Content */}
-                <div className="flex-1 p-6">
+            {/* Content */}
+            <div className="flex flex-1 w-full overflow-hidden">
+                {/* Main Content Area */}
+                <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
                     {/* Section Title */}
                     <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -115,7 +131,7 @@ export default function TrackingPage() {
                     </div>
 
                     {/* Individual Settings Header */}
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                         <div>
                             <h3 className="text-lg font-semibold text-slate-900">Individual settings</h3>
                             <p className="text-sm text-slate-500">Override the organization default for specific members</p>
@@ -127,7 +143,7 @@ export default function TrackingPage() {
                                 placeholder="Search members"
                                 value={searchQuery}
                                 onChange={(e) => handleSearchChange(e.target.value)}
-                                className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
+                                className="pl-10 pr-4 py-2 w-full sm:w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                             />
                         </div>
                     </div>

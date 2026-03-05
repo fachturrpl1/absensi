@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { PoliciesHeader } from "@/components/settings/PoliciesHeader"
-import { PoliciesSidebar } from "@/components/settings/PoliciesSidebar"
+import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import { ShieldCheck } from "lucide-react"
+import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { Button } from "@/components/ui/button"
 import { Plus, ChevronDown } from "lucide-react"
 import { AddTimeOffPolicyDialog } from "@/components/settings/policies/AddTimeOffPolicyDialog"
@@ -80,12 +81,31 @@ export default function TimeOffPoliciesPage() {
 
     const filteredPolicies = activePolicies.filter(p => p.status === activeTab)
 
+    const tabs: SettingTab[] = [
+        { label: "TIME OFF", href: "/settings/Policies", active: true },
+        { label: "WORK BREAKS", href: "/settings/Policies/work-breaks", active: false },
+        { label: "OVERTIME", href: "/settings/Policies/overtime", active: false },
+    ]
+
+    const sidebarItems: SidebarItem[] = [
+        { id: "policies", label: "Time off policies", href: "/settings/Policies" },
+        { id: "holidays", label: "Holidays", href: "/settings/Policies/holidays" },
+        { id: "balances", label: "Time off balances", href: "/settings/Policies/time-off-balances" },
+    ]
+
     return (
         <div className="flex flex-col min-h-screen bg-white">
-            <PoliciesHeader activeTab="time-off" />
-            <div className="flex flex-1">
-                <PoliciesSidebar activeItem="policies" />
-                <div className="flex-1 p-8">
+            <SettingsHeader
+                title="Policies"
+                Icon={ShieldCheck}
+                tabs={tabs}
+                sidebarItems={sidebarItems}
+                activeItemId="policies"
+            />
+            {/* Content */}
+            <div className="flex flex-1 w-full overflow-hidden">
+                {/* Main Content Area */}
+                <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
                     {/* Tabs */}
                     <div className="flex border-b border-slate-200 mb-8">
                         <button
@@ -111,7 +131,7 @@ export default function TimeOffPoliciesPage() {
                     {/* Content */}
                     {filteredPolicies.length > 0 ? (
                         <div className="space-y-6">
-                            <div className="flex justify-between items-start">
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-2">
                                         <h2 className="text-sm font-bold text-slate-500 uppercase">TIME OFF POLICIES</h2>
@@ -129,17 +149,17 @@ export default function TimeOffPoliciesPage() {
                                             setEditingPolicy(null)
                                             setIsDialogOpen(true)
                                         }}
-                                        className="bg-slate-900 hover:bg-slate-800 text-white"
+                                        className="bg-slate-900 hover:bg-slate-800 text-white w-full sm:w-auto"
                                     >
                                         Add policy
                                     </Button>
                                 )}
                             </div>
 
-                            <div className="w-full">
+                            <div className="w-full overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
-                                        <tr className="border-b border-slate-100">
+                                        <tr className="border-b border-slate-100 hidden sm:table-row">
                                             <th className="text-left py-4 font-semibold text-slate-900">Policy name</th>
                                             <th className="text-left py-4 font-semibold text-slate-900">Members</th>
                                             <th className="text-left py-4 font-semibold text-slate-900">Accrual schedule</th>
@@ -148,15 +168,20 @@ export default function TimeOffPoliciesPage() {
                                     </thead>
                                     <tbody>
                                         {filteredPolicies.map((policy) => (
-                                            <tr key={policy.id} className="border-b border-slate-50">
-                                                <td className="py-4 text-slate-900">{policy.name}</td>
-                                                <td className="py-4 text-slate-900">{policy.members}</td>
-                                                <td className="py-4 text-slate-900">
-                                                    <div>
-                                                        <div className="font-medium text-slate-900">
+                                            <tr key={policy.id} className="border-b border-slate-50 flex flex-col sm:table-row py-4 sm:py-0">
+                                                <td className="py-2 sm:py-4 text-slate-900 sm:table-cell">
+                                                    <div className="font-medium sm:font-normal">{policy.name}</div>
+                                                    <div className="sm:hidden text-xs text-slate-500 mt-1">
+                                                        {policy.members} members
+                                                    </div>
+                                                </td>
+                                                <td className="py-4 text-slate-900 hidden sm:table-cell">{policy.members}</td>
+                                                <td className="py-2 sm:py-4 text-slate-900 sm:table-cell">
+                                                    <div className="flex flex-col">
+                                                        <div className="font-medium text-slate-900 text-sm sm:text-base">
                                                             {policy.accrualSchedule}
                                                         </div>
-                                                        <div className="text-sm text-slate-500">
+                                                        <div className="text-xs sm:text-sm text-slate-500">
                                                             {policy.accrualSchedule === "Annual" && policy.maxAccrual && (
                                                                 `${policy.maxAccrual} hours per year`
                                                             )}
@@ -175,10 +200,10 @@ export default function TimeOffPoliciesPage() {
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="py-4 text-right">
+                                                <td className="py-2 sm:py-4 text-right sm:table-cell">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
-                                                            <Button variant="outline" className="h-9">
+                                                            <Button variant="outline" className="h-9 w-full sm:w-auto justify-between sm:justify-center">
                                                                 Actions <ChevronDown className="ml-2 h-4 w-4" />
                                                             </Button>
                                                         </DropdownMenuTrigger>

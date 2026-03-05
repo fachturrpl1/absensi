@@ -310,14 +310,25 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
                     {/* Header - hanya tampil jika bukan settings page */}
                     {!isSettingsPage && (
                         <>
-                            <div className="relative flex w-full items-center justify-between gap-4">
-                                {/* Screenshot Title */}
-                                <div className="flex-1 min-w-[220px]">
-                                    <h1 className="text-xl font-semibold mb-5">Screenshot</h1>
+                            <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between relative">
+                                {/* Baris pertama: Judul & Tombol Settings (Mobile) */}
+                                <div className="flex w-full items-center justify-between sm:flex-1 sm:min-w-0">
+                                    <h1 className="text-xl font-semibold sm:mb-5">Screenshot</h1>
+                                    <div className="sm:hidden">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="flex items-center gap-2 rounded-md border border-slate-200 px-3 text-xs font-medium text-slate-700"
+                                            onClick={() => router.push("/settings/screenshot")}
+                                        >
+                                            <Settings className="h-4 w-4 text-slate-700" />
+                                            Settings
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 {/* Tab Navigation */}
-                                <div className="absolute left-1/2 flex -translate-x-1/2 transform">
+                                <div className="flex justify-center sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:transform">
                                     <div
                                         className="flex min-w-[250px] justify-center gap-1 rounded-full px-1 py-1 shadow-sm"
                                         style={{ backgroundColor: "#A9A9A9" }}
@@ -342,7 +353,9 @@ export default function ScreenshotsLayout({ children }: { children: React.ReactN
                                         </button>
                                     </div>
                                 </div>
-                                <div className="flex min-w-[160px] justify-end">
+
+                                {/* Settings Button (Desktop Only) */}
+                                <div className="hidden sm:flex min-w-[160px] justify-end">
                                     <Button
                                         variant="outline"
                                         className="flex items-center gap-2 rounded-md border border-slate-200 px-4 text-sm font-medium text-slate-700"

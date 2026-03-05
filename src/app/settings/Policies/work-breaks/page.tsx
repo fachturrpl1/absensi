@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { PoliciesHeader } from "@/components/settings/PoliciesHeader"
-import { WorkBreaksSidebar } from "@/components/settings/WorkBreaksSidebar"
+import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import { ShieldCheck } from "lucide-react"
+import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { Button } from "@/components/ui/button"
 import { Plus, Coffee, ChevronDown } from "lucide-react"
 import { AddWorkBreakPolicyDialog } from "@/components/settings/policies/AddWorkBreakPolicyDialog"
@@ -91,12 +92,30 @@ export default function WorkBreaksPage() {
         }
     }
 
+    const tabs: SettingTab[] = [
+        { label: "TIME OFF", href: "/settings/Policies", active: false },
+        { label: "WORK BREAKS", href: "/settings/Policies/work-breaks", active: true },
+        { label: "OVERTIME", href: "/settings/Policies/overtime", active: false },
+    ]
+
+    const sidebarItems: SidebarItem[] = [
+        { id: "policies", label: "break policies", href: "/settings/Policies/work-breaks" },
+        { id: "notifications", label: "break notifications", href: "/settings/Policies/work-breaks/notifications" },
+    ]
+
     return (
         <div className="flex flex-col min-h-screen bg-white">
-            <PoliciesHeader activeTab="work-breaks" />
-            <div className="flex flex-1">
-                <WorkBreaksSidebar activeItem="policies" />
-                <div className="flex-1 p-8">
+            <SettingsHeader
+                title="Policies"
+                Icon={ShieldCheck}
+                tabs={tabs}
+                sidebarItems={sidebarItems}
+                activeItemId="policies"
+            />
+            {/* Content */}
+            <div className="flex flex-1 w-full overflow-hidden">
+                {/* Main Content Area */}
+                <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
                     {/* Tabs */}
                     <div className="flex border-b border-slate-200 mb-8">
                         <button
@@ -145,13 +164,13 @@ export default function WorkBreaksPage() {
                         </div>
                     ) : (
                         <div className="space-y-6">
-                            <div className="flex justify-between items-center">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div>
                                     <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">BREAK POLICIES</h2>
                                     <p className="text-slate-500 text-sm">Set up automatic break policies</p>
                                 </div>
                                 <Button
-                                    className="bg-slate-900 hover:bg-slate-800 text-white rounded-md h-10 px-4 font-medium"
+                                    className="bg-slate-900 hover:bg-slate-800 text-white rounded-md h-10 px-4 font-medium w-full sm:w-auto"
                                     onClick={() => setIsDialogOpen(true)}
                                 >
                                     Add policy
@@ -163,8 +182,8 @@ export default function WorkBreaksPage() {
                                     <TableHeader className="bg-white">
                                         <TableRow className="hover:bg-transparent border-b-slate-100">
                                             <TableHead className="w-[300px] font-bold text-slate-900">Policy name</TableHead>
-                                            <TableHead className="font-bold text-slate-900">Members</TableHead>
-                                            <TableHead className="font-bold text-slate-900">Type</TableHead>
+                                            <TableHead className="font-bold text-slate-900 hidden sm:table-cell">Members</TableHead>
+                                            <TableHead className="font-bold text-slate-900 hidden sm:table-cell">Type</TableHead>
                                             <TableHead className="w-[100px]"></TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -172,9 +191,16 @@ export default function WorkBreaksPage() {
                                         {policies.filter(p => p.status === activeTab).map((policy) => (
                                             <TableRow key={policy.id} className="hover:bg-slate-50 border-b-slate-100">
                                                 <TableCell className="font-medium text-slate-700 py-4">
-                                                    {policy.name}
+                                                    <div className="flex flex-col gap-1">
+                                                        <span>{policy.name}</span>
+                                                        <div className="flex items-center gap-2 sm:hidden">
+                                                            <span className="text-xs text-slate-500 capitalize">{policy.type}</span>
+                                                            <span className="text-xs text-slate-300">•</span>
+                                                            <span className="text-xs text-slate-500">{policy.members?.length || 0} members</span>
+                                                        </div>
+                                                    </div>
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="hidden sm:table-cell">
                                                     <div className="flex items-center gap-2">
                                                         <div className="bg-slate-200 rounded-full w-6 h-6 flex items-center justify-center">
                                                             <User className="w-3 h-3 text-slate-500" />
@@ -184,7 +210,7 @@ export default function WorkBreaksPage() {
                                                         </span>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="text-slate-600 capitalize">
+                                                <TableCell className="text-slate-600 capitalize hidden sm:table-cell">
                                                     {policy.type}
                                                 </TableCell>
                                                 <TableCell>

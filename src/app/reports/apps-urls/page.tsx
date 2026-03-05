@@ -172,9 +172,9 @@ export default function AppsUrlsPage() {
 
 
 
-            <div className="mt-6 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm">
+            <div className="mt-6">
                 <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as 'apps' | 'urls'); setPage(1); }}>
-                    <div className="border-b px-4 py-4">
+                    <div className="px-4 py-4">
                         <TabsList className="grid w-[300px] grid-cols-2">
                             <TabsTrigger value="apps">Applications</TabsTrigger>
                             <TabsTrigger value="urls">Websites</TabsTrigger>
@@ -182,7 +182,7 @@ export default function AppsUrlsPage() {
                     </div>
 
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x border-b bg-gray-50/50">
+                    <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x">
                         <div className="p-4">
                             <p className="text-sm font-medium text-gray-500">Total Time Spent</p>
                             <p className="text-2xl font-bold text-gray-900">
@@ -206,7 +206,7 @@ export default function AppsUrlsPage() {
                     <TabsContent value="apps" className="m-0">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-800">
+                                <thead className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-medium border-t border-b border-gray-200 dark:border-gray-800">
                                     <tr>
                                         <th className="p-4">Application</th>
                                         <th className="p-4">Category</th>
@@ -233,9 +233,7 @@ export default function AppsUrlsPage() {
                                             <td className="p-4 text-gray-600">{app.date}</td>
                                             <td className="p-4 text-right font-medium">{formatMinutes(app.timeSpent)}</td>
                                             <td className="p-4 text-right text-gray-600">
-                                                {appsSummary.totalTime > 0
-                                                    ? ((app.timeSpent / appsSummary.totalTime) * 100).toFixed(1) + '%'
-                                                    : '0%'}
+                                               
                                             </td>
                                         </tr>
                                     ))}
@@ -261,7 +259,7 @@ export default function AppsUrlsPage() {
                     <TabsContent value="urls" className="m-0">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-800">
+                                <thead className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-medium border-t border-b border-gray-200 dark:border-gray-800">
                                     <tr>
                                         <th className="p-4">Website</th>
                                         <th className="p-4">Project</th>

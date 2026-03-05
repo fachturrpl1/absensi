@@ -13,8 +13,8 @@ import { Input } from "@/components/ui/input";
 
 const FormSchema = z
   .object({
-    password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-    confirmPassword: z.string().min(8, { message: "Confirm password must be at least 8 characters." }),
+    password: z.string().min(8, { message: "Password minimal harus 8 karakter." }),
+    confirmPassword: z.string().min(8, { message: "Konfirmasi password minimal harus 8 karakter." }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match.",

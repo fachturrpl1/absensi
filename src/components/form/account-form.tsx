@@ -26,6 +26,7 @@ import {
 
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import imageCompression from "browser-image-compression";
 import {
   Mail,
   Phone,
@@ -230,12 +231,27 @@ export function AccountForm({ initialData }: AccountFormProps) {
     setPhotoUploading(true);
 
     try {
+      // Client-side compression
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 400,
+        useWebWorker: true,
+        fileType: 'image/webp'
+      };
+
+      const imageFile = new File([croppedBlob], selectedFile.name, {
+        type: 'image/png',
+        lastModified: Date.now(),
+      });
+
+      const compressedFile = await imageCompression(imageFile, options);
+
       const reader = new FileReader();
-      reader.readAsDataURL(croppedBlob);
+      reader.readAsDataURL(compressedFile);
       reader.onloadend = async () => {
         const base64 = reader.result?.toString();
         if (!base64) {
-          toast.error("Failed to process cropped image");
+          toast.error("Failed to process compressed image");
           setPhotoUploading(false);
           return;
         }
@@ -243,9 +259,9 @@ export function AccountForm({ initialData }: AccountFormProps) {
         const base64Data = (base64.includes('base64,') ? base64.split('base64,')[1] : base64) || "";
         const result = await uploadProfilePhotoBase64({
           base64Data,
-          fileName: selectedFile.name,
-          fileType: 'image/png',
-          fileSize: croppedBlob.size,
+          fileName: compressedFile.name,
+          fileType: compressedFile.type,
+          fileSize: compressedFile.size,
         });
 
         if (result.success) {
@@ -331,7 +347,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
       />
 
       {/* ── PAGE HEADER ── */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <h1 className="text-2xl font-bold">Profile Page</h1>
         <Button variant="outline" size="sm" asChild>
           <NextLink href="/account/settings">
@@ -343,7 +359,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
 
       {/* ── MAIN TABS ── */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="mb-6 border-b rounded-none bg-transparent h-auto p-0 gap-0">
+        <TabsList className="mb-6 border-b rounded-none bg-transparent h-auto p-0 gap-0 w-full overflow-x-auto justify-start scrollbar-hide">
           <TabsTrigger
             value="overview"
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2 text-sm font-medium"

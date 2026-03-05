@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { PoliciesHeader } from "@/components/settings/PoliciesHeader"
-import { WorkBreaksSidebar } from "@/components/settings/WorkBreaksSidebar"
+import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import { ShieldCheck } from "lucide-react"
+import { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -46,12 +47,28 @@ export default function WorkBreakNotificationsPage() {
             .slice(0, 2)
     }
 
+    const tabs: SettingTab[] = [
+        { label: "POLICIES", href: "/settings/Policies", active: false },
+        { label: "WORK BREAKS", href: "/settings/Policies/work-breaks", active: true },
+        { label: "OVERTIME", href: "/settings/Policies/overtime", active: false },
+    ]
+
+    const sidebarItems: SidebarItem[] = [
+        { id: "policies", label: "break policies", href: "/settings/Policies/work-breaks" },
+        { id: "notifications", label: "break notifications", href: "/settings/Policies/work-breaks/notifications" },
+    ]
+
     return (
         <div className="flex flex-col min-h-screen bg-white">
-            <PoliciesHeader activeTab="work-breaks" />
-            <div className="flex flex-1">
-                <WorkBreaksSidebar activeItem="notifications" />
-                <div className="flex-1 p-8">
+            <SettingsHeader
+                title="Policies"
+                Icon={ShieldCheck}
+                tabs={tabs}
+                sidebarItems={sidebarItems}
+                activeItemId="notifications"
+            />
+            <div className="flex flex-1 w-full">
+                <div className="flex-1 p-4 md:p-8 w-full overflow-x-hidden">
                     {/* Header Section */}
                     <div className="mb-8">
                         <div className="flex items-center gap-2 mb-2">

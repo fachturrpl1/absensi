@@ -4,6 +4,29 @@ import { createClient } from "@/utils/supabase/server"
 import { IUser } from "@/interface"
 
 import { logger } from '@/lib/logger';
+import { z } from "zod";
+
+// Schemas for server-side validation
+const signUpSchema = z.object({
+  email: z.string().email({ message: "Email tidak valid. Pastikan menyertakan simbol '@'." }),
+  password: z.string().min(6, { message: "Password minimal harus 6 karakter." }),
+  first_name: z.string().min(1, { message: "Nama depan wajib diisi." }),
+  middle_name: z.string().optional(),
+  last_name: z.string().optional(),
+});
+
+const loginSchema = z.object({
+  email: z.string().email({ message: "Email tidak valid. Pastikan menyertakan simbol '@'." }),
+  password: z.string().min(6, { message: "Password minimal harus 6 karakter." }),
+});
+
+const requestPasswordResetSchema = z.object({
+  email: z.string().email({ message: "Email tidak valid. Pastikan menyertakan simbol '@'." }),
+});
+
+const resetPasswordSchema = z.object({
+  password: z.string().min(8, { message: "Password baru minimal harus 8 karakter." }),
+});
 // Helper buat bikin client
 async function getSupabase() {
   return await createClient()
@@ -15,11 +38,26 @@ async function getSupabase() {
 export async function signUp(formData: FormData) {
   const supabase = await getSupabase()
 
-  const email = formData.get("email") as string
-  const password = formData.get("password") as string
-  const firstName = (formData.get("first_name") as string) || ""
-  const middleName = (formData.get("middle_name") as string) || ""
-  const lastName = (formData.get("last_name") as string) || ""
+  const rawEmail = formData.get("email") as string
+  const rawPassword = formData.get("password") as string
+  const rawFirstName = (formData.get("first_name") as string) || ""
+  const rawMiddleName = (formData.get("middle_name") as string) || ""
+  const rawLastName = (formData.get("last_name") as string) || ""
+
+  // Server-side validation
+  const validation = signUpSchema.safeParse({
+    email: rawEmail,
+    password: rawPassword,
+    first_name: rawFirstName,
+    middle_name: rawMiddleName,
+    last_name: rawLastName,
+  });
+
+  if (!validation.success) {
+    return { error: validation.error.issues[0]?.message || "Validation failed" };
+  }
+
+  const { email, password, first_name: firstName, middle_name: middleName, last_name: lastName } = validation.data;
 
   const displayNameParts = [firstName, middleName, lastName].filter((part) => part && part.trim() !== "")
   const displayName = displayNameParts.join(" ") || firstName || email
@@ -86,8 +124,20 @@ export async function signInWithGoogle() {
 export async function login(formData: FormData) {
   const supabase = await getSupabase()
 
-  const email = formData.get("email") as string
-  const password = formData.get("password") as string
+  const rawEmail = formData.get("email") as string
+  const rawPassword = formData.get("password") as string
+
+  // Server-side validation
+  const validation = loginSchema.safeParse({
+    email: rawEmail,
+    password: rawPassword,
+  });
+
+  if (!validation.success) {
+    return { success: false, message: validation.error.issues[0]?.message || "Validation failed" };
+  }
+
+  const { email, password } = validation.data;
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -177,11 +227,16 @@ export async function login(formData: FormData) {
 export async function requestPasswordReset(formData: FormData) {
   const supabase = await getSupabase()
 
-  const email = (formData.get('email') as string)?.trim()
+  const rawEmail = (formData.get('email') as string)?.trim()
 
-  if (!email) {
-    return { success: false, message: 'Email is required.' }
+  // Server-side validation
+  const validation = requestPasswordResetSchema.safeParse({ email: rawEmail });
+
+  if (!validation.success) {
+    return { success: false, message: validation.error.issues[0]?.message || "Validation failed" };
   }
+
+  const { email } = validation.data;
 
   const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://absensi-ubig.vercel.app'}/auth/callback?next=/auth/reset-password`
 
@@ -202,11 +257,16 @@ export async function requestPasswordReset(formData: FormData) {
 export async function resetPassword(formData: FormData) {
   const supabase = await getSupabase()
 
-  const password = (formData.get('password') as string)?.trim()
+  const rawPassword = (formData.get('password') as string)?.trim()
 
-  if (!password || password.length < 8) {
-    return { success: false, message: 'New password must be at least 8 characters.' }
+  // Server-side validation
+  const validation = resetPasswordSchema.safeParse({ password: rawPassword });
+
+  if (!validation.success) {
+    return { success: false, message: validation.error.issues[0]?.message || "Validation failed" };
   }
+
+  const { password } = validation.data;
 
   const { error } = await supabase.auth.updateUser({ password })
 

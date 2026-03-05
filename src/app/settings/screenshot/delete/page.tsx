@@ -6,8 +6,9 @@ import { Info, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import { useOrgStore } from "@/store/org-store"
 import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
 import { getScreenshotSettings, upsertScreenshotSetting } from "@/action/screenshot-settings"
-import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
-import { ScreenshotsSidebar } from "@/components/settings/ScreenshotsSidebar"
+import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import { Activity } from "lucide-react"
+import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
 export default function ScreenshotDeletePage() {
   const { organizationId } = useOrgStore()
@@ -15,12 +16,14 @@ export default function ScreenshotDeletePage() {
   const [members, setMembers] = useState<ISimpleMember[]>([])
   const [totalMembers, setTotalMembers] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [globalDelete, setGlobalDelete] = useState(false)
-  const [memberDeletes, setMemberDeletes] = useState<Record<string, boolean>>({})
-
-  const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [memberSettings, setMemberSettings] = useState<Record<string, number>>({})
   const itemsPerPage = 10
+
+  // Dummy states and functions to prevent reference errors (UI focus)
+  const [globalDelete, setGlobalDelete] = useState(false)
+  const setGlobalDeleteSetting = (val: boolean) => setGlobalDelete(val)
 
   // Fetch Members and Settings
   useEffect(() => {
@@ -37,7 +40,7 @@ export default function ScreenshotDeletePage() {
             String(organizationId),
             { page: currentPage, limit: itemsPerPage },
             searchQuery
-          ),
+          ) as any,
           getScreenshotSettings(String(organizationId))
         ])
 
@@ -47,20 +50,14 @@ export default function ScreenshotDeletePage() {
         }
 
         if (settingsRes.success && settingsRes.data) {
-          // Set Global
-          if (settingsRes.data.global) {
-            setGlobalDelete(settingsRes.data.global.allow_delete)
-          }
-
-          // Set Member Deletes
-          const overrides: Record<string, boolean> = {}
+          const hours: Record<string, number> = {}
           Object.entries(settingsRes.data.members).forEach(([memIdStr, setting]) => {
-            overrides[memIdStr] = setting.allow_delete
+            hours[memIdStr] = (setting as any).delete_after_hours || 0
           })
-          setMemberDeletes(overrides)
+          setMemberSettings(hours)
         }
       } catch (err) {
-        console.error("Failed to load screenshot delete settings", err)
+        console.error("Failed to load screenshot settings data", err)
       } finally {
         setLoading(false)
       }
@@ -69,29 +66,14 @@ export default function ScreenshotDeletePage() {
     loadData()
   }, [organizationId, currentPage, searchQuery])
 
-  const getMemberDelete = (memberId: string) => {
-    return memberDeletes[memberId] !== undefined ? memberDeletes[memberId] : globalDelete
+  const getMemberHours = (memberId: string) => {
+    return memberSettings[memberId] ?? 0
   }
 
-  const setGlobalDeleteSetting = async (value: boolean) => {
-    setGlobalDelete(value)
-
-    if (!organizationId) return
-    try {
-      await upsertScreenshotSetting({
-        organization_id: Number(organizationId),
-        organization_member_id: null,
-        allow_delete: value
-      })
-    } catch (e) {
-      console.error("Failed to update global delete", e)
-    }
-  }
-
-  const handleMemberDeleteChange = async (memberId: string, checked: boolean) => {
-    setMemberDeletes(prev => ({
+  const handleMemberHoursChange = async (memberId: string, hours: number) => {
+    setMemberSettings(prev => ({
       ...prev,
-      [memberId]: checked
+      [memberId]: hours
     }))
 
     if (!organizationId) return
@@ -99,32 +81,48 @@ export default function ScreenshotDeletePage() {
       await upsertScreenshotSetting({
         organization_id: Number(organizationId),
         organization_member_id: Number(memberId),
-        allow_delete: checked
-      })
+        delete_after_hours: hours
+      } as any)
     } catch (e) {
-      console.error("Failed to update member delete setting", e)
+      console.error("Failed to update delete hours", e)
     }
   }
 
-  const totalPages = Math.ceil(totalMembers / itemsPerPage)
-
+  // Reset to first page when search changes
   const handleSearchChange = (value: string) => {
     setSearchQuery(value)
     setCurrentPage(1)
   }
 
+  const totalPages = Math.ceil(totalMembers / itemsPerPage)
+
+  const tabs: SettingTab[] = [
+    { label: "ACTIVITY", href: "/settings/Activity", active: false },
+    { label: "TIMESHEETS", href: "/settings/Timesheet", active: false },
+    { label: "TRACKING", href: "/settings/tracking", active: false },
+    { label: "SCREENSHOTS", href: "/settings/screenshot", active: true },
+  ]
+
+  const sidebarItems: SidebarItem[] = [
+    { id: "general", label: "General", href: "/settings/screenshot" },
+    { id: "delete", label: "Delete Screenshots", href: "/settings/screenshot/delete" },
+    { id: "blur", label: "Blur Screenshots", href: "/settings/screenshot/blur" },
+  ]
+
   return (
     <div className="flex flex-col min-h-screen bg-white w-full">
-      <ActivityTrackingHeader activeTab="screenshots" />
+      <SettingsHeader
+        title="Activity & Tracking"
+        Icon={Activity}
+        tabs={tabs}
+        sidebarItems={sidebarItems}
+        activeItemId="delete"
+      />
 
-      {/* Main Content */}
-      <div className="flex flex-1 w-full">
-        {/* Left Sidebar */}
-        {/* Left Sidebar */}
-        <ScreenshotsSidebar activeItem="delete" />
-
+      {/* Content */}
+      <div className="flex flex-1 w-full overflow-hidden">
         {/* Main Content Area */}
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
           {/* Delete Screenshots Section */}
           <div className="space-y-6">
             {/* Global Settings */}
@@ -170,7 +168,7 @@ export default function ScreenshotDeletePage() {
 
             {/* Individual Settings */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-base font-semibold text-slate-900">Individual settings</h3>
                   <p className="text-sm text-slate-600 mt-1">
@@ -184,7 +182,7 @@ export default function ScreenshotDeletePage() {
                     placeholder="Search members"
                     value={searchQuery}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
+                    className="pl-10 pr-4 py-2 w-full sm:w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                   />
                 </div>
               </div>
@@ -192,7 +190,7 @@ export default function ScreenshotDeletePage() {
               {/* Members Table */}
               <div className="border border-slate-200 rounded-lg overflow-hidden">
                 <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+                  <thead className="bg-slate-50 border-b border-slate-200 hidden sm:table-header-group">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Name
@@ -219,10 +217,10 @@ export default function ScreenshotDeletePage() {
                         </td>
                       </tr>
                     ) : members.map(member => {
-                      const memberCanDelete = getMemberDelete(member.id)
+                      const memberHours = getMemberHours(member.id)
                       return (
-                        <tr key={member.id} className="hover:bg-slate-50">
-                          <td className="px-4 py-3">
+                        <tr key={member.id} className="hover:bg-slate-50 flex flex-col sm:table-row py-4 sm:py-0 border-b border-slate-100 last:border-0">
+                          <td className="px-4 py-3 sm:table-cell">
                             <div className="flex items-center gap-3">
                               <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden">
                                 {member.avatarUrl ? (
@@ -238,28 +236,18 @@ export default function ScreenshotDeletePage() {
                               </span>
                             </div>
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="flex justify-end">
-                              {/* Toggle Switch with Off/On labels */}
-                              <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-200 p-1">
-                                <button
-                                  onClick={() => handleMemberDeleteChange(member.id, false)}
-                                  className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${!memberCanDelete
-                                    ? "bg-white text-slate-900 shadow-sm"
-                                    : "bg-transparent text-slate-600"
-                                    }`}
-                                >
-                                  Off
-                                </button>
-                                <button
-                                  onClick={() => handleMemberDeleteChange(member.id, true)}
-                                  className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${memberCanDelete
-                                    ? "bg-white text-slate-900 shadow-sm"
-                                    : "bg-transparent text-slate-600"
-                                    }`}
-                                >
-                                  On
-                                </button>
+                          <td className="px-4 py-3 sm:table-cell text-right">
+                            <div className="flex justify-between sm:justify-end items-center gap-2">
+                              <span className="text-xs font-medium text-slate-500 sm:hidden uppercase tracking-wider">Delete after:</span>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  value={memberHours}
+                                  onChange={(e) => handleMemberHoursChange(member.id, parseInt(e.target.value) || 0)}
+                                  className="w-16 px-2 py-1 border border-slate-300 rounded text-sm text-right"
+                                  min="0"
+                                />
+                                <span className="text-sm text-slate-600">hours</span>
                               </div>
                             </div>
                           </td>

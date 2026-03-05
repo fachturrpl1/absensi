@@ -35,7 +35,7 @@ interface SettingsLayoutProps {
 
 export default function SettingsLayout({ children }: SettingsLayoutProps) {
     return (
-        <div className="hidden space-y-6 px-6 pt-1 pb-16 md:block">
+        <div className="space-y-6 px-4 md:px-6 pt-1 pb-16">
             <div className="flex flex-col space-y-4">
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight">Account Settings</h2>
@@ -45,8 +45,8 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                 </div>
             </div>
             {/* <Separator className="my-4" /> */}
-            <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-8 lg:space-y-0">
-                <aside className="lg:w-1/4 xl:w-1/5">
+            <div className="flex flex-col space-y-8 md:flex-row md:space-x-8 md:space-y-0">
+                <aside className="md:w-1/4 xl:w-1/5">
                     <Card className="h-fit">
                         <CardContent className="p-1">
                             <UserSettingsSidebar items={sidebarNavItems} />

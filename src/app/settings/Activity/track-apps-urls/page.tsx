@@ -4,8 +4,9 @@ import { useState } from "react"
 
 import { Info, Search } from "lucide-react"
 import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
-import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
-import { ActivitySidebar } from "@/components/settings/ActivitySidebar"
+import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import { Activity } from "lucide-react"
+import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
 type TrackAppsUrlsOption = "off" | "apps" | "apps-urls"
 
@@ -34,161 +35,174 @@ export default function TrackAppsUrlsPage() {
     return memberTrackAppsUrls[memberId] || globalTrackAppsUrls
   }
 
+  const tabs: SettingTab[] = [
+    { label: "ACTIVITY", href: "/settings/Activity", active: true },
+    { label: "TIMESHEETS", href: "/settings/Timesheet", active: false },
+    { label: "TRACKING", href: "/settings/tracking", active: false },
+    { label: "SCREENSHOTS", href: "/settings/screenshot", active: false },
+  ]
+
+  const sidebarItems: SidebarItem[] = [
+    { id: "track-apps-urls", label: "Apps & URLs tracking", href: "/settings/Activity" },
+    { id: "record-activity", label: "Record activity", href: "/settings/Activity/record-activity" },
+    { id: "track-apps-urls-detailed", label: "Track apps & URLs", href: "/settings/Activity/track-apps-urls" },
+    { id: "data-privacy", label: "Data privacy", href: "/settings/Activity/data-privacy" },
+  ]
+
   return (
     <div className="flex flex-col min-h-screen bg-white w-full">
-      <ActivityTrackingHeader activeTab="activity" />
+      <SettingsHeader
+        title="Activity & Tracking"
+        Icon={Activity}
+        tabs={tabs}
+        sidebarItems={sidebarItems}
+        activeItemId="track-apps-urls-detailed"
+      />
 
       {/* Main Content */}
-      <div className="flex flex-1 w-full">
-        {/* Left Sidebar */}
-        <ActivitySidebar activeItem="track-apps-urls" />
-
+      <div className="flex flex-1 w-full overflow-hidden">
         {/* Main Content Area */}
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto">
           {/* Track Apps & URLs Section */}
           <div className="space-y-6">
             {/* Global Settings */}
-            <div className="space-y-4">
+            <div className="space-y-6 pt-4">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-slate-900">TRACK APPS & URLS</h2>
-                <Info className="h-4 w-4 text-slate-400" />
+                <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">TRACK APPS & URLS</h2>
+                <Info className="h-3.5 w-3.5 text-slate-300" />
               </div>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-500 leading-relaxed max-w-2xl">
                 Control whether the names of apps used and the URLs visited are tracked when using Hubstaff Desktop apps.
               </p>
 
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
+              <div className="bg-slate-50 border border-slate-100 p-6 rounded-2xl inline-block w-full sm:w-auto">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-6">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-700">GLOBAL:</span>
-                    <Info className="h-4 w-4 text-slate-400" />
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">GLOBAL SETTING:</span>
+                    <Info className="h-3.5 w-3.5 text-slate-300" />
                   </div>
-                  {/* Toggle Switch with Off, Apps, Apps & URLs */}
-                  <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-200 p-1">
-                    <button
-                      onClick={() => handleGlobalTrackAppsUrlsChange("off")}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${globalTrackAppsUrls === "off"
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "bg-transparent text-slate-600"
-                        }`}
-                    >
-                      Off
-                    </button>
-                    <button
-                      onClick={() => handleGlobalTrackAppsUrlsChange("apps")}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${globalTrackAppsUrls === "apps"
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "bg-transparent text-slate-600"
-                        }`}
-                    >
-                      Apps
-                    </button>
-                    <button
-                      onClick={() => handleGlobalTrackAppsUrlsChange("apps-urls")}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${globalTrackAppsUrls === "apps-urls"
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "bg-transparent text-slate-600"
-                        }`}
-                    >
-                      Apps & URLs
-                    </button>
+
+                  <div className="flex items-center gap-4">
+                    {/* Toggle Switch with Off, Apps, Apps & URLs */}
+                    <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 p-1 shadow-inner">
+                      <button
+                        onClick={() => handleGlobalTrackAppsUrlsChange("off")}
+                        className={`px-5 py-1.5 text-[10px] font-bold rounded-xl transition-all uppercase tracking-widest ${globalTrackAppsUrls === "off"
+                          ? "bg-white text-slate-900 shadow-sm"
+                          : "bg-transparent text-slate-400"
+                          }`}
+                      >
+                        Off
+                      </button>
+                      <button
+                        onClick={() => handleGlobalTrackAppsUrlsChange("apps")}
+                        className={`px-5 py-1.5 text-[10px] font-bold rounded-xl transition-all uppercase tracking-widest ${globalTrackAppsUrls === "apps"
+                          ? "bg-white text-slate-900 shadow-sm"
+                          : "bg-transparent text-slate-400"
+                          }`}
+                      >
+                        Apps
+                      </button>
+                      <button
+                        onClick={() => handleGlobalTrackAppsUrlsChange("apps-urls")}
+                        className={`px-5 py-1.5 text-[10px] font-bold rounded-xl transition-all uppercase tracking-widest ${globalTrackAppsUrls === "apps-urls"
+                          ? "bg-white text-slate-900 shadow-sm"
+                          : "bg-transparent text-slate-400"
+                          }`}
+                      >
+                        Apps & URLs
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
+
             {/* Individual Settings */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-end">
-                <div className="relative">
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-2">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 tracking-tight mb-1">Individual settings</h3>
+                  <p className="text-sm text-slate-500 leading-relaxed">
+                    Override the organization default for specific members
+                  </p>
+                </div>
+                <div className="relative w-full sm:w-auto">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Search members"
+                    placeholder="Search members..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
+                    className="pl-10 pr-4 py-2 w-full sm:w-64 border border-slate-200 rounded-full focus:outline-none focus:ring-1 focus:ring-slate-900 text-sm h-10 transition-all bg-white"
                   />
                 </div>
               </div>
 
               {/* Members Table */}
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Track apps & URLs
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-slate-200">
-                    {filteredMembers.length === 0 ? (
-                      <tr>
-                        <td colSpan={2} className="px-4 py-8 text-center text-sm text-slate-500">
-                          No members found
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredMembers.map((member) => {
-                        const memberTrackAppsUrls = getMemberTrackAppsUrls(member.id)
-                        return (
-                          <tr key={member.id} className="hover:bg-slate-50">
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center">
-                                  <span className="text-xs font-medium text-slate-900">
-                                    {member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                                  </span>
-                                </div>
-                                <span className="text-sm text-slate-900">
-                                  {member.name}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex justify-end">
-                                {/* Toggle Switch with Off, Apps, Apps & URLs */}
-                                <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-200 p-1">
-                                  <button
-                                    onClick={() => handleMemberTrackAppsUrlsChange(member.id, "off")}
-                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${memberTrackAppsUrls === "off"
-                                      ? "bg-white text-slate-900 shadow-sm"
-                                      : "bg-transparent text-slate-600"
-                                      }`}
-                                  >
-                                    Off
-                                  </button>
-                                  <button
-                                    onClick={() => handleMemberTrackAppsUrlsChange(member.id, "apps")}
-                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${memberTrackAppsUrls === "apps"
-                                      ? "bg-white text-slate-900 shadow-sm"
-                                      : "bg-transparent text-slate-600"
-                                      }`}
-                                  >
-                                    Apps
-                                  </button>
-                                  <button
-                                    onClick={() => handleMemberTrackAppsUrlsChange(member.id, "apps-urls")}
-                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${memberTrackAppsUrls === "apps-urls"
-                                      ? "bg-white text-slate-900 shadow-sm"
-                                      : "bg-transparent text-slate-600"
-                                      }`}
-                                  >
-                                    Apps & URLs
-                                  </button>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                      })
-                    )}
-                  </tbody>
-                </table>
+              <div className="mt-8">
+                {/* Table Header - Hidden on mobile */}
+                <div className="hidden sm:grid grid-cols-2 py-3 border-b border-slate-100 px-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Name</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Tracking Mode</span>
+                </div>
+
+                {/* Table Body */}
+                <div className="divide-y divide-slate-100">
+                  {filteredMembers.length === 0 ? (
+                    <div className="py-12 text-center">
+                      <p className="text-sm text-slate-500">No members found</p>
+                    </div>
+                  ) : (
+                    filteredMembers.map((member) => {
+                      const memberTrackAppsUrls = getMemberTrackAppsUrls(member.id)
+                      return (
+                        <div key={member.id} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-5 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 px-2 rounded-xl transition-colors group">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 group-hover:bg-white transition-colors text-slate-400 font-bold text-xs uppercase">
+                              {member.name.charAt(0)}
+                            </div>
+                            <span className="text-sm font-semibold text-slate-900 group-hover:text-slate-950 transition-colors uppercase tracking-tight">{member.name}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between sm:justify-end gap-6 bg-slate-100 sm:bg-slate-50 rounded-2xl p-1 w-full sm:w-fit shadow-inner">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest sm:hidden pl-3">Tracking:</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleMemberTrackAppsUrlsChange(member.id, "off")}
+                                className={`px-5 py-1.5 text-[10px] font-bold rounded-xl transition-all uppercase tracking-widest ${memberTrackAppsUrls === "off"
+                                  ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
+                                  : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
+                                  }`}
+                              >
+                                Off
+                              </button>
+                              <button
+                                onClick={() => handleMemberTrackAppsUrlsChange(member.id, "apps")}
+                                className={`px-5 py-1.5 text-[10px] font-bold rounded-xl transition-all uppercase tracking-widest ${memberTrackAppsUrls === "apps"
+                                  ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
+                                  : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
+                                  }`}
+                              >
+                                Apps
+                              </button>
+                              <button
+                                onClick={() => handleMemberTrackAppsUrlsChange(member.id, "apps-urls")}
+                                className={`px-5 py-1.5 text-[10px] font-bold rounded-xl transition-all uppercase tracking-widest ${memberTrackAppsUrls === "apps-urls"
+                                  ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
+                                  : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
+                                  }`}
+                              >
+                                Apps & URLs
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
               </div>
             </div>
           </div>

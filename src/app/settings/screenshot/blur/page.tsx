@@ -6,8 +6,9 @@ import { Info, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import { useOrgStore } from "@/store/org-store"
 import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
 import { getScreenshotSettings, upsertScreenshotSetting } from "@/action/screenshot-settings"
-import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
-import { ScreenshotsSidebar } from "@/components/settings/ScreenshotsSidebar"
+import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import { Activity } from "lucide-react"
+import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
 export default function ScreenshotBlurPage() {
   const { organizationId } = useOrgStore()
@@ -115,18 +116,32 @@ export default function ScreenshotBlurPage() {
   }
 
 
+  const tabs: SettingTab[] = [
+    { label: "ACTIVITY", href: "/settings/Activity", active: false },
+    { label: "TIMESHEETS", href: "/settings/Timesheet", active: false },
+    { label: "TRACKING", href: "/settings/tracking", active: false },
+    { label: "SCREENSHOTS", href: "/settings/screenshot", active: true },
+  ]
+
+  const sidebarItems: SidebarItem[] = [
+    { id: "frequency", label: "Screenshot frequency", href: "/settings/screenshot" },
+    { id: "blur", label: "Screenshot blur", href: "/settings/screenshot/blur" },
+    { id: "delete", label: "Delete screenshots", href: "/settings/screenshot/delete" },
+  ]
+
   return (
-    <div className="flex flex-col min-h-screen bg-white w-full">
-      <ActivityTrackingHeader activeTab="screenshots" />
-
+    <div className="flex flex-col min-h-screen bg-white">
+      <SettingsHeader
+        title="Activity & tracking"
+        Icon={Activity}
+        tabs={tabs}
+        sidebarItems={sidebarItems}
+        activeItemId="blur"
+      />
       {/* Main Content */}
-      <div className="flex flex-1 w-full">
-        {/* Left Sidebar */}
-        {/* Left Sidebar */}
-        <ScreenshotsSidebar activeItem="blur" />
-
+      <div className="flex flex-1 w-full overflow-hidden">
         {/* Main Content Area */}
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
           {/* Screenshot Blur Section */}
           <div className="space-y-6">
             {/* Global Settings */}
@@ -172,7 +187,7 @@ export default function ScreenshotBlurPage() {
 
             {/* Individual Settings */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-base font-semibold text-slate-900">Individual settings</h3>
                   <p className="text-sm text-slate-600 mt-1">
@@ -186,7 +201,7 @@ export default function ScreenshotBlurPage() {
                     placeholder="Search members"
                     value={searchQuery}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
+                    className="pl-10 pr-4 py-2 w-full sm:w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                   />
                 </div>
               </div>
@@ -194,7 +209,7 @@ export default function ScreenshotBlurPage() {
               {/* Members Table */}
               <div className="border border-slate-200 rounded-lg overflow-hidden">
                 <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+                  <thead className="bg-slate-50 border-b border-slate-200 hidden sm:table-header-group">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Name
@@ -224,8 +239,8 @@ export default function ScreenshotBlurPage() {
                       members.map((member) => {
                         const memberBlur = getMemberBlur(member.id)
                         return (
-                          <tr key={member.id} className="hover:bg-slate-50">
-                            <td className="px-4 py-3">
+                          <tr key={member.id} className="hover:bg-slate-50 flex flex-col sm:table-row py-4 sm:py-0 border-b border-slate-100 last:border-0">
+                            <td className="px-4 py-3 sm:table-cell">
                               <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden">
                                   {member.avatarUrl ? (
@@ -241,8 +256,9 @@ export default function ScreenshotBlurPage() {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-3">
-                              <div className="flex justify-end">
+                            <td className="px-4 py-3 sm:table-cell">
+                              <div className="flex justify-between sm:justify-end items-center gap-2">
+                                <span className="text-xs font-medium text-slate-500 sm:hidden uppercase tracking-wider">Blur:</span>
                                 {/* Toggle Switch with Off/On labels */}
                                 <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-200 p-1">
                                   <button
@@ -251,7 +267,7 @@ export default function ScreenshotBlurPage() {
                                       setMemberBlur(member.id, false)
                                     }}
                                     className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${!memberBlur
-                                      ? "bg-white text-slate-900 shadow-sm"
+                                      ? "bg-white text-slate-900 shadow-sm border border-slate-200 sm:border-0"
                                       : "bg-transparent text-slate-600"
                                       }`}
                                   >
@@ -263,7 +279,7 @@ export default function ScreenshotBlurPage() {
                                       setMemberBlur(member.id, true)
                                     }}
                                     className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${memberBlur
-                                      ? "bg-white text-slate-900 shadow-sm"
+                                      ? "bg-white text-slate-900 shadow-sm border border-slate-200 sm:border-0"
                                       : "bg-transparent text-slate-600"
                                       }`}
                                   >

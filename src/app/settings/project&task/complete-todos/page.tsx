@@ -3,8 +3,9 @@
 import React, { useState } from "react"
 import { Info } from "lucide-react"
 
-import { OrganizationHeader } from "@/components/settings/OrganizationHeader"
-import { ProjectSidebar } from "@/components/settings/ProjectSidebar"
+import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import { Building2 } from "lucide-react"
+import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
 type PermissionType = "everyone" | "management-only"
 
@@ -13,55 +14,69 @@ export default function CompleteTodosPage() {
 
 
 
+    const tabs: SettingTab[] = [
+        { label: "PROJECTS & TO-DOS", href: "/settings/project&task", active: true },
+    ]
+
+    const sidebarItems: SidebarItem[] = [
+        { id: "default-roles", label: "Default project role", href: "/settings/project&task" },
+        { id: "complete-todos", label: "Complete to-dos", href: "/settings/project&task/complete-todos" },
+        { id: "manage-todos", label: "Manage to-dos", href: "/settings/project&task/manage-todos" },
+        { id: "allow-project-tracking", label: "Allow project tracking", href: "/settings/project&task/allow-project-tracking" },
+        { id: "global-todos", label: "Global to-dos", href: "/settings/project&task/global-todos" },
+    ]
+
     return (
         <div className="flex flex-col min-h-screen bg-white">
-            <OrganizationHeader activeTab="projects-todos" />
+            <SettingsHeader
+                title="Organization"
+                Icon={Building2}
+                tabs={tabs}
+                sidebarItems={sidebarItems}
+                activeItemId="complete-todos"
+            />
 
             {/* Content */}
-            <div className="flex flex-1">
-                {/* Sidebar */}
-                {/* Sidebar */}
-                <ProjectSidebar activeItem="complete-todos" />
-
-                {/* Main Content */}
-                <div className="flex-1 p-6">
+            <div className="flex flex-1 w-full overflow-hidden">
+                {/* Main Content Area */}
+                <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
                     {/* Section Title */}
                     <div className="flex items-center gap-1 mb-2">
-                        <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                             PERMISSION TO COMPLETE TO-DOS
                         </span>
-                        <Info className="w-3.5 h-3.5 text-gray-400" />
+                        <Info className="w-3.5 h-3.5 text-slate-300" />
                     </div>
 
                     {/* Description */}
-                    <p className="text-sm text-gray-600 mb-6">
-                        Allow tasks/to-dos completion within projects for everyone (role: users) or management only (roles: org owner and org managers)
+                    <p className="text-sm text-slate-500 mb-8 max-w-2xl leading-relaxed">
+                        Allow tasks/to-dos completion within projects for <span className="text-slate-900 font-semibold">everyone</span> (role: users) or <span className="text-slate-900 font-semibold">management only</span> (roles: org owner and org managers)
                     </p>
 
                     {/* Default Setting */}
-                    <div className="flex items-center gap-1 mb-3">
-                        <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                            DEFAULT:
+                    <div className="flex items-center gap-1 mb-4">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            DEFAULT SETTING:
                         </span>
-                        <Info className="w-3.5 h-3.5 text-gray-400" />
+                        <Info className="w-3.5 h-3.5 text-slate-300" />
                     </div>
 
                     {/* Permission Selection Pills */}
-                    <div className="flex items-center bg-gray-100 rounded-full p-1 w-fit">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-slate-100 rounded-2xl p-1.5 w-full sm:w-fit gap-1 shadow-inner">
                         <button
                             onClick={() => setPermission("everyone")}
-                            className={`px-6 py-2 text-sm font-medium rounded-full transition-colors ${permission === "everyone"
-                                ? "bg-white text-gray-900 shadow-sm"
-                                : "text-gray-600 hover:text-gray-900"
+                            className={`flex-1 sm:flex-none px-8 py-2.5 text-xs font-bold rounded-xl transition-all uppercase tracking-widest ${permission === "everyone"
+                                ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
+                                : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
                                 }`}
                         >
                             Everyone
                         </button>
                         <button
                             onClick={() => setPermission("management-only")}
-                            className={`px-6 py-2 text-sm font-medium rounded-full transition-colors ${permission === "management-only"
-                                ? "bg-white text-gray-900 shadow-sm"
-                                : "text-gray-600 hover:text-gray-900"
+                            className={`flex-1 sm:flex-none px-8 py-2.5 text-xs font-bold rounded-xl transition-all uppercase tracking-widest ${permission === "management-only"
+                                ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
+                                : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
                                 }`}
                         >
                             Management Only

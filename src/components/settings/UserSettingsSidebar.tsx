@@ -19,7 +19,7 @@ export function UserSettingsSidebar({ className, items, ...props }: SidebarNavPr
     return (
         <nav
             className={cn(
-                "flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1",
+                "flex space-x-2 overflow-x-auto pb-2 scrollbar-hide md:flex-col md:space-x-0 md:space-y-1 md:pb-0",
                 className
             )}
             {...props}

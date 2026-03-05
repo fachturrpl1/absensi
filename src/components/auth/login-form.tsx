@@ -16,8 +16,8 @@ import { useAuthStore } from "@/store/user-store";
 import { GoogleIcon } from "@/components/ui/google-icon";
 
 const FormSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  email: z.string().email({ message: "Email tidak valid. Pastikan menyertakan simbol '@'." }),
+  password: z.string().min(6, { message: "Password minimal harus 6 karakter." }),
   remember: z.boolean().optional(),
 });
 

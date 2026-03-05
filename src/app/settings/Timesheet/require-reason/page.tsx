@@ -5,8 +5,9 @@ import { Info, Search, User } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
 import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
-import { ActivityTrackingHeader } from "@/components/settings/ActivityTrackingHeader"
-import { TimesheetSidebar } from "@/components/settings/TimesheetSidebar"
+import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import { Activity } from "lucide-react"
+import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
 interface MemberWithSetting {
     id: string
@@ -50,18 +51,33 @@ export default function RequireReasonPage() {
         member.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
+    const tabs: SettingTab[] = [
+        { label: "ACTIVITY", href: "/settings/Activity", active: false },
+        { label: "TIMESHEETS", href: "/settings/Timesheet", active: true },
+        { label: "TRACKING", href: "/settings/tracking", active: false },
+        { label: "SCREENSHOTS", href: "/settings/screenshot", active: false },
+    ]
+
+    const sidebarItems: SidebarItem[] = [
+        { id: "modify-time", label: "Modify time (manual time)", href: "/settings/Timesheet" },
+        { id: "require-reason", label: "Require reason", href: "/settings/Timesheet/require-reason" },
+        { id: "reasons", label: "Reasons", href: "/settings/Timesheet/reasons" },
+    ]
+
     return (
         <div className="flex flex-col min-h-screen bg-white">
-            <ActivityTrackingHeader activeTab="timesheets" />
+            <SettingsHeader
+                title="Activity & Tracking"
+                Icon={Activity}
+                tabs={tabs}
+                sidebarItems={sidebarItems}
+                activeItemId="require-reason"
+            />
 
-            {/* Content */}
-            <div className="flex flex-1">
-                {/* Sidebar */}
-                {/* Sidebar */}
-                <TimesheetSidebar activeItem="require-reason" />
-
-                {/* Main Content */}
-                <div className="flex-1 p-6">
+            {/* Main Content */}
+            <div className="flex flex-1 w-full overflow-hidden">
+                {/* Main Content Area */}
+                <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
                     {/* Section Title */}
                     <div className="flex items-center gap-1 mb-2">
                         <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">

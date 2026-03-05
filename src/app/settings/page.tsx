@@ -87,7 +87,7 @@ export default function SettingsPage() {
       title: 'Members',
       icon: Users,
       items: [
-        { label: 'Custom fields', href: '/settings/members/custom-fields' },
+        { label: 'E-mail notifications', href: '/settings/members/email-notifications' },
         { label: 'Work time limits', href: '/settings/work-time-limit' },
         { label: 'Payments', href: '/settings/payments' },
         { label: 'Achievements', href: '/settings/Achievements' },
@@ -175,16 +175,16 @@ export default function SettingsPage() {
     <div className="flex flex-1 flex-col bg-white min-h-screen">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-6 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 className="text-xl font-semibold text-slate-900">Settings</h1>
-          <div className="relative">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
               placeholder="Search settings"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2 w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
+              className="pl-10 pr-4 py-2 w-full border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
             />
           </div>
         </div>
