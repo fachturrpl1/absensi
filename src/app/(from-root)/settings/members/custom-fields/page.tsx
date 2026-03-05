@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { MembersHeader } from "@/components/settings/MembersHeader"
-import { MembersSidebar } from "@/components/settings/MembersSidebar"
+// import { MembersSidebar } from "@/components/settings/MembersSidebar"
 
 export default function CustomFieldsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)

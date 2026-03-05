@@ -27,7 +27,7 @@ import {
 import { UserAvatar } from "@/components/common/user-avatar"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { PaginationFooter } from "@/components/(reuseable)/tables/pagination-footer"
 import { cn } from "@/lib/utils"
 import { formatLocalTime } from "@/utils/timezone"
 

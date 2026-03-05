@@ -9,7 +9,7 @@ import { Download, Search, Filter, Layers, ChevronDown, ChevronRight } from "luc
 import { Input } from "@/components/ui/input"
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { TeamInvoicesFilterSidebar } from "@/components/report/TeamInvoicesFilterSidebar"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { PaginationFooter } from "@/components/(reuseable)/tables/pagination-footer"
 import {
     DropdownMenu,
     DropdownMenuContent,

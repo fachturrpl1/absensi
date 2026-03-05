@@ -28,7 +28,7 @@ import {
 import { format } from "date-fns"
 import { TimeActivityFilterSidebar } from "@/components/report/TimeActivityFilterSidebar"
 import { SaveReportDialog } from "@/components/report/SaveReportDialog"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { PaginationFooter } from "@/components/(reuseable)/tables/pagination-footer"
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useTimezone } from "@/components/providers/timezone-provider"
 

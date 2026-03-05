@@ -11,7 +11,7 @@ import { useTimezone } from "@/components/providers/timezone-provider"
 // DataTable removed in favor of manual table implementation
 
 import { TimeOffBalancesFilterSidebar } from "@/components/report/TimeOffBalancesFilterSidebar"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { PaginationFooter } from "@/components/(reuseable)/tables/pagination-footer"
 import {
     DropdownMenu,
     DropdownMenuContent,

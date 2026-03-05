@@ -5,7 +5,7 @@ import { columns } from "./columns"
 import { DUMMY_PROJECT_BUDGETS, ProjectBudgetEntry } from "@/lib/data/dummy-project-budgets"
 // Using dummy members for the shared header filter if needed, though this report is project-centric
 import { DUMMY_MEMBERS, DUMMY_TEAMS, DUMMY_PROJECTS } from "@/lib/data/dummy-data"
-import { DataTable } from "@/components/tables/data-table"
+import { DataTable } from "@/components/(reuseable)/tables/data-table"
 import { Button } from "@/components/ui/button"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"

@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { MembersTable } from "@/components/tables/members-table"
+import { MembersTable } from "@/components/(reuseable)/tables/members-table"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useQueryClient } from "@tanstack/react-query"
@@ -44,7 +44,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useQuery } from "@tanstack/react-query"
 import { useDebounce } from "@/utils/debounce"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { PaginationFooter } from "@/components/(reuseable)/tables/pagination-footer"
 
 import { computeName, computeGroupName, computeGender, computeNik, MemberLike } from "@/lib/members-mapping"
 
@@ -60,7 +60,7 @@ import { useHydration } from "@/hooks/useHydration"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getAllInvitations } from "@/action/invitations"
-import { InvitationsTable } from "@/components/tables/invitations-table"
+import { InvitationsTable } from "@/components/(reuseable)/tables/invitations-table"
 
 
 const inviteSchema = z.object({

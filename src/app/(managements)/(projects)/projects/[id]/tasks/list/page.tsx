@@ -37,7 +37,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { PaginationFooter } from "@/components/(reuseable)/tables/pagination-footer"
 import { createTask, updateTask, deleteTask, getTasks, assignTaskMember } from "@/action/task"
 import { toast } from "sonner"
 import { ITask, IProject, IOrganization_member, ITaskStatus } from "@/interface"

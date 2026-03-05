@@ -34,7 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { DataTable } from "@/components/tables/data-table";
+import { DataTable } from "@/components/(reuseable)/tables/data-table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Empty,

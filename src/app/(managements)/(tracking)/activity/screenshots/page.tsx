@@ -2,21 +2,21 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ScreenshotCardSkeleton } from "@/components/activity/ScreenshotCardSkeleton"
+import { ScreenshotCardSkeleton } from "@/components/(managements)/(tracking)/activity/ScreenshotCardSkeleton"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function Page() {
   const router = useRouter()
-  
+
   useEffect(() => {
     // Delay redirect agar skeleton terlihat dengan jelas
     const timer = setTimeout(() => {
       router.replace("/activity/screenshots/10min")
     }, 500)
-    
+
     return () => clearTimeout(timer)
   }, [router])
-  
+
   // Copy semua skeleton dari halaman 10min
   return (
     <>

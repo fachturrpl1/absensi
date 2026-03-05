@@ -30,18 +30,18 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import AddProjectDialog from "@/components/projects/AddProjectDialog"
-import EditProjectDialog from "@/components/projects/EditProjectDialog"
-import TransferProjectDialog from "@/components/projects/TransferProjectDialog"
-import type { Project, NewProjectForm } from "@/components/projects/types"
-import ProjectGridView from "@/components/projects/ProjectGridView"
+import AddProjectDialog from "@/components/(managements)/(projects)/projects/AddProjectDialog"
+import EditProjectDialog from "@/components/(managements)/(projects)/projects/EditProjectDialog"
+import TransferProjectDialog from "@/components/(managements)/(projects)/projects/TransferProjectDialog"
+import type { Project, NewProjectForm } from "@/components/(managements)/(projects)/projects/types"
+import ProjectGridView from "@/components/(managements)/(projects)/projects/ProjectGridView"
 import { getAllProjects, createProject, updateProject, deleteProject, archiveProject, unarchiveProject, IProject, getSimpleMembersForDropdown } from "@/action/projects"
 import { getClients } from "@/action/client"
 import { getAllGroups } from "@/action/group"
 import { useOrgStore } from "@/store/org-store"
 import { IClient, IGroup } from "@/interface"
 
-import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { PaginationFooter } from "@/components/(reuseable)/tables/pagination-footer"
 
 function mapProjectData(p: IProject): Project {
     // Build members list from real team_members data
