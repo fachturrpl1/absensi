@@ -18,8 +18,8 @@ import {
 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
-import { OrganizationCard } from "@/components/(managements)/(projects)/organization/organization-card"
-import { OrganizationCardSkeleton } from "@/components/(managements)/(projects)/organization/organization-card-skeleton"
+import { OrganizationCard } from "@/components/organization/organization-card"
+import { OrganizationCardSkeleton } from "@/components/organization/organization-card-skeleton"
 
 export default function OrganizationPage() {
   const router = useRouter()

@@ -28,7 +28,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 
 import { useOrgStore } from '@/store/org-store';
 import { useAuthStore } from '@/store/user-store';
-import { NotificationDropdown } from '@/components/(from-root)/notifications/notification-dropdown';
+import { NotificationDropdown } from '@/components/notifications/notification-dropdown';
 
 export function NavbarNew() {
   const router = useRouter();

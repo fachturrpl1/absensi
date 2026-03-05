@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react"
 import { DUMMY_CUSTOM_REPORTS, type CustomReport } from "@/lib/data/dummy-data"
-import { PaginationFooter } from "@/components/(reuseable)/tables/pagination-footer"
+import { PaginationFooter } from "@/components/reuseable/pagination-footer"
 import { Button } from "@/components/ui/button"
 import {
     DropdownMenu,

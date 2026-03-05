@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"
 import { columns } from "./columns"
 import { DUMMY_WEEKLY_LIMITS, DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
-import { DataTable } from "@/components/(reuseable)/tables/data-table"
+import { DataTable } from "@/components/reuseable/tables/data-table"
 import { Button } from "@/components/ui/button"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"

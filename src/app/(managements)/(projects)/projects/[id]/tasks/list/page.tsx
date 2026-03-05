@@ -18,7 +18,7 @@ import {
     flattenTree,
     TaskNode,
     TasksViewSwitcher,
-} from "@/components/tasks/tasks-shared"
+} from "@/components/projects/tasks/tasks-shared"
 import { useMemo, useState, useEffect, use } from "react"
 import { useSearchParams } from "next/navigation"
 import { Input } from "@/components/ui/input"
@@ -37,7 +37,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { PaginationFooter } from "@/components/(reuseable)/tables/pagination-footer"
+import { PaginationFooter } from "@/components/reuseable/pagination-footer"
 import { createTask, updateTask, deleteTask, getTasks, assignTaskMember } from "@/action/task"
 import { toast } from "sonner"
 import { ITask, IProject, IOrganization_member, ITaskStatus } from "@/interface"

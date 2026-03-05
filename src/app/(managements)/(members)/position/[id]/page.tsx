@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { DataTable } from "@/components/(reuseable)/tables/data-table"
+import { DataTable } from "@/components/reuseable/tables/data-table"
 import { ColumnDef } from "@tanstack/react-table"
 import { TableSkeleton } from "@/components/ui/loading-skeleton"
 import { Input } from "@/components/ui/input"

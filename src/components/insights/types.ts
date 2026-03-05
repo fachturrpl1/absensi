@@ -1,3 +1,7 @@
+import type { DateRange } from "@/components/reuseable/date-picker"
+
+export type { DateRange }
+
 export type FilterTab = "members" | "teams"
 
 export interface PickerItem {
@@ -11,7 +15,3 @@ export interface SelectedFilter {
   id?: string
 }
 
-export interface DateRange {
-  startDate: Date
-  endDate: Date
-}

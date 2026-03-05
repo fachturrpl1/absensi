@@ -7,7 +7,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { DownloadDialog } from "@/components/(managements)/(tracking)/activity/DownloadDialog"
+import { DownloadDialog } from "@/components/activity/DownloadDialog"
 import { SelectedMemberProvider } from "./selected-member-context"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { DateRange, SelectedFilter } from "@/components/insights/types"

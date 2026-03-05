@@ -35,7 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { getCache, setCache } from "@/lib/local-cache"
-import { PaginationFooter } from "@/components/(reuseable)/tables/pagination-footer"
+import { PaginationFooter } from "@/components/reuseable/pagination-footer"
 import { getAllGroups } from "@/action/group"
 
 interface Device {

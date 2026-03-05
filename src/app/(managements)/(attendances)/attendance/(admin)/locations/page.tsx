@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { MapPin, Plus, Eye, Search } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { LocationStats } from "./_components/location-stats";
-import { PaginationFooter } from "@/components/(reuseable)/tables/pagination-footer";
+import { PaginationFooter } from "@/components/reuseable/pagination-footer";
 import { PageSkeleton } from "@/components/ui/loading-skeleton";
 
 export default function LocationsPage() {

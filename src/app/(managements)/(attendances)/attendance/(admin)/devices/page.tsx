@@ -36,11 +36,11 @@ import {
     EmptyMedia,
 } from "@/components/ui/empty"
 import { createClient } from "@/utils/supabase/client"
-import { ActivateDeviceDialog } from "@/components/(managements)/(attendances)/(admin)/(devices)/dialogs/activate-device-dialog"
-import { PaginationFooter } from "@/components/(reuseable)/tables/pagination-footer"
+import { ActivateDeviceDialog } from "@/components/attendance/devices/activate-device-dialog"
+import { PaginationFooter } from "@/components/reuseable/pagination-footer"
 import { useOrgStore } from "@/store/org-store"
 import { useDebounce } from "@/utils/debounce"
-import { CardTable, CardTableHeader, CardTableBody, CardTableCell, CardTableHead, CardTableRow } from "@/components/(reuseable)/tables/card-table"
+import { CardTable, CardTableHeader, CardTableBody, CardTableCell, CardTableHead, CardTableRow } from "@/components/reuseable/tables/card-table"
 
 const editDeviceSchema = z.object({
     deviceName: z.string().min(1, "Device name is required"),

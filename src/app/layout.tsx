@@ -7,10 +7,10 @@ import { UserProvider } from "@/components/auth/user-provider";
 import { TimezoneProvider } from "@/components/providers/timezone-provider";
 import { TimeFormatProvider } from "@/components/providers/time-format-provider";
 import { QueryProvider } from "@/providers/query-provider";
-import OrganizationStatusChecker from "@/components/(managements)/(projects)/organization/organization-status-checker";
-import AccountStatusChecker from "@/components/(managements)/(projects)/organization/account-status-checker";
+import OrganizationStatusChecker from "@/components/organization/organization-status-checker";
+import AccountStatusChecker from "@/components/organization/account-status-checker";
 import { PermissionInitializer } from "@/components/auth/permission-initializer";
-import { ToastProvider } from "@/components/(from-root)/notifications/toast-system";
+import { ToastProvider } from "@/components/notifications/toast-system";
 import { DashboardLayoutWrapper } from "@/components/layout/dashboard-layout-wrapper";
 import "leaflet/dist/leaflet.css"
 import { createClient } from "@/utils/supabase/server";

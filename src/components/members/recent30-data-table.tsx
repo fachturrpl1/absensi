@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { ColumnDef } from "@tanstack/react-table"
-import { DataTable } from "@/components/(reuseable)/tables/data-table"
+import { DataTable } from "@/components/reuseable/tables/data-table"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 

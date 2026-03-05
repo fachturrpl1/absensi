@@ -10,7 +10,7 @@ import { format } from "date-fns"
 import { formatHoursForExport } from "@/lib/export-utils"
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { Input } from "@/components/ui/input"
-import { PaginationFooter } from "@/components/(reuseable)/tables/pagination-footer"
+import { PaginationFooter } from "@/components/reuseable/pagination-footer"
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,

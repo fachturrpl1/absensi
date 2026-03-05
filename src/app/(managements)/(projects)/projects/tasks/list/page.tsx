@@ -28,7 +28,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { DUMMY_TEAMS } from "@/lib/data/dummy-data"
-import { DataTable } from "@/components/(reuseable)/tables/data-table"
+import { DataTable } from "@/components/reuseable/tables/data-table"
 import { ColumnDef } from "@tanstack/react-table"
 import type { RowSelectionState } from "@tanstack/react-table"
 import { getTasks, createTask, updateTask, deleteTask, assignTaskMember } from "@/action/task"

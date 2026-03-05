@@ -1,7 +1,7 @@
 "use client"
 import React, { useCallback, useEffect, useRef, useState, useMemo, useDeferredValue } from "react"
 
-import { DateFilterBar } from "@/components/analytics/date-filter-bar"
+import { DateFilterBar } from "@/components/attendance/dashboard/date-filter-bar"
 import { useOrgStore } from "@/store/org-store"
 import { formatInTimeZone } from "date-fns-tz"
 import type { GetAttendanceResult, AttendanceListItem } from "@/action/attendance"
@@ -27,7 +27,7 @@ import {
 import { UserAvatar } from "@/components/common/user-avatar"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { PaginationFooter } from "@/components/(reuseable)/tables/pagination-footer"
+import { PaginationFooter } from "@/components/reuseable/pagination-footer"
 import { cn } from "@/lib/utils"
 import { formatLocalTime } from "@/utils/timezone"
 

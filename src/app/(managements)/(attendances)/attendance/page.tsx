@@ -12,9 +12,9 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { createClient } from '@/utils/supabase/client';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
-import { DateFilterBar, DateFilterState } from '@/components/analytics/date-filter-bar';
+import { DateFilterBar, DateFilterState } from '@/components/attendance/dashboard/date-filter-bar';
 import { EmptyState } from '@/components/dashboard/empty-state';
-import { AnalyticsSkeleton } from '@/components/analytics/analytics-skeleton';
+import { AnalyticsSkeleton } from '@/components/attendance/dashboard/analytics-skeleton';
 import { useHydration } from '@/hooks/useHydration';
 import Link from 'next/link';
 import {

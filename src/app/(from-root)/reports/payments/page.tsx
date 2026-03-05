@@ -11,7 +11,7 @@ import { useTimezone } from "@/components/providers/timezone-provider"
 import { Input } from "@/components/ui/input"
 
 import { PaymentsFilterSidebar } from "@/components/report/PaymentsFilterSidebar"
-import { DataTable } from "@/components/(reuseable)/tables/data-table"
+import { DataTable } from "@/components/reuseable/tables/data-table"
 import { columns } from "./columns"
 import { toast } from "sonner"
 import { RowSelectionState, VisibilityState } from "@tanstack/react-table"

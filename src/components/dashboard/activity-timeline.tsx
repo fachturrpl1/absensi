@@ -26,43 +26,43 @@ interface ActivityTimelineProps {
 
 const statusConfig = {
   present: {
-    label: 'Hadir',
+    label: 'Present',
     color: 'bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400',
     icon: CheckCircle2,
     iconColor: 'text-green-600 dark:text-green-400',
   },
   on_time: {
-    label: 'Hadir',
+    label: 'On Time',
     color: 'bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400',
     icon: CheckCircle2,
     iconColor: 'text-green-600 dark:text-green-400',
   },
   late: {
-    label: 'Terlambat',
+    label: 'Late',
     color: 'bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400',
     icon: AlertCircle,
     iconColor: 'text-orange-600 dark:text-orange-400',
   },
   early_leave: {
-    label: 'Pulang Awal',
+    label: 'Early Leave',
     color: 'bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400',
     icon: AlertCircle,
     iconColor: 'text-orange-600 dark:text-orange-400',
   },
   late_and_early: {
-    label: 'Telat & Pulang Awal',
+    label: 'late & early leave',
     color: 'bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400',
     icon: AlertCircle,
     iconColor: 'text-orange-600 dark:text-orange-400',
   },
   excused_absence: {
-    label: 'Izin/Cuti',
+    label: 'leaves',
     color: 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
     icon: Clock,
     iconColor: 'text-blue-600 dark:text-blue-400',
   },
   absent: {
-    label: 'Tidak Hadir',
+    label: 'Absent',
     color: 'bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400',
     icon: XCircle,
     iconColor: 'text-red-600 dark:text-red-400',

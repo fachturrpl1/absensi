@@ -7,7 +7,7 @@ import { DUMMY_BREAKS, DUMMY_MEMBERS, DUMMY_TEAMS } from "@/lib/data/dummy-data"
 import { Button } from "@/components/ui/button"
 import { Download, Settings, Search } from "lucide-react"
 import { format } from "date-fns"
-import { PaginationFooter } from "@/components/(reuseable)/tables/pagination-footer"
+import { PaginationFooter } from "@/components/reuseable/pagination-footer"
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { Input } from "@/components/ui/input"
 import {

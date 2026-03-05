@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ScreenshotCardSkeleton } from "@/components/(managements)/(tracking)/activity/ScreenshotCardSkeleton"
+import { ScreenshotCardSkeleton } from "@/components/activity/ScreenshotCardSkeleton"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function Page() {

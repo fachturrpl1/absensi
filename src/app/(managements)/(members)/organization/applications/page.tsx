@@ -25,7 +25,7 @@
 
 import { Suspense } from "react"
 import { headers } from "next/headers"
-import ApplicationsClient from "@/components/(managements)/(projects)/organization/ApplicationsClient"
+import ApplicationsClient from "@/components/organization/ApplicationsClient"
 import type { ApplicationSection } from "@/types/application.ts"
 
 // ---------------------------------------------------------------------------

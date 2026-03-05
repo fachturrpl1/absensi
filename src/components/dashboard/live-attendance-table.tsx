@@ -57,25 +57,25 @@ interface LiveAttendanceTableProps {
 
 const statusConfig = {
   present: {
-    label: 'Hadir',
+    label: 'Present',
     color: 'bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400 border-green-500/20',
     icon: CheckCircle2,
     dotColor: 'bg-green-500',
   },
   late: {
-    label: 'Terlambat',
+    label: 'Late',
     color: 'bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 border-orange-500/20',
     icon: AlertCircle,
     dotColor: 'bg-orange-500',
   },
   absent: {
-    label: 'Tidak Hadir',
+    label: 'Absent',
     color: 'bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400 border-red-500/20',
     icon: XCircle,
     dotColor: 'bg-red-500',
   },
   'on-leave': {
-    label: 'Cuti',
+    label: 'Leaves',
     color: 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/20',
     icon: FileText,
     dotColor: 'bg-blue-500',

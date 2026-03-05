@@ -21,9 +21,9 @@ import {
 } from "@/action/screenshots"
 import { formatDateLocal } from "@/utils/date-helper"
 import { useSelectedMemberContext } from "../selected-member-context"
-import { MemberScreenshotCard } from "@/components/(managements)/(tracking)/activity/MemberScreenshotCard"
+import { MemberScreenshotCard } from "@/components/activity/MemberScreenshotCard"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { ScreenshotCardSkeleton } from "@/components/(managements)/(tracking)/activity/ScreenshotCardSkeleton"
+import { ScreenshotCardSkeleton } from "@/components/activity/ScreenshotCardSkeleton"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuthStore } from "@/store/user-store"
 

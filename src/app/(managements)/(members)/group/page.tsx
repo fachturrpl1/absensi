@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { DataTable } from "@/components/(reuseable)/tables/data-table"
+import { DataTable } from "@/components/reuseable/tables/data-table"
 import { Button } from "@/components/ui/button"
 import { useQueryClient } from "@tanstack/react-query"
 import { useSearchParams } from "next/navigation"
