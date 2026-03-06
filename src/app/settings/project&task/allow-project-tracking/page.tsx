@@ -1,39 +1,84 @@
 ﻿"use client"
-
-import React, { useState } from "react"
-import {
-    Info, Search
-} from "lucide-react"
-
-
+import React, { useState, useEffect } from "react"
+import { Info, Search, Loader2 } from "lucide-react"
+import { useOrgStore } from "@/store/org-store"
+import { getOrgSettings, upsertOrgSetting } from "@/action/organization-settings"
+import { getAllProjects, updateProject, type IProject } from "@/action/projects"
+import { toast } from "sonner"
 import { Switch } from "@/components/ui/switch"
 import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
 import { Building2 } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
-interface ProjectWithTracking {
-    id: string
-    name: string
-    tasks: number
-    trackingEnabled: boolean
-}
-
 export default function AllowProjectTrackingPage() {
+    const { organizationId } = useOrgStore()
+    const [loading, setLoading] = useState(true)
     const [globalEnabled, setGlobalEnabled] = useState(true)
-    const [projects, setProjects] = useState<ProjectWithTracking[]>([
-        { id: "1", name: "SMA Bradas", tasks: 0, trackingEnabled: true },
-        { id: "2", name: "SMK 100 Brantas' Project", tasks: 3, trackingEnabled: false },
-    ])
+    const [projects, setProjects] = useState<IProject[]>([])
     const [searchQuery, setSearchQuery] = useState("")
 
+    useEffect(() => {
+        async function loadData() {
+            if (!organizationId) {
+                setLoading(false)
+                return
+            }
 
+            setLoading(true)
+            try {
+                const [orgSettingsRes, projectsRes] = await Promise.all([
+                    getOrgSettings(String(organizationId)),
+                    getAllProjects(String(organizationId))
+                ])
 
-    const handleProjectTrackingChange = (id: string, enabled: boolean) => {
+                if (orgSettingsRes.success && orgSettingsRes.data) {
+                    if (orgSettingsRes.data.project_tracking_enabled !== undefined) {
+                        setGlobalEnabled(orgSettingsRes.data.project_tracking_enabled)
+                    }
+                }
+
+                if (projectsRes.success && projectsRes.data) {
+                    setProjects(projectsRes.data)
+                }
+            } catch (err) {
+                console.error("Failed to load project tracking settings", err)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        loadData()
+    }, [organizationId])
+
+    const handleGlobalEnabledChange = async (val: boolean) => {
+        setGlobalEnabled(val)
+        if (!organizationId) return
+        try {
+            await upsertOrgSetting(String(organizationId), {
+                project_tracking_enabled: val
+            })
+            toast.success("Global tracking setting updated")
+        } catch (err) {
+            toast.error("Failed to update global setting")
+        }
+    }
+
+    const handleProjectTrackingChange = async (id: number, enabled: boolean) => {
+        const project = projects.find(p => p.id === id)
+        if (!project) return
+
+        const newMetadata = { ...(project.metadata || {}), tracking_enabled: enabled }
+
         setProjects(prev =>
-            prev.map(project =>
-                project.id === id ? { ...project, trackingEnabled: enabled } : project
-            )
+            prev.map(p => p.id === id ? { ...p, metadata: newMetadata } : p)
         )
+
+        try {
+            await updateProject(id, { metadata: newMetadata })
+            toast.success(`Tracking updated for ${project.name}`)
+        } catch (err) {
+            toast.error("Failed to update project setting")
+        }
     }
 
     const filteredProjects = projects.filter(project =>
@@ -91,7 +136,7 @@ export default function AllowProjectTrackingPage() {
                         <div className="flex items-center gap-4">
                             <Switch
                                 checked={globalEnabled}
-                                onCheckedChange={setGlobalEnabled}
+                                onCheckedChange={handleGlobalEnabledChange}
                                 className="data-[state=checked]:bg-slate-900"
                             />
                             <span className="text-sm font-normal text-slate-900 uppercase tracking-tight">Enable tracking for all projects</span>
@@ -121,23 +166,27 @@ export default function AllowProjectTrackingPage() {
                         {/* Table Header - Hidden on mobile */}
                         <div className="hidden sm:grid grid-cols-3 py-3 border-b border-slate-100 px-2">
                             <span className="text-[10px] font-normal text-slate-400 uppercase tracking-widest">Project</span>
-                            <span className="text-[10px] font-normal text-slate-400 uppercase tracking-widest">Tasks</span>
                             <span className="text-[10px] font-normal text-slate-400 uppercase tracking-widest text-right">Tracking</span>
                         </div>
 
                         {/* Table Body */}
                         <div className="divide-y divide-slate-100">
-                            {filteredProjects.map((project) => (
-                                <div key={project.id} className="flex flex-col gap-4 sm:grid sm:grid-cols-3 sm:items-center py-5 hover:bg-slate-50/50 px-2 rounded-xl transition-colors group">
+                            {loading && projects.length === 0 ? (
+                                <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
+                                    <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
+                                    <span className="text-xs font-light uppercase tracking-widest">Loading projects...</span>
+                                </div>
+                            ) : projects.length === 0 ? (
+                                <div className="py-20 text-center text-slate-400">
+                                    <span className="text-xs font-light uppercase tracking-widest">No projects found</span>
+                                </div>
+                            ) : filteredProjects.map((project) => (
+                                <div key={project.id} className="flex flex-col gap-4 sm:grid sm:grid-cols-2 sm:items-center py-5 hover:bg-slate-50/50 px-2 rounded-xl transition-colors group">
                                     <span className="text-sm font-normal text-slate-900 group-hover:text-slate-950 transition-colors uppercase tracking-tight">{project.name}</span>
-                                    <div className="flex items-center justify-between sm:justify-start gap-4">
-                                        <span className="text-[10px] font-normal text-slate-400 uppercase tracking-widest sm:hidden">Tasks:</span>
-                                        <span className="text-sm font-normal text-slate-500 bg-slate-100/50 px-2.5 py-0.5 rounded-full border border-slate-200/50">{project.tasks}</span>
-                                    </div>
                                     <div className="flex items-center justify-between sm:justify-end gap-4">
                                         <span className="text-[10px] font-normal text-slate-400 uppercase tracking-widest sm:hidden">Tracking:</span>
                                         <Switch
-                                            checked={project.trackingEnabled}
+                                            checked={project.metadata?.tracking_enabled ?? globalEnabled}
                                             onCheckedChange={(checked) => handleProjectTrackingChange(project.id, checked)}
                                             className="data-[state=checked]:bg-slate-900"
                                         />

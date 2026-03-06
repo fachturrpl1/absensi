@@ -1,4 +1,5 @@
-﻿"use client"
+"use client"
+
 import React, { useState, useEffect } from "react"
 import { useOrgStore } from "@/store/org-store"
 import { getOrgSettings, upsertOrgSetting } from "@/action/organization-settings"
@@ -8,12 +9,12 @@ import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader
 import { Building2 } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
-type PermissionType = "everyone" | "management-only"
+type ProjectRoleOption = "manager" | "member" | "viewer"
 
-export default function ManageTodosPage() {
+export default function ProjectAndTaskPage() {
     const { organizationId } = useOrgStore()
     const [loading, setLoading] = useState(true)
-    const [permission, setPermission] = useState<PermissionType>("everyone")
+    const [defaultRole, setDefaultRole] = useState<ProjectRoleOption>("member")
 
     useEffect(() => {
         async function loadData() {
@@ -26,12 +27,12 @@ export default function ManageTodosPage() {
             try {
                 const res = await getOrgSettings(String(organizationId))
                 if (res.success && res.data) {
-                    if (res.data.todo_manage_permission) {
-                        setPermission(res.data.todo_manage_permission as PermissionType)
+                    if (res.data.default_project_role) {
+                        setDefaultRole(res.data.default_project_role as ProjectRoleOption)
                     }
                 }
             } catch (err) {
-                console.error("Failed to load manage to-dos settings", err)
+                console.error("Failed to load project & task settings", err)
             } finally {
                 setLoading(false)
             }
@@ -40,16 +41,16 @@ export default function ManageTodosPage() {
         loadData()
     }, [organizationId])
 
-    const handlePermissionChange = async (newPermission: PermissionType) => {
-        setPermission(newPermission)
+    const handleRoleChange = async (role: ProjectRoleOption) => {
+        setDefaultRole(role)
         if (!organizationId) return
         try {
             await upsertOrgSetting(String(organizationId), {
-                todo_manage_permission: newPermission
+                default_project_role: role
             })
-            toast.success("Permission updated")
+            toast.success("Default project role updated")
         } catch (err) {
-            toast.error("Failed to update setting")
+            toast.error("Failed to update settings")
         }
     }
 
@@ -76,53 +77,61 @@ export default function ManageTodosPage() {
                 Icon={Building2}
                 tabs={tabs}
                 sidebarItems={sidebarItems}
-                activeItemId="manage-todos"
+                activeItemId="default-roles"
             />
 
             {/* Content */}
             <div className="flex flex-1 w-full overflow-hidden">
-                {/* Main Content Area */}
                 <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
                     {/* Section Title */}
                     <div className="flex items-center gap-1 mb-2">
                         <span className="text-[10px] font-normal text-slate-400 uppercase tracking-widest">
-                            PERMISSION TO MANAGE TO-DOS
+                            DEFAULT PROJECT ROLE
                         </span>
                         <Info className="w-3.5 h-3.5 text-slate-300" />
                     </div>
 
                     {/* Description */}
                     <p className="text-sm text-slate-500 mb-8 max-w-2xl leading-relaxed">
-                        Allow tasks/to-dos to be managed (create, edit, delete) by <span className="text-slate-900 font-normal">everyone</span> (role: users) or <span className="text-slate-900 font-normal">management only</span> (roles: org owner and org managers)
+                        Set the default role assigned to members when they are added to a project. This role determines their level of access and permissions within the project.
                     </p>
 
                     {/* Default Setting */}
                     <div className="flex items-center gap-1 mb-4">
                         <span className="text-[10px] font-normal text-slate-400 uppercase tracking-widest">
-                            DEFAULT SETTING:
+                            DEFAULT ROLE:
                         </span>
                         <Info className="w-3.5 h-3.5 text-slate-300" />
                     </div>
 
-                    {/* Permission Selection Pills */}
+                    {/* Role Selection Pills */}
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-slate-100 rounded-2xl p-1.5 w-full sm:w-fit gap-1 shadow-inner">
                         <button
-                            onClick={() => handlePermissionChange("everyone")}
-                            className={`flex-1 sm:flex-none px-8 py-2.5 text-xs font-normal rounded-xl transition-all uppercase tracking-widest ${permission === "everyone"
+                            onClick={() => handleRoleChange("manager")}
+                            className={`flex-1 sm:flex-none px-8 py-2.5 text-xs font-normal rounded-xl transition-all uppercase tracking-widest ${defaultRole === "manager"
                                 ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
                                 : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
                                 }`}
                         >
-                            Everyone
+                            Manager
                         </button>
                         <button
-                            onClick={() => handlePermissionChange("management-only")}
-                            className={`flex-1 sm:flex-none px-8 py-2.5 text-xs font-normal rounded-xl transition-all uppercase tracking-widest ${permission === "management-only"
+                            onClick={() => handleRoleChange("member")}
+                            className={`flex-1 sm:flex-none px-8 py-2.5 text-xs font-normal rounded-xl transition-all uppercase tracking-widest ${defaultRole === "member"
                                 ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
                                 : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
                                 }`}
                         >
-                            Management Only
+                            Member
+                        </button>
+                        <button
+                            onClick={() => handleRoleChange("viewer")}
+                            className={`flex-1 sm:flex-none px-8 py-2.5 text-xs font-normal rounded-xl transition-all uppercase tracking-widest ${defaultRole === "viewer"
+                                ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
+                                : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
+                                }`}
+                        >
+                            Viewer
                         </button>
                     </div>
                 </div>

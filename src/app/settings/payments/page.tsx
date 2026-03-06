@@ -9,24 +9,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
 import { Users } from "lucide-react"
-import { usePaymentStore } from "@/store/payment-store"
+import { useOrgStore } from "@/store/org-store"
+import { getOrgSettings, upsertOrgSetting } from "@/action/organization-settings"
 import { SidebarItem } from "@/components/settings/SettingsSidebar"
 
 export default function PaymentsPage() {
+  const { organizationId } = useOrgStore()
+  const [loading, setLoading] = useState(true)
+
   const DEFAULT_PROCESS: "manually" | "automatically" = "manually"
   const DEFAULT_DELAY_DAYS = "0"
   const DEFAULT_PROOF_ENABLED = true
-
-  const {
-    processPayments: storedProcess,
-    delayDays: storedDelay,
-    proofOfPaymentEnabled: storedProof,
-    setProcessPayments: saveProcess,
-    setDelayDays: saveDelay,
-    setProofOfPaymentEnabled: saveProof
-  } = usePaymentStore()
-
-  const [hydrated, setHydrated] = useState(false)
 
   // Local state for form
   const [processPayments, setProcessPayments] = useState<"manually" | "automatically">(DEFAULT_PROCESS)
@@ -34,30 +27,55 @@ export default function PaymentsPage() {
   const [proofOfPaymentEnabled, setProofOfPaymentEnabled] = useState(DEFAULT_PROOF_ENABLED)
 
   useEffect(() => {
-    setHydrated(true)
-    // Sync local state with store
-    setProcessPayments(storedProcess)
-    setDelayDays(storedDelay)
-    setProofOfPaymentEnabled(storedProof)
-  }, [storedProcess, storedDelay, storedProof])
+    async function loadData() {
+      if (!organizationId) {
+        setLoading(false)
+        return
+      }
+
+      setLoading(true)
+      try {
+        const res = await getOrgSettings(String(organizationId))
+        if (res.success && res.data) {
+          const s = res.data
+          if (s.payment_process) setProcessPayments(s.payment_process)
+          if (s.payment_delay_days !== undefined) setDelayDays(String(s.payment_delay_days))
+          if (s.proof_of_payment_enabled !== undefined) setProofOfPaymentEnabled(s.proof_of_payment_enabled)
+        }
+      } catch (err) {
+        console.error("Failed to load payment settings", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [organizationId])
 
   const handleCancel = () => {
-    // Revert to stored values
-    setProcessPayments(storedProcess)
-    setDelayDays(storedDelay)
-    setProofOfPaymentEnabled(storedProof)
+    window.location.reload()
   }
 
-  const handleSave = () => {
-    saveProcess(processPayments)
-    saveDelay(delayDays)
-    saveProof(proofOfPaymentEnabled)
-    console.log("Settings saved to store")
-    toast("Payment saved")
+  const handleSave = async () => {
+    if (!organizationId) return
+    try {
+      setLoading(true)
+      const res = await upsertOrgSetting(String(organizationId), {
+        payment_process: processPayments,
+        payment_delay_days: parseInt(delayDays) || 0,
+        proof_of_payment_enabled: proofOfPaymentEnabled
+      })
+      if (!res.success) throw new Error(res.message)
+      toast.success("Payment settings saved")
+    } catch (err) {
+      toast.error("Failed to save settings")
+    } finally {
+      setLoading(false)
+    }
   }
 
-  if (!hydrated) {
-    return null // or a loading skeleton
+  if (loading && !organizationId) {
+    return null
   }
 
   const tabs: SettingTab[] = [
@@ -68,7 +86,10 @@ export default function PaymentsPage() {
   ]
 
   const sidebarItems: SidebarItem[] = [
+    { id: "email-notifications", label: "Email notifications", href: "/settings/members/email-notifications" },
+    { id: "work-time-limit", label: "Work time limits", href: "/settings/work-time-limit" },
     { id: "payments", label: "Payments", href: "/settings/payments" },
+    { id: "achievements", label: "Achievements", href: "/settings/Achievements" },
   ]
 
   return (
@@ -155,7 +176,7 @@ export default function PaymentsPage() {
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-normal text-slate-900 uppercase tracking-tight flex items-center gap-2">
                     Proof of Payment PDF
-                    <span className="px-2 py-0.5 text-[10px] uppercase font-normal text-white bg-blue-500 rounded-md">
+                    <span className="px-2 py-0.5 text-[10px] uppercase font-normal text-white bg-slate-700 rounded-md">
                       New
                     </span>
                   </h2>

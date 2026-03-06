@@ -12,7 +12,7 @@ export interface IUser {
     employee_code?: string;
     email?: string;
     first_name?: string;
-last_name?: string;
+    last_name?: string;
     display_name?: string | null;
     phone?: string;
     mobile?: string;
@@ -39,7 +39,9 @@ export interface IOrganization {
     id: string
     code?: string
     name: string
-    legal_name?: string
+    legal_name?: string | null
+    description?: string | null
+    inv_code?: string | null
     tax_id?: string
     industry?: string
     size_category?: string
@@ -49,13 +51,13 @@ export interface IOrganization {
     address?: string
     city?: string
     state_province?: string
-    postal_code?: string // ✅ ubah ke string
-    phone?: string       // ✅ ubah ke string
+    postal_code?: string
+    phone?: string
     email?: string
     website?: string
     logo_url?: string | null
     is_active: boolean
-    subscription_tier?: string // ✅ perbaikan typo
+    subscription_tier?: string
     time_format?: '12h' | '24h'
     subscription_expires_at?: string | null
     created_at: string
@@ -494,8 +496,8 @@ export interface IClient {
     organization_id: number;
     name: string;
     email?: string | null;
-    phone?: string | null;
-    address?: string | null;
+    phone?: string;
+    address?: string;
     status: 'active' | 'inactive' | 'archived' | 'deleted';
     budget_type?: 'total_hours' | 'total_cost' | 'monthly_hours' | 'monthly_cost' | null;
     budget_amount?: number | null;

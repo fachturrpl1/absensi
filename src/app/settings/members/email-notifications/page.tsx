@@ -1,7 +1,9 @@
 ﻿"use client"
 
-import { useState } from "react"
-
+import { useState, useEffect } from "react"
+import { useOrgStore } from "@/store/org-store"
+import { getOrgSettings, upsertOrgSetting } from "@/action/organization-settings"
+import { toast } from "sonner"
 import { Lock, Info } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
@@ -9,7 +11,51 @@ import { Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function EmailNotificationsPage() {
+  const { organizationId } = useOrgStore()
+  const [loading, setLoading] = useState(true)
   const [defaultEmailNotifications, setDefaultEmailNotifications] = useState(false)
+
+  useEffect(() => {
+    async function loadData() {
+      if (!organizationId) {
+        setLoading(false)
+        return
+      }
+
+      setLoading(true)
+      try {
+        const res = await getOrgSettings(String(organizationId))
+        if (res.success && res.data) {
+          if (res.data.email_notifications_enabled !== undefined) {
+            setDefaultEmailNotifications(res.data.email_notifications_enabled)
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load email notifications settings", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [organizationId])
+
+  const handleToggle = async (val: boolean) => {
+    setDefaultEmailNotifications(val)
+    if (!organizationId) return
+    try {
+      await upsertOrgSetting(String(organizationId), {
+        email_notifications_enabled: val
+      })
+      toast.success("Email notification settings updated")
+    } catch (err) {
+      toast.error("Failed to update settings")
+    }
+  }
+
+  if (loading && !organizationId) {
+    return null
+  }
 
   const tabs: SettingTab[] = [
     { label: "EMAIL NOTIFICATIONS", href: "/settings/members/email-notifications", active: true },
@@ -20,6 +66,9 @@ export default function EmailNotificationsPage() {
 
   const sidebarItems: SidebarItem[] = [
     { id: "email-notifications", label: "Email notifications", href: "/settings/members/email-notifications" },
+    { id: "work-time-limit", label: "Work time limits", href: "/settings/work-time-limit" },
+    { id: "payments", label: "Payments", href: "/settings/payments" },
+    { id: "achievements", label: "Achievements", href: "/settings/Achievements" },
   ]
 
   return (
@@ -81,7 +130,7 @@ export default function EmailNotificationsPage() {
                     {/* Toggle Switch with Off/On labels */}
                     <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 p-1 shadow-inner">
                       <button
-                        onClick={() => setDefaultEmailNotifications(false)}
+                        onClick={() => handleToggle(false)}
                         className={`px-5 py-1.5 text-xs font-normal rounded-full transition-all ${!defaultEmailNotifications
                           ? "bg-white text-slate-900 shadow-sm"
                           : "bg-transparent text-slate-400"
@@ -90,7 +139,7 @@ export default function EmailNotificationsPage() {
                         Off
                       </button>
                       <button
-                        onClick={() => setDefaultEmailNotifications(true)}
+                        onClick={() => handleToggle(true)}
                         className={`px-5 py-1.5 text-xs font-normal rounded-full transition-all ${defaultEmailNotifications
                           ? "bg-white text-slate-900 shadow-sm"
                           : "bg-transparent text-slate-400"

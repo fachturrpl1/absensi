@@ -1,75 +1,168 @@
 ﻿"use client"
-
-import React, { useState, useMemo } from "react"
-import { Info, Search, User, Clock } from "lucide-react"
-
+import React, { useState, useEffect } from "react"
+import { Info, Search, Clock, Loader2, Trophy } from "lucide-react"
+import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
+import { useOrgStore } from "@/store/org-store"
+import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
+import { getOrgSettings, upsertOrgSetting, getAllMemberSettings, upsertMemberSetting } from "@/action/organization-settings"
 import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
-import { Trophy } from "lucide-react"
-
-interface MemberWithSettings {
-    id: string
-    name: string
-    avatar?: string
-    enabled: boolean
-    weeklyHoursGoal: number
-}
+import { MemberAvatar } from "@/components/MemberAvatar"
 
 export default function TimeHeroPage() {
-    const initialMembers: MemberWithSettings[] = useMemo(() =>
-        SHARED_MEMBERS.map(m => ({
-            id: m.id,
-            name: m.name,
-            avatar: m.avatar,
-            enabled: true,
-            weeklyHoursGoal: 40
-        })), []
-    )
-
+    const { organizationId } = useOrgStore()
+    const [members, setMembers] = useState<ISimpleMember[]>([])
+    const [totalMembers, setTotalMembers] = useState(0)
+    const [loading, setLoading] = useState(true)
     const [globalEnabled, setGlobalEnabled] = useState(true)
     const [globalWeeklyHoursGoal, setGlobalWeeklyHoursGoal] = useState(40)
-    const [members, setMembers] = useState<MemberWithSettings[]>(initialMembers)
+    const [memberSettings, setMemberSettings] = useState<Record<string, { enabled: boolean, goal: number }>>({})
     const [searchQuery, setSearchQuery] = useState("")
+    const [currentPage, setCurrentPage] = useState(1)
+    const itemsPerPage = 10
 
+    // Fetch Members and Settings
+    useEffect(() => {
+        async function loadData() {
+            if (!organizationId) {
+                setLoading(false)
+                return
+            }
 
+            setLoading(true)
+            try {
+                const [membersRes, orgSettingsRes, allMemberSettingsRes] = await Promise.all([
+                    getMembersForScreenshot(
+                        String(organizationId),
+                        { page: currentPage, limit: itemsPerPage },
+                        searchQuery
+                    ),
+                    getOrgSettings(String(organizationId)),
+                    getAllMemberSettings(String(organizationId))
+                ])
 
-    const handleApplyToAll = () => {
-        setMembers(prev =>
-            prev.map(member => ({
-                ...member,
-                enabled: globalEnabled,
-                weeklyHoursGoal: globalWeeklyHoursGoal
-            }))
-        )
+                if (membersRes.success && membersRes.data) {
+                    setMembers(membersRes.data)
+                    setTotalMembers(membersRes.total ?? 0)
+                }
+
+                if (orgSettingsRes.success && orgSettingsRes.data) {
+                    if (orgSettingsRes.data.achievement_timehero_enabled !== undefined) {
+                        setGlobalEnabled(orgSettingsRes.data.achievement_timehero_enabled)
+                    }
+                    if (orgSettingsRes.data.achievement_timehero_goal !== undefined) {
+                        setGlobalWeeklyHoursGoal(orgSettingsRes.data.achievement_timehero_goal)
+                    }
+                }
+
+                if (allMemberSettingsRes.success && allMemberSettingsRes.data) {
+                    const overrides: Record<string, { enabled: boolean, goal: number }> = {}
+                    Object.entries(allMemberSettingsRes.data).forEach(([mId, settings]) => {
+                        if (settings.achievement_timehero_enabled !== undefined || settings.achievement_timehero_goal !== undefined) {
+                            overrides[mId] = {
+                                enabled: settings.achievement_timehero_enabled ?? globalEnabled,
+                                goal: settings.achievement_timehero_goal ?? globalWeeklyHoursGoal
+                            }
+                        }
+                    })
+                    setMemberSettings(overrides)
+                }
+            } catch (err) {
+                console.error("Failed to load time hero data", err)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        loadData()
+    }, [organizationId, currentPage, searchQuery])
+
+    const handleApplyToAll = async () => {
+        if (!organizationId) return
+        try {
+            setLoading(true)
+            await upsertOrgSetting(String(organizationId), {
+                achievement_timehero_enabled: globalEnabled,
+                achievement_timehero_goal: globalWeeklyHoursGoal
+            })
+            toast.success("Default settings updated and applied")
+        } catch (err) {
+            toast.error("Failed to apply settings")
+        } finally {
+            setLoading(false)
+        }
     }
 
-    const handleMemberEnabledChange = (id: string, enabled: boolean) => {
-        setMembers(prev =>
-            prev.map(member =>
-                member.id === id ? { ...member, enabled } : member
-            )
-        )
+    const handleGlobalEnabledChange = async (val: boolean) => {
+        setGlobalEnabled(val)
+        if (!organizationId) return
+        try {
+            await upsertOrgSetting(String(organizationId), { achievement_timehero_enabled: val })
+        } catch (e) {
+            console.error(e)
+        }
     }
 
-    const handleMemberGoalChange = (id: string, weeklyHoursGoal: number) => {
-        setMembers(prev =>
-            prev.map(member =>
-                member.id === id ? { ...member, weeklyHoursGoal } : member
-            )
-        )
+    const handleGlobalGoalChange = async (val: number) => {
+        setGlobalWeeklyHoursGoal(val)
+        if (!organizationId) return
+        try {
+            await upsertOrgSetting(String(organizationId), { achievement_timehero_goal: val })
+        } catch (e) {
+            console.error(e)
+        }
     }
 
-    const filteredMembers = members.filter(member =>
-        member.name.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const handleMemberEnabledChange = async (memberId: string, enabled: boolean) => {
+        const goal = getMemberGoal(memberId)
+        setMemberSettings(prev => ({
+            ...prev,
+            [memberId]: { enabled, goal }
+        }))
+
+        try {
+            await upsertMemberSetting(memberId, { achievement_timehero_enabled: enabled })
+        } catch (e) {
+            console.error(e)
+        }
+    }
+
+    const handleMemberGoalChange = async (memberId: string, goal: number) => {
+        const enabled = getMemberEnabled(memberId)
+        setMemberSettings(prev => ({
+            ...prev,
+            [memberId]: { enabled, goal }
+        }))
+
+        try {
+            await upsertMemberSetting(memberId, { achievement_timehero_goal: goal })
+        } catch (e) {
+            console.error(e)
+        }
+    }
+
+    const getMemberEnabled = (memberId: string) => {
+        return memberSettings[memberId]?.enabled ?? globalEnabled
+    }
+
+    const getMemberGoal = (memberId: string) => {
+        return memberSettings[memberId]?.goal ?? globalWeeklyHoursGoal
+    }
+
+    const handleSearchChange = (val: string) => {
+        setSearchQuery(val)
+        setCurrentPage(1)
+    }
+
+    const totalPages = Math.ceil(totalMembers / itemsPerPage)
 
     const tabs: SettingTab[] = [
-        { label: "EFFICIENCY PRO", href: "/settings/Achievements", active: false },
-        { label: "PRODUCTIVITY CHAMP", href: "/settings/Achievements/productivity-champ", active: false },
-        { label: "TIME HERO", href: "/settings/Achievements/time-hero", active: true },
+        { label: "EMAIL NOTIFICATIONS", href: "/settings/members/email-notifications", active: false },
+        { label: "WORK TIME LIMITS", href: "/settings/work-time-limit", active: false },
+        { label: "PAYMENTS", href: "/settings/payments", active: false },
+        { label: "ACHIEVEMENTS", href: "/settings/Achievements", active: true },
     ]
 
     return (
@@ -116,7 +209,7 @@ export default function TimeHeroPage() {
                         <div className="flex items-center gap-4">
                             <Switch
                                 checked={globalEnabled}
-                                onCheckedChange={setGlobalEnabled}
+                                onCheckedChange={handleGlobalEnabledChange}
                                 className="data-[state=checked]:bg-slate-900"
                             />
                             {/* Badge Icon - Hexagon with Clock */}
@@ -151,7 +244,7 @@ export default function TimeHeroPage() {
                             <Input
                                 type="number"
                                 value={globalWeeklyHoursGoal}
-                                onChange={(e) => setGlobalWeeklyHoursGoal(Number(e.target.value))}
+                                onChange={(e) => handleGlobalGoalChange(Number(e.target.value))}
                                 className="w-full sm:w-24 border-0 text-center font-normal text-slate-900 h-10 focus-visible:ring-0"
                             />
                             <span className="px-4 py-2 bg-slate-50 text-[10px] font-normal text-slate-500 border-l border-slate-200 uppercase tracking-widest">hours</span>
@@ -176,7 +269,7 @@ export default function TimeHeroPage() {
                                 type="text"
                                 placeholder="Search members"
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={(e) => handleSearchChange(e.target.value)}
                                 className="pl-10 pr-4 py-2 w-full sm:w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                             />
                         </div>
@@ -193,18 +286,29 @@ export default function TimeHeroPage() {
 
                         {/* Table Body */}
                         <div className="divide-y divide-gray-200">
-                            {filteredMembers.map((member) => (
+                            {loading && members.length === 0 ? (
+                                <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
+                                    <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
+                                    <span className="text-xs font-light uppercase tracking-widest">Loading members...</span>
+                                </div>
+                            ) : members.length === 0 ? (
+                                <div className="py-20 text-center text-slate-400">
+                                    <span className="text-xs font-light uppercase tracking-widest">No members found</span>
+                                </div>
+                            ) : members.map((member) => (
                                 <div key={member.id} className="flex flex-col gap-4 sm:grid sm:grid-cols-3 sm:items-center py-4 border-b border-gray-100 last:border-0">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                                            <User className="w-4 h-4 text-gray-500" />
-                                        </div>
+                                        <MemberAvatar
+                                            src={member.avatarUrl}
+                                            name={member.name}
+                                            className="w-8 h-8"
+                                        />
                                         <span className="text-sm text-gray-900">{member.name}</span>
                                     </div>
                                     <div className="flex items-center justify-between sm:justify-start gap-2">
                                         <span className="text-xs font-medium text-gray-500 sm:hidden">Enabled:</span>
                                         <Switch
-                                            checked={member.enabled}
+                                            checked={getMemberEnabled(member.id)}
                                             onCheckedChange={(checked) => handleMemberEnabledChange(member.id, checked)}
                                         />
                                     </div>
@@ -213,21 +317,44 @@ export default function TimeHeroPage() {
                                         <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden w-fit">
                                             <Input
                                                 type="number"
-                                                value={member.weeklyHoursGoal}
+                                                value={getMemberGoal(member.id)}
                                                 onChange={(e) => handleMemberGoalChange(member.id, Number(e.target.value))}
                                                 className="w-16 border-0 text-center text-sm"
                                             />
-                                            <span className="px-2 py-1.5 bg-gray-100 text-xs text-gray-600 border-l border-gray-300">hours</span>
+                                            <span className="px-2 py-1.5 bg-gray-100 text-xs text-gray-600 border-l border-gray-300 whitespace-nowrap">hours</span>
                                         </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-                        {/* Footer */}
-                        <div className="py-3 text-sm text-gray-500">
-                            Showing {filteredMembers.length} of {members.length} members
-                        </div>
+                        {/* Pagination */}
+                        {!loading && members.length > 0 && (
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-8 gap-4 px-2">
+                                <div className="text-[10px] font-normal text-slate-400 uppercase tracking-widest">
+                                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalMembers)} of {totalMembers} members
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <Info className="h-4 w-4 rotate-90" />
+                                    </button>
+                                    <span className="text-[10px] font-normal text-slate-500 uppercase tracking-widest px-2">
+                                        Page {currentPage} of {totalPages || 1}
+                                    </span>
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages || totalPages === 0}
+                                        className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <Info className="h-4 w-4 -rotate-90" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

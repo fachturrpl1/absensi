@@ -1,38 +1,81 @@
 ﻿"use client"
 
-import { useState } from "react"
-import { Info, Search, Loader2, ChevronLeft, ChevronRight, Activity } from "lucide-react"
-import { DUMMY_MEMBERS } from "@/lib/data/dummy-data"
+import { useState, useEffect } from "react"
+import { Info, Search, Loader2, ChevronLeft, ChevronRight, Activity, Star } from "lucide-react"
+import { useOrgStore } from "@/store/org-store"
+import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
+import { getOrgSettings, upsertOrgSetting, getAllMemberSettings, upsertMemberSetting } from "@/action/organization-settings"
 import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
-import { Star } from "lucide-react"
+import { toast } from "sonner"
 
 type KeepIdleTimeOption = "prompt" | "always" | "never"
 
 export default function TrackingPage() {
-    const members = DUMMY_MEMBERS
-    const loading = false
+    const { organizationId } = useOrgStore()
+    const [members, setMembers] = useState<ISimpleMember[]>([])
+    const [totalMembers, setTotalMembers] = useState(0)
+    const [loading, setLoading] = useState(true)
     const [globalKeepIdleTime, setGlobalKeepIdleTime] = useState<KeepIdleTimeOption>("prompt")
     const [searchQuery, setSearchQuery] = useState("")
     const [memberKeepIdleTimes, setMemberKeepIdleTimes] = useState<Record<string, KeepIdleTimeOption>>({})
     const [currentPage, setCurrentPage] = useState(1)
     const itemsPerPage = 10
 
+    // Fetch Members and Settings
+    useEffect(() => {
+        async function loadData() {
+            if (!organizationId) {
+                setLoading(false)
+                return
+            }
+
+            setLoading(true)
+            try {
+                // Fetch members, global settings, and member settings in parallel
+                const [membersRes, orgSettingsRes, allMemberSettingsRes] = await Promise.all([
+                    getMembersForScreenshot(
+                        String(organizationId),
+                        { page: currentPage, limit: itemsPerPage },
+                        searchQuery
+                    ),
+                    getOrgSettings(String(organizationId)),
+                    getAllMemberSettings(String(organizationId))
+                ])
+
+                if (membersRes.success && membersRes.data) {
+                    setMembers(membersRes.data)
+                    setTotalMembers(membersRes.total ?? 0)
+                }
+
+                if (orgSettingsRes.success && orgSettingsRes.data) {
+                    if (orgSettingsRes.data.keep_idle_time) {
+                        setGlobalKeepIdleTime(orgSettingsRes.data.keep_idle_time as KeepIdleTimeOption)
+                    }
+                }
+
+                if (allMemberSettingsRes.success && allMemberSettingsRes.data) {
+                    const overrides: Record<string, KeepIdleTimeOption> = {}
+                    Object.entries(allMemberSettingsRes.data).forEach(([mId, settings]) => {
+                        if (settings.keep_idle_time) {
+                            overrides[mId] = settings.keep_idle_time as KeepIdleTimeOption
+                        }
+                    })
+                    setMemberKeepIdleTimes(overrides)
+                }
+            } catch (err) {
+                console.error("Failed to load tracking data", err)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        loadData()
+    }, [organizationId, currentPage, searchQuery])
+
     const getMemberKeepIdleTime = (memberId: string): KeepIdleTimeOption => {
         return memberKeepIdleTimes[memberId] || globalKeepIdleTime
     }
-
-    const filteredMembers = members.filter(member => {
-        const fullName = member.name.toLowerCase()
-        const keepIdleTime = getMemberKeepIdleTime(member.id).toLowerCase()
-        const query = searchQuery.toLowerCase()
-        return fullName.includes(query) || keepIdleTime.includes(query)
-    })
-
-    // Pagination calculations
-    const totalPages = Math.ceil(filteredMembers.length / itemsPerPage)
-    const startIndex = (currentPage - 1) * itemsPerPage
-    const paginatedMembers = filteredMembers.slice(startIndex, startIndex + itemsPerPage)
 
     // Reset to first page when search changes
     const handleSearchChange = (value: string) => {
@@ -40,20 +83,52 @@ export default function TrackingPage() {
         setCurrentPage(1)
     }
 
-    const handleGlobalKeepIdleTimeChange = (value: KeepIdleTimeOption) => {
+    const handleGlobalKeepIdleTimeChange = async (value: KeepIdleTimeOption) => {
+        const previousValue = globalKeepIdleTime
         setGlobalKeepIdleTime(value)
+
+        if (!organizationId) return
+        try {
+            const res = await upsertOrgSetting(String(organizationId), {
+                keep_idle_time: value
+            })
+            if (!res.success) throw new Error(res.message)
+            toast.success("Global setting updated")
+        } catch (err) {
+            console.error("Failed to update global keep idle time", err)
+            setGlobalKeepIdleTime(previousValue)
+            toast.error("Failed to update global setting")
+        }
     }
 
-    const handleMemberKeepIdleTimeChange = (memberId: string, value: KeepIdleTimeOption) => {
+    const handleMemberKeepIdleTimeChange = async (memberId: string, value: KeepIdleTimeOption) => {
+        const previousValue = memberKeepIdleTimes[memberId]
         setMemberKeepIdleTimes(prev => ({
             ...prev,
             [memberId]: value
         }))
+
+        try {
+            const res = await upsertMemberSetting(memberId, {
+                keep_idle_time: value
+            })
+            if (!res.success) throw new Error(res.message)
+            toast.success("Member setting updated")
+        } catch (err) {
+            console.error("Failed to update member keep idle time", err)
+            setMemberKeepIdleTimes(prev => ({
+                ...prev,
+                [memberId]: previousValue || globalKeepIdleTime
+            }))
+            toast.error("Failed to update member setting")
+        }
     }
+
+    const totalPages = Math.ceil(totalMembers / itemsPerPage)
 
     const tabs: SettingTab[] = [
         { label: "ACTIVITY", href: "/settings/Activity", active: false },
-        { label: "TIMESHEETS", href: "/settings/Timesheet", active: false },
+        { label: "TIMESHEETS", href: "/settings/timesheets", active: false },
         { label: "TRACKING", href: "/settings/tracking", active: true },
         { label: "SCREENSHOTS", href: "/settings/screenshot", active: false },
     ]
@@ -160,17 +235,21 @@ export default function TrackingPage() {
                                     Loading members...
                                 </div>
                             </div>
-                        ) : filteredMembers.length === 0 ? (
+                        ) : members.length === 0 ? (
                             <div className="py-8 text-center text-sm text-slate-500">
                                 No members found
                             </div>
-                        ) : paginatedMembers.map((member) => (
+                        ) : members.map((member) => (
                             <div key={member.id} className="flex items-center justify-between py-4 border-b border-slate-100">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
-                                        <span className="text-sm font-medium text-slate-600">
-                                            {member.name.charAt(0).toUpperCase()}
-                                        </span>
+                                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden text-slate-600">
+                                        {member.avatarUrl ? (
+                                            <img src={member.avatarUrl} alt={member.name} className="h-full w-full object-cover" />
+                                        ) : (
+                                            <span className="text-sm font-medium">
+                                                {member.name.charAt(0).toUpperCase()}
+                                            </span>
+                                        )}
                                     </div>
                                     <span className="text-sm text-slate-900">{member.name}</span>
                                 </div>
@@ -208,10 +287,10 @@ export default function TrackingPage() {
                     </div>
 
                     {/* Pagination */}
-                    {!loading && filteredMembers.length > 0 && (
+                    {!loading && members.length > 0 && (
                         <div className="flex items-center justify-between mt-4">
                             <div className="text-sm text-slate-500">
-                                Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredMembers.length)} of {filteredMembers.length} members
+                                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalMembers)} of {totalMembers} members
                             </div>
                             <div className="flex items-center gap-2">
                                 <button

@@ -147,7 +147,7 @@ export default function ScreenshotSettingsPage() {
 
   const tabs: SettingTab[] = [
     { label: "ACTIVITY", href: "/settings/Activity", active: false },
-    { label: "TIMESHEETS", href: "/settings/Timesheet", active: false },
+    { label: "TIMESHEETS", href: "/settings/timesheets", active: false },
     { label: "TRACKING", href: "/settings/tracking", active: false },
     { label: "SCREENSHOTS", href: "/settings/screenshot", active: true },
   ]

@@ -35,7 +35,7 @@ export default function NotFound() {
         {/* 404 Illustration */}
         <div className="relative animate-bounce-slow">
           <div className="text-8xl font-bold text-muted-foreground/20 select-none">
-            404
+            1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
             <AlertTriangle className="w-16 h-16 text-muted-foreground/40 animate-pulse" />

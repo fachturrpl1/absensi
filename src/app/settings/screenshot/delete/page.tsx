@@ -9,6 +9,7 @@ import { getScreenshotSettings, upsertScreenshotSetting } from "@/action/screens
 import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
 import { Activity } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
+import { MemberAvatar } from "@/components/MemberAvatar"
 
 export default function ScreenshotDeletePage() {
   const { organizationId } = useOrgStore()
@@ -18,12 +19,9 @@ export default function ScreenshotDeletePage() {
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState("")
-  const [memberSettings, setMemberSettings] = useState<Record<string, number>>({})
+  const [globalAllowDelete, setGlobalAllowDelete] = useState(false)
+  const [memberRetention, setMemberRetention] = useState<Record<string, number>>({})
   const itemsPerPage = 10
-
-  // Dummy states and functions to prevent reference errors (UI focus)
-  const [globalDelete, setGlobalDelete] = useState(false)
-  const setGlobalDeleteSetting = (val: boolean) => setGlobalDelete(val)
 
   // Fetch Members and Settings
   useEffect(() => {
@@ -40,7 +38,7 @@ export default function ScreenshotDeletePage() {
             String(organizationId),
             { page: currentPage, limit: itemsPerPage },
             searchQuery
-          ) as any,
+          ),
           getScreenshotSettings(String(organizationId))
         ])
 
@@ -50,14 +48,20 @@ export default function ScreenshotDeletePage() {
         }
 
         if (settingsRes.success && settingsRes.data) {
-          const hours: Record<string, number> = {}
+          // Set Global
+          if (settingsRes.data.global) {
+            setGlobalAllowDelete(settingsRes.data.global.allow_delete)
+          }
+
+          // Set Member Retentions
+          const retentions: Record<string, number> = {}
           Object.entries(settingsRes.data.members).forEach(([memIdStr, setting]) => {
-            hours[memIdStr] = (setting as any).delete_after_hours || 0
+            retentions[memIdStr] = setting.retention_days
           })
-          setMemberSettings(hours)
+          setMemberRetention(retentions)
         }
       } catch (err) {
-        console.error("Failed to load screenshot settings data", err)
+        console.error("Failed to load screenshot delete settings", err)
       } finally {
         setLoading(false)
       }
@@ -66,14 +70,29 @@ export default function ScreenshotDeletePage() {
     loadData()
   }, [organizationId, currentPage, searchQuery])
 
-  const getMemberHours = (memberId: string) => {
-    return memberSettings[memberId] ?? 0
+  const getMemberRetention = (memberId: string) => {
+    return memberRetention[memberId] !== undefined ? memberRetention[memberId] : 0
   }
 
-  const handleMemberHoursChange = async (memberId: string, hours: number) => {
-    setMemberSettings(prev => ({
+  const handleGlobalDeleteSetting = async (val: boolean) => {
+    setGlobalAllowDelete(val)
+
+    if (!organizationId) return
+    try {
+      await upsertScreenshotSetting({
+        organization_id: Number(organizationId),
+        organization_member_id: null,
+        allow_delete: val
+      })
+    } catch (e) {
+      console.error("Failed to update global delete permission", e)
+    }
+  }
+
+  const handleMemberRetentionChange = async (memberId: string, days: number) => {
+    setMemberRetention(prev => ({
       ...prev,
-      [memberId]: hours
+      [memberId]: days
     }))
 
     if (!organizationId) return
@@ -81,10 +100,10 @@ export default function ScreenshotDeletePage() {
       await upsertScreenshotSetting({
         organization_id: Number(organizationId),
         organization_member_id: Number(memberId),
-        delete_after_hours: hours
-      } as any)
+        retention_days: days
+      })
     } catch (e) {
-      console.error("Failed to update delete hours", e)
+      console.error("Failed to update member retention", e)
     }
   }
 
@@ -98,15 +117,15 @@ export default function ScreenshotDeletePage() {
 
   const tabs: SettingTab[] = [
     { label: "ACTIVITY", href: "/settings/Activity", active: false },
-    { label: "TIMESHEETS", href: "/settings/Timesheet", active: false },
+    { label: "TIMESHEETS", href: "/settings/timesheets", active: false },
     { label: "TRACKING", href: "/settings/tracking", active: false },
     { label: "SCREENSHOTS", href: "/settings/screenshot", active: true },
   ]
 
   const sidebarItems: SidebarItem[] = [
-    { id: "general", label: "General", href: "/settings/screenshot" },
-    { id: "delete", label: "Delete Screenshots", href: "/settings/screenshot/delete" },
-    { id: "blur", label: "Blur Screenshots", href: "/settings/screenshot/blur" },
+    { id: "frequency", label: "Screenshot frequency", href: "/settings/screenshot" },
+    { id: "blur", label: "Screenshot blur", href: "/settings/screenshot/blur" },
+    { id: "delete", label: "Delete screenshots", href: "/settings/screenshot/delete" },
   ]
 
   return (
@@ -122,7 +141,7 @@ export default function ScreenshotDeletePage() {
       {/* Content */}
       <div className="flex flex-1 w-full overflow-hidden">
         {/* Main Content Area */}
-        <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full text-slate-900 font-normal">
           {/* Delete Screenshots Section */}
           <div className="space-y-6">
             {/* Global Settings */}
@@ -131,7 +150,7 @@ export default function ScreenshotDeletePage() {
                 <h2 className="text-lg font-normal text-slate-900">DELETE SCREENSHOTS</h2>
                 <Info className="h-4 w-4 text-slate-400" />
               </div>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 font-light leading-relaxed">
                 This setting allows Owners, Organization managers, Team leads with permission and Project managers to delete screenshots for themselves and other team members.
               </p>
 
@@ -142,21 +161,21 @@ export default function ScreenshotDeletePage() {
                     <Info className="h-4 w-4 text-slate-400" />
                   </div>
                   {/* Toggle Switch with Off/On labels */}
-                  <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-200 p-1">
+                  <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-200 p-1 shadow-inner h-10 overflow-hidden">
                     <button
-                      onClick={() => setGlobalDeleteSetting(false)}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${!globalDelete
+                      onClick={() => handleGlobalDeleteSetting(false)}
+                      className={`px-5 py-1.5 text-xs font-light rounded-xl transition-all h-full ${!globalAllowDelete
                         ? "bg-white text-slate-900 shadow-sm"
-                        : "bg-transparent text-slate-600"
+                        : "bg-transparent text-slate-400 hover:text-slate-600"
                         }`}
                     >
                       Off
                     </button>
                     <button
-                      onClick={() => setGlobalDeleteSetting(true)}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${globalDelete
+                      onClick={() => handleGlobalDeleteSetting(true)}
+                      className={`px-5 py-1.5 text-xs font-light rounded-xl transition-all h-full ${globalAllowDelete
                         ? "bg-white text-slate-900 shadow-sm"
-                        : "bg-transparent text-slate-600"
+                        : "bg-transparent text-slate-400 hover:text-slate-600"
                         }`}
                     >
                       On
@@ -168,10 +187,10 @@ export default function ScreenshotDeletePage() {
 
             {/* Individual Settings */}
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
                 <div>
-                  <h3 className="text-base font-normal text-slate-900">Individual settings</h3>
-                  <p className="text-sm text-slate-600 mt-1">
+                  <h3 className="text-lg font-normal text-slate-900">Individual settings</h3>
+                  <p className="text-sm text-slate-500 font-light mt-1">
                     Override the organization default for specific members
                   </p>
                 </div>
@@ -182,72 +201,68 @@ export default function ScreenshotDeletePage() {
                     placeholder="Search members"
                     value={searchQuery}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="pl-10 pr-4 py-2 w-full sm:w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
+                    className="pl-10 pr-4 py-2 w-full sm:w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900 text-sm h-10 transition-all font-light"
                   />
                 </div>
               </div>
 
               {/* Members Table */}
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
+              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                 <table className="w-full">
                   <thead className="bg-slate-50 border-b border-slate-200 hidden sm:table-header-group">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-normal text-slate-700 uppercase tracking-wider">
+                      <th className="px-5 py-3 text-left text-[10px] font-medium text-slate-400 uppercase tracking-widest">
                         Name
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-normal text-slate-700 uppercase tracking-wider">
-                        Delete
+                      <th className="px-5 py-3 text-right text-[10px] font-medium text-slate-400 uppercase tracking-widest">
+                        Retention policy
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-slate-200">
+                  <tbody className="bg-white divide-y divide-slate-100">
                     {loading ? (
                       <tr>
-                        <td colSpan={2} className="px-4 py-8 text-center text-sm text-slate-500">
-                          <div className="flex items-center justify-center gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Loading members...
+                        <td colSpan={2} className="px-5 py-12 text-center text-sm text-slate-500">
+                          <div className="flex flex-col items-center justify-center gap-3">
+                            <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
+                            <span className="text-[10px] font-light uppercase tracking-widest text-slate-400">Loading members...</span>
                           </div>
                         </td>
                       </tr>
                     ) : members.length === 0 ? (
                       <tr>
-                        <td colSpan={2} className="px-4 py-8 text-center text-sm text-slate-500">
-                          No members found
+                        <td colSpan={2} className="px-5 py-12 text-center text-sm text-slate-400">
+                          <span className="text-[10px] font-light uppercase tracking-widest">No members found</span>
                         </td>
                       </tr>
                     ) : members.map(member => {
-                      const memberHours = getMemberHours(member.id)
+                      const retentionDays = getMemberRetention(member.id)
                       return (
-                        <tr key={member.id} className="hover:bg-slate-50 flex flex-col sm:table-row py-4 sm:py-0 border-b border-slate-100 last:border-0">
-                          <td className="px-4 py-3 sm:table-cell">
+                        <tr key={member.id} className="hover:bg-slate-50/50 flex flex-col sm:table-row py-4 sm:py-0 border-b border-slate-100 last:border-0 transition-colors group">
+                          <td className="px-5 py-4 sm:table-cell align-middle">
                             <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden">
-                                {member.avatarUrl ? (
-                                  <img src={member.avatarUrl} alt={member.name} className="h-full w-full object-cover" />
-                                ) : (
-                                  <span className="text-xs font-medium text-slate-900">
-                                    {member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-sm text-slate-900">
+                              <MemberAvatar
+                                src={member.avatarUrl}
+                                name={member.name}
+                                className="h-9 w-9"
+                              />
+                              <span className="text-sm font-normal text-slate-900 group-hover:text-slate-950 transition-colors uppercase tracking-tight">
                                 {member.name}
                               </span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 sm:table-cell text-right">
-                            <div className="flex justify-between sm:justify-end items-center gap-2">
-                              <span className="text-xs font-medium text-slate-500 sm:hidden uppercase tracking-wider">Delete after:</span>
+                          <td className="px-5 py-4 sm:table-cell align-middle text-right">
+                            <div className="flex justify-between sm:justify-end items-center gap-4">
+                              <span className="text-[10px] font-medium text-slate-400 sm:hidden uppercase tracking-widest">Retention:</span>
                               <div className="flex items-center gap-2">
                                 <input
                                   type="number"
-                                  value={memberHours}
-                                  onChange={(e) => handleMemberHoursChange(member.id, parseInt(e.target.value) || 0)}
-                                  className="w-16 px-2 py-1 border border-slate-300 rounded text-sm text-right"
+                                  value={retentionDays}
+                                  onChange={(e) => handleMemberRetentionChange(member.id, parseInt(e.target.value) || 0)}
+                                  className="w-16 h-10 px-3 py-1 border border-slate-200 rounded-lg text-sm text-right focus:outline-none focus:ring-1 focus:ring-slate-900 transition-all font-light"
                                   min="0"
                                 />
-                                <span className="text-sm text-slate-600">hours</span>
+                                <span className="text-xs text-slate-500 font-light">days</span>
                               </div>
                             </div>
                           </td>
@@ -261,25 +276,25 @@ export default function ScreenshotDeletePage() {
 
               {/* Pagination */}
               {!loading && members.length > 0 && (
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-slate-500">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-6 gap-4 px-2">
+                  <div className="text-[10px] font-normal text-slate-400 uppercase tracking-widest">
                     Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalMembers)} of {totalMembers} members
-                  </p>
+                  </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
-                      className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
-                    <span className="text-sm text-slate-700">
+                    <span className="text-[10px] font-normal text-slate-500 uppercase tracking-widest px-2">
                       Page {currentPage} of {totalPages || 1}
                     </span>
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages || totalPages === 0}
-                      className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </button>

@@ -9,6 +9,7 @@ import { getScreenshotSettings, upsertScreenshotSetting } from "@/action/screens
 import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
 import { Activity } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
+import { MemberAvatar } from "@/components/MemberAvatar"
 
 export default function ScreenshotBlurPage() {
   const { organizationId } = useOrgStore()
@@ -118,7 +119,7 @@ export default function ScreenshotBlurPage() {
 
   const tabs: SettingTab[] = [
     { label: "ACTIVITY", href: "/settings/Activity", active: false },
-    { label: "TIMESHEETS", href: "/settings/Timesheet", active: false },
+    { label: "TIMESHEETS", href: "/settings/timesheets", active: false },
     { label: "TRACKING", href: "/settings/tracking", active: false },
     { label: "SCREENSHOTS", href: "/settings/screenshot", active: true },
   ]
@@ -242,15 +243,11 @@ export default function ScreenshotBlurPage() {
                           <tr key={member.id} className="hover:bg-slate-50 flex flex-col sm:table-row py-4 sm:py-0 border-b border-slate-100 last:border-0">
                             <td className="px-4 py-3 sm:table-cell">
                               <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden">
-                                  {member.avatarUrl ? (
-                                    <img src={member.avatarUrl} alt={member.name} className="h-full w-full object-cover" />
-                                  ) : (
-                                    <span className="text-xs font-medium text-slate-900">
-                                      {member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                                    </span>
-                                  )}
-                                </div>
+                                <MemberAvatar
+                                  src={member.avatarUrl}
+                                  name={member.name}
+                                  className="h-8 w-8"
+                                />
                                 <div className="flex flex-col">
                                   <span className="text-sm font-medium text-slate-900">{member.name}</span>
                                 </div>

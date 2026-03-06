@@ -3,7 +3,6 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { buttonVariants } from "@/components/ui/button"
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
     items: {
@@ -29,11 +28,10 @@ export function UserSettingsSidebar({ className, items, ...props }: SidebarNavPr
                     key={item.href}
                     href={item.href}
                     className={cn(
-                        buttonVariants({ variant: "ghost" }),
+                        "flex items-center gap-2 justify-start px-3 py-2 rounded-md text-sm font-normal transition-colors no-underline",
                         pathname === item.href
-                            ? "bg-muted hover:bg-muted"
-                            : "hover:bg-transparent hover:underline",
-                        "justify-start gap-2"
+                            ? "bg-slate-100 text-slate-900"
+                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                     )}
                 >
                     {item.icon}

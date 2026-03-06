@@ -296,7 +296,7 @@ export default function TimesheetApprovalsPage() {
 
             {/* 1. Settings Link */}
             <div>
-                <Link href="/settings/Timesheet" className="inline-flex items-center text-gray-900 hover:text-blue-700 font-medium text-sm">
+                <Link href="/settings/timesheets" className="inline-flex items-center text-gray-900 hover:text-blue-700 font-medium text-sm">
                     <Settings className="w-4 h-4 mr-2" />
                     Manage timesheet approvals
                 </Link>

@@ -25,6 +25,7 @@ import { MemberScreenshotCard } from "@/components/activity/MemberScreenshotCard
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ScreenshotCardSkeleton } from "@/components/activity/ScreenshotCardSkeleton"
 import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "sonner"
 import { useAuthStore } from "@/store/user-store"
 
 
@@ -232,6 +233,11 @@ export default function Every10MinPage() {
       setDbScreenshots(res.data)
     } else {
       setDbScreenshots([])
+      if (res.message) {
+        toast.error("Gagal mengambil screenshot", {
+          description: res.message
+        })
+      }
     }
     setIsLoading(false)
     isFirstMount.current = false

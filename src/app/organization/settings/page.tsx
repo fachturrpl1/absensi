@@ -316,19 +316,19 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchGeoData(selectedCountry);
   }, [selectedCountry, fetchGeoData]);
-  
-  
+
+
   // Image compression hook
 
-  const { 
+  const {
 
-    compressImage, 
+    compressImage,
 
-    isCompressing, 
+    isCompressing,
 
     error: compressionError,
 
-    validateFile 
+    validateFile
 
   } = useImageCompression({ preset: 'standard' });
 
@@ -344,26 +344,26 @@ export default function SettingsPage() {
 
       try {
 
-        const result = await getCurrentUserOrganization(orgStore.organizationId);
+        const result = await getCurrentUserOrganization();
 
-        
-        
+
+
         if (result.success && result.data) {
 
           const data = result.data;
 
-          setOrgData(data as OrganizationData);
+          setOrgData(data as any as OrganizationData);
 
           const countryCode = (data.country_code || "ID").toUpperCase();
           const geo = await fetchGeoData(countryCode);
-          const normalizedState = normalizeStateValue(geo, data.state_province);
-          const normalizedCity = normalizeCityValue(geo, data.city, normalizedState);
+          const normalizedState = normalizeStateValue(geo, data.state_province ?? null);
+          const normalizedCity = normalizeCityValue(geo, data.city ?? null, normalizedState);
 
           setFormData({
 
             name: data.name || "",
 
-            description: data.description || "",
+            description: (data as any).description || "",
 
             address: data.address || "",
 
@@ -382,13 +382,13 @@ export default function SettingsPage() {
             currency_code: data.currency_code || "USD",
 
             country_code: countryCode,
-            industry: findIndustryValue(data.industry),
+            industry: findIndustryValue((data as any).industry),
 
             time_format: data.time_format || '24h'
 
           });
 
-          setLogoPreview(data.logo_url);
+          setLogoPreview(data.logo_url ?? null);
 
         } else {
 
@@ -446,8 +446,8 @@ export default function SettingsPage() {
 
       toast.info('Upload logo...');
 
-      
-      
+
+
       // Compress the image
 
       const compressionResult = await compressImage(file);
@@ -480,14 +480,14 @@ export default function SettingsPage() {
 
       setLogoPreview(compressionResult.dataUrl || '');
 
-      
-      
+
+
       // Show success without compression details
 
       toast.success('Logo ready to upload');
 
-      
-      
+
+
       // Optional: Log compression info to console for debugging
 
       const originalSizeMB = (file.size / (1024 * 1024)).toFixed(2);
@@ -524,38 +524,38 @@ export default function SettingsPage() {
 
         if (!logoUrl) return { success: false, message: 'No logo URL provided' }
 
-        
-        
+
+
         try {
 
           const filePath = logoUrl.split('/').pop()
 
           if (!filePath) return { success: false, message: 'Invalid logo URL' }
 
-          
-          
+
+
           const { createClient } = await import('@/utils/supabase/client')
 
           const supabase = createClient()
 
-          
-          
+
+
           const { error } = await supabase.storage
 
             .from('logo')
 
             .remove([`organization/${filePath}`])
-          
-          
-          
+
+
+
           if (error) {
 
             return { success: false, message: error.message }
 
           }
 
-          
-          
+
+
           return { success: true, message: 'Logo deleted' }
 
         } catch (error) {
@@ -568,8 +568,8 @@ export default function SettingsPage() {
 
       const supabase = createClient();
 
-      
-      
+
+
       // Debug: Log file details
 
       organizationLogger.debug('Uploading file:', {
@@ -584,16 +584,16 @@ export default function SettingsPage() {
 
       });
 
-      
-      
+
+
       // Create file name with safeguards and fallback
 
       let fileName;
 
       let fileNameToUse = file.name;
 
-      
-      
+
+
       // Fallback if filename is missing or invalid
 
       if (!fileNameToUse || typeof fileNameToUse !== 'string' || fileNameToUse.trim() === '') {
@@ -612,8 +612,8 @@ export default function SettingsPage() {
 
       }
 
-      
-      
+
+
       try {
 
         // Generate logo path: organization/org_{id}_{filename}
@@ -632,8 +632,8 @@ export default function SettingsPage() {
 
       }
 
-      
-      
+
+
       // Delete old logo first if it exists
 
       if (orgData?.logo_url) {
@@ -652,8 +652,8 @@ export default function SettingsPage() {
 
       }
 
-      
-      
+
+
       // Upload new logo
 
       const { error } = await supabase.storage
@@ -661,9 +661,9 @@ export default function SettingsPage() {
         .from('logo')
 
         .upload(fileName, file, { upsert: true });
-      
-      
-      
+
+
+
       if (error) {
 
         organizationLogger.error('Upload error:', error);
@@ -674,8 +674,8 @@ export default function SettingsPage() {
 
       }
 
-      
-      
+
+
       // Get public URL
 
       const { data: publicUrlData } = supabase.storage
@@ -683,9 +683,9 @@ export default function SettingsPage() {
         .from('logo')
 
         .getPublicUrl(fileName);
-      
-      
-      
+
+
+
       return publicUrlData.publicUrl;
 
     } catch (error) {
@@ -720,8 +720,8 @@ export default function SettingsPage() {
 
       let logoUrl = orgData?.logo_url;
 
-      
-      
+
+
       // Upload logo if new file is selected
 
       if (logoFile) {
@@ -744,12 +744,12 @@ export default function SettingsPage() {
 
       }
 
-      
+
       // Convert geo values to labels before saving to database
       // Only use label, never send raw value (e.g., "id-ji-malang")
       let cityLabel = getCityLabelFromGeo(geoData, formData.city);
       let stateLabel = getStateLabelFromGeo(geoData, formData.state_province);
-      
+
       // If conversion failed, check if formData already contains a label (not a value)
       // Values typically contain hyphens and country codes (e.g., "id-ji-malang")
       // Labels are plain text (e.g., "Malang")
@@ -760,7 +760,7 @@ export default function SettingsPage() {
           cityLabel = formData.city; // Already a label
         }
       }
-      
+
       if (!stateLabel && formData.state_province) {
         const looksLikeValue = /^[a-z]{2}-[a-z]{2}$/i.test(formData.state_province);
         if (!looksLikeValue) {
@@ -804,12 +804,12 @@ export default function SettingsPage() {
 
       };
 
-      
-      
-      const result = await updateOrganization(updateData, orgStore.organizationId);
 
-      
-      
+
+      const result = await updateOrganization(String(orgStore.organizationId), updateData as any);
+
+
+
       if (result.success) {
 
         toast.success("Organization settings updated successfully!");
@@ -823,11 +823,11 @@ export default function SettingsPage() {
 
         // Refresh organization data
 
-        const refreshResult = await getCurrentUserOrganization(orgStore.organizationId);
+        const refreshResult = await getCurrentUserOrganization();
 
         if (refreshResult.success && refreshResult.data) {
 
-          setOrgData(refreshResult.data as OrganizationData);
+          setOrgData(refreshResult.data as any as OrganizationData);
 
         }
 
@@ -877,7 +877,7 @@ export default function SettingsPage() {
 
     setIsDeleting(true);
     try {
-      const result = await deleteOrganization(orgData.id);
+      const result = await deleteOrganization(String(orgData.id));
       if (result.success) {
         toast.success("Organization deleted successfully. Redirecting...");
 
@@ -904,25 +904,25 @@ export default function SettingsPage() {
 
     try {
 
-      const result = await regenerateInviteCode(orgStore.organizationId);
+      const result = await regenerateInviteCode(String(orgStore.organizationId));
 
-      
-      
-        if (result.success) {
+
+
+      if (result.success) {
 
         toast.success(result.message);
 
         // Refresh organization data to get the new invite code
 
-        const refreshResult = await getCurrentUserOrganization(orgStore.organizationId);
+        const refreshResult = await getCurrentUserOrganization();
 
         if (refreshResult.success && refreshResult.data) {
 
-          const refreshed = refreshResult.data as Partial<OrganizationData>;
+          const refreshed = refreshResult.data as any as Partial<OrganizationData>;
 
           setOrgData({
 
-            ...(refreshResult.data as OrganizationData),
+            ...(refreshResult.data as any as OrganizationData),
 
             time_format: refreshed.time_format || '24h'
 
@@ -971,8 +971,8 @@ export default function SettingsPage() {
             <div className="shrink-0">
               {logoPreview || orgData?.logo_url ? (
                 <div className="w-20 h-20 rounded-lg border border-border bg-muted overflow-hidden flex items-center justify-center">
-                  <img 
-                    src={logoPreview || orgData?.logo_url || ''} 
+                  <img
+                    src={logoPreview || orgData?.logo_url || ''}
                     alt={`${orgData?.name || 'Organization'} logo`}
                     className="block w-full h-full object-cover"
                   />
@@ -988,7 +988,7 @@ export default function SettingsPage() {
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-3xl font-bold">{orgData?.name || 'Organization Settings'}</h1>
-                <Badge 
+                <Badge
                   variant="secondary"
                   className={
                     orgData?.is_active
@@ -999,7 +999,7 @@ export default function SettingsPage() {
                   {orgData?.is_active ? "Active" : "Inactive"}
                 </Badge>
               </div>
-              
+
               <p className="text-muted-foreground">
                 Manage your organization information, settings, and preferences
               </p>
@@ -1103,8 +1103,8 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-4">
                   {logoPreview ? (
                     <div className="w-16 h-16 rounded-lg border border-border bg-muted overflow-hidden flex items-center justify-center">
-                      <img 
-                        src={logoPreview} 
+                      <img
+                        src={logoPreview}
                         alt={`${orgData?.name || 'Organization'} logo preview`}
                         className="block w-full h-full object-cover"
                       />
@@ -1115,7 +1115,7 @@ export default function SettingsPage() {
                       <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
                     </div>
                   )}
-                  
+
                   <div className="space-y-2">
                     <Input
                       id="logo"
@@ -1168,7 +1168,7 @@ export default function SettingsPage() {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Enter organization name"
                   className="h-10"
                 />
@@ -1187,7 +1187,7 @@ export default function SettingsPage() {
                 <Textarea
                   id="description"
                   value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Brief description of your organization"
                   className="min-h-20 resize-none"
                 />
@@ -1198,7 +1198,7 @@ export default function SettingsPage() {
                 <Label htmlFor="industry" className="text-sm font-medium">
                   Industry
                 </Label>
-                <Select value={formData.industry} onValueChange={(value) => setFormData({...formData, industry: value})}>
+                <Select value={formData.industry} onValueChange={(value) => setFormData({ ...formData, industry: value })}>
                   <SelectTrigger id="industry" className="h-10">
                     <SelectValue placeholder="Select industry" />
                   </SelectTrigger>
@@ -1238,7 +1238,7 @@ export default function SettingsPage() {
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="info@example.com"
                   className="h-10"
                 />
@@ -1254,7 +1254,7 @@ export default function SettingsPage() {
                   id="phone"
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="+62 xxx xxxx xxxx"
                   className="h-10"
                 />
@@ -1270,7 +1270,7 @@ export default function SettingsPage() {
                   id="website"
                   type="url"
                   value={formData.website}
-                  onChange={(e) => setFormData({...formData, website: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                   placeholder="https://example.com"
                   className="h-10"
                 />
@@ -1286,7 +1286,7 @@ export default function SettingsPage() {
                 <Input
                   id="address"
                   value={formData.address}
-                  onChange={(e) => setFormData({...formData, address: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   placeholder="123 Main Street"
                   className="h-10"
                 />
@@ -1298,7 +1298,7 @@ export default function SettingsPage() {
                   <Label htmlFor="country" className="text-sm font-medium">
                     Country
                   </Label>
-                  <Select value={formData.country_code} onValueChange={(value) => setFormData({...formData, country_code: value})}>
+                  <Select value={formData.country_code} onValueChange={(value) => setFormData({ ...formData, country_code: value })}>
                     <SelectTrigger id="country" className="h-10">
                       <SelectValue />
                     </SelectTrigger>
@@ -1340,7 +1340,7 @@ export default function SettingsPage() {
                                 key={state.value}
                                 value={state.value}
                                 onSelect={(currentValue) => {
-                                  setFormData({...formData, state_province: currentValue === formData.state_province ? "" : currentValue});
+                                  setFormData({ ...formData, state_province: currentValue === formData.state_province ? "" : currentValue });
                                   setStatePopoverOpen(false);
                                 }}
                               >
@@ -1391,7 +1391,7 @@ export default function SettingsPage() {
                                 key={city.value}
                                 value={city.value}
                                 onSelect={(currentValue) => {
-                                  setFormData({...formData, city: currentValue === formData.city ? "" : currentValue});
+                                  setFormData({ ...formData, city: currentValue === formData.city ? "" : currentValue });
                                   setCityPopoverOpen(false);
                                 }}
                               >
@@ -1418,7 +1418,7 @@ export default function SettingsPage() {
                   <Input
                     id="postal_code"
                     value={formData.postal_code}
-                    onChange={(e) => setFormData({...formData, postal_code: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
                     placeholder="12345"
                     className="h-10"
                   />
@@ -1433,7 +1433,7 @@ export default function SettingsPage() {
                   <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                   Timezone
                 </Label>
-                <Select value={formData.timezone} onValueChange={(value) => setFormData({...formData, timezone: value})}>
+                <Select value={formData.timezone} onValueChange={(value) => setFormData({ ...formData, timezone: value })}>
                   <SelectTrigger id="timezone" className="h-10">
                     <SelectValue />
                   </SelectTrigger>
@@ -1456,7 +1456,7 @@ export default function SettingsPage() {
                 <Label htmlFor="currency" className="text-sm font-medium">
                   Currency
                 </Label>
-                <Select value={formData.currency_code} onValueChange={(value) => setFormData({...formData, currency_code: value})}>
+                <Select value={formData.currency_code} onValueChange={(value) => setFormData({ ...formData, currency_code: value })}>
                   <SelectTrigger id="currency" className="h-10">
                     <SelectValue />
                   </SelectTrigger>

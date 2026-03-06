@@ -300,17 +300,17 @@ export function AddWorkBreakPolicyDialog({ open, onOpenChange, onSave, initialDa
 
                                 {restrictions === "once_per_session" && (
                                     <div>
-                                        <div className="h-8 bg-blue-200 w-full border border-blue-300 rounded-sm mb-1"></div>
+                                        <div className="h-8 bg-slate-200 w-full border border-slate-300 rounded-sm mb-1"></div>
                                         <div className="text-center text-sm text-slate-700">1st break available</div>
                                     </div>
                                 )}
 
                                 {(restrictions === "within_hours" || restrictions === "after_hours") && (
                                     <div>
-                                        <div className="flex border border-blue-300 rounded-sm overflow-hidden mb-1">
-                                            <div className="flex-1 h-8 bg-blue-200 border-r border-blue-300 last:border-r-0"></div>
-                                            <div className="flex-1 h-8 bg-blue-200 border-r border-blue-300 last:border-r-0"></div>
-                                            <div className="flex-1 h-8 bg-blue-200 last:border-r-0"></div>
+                                        <div className="flex border border-slate-300 rounded-sm overflow-hidden mb-1">
+                                            <div className="flex-1 h-8 bg-slate-200 border-r border-slate-300 last:border-r-0"></div>
+                                            <div className="flex-1 h-8 bg-slate-200 border-r border-slate-300 last:border-r-0"></div>
+                                            <div className="flex-1 h-8 bg-slate-200 last:border-r-0"></div>
                                         </div>
                                         <div className="flex text-sm text-slate-700 text-center">
                                             <div className="flex-1">1st break available</div>

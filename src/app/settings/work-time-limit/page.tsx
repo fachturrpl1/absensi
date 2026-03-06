@@ -6,26 +6,16 @@ import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
+import { useOrgStore } from "@/store/org-store"
+import { getOrgSettings, upsertOrgSetting } from "@/action/organization-settings"
 import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
 import { Users } from "lucide-react"
-import { useWorkTimeLimitStore, DayOfWeek, WorkHourEntry } from "@/store/work-time-limit-store"
+import { type DayOfWeek, type WorkHourEntry } from "@/store/work-time-limit-store"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
 export default function WorkTimeLimitPage() {
-    const {
-        selectedDays: storedSelectedDays,
-        disableTracking: storedDisableTracking,
-        expectedHours: storedExpectedHours,
-        weeklyLimit: storedWeeklyLimit,
-        dailyLimit: storedDailyLimit,
-        setSelectedDays: saveSelectedDays,
-        setDisableTracking: saveDisableTracking,
-        setExpectedHours: saveExpectedHours,
-        setWeeklyLimit: saveWeeklyLimit,
-        setDailyLimit: saveDailyLimit,
-    } = useWorkTimeLimitStore()
-
-    const [hydrated, setHydrated] = useState(false)
+    const { organizationId } = useOrgStore()
+    const [loading, setLoading] = useState(true)
 
     // Local state for form
     const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>(["Mon", "Tue", "Wed", "Thu", "Fri"])
@@ -36,15 +26,34 @@ export default function WorkTimeLimitPage() {
     const [weeklyLimit, setWeeklyLimit] = useState(40)
     const [dailyLimit, setDailyLimit] = useState(8)
 
+    // Fetch Settings
     useEffect(() => {
-        setHydrated(true)
-        // Sync local state with store
-        setSelectedDays(storedSelectedDays)
-        setDisableTracking(storedDisableTracking)
-        setExpectedHours(storedExpectedHours)
-        setWeeklyLimit(storedWeeklyLimit)
-        setDailyLimit(storedDailyLimit)
-    }, [storedSelectedDays, storedDisableTracking, storedExpectedHours, storedWeeklyLimit, storedDailyLimit])
+        async function loadData() {
+            if (!organizationId) {
+                setLoading(false)
+                return
+            }
+
+            setLoading(true)
+            try {
+                const res = await getOrgSettings(String(organizationId))
+                if (res.success && res.data) {
+                    const s = res.data
+                    if (s.work_days) setSelectedDays(s.work_days)
+                    if (s.disable_tracking_days !== undefined) setDisableTracking(s.disable_tracking_days)
+                    if (s.expected_weekly_hours) setExpectedHours([{ id: "1", hours: s.expected_weekly_hours, unit: "hrs/wk" }])
+                    if (s.weekly_limit) setWeeklyLimit(s.weekly_limit)
+                    if (s.daily_limit) setDailyLimit(s.daily_limit)
+                }
+            } catch (err) {
+                console.error("Failed to load work time limits", err)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        loadData()
+    }, [organizationId])
 
     const days: DayOfWeek[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -54,10 +63,6 @@ export default function WorkTimeLimitPage() {
                 ? prev.filter(d => d !== day)
                 : [...prev, day]
         )
-    }
-
-    const removeExpectedHours = (id: string) => {
-        setExpectedHours(prev => prev.filter(entry => entry.id !== id))
     }
 
     const updateExpectedHours = (id: string, hours: number) => {
@@ -84,29 +89,27 @@ export default function WorkTimeLimitPage() {
         return selectedDays.join(", ")
     }
 
-    const handleCancel = () => {
-        // Revert to stored values
-        setSelectedDays(storedSelectedDays)
-        setDisableTracking(storedDisableTracking)
-        setExpectedHours(storedExpectedHours)
-        setWeeklyLimit(storedWeeklyLimit)
-        setDailyLimit(storedDailyLimit)
-        // toast("Changes reverted", { description: "Restored to last saved settings" })
+    const handleSave = async () => {
+        if (!organizationId) return
+        try {
+            setLoading(true)
+            const res = await upsertOrgSetting(String(organizationId), {
+                work_days: selectedDays,
+                disable_tracking_days: disableTracking,
+                expected_weekly_hours: expectedHours[0]?.hours || 40,
+                weekly_limit: weeklyLimit,
+                daily_limit: dailyLimit
+            })
+            if (!res.success) throw new Error(res.message)
+            toast.success("Settings saved successfully")
+        } catch (err) {
+            toast.error("Failed to save settings")
+        } finally {
+            setLoading(false)
+        }
     }
 
-    const handleSave = () => {
-        saveSelectedDays(selectedDays)
-        saveDisableTracking(disableTracking)
-        saveExpectedHours(expectedHours)
-        saveWeeklyLimit(weeklyLimit)
-        saveDailyLimit(dailyLimit)
-
-        toast("Settings saved", {
-            description: "Work time limits have been updated successfully."
-        })
-    }
-
-    if (!hydrated) {
+    if (loading && !organizationId) {
         return null
     }
 
@@ -118,7 +121,10 @@ export default function WorkTimeLimitPage() {
     ]
 
     const sidebarItems: SidebarItem[] = [
+        { id: "email-notifications", label: "Email notifications", href: "/settings/members/email-notifications" },
         { id: "work-time-limit", label: "Work time limits", href: "/settings/work-time-limit" },
+        { id: "payments", label: "Payments", href: "/settings/payments" },
+        { id: "achievements", label: "Achievements", href: "/settings/Achievements" },
     ]
 
     return (
@@ -144,7 +150,7 @@ export default function WorkTimeLimitPage() {
                             Save
                         </Button>
                         <button
-                            onClick={handleCancel}
+                            onClick={() => window.location.reload()}
                             className="text-slate-500 hover:text-slate-900 text-sm font-medium"
                         >
                             Cancel
@@ -225,12 +231,7 @@ export default function WorkTimeLimitPage() {
                                         </span>
                                     </div>
                                     {expectedHours.length > 1 && (
-                                        <button
-                                            onClick={() => removeExpectedHours(entry.id)}
-                                            className="text-slate-500 hover:text-slate-900 text-sm"
-                                        >
-                                            Remove
-                                        </button>
+                                        <div className="w-16" />
                                     )}
                                 </div>
                             ))}

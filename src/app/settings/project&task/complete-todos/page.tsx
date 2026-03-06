@@ -1,8 +1,9 @@
 ﻿"use client"
-
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
+import { useOrgStore } from "@/store/org-store"
+import { getOrgSettings, upsertOrgSetting } from "@/action/organization-settings"
+import { toast } from "sonner"
 import { Info } from "lucide-react"
-
 import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
 import { Building2 } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
@@ -10,9 +11,51 @@ import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 type PermissionType = "everyone" | "management-only"
 
 export default function CompleteTodosPage() {
+    const { organizationId } = useOrgStore()
+    const [loading, setLoading] = useState(true)
     const [permission, setPermission] = useState<PermissionType>("everyone")
 
+    useEffect(() => {
+        async function loadData() {
+            if (!organizationId) {
+                setLoading(false)
+                return
+            }
 
+            setLoading(true)
+            try {
+                const res = await getOrgSettings(String(organizationId))
+                if (res.success && res.data) {
+                    if (res.data.todo_complete_permission) {
+                        setPermission(res.data.todo_complete_permission as PermissionType)
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load complete to-dos settings", err)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        loadData()
+    }, [organizationId])
+
+    const handlePermissionChange = async (newPermission: PermissionType) => {
+        setPermission(newPermission)
+        if (!organizationId) return
+        try {
+            await upsertOrgSetting(String(organizationId), {
+                todo_complete_permission: newPermission
+            })
+            toast.success("Permission updated")
+        } catch (err) {
+            toast.error("Failed to update setting")
+        }
+    }
+
+    if (loading && !organizationId) {
+        return null
+    }
 
     const tabs: SettingTab[] = [
         { label: "PROJECTS & TO-DOS", href: "/settings/project&task", active: true },
@@ -64,7 +107,7 @@ export default function CompleteTodosPage() {
                     {/* Permission Selection Pills */}
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-slate-100 rounded-2xl p-1.5 w-full sm:w-fit gap-1 shadow-inner">
                         <button
-                            onClick={() => setPermission("everyone")}
+                            onClick={() => handlePermissionChange("everyone")}
                             className={`flex-1 sm:flex-none px-8 py-2.5 text-xs font-normal rounded-xl transition-all uppercase tracking-widest ${permission === "everyone"
                                 ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
                                 : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
@@ -73,7 +116,7 @@ export default function CompleteTodosPage() {
                             Everyone
                         </button>
                         <button
-                            onClick={() => setPermission("management-only")}
+                            onClick={() => handlePermissionChange("management-only")}
                             className={`flex-1 sm:flex-none px-8 py-2.5 text-xs font-normal rounded-xl transition-all uppercase tracking-widest ${permission === "management-only"
                                 ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
                                 : "text-slate-500 hover:text-slate-700 hover:bg-white/50"

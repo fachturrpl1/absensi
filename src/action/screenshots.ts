@@ -167,25 +167,33 @@ export async function getScreenshotsByMemberAndDate(
 ): Promise<{ success: boolean; data?: IScreenshotWithActivity[]; message?: string }> {
     const supabase = await createClient()
 
+    console.log(`Fetching screenshots: memberId=${organizationMemberId}, range=${startDate} to ${endDate}`)
+
+    // Use a robust JOIN for activities
     const { data, error } = await supabase
         .from('screenshots')
         .select(`
-      *,
-      activities (
-        keyboard_seconds,
-        mouse_seconds
-      )
-    `)
+            *,
+            activities!activity_id (
+                keyboard_seconds,
+                mouse_seconds
+            )
+        `)
         .eq('organization_member_id', organizationMemberId)
         .gte('screenshot_date', startDate)
         .lte('screenshot_date', endDate)
         .eq('is_deleted', false)
         .order('time_slot', { ascending: true })
 
-    // Perbaikan offset timezone dengan menggunakan local date components
-
     if (error) {
-        return { success: false, message: error.message }
+        console.error('getScreenshotsByMemberAndDate error:', error)
+        return { success: false, message: `Query Error: ${error.message}` }
+    }
+
+    if (!data || data.length === 0) {
+        console.log(`No screenshots found for member ${organizationMemberId} in range ${startDate} to ${endDate}`)
+    } else {
+        console.log(`Found ${data.length} screenshots for member ${organizationMemberId}`)
     }
 
     // Hitung activity_progress dari keyboard_seconds + mouse_seconds
@@ -237,8 +245,11 @@ export async function getMemberInsightsSummary(
             .gte('end_date', startDate)   // Timesheet berakhir sesudah/pada awal range
 
         if (timesheetsError) {
+            console.error('getMemberInsightsSummary timesheetsError:', timesheetsError)
             return { success: false, message: timesheetsError.message }
         }
+
+        console.log(`Found ${timesheetsData?.length || 0} timesheets for member ${organizationMemberId} in ${startDate}-${endDate}`)
 
         let totalWorkedSeconds = 0
         let totalFocusSeconds = 0
@@ -246,12 +257,12 @@ export async function getMemberInsightsSummary(
         const avgActivitySum = 0
 
         if (timesheetsData && timesheetsData.length > 0) {
-            const ts = timesheetsData[0]
-            if (ts) {
-                totalWorkedSeconds = ts.total_tracked_seconds || 0
-                totalFocusSeconds = ts.focus_seconds || 0
-                totalUnusualCount = ts.unusual_activity_count || 0
-            }
+            timesheetsData.forEach(ts => {
+                totalWorkedSeconds += (ts.total_tracked_seconds || 0)
+                totalFocusSeconds += (ts.focus_seconds || 0)
+                totalUnusualCount += (ts.unusual_activity_count || 0)
+                console.log(`Adding timesheet ID ${ts.id}: Tracked=${ts.total_tracked_seconds}, Focus=${ts.focus_seconds}`)
+            })
         }
 
         // 2. Ambil klasifikasi kerja dari productivity_categories & tool_usages/url_visits
@@ -287,6 +298,7 @@ export async function getMemberInsightsSummary(
 
             // FALLBACK: Jika worked_seconds dari timesheet adalah 0, gunakan totalOverallSeconds dari activities
             if (totalWorkedSeconds === 0) {
+                console.log(`Fallback worked time to totalOverallSeconds: ${totalOverallSeconds}`)
                 totalWorkedSeconds = totalOverallSeconds
             }
         }
@@ -328,7 +340,7 @@ export async function getMemberInsightsSummary(
         const processActivityItem = (name: string, seconds: number, classification: string) => {
             if (!seconds) return
 
-            if (classification === 'core-work') {
+            if (classification === 'core-work' || classification === 'productive' || classification === 'core') {
                 coreWorkSeconds += seconds
                 coreItemsMap[name] = (coreItemsMap[name] || 0) + seconds
             } else if (classification === 'unproductive') {
@@ -342,6 +354,8 @@ export async function getMemberInsightsSummary(
 
         urlsData?.forEach((item: any) => processActivityItem(item.url, item.tracked_seconds, item.is_productive))
         toolsData?.forEach((item: any) => processActivityItem(item.tool_name, item.tracked_seconds, item.is_productive))
+
+        console.log(`Classification: Core=${coreWorkSeconds}, NonCore=${nonCoreWorkSeconds}, Unproductive=${unproductiveSeconds}`)
 
         const totalClassificationSeconds = coreWorkSeconds + nonCoreWorkSeconds + unproductiveSeconds
 

@@ -71,7 +71,7 @@ export function SettingsHeader({ title, Icon, tabs, sidebarItems, activeItemId }
                         <Link
                             key={tab.label}
                             href={tab.href}
-                            className={`px-2 md:px-4 py-3 text-xs md:text-sm font-bold border-b-2 transition-all whitespace-nowrap tracking-tight ${tab.active
+                            className={`px-2 md:px-4 py-3 text-xs md:text-sm font-normal no-underline border-b-2 transition-all whitespace-nowrap tracking-tight ${tab.active
                                 ? "text-slate-900 border-slate-900"
                                 : "text-slate-500 hover:text-slate-900 border-transparent hover:border-slate-300"
                                 }`}
