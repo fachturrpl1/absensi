@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -95,7 +95,6 @@ export function ProfileSettingsForm({ initialData }: ProfileSettingsFormProps) {
 
         employee_code: initialData.user.employee_code || "",
         first_name: initialData.user.first_name || "",
-        middle_name: initialData.user.middle_name || "",
         last_name: initialData.user.last_name || "",
         phone: initialData.user.phone || "",
 
@@ -249,7 +248,6 @@ export function ProfileSettingsForm({ initialData }: ProfileSettingsFormProps) {
             if (data.display_name) formData.append("display_name", data.display_name);
             if (data.email) formData.append("email", data.email);
             if (data.first_name) formData.append("first_name", data.first_name);
-            if (data.middle_name) formData.append("middle_name", data.middle_name);
             if (data.last_name) formData.append("last_name", data.last_name);
             if (data.phone) formData.append("phone", data.phone);
 
@@ -273,7 +271,6 @@ export function ProfileSettingsForm({ initialData }: ProfileSettingsFormProps) {
                 display_name: data.display_name,
                 email: data.email,
                 first_name: data.first_name,
-                middle_name: data.middle_name,
                 last_name: data.last_name,
                 phone: data.phone,
                 gender: data.gender,

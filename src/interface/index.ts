@@ -1,4 +1,4 @@
-import type { DayType, ExcusedReasonCode, WorkMode, PunchException, HalfDayType } from '@/lib/attendance-status-calculator';
+﻿import type { DayType, ExcusedReasonCode, WorkMode, PunchException, HalfDayType } from '@/lib/attendance-status-calculator';
 // Emergency Contact Interface
 export interface IEmergencyContact {
     name?: string;
@@ -12,8 +12,7 @@ export interface IUser {
     employee_code?: string;
     email?: string;
     first_name?: string;
-    middle_name?: string;
-    last_name?: string;
+last_name?: string;
     display_name?: string | null;
     phone?: string;
     mobile?: string;

@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -53,7 +53,6 @@ export async function getSettingsMembers(): Promise<{
           id,
           email,
           first_name,
-          middle_name,
           last_name,
           display_name,
           profile_photo_url
@@ -138,11 +137,10 @@ export async function getSettingsMembers(): Promise<{
 
             // Build display name
             const firstName = userProfile.first_name || "";
-            const middleName = userProfile.middle_name || "";
             const lastName = userProfile.last_name || "";
             const displayName = userProfile.display_name || "";
 
-            const fullName = [firstName, middleName, lastName]
+            const fullName = [firstName, lastName]
                 .filter(Boolean)
                 .join(" ")
                 .trim();

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React from "react"
 import { ColumnDef } from "@tanstack/react-table"
@@ -97,10 +97,11 @@ export default function MemberSchedulesClient({
   }
 
   const getMemberName = (schedule: IMemberSchedule) => {
-    const member = schedule.organization_member as { user?: { first_name?: string; middle_name?: string; last_name?: string; email?: string } }
+    const member = schedule.organization_member as { user?: { first_name?: string;
+last_name?: string; email?: string } }
     if (!member?.user) return "Unknown Member"
-    const { first_name, middle_name, last_name, email } = member.user
-    const parts = [first_name, middle_name, last_name].filter(Boolean)
+    const { first_name, last_name, email } = member.user
+    const parts = [first_name, last_name].filter(Boolean)
     return parts.length > 0 ? parts.join(" ") : email || "Unknown"
   }
 

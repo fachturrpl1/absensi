@@ -1,8 +1,7 @@
-import { useAuthStore } from '@/store/user-store'
+﻿import { useAuthStore } from '@/store/user-store'
 
 interface UserProfile {
   first_name?: string
-  middle_name?: string
   last_name?: string
   display_name?: string | null
   profile_photo_url?: string | null
@@ -18,7 +17,6 @@ export function useUserProfile() {
 
   const profile: UserProfile | null = storeUser ? {
     first_name: storeUser.first_name,
-    middle_name: storeUser.middle_name,
     last_name: storeUser.last_name,
     display_name: storeUser.display_name,
     profile_photo_url: storeUser.profile_photo_url,

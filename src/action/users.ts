@@ -1,4 +1,4 @@
-"use server"
+﻿"use server"
 
 import { createClient } from "@/utils/supabase/server"
 import { IUser } from "@/interface"
@@ -11,7 +11,6 @@ const signUpSchema = z.object({
   email: z.string().email({ message: "Email tidak valid. Pastikan menyertakan simbol '@'." }),
   password: z.string().min(6, { message: "Password minimal harus 6 karakter." }),
   first_name: z.string().min(1, { message: "Nama depan wajib diisi." }),
-  middle_name: z.string().optional(),
   last_name: z.string().optional(),
 });
 
@@ -41,7 +40,6 @@ export async function signUp(formData: FormData) {
   const rawEmail = formData.get("email") as string
   const rawPassword = formData.get("password") as string
   const rawFirstName = (formData.get("first_name") as string) || ""
-  const rawMiddleName = (formData.get("middle_name") as string) || ""
   const rawLastName = (formData.get("last_name") as string) || ""
 
   // Server-side validation
@@ -49,7 +47,6 @@ export async function signUp(formData: FormData) {
     email: rawEmail,
     password: rawPassword,
     first_name: rawFirstName,
-    middle_name: rawMiddleName,
     last_name: rawLastName,
   });
 
@@ -57,9 +54,9 @@ export async function signUp(formData: FormData) {
     return { error: validation.error.issues[0]?.message || "Validation failed" };
   }
 
-  const { email, password, first_name: firstName, middle_name: middleName, last_name: lastName } = validation.data;
+  const { email, password, first_name: firstName, last_name: lastName } = validation.data;
 
-  const displayNameParts = [firstName, middleName, lastName].filter((part) => part && part.trim() !== "")
+  const displayNameParts = [firstName, lastName].filter((part) => part && part.trim() !== "")
   const displayName = displayNameParts.join(" ") || firstName || email
 
   const { data, error } = await supabase.auth.signUp({
@@ -67,8 +64,7 @@ export async function signUp(formData: FormData) {
     password,
     options: {
       data: {
-        first_name: firstName,
-        middle_name: middleName || null,
+        first_name: firstName || null,
         last_name: lastName || null,
         display_name: displayName,
       },

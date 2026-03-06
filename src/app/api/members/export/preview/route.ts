@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+﻿import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
 
@@ -68,7 +68,6 @@ export async function GET(request: NextRequest) {
           nik,
           email,
           first_name,
-          middle_name,
           last_name,
           display_name,
           phone,
@@ -181,7 +180,7 @@ export async function GET(request: NextRequest) {
     const transformedData = filteredMembers.map((member: any) => {
       const userProfile = getUserProfile(member)
       const displayName = userProfile.display_name || `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim()
-      const fullName = [userProfile.first_name, userProfile.middle_name, userProfile.last_name].filter(Boolean).join(" ").trim()
+      const fullName = [userProfile.first_name, userProfile.userProfile.last_name].filter(Boolean).join(" ").trim()
       
       // Convert user_profiles jenis_kelamin (male/female) to biodata format (L/P)
       const genderMap: Record<string, string> = { 'male': 'L', 'female': 'P' }

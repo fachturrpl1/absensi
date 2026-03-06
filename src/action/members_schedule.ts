@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 import { createClient } from "@/utils/supabase/server";
 import { IMemberSchedule } from "@/interface";
 
@@ -62,7 +62,6 @@ export const getAllMemberSchedule = async (organizationId?: number | string) => 
         user:user_id (
           id,
           first_name,
-          middle_name,
           last_name,
           email
         )
@@ -141,7 +140,6 @@ export const getMemberSchedulesPage = async (
           user:user_id (
             id,
             first_name,
-            middle_name,
             last_name,
             email
           )
@@ -259,7 +257,6 @@ export const getMemberScheduleById = async (id: string) => {
         user:user_id (
           id,
           first_name,
-          middle_name,
           last_name,
           email
         )

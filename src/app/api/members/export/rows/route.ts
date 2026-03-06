@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+﻿import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
 
@@ -80,7 +80,6 @@ export async function GET(request: NextRequest) {
             nik,
             email,
             first_name,
-            middle_name,
             last_name,
             display_name,
             phone,

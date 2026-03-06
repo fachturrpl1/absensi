@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { useParams } from "next/navigation"
@@ -238,7 +238,8 @@ export default function WorkScheduleDetailsPage() {
           .map((m: unknown) => {
             const o = m as {
               id?: unknown
-              user?: { first_name?: string | null; middle_name?: string | null; last_name?: string | null; email?: string | null; display_name?: string | null } | null
+              user?: { first_name?: string | null;
+last_name?: string | null; email?: string | null; display_name?: string | null } | null
               departments?: { name?: string | null } | null
               groups?: { name?: string | null } | null
             }
@@ -246,7 +247,7 @@ export default function WorkScheduleDetailsPage() {
             const u = o.user || null
             const labelBase =
               u?.display_name?.trim()
-              || [u?.first_name, u?.middle_name, u?.last_name].filter(Boolean).join(' ').trim()
+              || [u?.first_name, u?.last_name].filter(Boolean).join(' ').trim()
               || u?.email
               || 'No Name'
             const dept = o.departments?.name || o.groups?.name || ''

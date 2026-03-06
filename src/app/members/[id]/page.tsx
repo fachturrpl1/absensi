@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useState, useEffect, use } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
@@ -259,7 +259,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
 
 
   const displayName = user
-    ? [user.first_name, user.middle_name, user.last_name]
+    ? [user.first_name, user.last_name]
       .filter((part) => part && part.trim().length)
       .join(" ") ||
     (user.email && !user.email.toLowerCase().endsWith("@dummy.local") ? user.email : null) ||

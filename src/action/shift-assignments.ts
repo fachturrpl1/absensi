@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { createClient } from "@/utils/supabase/server";
 import { IShiftAssignment } from "@/interface";
@@ -19,8 +19,7 @@ export type ShiftAssignmentMemberOption = {
   user?: {
     id?: string;
     first_name?: string | null;
-    middle_name?: string | null;
-    last_name?: string | null;
+last_name?: string | null;
     display_name?: string | null;
     email?: string | null;
   } | null;
@@ -108,7 +107,7 @@ export const getShiftAssignmentMembersPage = async (
     let query = supabase
       .from("organization_members")
       .select(
-        `id, employee_id, user:user_id (id, first_name, middle_name, last_name, display_name, email)`,
+        `id, employee_id, user:user_id (id, first_name, last_name, display_name, email)`,
         { count: "estimated" },
       )
       .eq("organization_id", finalOrgId)
@@ -120,7 +119,7 @@ export const getShiftAssignmentMembersPage = async (
     if (q) {
       // Filter by name only (requested): use foreignTable so PostgREST applies conditions to the joined user
       query = query.or(
-        `first_name.ilike.%${q}%,middle_name.ilike.%${q}%,last_name.ilike.%${q}%,display_name.ilike.%${q}%`,
+        `first_name.ilike.%${q}%.ilike.%${q}%,last_name.ilike.%${q}%,display_name.ilike.%${q}%`,
         { foreignTable: "user" },
       ) as unknown as typeof query;
     }
@@ -184,7 +183,7 @@ export const getShiftAssignmentOptions = async (organizationId?: number | string
     supabase
       .from("organization_members")
       .select(
-        `id, employee_id, user:user_id (id, first_name, middle_name, last_name, display_name, email)`
+        `id, employee_id, user:user_id (id, first_name, last_name, display_name, email)`
       )
       .eq("organization_id", finalOrgId)
       .eq("is_active", true)
@@ -275,7 +274,7 @@ export const getShiftAssignmentsPage = async (
           id,
           employee_id,
           organization_id,
-          user:user_id (id, first_name, middle_name, last_name, display_name, email)
+          user:user_id (id, first_name, last_name, display_name, email)
         ),
         shift:shift_id (id, code, name, start_time, end_time)
       `,
@@ -351,7 +350,7 @@ export const getShiftAssignmentsRange = async (
           id,
           employee_id,
           organization_id,
-          user:user_id (id, first_name, middle_name, last_name, display_name, email)
+          user:user_id (id, first_name, last_name, display_name, email)
         ),
         shift:shift_id (id, code, name, start_time, end_time)
       `,
@@ -415,7 +414,7 @@ export async function createShiftAssignment(payload: {
       organization_member:organization_member_id (
         id,
         employee_id,
-        user:user_id (id, first_name, middle_name, last_name, display_name, email)
+        user:user_id (id, first_name, last_name, display_name, email)
       ),
       shift:shift_id (id, code, name, start_time, end_time)
     `,

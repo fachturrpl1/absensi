@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState, memo } from 'react';
 import { EllipsisVertical, CircleUser, LogOut } from 'lucide-react';
@@ -44,7 +44,7 @@ export const NavUser = memo(function NavUser() {
   useEffect(() => {
     if (storeUser) {
       const displayName = storeUser.display_name ||
-        [storeUser.first_name, storeUser.middle_name, storeUser.last_name]
+        [storeUser.first_name, storeUser.last_name]
           .filter(Boolean)
           .join(' ') ||
         'User';

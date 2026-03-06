@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { IOrganization_member } from "@/interface";
@@ -71,7 +71,6 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         id,
         email,
         first_name,
-        middle_name,
         last_name,
         display_name,
         phone,
@@ -494,7 +493,7 @@ export const getOrganizationMembersById = async (id: string) => {
         // select common profile fields including email explicitly
         const { data: userData, error: userError } = await supabase
           .from("user_profiles")
-          .select("id, employee_code, nik, first_name, middle_name, last_name, display_name, phone, mobile, date_of_birth, profile_photo_url, email, is_active, created_at, updated_at, deleted_at, jalan, rt, rw, dusun, kelurahan, kecamatan")
+          .select("id, employee_code, nik, first_name, last_name, display_name, phone, mobile, date_of_birth, profile_photo_url, email, is_active, created_at, updated_at, deleted_at, jalan, rt, rw, dusun, kelurahan, kecamatan")
           .eq("id", member.user_id)
           .maybeSingle()
 
@@ -609,7 +608,6 @@ export const getMembersByGroupId = async (groupId: string) => {
         id,
         email,
         first_name,
-        middle_name,
         last_name,
         display_name
       )
@@ -633,7 +631,6 @@ export const getMembersByPositionId = async (positionId: string) => {
         id,
         email,
         first_name,
-        middle_name,
         last_name,
         display_name
       )

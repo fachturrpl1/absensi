@@ -1,4 +1,4 @@
-import { cache } from "react"
+﻿import { cache } from "react"
 import { createSupabaseClient } from "@/config/supabase-config"
 
 import { logger } from '@/lib/logger';
@@ -13,7 +13,7 @@ export const getCachedUserProfile = cache(async (userId: string) => {
 
   const { data } = await supabase
     .from("user_profiles")
-    .select("first_name, middle_name, last_name, display_name, profile_photo_url, employee_code")
+    .select("first_name, last_name, display_name, profile_photo_url, employee_code")
     .eq("id", userId)
     .maybeSingle()
 

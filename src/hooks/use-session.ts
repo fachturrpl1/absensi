@@ -1,4 +1,4 @@
-import { useAuthStore } from '@/store/user-store'
+﻿import { useAuthStore } from '@/store/user-store'
 import { User } from '@supabase/supabase-js'
 
 /**
@@ -7,7 +7,7 @@ import { User } from '@supabase/supabase-js'
  */
 export function useSession() {
   const storeUser = useAuthStore((state) => state.user)
-  
+
   // Convert store user to Supabase User format
   const user: User | null = storeUser ? {
     id: storeUser.id,
@@ -15,7 +15,6 @@ export function useSession() {
     app_metadata: {},
     user_metadata: {
       first_name: storeUser.first_name,
-      middle_name: storeUser.middle_name,
       last_name: storeUser.last_name,
       display_name: storeUser.display_name,
       profile_photo_url: storeUser.profile_photo_url,
@@ -23,7 +22,7 @@ export function useSession() {
     aud: 'authenticated',
     created_at: '',
   } as User : null
-  
+
   return {
     data: user,
     isLoading: false,

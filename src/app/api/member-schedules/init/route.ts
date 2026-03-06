@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+﻿import { NextResponse } from "next/server"
 import { createSupabaseClient } from "@/config/supabase-config"
 
 import { memberLogger } from '@/lib/logger';
@@ -28,7 +28,6 @@ export async function GET(request: Request) {
           user:user_id (
             id,
             first_name,
-            middle_name,
             last_name,
             email,
             profile_photo_url
@@ -55,7 +54,6 @@ export async function GET(request: Request) {
             user:user_id (
               id,
               first_name,
-              middle_name,
               last_name,
               email,
               profile_photo_url

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { DataTable } from "@/components/tables/data-table-move"
@@ -44,7 +44,6 @@ type MemberRow = {
   user_profiles?: {
     id: string
     first_name?: string
-    middle_name?: string
     last_name?: string
     display_name?: string | null
     email?: string
@@ -56,7 +55,6 @@ type MemberRow = {
   } | {
     id: string
     first_name?: string
-    middle_name?: string
     last_name?: string
     display_name?: string | null
     email?: string
@@ -189,7 +187,6 @@ export default function MoveGroupPage() {
             user_profiles (
               id,
               first_name,
-              middle_name,
               last_name,
               display_name,
               email,
@@ -236,7 +233,6 @@ export default function MoveGroupPage() {
           user: up ? {
             id: up.id,
             first_name: up.first_name,
-            middle_name: up.middle_name,
             last_name: up.last_name,
             display_name: up.display_name,
             email: up.email,

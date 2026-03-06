@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useCallback } from 'react'
 import { IUser } from '@/interface'
@@ -45,7 +45,7 @@ export function useProfileRefresh() {
               : base.display_name ?? null
 
           const fallbackName =
-            [incoming.first_name || base.first_name || "", incoming.middle_name || base.middle_name || "", incoming.last_name || base.last_name || ""]
+            [incoming.first_name || base.first_name || ""]
               .filter((part) => part && part.trim() !== "")
               .join(" ") || null
 

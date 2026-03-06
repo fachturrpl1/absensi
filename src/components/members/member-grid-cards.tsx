@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -63,7 +63,7 @@ export function MemberGridCards({ members, onView, onEdit, onDelete }: MemberGri
     
     // Get name from user_profiles
     const fullName = user
-      ? [user.first_name, user.middle_name, user.last_name]
+      ? [user.first_name, user.user.last_name]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
@@ -98,7 +98,7 @@ export function MemberGridCards({ members, onView, onEdit, onDelete }: MemberGri
   const MemberCard = ({ member }: { member: IOrganization_member }) => {
     const user = (member as any).user;
     const fullName = user
-      ? [user.first_name, user.middle_name, user.last_name]
+      ? [user.first_name, user.user.last_name]
           .filter(Boolean)
           .join(' ') || user.display_name || (user.email && !user.email.toLowerCase().endsWith('@dummy.local') ? user.email : null)
       : 'No Name';

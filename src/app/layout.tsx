@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import "./globals.css";
 
 import { Toaster } from "@/components/ui/sonner";
@@ -121,13 +121,12 @@ export default async function RootLayout({
   const profile = user ? await getCachedUserProfile(user.id) : null;
 
   const resolvedFirstName = profile?.first_name ?? metadata.first_name ?? undefined;
-  const resolvedMiddleName = profile?.middle_name ?? metadata.middle_name ?? undefined;
   const resolvedLastName = profile?.last_name ?? metadata.last_name ?? undefined;
 
   const displayNameCandidates = [
     profile?.display_name,
     metadata.display_name,
-    [resolvedFirstName, resolvedMiddleName, resolvedLastName].filter((part) => part && part.trim() !== "").join(" ") || null,
+    [resolvedFirstName, resolvedLastName].filter((part) => part && part.trim() !== "").join(" ") || null,
   ].filter((value): value is string => Boolean(value && value.trim() !== ""));
 
   const resolvedDisplayName = displayNameCandidates[0] ?? null;
@@ -138,7 +137,6 @@ export default async function RootLayout({
       email: user.email ?? undefined,
       employee_code: profile?.employee_code ?? undefined,
       first_name: resolvedFirstName ?? undefined,
-      middle_name: resolvedMiddleName ?? undefined,
       last_name: resolvedLastName ?? undefined,
       display_name: resolvedDisplayName ?? undefined,
       profile_photo_url: profile?.profile_photo_url ?? metadata.profile_photo_url ?? undefined,

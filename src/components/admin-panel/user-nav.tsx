@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import Link from "next/link"
 import { LayoutGrid, User } from "lucide-react"
@@ -35,7 +35,7 @@ export function UserNav() {
 
   // Get full name from user data
   const getFullName = () => {
-    const nameParts = [user.first_name, user.middle_name, user.last_name]
+    const nameParts = [user.first_name, user.last_name]
       .filter((part): part is string => Boolean(part && part.trim()))
 
     if (user.display_name && user.display_name.trim() !== '') {

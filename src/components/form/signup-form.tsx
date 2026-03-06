@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -15,7 +15,6 @@ import { GoogleIcon } from "@/components/ui/google-icon";
 const FormSchema = z
   .object({
     first_name: z.string().min(1, { message: "Nama depan wajib diisi." }),
-    middle_name: z.string().optional(),
     last_name: z.string().optional(),
     email: z.string().email({ message: "Email tidak valid. Pastikan menyertakan simbol '@'." }),
     password: z.string().min(6, { message: "Password minimal harus 6 karakter." }),
@@ -41,7 +40,6 @@ export function SignUp() {
     resolver: zodResolver(FormSchema),
     defaultValues: {
       first_name: "",
-      middle_name: "",
       last_name: "",
       email: "",
       password: "",
@@ -55,7 +53,6 @@ export function SignUp() {
 
     const formData = new FormData();
     formData.append("first_name", data.first_name);
-    formData.append("middle_name", data.middle_name || "");
     formData.append("last_name", data.last_name || "");
     formData.append("email", data.email);
     formData.append("password", data.password);
@@ -129,19 +126,7 @@ export function SignUp() {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="middle_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Middle Name (optional)</FormLabel>
-              <FormControl>
-                <Input id="middle_name" type="text" placeholder="Michael" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+       
         <FormField
           control={form.control}
           name="last_name"

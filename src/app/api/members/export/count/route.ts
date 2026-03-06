@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+﻿import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
 
@@ -86,7 +86,6 @@ export async function GET(request: NextRequest) {
             nik,
             email,
             first_name,
-            middle_name,
             last_name,
             display_name,
             jenis_kelamin,
@@ -137,7 +136,7 @@ export async function GET(request: NextRequest) {
         filtered = filtered.filter((member: any) => {
           const userProfile = getUserProfile(member)
           const displayName = userProfile.display_name || `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim()
-          const full = [userProfile.first_name, userProfile.middle_name, userProfile.last_name].filter(Boolean).join(' ')
+          const full = [userProfile.first_name, userProfile.userProfile.last_name].filter(Boolean).join(' ')
           return (
             member.biodata_nik?.toLowerCase().includes(searchLower) ||
             (userProfile.nik || '').toLowerCase().includes(searchLower) ||

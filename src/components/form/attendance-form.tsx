@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CalendarIcon, ChevronDown, Loader2, Plus, Trash2, X } from "lucide-react"
@@ -149,7 +149,7 @@ export function AttendanceForm() {
             let resolvedLabel = "No Name"
             if (user) {
               const displayName = user.display_name?.trim()
-              const concatenated = [user.first_name, user.middle_name, user.last_name]
+              const concatenated = [user.first_name, user.last_name]
                 .filter(Boolean)
                 .join(" ")
               const fullName = concatenated.trim()

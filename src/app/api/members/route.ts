@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { getAllOrganization_member } from '@/action/members'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
@@ -147,7 +147,6 @@ export async function GET(req: Request) {
           id,
           email,
           first_name,
-          middle_name,
           last_name,
           display_name,
           phone,
@@ -383,7 +382,6 @@ export async function GET(req: Request) {
       type UserProfile = {
         display_name?: string
         first_name?: string
-        middle_name?: string
         last_name?: string
         email?: string
         search_name?: string
@@ -401,11 +399,10 @@ export async function GET(req: Request) {
       const normalizeName = (m: MemberRow) => {
         const displayName = (m.user?.display_name ?? '').trim()
         const firstName = (m.user?.first_name ?? '').trim()
-        const middleName = (m.user?.middle_name ?? '').trim()
         const lastName = (m.user?.last_name ?? '').trim()
         const email = (m.user?.email ?? '').trim()
         const searchName = (m.user?.search_name ?? '').trim()
-        const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ').trim()
+        const fullName = [firstName, lastName].filter(Boolean).join(' ').trim()
         const biodataNama = (m.biodata?.nama ?? '').trim()
         const biodataNickname = (m.biodata?.nickname ?? '').trim()
         return displayName || fullName || email || searchName || biodataNama || biodataNickname || null

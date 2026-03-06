@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,7 @@ import { useProfilePhotoUrl } from "@/hooks/use-profile";
 import { accountLogger } from '@/lib/logger';
 type UserProfile = {
   first_name: string;
-  middle_name?: string;
-  last_name: string;
+last_name: string;
   email?: string;
   phone?: string;
   mobile?: string;
@@ -186,7 +185,7 @@ export default function AccountInactivePage() {
   };
 
   const fullName = profile
-    ? [profile.first_name, profile.middle_name, profile.last_name]
+    ? [profile.first_name, profile.last_name]
       .filter(Boolean)
       .join(" ")
     : "User";

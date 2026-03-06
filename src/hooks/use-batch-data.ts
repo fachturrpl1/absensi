@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+﻿import { useQuery } from '@tanstack/react-query'
 import { useSession } from './use-session'
 
 interface BatchDataResponse {
@@ -12,7 +12,6 @@ interface BatchDataResponse {
   }
   profile?: {
     first_name?: string
-    middle_name?: string
     last_name?: string
     display_name?: string
     profile_photo_url?: string

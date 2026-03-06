@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React from "react"
 import { toast } from "sonner"
@@ -127,7 +127,7 @@ const formatWeekRangeLabel = (weekStart: Date) => {
 
 const toMemberName = (m: ShiftAssignmentMemberOption) => {
   const u = m.user
-  const fullName = [u?.first_name, u?.middle_name, u?.last_name]
+  const fullName = [u?.first_name, u?.last_name]
     .filter((p) => p && String(p).trim() !== "")
     .join(" ")
   const name = fullName || u?.display_name

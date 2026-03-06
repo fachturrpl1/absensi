@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 /**
  * Admin Server Actions for Leave Management
@@ -172,7 +172,7 @@ export async function getAllLeaveRequests(organizationId: number) {
         leave_type:leave_types(*),
         organization_member:organization_members!inner(
           *,
-          user:user_profiles(id, employee_code, first_name, middle_name, last_name, display_name, profile_photo_url),
+          user:user_profiles(id, employee_code, first_name, last_name, display_name, profile_photo_url),
           departments:department_id(id, code, name),
           positions:position_id(id, code, title),
           organization_id
@@ -184,9 +184,9 @@ export async function getAllLeaveRequests(organizationId: number) {
           status,
           comments,
           responded_at,
-          approver:approver_id(id, first_name, middle_name, last_name, display_name, profile_photo_url)
+          approver:approver_id(id, first_name, last_name, display_name, profile_photo_url)
         ),
-        approved_by_user:approved_by(id, first_name, middle_name, last_name, display_name, profile_photo_url)
+        approved_by_user:approved_by(id, first_name, last_name, display_name, profile_photo_url)
       `)
       .eq("organization_member.organization_id", organizationId)
       .order("requested_at", { ascending: false });

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -101,8 +101,7 @@ export default function MemberEditFormImproved({
     const userProfile = initialValues.user as any
     const fullName = [
         userProfile?.first_name,
-        userProfile?.middle_name,
-        userProfile?.last_name
+        userProfile?.userProfile?.last_name
     ].filter(Boolean).join(' ')
     
     const form = useForm<FormValues>({

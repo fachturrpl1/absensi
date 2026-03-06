@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 
 export const dynamic = 'force-dynamic'
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
         Promise.resolve(
           supabase
             .from('user_profiles')
-            .select('first_name, middle_name, last_name, display_name, profile_photo_url, employee_code')
+            .select('first_name, last_name, display_name, profile_photo_url, employee_code')
             .eq('id', user.id)
             .single()
         )

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React from "react"
 import { IOrganization_member } from "@/interface"
@@ -69,7 +69,6 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
     id?: string
     email?: string
     first_name?: string
-    middle_name?: string
     last_name?: string
     display_name?: string
     phone?: string
@@ -93,16 +92,13 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
     const m = member as MemberExtended
     const displayName = (m.user?.display_name ?? '').trim()
     const firstName = m.user?.first_name ?? ''
-    const middleName = m.user?.middle_name ?? ''
     const lastName = m.user?.last_name ?? ''
     const rawEmail = (m.user?.email ?? '').trim()
-    // Filter out dummy emails (ending with @dummy.local)
     const email = rawEmail && !rawEmail.toLowerCase().endsWith('@dummy.local') ? rawEmail : ''
     const searchName = (m.user?.search_name ?? '').trim()
-    const fullName = [firstName, middleName, lastName].filter((p) => p && p.trim() !== '').join(' ').trim()
+    const fullName = [firstName, lastName].filter((p) => p && p.trim() !== '').join(' ').trim()
     const biodataNama = (m.biodata?.nama ?? '').trim()
     const biodataNickname = (m.biodata?.nickname ?? '').trim()
-
     return displayName || fullName || email || searchName || biodataNama || biodataNickname || "No Name"
   }
 

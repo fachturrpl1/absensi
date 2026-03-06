@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import NextLink from "next/link";
@@ -71,7 +71,6 @@ interface AccountFormProps {
 const profileFormSchema = z.object({
   employee_code: z.string().optional(),
   first_name: z.string().min(1, "First name is required"),
-  middle_name: z.string().optional(),
   last_name: z.string().optional(),
   display_name: z.string().optional(),
   email: z.string().email("Invalid email address"),
@@ -149,7 +148,6 @@ export function AccountForm({ initialData }: AccountFormProps) {
     defaultValues: {
       employee_code: initialData.user.employee_code || "",
       first_name: initialData.user.first_name || "",
-      middle_name: initialData.user.middle_name || "",
       last_name: initialData.user.last_name || "",
       display_name: initialData.user.display_name || "",
       email: initialData.user.email || "",
@@ -175,7 +173,6 @@ export function AccountForm({ initialData }: AccountFormProps) {
     if (dn && dn.trim() !== "") return dn;
     const parts = [
       currentUser?.first_name ?? initialData.user.first_name ?? "",
-      currentUser?.middle_name ?? initialData.user.middle_name ?? "",
       currentUser?.last_name ?? initialData.user.last_name ?? "",
     ].filter((part) => part && part.trim() !== "");
     if (parts.length > 0) return parts.join(" ");
