@@ -1,0 +1,63 @@
+// types/attendance.ts - VERSI BENAR
+import { z } from "zod"
+
+export interface AttendanceEntry {
+  organization_member_id: string
+  attendance_date: string
+  actual_check_in: string
+  actual_check_out: string | null
+  status: string
+  remarks?: string
+  check_in_method?: string
+  check_out_method?: string
+}
+
+export interface MemberOption {
+  id: string
+  label: string
+  department: string
+}
+
+export interface RawMember {
+  id?: string | number
+  user?: { 
+    first_name?: string 
+    last_name?: string 
+    display_name?: string 
+    email?: string 
+  }
+  departments?: { name: string } | null | any[]
+}
+
+export interface BatchEntry {
+  id: string
+  memberId: string
+  checkInDate: string
+  checkInTime: string
+  checkOutDate?: string
+  checkOutTime?: string
+  status: string
+  remarks?: string
+}
+
+// ✅ ZOD SCHEMA - SINGLE SOURCE OF TRUTH
+export const singleFormSchema = z.object({
+  memberId: z.string().min(1, "Member is required"),
+  checkInDate: z.string().min(1, "Check-in date is required"),
+  checkInTime: z.string().min(1, "Check-in time is required"),
+  checkOutDate: z.string().optional(),
+  checkOutTime: z.string().optional(),
+  status: z.string().min(1, "Status is required"),
+  remarks: z.string().max(500).optional(),
+})
+
+// ✅ INFER TYPE DARI ZOD - NO DUPLICATION!
+export type SingleFormValues = z.infer<typeof singleFormSchema>
+
+export const QUICK_STATUSES = [
+  { value: "present", label: "Present", color: "bg-green-100 text-green-800" },
+  { value: "absent", label: "Absent", color: "bg-red-100 text-red-800" },
+  { value: "late", label: "Late", color: "bg-yellow-100 text-yellow-800" },
+  { value: "excused", label: "Excused", color: "bg-blue-100 text-blue-800" },
+  { value: "early_leave", label: "Early Leave", color: "bg-purple-100 text-purple-800" },
+] as const

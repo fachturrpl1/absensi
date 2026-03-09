@@ -156,6 +156,11 @@ export interface IOrganization_member {
     created_at: string;
     updated_at?: string;
 
+    // Computed / Virtual fields from API
+    computed_name?: string;
+    groupName?: string;
+    biodata_nik?: string;
+
     user?: IUser;
     groups?: IGroup;
     departments?: IGroup;

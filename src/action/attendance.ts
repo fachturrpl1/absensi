@@ -4,10 +4,11 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
 import { createClient } from "@/utils/supabase/server";
-
+import { AttendanceEntry } from "@/types/attendance";
 import { attendanceLogger } from '@/lib/logger';
 import { getJSON, setJSON } from '@/lib/cache';
 import { calculateAttendanceStatus, getDayOfWeek, type ScheduleRule } from '@/lib/attendance-status-calculator';
+import { supabase } from "@/config/supabase-config";
 async function getSupabase() {
   return await createClient();
 }
@@ -804,4 +805,15 @@ export async function deleteMultipleAttendanceRecords(ids: string[]) {
       message: err instanceof Error ? err.message : "An error occurred"
     };
   }
+}
+
+export async function bulkCreateAttendance(entries: AttendanceEntry[]) {
+  if (entries.length === 0) return { success: false, message: 'No entries' }
+
+  const { data, error } = await supabase
+    .from('attendances')
+    .insert(entries)
+
+  if (error) return { success: false, message: error.message }
+  return { success: true, count: data?.length || 0 }
 }

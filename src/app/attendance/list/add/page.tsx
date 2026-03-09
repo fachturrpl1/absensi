@@ -1,20 +1,19 @@
 "use client"
 
-import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2, X, Search, Plus, Minus } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
+import { useAttendanceForm } from "@/hooks/attendance/use-attendance-form"
 import { useQueryClient } from "@tanstack/react-query"
-import { format } from "date-fns"
-
-import { createManualAttendance, checkExistingAttendance } from "@/action/attendance"
-import { getAllOrganization_member } from "@/action/members"
-// groups in UI = departments in backend; we derive names from member.departments
-import { useOrgStore } from "@/store/org-store"
+import { createManualAttendance } from "@/action/attendance"
 import { toTimestampWithTimezone } from "@/lib/timezone"
+import { useBatchAttendance } from "@/hooks/attendance/use-batch-attendance"
 import { Button } from "@/components/ui/button"
+import { useState } from "react"
+import {
+    type AttendanceEntry,
+    SingleFormValues,
+    QUICK_STATUSES,
+} from "@/types/attendance"
 import {
     Form,
     FormControl,
@@ -42,246 +41,28 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
-
-type AttendanceEntry = {
-    organization_member_id: string
-    attendance_date: string
-    actual_check_in: string
-    actual_check_out: string | null
-    status: string
-    remarks?: string
-    check_in_method?: string
-    check_out_method?: string
-}
-
-type MemberOption = {
-    id: string
-    label: string
-    department: string
-}
-
-type BatchEntry = {
-    id: string
-    memberId: string
-    checkInDate: string
-    checkInTime: string
-    checkOutDate?: string
-    checkOutTime?: string
-    status: string
-    remarks?: string
-}
-
-const singleFormSchema = z.object({
-    memberId: z.string().min(1, "Member is required"),
-    checkInDate: z.string().min(1, "Check-in date is required"),
-    checkInTime: z.string().min(1, "Check-in time is required"),
-    checkOutDate: z.string().optional(),
-    checkOutTime: z.string().optional(),
-    status: z.string().min(1, "Status is required"),
-    remarks: z.string().max(500).optional(),
-})
-
-type SingleFormValues = z.infer<typeof singleFormSchema>
-
-const QUICK_STATUSES = [
-    { value: "present", label: "Present", color: "bg-green-100 text-green-800" },
-    { value: "absent", label: "Absent", color: "bg-red-100 text-red-800" },
-    { value: "late", label: "Late", color: "bg-yellow-100 text-yellow-800" },
-    { value: "excused", label: "Excused", color: "bg-blue-100 text-blue-800" },
-    { value: "early_leave", label: "Early Leave", color: "bg-purple-100 text-purple-800" },
-]
+import { useMembers } from "@/hooks/attendance/use-members"
+import { bulkCreateAttendance } from "@/action/attendance"
 
 export default function AddAttendancePage() {
     const router = useRouter()
     const queryClient = useQueryClient()
-    const orgStore = useOrgStore()
-    const [members, setMembers] = useState<MemberOption[]>([])
-    const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState("single")
-    const [batchEntries, setBatchEntries] = useState<BatchEntry[]>([])
-    const [isSubmitting, setIsSubmitting] = useState(false)
-    const [departmentFilter, setDepartmentFilter] = useState<string>("all")
-    const [departments, setDepartments] = useState<string[]>([])
-    const [memberDialogOpen, setMemberDialogOpen] = useState(false)
-    const [activeBatchEntryId, setActiveBatchEntryId] = useState<string | null>(null)
-    const [memberSearch, setMemberSearch] = useState("")
-    // Master date/time for Batch mode (applies to all selected members)
-    const [batchCheckInDate, setBatchCheckInDate] = useState<string>("")
-    const [batchCheckInTime, setBatchCheckInTime] = useState<string>("08:00")
-    const [batchCheckOutDate, setBatchCheckOutDate] = useState<string>("")
-    const [batchCheckOutTime, setBatchCheckOutTime] = useState<string>("")
-    // Master status & notes for Batch mode
-    const [batchStatus, setBatchStatus] = useState<string>("present")
-    const [batchRemarks, setBatchRemarks] = useState<string>("")
-
-    const form = useForm<SingleFormValues>({
-        resolver: zodResolver(singleFormSchema),
-        mode: "onChange",
-        reValidateMode: "onChange",
-        defaultValues: {
-            memberId: "",
-            checkInDate: "",
-            checkInTime: "",
-            checkOutDate: "",
-            checkOutTime: "",
-            status: "present",
-            remarks: "",
-        },
-    })
-
-    const singleCheckInDate = form.watch('checkInDate')
-    useEffect(() => {
-        form.setValue('checkOutDate', singleCheckInDate || '')
-    }, [singleCheckInDate])
-
-    // Initialize current date and time on client side only
-    useEffect(() => {
-        const now = new Date();
-        const date = format(now, 'yyyy-MM-dd');
-        const time = format(now, 'HH:mm');
-        form.reset({
-            memberId: "",
-            checkInDate: date,
-            checkInTime: time,
-            checkOutDate: date,
-            checkOutTime: time,
-            status: "present",
-            remarks: "",
-        });
-    }, [])
-
-    useEffect(() => {
-        const now = new Date();
-        const date = format(now, 'yyyy-MM-dd');
-        const time = format(now, 'HH:mm');
-        setBatchCheckInDate(date)
-        setBatchCheckInTime(time)
-        setBatchCheckOutDate(date)
-        setBatchCheckOutTime("")
-    }, [])
-
-    useEffect(() => {
-        setBatchCheckOutDate(batchCheckInDate)
-    }, [batchCheckInDate])
-
-    // Keep all batch entries in sync with master date/time
-    useEffect(() => {
-        setBatchEntries(prev => prev.map(e => ({
-            ...e,
-            checkInDate: batchCheckInDate || e.checkInDate,
-            checkInTime: batchCheckInTime || e.checkInTime,
-            checkOutDate: batchCheckInDate || "",
-            checkOutTime: batchCheckOutTime || "",
-        })))
-    }, [batchCheckInDate, batchCheckInTime, batchCheckOutDate, batchCheckOutTime])
-
-    // Keep all batch entries in sync with master status & notes
-    useEffect(() => {
-        setBatchEntries(prev => prev.map(e => ({
-            ...e,
-            status: batchStatus || e.status,
-            remarks: batchRemarks,
-        })))
-    }, [batchStatus, batchRemarks])
-
-    // Load members and derive groups(departments) on mount and when org changes
-    useEffect(() => {
-        const loadMembers = async () => {
-            try {
-                setLoading(true)
-
-                // Fetch members and departments with proper organization scoping
-                const rawOrgId = orgStore.organizationId
-                let safeOrgId: number | undefined = undefined
-                if (typeof rawOrgId === 'number' && Number.isFinite(rawOrgId)) {
-                    safeOrgId = rawOrgId
-                } else if (typeof rawOrgId === 'string') {
-                    const parsed = Number(rawOrgId)
-                    if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
-                        safeOrgId = parsed
-                    }
-                }
-
-                // When safeOrgId undefined, server action will fallback to user's organization
-                const membersRes = await getAllOrganization_member(safeOrgId)
-
-                // Check if members fetch succeeded
-                if (!membersRes.success) {
-                    const errorMessage = membersRes.message || "Failed to load members"
-                    console.error("Failed to load members:", errorMessage)
-                    toast.error(errorMessage)
-                    // Still set empty arrays to prevent UI issues
-                    setMembers([])
-                    return
-                }
-
-                // Ensure we have valid data
-                const membersData = Array.isArray(membersRes.data) ? membersRes.data : []
-
-                if (membersData.length === 0) {
-                    setMembers([])
-                    return
-                }
-
-                // Normalize department structure for all members (departments = groups in UI)
-                const normalizedMembers = membersData.map((member: any) => {
-                    // Handle departments that might be an array or object
-                    if (member.departments) {
-                        if (Array.isArray(member.departments) && member.departments.length > 0) {
-                            member.departments = member.departments[0]
-                        } else if (Array.isArray(member.departments) && member.departments.length === 0) {
-                            member.departments = null
-                        }
-                    }
-                    return member
-                })
-
-                // Build member options similar to attendance-form.tsx
-                const options: MemberOption[] = normalizedMembers
-                    .filter((member: any) => {
-                        // valid if it has numeric id
-                        if (!member.id) return false
-                        const memberIdNum = Number(member.id)
-                        return !isNaN(memberIdNum) && memberIdNum > 0
-                    })
-                    .map((member: any) => {
-                        const user = member.user
-                        let resolvedLabel = "No Name"
-                        if (user) {
-                            const displayName = user.display_name?.trim()
-                            const concatenated = [user.first_name, user.last_name]
-                                .filter(Boolean)
-                                .join(" ")
-                            const fullName = concatenated.trim()
-                            resolvedLabel = displayName || fullName || user.email || "No Name"
-                        }
-                        return {
-                            id: String(Number(member.id)),
-                            label: resolvedLabel,
-                            department: member.departments?.name || member.groups?.name || "",
-                        } as MemberOption
-                    })
-
-                // Derive departments (groups) from options
-                const deptNames = Array.from(new Set(options.map((m) => m.department).filter(Boolean))).sort() as string[]
-                setDepartments(deptNames)
-
-                setMembers(options)
-            } catch (error) {
-                const message = error instanceof Error ? error.message : "An error occurred while loading data"
-                console.error("Error loading members:", error)
-                toast.error(message)
-                // Set empty arrays to prevent UI issues
-                setMembers([])
-                setDepartments([])
-            } finally {
-                setLoading(false)
-            }
-        }
-
-        // Always attempt load; server will fallback org when not provided
-        loadMembers()
-    }, [orgStore.organizationId])
+    const { form, singleCheckInDate } = useAttendanceForm()
+    const { members, departments, loading } = useMembers()
+    const [ activeTab, setActiveTab ] = useState("single")
+    const {
+        batchEntries, addBatchEntry, updateBatchEntry, removeBatchEntry,
+        batchCheckInDate, setBatchCheckInDate,
+        batchCheckInTime, setBatchCheckInTime,
+        batchCheckOutTime, setBatchCheckOutTime,
+        batchStatus, setBatchStatus,
+        batchRemarks, setBatchRemarks,
+        departmentFilter, setDepartmentFilter,
+        memberDialogOpen, setMemberDialogOpen,
+        activeBatchEntryId, setActiveBatchEntryId,
+        memberSearch, setMemberSearch,
+        isSubmitting, setIsSubmitting
+    } = useBatchAttendance()
 
     // Parse date and time to DateTime
     const parseDateTime = (dateStr: string, timeStr: string): Date => {
@@ -337,30 +118,6 @@ export default function AddAttendancePage() {
             const message = error instanceof Error ? error.message : "An error occurred"
             toast.error(message)
         }
-    }
-
-    // Batch Mode: Add Entry
-    const addBatchEntry = (memberId?: string) => {
-        const newEntry: BatchEntry = {
-            id: Date.now().toString(),
-            memberId: memberId || "",
-            checkInDate: batchCheckInDate || new Date().toISOString().slice(0, 10),
-            checkInTime: batchCheckInTime || "08:00",
-            checkOutDate: batchCheckOutDate || "",
-            checkOutTime: batchCheckOutTime || "",
-            status: batchStatus || "present",
-            remarks: batchRemarks || "",
-        }
-        setBatchEntries([...batchEntries, newEntry])
-    }
-
-    // Batch Mode: Update Entry
-    const updateBatchEntry = (id: string, field: string, value: string) => {
-        setBatchEntries(
-            batchEntries.map((entry) =>
-                entry.id === id ? { ...entry, [field]: value } : entry
-            )
-        )
     }
 
     // Batch Mode: Submit All
@@ -426,81 +183,31 @@ export default function AddAttendancePage() {
 
         try {
             setIsSubmitting(true)
-            let successCount = 0
-            let skipCount = 0
-            const errors: string[] = []
+            
+            // 1 BULK CALL!
+            const bulkPayload: AttendanceEntry[] = batchEntries.map(entry => ({
+                organization_member_id: entry.memberId,
+                attendance_date: entry.checkInDate,
+                actual_check_in: toTimestampWithTimezone(parseDateTime(entry.checkInDate, entry.checkInTime)),
+                actual_check_out: entry.checkOutDate && entry.checkOutTime 
+                    ? toTimestampWithTimezone(parseDateTime(entry.checkOutDate, entry.checkOutTime))
+                    : null,
+                status: entry.status || batchStatus,
+                remarks: entry.remarks || batchRemarks || undefined,
+                check_in_method: "MANUAL",
+                check_out_method: entry.checkOutDate && entry.checkOutTime ? "MANUAL" : undefined,
+            }))
 
-            for (const entry of batchEntries) {
-                const selectedMember = members.find((m) => m.id === entry.memberId)
-                const memberName = selectedMember?.label || `Member ${entry.memberId}`
+            // GUNAKAN NAMA BENAR:
+            const res = await bulkCreateAttendance(bulkPayload)  // Bukan createBulkManualAttendance
 
-                // Validate member ID is a valid number
-                const memberIdNum = Number(entry.memberId)
-                if (isNaN(memberIdNum)) {
-                    skipCount++
-                    errors.push(`${memberName}: Invalid member ID format`)
-                    continue
-                }
-
-                // Check if attendance already exists for this member and date
-                const checkRes = await checkExistingAttendance(String(memberIdNum), entry.checkInDate)
-
-                // Only skip if check was successful AND exists is true
-                if (checkRes.success && checkRes.exists) {
-                    skipCount++
-                    errors.push(`${memberName} already has attendance recorded for ${entry.checkInDate}`)
-                    continue
-                } else if (!checkRes.success) {
-                    // Log warning but continue - we'll let the insert fail if duplicate
-                    console.warn(`Could not check existing attendance for ${memberName}:`, checkRes)
-                }
-
-                const checkInDateTime = parseDateTime(entry.checkInDate, entry.checkInTime)
-                const checkOutDateTime = entry.checkOutDate && entry.checkOutTime
-                    ? parseDateTime(entry.checkOutDate, entry.checkOutTime)
-                    : null
-
-                const payload: AttendanceEntry = {
-                    organization_member_id: entry.memberId,
-                    attendance_date: entry.checkInDate,
-                    actual_check_in: toTimestampWithTimezone(checkInDateTime),
-                    actual_check_out: checkOutDateTime ? toTimestampWithTimezone(checkOutDateTime) : null,
-                    status: entry.status,
-                    remarks: entry.remarks?.trim() || undefined,
-                    check_in_method: "MANUAL",
-                    check_out_method: checkOutDateTime ? "MANUAL" : undefined,
-                }
-
-                const res = await createManualAttendance(payload)
-                if (res.success) {
-                    successCount++
-                } else {
-                    skipCount++
-                    errors.push(`${memberName}: ${res.message}`)
-                }
-            }
-
-            if (successCount === batchEntries.length) {
-                // Invalidate dashboard cache to refresh data
-                await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-                toast.success(`${successCount} attendance records saved successfully`)
-                router.push("/attendance/list")
-            } else if (successCount > 0) {
-                // Invalidate dashboard cache even for partial success
-                await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-                toast.success(`${successCount} records saved`)
-                if (skipCount > 0) {
-                    toast.error(`${skipCount} records skipped (duplicates or errors)`)
-                    errors.forEach((err) => toast.info(err))
-                }
-                setTimeout(() => router.push("/attendance"), 2000)
-            } else {
-                toast.error("No records could be saved")
-                errors.forEach((err) => toast.error(err))
+            if (res.success) {
+            await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+            toast.success(`${res.count} records saved! ⚡`)
+            router.push("/attendance/list")
             }
         } catch (error) {
-            const message = error instanceof Error ? error.message : "An error occurred"
-            toast.error(message)
+            toast.error("Bulk save failed")
         } finally {
             setIsSubmitting(false)
         }
@@ -539,7 +246,7 @@ export default function AddAttendancePage() {
                                                                 <FormItem className="flex flex-col">
                                                                     <FormControl>
                                                                         {/* Hidden input to properly register the field with RHF and keep it a string */}
-                                                                        <input type="hidden" {...field} value={field.value ?? ""} />
+                                                                        <input type="hidden" {...field} />
                                                                     </FormControl>
                                                                     <FormLabel>Select Member *</FormLabel>
                                                                     <Button
@@ -605,9 +312,16 @@ export default function AddAttendancePage() {
                                                                     <FormItem>
                                                                         <FormLabel className="text-sm">Date</FormLabel>
                                                                         <FormControl>
-                                                                            <Input type="date" {...field} value={singleCheckInDate || ""} disabled />
+                                                                            <Input
+                                                                                type="date"
+                                                                                {...field}
+                                                                                value={singleCheckInDate || ""}  // Paksa value dari checkInDate
+                                                                                onChange={(e) => {
+                                                                                    field.onChange(e); // Tetap trigger RHF
+                                                                                }}
+                                                                                disabled  // Tetap disabled
+                                                                            />
                                                                         </FormControl>
-                                                                        <FormMessage />
                                                                     </FormItem>
                                                                 )}
                                                             />
@@ -618,7 +332,7 @@ export default function AddAttendancePage() {
                                                                     <FormItem>
                                                                         <FormLabel className="text-sm">Time</FormLabel>
                                                                         <FormControl>
-                                                                            <Input type="time" {...field} value={field.value || ""} />
+                                                                            <Input type="time" {...field} value={field.value ?? ""} />
                                                                         </FormControl>
                                                                         <FormMessage />
                                                                     </FormItem>
@@ -640,7 +354,7 @@ export default function AddAttendancePage() {
                                                                     value={field.value}
                                                                 >
                                                                     <FormControl>
-                                                                        <SelectTrigger className="w-50%">
+                                                                        <SelectTrigger className="w-full md:w-1/2">
                                                                             <SelectValue placeholder="Select status" />
                                                                         </SelectTrigger>
                                                                     </FormControl>
@@ -673,7 +387,6 @@ export default function AddAttendancePage() {
                                                                         placeholder="Add any notes..."
                                                                         rows={3}
                                                                         {...field}
-                                                                        value={field.value ?? ""}
                                                                     />
                                                                 </FormControl>
                                                                 <FormDescription>Max 500 characters</FormDescription>
@@ -704,7 +417,6 @@ export default function AddAttendancePage() {
                                             <CardTitle>Add Batch Attendance</CardTitle>
                                         </CardHeader>
                                         <CardContent className="space-y-6">
-
 
                                             {/* Master Date & Time for Batch Entries */}
                                             <div className="space-y-3">
@@ -783,6 +495,8 @@ export default function AddAttendancePage() {
                                                         onClick={() => addBatchEntry()}
                                                         disabled={isSubmitting}
                                                     >
+                                                        <Plus className="mr-1 h-3 w-3" />
+                                                        Add Empty Entry
                                                     </Button>
                                                 </div>
                                                 <div className="space-y-2">
@@ -846,7 +560,7 @@ export default function AddAttendancePage() {
                                                                     variant="outline"
                                                                     size="sm"
                                                                     onClick={() => {
-                                                                        setBatchEntries((prev) => prev.filter((e) => e.id !== entry.id));
+                                                                        removeBatchEntry(entry.id)
                                                                     }}
                                                                     disabled={isSubmitting}
                                                                     className="text-left truncate"
