@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react"
 import { Calendar, Search, Info, User } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
-import { SettingsHeader, type SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, type SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { Button } from "@/components/ui/button"
 import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
 import {
@@ -78,6 +78,7 @@ export default function GracePeriodPage() {
                 sidebarItems={sidebarItems}
                 activeItemId="grace-period"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="grace-period">
 
             {/* Content */}
             <div className="flex flex-1 w-full overflow-hidden">
@@ -182,6 +183,8 @@ export default function GracePeriodPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        
+            </SettingsContentLayout>
+</div>
     )
 }

@@ -1,15 +1,14 @@
 ﻿"use client"
 
 import React, { useState, useEffect } from "react"
-import { Info } from "lucide-react"
+import { Info, Users } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { useOrgStore } from "@/store/org-store"
 import { getOrgSettings, upsertOrgSetting } from "@/action/organization-settings"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
-import { Users } from "lucide-react"
+import { SettingsHeader, SettingTab, SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { type DayOfWeek, type WorkHourEntry } from "@/store/work-time-limit-store"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
@@ -121,10 +120,8 @@ export default function WorkTimeLimitPage() {
     ]
 
     const sidebarItems: SidebarItem[] = [
-        { id: "email-notifications", label: "Email notifications", href: "/settings/members/email-notifications" },
-        { id: "work-time-limit", label: "Work time limits", href: "/settings/work-time-limit" },
-        { id: "payments", label: "Payments", href: "/settings/payments" },
-        { id: "achievements", label: "Achievements", href: "/settings/Achievements" },
+        { id: "work-time-limit", label: "Work time limit", href: "/settings/work-time-limit" },
+        { id: "idle-detection", label: "Idle detection", href: "/settings/work-time-limit/idle-detection" },
     ]
 
     return (
@@ -136,157 +133,145 @@ export default function WorkTimeLimitPage() {
                 sidebarItems={sidebarItems}
                 activeItemId="work-time-limit"
             />
-
-            {/* Content */}
-            <div className="flex-1 p-4 md:p-6">
-                {/* Default Settings Header */}
-                <div className="flex flex-wrap items-center gap-4 mb-8">
-                    <h2 className="text-lg font-normal text-gray-900">Default settings</h2>
-                    <div className="flex items-center gap-4">
-                        <Button
-                            onClick={handleSave}
-                            className="bg-slate-900 hover:bg-slate-800 text-white px-6"
-                        >
-                            Save
-                        </Button>
-                        <button
-                            onClick={() => window.location.reload()}
-                            className="text-slate-500 hover:text-slate-900 text-sm font-medium"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-
-                {/* Two Column Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-                    {/* Left Column - Weekly Work Days */}
-                    <div>
-                        <div className="mb-6">
-                            <span className="text-[11px] font-normal text-gray-500 uppercase tracking-wider">
-                                WEEKLY WORK DAYS
-                            </span>
-                        </div>
-
-                        <p className="text-sm text-gray-600 mb-4">
-                            Set the week days members are expected to work. You can also set which days members are not allowed to track time.
-                        </p>
-
-                        <p className="text-sm text-gray-900 mb-4">
-                            Expected work days: <span className="font-medium">{getExpectedDaysLabel()}</span>
-                        </p>
-
-                        {/* Day Selection */}
-                        <div className="flex gap-2 mb-6">
-                            {days.map((day) => (
-                                <button
-                                    key={day}
-                                    onClick={() => toggleDay(day)}
-                                    className={`w-10 h-10 rounded-full text-sm font-medium transition-colors ${selectedDays.includes(day)
-                                        ? "bg-slate-900 text-white"
-                                        : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50"
-                                        }`}
-                                >
-                                    {day}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Disable Time Tracking */}
-                        <div className="flex items-center gap-3">
-                            <Switch
-                                checked={disableTracking}
-                                onCheckedChange={setDisableTracking}
-                            />
-                            <span className="text-sm text-gray-700">
-                                Disable time tracking on specific days
-                            </span>
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="work-time-limit">
+                <div className="flex-1 p-4 md:p-6">
+                    <div className="flex flex-wrap items-center gap-4 mb-8">
+                        <h2 className="text-lg font-normal text-gray-900">Default settings</h2>
+                        <div className="flex items-center gap-4">
+                            <Button
+                                onClick={handleSave}
+                                className="bg-slate-900 hover:bg-slate-800 text-white px-6"
+                            >
+                                Save
+                            </Button>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="text-slate-500 hover:text-slate-900 text-sm font-medium"
+                            >
+                                Cancel
+                            </button>
                         </div>
                     </div>
 
-                    {/* Right Column - Work Hours */}
-                    <div className="space-y-8">
-                        {/* Expected Weekly Work Hours */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
                         <div>
-                            <div className="flex items-center gap-1 mb-2">
+                            <div className="mb-6">
                                 <span className="text-[11px] font-normal text-gray-500 uppercase tracking-wider">
-                                    EXPECTED WEEKLY WORK HOURS
+                                    WEEKLY WORK DAYS
                                 </span>
                             </div>
-                            <p className="text-sm text-gray-600 mb-3">
-                                Set the hours members are expected to work weekly
+
+                            <p className="text-sm text-gray-600 mb-4">
+                                Set the week days members are expected to work. You can also set which days members are not allowed to track time.
                             </p>
 
-                            {expectedHours.map((entry) => (
-                                <div key={entry.id} className="flex items-center gap-3 mb-2">
-                                    <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
-                                        <Input
-                                            type="number"
-                                            value={entry.hours}
-                                            onChange={(e) => updateExpectedHours(entry.id, Number(e.target.value))}
-                                            className="w-32 border-0 text-sm"
-                                        />
-                                        <span className="px-4 py-2 bg-gray-100 text-sm text-gray-600 border-l border-gray-300">
-                                            hrs/wk
-                                        </span>
-                                    </div>
-                                    {expectedHours.length > 1 && (
-                                        <div className="w-16" />
-                                    )}
+                            <p className="text-sm text-gray-900 mb-4">
+                                Expected work days: <span className="font-medium">{getExpectedDaysLabel()}</span>
+                            </p>
+
+                            <div className="flex gap-2 mb-6">
+                                {days.map((day) => (
+                                    <button
+                                        key={day}
+                                        onClick={() => toggleDay(day)}
+                                        className={`w-10 h-10 rounded-full text-sm font-medium transition-colors ${selectedDays.includes(day)
+                                            ? "bg-slate-900 text-white"
+                                            : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50"
+                                            }`}
+                                    >
+                                        {day}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <Switch
+                                    checked={disableTracking}
+                                    onCheckedChange={setDisableTracking}
+                                />
+                                <span className="text-sm text-gray-700">
+                                    Disable time tracking on specific days
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-8">
+                            <div>
+                                <div className="flex items-center gap-1 mb-2">
+                                    <span className="text-[11px] font-normal text-gray-500 uppercase tracking-wider">
+                                        EXPECTED WEEKLY WORK HOURS
+                                    </span>
                                 </div>
-                            ))}
-                        </div>
+                                <p className="text-sm text-gray-600 mb-3">
+                                    Set the hours members are expected to work weekly
+                                </p>
 
-                        {/* Weekly Limit */}
-                        <div>
-                            <div className="flex items-center gap-1 mb-2">
-                                <span className="text-[11px] font-normal text-gray-500 uppercase tracking-wider">
-                                    WEEKLY LIMIT
-                                </span>
-                                <Info className="w-3.5 h-3.5 text-gray-400" />
+                                {expectedHours.map((entry) => (
+                                    <div key={entry.id} className="flex items-center gap-3 mb-2">
+                                        <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+                                            <Input
+                                                type="number"
+                                                value={entry.hours}
+                                                onChange={(e) => updateExpectedHours(entry.id, Number(e.target.value))}
+                                                className="w-32 border-0 text-sm"
+                                            />
+                                            <span className="px-4 py-2 bg-gray-100 text-sm text-gray-600 border-l border-gray-300">
+                                                hrs/wk
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                            <p className="text-sm text-gray-600 mb-3">
-                                Set the hours members are allowed to work weekly
-                            </p>
-                            <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden w-fit">
-                                <Input
-                                    type="number"
-                                    value={weeklyLimit}
-                                    onChange={(e) => setWeeklyLimit(Number(e.target.value))}
-                                    className="w-32 border-0 text-sm"
-                                />
-                                <span className="px-4 py-2 bg-gray-100 text-sm text-gray-600 border-l border-gray-300">
-                                    hrs/wk
-                                </span>
-                            </div>
-                        </div>
 
-                        {/* Daily Limit */}
-                        <div>
-                            <div className="flex items-center gap-1 mb-2">
-                                <span className="text-[11px] font-normal text-gray-500 uppercase tracking-wider">
-                                    DAILY LIMIT
-                                </span>
-                                <Info className="w-3.5 h-3.5 text-gray-400" />
+                            <div>
+                                <div className="flex items-center gap-1 mb-2">
+                                    <span className="text-[11px] font-normal text-gray-500 uppercase tracking-wider">
+                                        WEEKLY LIMIT
+                                    </span>
+                                    <Info className="w-3.5 h-3.5 text-gray-400" />
+                                </div>
+                                <p className="text-sm text-gray-600 mb-3">
+                                    Set the hours members are allowed to work weekly
+                                </p>
+                                <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden w-fit">
+                                    <Input
+                                        type="number"
+                                        value={weeklyLimit}
+                                        onChange={(e) => setWeeklyLimit(Number(e.target.value))}
+                                        className="w-32 border-0 text-sm"
+                                    />
+                                    <span className="px-4 py-2 bg-gray-100 text-sm text-gray-600 border-l border-gray-300">
+                                        hrs/wk
+                                    </span>
+                                </div>
                             </div>
-                            <p className="text-sm text-gray-600 mb-3">
-                                Set the hours members are allowed to work daily
-                            </p>
-                            <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden w-fit">
-                                <Input
-                                    type="number"
-                                    value={dailyLimit}
-                                    onChange={(e) => setDailyLimit(Number(e.target.value))}
-                                    className="w-32 border-0 text-sm"
-                                />
-                                <span className="px-4 py-2 bg-gray-100 text-sm text-gray-600 border-l border-gray-300">
-                                    hrs/day
-                                </span>
+
+                            <div>
+                                <div className="flex items-center gap-1 mb-2">
+                                    <span className="text-[11px] font-normal text-gray-500 uppercase tracking-wider">
+                                        DAILY LIMIT
+                                    </span>
+                                    <Info className="w-3.5 h-3.5 text-gray-400" />
+                                </div>
+                                <p className="text-sm text-gray-600 mb-3">
+                                    Set the hours members are allowed to work daily
+                                </p>
+                                <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden w-fit">
+                                    <Input
+                                        type="number"
+                                        value={dailyLimit}
+                                        onChange={(e) => setDailyLimit(Number(e.target.value))}
+                                        className="w-32 border-0 text-sm"
+                                    />
+                                    <span className="px-4 py-2 bg-gray-100 text-sm text-gray-600 border-l border-gray-300">
+                                        hrs/day
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </SettingsContentLayout>
         </div>
     )
 }

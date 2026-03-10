@@ -5,7 +5,7 @@ import { Info, Search, Loader2, ChevronLeft, ChevronRight, Activity, Star } from
 import { useOrgStore } from "@/store/org-store"
 import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
 import { getOrgSettings, upsertOrgSetting, getAllMemberSettings, upsertMemberSetting } from "@/action/organization-settings"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -165,6 +165,7 @@ export default function IdleTimeoutPage() {
         sidebarItems={sidebarItems}
         activeItemId="idle-timeout"
       />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="idle-timeout">
 
       {/* Content */}
       <div className="flex flex-1 w-full overflow-hidden">
@@ -341,6 +342,8 @@ export default function IdleTimeoutPage() {
           </div>
         </div>
       </div>
-    </div>
+    
+            </SettingsContentLayout>
+</div>
   )
 }

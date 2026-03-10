@@ -15,7 +15,7 @@ export interface SettingsMember {
  * Fetches members from Supabase for settings pages.
  * Only returns members with real emails (excludes @example.com and similar dummy emails).
  */
-export async function getSettingsMembers(): Promise<{
+export async function getSettingsMembers(explicitOrgId?: string): Promise<{
     success: boolean;
     data: SettingsMember[];
     message?: string;
@@ -24,25 +24,29 @@ export async function getSettingsMembers(): Promise<{
         const supabase = await createClient();
         const adminClient = createAdminClient();
 
-        // Get current user's organization
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        let organizationId: string | number | undefined = explicitOrgId;
 
-        if (userError || !user) {
-            return { success: false, message: "User not logged in", data: [] };
+        if (!organizationId) {
+            // Get current user's organization
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+            if (userError || !user) {
+                return { success: false, message: "User not logged in", data: [] };
+            }
+
+            // Get user's organization
+            const { data: member } = await supabase
+                .from("organization_members")
+                .select("organization_id")
+                .eq("user_id", user.id)
+                .maybeSingle();
+
+            if (!member?.organization_id) {
+                return { success: true, message: "User not in any organization", data: [] };
+            }
+
+            organizationId = member.organization_id;
         }
-
-        // Get user's organization
-        const { data: member } = await supabase
-            .from("organization_members")
-            .select("organization_id")
-            .eq("user_id", user.id)
-            .maybeSingle();
-
-        if (!member?.organization_id) {
-            return { success: true, message: "User not in any organization", data: [] };
-        }
-
-        const organizationId = member.organization_id;
 
         // Fetch organization members with their user profiles
         const { data: members, error: membersError } = await adminClient

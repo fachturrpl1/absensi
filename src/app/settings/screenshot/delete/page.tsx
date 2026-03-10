@@ -6,7 +6,7 @@ import { Info, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import { useOrgStore } from "@/store/org-store"
 import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
 import { getScreenshotSettings, upsertScreenshotSetting } from "@/action/screenshot-settings"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { Activity } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { MemberAvatar } from "@/components/profile&image/MemberAvatar"
@@ -137,6 +137,7 @@ export default function ScreenshotDeletePage() {
         sidebarItems={sidebarItems}
         activeItemId="delete"
       />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="delete">
 
       {/* Content */}
       <div className="flex flex-1 w-full overflow-hidden">
@@ -305,7 +306,9 @@ export default function ScreenshotDeletePage() {
           </div>
         </div>
       </div>
-    </div>
+    
+            </SettingsContentLayout>
+</div>
   )
 }
 

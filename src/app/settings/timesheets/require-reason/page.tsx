@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react"
 import { Info, Search, Loader2 } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { Activity } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { useOrgStore } from "@/store/org-store"
@@ -147,6 +147,7 @@ export default function RequireReasonPage() {
                 sidebarItems={sidebarItems}
                 activeItemId="require-reason"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="require-reason">
 
             {/* Main Content */}
             <div className="flex flex-1 w-full overflow-hidden">
@@ -277,6 +278,7 @@ export default function RequireReasonPage() {
                     </div>
                 </div>
             </div>
+            </SettingsContentLayout>
         </div>
     )
 }

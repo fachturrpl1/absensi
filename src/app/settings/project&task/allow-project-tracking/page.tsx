@@ -6,7 +6,7 @@ import { getOrgSettings, upsertOrgSetting } from "@/action/organization-settings
 import { getAllProjects, updateProject, type IProject } from "@/action/projects"
 import { toast } from "sonner"
 import { Switch } from "@/components/ui/switch"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { Building2 } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
@@ -106,6 +106,7 @@ export default function AllowProjectTrackingPage() {
                 sidebarItems={sidebarItems}
                 activeItemId="allow-project-tracking"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="allow-project-tracking">
 
             {/* Content */}
             <div className="flex flex-1 w-full overflow-hidden">
@@ -197,6 +198,8 @@ export default function AllowProjectTrackingPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        
+            </SettingsContentLayout>
+</div>
     )
 }

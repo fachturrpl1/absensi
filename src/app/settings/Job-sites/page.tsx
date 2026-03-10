@@ -1,10 +1,11 @@
-﻿"use client"
+"use client"
+import type { SidebarItem } from "@/components/settings/SettingsSidebar";
 
 import React, { useState, useMemo } from "react"
 import { Info, Search, User } from "lucide-react"
 
 import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { Calendar } from "lucide-react"
 
 interface MemberWithSetting {
@@ -56,18 +57,21 @@ export default function JobSitesPage() {
         { label: "MAP", href: "/settings/Map", active: false },
     ]
 
+    const sidebarItems: SidebarItem[] = [
+        { id: "restrict-timer", label: "Restrict timer to job sites", href: "/settings/Job-sites" },
+        { id: "enter-exit-notifications", label: "Enter/exit notifications", href: "/settings/Job-sites/enter-exit-notifications" },
+    ]
+
     return (
         <div className="flex flex-col min-h-screen bg-white">
             <SettingsHeader
                 title="Schedules"
                 Icon={Calendar}
                 tabs={tabs}
-                sidebarItems={[
-                    { id: "restrict-timer", label: "Restrict timer to job sites", href: "/settings/Job-sites" },
-                    { id: "enter-exit-notifications", label: "Enter/exit notifications", href: "/settings/Job-sites/enter-exit-notifications" },
-                ]}
+                sidebarItems={sidebarItems}
                 activeItemId="restrict-timer"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="restrict-timer">
 
             {/* Content */}
             <div className="flex flex-1 w-full overflow-hidden">
@@ -183,6 +187,8 @@ export default function JobSitesPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        
+            </SettingsContentLayout>
+</div>
     )
 }

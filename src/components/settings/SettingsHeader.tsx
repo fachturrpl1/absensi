@@ -44,7 +44,7 @@ export function SettingsHeader({ title, Icon, tabs, sidebarItems, activeItemId }
             <div className="px-6 py-4 border-b border-slate-200 w-full bg-white">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        {sidebarItems && (
+                        {sidebarItems && sidebarItems.length > 0 && (
                             <>
                                 {/* Mobile Hamburger (buka Sheet) */}
                                 <div className="md:hidden">
@@ -125,7 +125,7 @@ export function SettingsContentLayout({ sidebarItems, activeItemId, children }: 
     return (
         <div className="flex flex-1 w-full overflow-hidden">
             {/* Sidebar Desktop - hanya muncul di md ke atas */}
-            {isSidebarOpen && (
+            {isSidebarOpen && sidebarItems?.length > 0 && (
                 <aside className="hidden md:flex flex-col w-52 shrink-0 border-r border-slate-200 bg-slate-50/30">
                     <SettingsSidebar
                         items={sidebarItems}

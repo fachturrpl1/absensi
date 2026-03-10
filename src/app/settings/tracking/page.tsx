@@ -5,7 +5,7 @@ import { Info, Search, Loader2, ChevronLeft, ChevronRight, Activity, Star } from
 import { useOrgStore } from "@/store/org-store"
 import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
 import { getOrgSettings, upsertOrgSetting, getAllMemberSettings, upsertMemberSetting } from "@/action/organization-settings"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { toast } from "sonner"
 
@@ -148,6 +148,7 @@ export default function TrackingPage() {
                 sidebarItems={sidebarItems}
                 activeItemId="keep-idle-time"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="keep-idle-time">
 
             {/* Content */}
             <div className="flex flex-1 w-full overflow-hidden">
@@ -315,6 +316,8 @@ export default function TrackingPage() {
                     )}
                 </div>
             </div>
-        </div>
+        
+            </SettingsContentLayout>
+</div>
     )
 }

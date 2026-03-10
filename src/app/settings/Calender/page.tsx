@@ -2,7 +2,7 @@
 
 import React, { useState } from "react"
 import { Info } from "lucide-react"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { Calendar } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
@@ -30,6 +30,7 @@ export default function SchedulePage() {
                 sidebarItems={sidebarItems}
                 activeItemId="calendar-type"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="calendar-type">
 
             {/* Main Content */}
             <div className="flex flex-1 w-full overflow-hidden">
@@ -79,6 +80,8 @@ export default function SchedulePage() {
                     </div>
                 </div>
             </div>
-        </div>
+        
+            </SettingsContentLayout>
+</div>
     )
 }

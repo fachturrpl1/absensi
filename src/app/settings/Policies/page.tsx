@@ -1,7 +1,7 @@
 ﻿"use client"
 
 import { useState, useEffect } from "react"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { ShieldCheck } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { Button } from "@/components/ui/button"
@@ -102,6 +102,7 @@ export default function TimeOffPoliciesPage() {
                 sidebarItems={sidebarItems}
                 activeItemId="policies"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="policies">
             {/* Content */}
             <div className="flex flex-1 w-full overflow-hidden">
                 {/* Main Content Area */}
@@ -301,6 +302,8 @@ export default function TimeOffPoliciesPage() {
                 initialData={editingPolicy}
                 mode={editMode}
             />
-        </div>
+        
+            </SettingsContentLayout>
+</div>
     )
 }

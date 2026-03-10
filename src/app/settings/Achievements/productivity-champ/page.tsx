@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { MemberAvatar } from "@/components/profile&image/MemberAvatar"
 import { useOrgStore } from "@/store/org-store"
-import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
-import { getOrgSettings, upsertOrgSetting, getAllMemberSettings, upsertMemberSetting } from "@/action/organization-settings"
+import { getSettingsMembers, type SettingsMember } from "@/action/settings-members"
+import { getAchievementSettings, upsertAchievementSetting, getAllMemberAchievementSettings } from "@/action/achievement-settings"
 import { SettingsHeader, SettingTab, SettingsContentLayout } from "@/components/settings/SettingsHeader"
 
 export default function ProductivityChampPage() {
     const { organizationId } = useOrgStore()
-    const [members, setMembers] = useState<ISimpleMember[]>([])
+    const [members, setMembers] = useState<SettingsMember[]>([])
     const [totalMembers, setTotalMembers] = useState(0)
     const [loading, setLoading] = useState(true)
     const [globalEnabled, setGlobalEnabled] = useState(true)
@@ -33,43 +33,40 @@ export default function ProductivityChampPage() {
 
             setLoading(true)
             try {
-                const [membersRes, orgSettingsRes, allMemberSettingsRes] = await Promise.all([
-                    getMembersForScreenshot(
-                        String(organizationId),
-                        { page: currentPage, limit: itemsPerPage },
-                        searchQuery
-                    ),
-                    getOrgSettings(String(organizationId)),
-                    getAllMemberSettings(String(organizationId))
+                const [membersRes, achievementSettingsRes, allMemberSettingsRes] = await Promise.all([
+                    getSettingsMembers(String(organizationId)),
+                    getAchievementSettings(String(organizationId), 'productivity_champ'),
+                    getAllMemberAchievementSettings(String(organizationId), 'productivity_champ')
                 ])
 
                 if (membersRes.success && membersRes.data) {
-                    setMembers(membersRes.data)
-                    setTotalMembers(membersRes.total ?? 0)
+                    const filtered = searchQuery
+                        ? membersRes.data.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                        : membersRes.data
+
+                    const start = (currentPage - 1) * itemsPerPage
+                    const paginated = filtered.slice(start, start + itemsPerPage)
+
+                    setMembers(paginated)
+                    setTotalMembers(filtered.length)
                 }
 
-                if (orgSettingsRes.success && orgSettingsRes.data) {
-                    if (orgSettingsRes.data.achievement_productivity_enabled !== undefined) {
-                        setGlobalEnabled(orgSettingsRes.data.achievement_productivity_enabled)
-                    }
-                    if (orgSettingsRes.data.achievement_productivity_goal !== undefined) {
-                        setGlobalWeeklyTodosGoal(orgSettingsRes.data.achievement_productivity_goal)
-                    }
+                if (achievementSettingsRes.success && achievementSettingsRes.data) {
+                    setGlobalEnabled(achievementSettingsRes.data.is_enabled)
+                    setGlobalWeeklyTodosGoal(Number(achievementSettingsRes.data.goal_value))
                 }
 
                 if (allMemberSettingsRes.success && allMemberSettingsRes.data) {
                     const overrides: Record<string, { enabled: boolean, goal: number }> = {}
                     Object.entries(allMemberSettingsRes.data).forEach(([mId, settings]) => {
-                        if (settings.achievement_productivity_enabled !== undefined || settings.achievement_productivity_goal !== undefined) {
-                            overrides[mId] = {
-                                enabled: settings.achievement_productivity_enabled ?? globalEnabled,
-                                goal: settings.achievement_productivity_goal ?? globalWeeklyTodosGoal
-                            }
+                        overrides[mId] = {
+                            enabled: settings.is_enabled,
+                            goal: Number(settings.goal_value)
                         }
                     })
                     setMemberSettings(overrides)
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Failed to load productivity champ data", err)
             } finally {
                 setLoading(false)
@@ -83,11 +80,14 @@ export default function ProductivityChampPage() {
         if (!organizationId) return
         try {
             setLoading(true)
-            await upsertOrgSetting(String(organizationId), {
-                achievement_productivity_enabled: globalEnabled,
-                achievement_productivity_goal: globalWeeklyTodosGoal
+            await upsertAchievementSetting({
+                organization_id: Number(organizationId),
+                achievement_type: 'productivity_champ',
+                is_enabled: globalEnabled,
+                goal_value: globalWeeklyTodosGoal,
+                organization_member_id: null
             })
-            toast.success("Default settings updated and applied")
+            toast.success("Default settings updated")
         } catch (err) {
             toast.error("Failed to apply settings")
         } finally {
@@ -99,7 +99,13 @@ export default function ProductivityChampPage() {
         setGlobalEnabled(val)
         if (!organizationId) return
         try {
-            await upsertOrgSetting(String(organizationId), { achievement_productivity_enabled: val })
+            await upsertAchievementSetting({
+                organization_id: Number(organizationId),
+                achievement_type: 'productivity_champ',
+                is_enabled: val,
+                goal_value: globalWeeklyTodosGoal,
+                organization_member_id: null
+            })
         } catch (e) {
             console.error(e)
         }
@@ -109,7 +115,13 @@ export default function ProductivityChampPage() {
         setGlobalWeeklyTodosGoal(val)
         if (!organizationId) return
         try {
-            await upsertOrgSetting(String(organizationId), { achievement_productivity_goal: val })
+            await upsertAchievementSetting({
+                organization_id: Number(organizationId),
+                achievement_type: 'productivity_champ',
+                is_enabled: globalEnabled,
+                goal_value: val,
+                organization_member_id: null
+            })
         } catch (e) {
             console.error(e)
         }
@@ -123,7 +135,13 @@ export default function ProductivityChampPage() {
         }))
 
         try {
-            await upsertMemberSetting(memberId, { achievement_productivity_enabled: enabled })
+            await upsertAchievementSetting({
+                organization_id: Number(organizationId),
+                achievement_type: 'productivity_champ',
+                organization_member_id: Number(memberId),
+                is_enabled: enabled,
+                goal_value: goal
+            })
         } catch (e) {
             console.error(e)
         }
@@ -137,7 +155,13 @@ export default function ProductivityChampPage() {
         }))
 
         try {
-            await upsertMemberSetting(memberId, { achievement_productivity_goal: goal })
+            await upsertAchievementSetting({
+                organization_id: Number(organizationId),
+                achievement_type: 'productivity_champ',
+                organization_member_id: Number(memberId),
+                is_enabled: enabled,
+                goal_value: goal
+            })
         } catch (e) {
             console.error(e)
         }
@@ -297,7 +321,7 @@ export default function ProductivityChampPage() {
                             <div key={member.id} className="flex flex-col gap-4 sm:grid sm:grid-cols-3 sm:items-center py-4 border-b border-gray-100 last:border-0">
                                 <div className="flex items-center gap-3">
                                     <MemberAvatar
-                                        src={member.avatarUrl}
+                                        src={member.avatar}
                                         name={member.name}
                                         className="w-8 h-8"
                                     />

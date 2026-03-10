@@ -1,6 +1,6 @@
 ﻿"use client"
 
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { ShieldCheck } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { Button } from "@/components/ui/button"
@@ -103,6 +103,7 @@ export default function HolidaysPage() {
                 sidebarItems={sidebarItems}
                 activeItemId="holidays"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="holidays">
             {/* Content */}
             <div className="flex flex-1 w-full overflow-hidden">
                 {/* Main Content Area */}
@@ -244,6 +245,8 @@ export default function HolidaysPage() {
                 mode={dialogMode}
                 initialData={editingHoliday}
             />
-        </div>
+        
+            </SettingsContentLayout>
+</div>
     )
 }

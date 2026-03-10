@@ -5,7 +5,7 @@ import { useOrgStore } from "@/store/org-store"
 import { getOrgSettings, upsertOrgSetting } from "@/action/organization-settings"
 import { toast } from "sonner"
 import { Info } from "lucide-react"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { Building2 } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
@@ -79,6 +79,7 @@ export default function ProjectAndTaskPage() {
                 sidebarItems={sidebarItems}
                 activeItemId="default-roles"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="default-roles">
 
             {/* Content */}
             <div className="flex flex-1 w-full overflow-hidden">
@@ -136,6 +137,8 @@ export default function ProjectAndTaskPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        
+            </SettingsContentLayout>
+</div>
     )
 }

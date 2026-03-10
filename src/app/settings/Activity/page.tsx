@@ -5,7 +5,7 @@ import { Info, Search, Loader2, ChevronLeft, ChevronRight, Activity } from "luci
 import { useOrgStore } from "@/store/org-store"
 import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
 import { getOrgSettings, upsertOrgSetting, getAllMemberSettings, upsertMemberSetting } from "@/action/organization-settings"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { toast } from "sonner"
 import { MemberAvatar } from "@/components/profile&image/MemberAvatar"
@@ -148,6 +148,7 @@ export default function ActivityPage() {
                 sidebarItems={sidebarItems}
                 activeItemId="track-apps-urls"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="track-apps-urls">
 
             {/* Main Content */}
             <div className="flex flex-1 w-full overflow-hidden">
@@ -315,6 +316,8 @@ export default function ActivityPage() {
                     )}
                 </div>
             </div>
-        </div>
+        
+            </SettingsContentLayout>
+</div>
     )
 }

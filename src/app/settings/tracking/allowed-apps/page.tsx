@@ -5,7 +5,7 @@ import { Info, Search, Loader2, ChevronLeft, ChevronRight, Activity, Star } from
 import { useOrgStore } from "@/store/org-store"
 import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
 import { getOrgSettings, upsertOrgSetting, getAllMemberSettings, upsertMemberSetting } from "@/action/organization-settings"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { toast } from "sonner"
 
@@ -139,6 +139,7 @@ export default function AllowedAppsPage() {
         sidebarItems={sidebarItems}
         activeItemId="allowed-apps"
       />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="allowed-apps">
 
       {/* Content */}
       <div className="flex flex-1 w-full overflow-hidden">
@@ -338,6 +339,8 @@ export default function AllowedAppsPage() {
           </div>
         </div>
       </div>
-    </div>
+    
+            </SettingsContentLayout>
+</div>
   )
 }
