@@ -4,10 +4,11 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
 import { createClient } from "@/utils/supabase/server";
-
+import { AttendanceEntry } from "@/types/attendance";
 import { attendanceLogger } from '@/lib/logger';
 import { getJSON, setJSON } from '@/lib/cache';
 import { calculateAttendanceStatus, getDayOfWeek, type ScheduleRule } from '@/lib/attendance-status-calculator';
+import { supabase } from "@/config/supabase-config";
 async function getSupabase() {
   return await createClient();
 }
@@ -189,6 +190,7 @@ export type AttendanceListItem = {
   actualBreakEnd: string | null;
   breakInMethod: string | null;
   breakOutMethod: string | null;
+  work_duration_minutes: number | null
   notes: string;
   timezone: string;
   time_format: string;
@@ -510,6 +512,7 @@ export const getAllAttendance = async (params: GetAttendanceParams = {}): Promis
       breakInMethod: inMethod ? String(inMethod) : null,
       breakOutMethod: inMethod ? String(inMethod) : null,
       notes: '',
+      work_duration_minutes: item.work_duration_minutes,
       timezone: orgInfo?.timezone || 'Asia/Jakarta',
       time_format: orgInfo?.time_format || '24h',
     };
@@ -802,4 +805,15 @@ export async function deleteMultipleAttendanceRecords(ids: string[]) {
       message: err instanceof Error ? err.message : "An error occurred"
     };
   }
+}
+
+export async function bulkCreateAttendance(entries: AttendanceEntry[]) {
+  if (entries.length === 0) return { success: false, message: 'No entries' }
+
+  const { data, error } = await supabase
+    .from('attendances')
+    .insert(entries)
+
+  if (error) return { success: false, message: error.message }
+  return { success: true, count: data?.length || 0 }
 }
