@@ -1,7 +1,7 @@
 ﻿"use client"
 
 import { useState } from "react"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { ShieldCheck } from "lucide-react"
 import { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { Switch } from "@/components/ui/switch"
@@ -67,6 +67,7 @@ export default function WorkBreakNotificationsPage() {
                 sidebarItems={sidebarItems}
                 activeItemId="notifications"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="notifications">
             <div className="flex flex-1 w-full">
                 <div className="flex-1 p-4 md:p-8 w-full overflow-x-hidden">
                     {/* Header Section */}
@@ -175,6 +176,8 @@ export default function WorkBreakNotificationsPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        
+            </SettingsContentLayout>
+</div>
     )
 }

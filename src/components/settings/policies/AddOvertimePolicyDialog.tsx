@@ -6,10 +6,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 
 import { Info, Search } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+
+import { MemberSelectionModal } from "@/components/settings/MemberSelectionModal"
 
 interface AddOvertimePolicyDialogProps {
     open: boolean
@@ -61,46 +62,49 @@ export function AddOvertimePolicyDialog({ open, onOpenChange, onSave, initialDat
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white">
-                    <DialogHeader>
-                        <DialogTitle className="text-2xl font-normal text-slate-900">
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white border-none shadow-2xl rounded-2xl">
+                    <DialogHeader className="p-2">
+                        <DialogTitle className="text-2xl font-bold text-slate-900">
                             Create weekly overtime policy
                         </DialogTitle>
                     </DialogHeader>
 
                     <div className="space-y-8 py-6">
                         {/* Policy Name */}
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium text-slate-600 uppercase tracking-wide">
+                        <div className="space-y-3">
+                            <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-none">
                                 POLICY NAME*
                             </Label>
                             <Input
                                 value={policyName}
                                 onChange={(e) => setPolicyName(e.target.value)}
-                                placeholder="Policy name"
-                                className="bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
+                                placeholder="e.g. Standard 40h Overtime"
+                                className="h-12 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-xl focus:ring-slate-900"
                             />
                         </div>
 
                         {/* Weekly Overtime Section */}
                         <div className="space-y-6">
-                            <h3 className="text-lg font-medium text-slate-900">Weekly overtime</h3>
+                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                Weekly overtime
+                                <div className="h-px flex-1 bg-slate-100" />
+                            </h3>
 
                             {/* Weekly Overtime Threshold */}
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 <div className="flex items-center gap-2">
-                                    <Label className="text-sm font-medium text-slate-600 uppercase tracking-wide">
+                                    <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
                                         WEEKLY OVERTIME THRESHOLD
                                     </Label>
                                     <TooltipProvider>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
                                                 <div className="cursor-help">
-                                                    <Info className="w-4 h-4 text-slate-400" />
+                                                    <Info className="w-3.5 h-3.5 text-slate-400" />
                                                 </div>
                                             </TooltipTrigger>
-                                            <TooltipContent className="bg-slate-900 text-white border-slate-800">
-                                                <p className="max-w-xs text-sm">
+                                            <TooltipContent className="bg-slate-900 text-white border-slate-800 p-3 rounded-xl max-w-64">
+                                                <p className="text-sm font-medium">
                                                     The number of hours per week after which overtime pay begins
                                                 </p>
                                             </TooltipContent>
@@ -108,71 +112,63 @@ export function AddOvertimePolicyDialog({ open, onOpenChange, onSave, initialDat
                                     </TooltipProvider>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <Input
-                                        type="number"
-                                        value={weeklyThreshold}
-                                        onChange={(e) => setWeeklyThreshold(e.target.value)}
-                                        className="w-32 bg-white border-slate-200 text-slate-900"
-                                    />
-                                    <span className="text-sm text-slate-600">hours</span>
+                                    <div className="relative flex items-center">
+                                        <Input
+                                            type="number"
+                                            value={weeklyThreshold}
+                                            onChange={(e) => setWeeklyThreshold(e.target.value)}
+                                            className="w-32 h-11 bg-white border-slate-200 text-slate-900 rounded-xl pr-12 focus:ring-slate-900"
+                                        />
+                                        <span className="absolute right-4 text-xs font-bold text-slate-400 uppercase tracking-wider">hrs</span>
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Weekly Overtime Pay Rate Multiplier */}
-                            <div className="space-y-2">
-                                <Label className="text-sm font-medium text-slate-600 uppercase tracking-wide">
+                            <div className="space-y-3">
+                                <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
                                     WEEKLY OVERTIME PAY RATE MULTIPLIER
                                 </Label>
                                 <div className="flex items-center gap-3">
-                                    <Input
-                                        type="number"
-                                        step="0.1"
-                                        value={payRateMultiplier}
-                                        onChange={(e) => setPayRateMultiplier(e.target.value)}
-                                        className="w-32 bg-white border-slate-200 text-slate-900"
-                                    />
-                                    <span className="text-sm text-slate-600">x member's pay rate</span>
+                                    <div className="relative flex items-center">
+                                        <Input
+                                            type="number"
+                                            step="0.1"
+                                            value={payRateMultiplier}
+                                            onChange={(e) => setPayRateMultiplier(e.target.value)}
+                                            className="w-32 h-11 bg-white border-slate-200 text-slate-900 rounded-xl pr-8 focus:ring-slate-900"
+                                        />
+                                        <span className="absolute right-4 text-xs font-bold text-slate-400 uppercase tracking-wider">x</span>
+                                    </div>
+                                    <span className="text-sm font-medium text-slate-500 italic">member's pay rate</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* Notifications Section */}
                         <div className="space-y-4">
-                            <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-medium text-slate-900">Notifications</h3>
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <div className="cursor-help">
-                                                <Info className="w-4 h-4 text-slate-400" />
-                                            </div>
-                                        </TooltipTrigger>
-                                        <TooltipContent className="bg-slate-900 text-white border-slate-800">
-                                            <p className="max-w-xs text-sm">
-                                                Automatic notifications for overtime tracking
-                                            </p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            </div>
+                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                Notifications
+                                <div className="h-px flex-1 bg-slate-100" />
+                            </h3>
 
                             {/* Notification Items */}
-                            <div className="space-y-4 pl-0">
-                                <div>
-                                    <div className="text-sm font-medium text-slate-600 uppercase tracking-wide mb-1">
-                                        1 HOUR BEFORE OVERTIME THRESHOLD
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-5 bg-slate-50 rounded-2xl space-y-2 border border-slate-100">
+                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        1 HOUR BEFORE LIMIT
                                     </div>
-                                    <div className="text-sm text-slate-600">
-                                        Members, managers, and owners will receive an email notification
+                                    <div className="text-sm font-medium text-slate-700 leading-relaxed">
+                                        Members & owners will receive an email notification
                                     </div>
                                 </div>
 
-                                <div>
-                                    <div className="text-sm font-medium text-slate-600 uppercase tracking-wide mb-1">
-                                        WHEN MEMBER BEGINS OVERTIME
+                                <div className="p-5 bg-slate-50 rounded-2xl space-y-2 border border-slate-100 text-indigo-900 bg-indigo-50/50 border-indigo-100">
+                                    <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
+                                        THRESHOLD REACHED
                                     </div>
-                                    <div className="text-sm text-slate-600">
-                                        Members, managers, and owners will receive an email notification
+                                    <div className="text-sm font-medium text-indigo-800 leading-relaxed">
+                                        Real-time notification when member begins overtime
                                     </div>
                                 </div>
                             </div>
@@ -180,50 +176,59 @@ export function AddOvertimePolicyDialog({ open, onOpenChange, onSave, initialDat
 
                         {/* Policy Members Section */}
                         <div className="space-y-4">
-                            <h3 className="text-lg font-medium text-slate-900">Policy members</h3>
+                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                Policy members
+                                <div className="h-px flex-1 bg-slate-100" />
+                            </h3>
 
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <Label className="text-sm font-medium text-slate-600 uppercase tracking-wide">
+                                    <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-none">
                                         MEMBERS
                                     </Label>
                                     <button
                                         type="button"
                                         onClick={handleSelectAll}
-                                        className="text-sm font-medium text-slate-900 hover:text-slate-700 underline"
+                                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-wider"
                                     >
-                                        Select all
+                                        Select all members
                                     </button>
                                 </div>
-                                <p className="text-sm text-slate-600">
-                                    Members can only be on 1 overtime policy at a time
-                                </p>
                                 <div
                                     onClick={() => setIsMemberSelectionOpen(true)}
-                                    className="w-full px-3 py-2 border border-slate-200 rounded-md bg-white text-sm text-slate-400 cursor-pointer hover:border-slate-300 transition-colors"
+                                    className="w-full h-14 px-4 flex items-center justify-between border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 text-sm font-medium text-slate-500 cursor-pointer hover:border-slate-300 hover:bg-slate-50 transition-all group"
                                 >
-                                    {selectedMembers.length > 0
-                                        ? `${selectedMembers.length} member${selectedMembers.length > 1 ? 's' : ''} selected`
-                                        : "Select members"}
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-slate-400">
+                                            <Search className="w-4 h-4" />
+                                        </div>
+                                        {selectedMembers.length > 0
+                                            ? <span className="text-slate-900 font-bold">{selectedMembers.length} members selected</span>
+                                            : "Search and select members for this policy"}
+                                    </div>
+                                    <span className="text-indigo-600 font-bold group-hover:translate-x-0.5 transition-transform">Edit List &rarr;</span>
                                 </div>
+                                <p className="text-[10px] text-slate-400 font-medium px-1">
+                                    Note: Members can only be assigned to one overtime policy at a time.
+                                </p>
                             </div>
                         </div>
                     </div>
 
-                    <DialogFooter className="flex items-center justify-end gap-3 pt-6 border-t border-slate-200">
+                    <DialogFooter className="flex items-center justify-end gap-3 p-2 pt-6 border-t border-slate-100">
                         <Button
-                            variant="outline"
+                            variant="ghost"
                             onClick={() => onOpenChange(false)}
-                            className="px-6 bg-white text-slate-900 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+                            className="px-8 h-12 rounded-xl text-slate-500 font-bold hover:bg-slate-50"
                         >
                             Cancel
                         </Button>
                         <Button
                             onClick={handleSave}
                             disabled={!policyName.trim()}
-                            className="px-6 bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400"
+                            className="px-10 h-12 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-300 shadow-xl shadow-slate-200 transition-all"
                         >
-                            Save
+                            Create Policy
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -234,217 +239,8 @@ export function AddOvertimePolicyDialog({ open, onOpenChange, onSave, initialDat
                 onOpenChange={setIsMemberSelectionOpen}
                 selectedMembers={selectedMembers}
                 onSave={handleMemberSelectionSave}
+                title="Select Policy Members"
             />
         </>
-    )
-}
-
-// Local MemberSelectionModal component
-function MemberSelectionModal({ open, onOpenChange, selectedMembers, onSave }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    selectedMembers: string[];
-    onSave: (members: string[]) => void;
-}) {
-    const [localSelected, setLocalSelected] = useState<string[]>(selectedMembers)
-    const [searchQuery, setSearchQuery] = useState("")
-
-    const [members, setMembers] = useState<{ id: string; name: string }[]>([])
-    const [totalMembers, setTotalMembers] = useState(0)
-    const [isLoading, setIsLoading] = useState(false)
-
-    const [currentPage, setCurrentPage] = useState(1)
-    const ITEMS_PER_PAGE = 10
-
-    // Effect to sync when opening
-    useEffect(() => {
-        if (open) {
-            setLocalSelected(selectedMembers)
-            setSearchQuery("") // Reset search when modal opens
-            setCurrentPage(1) // Reset to first page
-        }
-    }, [open, selectedMembers])
-
-    // Get filtered and paginated dummy members (client-side)
-    useEffect(() => {
-        setIsLoading(true)
-
-        // Filter dummy members based on search query
-        const filtered = DUMMY_MEMBERS.filter(member =>
-            member.name.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-
-        // Calculate pagination
-        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-        const endIndex = startIndex + ITEMS_PER_PAGE
-        const paginated = filtered.slice(startIndex, endIndex)
-
-        // Map to expected format
-        const mapped = paginated.map(m => ({
-            id: m.id,
-            name: m.name
-        }))
-
-        setMembers(mapped)
-        setTotalMembers(filtered.length)
-        setIsLoading(false)
-    }, [searchQuery, currentPage, open])
-
-    // Total pages calculation
-    const totalPages = Math.ceil(totalMembers / ITEMS_PER_PAGE)
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-
-    const handleToggle = (id: string) => {
-        if (localSelected.includes(id)) {
-            setLocalSelected(localSelected.filter(i => i !== id))
-        } else {
-            setLocalSelected([...localSelected, id])
-        }
-    }
-
-    const handleSelectAll = async () => {
-        if (totalMembers > 0 && localSelected.length >= totalMembers) {
-            setLocalSelected([])
-        } else {
-            // Select all filtered members from DUMMY_MEMBERS
-            const filtered = DUMMY_MEMBERS.filter(member =>
-                member.name.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-            const allIds = filtered.map(m => m.id)
-
-            if (searchQuery) {
-                // Union with existing selection
-                const newSet = new Set([...localSelected, ...allIds])
-                setLocalSelected(Array.from(newSet))
-            } else {
-                // Replace with all IDs
-                setLocalSelected(allIds)
-            }
-        }
-    }
-
-    const handleClearAll = () => {
-        setLocalSelected([])
-    }
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px] p-0 gap-0 overflow-hidden flex flex-col h-[85vh]">
-                <DialogHeader className="p-4 pb-2 flex-shrink-0 border-b border-transparent">
-                    <DialogTitle className="text-xl font-semibold">Members</DialogTitle>
-                </DialogHeader>
-
-                <div className="px-4 pb-0">
-                    <div className="flex border-b border-slate-900 w-max">
-                        <button className="px-1 py-2 text-sm font-medium text-slate-900">
-                            MEMBERS
-                        </button>
-                    </div>
-                </div>
-
-                <div className="px-4 pt-3 pb-3 flex-shrink-0">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <Input
-                            value={searchQuery}
-                            onChange={(e) => {
-                                setSearchQuery(e.target.value)
-                                setCurrentPage(1) // Reset to first page on search
-                            }}
-                            placeholder="Search members..."
-                            className="pl-9 bg-white border-slate-200 text-slate-900"
-                        />
-                    </div>
-                </div>
-
-                <div className="flex-1 flex flex-col overflow-hidden">
-                    <div className="px-4 pb-2 flex items-center justify-between flex-shrink-0">
-                        <button
-                            onClick={handleSelectAll}
-                            className="text-sm font-medium text-slate-900 hover:text-slate-700 underline"
-                        >
-                            Select all
-                        </button>
-                        {localSelected.length > 0 && (
-                            <button
-                                onClick={handleClearAll}
-                                className="text-sm font-medium text-slate-900 hover:text-slate-700 underline"
-                            >
-                                Clear all
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto">
-                        <div className="space-y-0 px-4">
-                            {!isLoading && members.length > 0 ? (
-                                members.map((member) => (
-                                    <div key={member.id} className="flex items-center space-x-3 py-2 border-b border-slate-100 last:border-0">
-                                        <Checkbox
-                                            id={`member-${member.id}`}
-                                            checked={localSelected.includes(member.id)}
-                                            onCheckedChange={() => handleToggle(member.id)}
-                                            className="border-slate-300"
-                                        />
-                                        <Label
-                                            htmlFor={`member-${member.id}`}
-                                            className="text-sm text-slate-900 cursor-pointer flex-1"
-                                        >
-                                            {member.name}
-                                        </Label>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="p-4 text-center text-sm text-slate-500">
-                                    No members found
-                                </div>
-                            )}
-                        </div>
-
-                        {totalPages > 1 && (
-                            <div className="p-2 border-t border-slate-100 flex items-center justify-between bg-slate-50">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1 || isLoading}
-                                    className="h-8 px-2 text-xs"
-                                >
-                                    Previous
-                                </Button>
-                                <span className="text-xs text-slate-500">
-                                    Page {currentPage} of {totalPages}
-                                </span>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages || isLoading}
-                                    className="h-8 px-2 text-xs"
-                                >
-                                    Next
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="text-xs text-slate-500 px-4 py-2 flex-shrink-0">
-                        Showing {startIndex + 1}-{Math.min(startIndex + members.length, totalMembers)} of {totalMembers} members
-                    </div>
-                </div>
-
-                <DialogFooter className="p-4 border-t border-slate-100">
-                    <Button
-                        onClick={() => {
-                            onSave(localSelected)
-                            onOpenChange(false)
-                        }}
-                        className="bg-slate-900 hover:bg-slate-800 text-white w-24"
-                    >
-                        Save
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
     )
 }

@@ -1,7 +1,7 @@
 ﻿"use client"
 
 import { useState } from "react"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { ShieldCheck } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { Button } from "@/components/ui/button"
@@ -68,6 +68,7 @@ export default function OvertimePage() {
                 sidebarItems={sidebarItems}
                 activeItemId="overtime"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="overtime">
             {/* Content */}
             <div className="flex flex-1 w-full overflow-hidden">
                 {/* Main Content Area */}
@@ -261,6 +262,8 @@ export default function OvertimePage() {
                     onSave={handleSavePolicy}
                 />
             </div>
-        </div>
+        
+            </SettingsContentLayout>
+</div>
     )
 }

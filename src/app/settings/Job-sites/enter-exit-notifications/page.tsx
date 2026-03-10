@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react"
 import { Info, Search, User } from "lucide-react"
 
 import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { Calendar } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
@@ -71,6 +71,7 @@ export default function EnterExitNotificationsPage() {
                 sidebarItems={sidebarItems}
                 activeItemId="enter-exit-notifications"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="enter-exit-notifications">
 
             {/* Content */}
             <div className="flex flex-1 w-full overflow-hidden">
@@ -186,6 +187,8 @@ export default function EnterExitNotificationsPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        
+            </SettingsContentLayout>
+</div>
     )
 }

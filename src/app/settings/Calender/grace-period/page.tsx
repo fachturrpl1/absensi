@@ -4,7 +4,7 @@ import React, { useState } from "react"
 import { Info, Search, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { Calendar } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
@@ -64,6 +64,7 @@ export default function GracePeriodPage() {
                 sidebarItems={sidebarItems}
                 activeItemId="grace-period"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="grace-period">
 
             {/* Content */}
             <div className="flex flex-1 w-full overflow-hidden">
@@ -168,6 +169,8 @@ export default function GracePeriodPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        
+            </SettingsContentLayout>
+</div>
     )
 }

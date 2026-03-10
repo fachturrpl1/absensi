@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Info, Search, Loader2 } from "lucide-react"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { Activity } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 import { useOrgStore } from "@/store/org-store"
@@ -142,6 +142,7 @@ export default function DataPrivacyPage() {
         sidebarItems={sidebarItems}
         activeItemId="data-privacy"
       />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="data-privacy">
 
       {/* Main Content */}
       <div className="flex flex-1 w-full overflow-hidden">
@@ -316,7 +317,9 @@ export default function DataPrivacyPage() {
           </div>
         </div>
       </div>
-    </div>
+    
+            </SettingsContentLayout>
+</div>
   )
 }
 

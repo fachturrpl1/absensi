@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react"
 import { Calendar, Search, Info, User } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
 
 interface MemberWithAlert {
@@ -77,6 +77,7 @@ export default function ShiftAlertsPage() {
                 sidebarItems={sidebarItems}
                 activeItemId="shift-alerts"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="shift-alerts">
 
             {/* Content */}
             <div className="flex flex-1 w-full overflow-hidden">
@@ -174,6 +175,8 @@ export default function ShiftAlertsPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        
+            </SettingsContentLayout>
+</div>
     )
 }

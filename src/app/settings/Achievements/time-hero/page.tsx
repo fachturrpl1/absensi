@@ -6,14 +6,14 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { useOrgStore } from "@/store/org-store"
-import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
-import { getOrgSettings, upsertOrgSetting, getAllMemberSettings, upsertMemberSetting } from "@/action/organization-settings"
+import { getSettingsMembers, type SettingsMember } from "@/action/settings-members"
+import { getAchievementSettings, upsertAchievementSetting, getAllMemberAchievementSettings } from "@/action/achievement-settings"
 import { SettingsHeader, SettingTab, SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { MemberAvatar } from "@/components/profile&image/MemberAvatar"
 
 export default function TimeHeroPage() {
     const { organizationId } = useOrgStore()
-    const [members, setMembers] = useState<ISimpleMember[]>([])
+    const [members, setMembers] = useState<SettingsMember[]>([])
     const [totalMembers, setTotalMembers] = useState(0)
     const [loading, setLoading] = useState(true)
     const [globalEnabled, setGlobalEnabled] = useState(true)
@@ -33,43 +33,40 @@ export default function TimeHeroPage() {
 
             setLoading(true)
             try {
-                const [membersRes, orgSettingsRes, allMemberSettingsRes] = await Promise.all([
-                    getMembersForScreenshot(
-                        String(organizationId),
-                        { page: currentPage, limit: itemsPerPage },
-                        searchQuery
-                    ),
-                    getOrgSettings(String(organizationId)),
-                    getAllMemberSettings(String(organizationId))
+                const [membersRes, achievementSettingsRes, allMemberSettingsRes] = await Promise.all([
+                    getSettingsMembers(String(organizationId)),
+                    getAchievementSettings(String(organizationId), 'time_hero'),
+                    getAllMemberAchievementSettings(String(organizationId), 'time_hero')
                 ])
 
                 if (membersRes.success && membersRes.data) {
-                    setMembers(membersRes.data)
-                    setTotalMembers(membersRes.total ?? 0)
+                    const filtered = searchQuery
+                        ? membersRes.data.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                        : membersRes.data
+
+                    const start = (currentPage - 1) * itemsPerPage
+                    const paginated = filtered.slice(start, start + itemsPerPage)
+
+                    setMembers(paginated)
+                    setTotalMembers(filtered.length)
                 }
 
-                if (orgSettingsRes.success && orgSettingsRes.data) {
-                    if (orgSettingsRes.data.achievement_timehero_enabled !== undefined) {
-                        setGlobalEnabled(orgSettingsRes.data.achievement_timehero_enabled)
-                    }
-                    if (orgSettingsRes.data.achievement_timehero_goal !== undefined) {
-                        setGlobalWeeklyHoursGoal(orgSettingsRes.data.achievement_timehero_goal)
-                    }
+                if (achievementSettingsRes.success && achievementSettingsRes.data) {
+                    setGlobalEnabled(achievementSettingsRes.data.is_enabled)
+                    setGlobalWeeklyHoursGoal(Number(achievementSettingsRes.data.goal_value))
                 }
 
                 if (allMemberSettingsRes.success && allMemberSettingsRes.data) {
                     const overrides: Record<string, { enabled: boolean, goal: number }> = {}
                     Object.entries(allMemberSettingsRes.data).forEach(([mId, settings]) => {
-                        if (settings.achievement_timehero_enabled !== undefined || settings.achievement_timehero_goal !== undefined) {
-                            overrides[mId] = {
-                                enabled: settings.achievement_timehero_enabled ?? globalEnabled,
-                                goal: settings.achievement_timehero_goal ?? globalWeeklyHoursGoal
-                            }
+                        overrides[mId] = {
+                            enabled: settings.is_enabled,
+                            goal: Number(settings.goal_value)
                         }
                     })
                     setMemberSettings(overrides)
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Failed to load time hero data", err)
             } finally {
                 setLoading(false)
@@ -83,11 +80,14 @@ export default function TimeHeroPage() {
         if (!organizationId) return
         try {
             setLoading(true)
-            await upsertOrgSetting(String(organizationId), {
-                achievement_timehero_enabled: globalEnabled,
-                achievement_timehero_goal: globalWeeklyHoursGoal
+            await upsertAchievementSetting({
+                organization_id: Number(organizationId),
+                achievement_type: 'time_hero',
+                is_enabled: globalEnabled,
+                goal_value: globalWeeklyHoursGoal,
+                organization_member_id: null
             })
-            toast.success("Default settings updated and applied")
+            toast.success("Default settings updated")
         } catch (err) {
             toast.error("Failed to apply settings")
         } finally {
@@ -99,7 +99,13 @@ export default function TimeHeroPage() {
         setGlobalEnabled(val)
         if (!organizationId) return
         try {
-            await upsertOrgSetting(String(organizationId), { achievement_timehero_enabled: val })
+            await upsertAchievementSetting({
+                organization_id: Number(organizationId),
+                achievement_type: 'time_hero',
+                is_enabled: val,
+                goal_value: globalWeeklyHoursGoal,
+                organization_member_id: null
+            })
         } catch (e) {
             console.error(e)
         }
@@ -109,7 +115,13 @@ export default function TimeHeroPage() {
         setGlobalWeeklyHoursGoal(val)
         if (!organizationId) return
         try {
-            await upsertOrgSetting(String(organizationId), { achievement_timehero_goal: val })
+            await upsertAchievementSetting({
+                organization_id: Number(organizationId),
+                achievement_type: 'time_hero',
+                is_enabled: globalEnabled,
+                goal_value: val,
+                organization_member_id: null
+            })
         } catch (e) {
             console.error(e)
         }
@@ -123,7 +135,13 @@ export default function TimeHeroPage() {
         }))
 
         try {
-            await upsertMemberSetting(memberId, { achievement_timehero_enabled: enabled })
+            await upsertAchievementSetting({
+                organization_id: Number(organizationId),
+                achievement_type: 'time_hero',
+                organization_member_id: Number(memberId),
+                is_enabled: enabled,
+                goal_value: goal
+            })
         } catch (e) {
             console.error(e)
         }
@@ -137,7 +155,13 @@ export default function TimeHeroPage() {
         }))
 
         try {
-            await upsertMemberSetting(memberId, { achievement_timehero_goal: goal })
+            await upsertAchievementSetting({
+                organization_id: Number(organizationId),
+                achievement_type: 'time_hero',
+                organization_member_id: Number(memberId),
+                is_enabled: enabled,
+                goal_value: goal
+            })
         } catch (e) {
             console.error(e)
         }
@@ -298,7 +322,7 @@ export default function TimeHeroPage() {
                             <div key={member.id} className="flex flex-col gap-4 sm:grid sm:grid-cols-3 sm:items-center py-4 border-b border-gray-100 last:border-0">
                                 <div className="flex items-center gap-3">
                                     <MemberAvatar
-                                        src={member.avatarUrl}
+                                        src={member.avatar}
                                         name={member.name}
                                         className="w-8 h-8"
                                     />

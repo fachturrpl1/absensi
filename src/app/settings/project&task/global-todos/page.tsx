@@ -4,7 +4,7 @@ import React, { useState } from "react"
 import { Plus, Package } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { SettingsHeader, SettingTab } from "@/components/settings/SettingsHeader"
+import {  SettingsHeader, SettingTab , SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import { Building2 } from "lucide-react"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
 
@@ -40,6 +40,7 @@ export default function GlobalTodosPage() {
                 sidebarItems={sidebarItems}
                 activeItemId="global-todos"
             />
+            <SettingsContentLayout sidebarItems={sidebarItems} activeItemId="global-todos">
 
             {/* Content */}
             <div className="flex flex-1 w-full overflow-hidden">
@@ -97,6 +98,8 @@ export default function GlobalTodosPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        
+            </SettingsContentLayout>
+</div>
     )
 }
