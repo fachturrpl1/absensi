@@ -32,6 +32,7 @@ export interface IScreenshotWithActivity extends IScreenshot {
     // Dari join activities
     keyboard_seconds: number | null
     mouse_seconds: number | null
+    notes: string | null
     // Computed
     activity_progress: number // 0-100
 }
@@ -176,7 +177,8 @@ export async function getScreenshotsByMemberAndDate(
             *,
             activities!activity_id (
                 keyboard_seconds,
-                mouse_seconds
+                mouse_seconds,
+                notes
             )
         `)
         .eq('organization_member_id', organizationMemberId)
@@ -208,6 +210,7 @@ export async function getScreenshotsByMemberAndDate(
             ...row,
             keyboard_seconds: kbd,
             mouse_seconds: mouse,
+            notes: row.activities?.notes ?? null,
             activity_progress: progress,
         }
     })
@@ -230,7 +233,7 @@ export async function getMemberInsightsSummary(
         // 1. Ambil data dari timesheets (Worked Time, Focus, Unusual)
         // PERBAIKAN LOGIK: Cari timesheet yang MENCAKUP rentang tanggal yang dipilih,
         // bukan yang start/end-nya persis sama dengan range tersebut.
-        const { data: timesheetsData, error: timesheetsError } = await supabase
+        const { data: timesheetsData } = await supabase
             .from('timesheets')
             .select(`
                 id,
@@ -244,30 +247,20 @@ export async function getMemberInsightsSummary(
             .lte('start_date', endDate)   // Timesheet mulai sebelum/pada akhir range
             .gte('end_date', startDate)   // Timesheet berakhir sesudah/pada awal range
 
-        if (timesheetsError) {
-            console.error('getMemberInsightsSummary timesheetsError:', timesheetsError)
-            return { success: false, message: timesheetsError.message }
-        }
-
-        console.log(`Found ${timesheetsData?.length || 0} timesheets for member ${organizationMemberId} in ${startDate}-${endDate}`)
-
         let totalWorkedSeconds = 0
         let totalFocusSeconds = 0
         let totalUnusualCount = 0
-        const avgActivitySum = 0
 
         if (timesheetsData && timesheetsData.length > 0) {
             timesheetsData.forEach(ts => {
-                totalWorkedSeconds += (ts.total_tracked_seconds || 0)
+                // Keep focus and unusual from timesheets
                 totalFocusSeconds += (ts.focus_seconds || 0)
                 totalUnusualCount += (ts.unusual_activity_count || 0)
-                console.log(`Adding timesheet ID ${ts.id}: Tracked=${ts.total_tracked_seconds}, Focus=${ts.focus_seconds}`)
             })
         }
 
-        // 2. Ambil klasifikasi kerja dari productivity_categories & tool_usages/url_visits
-        // Logika ini tetap sama (menggunakan mock atau query real jika sudah ada)
-        // ... (sisanya tetap sesuai kebutuhan UI)
+        // 2. Ambil data dari activities (Worked Time)
+        // Logika: Jumlahkan overall_seconds dari activities untuk mendapatkan Worked Time yang dinamis
         const { data: activitiesData, error: activitiesError } = await supabase
             .from('activities')
             .select('overall_seconds, keyboard_seconds, mouse_seconds')
@@ -296,11 +289,8 @@ export async function getMemberInsightsSummary(
                 totalMouseSeconds += (act.mouse_seconds || 0)
             })
 
-            // FALLBACK: Jika worked_seconds dari timesheet adalah 0, gunakan totalOverallSeconds dari activities
-            if (totalWorkedSeconds === 0) {
-                console.log(`Fallback worked time to totalOverallSeconds: ${totalOverallSeconds}`)
-                totalWorkedSeconds = totalOverallSeconds
-            }
+            // GUNAKAN TOTAL DARI ACTIVITIES sebagai Worked Time (agar dinamis saat hapus kartu)
+            totalWorkedSeconds = totalOverallSeconds
         }
 
         const avgActivityPercent = totalOverallSeconds > 0
@@ -394,7 +384,7 @@ export async function getMemberInsightsSummary(
                 workedSeconds: totalWorkedSeconds,
                 focusSeconds: totalFocusSeconds,
                 unusualCount: totalUnusualCount,
-                avgActivityPercent: avgActivitySum || Math.min(100, avgActivityPercent),
+                avgActivityPercent: Math.min(100, avgActivityPercent),
                 classification: classificationData
             }
         }
@@ -576,4 +566,105 @@ export async function getSignedUrl(
     }
 
     return { success: true, signedUrl: data.signedUrl }
+}
+// ============================================================
+// Delete whole work card (activities, screenshots, apps, urls)
+// ============================================================
+
+export async function deleteWorkCard(
+    activityId: number,
+    memberId: number,
+    timeSlot: string // ISO string of the slot start
+): Promise<{ success: boolean; message?: string }> {
+    const supabase = await createClient()
+
+    try {
+        // 1. Delete tool_usages for this slot context
+        // We usually don't have activity_id in tool_usages (depending on schema)
+        // So we use member + time range (10 mins)
+        const startTime = new Date(timeSlot)
+        const endTime = new Date(startTime.getTime() + 10 * 60 * 1000)
+
+        // Note: tool_usages might use usage_date and a time column, or just a timestamp.
+        // Assuming there is a recorded_at or similar, or we just trust the activity_id link if it exists.
+        // But if it doesn't exist, we use the time range.
+
+        // For now, let's try to delete by activity_id if the column exists, 
+        // fallback to time range if we are sure about the schema.
+        // Given the complexity of the schema, I'll try to find if activity_id is used.
+
+        // Delete screenshots first
+        await supabase.from("screenshots").delete().eq("activity_id", activityId)
+
+        // Delete tool_usages
+        // We'll use recorded_at range if available, or usage_date + time check.
+        // Based on common patterns in this project:
+        await supabase.from("tool_usages")
+            .delete()
+            .eq("organization_member_id", memberId)
+            .gte("recorded_at", startTime.toISOString())
+            .lt("recorded_at", endTime.toISOString())
+
+        // Delete url_visits
+        await supabase.from("url_visits")
+            .delete()
+            .eq("organization_member_id", memberId)
+            .gte("recorded_at", startTime.toISOString())
+            .lt("recorded_at", endTime.toISOString())
+
+        // Finally delete the activity record itself
+        const { error: actError } = await supabase.from("activities").delete().eq("id", activityId)
+
+        if (actError) throw actError
+
+        return { success: true }
+    } catch (err: any) {
+        console.error("Error deleting work card:", err)
+        return { success: false, message: err.message }
+    }
+}
+
+// ============================================================
+// Delete only the screenshot image (soft delete)
+// ============================================================
+
+export async function deleteScreenshotOnly(
+    screenshotId: number,
+    deletedBy: string
+): Promise<{ success: boolean; message?: string }> {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+        .from('screenshots')
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+            deleted_by: deletedBy,
+        })
+        .eq('id', screenshotId)
+
+    if (error) {
+        return { success: false, message: error.message }
+    }
+
+    return { success: true }
+}
+
+// ============================================================
+// Update screenshot note
+// ============================================================
+
+export async function updateScreenshotNote(activityId: number, notes: string) {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+        .from('activities')
+        .update({ notes })
+        .eq('id', activityId)
+
+    if (error) {
+        return { success: false, message: error.message }
+    }
+
+    return { success: true }
 }

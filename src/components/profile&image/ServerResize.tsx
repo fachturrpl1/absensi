@@ -23,7 +23,7 @@ export default function ServerResize({ compressedFile, originalSize, onresized }
             const formData = new FormData();
             formData.append("file", compressedFile);
 
-            const response = await fetch("/api/server-resize", {
+            const response = await fetch("/api/comprees-image/server-resize", {
                 method: "POST",
                 body: formData,
             });

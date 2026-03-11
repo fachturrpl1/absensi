@@ -1,6 +1,6 @@
 "use client"
 
-import { BlurProvider } from "./blur-context"
+import { BlurProvider } from "@/hooks/screenshot/use-blur-settings"
 
 export default function ScreenshotLayout({
     children,
