@@ -126,7 +126,7 @@ export function SignUp() {
             </FormItem>
           )}
         />
-       
+
         <FormField
           control={form.control}
           name="last_name"
@@ -160,7 +160,7 @@ export function SignUp() {
             <FormItem>
               <FormLabel>Password</FormLabel>
               <FormControl>
-                <Input id="password" type="password" placeholder="••••••••" autoComplete="new-password" {...field} />
+                <Input id="password" type="password" placeholder="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½" autoComplete="new-password" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -176,7 +176,7 @@ export function SignUp() {
                 <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"
                   autoComplete="new-password"
                   {...field}
                 />

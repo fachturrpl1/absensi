@@ -442,14 +442,14 @@ export function AccountForm({ initialData }: AccountFormProps) {
                 {/* Stats */}
                 <div className="grid grid-cols-3 w-full divide-x divide-border border rounded-lg overflow-hidden">
                   <div className="py-3 text-center">
-                    <p className="text-base font-bold">{initialData.organizationMember?.employee_id ? "?" : "—"}</p>
+                    <p className="text-base font-bold">{initialData.organizationMember?.employee_id ? "?" : "ï¿½"}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">Employee</p>
                   </div>
                   <div className="py-3 text-center">
                     <p className="text-base font-bold">
                       {initialData.organizationMember?.departments?.name
                         ? initialData.organizationMember.departments.name.slice(0, 4)
-                        : "—"}
+                        : "ï¿½"}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">Dept</p>
                   </div>
@@ -457,7 +457,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                     <p className="text-base font-bold capitalize">
                       {initialData.organizationMember?.employment_status
                         ? initialData.organizationMember.employment_status.slice(0, 3)
-                        : "—"}
+                        : "ï¿½"}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">Status</p>
                   </div>
@@ -584,27 +584,27 @@ export function AccountForm({ initialData }: AccountFormProps) {
                     <div className="grid grid-cols-2 gap-6">
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Employee Code</p>
-                        <p className="text-sm font-medium">{initialData.user.employee_code || "—"}</p>
+                        <p className="text-sm font-medium">{initialData.user.employee_code || "ï¿½"}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Email Address</p>
-                        <p className="text-sm font-medium truncate" title={initialData.user.email || ""}>{initialData.user.email || "—"}</p>
+                        <p className="text-sm font-medium truncate" title={initialData.user.email || ""}>{initialData.user.email || "ï¿½"}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">First Name</p>
-                        <p className="text-sm font-medium">{initialData.user.first_name || "—"}</p>
+                        <p className="text-sm font-medium">{initialData.user.first_name || "ï¿½"}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Last Name</p>
-                        <p className="text-sm font-medium">{initialData.user.last_name || "—"}</p>
+                        <p className="text-sm font-medium">{initialData.user.last_name || "ï¿½"}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Display Name</p>
-                        <p className="text-sm font-medium">{initialData.user.display_name || "—"}</p>
+                        <p className="text-sm font-medium">{initialData.user.display_name || "ï¿½"}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Phone Number</p>
-                        <p className="text-sm font-medium">{initialData.user.phone || "—"}</p>
+                        <p className="text-sm font-medium">{initialData.user.phone || "ï¿½"}</p>
                       </div>
                     </div>
                   </TabsContent>
@@ -618,22 +618,22 @@ export function AccountForm({ initialData }: AccountFormProps) {
                             ? new Date(initialData.user.date_of_birth).toLocaleDateString('id-ID', {
                               year: 'numeric', month: 'long', day: 'numeric',
                             })
-                            : "—"}
+                            : "ï¿½"}
                         </p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Gender</p>
                         <p className="text-sm font-medium capitalize">
-                          {initialData.user.gender?.replace(/_/g, ' ') || "—"}
+                          {initialData.user.gender?.replace(/_/g, ' ') || "ï¿½"}
                         </p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Nationality</p>
-                        <p className="text-sm font-medium">{initialData.user.nationality || "—"}</p>
+                        <p className="text-sm font-medium">{initialData.user.nationality || "ï¿½"}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">National ID</p>
-                        <p className="text-sm font-medium">{initialData.user.national_id || "—"}</p>
+                        <p className="text-sm font-medium">{initialData.user.national_id || "ï¿½"}</p>
                       </div>
 
                       <div className="col-span-2 pt-2 border-t mt-2">
@@ -641,15 +641,15 @@ export function AccountForm({ initialData }: AccountFormProps) {
                         <div className="grid grid-cols-2 gap-6">
                           <div className="space-y-1">
                             <p className="text-xs text-muted-foreground">Name</p>
-                            <p className="text-sm font-medium">{initialData.user.emergency_contact?.name || "—"}</p>
+                            <p className="text-sm font-medium">{initialData.user.emergency_contact?.name || "ï¿½"}</p>
                           </div>
                           <div className="space-y-1">
                             <p className="text-xs text-muted-foreground">Relationship</p>
-                            <p className="text-sm font-medium">{initialData.user.emergency_contact?.relationship || "—"}</p>
+                            <p className="text-sm font-medium">{initialData.user.emergency_contact?.relationship || "ï¿½"}</p>
                           </div>
                           <div className="space-y-1 col-span-2">
                             <p className="text-xs text-muted-foreground">Phone</p>
-                            <p className="text-sm font-medium">{initialData.user.emergency_contact?.phone || "—"}</p>
+                            <p className="text-sm font-medium">{initialData.user.emergency_contact?.phone || "ï¿½"}</p>
                           </div>
                         </div>
                       </div>
@@ -707,7 +707,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                     <div className="mt-0.5 shrink-0">{item.icon}</div>
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">{item.label}</p>
-                      <p className="text-sm font-medium truncate">{item.value || "—"}</p>
+                      <p className="text-sm font-medium truncate">{item.value || "ï¿½"}</p>
                     </div>
                   </div>
                 ))}
@@ -810,14 +810,14 @@ export function AccountForm({ initialData }: AccountFormProps) {
                 {/* Stats */}
                 <div className="grid grid-cols-3 w-full divide-x divide-border border rounded-lg overflow-hidden">
                   <div className="py-3 text-center">
-                    <p className="text-base font-bold">{initialData.organizationMember?.employee_id ? "?" : "—"}</p>
+                    <p className="text-base font-bold">{initialData.organizationMember?.employee_id ? "?" : "ï¿½"}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">Employee</p>
                   </div>
                   <div className="py-3 text-center">
                     <p className="text-base font-bold">
                       {initialData.organizationMember?.departments?.name
                         ? initialData.organizationMember.departments.name.slice(0, 4)
-                        : "—"}
+                        : "ï¿½"}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">Dept</p>
                   </div>
@@ -825,7 +825,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                     <p className="text-base font-bold capitalize">
                       {initialData.organizationMember?.employment_status
                         ? initialData.organizationMember.employment_status.slice(0, 3)
-                        : "—"}
+                        : "ï¿½"}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">Status</p>
                   </div>

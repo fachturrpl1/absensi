@@ -99,7 +99,7 @@ export function useProfilePhotoUrl(profilePhotoUrl?: string, userId?: string) {
       return undefined
     }
 
-    // New uploads store the full public URL — use as-is
+    // New uploads store the full public URL â€” use as-is
     if (profilePhotoUrl.startsWith('http')) {
       return profilePhotoUrl
     }
@@ -189,3 +189,4 @@ export function useProfilePhotoDelete() {
 
   return { deleteProfilePhoto }
 }
+
