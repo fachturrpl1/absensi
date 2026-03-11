@@ -6,7 +6,6 @@ import { useOrgStore } from "@/store/org-store"
 import { formatInTimeZone } from "date-fns-tz"
 import type { GetAttendanceResult, AttendanceListItem } from "@/action/attendance"
 import Link from "next/link"
-import { CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/utils/supabase/client"
 import { Input } from "@/components/ui/input"
@@ -626,7 +625,7 @@ function ModernAttendanceListCloned() {
                     <SelectItem value="present">Present</SelectItem>
                     <SelectItem value="late">Late</SelectItem>
                     <SelectItem value="absent">Absent</SelectItem>
-                    <SelectItem value="leave">On Leave</SelectItem>
+                    <SelectItem value="excused">Excused</SelectItem>
                   </SelectContent>
                 </Select>
               ) : (
@@ -675,7 +674,7 @@ function ModernAttendanceListCloned() {
               </Button>
             </Link>
 
-            <Link href="/attendance/list/add" className="flex-1 md:flex-none">
+            <Link href="/attendance/add" className="flex-1 md:flex-none">
               <Button className="w-full bg-zinc-900 text-zinc-50 hover:bg-zinc-900/90 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-50/90 whitespace-nowrap">
                 <Plus className="mr-2 h-4 w-4" />
                 Entry
@@ -725,9 +724,7 @@ function ModernAttendanceListCloned() {
       </div>
 
       {/* Table */}
-      <div className="">
-        <div>
-          <CardContent className="p-0">
+      <div>
             <div className="overflow-x-auto w-full">
               <table className="w-full min-w-[880px]">
                 <thead className="sticky top-0 z-10 bg-muted/50">
@@ -794,8 +791,6 @@ function ModernAttendanceListCloned() {
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </div>
 
         {/* Pagination */}
         {!loading && data.total > queryParams.limit && (

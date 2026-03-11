@@ -94,11 +94,10 @@ export function OrgBreadcrumb() {
     '/attendance/locations': 'Locations',
     '/attendance/devices': 'Devices',
     '/analytics': 'Analytics',
-    '/attendance/list/add': 'Add',
 
     // Schedules
     '/schedule': 'Schedules',
-    '/member-schedules': 'Member Schedules',
+    '/schedule/member': 'Member Schedules',
 
     // Organization
     '/members': 'Members',
@@ -122,13 +121,12 @@ export function OrgBreadcrumb() {
   // Parent mapping untuk nested pages
   const parentMapping: Record<string, string> = {
     '/attendance/list': '/attendance',
-    '/attendance/list/add': '/attendance/list',
     '/attendance/add': '/attendance',
     '/attendance/locations': '/attendance',
     '/attendance/devices': '/attendance',
     '/analytics': '/attendance',
     '/group/move': '/group',
-    '/member-schedules': '/schedule',
+    '/schedule/member': '/schedule',
   }
 
   const buildBreadcrumbs = (): BreadcrumbItem[] => {
