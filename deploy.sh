@@ -1,5 +1,5 @@
 #!/bin/bash
-set -uo pipefail
+set -euo pipefail
 
 ################################
 # LOCK (ANTI DEPLOY BARENGAN)
@@ -21,6 +21,8 @@ PROJECT_PATH="/www/wwwroot/absensi"
 SSH_KEY="/root/.ssh/id_ed25519_fachtur"
 GIT_REMOTE="git@fachtur:fachturscompany/absensi.git"
 BRANCH="main"
+
+LOG_FILE="/tmp/deploy_absensi.log"
 
 ################################
 # TELEGRAM
@@ -49,8 +51,10 @@ send_telegram() {
     text+="<b>Commit:</b> <code>$commit_hash</code>%0A"
     text+="<code>$commit_msg</code>"
 
-    curl -s --max-time 10 -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
-        -d "chat_id=$CHAT_ID&parse_mode=html&text=$text" >/dev/null 2>&1 || true
+    curl -s --max-time 10 -X POST \
+        "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+        -d "chat_id=$CHAT_ID&parse_mode=html&text=$text" \
+        >/dev/null 2>&1 || true
 
     set -e
 }
@@ -60,37 +64,63 @@ send_telegram() {
 ################################
 deploy() {
 
+    echo "===== DEPLOY $(date) =====" >> "$LOG_FILE"
+
     cd "$PROJECT_PATH"
 
+    ################################
+    # SSH KEY ROOT TANPA PASSWORD
+    ################################
+
     chmod 600 "$SSH_KEY"
-    export GIT_SSH_COMMAND="ssh -i $SSH_KEY -o StrictHostKeyChecking=no"
+
+    export GIT_SSH_COMMAND="ssh -i $SSH_KEY -o StrictHostKeyChecking=no -o PasswordAuthentication=no"
+
+    ################################
+    # GIT CONFIG
+    ################################
 
     git config --global --add safe.directory "$PROJECT_PATH"
+
     git remote set-url origin "$GIT_REMOTE"
 
-    echo "Pulling latest code..."
+    echo "Pulling latest code..." >> "$LOG_FILE"
 
     git fetch origin "$BRANCH"
+
     git reset --hard "origin/$BRANCH"
 
-    echo "Installing dependencies..."
+    ################################
+    # INSTALL DEPENDENCIES
+    ################################
 
-    npm install
+    echo "Installing dependencies..." >> "$LOG_FILE"
 
-    echo "Building Next.js..."
+    npm install >> "$LOG_FILE" 2>&1
 
-    npm run build
+    ################################
+    # BUILD NEXTJS
+    ################################
 
-    echo "Restarting Node App..."
+    echo "Building Next.js..." >> "$LOG_FILE"
+
+    npm run build >> "$LOG_FILE" 2>&1
+
+    ################################
+    # RESTART APP
+    ################################
+
+    echo "Restarting Node App..." >> "$LOG_FILE"
 
     pkill -f "next start" || true
 
-    nohup npm start > /dev/null 2>&1 &
+    nohup npm start >> "$LOG_FILE" 2>&1 &
 }
 
 ################################
 # RUN
 ################################
+
 ERROR_MSG=""
 
 if deploy; then
