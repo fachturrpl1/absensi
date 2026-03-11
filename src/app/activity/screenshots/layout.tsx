@@ -8,11 +8,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { DownloadDialog } from "@/components/activity/DownloadDialog"
-import { SelectedMemberProvider } from "./selected-member-context"
+import { SelectedMemberProvider } from "@/hooks/screenshot/use-selected-member"
 import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { DateRange, SelectedFilter } from "@/components/insights/types"
 import { useTimezone } from "@/components/providers/timezone-provider"
-import { BlurProvider } from "@/app/settings/screenshot/blur-context"
+import { BlurProvider } from "@/hooks/screenshot/use-blur-settings"
 import { getMembersForScreenshot, type ISimpleMember } from "@/action/screenshots"
 import { useOrgStore } from "@/store/org-store"
 

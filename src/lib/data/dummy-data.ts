@@ -1607,6 +1607,9 @@ export interface MemberScreenshotItem {
     noActivity?: boolean
     seconds?: boolean
     screenCount?: number
+    activityId?: number
+    notes?: string
+    rawTimeSlot?: string
 }
 
 export interface MemberInsightSummary {

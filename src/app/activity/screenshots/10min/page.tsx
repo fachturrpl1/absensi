@@ -17,10 +17,21 @@ import {
 import {
   getScreenshotsByMemberAndDate,
   getMemberInsightsSummary,
+  updateScreenshotNote,
+  deleteWorkCard,
+  deleteScreenshotOnly,
   type IScreenshotWithActivity
 } from "@/action/screenshots"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 import { formatDateLocal } from "@/utils/date-helper"
-import { useSelectedMemberContext } from "../selected-member-context"
+import { useSelectedMemberContext } from "@/hooks/screenshot/use-selected-member"
 import { MemberScreenshotCard } from "@/components/activity/MemberScreenshotCard"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ScreenshotCardSkeleton } from "@/components/activity/ScreenshotCardSkeleton"
@@ -50,17 +61,10 @@ const parseTimeForSort = (timeStr: string): number => {
   return hours * 60 + minutes // Return total minutes for easy comparison
 }
 
-const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => {
+const buildMemberTimeBlocks = (items: MemberScreenshotItem[]) => {
   if (!items.length) {
     return []
   }
-
-  // Sort items by time
-  const sorted = [...items].sort((a, b) => {
-    const timeA = parseTimeForSort(a.time)
-    const timeB = parseTimeForSort(b.time)
-    return timeA - timeB
-  })
 
   const formatDuration = (totalMinutes: number) => {
     const hours = Math.floor(totalMinutes / 60)
@@ -68,8 +72,6 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
     if (hours === 0) return `${minutes}m`
     return `${hours}h ${minutes.toString().padStart(2, "0")}m`
   }
-
-
 
   const formatTimeFromHoursMinutes = (hours: number, minutes: number): string => {
     let displayHours = hours
@@ -82,69 +84,57 @@ const buildMemberTimeBlocks = (items: MemberScreenshotItem[], chunkSize = 6) => 
     return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`
   }
 
-  const blocks = []
-  let currentChunk: MemberScreenshotItem[] = []
-  let startMinutes: number | null = null
-
-  for (let i = 0; i < sorted.length; i++) {
-    const item = sorted[i]
-    if (!item) continue
-
-    const itemMinutes = parseTimeForSort(item.time)
-
-    // Start a new block if:
-    // 1. No block is started
-    // 2. Current block has 6 items (Hubstaff grid is usually 6 wide)
-    // 3. Current item's time is outside the 60-minute window of the block's start
-    if (startMinutes === null || currentChunk.length >= chunkSize || itemMinutes >= startMinutes + 60) {
-      if (currentChunk.length > 0 && startMinutes !== null) {
-        // Finalize previous chunk
-        blocks.push(finalizeBlock(currentChunk, startMinutes))
-      }
-      currentChunk = [item]
-      startMinutes = itemMinutes
-    } else {
-      currentChunk.push(item)
+  // Group items by their beginning-of-hour timestamp (total minutes from midnight)
+  const hourGroups = new Map<number, MemberScreenshotItem[]>()
+  items.forEach(item => {
+    const totalMinutes = parseTimeForSort(item.time)
+    const hourStartMinutes = Math.floor(totalMinutes / 60) * 60
+    if (!hourGroups.has(hourStartMinutes)) {
+      hourGroups.set(hourStartMinutes, [])
     }
-  }
+    hourGroups.get(hourStartMinutes)!.push(item)
+  })
 
-  // Finalize the last chunk
-  if (currentChunk.length > 0 && startMinutes !== null) {
-    blocks.push(finalizeBlock(currentChunk, startMinutes))
-  }
+  // Sort hour starts to process them chronologically
+  const sortedHourStarts = Array.from(hourGroups.keys()).sort((a, b) => a - b)
 
-  function finalizeBlock(chunk: MemberScreenshotItem[], blockStartMins: number) {
-    const totalMinutes = chunk.reduce((sum, item) => sum + (item.minutes ?? 0), 0)
-    const summary = `Total time worked: ${formatDuration(totalMinutes)}`
+  const blocks = sortedHourStarts.map(hourStart => {
+    const groupItems = hourGroups.get(hourStart)!
 
-    // Create labels
-    const startMinsPart = blockStartMins % 60
-    const startHoursPart = Math.floor(blockStartMins / 60)
+    // Total worked minutes within this hour group
+    const totalMinutesWorked = groupItems.reduce((sum, item) => sum + (item.minutes ?? 0), 0)
+    const summary = `Total time worked: ${formatDuration(totalMinutesWorked)}`
 
-    const startTimeFormatted = formatTimeFromHoursMinutes(startHoursPart, startMinsPart)
-
-    let endHours = startHoursPart + 1
-    if (endHours >= 24) endHours -= 24
-    const endTimeFormatted = formatTimeFromHoursMinutes(endHours, startMinsPart)
-
+    // Generate label for the fixed hour block (e.g., 2:00 pm - 3:00 pm)
+    const startHour = Math.floor(hourStart / 60)
+    const startTimeFormatted = formatTimeFromHoursMinutes(startHour, 0)
+    const endHour = (startHour + 1) % 24
+    const endTimeFormatted = formatTimeFromHoursMinutes(endHour, 0)
     const label = `${startTimeFormatted} - ${endTimeFormatted}`
 
-    // Pad chunk to 6 items
-    const paddedChunk = [...chunk]
-    while (paddedChunk.length < chunkSize) {
-      paddedChunk.push({
-        id: `placeholder-${blockStartMins}-${paddedChunk.length}`,
-        time: "",
-        progress: 0,
-        minutes: 0,
-        image: "",
-        noActivity: true,
-        screenCount: 0
-      })
-    }
+    // Initialize 6 fixed slots for the 10-minute segments
+    const slots: MemberScreenshotItem[] = Array.from({ length: 6 }, (_, i) => ({
+      id: `placeholder-${hourStart}-${i}`,
+      time: "",
+      progress: 0,
+      minutes: 0,
+      image: "",
+      noActivity: true,
+      screenCount: 0
+    }))
 
-    return { label, summary, items: paddedChunk }
-  }
+    // Place each screenshot in its corresponding slot based on its minutes within the hour
+    groupItems.forEach(item => {
+      const itemMinutes = parseTimeForSort(item.time)
+      const minutesInHour = itemMinutes % 60
+      const slotIndex = Math.floor(minutesInHour / 10)
+      if (slotIndex >= 0 && slotIndex < 6) {
+        slots[slotIndex] = item
+      }
+    })
+
+    return { label, summary, items: slots }
+  })
 
   return blocks
 }
@@ -159,10 +149,12 @@ export default function Every10MinPage() {
   const [modalIndex, setModalIndex] = useState(0)
   const [isMounted, setIsMounted] = useState(false)
   // State untuk menyimpan daftar screenshot yang dihapus (berdasarkan item.id)
-  const [deletedScreenshots, setDeletedScreenshots] = useState<Set<string>>(new Set())
+  const [deletedScreenshots] = useState<Set<string>>(new Set())
   // State untuk dialog konfirmasi hapus
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [screenshotToDelete, setScreenshotToDelete] = useState<string | null>(null)
+  const [targetItem, setTargetItem] = useState<MemberScreenshotItem | null>(null)
+  const [deleteType, setDeleteType] = useState<'card' | 'image'>('card')
+  const [isDeleting, setIsDeleting] = useState(false)
   // State permission delete
   const [canDelete, setCanDelete] = useState(true)
 
@@ -190,6 +182,12 @@ export default function Every10MinPage() {
     }
   } | null>(null)
 
+  // State untuk Note Dialog
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false)
+  const [noteValue, setNoteValue] = useState("")
+  const [targetActivityId, setTargetActivityId] = useState<number | null>(null)
+  const [isSavingNote, setIsSavingNote] = useState(false)
+
 
   // Helper: map DB row -> MemberScreenshotItem
   const mapDbToItem = (s: IScreenshotWithActivity): MemberScreenshotItem => {
@@ -208,9 +206,12 @@ export default function Every10MinPage() {
       time: `${fmt(timeSlot)} - ${fmt(timeSlotEnd)}`,
       progress: s.activity_progress,
       minutes: 10,
-      image: s.thumb_url ?? s.full_url,
+      image: s.thumb_url ?? s.full_url ?? "",
       screenCount: s.screen_number,
       noActivity: false,
+      notes: s.notes ?? undefined,
+      activityId: s.activity_id ?? undefined,
+      rawTimeSlot: s.time_slot ?? undefined,
     }
   }
 
@@ -242,6 +243,40 @@ export default function Every10MinPage() {
     setIsLoading(false)
     isFirstMount.current = false
   }, [activeMemberId, dateRange.startDate, dateRange.endDate])
+
+  // Handler Note Dialog
+  const handleOpenNoteDialog = (item: MemberScreenshotItem) => {
+    if (!item.activityId) {
+      toast.error("Tidak ada activity ID untuk screenshot ini")
+      return
+    }
+    setTargetActivityId(item.activityId)
+    setNoteValue(item.notes || "")
+    setNoteDialogOpen(true)
+  }
+
+  const handleSaveNote = async () => {
+    if (targetActivityId === null) return
+
+    setIsSavingNote(true)
+    try {
+      const res = await updateScreenshotNote(targetActivityId, noteValue)
+      if (res.success) {
+        toast.success("Catatan berhasil disimpan")
+        fetchScreenshots() // Refresh data
+        setNoteDialogOpen(false)
+      } else {
+        toast.error("Gagal menyimpan catatan", {
+          description: res.message
+        })
+      }
+    } catch (err) {
+      console.error("Error saving note:", err)
+      toast.error("Terjadi kesalahan saat menyimpan catatan")
+    } finally {
+      setIsSavingNote(false)
+    }
+  }
 
   // Fetch member insights
   const fetchMemberInsights = useCallback(async () => {
@@ -304,8 +339,7 @@ export default function Every10MinPage() {
     let blocks: Array<{ label: string; summary: string; items: MemberScreenshotItem[] }> = []
 
     if (dateStatus.isYesterday) {
-      const filteredItems = baseItems.slice(0, Math.min(6, baseItems.length))
-      blocks = buildMemberTimeBlocks(filteredItems, 6)
+      blocks = buildMemberTimeBlocks(baseItems)
     } else if (dateStatus.isRange && dateRange) {
       // Grupkan berdasarkan screenshot_date dari DB
       const groupedByDate = new Map<string, MemberScreenshotItem[]>()
@@ -320,7 +354,7 @@ export default function Every10MinPage() {
       groupedByDate.forEach((items, dateKey) => {
         const dateObj = new Date(dateKey)
         const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-        let dayBlocks = buildMemberTimeBlocks(items, 6)
+        let dayBlocks = buildMemberTimeBlocks(items)
         if (!sortAscending) dayBlocks = [...dayBlocks].reverse()
         if (dayBlocks.length > 0) {
           dateGroupedBlocks.push({ date: dateKey, dateLabel, blocks: dayBlocks })
@@ -329,7 +363,7 @@ export default function Every10MinPage() {
 
       return dateGroupedBlocks as unknown as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>
     } else {
-      blocks = buildMemberTimeBlocks(baseItems, 6)
+      blocks = buildMemberTimeBlocks(baseItems)
     }
 
     if (!sortAscending) blocks = [...blocks].reverse()
@@ -348,7 +382,7 @@ export default function Every10MinPage() {
     } else {
       allItems = (memberTimeBlocks as Array<{ label: string; summary: string; items: MemberScreenshotItem[] }>).flatMap((block) => block.items)
     }
-    return allItems.filter(item => !deletedScreenshots.has(item.id))
+    return allItems.filter(item => !deletedScreenshots.has(item.id) && !(item.noActivity && !item.time))
   }, [memberTimeBlocks, dateStatus, deletedScreenshots])
 
   const currentScreenshot = flattenedScreenshots[modalIndex]
@@ -435,20 +469,58 @@ export default function Every10MinPage() {
   }
 
   // Handler untuk membuka dialog konfirmasi hapus
-  const handleDeleteClick = (screenshotId: string) => {
-    setScreenshotToDelete(screenshotId)
+  const handleDeleteClick = (item: MemberScreenshotItem, type: 'card' | 'image') => {
+    setTargetItem(item)
+    setDeleteType(type)
     setDeleteConfirmOpen(true)
   }
 
   // Handler untuk konfirmasi hapus
-  const handleConfirmDelete = () => {
-    if (screenshotToDelete) {
-      setDeletedScreenshots((prev) => new Set(prev).add(screenshotToDelete))
-      // Close modal if the deleted screenshot was the one currently open
-      if (currentScreenshot?.id === screenshotToDelete) {
-        setModalOpen(false)
+  const handleConfirmDelete = async () => {
+    if (!targetItem) return
+
+    setIsDeleting(true)
+    try {
+      if (deleteType === 'card') {
+        if (!targetItem.activityId) {
+          toast.error("Activity ID tidak ditemukan")
+          return
+        }
+        const res = await deleteWorkCard(
+          targetItem.activityId,
+          Number(activeMemberId),
+          targetItem.rawTimeSlot!
+        )
+        if (res.success) {
+          toast.success("Kartu kerja berhasil dihapus")
+          fetchScreenshots()
+          fetchMemberInsights()
+          if (modalOpen && currentScreenshot?.id === targetItem.id) {
+            setModalOpen(false)
+          }
+        } else {
+          toast.error("Gagal menghapus kartu kerja")
+        }
+      } else {
+        // Hapus screenshot saja
+        const res = await deleteScreenshotOnly(Number(targetItem.id), "User")
+        if (res.success) {
+          toast.success("Gambar screenshot berhasil dihapus")
+          fetchScreenshots()
+          if (modalOpen && currentScreenshot?.id === targetItem.id) {
+            setModalOpen(false)
+          }
+        } else {
+          toast.error("Gagal menghapus screenshot")
+        }
       }
-      setScreenshotToDelete(null)
+    } catch (err) {
+      console.error("Error during deletion:", err)
+      toast.error("Terjadi kesalahan sistem")
+    } finally {
+      setIsDeleting(false)
+      setDeleteConfirmOpen(false)
+      setTargetItem(null)
     }
   }
 
@@ -1039,9 +1111,11 @@ export default function Every10MinPage() {
                             key={item.id}
                             item={item}
                             onImageClick={() => openModal(globalIndex)}
-                            onDelete={() => handleDeleteClick(item.id)}
+                            onDelete={() => handleDeleteClick(item, 'card')}
+                            onDeleteImage={() => handleDeleteClick(item, 'image')}
                             isDeleted={isDeleted}
                             memberId={activeMemberId || undefined}
+                            onAddNote={() => handleOpenNoteDialog(item)}
                           />
                         )
                       })}
@@ -1086,9 +1160,11 @@ export default function Every10MinPage() {
                         key={item.id}
                         item={item}
                         onImageClick={() => openModal(globalIndex)}
-                        onDelete={canDelete ? () => handleDeleteClick(item.id) : undefined}
+                        onDelete={canDelete ? () => handleDeleteClick(item, 'card') : undefined}
+                        onDeleteImage={canDelete ? () => handleDeleteClick(item, 'image') : undefined}
                         isDeleted={isDeleted}
                         memberId={activeMemberId || undefined}
+                        onAddNote={() => handleOpenNoteDialog(item)}
                       />
                     )
                   })}
@@ -1197,12 +1273,40 @@ export default function Every10MinPage() {
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
         onConfirm={handleConfirmDelete}
-        title="Hapus Screenshot"
-        description="Apakah anda yakin ingin menghapusnya?"
-        confirmText="Hapus"
+        title={deleteType === 'card' ? "Hapus Kartu Kerja" : "Hapus Gambar Screenshot"}
+        description={deleteType === 'card'
+          ? "Apakah Anda yakin ingin menghapus seluruh data pada jam ini?"
+          : "Apakah Anda yakin ingin menghapus gambar screenshot ini saja? Riwayat aktivitas lainnya akan tetap ada."
+        }
+        confirmText={isDeleting ? "Menghapus..." : "Hapus"}
         cancelText="Batal"
         destructive={true}
       />
+
+      {/* Note Dialog */}
+      <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Catatan Screenshot</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Textarea
+              placeholder="Tambahkan catatan untuk aktivitas ini..."
+              value={noteValue}
+              onChange={(e) => setNoteValue(e.target.value)}
+              className="min-h-[150px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNoteDialogOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={handleSaveNote} disabled={isSavingNote}>
+              {isSavingNote ? "Menyimpan..." : "Simpan Catatan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
