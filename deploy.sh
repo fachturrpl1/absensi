@@ -12,8 +12,8 @@ flock -n 9 || exit 0
 ################################
 # KONFIGURASI
 ################################
-BOT_TOKEN="8502393105:AAFYm1KHBD-NouXXUqgIjlousB1BzJTTtro"
-CHAT_ID="5752910816"
+BOT_TOKEN="8774969455:AAEsY6a1Skn8NL3S4fMTbJY0M5RCHEEWIgA"
+CHAT_ID="8317411685"
 
 PROJECT_NAME="Project Absensi Web"
 PROJECT_PATH="/www/wwwroot/absensi"
