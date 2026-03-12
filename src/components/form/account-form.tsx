@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import NextLink from "next/link";
@@ -343,7 +343,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
         key={Date.now()}
       />
 
-      {/* ── PAGE HEADER ── */}
+      {/* -- PAGE HEADER -- */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <h1 className="text-2xl font-bold">Profile Page</h1>
         <Button variant="outline" size="sm" asChild>
@@ -354,7 +354,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
         </Button>
       </div>
 
-      {/* ── MAIN TABS ── */}
+      {/* -- MAIN TABS -- */}
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="mb-6 border-b rounded-none bg-transparent h-auto p-0 gap-0 w-full overflow-x-auto justify-start scrollbar-hide">
           <TabsTrigger
@@ -387,14 +387,14 @@ export function AccountForm({ initialData }: AccountFormProps) {
           </TabsTrigger>
         </TabsList>
 
-        {/* ══════════════════════════
+        {/* --------------------------
             TAB: OVERVIEW
-            ══════════════════════════ */}
+            -------------------------- */}
         <TabsContent value="overview" className="space-y-6">
           {/* Row 1: Profile card + Latest Activity */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-            {/* ── Left: Profile Card ── */}
+            {/* -- Left: Profile Card -- */}
             <Card className="md:col-span-1">
               <CardContent className="pt-6 flex flex-col items-center text-center space-y-4">
                 {/* Avatar */}
@@ -442,14 +442,14 @@ export function AccountForm({ initialData }: AccountFormProps) {
                 {/* Stats */}
                 <div className="grid grid-cols-3 w-full divide-x divide-border border rounded-lg overflow-hidden">
                   <div className="py-3 text-center">
-                    <p className="text-base font-bold">{initialData.organizationMember?.employee_id ? "✓" : "—"}</p>
+                    <p className="text-base font-bold">{initialData.organizationMember?.employee_id ? "?" : "�"}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">Employee</p>
                   </div>
                   <div className="py-3 text-center">
                     <p className="text-base font-bold">
                       {initialData.organizationMember?.departments?.name
                         ? initialData.organizationMember.departments.name.slice(0, 4)
-                        : "—"}
+                        : "�"}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">Dept</p>
                   </div>
@@ -457,7 +457,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                     <p className="text-base font-bold capitalize">
                       {initialData.organizationMember?.employment_status
                         ? initialData.organizationMember.employment_status.slice(0, 3)
-                        : "—"}
+                        : "�"}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">Status</p>
                   </div>
@@ -499,7 +499,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
               </CardContent>
             </Card>
 
-            {/* ── Right: Latest Activity ── */}
+            {/* -- Right: Latest Activity -- */}
             <Card className="md:col-span-2">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -560,7 +560,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
           {/* Row 2: Profile Completion + Work Info + Employment */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-            {/* ── Employment Details (Personal Info) ── */}
+            {/* -- Employment Details (Personal Info) -- */}
             <Card className="h-full min-h-[375px]">
               <Tabs defaultValue="profile" className="w-full h-full flex flex-col">
                 <CardHeader className="px-6 pt-3 pb-2">
@@ -584,27 +584,27 @@ export function AccountForm({ initialData }: AccountFormProps) {
                     <div className="grid grid-cols-2 gap-6">
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Employee Code</p>
-                        <p className="text-sm font-medium">{initialData.user.employee_code || "—"}</p>
+                        <p className="text-sm font-medium">{initialData.user.employee_code || "�"}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Email Address</p>
-                        <p className="text-sm font-medium truncate" title={initialData.user.email || ""}>{initialData.user.email || "—"}</p>
+                        <p className="text-sm font-medium truncate" title={initialData.user.email || ""}>{initialData.user.email || "�"}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">First Name</p>
-                        <p className="text-sm font-medium">{initialData.user.first_name || "—"}</p>
+                        <p className="text-sm font-medium">{initialData.user.first_name || "�"}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Last Name</p>
-                        <p className="text-sm font-medium">{initialData.user.last_name || "—"}</p>
+                        <p className="text-sm font-medium">{initialData.user.last_name || "�"}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Display Name</p>
-                        <p className="text-sm font-medium">{initialData.user.display_name || "—"}</p>
+                        <p className="text-sm font-medium">{initialData.user.display_name || "�"}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Phone Number</p>
-                        <p className="text-sm font-medium">{initialData.user.phone || "—"}</p>
+                        <p className="text-sm font-medium">{initialData.user.phone || "�"}</p>
                       </div>
                     </div>
                   </TabsContent>
@@ -618,22 +618,22 @@ export function AccountForm({ initialData }: AccountFormProps) {
                             ? new Date(initialData.user.date_of_birth).toLocaleDateString('id-ID', {
                               year: 'numeric', month: 'long', day: 'numeric',
                             })
-                            : "—"}
+                            : "�"}
                         </p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Gender</p>
                         <p className="text-sm font-medium capitalize">
-                          {initialData.user.gender?.replace(/_/g, ' ') || "—"}
+                          {initialData.user.gender?.replace(/_/g, ' ') || "�"}
                         </p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Nationality</p>
-                        <p className="text-sm font-medium">{initialData.user.nationality || "—"}</p>
+                        <p className="text-sm font-medium">{initialData.user.nationality || "�"}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">National ID</p>
-                        <p className="text-sm font-medium">{initialData.user.national_id || "—"}</p>
+                        <p className="text-sm font-medium">{initialData.user.national_id || "�"}</p>
                       </div>
 
                       <div className="col-span-2 pt-2 border-t mt-2">
@@ -641,15 +641,15 @@ export function AccountForm({ initialData }: AccountFormProps) {
                         <div className="grid grid-cols-2 gap-6">
                           <div className="space-y-1">
                             <p className="text-xs text-muted-foreground">Name</p>
-                            <p className="text-sm font-medium">{initialData.user.emergency_contact?.name || "—"}</p>
+                            <p className="text-sm font-medium">{initialData.user.emergency_contact?.name || "�"}</p>
                           </div>
                           <div className="space-y-1">
                             <p className="text-xs text-muted-foreground">Relationship</p>
-                            <p className="text-sm font-medium">{initialData.user.emergency_contact?.relationship || "—"}</p>
+                            <p className="text-sm font-medium">{initialData.user.emergency_contact?.relationship || "�"}</p>
                           </div>
                           <div className="space-y-1 col-span-2">
                             <p className="text-xs text-muted-foreground">Phone</p>
-                            <p className="text-sm font-medium">{initialData.user.emergency_contact?.phone || "—"}</p>
+                            <p className="text-sm font-medium">{initialData.user.emergency_contact?.phone || "�"}</p>
                           </div>
                         </div>
                       </div>
@@ -659,7 +659,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
               </Tabs>
             </Card>
 
-            {/* ── Work Information ── */}
+            {/* -- Work Information -- */}
             <Card className="h-full">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold">Work Information</CardTitle>
@@ -707,14 +707,14 @@ export function AccountForm({ initialData }: AccountFormProps) {
                     <div className="mt-0.5 shrink-0">{item.icon}</div>
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">{item.label}</p>
-                      <p className="text-sm font-medium truncate">{item.value || "—"}</p>
+                      <p className="text-sm font-medium truncate">{item.value || "�"}</p>
                     </div>
                   </div>
                 ))}
               </CardContent>
             </Card>
 
-            {/* ── Complete Your Profile ── */}
+            {/* -- Complete Your Profile -- */}
             <Card className="h-full">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold">Complete Your Profile</CardTitle>
@@ -756,14 +756,14 @@ export function AccountForm({ initialData }: AccountFormProps) {
           </div>
         </TabsContent>
 
-        {/* ══════════════════════════
+        {/* --------------------------
             TAB: EDIT PROFILE
-            ══════════════════════════ */}
+            -------------------------- */}
         <TabsContent value="edit" className="space-y-6">
 
           {/* Header Section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* ── Left: Profile Card ── */}
+            {/* -- Left: Profile Card -- */}
             <Card className="md:col-span-1">
               <CardContent className="pt-6 flex flex-col items-center text-center space-y-4">
                 {/* Avatar */}
@@ -810,14 +810,14 @@ export function AccountForm({ initialData }: AccountFormProps) {
                 {/* Stats */}
                 <div className="grid grid-cols-3 w-full divide-x divide-border border rounded-lg overflow-hidden">
                   <div className="py-3 text-center">
-                    <p className="text-base font-bold">{initialData.organizationMember?.employee_id ? "✓" : "—"}</p>
+                    <p className="text-base font-bold">{initialData.organizationMember?.employee_id ? "?" : "�"}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">Employee</p>
                   </div>
                   <div className="py-3 text-center">
                     <p className="text-base font-bold">
                       {initialData.organizationMember?.departments?.name
                         ? initialData.organizationMember.departments.name.slice(0, 4)
-                        : "—"}
+                        : "�"}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">Dept</p>
                   </div>
@@ -825,7 +825,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                     <p className="text-base font-bold capitalize">
                       {initialData.organizationMember?.employment_status
                         ? initialData.organizationMember.employment_status.slice(0, 3)
-                        : "—"}
+                        : "�"}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">Status</p>
                   </div>
@@ -867,7 +867,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
               </CardContent>
             </Card>
 
-            {/* ── Right: Projects Tabs ── */}
+            {/* -- Right: Projects Tabs -- */}
             <Card className="md:col-span-2 h-full">
               <CardHeader className="pb-3">
                 <CardTitle>Projects</CardTitle>
@@ -957,9 +957,9 @@ export function AccountForm({ initialData }: AccountFormProps) {
           </div>
         </TabsContent>
 
-        {/* ══════════════════════════
+        {/* --------------------------
             TAB: ACTIVITIES (placeholder)
-            ══════════════════════════ */}
+            -------------------------- */}
         <TabsContent value="activity">
           <Card>
             <CardContent className="py-16 text-center">
@@ -969,9 +969,9 @@ export function AccountForm({ initialData }: AccountFormProps) {
           </Card>
         </TabsContent>
 
-        {/* ══════════════════════════
+        {/* --------------------------
             TAB: MEMBERS (placeholder)
-            ══════════════════════════ */}
+            -------------------------- */}
         <TabsContent value="members">
           <Card>
             <CardContent className="py-16 text-center">
@@ -982,7 +982,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
         </TabsContent>
       </Tabs>
 
-      {/* ── PROFILE PHOTO DIALOG ── */}
+      {/* -- PROFILE PHOTO DIALOG -- */}
       <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
         {/* Removed max-w constraint to allow larger image */}
         <DialogContent className="bg-transparent border-none shadow-none p-0 flex items-center justify-center max-w-none w-auto">

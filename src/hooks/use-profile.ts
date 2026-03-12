@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useCallback } from 'react'
 import { IUser } from '@/interface'
@@ -189,3 +189,4 @@ export function useProfilePhotoDelete() {
 
   return { deleteProfilePhoto }
 }
+
