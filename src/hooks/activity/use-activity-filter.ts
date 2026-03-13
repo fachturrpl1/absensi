@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useOrgStore } from "@/store/org-store"
 import { getMembersForScreenshot, type ISimpleMember } from "@/action/activity/screenshot"
-import { getAllProjects, type IProject } from "@/action/projects"
+import { getAllProjects } from "@/action/projects"
+import type { IProject } from "@/interface/index"
 import type { DateRange, SelectedFilter } from "@/components/insights/types"
 
 interface UseActivityFilterProps {

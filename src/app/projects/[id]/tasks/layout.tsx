@@ -1,8 +1,18 @@
 "use client"
 
 // app/projects/[id]/tasks/layout.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+// Single source of truth untuk:
+//   • Server state  : tasks, members, taskStatuses
+//   • Shared UI     : activeTab
+//   • Mutations     : setTasks (optimistic), refreshTasks (server sync)
+//   • Header        : New Task dialog + Tab switcher + View switcher
+//
+// Child pages (list / kanban / timeline) HANYA membaca dari context.
+// Tidak ada fetch di child page manapun.
+// ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect, useContext, createContext, use } from "react"
+import React, { useState, useEffect, useContext, createContext, use, useCallback } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -22,25 +32,41 @@ import { ITask, IOrganization_member, ITaskAssignee, ITaskStatus } from "@/inter
 import { getTasksListPageData } from "@/action/projects/tasks/list"
 import { createTask, getTasks, assignTaskMember } from "@/action/task"
 import { toast } from "sonner"
-import { ActiveTab, CurrentView, TabCounts, TasksLayoutData } from "@/types/tasks"
+import { ActiveTab, CurrentView, TabCounts } from "@/types/tasks"
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
-interface TasksContextValue extends TasksLayoutData {
-    setTasks: (tasks: ITask[]) => void
-    activeTab: ActiveTab
+interface TasksContextValue {
+    // Server state
+    tasks: ITask[]
+    members: IOrganization_member[]
+    taskStatuses: ITaskStatus[]
     isLoading: boolean
+
+    // Shared UI state
+    activeTab: ActiveTab
+    setActiveTab: (tab: ActiveTab) => void
+
+    // Optimistic mutation — child page update tasks langsung tanpa round-trip
+    setTasks: React.Dispatch<React.SetStateAction<ITask[]>>
+
+    // Server sync — gunakan hanya saat optimistic tidak cukup (mis. setelah create)
+    refreshTasks: () => Promise<void>
+
+    // Derived helpers
+    projectId: string
+    tabCounts: TabCounts
 }
 
 const TasksContext = createContext<TasksContextValue | null>(null)
 
-export function useTasksContext() {
+export function useTasksContext(): TasksContextValue {
     const ctx = useContext(TasksContext)
     if (!ctx) throw new Error("useTasksContext must be used inside TasksLayout")
     return ctx
 }
 
-// ─── Assignee Helpers ─────────────────────────────────────────────────────────
+// ─── Assignee Helpers (di-export, dipakai child page) ────────────────────────
 
 export function getAssigneeInfo(
     assignee: ITaskAssignee,
@@ -73,7 +99,6 @@ export function StackedAssignees({
     showLink?: boolean
 }) {
     if (!assignees || assignees.length === 0) return null
-
     return (
         <div className="flex -space-x-2 shrink-0">
             {assignees.slice(0, max).map((asgn, i) => {
@@ -118,32 +143,12 @@ export function StackedAssignees({
     )
 }
 
-export function AssigneeAvatar({ asgn }: { asgn: ITaskAssignee }) {
-    const user = asgn.member?.user
-    const name =
-        user?.display_name ||
-        `${user?.first_name || ""} ${user?.last_name || ""}`.trim() ||
-        "Unknown"
-    return (
-        <Link
-            href={`/members/${asgn.organization_member_id}`}
-            onClick={e => e.stopPropagation()}
-            className="hover:scale-110 transition-transform"
-        >
-            <UserAvatar
-                name={name}
-                photoUrl={user?.profile_photo_url}
-                userId={user?.id}
-                size={6}
-                className="ring-2 ring-background"
-            />
-        </Link>
-    )
-}
+// ─── View Switcher (internal) ─────────────────────────────────────────────────
 
-// ─── View Switcher ────────────────────────────────────────────────────────────
-
-function TasksViewSwitcher({ currentView, projectId }: { currentView: CurrentView; projectId: string }) {
+function TasksViewSwitcher({ currentView, projectId }: {
+    currentView: CurrentView
+    projectId: string
+}) {
     const router = useRouter()
     const basePath = `/projects/${projectId}/tasks`
 
@@ -175,9 +180,12 @@ function TasksViewSwitcher({ currentView, projectId }: { currentView: CurrentVie
     )
 }
 
-// ─── Header ───────────────────────────────────────────────────────────────────
+// ─── Layout Header (internal) ─────────────────────────────────────────────────
 
-interface HeaderProps {
+function LayoutHeader({
+    projectId, currentView, activeTab, onTabChange,
+    tabCounts, members, taskStatuses, onCreateTask,
+}: {
     projectId: string
     currentView: CurrentView
     activeTab: ActiveTab
@@ -186,12 +194,7 @@ interface HeaderProps {
     members: IOrganization_member[]
     taskStatuses: ITaskStatus[]
     onCreateTask: (title: string, assigneeId: number | "", statusId: number | "") => Promise<void>
-}
-
-function TasksHeader({
-    projectId, currentView, activeTab, onTabChange,
-    tabCounts, members, taskStatuses, onCreateTask,
-}: HeaderProps) {
+}) {
     const [open, setOpen] = useState(false)
     const [title, setTitle] = useState("")
     const [assigneeId, setAssigneeId] = useState<number | "">("")
@@ -224,7 +227,7 @@ function TasksHeader({
                 <TasksViewSwitcher currentView={currentView} projectId={projectId} />
             </div>
 
-            {/* Tabs */}
+            {/* Tabs — shared across list / kanban / timeline */}
             <div className="flex items-center gap-6 text-sm border-b">
                 {(["active", "completed", "all"] as ActiveTab[]).map(tab => (
                     <button
@@ -243,7 +246,7 @@ function TasksHeader({
             </div>
 
             {/* New Task Dialog */}
-            <Dialog open={open} onOpenChange={open => !open && handleClose()}>
+            <Dialog open={open} onOpenChange={v => !v && handleClose()}>
                 <DialogContent>
                     <DialogHeader><DialogTitle>New Task</DialogTitle></DialogHeader>
                     <div className="space-y-3 py-4">
@@ -287,7 +290,7 @@ function TasksHeader({
     )
 }
 
-// ─── Layout (default export) ──────────────────────────────────────────────────
+// ─── TasksLayout (default export) ─────────────────────────────────────────────
 
 export default function TasksLayout({
     children,
@@ -299,18 +302,23 @@ export default function TasksLayout({
     const { id: projectId } = use(params)
     const pathname = usePathname()
 
+    // currentView: derived dari pathname, tidak perlu state
     const currentView: CurrentView = pathname.endsWith("/kanban")
         ? "board"
         : pathname.endsWith("/timeline")
             ? "timeline"
             : "list"
 
+    // ── Server state ───────────────────────────────────────────────────────────
     const [tasks, setTasks] = useState<ITask[]>([])
     const [members, setMembers] = useState<IOrganization_member[]>([])
     const [taskStatuses, setTaskStatuses] = useState<ITaskStatus[]>([])
     const [isLoading, setIsLoading] = useState(true)
+
+    // ── Shared UI state ────────────────────────────────────────────────────────
     const [activeTab, setActiveTab] = useState<ActiveTab>("active")
 
+    // ── Initial fetch — 1 round-trip, re-run hanya saat projectId berubah ─────
     useEffect(() => {
         setIsLoading(true)
         getTasksListPageData()
@@ -322,6 +330,13 @@ export default function TasksLayout({
             .finally(() => setIsLoading(false))
     }, [projectId])
 
+    // ── refreshTasks — server sync, pakai sparingly ────────────────────────────
+    const refreshTasks = useCallback(async () => {
+        const res = await getTasks()
+        if (res.success) setTasks(res.data)
+    }, [])
+
+    // ── Derived tab counts ─────────────────────────────────────────────────────
     const projectTasks = tasks.filter(t => t.project_id === Number(projectId))
     const tabCounts: TabCounts = {
         all: projectTasks.length,
@@ -329,7 +344,8 @@ export default function TasksLayout({
         completed: projectTasks.filter(t => t.task_status?.code === "done").length,
     }
 
-    const handleCreateTask = async (
+    // ── handleCreateTask — setelah create, server sync (id tidak diketahui) ────
+    const handleCreateTask = useCallback(async (
         title: string,
         assigneeId: number | "",
         statusId: number | "",
@@ -338,21 +354,32 @@ export default function TasksLayout({
         fd.append("name", title)
         fd.append("project_id", projectId)
         if (statusId) fd.append("status_id", statusId.toString())
+
         const res = await createTask(fd)
         if (res.success && res.data) {
             if (assigneeId) await assignTaskMember(res.data.id, Number(assigneeId))
-            const fresh = await getTasks()
-            if (fresh.success) setTasks(fresh.data)
+            await refreshTasks()
             toast.success("Task created")
         } else {
             toast.error("Failed to create task")
         }
-    }
+    }, [projectId, refreshTasks])
 
     return (
-        <TasksContext.Provider value={{ tasks, setTasks, members, taskStatuses, activeTab, isLoading }}>
+        <TasksContext.Provider value={{
+            tasks,
+            members,
+            taskStatuses,
+            isLoading,
+            activeTab,
+            setActiveTab,
+            setTasks,
+            refreshTasks,
+            projectId,
+            tabCounts,
+        }}>
             <div className="flex flex-col gap-4 p-4 pt-0">
-                <TasksHeader
+                <LayoutHeader
                     projectId={projectId}
                     currentView={currentView}
                     activeTab={activeTab}

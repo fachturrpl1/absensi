@@ -120,14 +120,14 @@ const ARCHIVED_PROJECTS = [
     name: "Company Landing Page",
     client: "Internal Project",
     completedDate: "2023-12-10",
-    status: "Completed"
+    lifecycle_status: "Completed"
   },
   {
     id: 5,
     name: "HR Management Portal",
     client: "Global Tech",
     completedDate: "2023-11-05",
-    status: "Completed"
+    lifecycle_status: "Completed"
   }
 ];
 
@@ -940,7 +940,7 @@ export function AccountForm({ initialData }: AccountFormProps) {
                               </div>
                             </div>
                             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
-                              {project.status}
+                              {project.lifecycle_status}
                             </Badge>
                           </div>
                           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground pt-1">
