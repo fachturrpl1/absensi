@@ -1,7 +1,7 @@
 "use client"
 import Link from "next/link"
 import { Avatar, AvatarFallback } from "@/components/profile&image/avatar"
-import { ClientActionsDropdown } from "./ClientActionsDropdown"
+import { ClientActionsDropdown } from "./client-action-dropdown"
 import {
     Table,
     TableBody,

@@ -1,11 +1,15 @@
 import type { DayType, ExcusedReasonCode, WorkMode, PunchException, HalfDayType } from '@/lib/attendance-status-calculator';
-// Emergency Contact Interface
+
+// ─── Emergency Contact ────────────────────────────────────────────────────────
+
 export interface IEmergencyContact {
     name?: string;
     relationship?: string;
     phone?: string;
     email?: string;
 }
+
+// ─── User ─────────────────────────────────────────────────────────────────────
 
 export interface IUser {
     id: string;
@@ -35,37 +39,40 @@ export interface IUser {
     updated_at?: string;
     deleted_at?: string;
 }
+
+// ─── Organization ─────────────────────────────────────────────────────────────
+
 export interface IOrganization {
-    id: string
-    code?: string
-    name: string
-    legal_name?: string | null
-    description?: string | null
-    inv_code?: string | null
-    tax_id?: string
-    industry?: string
-    size_category?: string
-    timezone?: string
-    currency_code?: string
-    country_code?: string
-    address?: string
-    city?: string
-    state_province?: string
-    postal_code?: string
-    phone?: string
-    email?: string
-    website?: string
-    logo_url?: string | null
-    is_active: boolean
-    subscription_tier?: string
-    time_format?: '12h' | '24h'
-    subscription_expires_at?: string | null
-    created_at: string
-    updated_at?: string
+    id: string;
+    code?: string;
+    name: string;
+    legal_name?: string | null;
+    description?: string | null;
+    inv_code?: string | null;
+    tax_id?: string;
+    industry?: string;
+    size_category?: string;
+    timezone?: string;
+    currency_code?: string;
+    country_code?: string;
+    address?: string;
+    city?: string;
+    state_province?: string;
+    postal_code?: string;
+    phone?: string;
+    email?: string;
+    website?: string;
+    logo_url?: string | null;
+    is_active: boolean;
+    subscription_tier?: string;
+    time_format?: '12h' | '24h';
+    subscription_expires_at?: string | null;
+    created_at: string;
+    updated_at?: string;
 }
 
+// ─── Group / Department ───────────────────────────────────────────────────────
 
-// Groups (stored as departments in database)
 export interface IGroup {
     id: string;
     organization_id: string;
@@ -77,13 +84,13 @@ export interface IGroup {
     is_active: boolean;
     created_at: string;
     updated_at?: string;
-
     organization?: IOrganization;
-
 }
 
-// Backward compatibility alias
 export type IDepartments = IGroup;
+
+// ─── Position ─────────────────────────────────────────────────────────────────
+
 export interface IPositions {
     id: string;
     organization_id: string;
@@ -94,83 +101,286 @@ export interface IPositions {
     is_active: boolean;
     created_at: string;
     updated_at?: string;
-
     organization?: IOrganization;
+}
 
+// ─── Project ──────────────────────────────────────────────────────────────────
+
+export interface IProjectMetadata {
+    budgetType?: string;
+    budgetBasedOn?: string;
+    budgetCost?: string | number;
+    budgetNotifyMembers?: boolean;
+    budgetNotifyAt?: string;
+    budgetNotifyWho?: string;
+    budgetStopTimers?: boolean;
+    budgetStopAt?: string;
+    budgetResets?: string;
+    budgetStartDate?: string | null;
+    budgetIncludeNonBillable?: boolean;
+    memberLimits?: Array<{
+        members: string[];
+        type: string;
+        basedOn: string;
+        cost: string;
+        resets: string;
+        startDate: string | null;
+    }>;
+    memberLimitNotifyAt?: string;
+    memberLimitNotifyMembers?: boolean;
+    clientName?: string | null;
+    tracking_enabled?: boolean;  // per-project tracking override
+    [key: string]: unknown;
+}
+
+export interface ITeams {
+    id: number;
+    organization_id: number;
+    code: string;
+    name: string;
+    description?: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at?: string;
+    settings?: string;
+    metadata?: string;
+}
+
+// ── Domain types (used throughout the app) ───────────────────────────────────
+
+export interface IProjectTeamMemberUser {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    profile_photo_url: string | null;
+}
+
+export interface IProjectOrganizationMember {
+    id: number;
+    user_id: string;
+    user: IProjectTeamMemberUser | null;
+}
+
+export interface IProjectTeamMember {
+    team_id: number;
+    organization_member_id: number;
+    role: string;
+    organization_members: IProjectOrganizationMember | null;
+}
+
+export interface IProjectTeam {
+    id: number;
+    name: string;
+    team_members?: IProjectTeamMember[];
+}
+
+export interface IProjectTeamProject {
+    team_id: number;
+    teams: IProjectTeam | null;
+}
+
+// ── Raw Supabase response types (SDK infers joins as arrays) ─────────────────
+// Used only inside action/projects.ts to type raw query results before mapping.
+
+export interface ISupabaseProjectOrganizationMember {
+    id: number;
+    user_id: string;
+    // Supabase SDK infers joined user as array even for 1-to-1 foreign keys
+    user: IProjectTeamMemberUser[];
+}
+
+export interface ISupabaseProjectTeamMember {
+    team_id: number;
+    organization_member_id: number;
+    role: string;
+    // Supabase SDK infers joined org member as array
+    organization_members: ISupabaseProjectOrganizationMember[];
+}
+
+export interface IProjectClientProject {
+    client_id: number;
+    clients: Pick<IClient, 'id' | 'name'> | null;
 }
 
 export interface IProject {
     id: number;
     organization_id: number;
+    code: string;
     name: string;
-    client_id?: number | null;
+    description?: string | null;
+    lifecycle_status: string;
+    priority?: string;
+    start_date?: string | null;
+    end_date?: string | null;
     is_billable: boolean;
-    is_active: boolean;
-    archived: boolean;
-    color?: string | null;
+    currency_code?: string;
+    budget_amount?: number | null;
+    budget_hours?: number | null;
+    color_code?: string | null;
+    metadata?: IProjectMetadata | null;
+    is_active?: boolean;
     created_at: string;
     updated_at?: string;
+    deleted_at?: string | null;
+
+    // Joined relations (populated via Supabase select)
+    organizations?: { id: number; name: string };
+    team_projects?: IProjectTeamProject[];
+    tasks?: { count: number }[];
+    client_projects?: IProjectClientProject[];
 }
+
+export interface IProjectMember {
+    id: string;
+    userId: string;
+    name: string;
+    photoUrl: string | null;
+}
+
+export interface IProjectWithMembers extends IProject {
+    clientName: string | null;
+    members: IProjectMember[];
+}
+
+export interface ISimpleMember {
+    id: string;
+    name: string;
+    department_id?: string | null;
+}
+
+// ─── Project Payload Types ────────────────────────────────────────────────────
+
+export interface CreateProjectPayload {
+    name: string;
+    is_billable?: boolean;
+    metadata?: IProjectMetadata;
+    teams?: number[];
+}
+
+export interface UpdateProjectPayload {
+    name?: string;
+    is_billable?: boolean;
+    metadata?: IProjectMetadata;
+    teams?: number[];
+    lifecycle_status?: string;
+}
+
+// ─── Project UI Types (used in components/projects/) ────────────────────────
+
+export interface MemberLimit {
+    members: string[];
+    type: string;
+    basedOn: string;
+    cost: string;
+    resets: string;
+    startDate: string | null;
+}
+
+export interface NewProjectForm {
+    names: string;
+    billable: boolean;
+    disableActivity: boolean;
+    allowTracking: boolean;
+    disableIdle: boolean;
+    clientId: string | null;
+    members: string[];
+    teams: string[];
+    budgetType: string;
+    budgetBasedOn: string;
+    budgetCost: string;
+    budgetNotifyMembers: boolean;
+    budgetNotifyAt: string;
+    budgetNotifyWho: string;
+    budgetStopTimers: boolean;
+    budgetStopAt: string;
+    budgetResets: string;
+    budgetStartDate: string | null;
+    budgetIncludeNonBillable: boolean;
+    memberLimits: MemberLimit[];
+    memberLimitNotifyAt: string;
+    memberLimitNotifyMembers: boolean;
+}
+
+export interface ProjectMember {
+    id: string;
+    name: string;
+    avatarUrl: string | null;
+}
+
+/** UI-level project model used in the projects list page and dialogs */
+export interface Project {
+    id: string;
+    name: string;
+    clientName: string | null;
+    teams: string[];
+    members: ProjectMember[];
+    taskCount: number;
+    budgetLabel: string;
+    memberLimitLabel: string;
+    archived: boolean;
+}
+
+export interface DuplicateProjectOptions {
+    name: string;
+    keepTasks: boolean;
+    keepTasksAssignees: boolean;
+    keepTasksCompleted: boolean;
+    keepAllMembers: boolean;
+    keepBudget: boolean;
+    keepMemberLimits: boolean;
+    keepSameClient: boolean;
+}
+
+// ─── Organization Member ──────────────────────────────────────────────────────
 
 export interface IOrganization_member {
     id: string;
     organization_id: string;
     user_id: string;
     employee_id?: string;
-    department_id?: string; // References group (stored as department in DB)
+    department_id?: string;
     position_id?: string;
     direct_manager_id?: string;
-    role_id?: string; // Role within the organization (Admin Org or User)
+    role_id?: string;
     hire_date: string;
     probation_end_date?: string;
     contract_type?: string;
     employment_status?: string;
     termination_date?: string;
     work_location?: string;
-
-    // Accounting & Pay
     tax_id_number?: string;
     tax_type?: string;
     account_code?: string;
     currency?: string;
-
-    // Work Time & Limits
     daily_limit_hours?: number;
     weekly_limit_hours?: number;
-
     allow_tracking?: boolean;
     require_tasks?: boolean;
     allow_manual_time?: boolean;
-
     overtime_daily_threshold?: number;
     overtime_weekly_threshold?: number;
-
     idle_timeout_minutes?: number;
     break_reminder_interval_minutes?: number;
-
-    tracking_window_start?: string; // HH:MM
-    tracking_window_end?: string; // HH:MM
+    tracking_window_start?: string;
+    tracking_window_end?: string;
     lock_entries_after_days?: number;
-
     is_active: boolean;
     created_at: string;
     updated_at?: string;
-
-    // Computed / Virtual fields from API
     computed_name?: string;
     groupName?: string;
     biodata_nik?: string;
-
     user?: IUser;
     groups?: IGroup;
     departments?: IGroup;
     positions?: IPositions;
     organization?: IOrganization;
     rfid_cards?: IRfidCard;
-    role?: IRole; // Organization role details
+    role?: IRole;
 }
 
-// Performance data returned for a single member
+// ─── Performance ──────────────────────────────────────────────────────────────
+
 export interface IMemberPerformance {
     counts: {
         present: number;
@@ -180,7 +390,6 @@ export interface IMemberPerformance {
     };
     lastSeen?: string | null;
     averageWorkDurationMinutes?: number;
-    // new insight fields (formatted time strings, e.g. "08:45")
     averageCheckInTime?: string | null;
     averageCheckOutTime?: string | null;
     recent30?: Array<{
@@ -191,12 +400,13 @@ export interface IMemberPerformance {
     }>;
 }
 
-// Point data for trend charts
 export interface IMemberAttendancePoint {
-    date: string; // YYYY-MM-DD
-    count: number; // count of attendance records (present) on that date
+    date: string;
+    count: number;
     averageWorkDurationMinutes?: number | null;
 }
+
+// ─── Attendance ───────────────────────────────────────────────────────────────
 
 export interface IAttendance {
     id: string;
@@ -231,20 +441,19 @@ export interface IAttendance {
     created_at: string;
     updated_at?: string;
     notes?: string;
-
-    // International-standard optional dimensions
-    day_type?: DayType;               // working_day | off_day | public_holiday | leave_day
-    leave_reason_code?: ExcusedReasonCode; // vacation | sick | maternity | paternity | bereavement | unpaid | training | business_trip
-    work_mode?: WorkMode;             // onsite | remote | on_duty
-    punch_exception?: PunchException; // none | missing_check_in | missing_check_out | missing_both
-    compliant?: boolean;              // memenuhi core hours
+    day_type?: DayType;
+    leave_reason_code?: ExcusedReasonCode;
+    work_mode?: WorkMode;
+    punch_exception?: PunchException;
+    compliant?: boolean;
     break_violation?: boolean;
-    half_day_type?: HalfDayType;      // none | half_day_am | half_day_pm
-
+    half_day_type?: HalfDayType;
     organization_member?: IOrganization_member;
     timezone?: string;
     time_format?: '12h' | '24h';
 }
+
+// ─── Work Schedule ────────────────────────────────────────────────────────────
 
 export interface IWorkSchedule {
     id: number;
@@ -257,22 +466,18 @@ export interface IWorkSchedule {
     is_active: boolean;
     created_at: string;
     updated_at?: string;
-    work_schedule_details?: IWorkScheduleDetail[]
+    work_schedule_details?: IWorkScheduleDetail[];
 }
 
 export interface IWorkScheduleDetail {
     id: number;
     work_schedule_id: number;
-    day_of_week: number; // 0=Sunday, 1=Monday, ..., 6=Saturday
+    day_of_week: number;
     is_working_day: boolean;
-
-    start_time?: string; // HH:MM:SS - Check-in time (must be earlier than core_hours_start)
-    end_time?: string;   // HH:MM:SS - Check-out time (must be later than core_hours_end)
-
-    // Core hours define the mandatory work period
-    core_hours_start?: string; // HH:MM:SS
-    core_hours_end?: string;   // HH:MM:SS
-
+    start_time?: string;
+    end_time?: string;
+    core_hours_start?: string;
+    core_hours_end?: string;
     break_start: string;
     break_end: string;
     break_duration_minutes?: number | null;
@@ -280,9 +485,10 @@ export interface IWorkScheduleDetail {
     is_active: boolean;
     created_at: string;
     updated_at?: string;
-
     work_schedule?: IWorkSchedule;
 }
+
+// ─── Shift ────────────────────────────────────────────────────────────────────
 
 export interface IShift {
     id: string;
@@ -307,7 +513,6 @@ export interface IShiftAssignment {
     assignment_date: string;
     created_by?: string | null;
     created_at?: string;
-
     organization_member?: IOrganization_member;
     shift?: Pick<IShift, "id" | "code" | "name" | "start_time" | "end_time">;
 }
@@ -316,29 +521,23 @@ export interface IMemberSchedule {
     id: string;
     organization_member_id: string;
     work_schedule_id: string;
-
     shift_id?: string;
     effective_date: string;
     end_date?: string | null;
     is_active: boolean;
     created_at: string;
     updated_at?: string;
-
     organization_member?: IOrganization_member;
     work_schedule?: IWorkSchedule;
 }
+
+// ─── Role & Permission ────────────────────────────────────────────────────────
 
 export interface IRole {
     id: string;
     code?: string;
     name: string;
     description: string;
-}
-
-export interface ApiResponse<T> {
-    success: boolean;
-    message?: string;
-    data: T;
 }
 
 export interface IPermission {
@@ -361,10 +560,11 @@ export interface IRolePermission {
 export interface IUserRole {
     user_id: string;
     role_id: string;
-
-    user: IUser
+    user: IUser;
     role: IRole;
 }
+
+// ─── RFID ─────────────────────────────────────────────────────────────────────
 
 export interface IRfidCard {
     id: string;
@@ -374,6 +574,8 @@ export interface IRfidCard {
     issue_date: string;
     organization_member: IOrganization_member;
 }
+
+// ─── Device ───────────────────────────────────────────────────────────────────
 
 export interface IDeviceType {
     id: string;
@@ -414,6 +616,8 @@ export interface IAttendanceDevice {
     organization?: IOrganization;
 }
 
+// ─── Invitation ───────────────────────────────────────────────────────────────
+
 export interface IMemberInvitation {
     id: string;
     organization_id: string;
@@ -430,14 +634,14 @@ export interface IMemberInvitation {
     accepted_at?: string;
     created_at: string;
     updated_at?: string;
-
-    // Relations (populated via Supabase select)
     organization?: IOrganization;
     inviter?: IUser;
     role?: IRole;
     department?: IDepartments;
     position?: IPositions;
 }
+
+// ─── Task ─────────────────────────────────────────────────────────────────────
 
 export interface ITaskStatus {
     id: number;
@@ -461,19 +665,16 @@ export interface ITask {
     description?: string | null;
     priority: 'low' | 'medium' | 'high' | 'urgent';
     estimated_hours?: number | null;
-    actual_hours?: number;
     due_date?: string | null;
+    completed_at?: string | null;
+    lifecycle_status?: 'active' | 'completed' | 'archived';
     created_at?: string;
     updated_at?: string;
     deleted_at?: string | null;
-
     project?: {
         id: number;
         name: string;
-        client?: Array<{
-            id: number;
-            name: string;
-        }>;
+        client?: Array<{ id: number; name: string }> | { id: number; name: string } | null;
     };
     assignees?: ITaskAssignee[];
     task_status?: ITaskStatus;
@@ -487,9 +688,10 @@ export interface ITaskAssignee {
     is_primary: boolean;
     assigned_at?: string;
     updated_at?: string;
-
     member?: IOrganization_member;
 }
+
+// ─── Client ───────────────────────────────────────────────────────────────────
 
 export interface IClient {
     id: number;
@@ -509,9 +711,15 @@ export interface IClient {
     created_at?: string;
     updated_at?: string;
     deleted_at?: string | null;
-
-    // Computed or Joined fields
     project_count?: number;
     task_count?: number;
     projects?: IProject[];
+}
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+
+export interface ApiResponse<T> {
+    success: boolean;
+    message?: string;
+    data: T;
 }

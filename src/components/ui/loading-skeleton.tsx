@@ -1,24 +1,116 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-export function TableSkeleton({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
+interface TableSkeletonProps {
+  rows?: number;
+  columns?: number;
+}
+
+export function TableSkeleton({ rows = 8 }: TableSkeletonProps) {
   return (
-    <div className="w-full space-y-3">
-      {/* Header */}
-      <div className="flex gap-3 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-        {Array.from({ length: columns }).map((_, i) => (
-          <Skeleton key={i} className="h-5 flex-1" />
-        ))}
-      </div>
+    <div className="w-full">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent border-b border-border">
+            {/* 1. Avatar */}
+            <TableHead className="w-10 px-4">
+            </TableHead>
+            
+            {/* 2. Name */}
+            <TableHead className="font-medium text-xs uppercase tracking-wide py-3">
+              <div className="h-4 w-20 rounded bg-muted/90 animate-pulse" />
+            </TableHead>
+            
+            {/* 3. Identification */}
+            <TableHead className="font-medium text-xs uppercase tracking-wide">
+              <div className="h-3.5 w-16 rounded bg-muted/80 animate-pulse" />
+            </TableHead>
+            
+            {/* 4. Group */}
+            <TableHead className="font-medium text-xs uppercase tracking-wide">
+              <div className="h-3.5 w-14 rounded bg-muted/80 animate-pulse" />
+            </TableHead>
+            
+            {/* 5. Gender (hidden md) */}
+            <TableHead className="font-medium text-xs uppercase tracking-wide hidden md:table-cell">
+              <div className="h-3.5 w-12 rounded bg-muted/70 animate-pulse" />
+            </TableHead>
+            
+            {/* 6. Religion (hidden md) */}
+            <TableHead className="font-medium text-xs uppercase tracking-wide hidden md:table-cell">
+              <div className="h-3.5 w-14 rounded bg-muted/70 animate-pulse" />
+            </TableHead>
+            
+            {/* 7. Status */}
+            <TableHead className="font-medium text-xs uppercase tracking-wide">
+              <div className="h-3.5 w-16 rounded bg-muted/80 animate-pulse" />
+            </TableHead>
+            
+            {/* 8. Actions */}
+            <TableHead className="w-20 text-right pr-6 font-medium text-xs uppercase tracking-wide">
+              <div className="flex gap-1 justify-end w-16">
+                <div className="size-6 rounded bg-muted/70 animate-pulse" />
+                <div className="size-6 rounded bg-muted/70 animate-pulse" />
+              </div>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
 
-      {/* Rows */}
-      {Array.from({ length: rows }).map((_, rowIndex) => (
-        <div key={rowIndex} className="flex gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900">
-          {Array.from({ length: columns }).map((_, colIndex) => (
-            <Skeleton key={colIndex} className="h-5 flex-1" />
+        <TableBody>
+          {Array.from({ length: rows }).map((_, rowIndex) => (
+            <TableRow key={rowIndex} className="group hover:bg-muted/50 transition-colors">
+              {/* 1. Avatar */}
+              <TableCell className="px-4 py-3">
+                <div className="h-8 w-8 rounded-full bg-muted/80 animate-pulse" />
+              </TableCell>
+
+              {/* 2. Name */}
+              <TableCell className="py-3">
+                <div className="space-y-1">
+                  <div className="h-4 w-[180px] rounded-full bg-muted animate-pulse" />
+                </div>
+              </TableCell>
+
+              {/* 3. Identification (NIK) */}
+              <TableCell className="text-sm">
+                <div className="h-3.5 w-32 rounded bg-muted/90 animate-pulse" />
+              </TableCell>
+
+              {/* 4. Group (badge style) */}
+              <TableCell>
+                <div className="h-6 w-20 rounded-md bg-muted/80 animate-pulse" />
+              </TableCell>
+
+              {/* 5. Gender (hidden md) */}
+              <TableCell className="hidden md:table-cell text-sm">
+                <div className="h-4 w-16 rounded bg-muted/80 animate-pulse" />
+              </TableCell>
+
+              {/* 6. Religion (hidden md) */}
+              <TableCell className="hidden md:table-cell text-sm">
+                <div className="h-4 w-20 rounded bg-muted/80 animate-pulse" />
+              </TableCell>
+
+              {/* 7. Status (dot + text) */}
+              <TableCell>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-muted/80 animate-pulse" />
+                  <div className="h-3.5 w-16 rounded bg-muted/90 animate-pulse" />
+                </div>
+              </TableCell>
+
+              {/* 8. Actions */}
+              <TableCell className="px-4 pr-6 text-right">
+                <div className="flex justify-end gap-1">
+                  <div className="h-8 w-8 rounded bg-muted/70 animate-pulse" />
+                  <div className="h-8 w-8 rounded bg-muted/70 animate-pulse" />
+                </div>
+              </TableCell>
+            </TableRow>
           ))}
-        </div>
-      ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }

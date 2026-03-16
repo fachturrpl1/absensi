@@ -13,7 +13,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 
 import { Badge } from "@/components/ui/badge"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { PaginationFooter } from "@/components/customs/pagination-footer"
 
 import Link from "next/link"
 import { IWorkSchedule } from "@/interface"

@@ -9,7 +9,7 @@ import { Download, Search, Filter } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { TeamInvoicesAgingFilterSidebar } from "@/components/report/TeamInvoicesAgingFilterSidebar"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { PaginationFooter } from "@/components/customs/pagination-footer"
 import { differenceInDays } from "date-fns"
 
 export default function TeamInvoicesAgingPage() {

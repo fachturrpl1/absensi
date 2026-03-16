@@ -29,7 +29,7 @@ export function useDebounceSearch(
 
     timeoutRef.current = setTimeout(async () => {
       setDebouncedQuery(value)
-      setIsLoading(true)
+      setIsLoading(false)
       try {
         await callback(value)
       } catch (error) {
